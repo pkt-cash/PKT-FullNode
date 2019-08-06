@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,8 +11,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Bip16Activation is the timestamp where BIP0016 is valid to use in the
@@ -76,6 +77,39 @@ func isWitnessScriptHash(pops []parsedOpcode) bool {
 	return len(pops) == 2 &&
 		pops[0].opcode.value == OP_0 &&
 		pops[1].opcode.value == OP_DATA_32
+}
+
+// ElectionGetVotesForAgainst gets the candidates who are voted for and voted against
+// by the provided pkScript
+func ElectionGetVotesForAgainst(pkScript []byte) (voteFor []byte, voteAgainst []byte) {
+	pops, err := parseScript(pkScript)
+	if err != nil {
+		return nil, nil
+	}
+	for i, op := range pops {
+		if op.opcode.value != OP_VOTE {
+			continue
+		}
+		if i < 2 {
+			// invalid, too short
+			continue
+		}
+		if pops[i-1].opcode.value == OP_0 {
+		} else if canonicalPush(pops[i-1]) && len(pops[i-1].data) > 0 && len(pops[i-1].data) < 80 {
+			voteAgainst = pops[i-1].data
+		} else {
+			continue
+		}
+		if pops[i-2].opcode.value == OP_0 {
+		} else if canonicalPush(pops[i-2]) && len(pops[i-2].data) > 0 && len(pops[i-2].data) < 80 {
+			voteFor = pops[i-2].data
+		} else {
+			voteAgainst = nil
+			continue
+		}
+		break
+	}
+	return
 }
 
 // IsPayToWitnessScriptHash returns true if the is in the standard

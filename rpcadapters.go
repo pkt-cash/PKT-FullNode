@@ -7,13 +7,13 @@ package main
 import (
 	"sync/atomic"
 
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/mempool"
-	"github.com/btcsuite/btcd/netsync"
-	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/netsync"
+	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/btcutil"
 )
 
 // rpcPeer provides a peer for use with the RPC server and implements the

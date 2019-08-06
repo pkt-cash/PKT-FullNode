@@ -1,5 +1,6 @@
 // Copyright (c) 2013-2017 The btcsuite developers
 // Copyright (c) 2017 The Decred developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,17 +11,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/btcsuite/btcd/addrmgr"
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/blockchain/indexers"
-	"github.com/btcsuite/btcd/connmgr"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/mempool"
-	"github.com/btcsuite/btcd/mining"
-	"github.com/btcsuite/btcd/mining/cpuminer"
-	"github.com/btcsuite/btcd/netsync"
-	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/txscript"
+	"github.com/pkt-cash/pktd/addrmgr"
+	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/blockchain/indexers"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
+	"github.com/pkt-cash/pktd/connmgr"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/mining"
+	"github.com/pkt-cash/pktd/mining/cpuminer"
+	"github.com/pkt-cash/pktd/netsync"
+	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/txscript"
 
 	"github.com/btcsuite/btclog"
 	"github.com/jrick/logrotate/rotator"
@@ -58,7 +62,7 @@ var (
 	amgrLog = backendLog.Logger("AMGR")
 	cmgrLog = backendLog.Logger("CMGR")
 	bcdbLog = backendLog.Logger("BCDB")
-	btcdLog = backendLog.Logger("BTCD")
+	pktdLog = backendLog.Logger("BTCD")
 	chanLog = backendLog.Logger("CHAN")
 	discLog = backendLog.Logger("DISC")
 	indxLog = backendLog.Logger("INDX")
@@ -69,6 +73,7 @@ var (
 	srvrLog = backendLog.Logger("SRVR")
 	syncLog = backendLog.Logger("SYNC")
 	txmpLog = backendLog.Logger("TXMP")
+	pcptLog = backendLog.Logger("PCPT")
 )
 
 // Initialize package-global logger variables.
@@ -84,6 +89,10 @@ func init() {
 	txscript.UseLogger(scrpLog)
 	netsync.UseLogger(syncLog)
 	mempool.UseLogger(txmpLog)
+
+	packetcrypt.UseLogger(pcptLog)
+	block.UseLogger(pcptLog)
+	proof.UseLogger(pcptLog)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
@@ -92,7 +101,7 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"AMGR": amgrLog,
 	"CMGR": cmgrLog,
 	"BCDB": bcdbLog,
-	"BTCD": btcdLog,
+	"BTCD": pktdLog,
 	"CHAN": chanLog,
 	"DISC": discLog,
 	"INDX": indxLog,
@@ -103,6 +112,7 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"SRVR": srvrLog,
 	"SYNC": syncLog,
 	"TXMP": txmpLog,
+	"PCPT": pcptLog,
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and

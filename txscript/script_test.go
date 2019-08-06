@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestParseOpcode tests for opcode parsing with bad data templates.
@@ -2261,17 +2262,17 @@ func TestUnparsingInvalidOpcodes(t *testing.T) {
 			expectedErr: scriptError(ErrInternal, ""),
 		},
 		{
-			name: "OP_VERNOTIF",
+			name: "OP_VOTE",
 			pop: &parsedOpcode{
-				opcode: &opcodeArray[OP_VERNOTIF],
+				opcode: &opcodeArray[OP_VOTE],
 				data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
-			name: "OP_VERNOTIF long",
+			name: "OP_VOTE long",
 			pop: &parsedOpcode{
-				opcode: &opcodeArray[OP_VERNOTIF],
+				opcode: &opcodeArray[OP_VOTE],
 				data:   make([]byte, 1),
 			},
 			expectedErr: scriptError(ErrInternal, ""),

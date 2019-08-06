@@ -13,10 +13,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/btcutil"
 )
 
 var (
@@ -154,7 +155,7 @@ type NotificationHandlers struct {
 	// OnRescanFinished is invoked after a rescan finishes due to a previous
 	// call to Rescan or RescanEndHeight.  Finished rescans should be
 	// signaled on this notification, rather than relying on the return
-	// result of a rescan request, due to how btcd may send various rescan
+	// result of a rescan request, due to how pktd may send various rescan
 	// notifications after the rescan request has already returned.
 	//
 	// NOTE: Deprecated. Not used with RescanBlocks.
@@ -180,22 +181,22 @@ type NotificationHandlers struct {
 	OnTxAcceptedVerbose func(txDetails *btcjson.TxRawResult)
 
 	// OnBtcdConnected is invoked when a wallet connects or disconnects from
-	// btcd.
+	// pktd.
 	//
 	// This will only be available when client is connected to a wallet
-	// server such as btcwallet.
+	// server such as pktwallet.
 	OnBtcdConnected func(connected bool)
 
 	// OnAccountBalance is invoked with account balance updates.
 	//
 	// This will only be available when speaking to a wallet server
-	// such as btcwallet.
+	// such as pktwallet.
 	OnAccountBalance func(account string, balance btcutil.Amount, confirmed bool)
 
 	// OnWalletLockState is invoked when a wallet is locked or unlocked.
 	//
 	// This will only be available when client is connected to a wallet
-	// server such as btcwallet.
+	// server such as pktwallet.
 	OnWalletLockState func(locked bool)
 
 	// OnUnknownNotification is invoked when an unrecognized notification
@@ -419,7 +420,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		connected, err := parseBtcdConnectedNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid btcd connected "+
+			log.Warnf("Received invalid pktd connected "+
 				"notification: %v", err)
 			return
 		}
@@ -528,7 +529,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // parseFilteredBlockConnectedParams parses out the parameters included in a
 // filteredblockconnected notification.
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, []*btcutil.Tx, error) {
@@ -584,7 +585,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 // parseFilteredBlockDisconnectedParams parses out the parameters included in a
 // filteredblockdisconnected notification.
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, error) {
@@ -739,7 +740,7 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 	}
 
 	// Bounds check amount.
-	amt, err := btcutil.NewAmount(famt)
+	amt, err := globalcfg.NewAmount(famt)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -750,7 +751,7 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 		return nil, 0, err
 	}
 
-	return txHash, amt, nil
+	return txHash, btcutil.Amount(amt), nil
 }
 
 // parseTxAcceptedVerboseNtfnParams parses out details about a raw transaction
@@ -775,8 +776,8 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 	return &rawTx, nil
 }
 
-// parseBtcdConnectedNtfnParams parses out the connection status of btcd
-// and btcwallet from the parameters of a btcdconnected notification.
+// parseBtcdConnectedNtfnParams parses out the connection status of pktd
+// and pktwallet from the parameters of a pktdconnected notification.
 func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 	if len(params) != 1 {
 		return false, wrongNumParams(len(params))
@@ -822,12 +823,12 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 	}
 
 	// Bounds check amount.
-	bal, err := btcutil.NewAmount(fbal)
+	bal, err := globalcfg.NewAmount(fbal)
 	if err != nil {
 		return "", 0, false, err
 	}
 
-	return account, bal, confirmed, nil
+	return account, btcutil.Amount(bal), confirmed, nil
 }
 
 // parseWalletLockStateNtfnParams parses out the account name and locked
@@ -871,7 +872,7 @@ func (r FutureNotifyBlocksResult) Receive() error {
 //
 // See NotifyBlocks for the blocking version and more details.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
@@ -897,7 +898,7 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 // The notifications delivered as a result of this call will be via one of
 // OnBlockConnected or OnBlockDisconnected.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 func (c *Client) NotifyBlocks() error {
 	return c.NotifyBlocksAsync().Receive()
 }
@@ -949,7 +950,7 @@ func newOutPointFromWire(op *wire.OutPoint) btcjson.OutPoint {
 //
 // See NotifySpent for the blocking version and more details.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilterAsync instead.
 func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentResult {
@@ -981,7 +982,7 @@ func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentR
 // The notifications delivered as a result of this call will be via
 // OnRedeemingTx.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilter instead.
 func (c *Client) NotifySpent(outpoints []*wire.OutPoint) error {
@@ -1005,7 +1006,7 @@ func (r FutureNotifyNewTransactionsResult) Receive() error {
 //
 // See NotifyNewTransactionsAsync for the blocking version and more details.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransactionsResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
@@ -1032,7 +1033,7 @@ func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransac
 // OnTxAccepted (when verbose is false) or OnTxAcceptedVerbose (when verbose is
 // true).
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 func (c *Client) NotifyNewTransactions(verbose bool) error {
 	return c.NotifyNewTransactionsAsync(verbose).Receive()
 }
@@ -1076,7 +1077,7 @@ func (c *Client) notifyReceivedInternal(addresses []string) FutureNotifyReceived
 //
 // See NotifyReceived for the blocking version and more details.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilterAsync instead.
 func (c *Client) NotifyReceivedAsync(addresses []btcutil.Address) FutureNotifyReceivedResult {
@@ -1116,7 +1117,7 @@ func (c *Client) NotifyReceivedAsync(addresses []btcutil.Address) FutureNotifyRe
 // of the outpoints which are automatically registered upon receipt of funds to
 // the address).
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilter instead.
 func (c *Client) NotifyReceived(addresses []btcutil.Address) error {
@@ -1148,7 +1149,7 @@ func (r FutureRescanResult) Receive() error {
 // callback for a good callsite to reissue rescan requests on connect and
 // reconnect.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use RescanBlocksAsync instead.
 func (c *Client) RescanAsync(startBlock *chainhash.Hash,
@@ -1213,7 +1214,7 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 // callback for a good callsite to reissue rescan requests on connect and
 // reconnect.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use RescanBlocks instead.
 func (c *Client) Rescan(startBlock *chainhash.Hash,
@@ -1229,7 +1230,7 @@ func (c *Client) Rescan(startBlock *chainhash.Hash,
 //
 // See RescanEndBlock for the blocking version and more details.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use RescanBlocksAsync instead.
 func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
@@ -1291,7 +1292,7 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 //
 // See Rescan to also perform a rescan through current end of the longest chain.
 //
-// NOTE: This is a btcd extension and requires a websocket connection.
+// NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use RescanBlocks instead.
 func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
@@ -1305,14 +1306,14 @@ func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
 // FutureLoadTxFilterResult is a future promise to deliver the result
 // of a LoadTxFilterAsync RPC invocation (or an applicable error).
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 type FutureLoadTxFilterResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the registration was not successful.
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (r FutureLoadTxFilterResult) Receive() error {
 	_, err := receiveFuture(r)
@@ -1325,7 +1326,7 @@ func (r FutureLoadTxFilterResult) Receive() error {
 //
 // See LoadTxFilter for the blocking version and more details.
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (c *Client) LoadTxFilterAsync(reload bool, addresses []btcutil.Address,
 	outPoints []wire.OutPoint) FutureLoadTxFilterResult {
@@ -1350,7 +1351,7 @@ func (c *Client) LoadTxFilterAsync(reload bool, addresses []btcutil.Address,
 // filter.  The filter is consistently updated based on inspected transactions
 // during mempool acceptance, block acceptance, and for all rescanned blocks.
 //
-// NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (c *Client) LoadTxFilter(reload bool, addresses []btcutil.Address, outPoints []wire.OutPoint) error {
 	return c.LoadTxFilterAsync(reload, addresses, outPoints).Receive()

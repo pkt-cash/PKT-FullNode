@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,8 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -119,6 +121,12 @@ type Params struct {
 	// DNSSeeds defines a list of DNS seeds for the network that are used
 	// as one method to discover peers.
 	DNSSeeds []DNSSeed
+
+	// The proof of work algorithm in use on this chain
+	GlobalConf globalcfg.Config
+
+	// The network network steward sig hash as of the first block
+	InitialNetworkSteward []byte
 
 	// GenesisBlock defines the first block of the chain.
 	GenesisBlock *wire.MsgBlock
@@ -236,6 +244,7 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
+	GlobalConf:               globalcfg.BitcoinDefaults(),
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
 	PowLimit:                 mainPowLimit,
@@ -338,6 +347,7 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
+	GlobalConf:               globalcfg.BitcoinDefaults(),
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
@@ -417,6 +427,7 @@ var TestNet3Params = Params{
 	},
 
 	// Chain parameters
+	GlobalConf:               globalcfg.BitcoinDefaults(),
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
@@ -498,6 +509,198 @@ var TestNet3Params = Params{
 	HDCoinType: 1,
 }
 
+// PktTestNetParams defines the network parameters for the test pkt.cash network
+// (version 1).  Not to be confused with the regression test network, this
+// network is sometimes simply called "testnet".
+var PktTestNetParams = Params{
+	Name:        "pkttest",
+	Net:         wire.PktTestNet,
+	DefaultPort: "64512",
+	DNSSeeds: []DNSSeed{
+		{"testseed.cjd.li", false},
+		{"testseed.anode.co", false},
+		{"testseed.gridfinity.com", false},
+	},
+
+	// Chain parameters
+	GlobalConf: globalcfg.Config{
+		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
+		HasNetworkSteward:    true,
+		SatoshiPerBitcoin:    0x40000000,
+		MaxSatoshi:           0x40000000 * 6000000000,
+
+		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
+		// algorithm depends on the number being odd
+		MedianTimeBlocks: 111,
+
+		// 1/10th that of bitcoin, because blocks come at a 10x rate
+		MaxTimeOffsetSeconds: 60 * 12,
+	},
+	InitialNetworkSteward: []byte{
+		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
+		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,
+		0x9e, 0xb1, 0x5a, 0x57, 0x51, 0x6a, 0xee, 0xfa,
+		0xbb, 0xbc, 0x06, 0x22, 0x65, 0xf6, 0x7e, 0x30,
+		0x8f, 0x2b,
+	},
+	GenesisBlock:             &pktTestNetGenesisBlock,
+	GenesisHash:              &pktTestNetGenesisHash,
+	PowLimitBits:             0x1f0fffff,
+	BIP0034Height:            0,
+	BIP0065Height:            0,
+	BIP0066Height:            0,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 2100000,
+	TargetTimespan:           (time.Hour * 24 * 14) / 10, // 14 days
+	TargetTimePerBlock:       time.Minute,                // 1 minute
+	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
+	MinerConfirmationWindow:       2016,
+	Deployments: [DefinedDeployments]ConsensusDeployment{
+		DeploymentTestDummy: {
+			BitNumber:  28,
+			StartTime:  1199145601, // January 1, 2008 UTC
+			ExpireTime: 1230767999, // December 31, 2008 UTC
+		},
+		DeploymentCSV: {
+			StartTime:  math.MaxInt64,
+			ExpireTime: math.MaxInt64,
+		},
+		DeploymentSegwit: {
+			StartTime:  math.MaxInt64,
+			ExpireTime: math.MaxInt64,
+		},
+	},
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "tp", // always tp for test net
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x6f, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	WitnessPubKeyHashAddrID: 0x03, // starts with QW
+	WitnessScriptHashAddrID: 0x28, // starts with T7n
+	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 252,
+}
+
+// PktMainNetParams defines the network parameters for the pkt.cash network.
+var PktMainNetParams = Params{
+	Name:        "pkt",
+	Net:         wire.PktMainNet,
+	DefaultPort: "64764",
+	DNSSeeds: []DNSSeed{
+		{"seed.cjd.li", false},
+		{"seed.anode.co", false},
+		{"seed.gridfinity.com", false},
+	},
+
+	// Chain parameters
+	GlobalConf: globalcfg.Config{
+		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
+		HasNetworkSteward:    true,
+		SatoshiPerBitcoin:    0x40000000,
+		MaxSatoshi:           0x40000000 * 6000000000,
+
+		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
+		// algorithm depends on the number being odd
+		MedianTimeBlocks: 111,
+
+		// 1/10th that of bitcoin, because blocks come at a 10x rate
+		MaxTimeOffsetSeconds: 60 * 12,
+	},
+	InitialNetworkSteward: []byte{
+		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
+		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,
+		0x9e, 0xb1, 0x5a, 0x57, 0x51, 0x6a, 0xee, 0xfa,
+		0xbb, 0xbc, 0x06, 0x22, 0x65, 0xf6, 0x7e, 0x30,
+		0x8f, 0x2b,
+	},
+	GenesisBlock:             &pktTestNetGenesisBlock,
+	GenesisHash:              &pktTestNetGenesisHash,
+	PowLimitBits:             0x1f0fffff,
+	BIP0034Height:            0,
+	BIP0065Height:            0,
+	BIP0066Height:            0,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 2100000,
+	TargetTimespan:           (time.Hour * 24 * 14) / 10, // 14 days
+	TargetTimePerBlock:       time.Minute,                // 1 minute
+	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
+	MinerConfirmationWindow:       2016,
+	Deployments: [DefinedDeployments]ConsensusDeployment{
+		DeploymentTestDummy: {
+			BitNumber:  28,
+			StartTime:  1199145601, // January 1, 2008 UTC
+			ExpireTime: 1230767999, // December 31, 2008 UTC
+		},
+		DeploymentCSV: {
+			StartTime:  math.MaxInt64,
+			ExpireTime: math.MaxInt64,
+		},
+		DeploymentSegwit: {
+			StartTime:  math.MaxInt64,
+			ExpireTime: math.MaxInt64,
+		},
+	},
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "pk", // always tm for test net
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x6f, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	WitnessPubKeyHashAddrID: 0x03, // starts with QW
+	WitnessScriptHashAddrID: 0x28, // starts with T7n
+	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 1,
+}
+
 // SimNetParams defines the network parameters for the simulation test Bitcoin
 // network.  This network is similar to the normal test network except it is
 // intended for private use within a group of individuals doing simulation
@@ -512,6 +715,9 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
+	GlobalConf: globalcfg.Config{
+		ProofOfWorkAlgorithm: globalcfg.PowSha256,
+	},
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
@@ -707,6 +913,7 @@ func init() {
 	// Register all default networks when the package is initialized.
 	mustRegister(&MainNetParams)
 	mustRegister(&TestNet3Params)
+	mustRegister(&PktTestNetParams)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
 }

@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,9 +15,9 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // An opcode defines the information related to a txscript opcode.  opfunc, if
@@ -138,7 +139,7 @@ const (
 	OP_IF                  = 0x63 // 99
 	OP_NOTIF               = 0x64 // 100
 	OP_VERIF               = 0x65 // 101
-	OP_VERNOTIF            = 0x66 // 102
+	OP_VOTE                = 0x66 // 102 repurpose OP_VERNOTIF
 	OP_ELSE                = 0x67 // 103
 	OP_ENDIF               = 0x68 // 104
 	OP_VERIFY              = 0x69 // 105
@@ -412,7 +413,7 @@ var opcodeArray = [256]opcode{
 	OP_IF:                  {OP_IF, "OP_IF", 1, opcodeIf},
 	OP_NOTIF:               {OP_NOTIF, "OP_NOTIF", 1, opcodeNotIf},
 	OP_VERIF:               {OP_VERIF, "OP_VERIF", 1, opcodeReserved},
-	OP_VERNOTIF:            {OP_VERNOTIF, "OP_VERNOTIF", 1, opcodeReserved},
+	OP_VOTE:                {OP_VOTE, "OP_VOTE", 1, opcode2Drop},
 	OP_ELSE:                {OP_ELSE, "OP_ELSE", 1, opcodeElse},
 	OP_ENDIF:               {OP_ENDIF, "OP_ENDIF", 1, opcodeEndif},
 	OP_VERIFY:              {OP_VERIFY, "OP_VERIFY", 1, opcodeVerify},
@@ -662,8 +663,6 @@ func (pop *parsedOpcode) isDisabled() bool {
 func (pop *parsedOpcode) alwaysIllegal() bool {
 	switch pop.opcode.value {
 	case OP_VERIF:
-		return true
-	case OP_VERNOTIF:
 		return true
 	default:
 		return false

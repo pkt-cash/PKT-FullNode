@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,11 +9,12 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // *****************************
@@ -1357,12 +1359,12 @@ func (r FutureListAccountsResult) Receive() (map[string]btcutil.Amount, error) {
 
 	accountsMap := make(map[string]btcutil.Amount)
 	for k, v := range accounts {
-		amount, err := btcutil.NewAmount(v)
+		amount, err := globalcfg.NewAmount(v)
 		if err != nil {
 			return nil, err
 		}
 
-		accountsMap[k] = amount
+		accountsMap[k] = btcutil.Amount(amount)
 	}
 
 	return accountsMap, nil
@@ -1424,12 +1426,12 @@ func (r FutureGetBalanceResult) Receive() (btcutil.Amount, error) {
 		return 0, err
 	}
 
-	amount, err := btcutil.NewAmount(balance)
+	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
 		return 0, err
 	}
 
-	return amount, nil
+	return btcutil.Amount(amount), nil
 }
 
 // FutureGetBalanceParseResult is same as FutureGetBalanceResult except
@@ -1457,12 +1459,12 @@ func (r FutureGetBalanceParseResult) Receive() (btcutil.Amount, error) {
 	if err != nil {
 		return 0, err
 	}
-	amount, err := btcutil.NewAmount(balance)
+	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
 		return 0, err
 	}
 
-	return amount, nil
+	return btcutil.Amount(amount), nil
 }
 
 // GetBalanceAsync returns an instance of a type that can be used to get the
@@ -1527,12 +1529,12 @@ func (r FutureGetReceivedByAccountResult) Receive() (btcutil.Amount, error) {
 		return 0, err
 	}
 
-	amount, err := btcutil.NewAmount(balance)
+	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
 		return 0, err
 	}
 
-	return amount, nil
+	return btcutil.Amount(amount), nil
 }
 
 // GetReceivedByAccountAsync returns an instance of a type that can be used to
@@ -1592,12 +1594,12 @@ func (r FutureGetUnconfirmedBalanceResult) Receive() (btcutil.Amount, error) {
 		return 0, err
 	}
 
-	amount, err := btcutil.NewAmount(balance)
+	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
 		return 0, err
 	}
 
-	return amount, nil
+	return btcutil.Amount(amount), nil
 }
 
 // GetUnconfirmedBalanceAsync returns an instance of a type that can be used to
@@ -1636,12 +1638,12 @@ func (r FutureGetReceivedByAddressResult) Receive() (btcutil.Amount, error) {
 		return 0, err
 	}
 
-	amount, err := btcutil.NewAmount(balance)
+	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
 		return 0, err
 	}
 
-	return amount, nil
+	return btcutil.Amount(amount), nil
 }
 
 // GetReceivedByAddressAsync returns an instance of a type that can be used to
@@ -2225,7 +2227,7 @@ func (c *Client) ImportPubKeyRescan(pubKey string, rescan bool) error {
 // Miscellaneous Functions
 // ***********************
 
-// NOTE: While getinfo is implemented here (in wallet.go), a btcd chain server
+// NOTE: While getinfo is implemented here (in wallet.go), a pktd chain server
 // will respond to getinfo requests as well, excluding any wallet information.
 
 // FutureGetInfoResult is a future promise to deliver the result of a
@@ -2268,12 +2270,12 @@ func (c *Client) GetInfo() (*btcjson.InfoWalletResult, error) {
 }
 
 // TODO(davec): Implement
-// backupwallet (NYI in btcwallet)
-// encryptwallet (Won't be supported by btcwallet since it's always encrypted)
-// getwalletinfo (NYI in btcwallet or btcjson)
-// listaddressgroupings (NYI in btcwallet)
-// listreceivedbyaccount (NYI in btcwallet)
+// backupwallet (NYI in pktwallet)
+// encryptwallet (Won't be supported by pktwallet since it's always encrypted)
+// getwalletinfo (NYI in pktwallet or btcjson)
+// listaddressgroupings (NYI in pktwallet)
+// listreceivedbyaccount (NYI in pktwallet)
 
 // DUMP
-// importwallet (NYI in btcwallet)
-// dumpwallet (NYI in btcwallet)
+// importwallet (NYI in pktwallet)
+// dumpwallet (NYI in pktwallet)

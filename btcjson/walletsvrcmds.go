@@ -1,4 +1,5 @@
 // Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -25,6 +26,12 @@ func NewAddMultisigAddressCmd(nRequired int, keys []string, account *string) *Ad
 		Keys:      keys,
 		Account:   account,
 	}
+}
+
+type AddP2shScriptCmd struct {
+	Script  string
+	Segwit  bool
+	Account *string
 }
 
 // AddWitnessAddressCmd defines the addwitnessaddress JSON-RPC command.
@@ -496,6 +503,16 @@ func NewSendFromCmd(fromAccount, toAddress string, amount float64, minConf *int,
 	}
 }
 
+type CreateTransactionCmd struct {
+	FromAccount    string
+	ToAddress      string
+	Amount         float64
+	ElectrumFormat *bool
+	ChangeAddress  *string
+	MinConf        *int `jsonrpcdefault:"1"`
+	Vote           *bool
+}
+
 // SendManyCmd defines the sendmany JSON-RPC command.
 type SendManyCmd struct {
 	FromAccount string
@@ -653,13 +670,37 @@ func NewWalletPassphraseChangeCmd(oldPassphrase, newPassphrase string) *WalletPa
 	}
 }
 
+// SetNetworkStewardVoteCmd is the argument to the wallet command setnetworkstewardvote
+type SetNetworkStewardVoteCmd struct {
+	Account     *string `json:"account"`
+	VoteFor     *string `json:"votefor"`
+	VoteAgainst *string `json:"voteagainst"`
+}
+
+// NewSetNetworkStewardVoteCmd creates the argument to the wallet command setnetworkstewardvote
+func NewSetNetworkStewardVoteCmd(voteFor *string, voteAgainst *string) *SetNetworkStewardVoteCmd {
+	return &SetNetworkStewardVoteCmd{VoteFor: voteFor, VoteAgainst: voteAgainst}
+}
+
+// GetNetworkStewardVoteCmd is the argument to the wallet command getnetworkstewardvote
+type GetNetworkStewardVoteCmd struct {
+	Account *string `json:"account"`
+}
+
+// NewGetNetworkStewardVoteCmd creates the argument to the wallet command getnetworkstewardvote
+func NewGetNetworkStewardVoteCmd(account *string) *GetNetworkStewardVoteCmd {
+	return &GetNetworkStewardVoteCmd{Account: account}
+}
+
 func init() {
 	// The commands in this file are only usable with a wallet server.
 	flags := UFWalletOnly
 
 	MustRegisterCmd("addmultisigaddress", (*AddMultisigAddressCmd)(nil), flags)
+	MustRegisterCmd("addp2shscript", (*AddP2shScriptCmd)(nil), flags)
 	MustRegisterCmd("addwitnessaddress", (*AddWitnessAddressCmd)(nil), flags)
 	MustRegisterCmd("createmultisig", (*CreateMultisigCmd)(nil), flags)
+	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("encryptwallet", (*EncryptWalletCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
@@ -668,6 +709,7 @@ func init() {
 	MustRegisterCmd("getaccountaddress", (*GetAccountAddressCmd)(nil), flags)
 	MustRegisterCmd("getaddressesbyaccount", (*GetAddressesByAccountCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
+	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)
 	MustRegisterCmd("getrawchangeaddress", (*GetRawChangeAddressCmd)(nil), flags)
 	MustRegisterCmd("getreceivedbyaccount", (*GetReceivedByAccountCmd)(nil), flags)
@@ -690,6 +732,7 @@ func init() {
 	MustRegisterCmd("sendmany", (*SendManyCmd)(nil), flags)
 	MustRegisterCmd("sendtoaddress", (*SendToAddressCmd)(nil), flags)
 	MustRegisterCmd("setaccount", (*SetAccountCmd)(nil), flags)
+	MustRegisterCmd("setnetworkstewardvote", (*SetNetworkStewardVoteCmd)(nil), flags)
 	MustRegisterCmd("settxfee", (*SetTxFeeCmd)(nil), flags)
 	MustRegisterCmd("signmessage", (*SignMessageCmd)(nil), flags)
 	MustRegisterCmd("signrawtransaction", (*SignRawTransactionCmd)(nil), flags)

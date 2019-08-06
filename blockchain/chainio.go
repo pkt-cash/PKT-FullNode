@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,15 +8,16 @@ package blockchain
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -66,6 +68,10 @@ var (
 	// utxoSetBucketName is the name of the db bucket used to house the
 	// unspent transaction output set.
 	utxoSetBucketName = []byte("utxosetv2")
+
+	// electionStateBucketName is the place where all election states for
+	// each block which is or was at some point the tip of the best chain.
+	electionStateBucketName = []byte("electionstate")
 
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
@@ -148,6 +154,47 @@ func dbFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 	}
 
 	return version, nil
+}
+
+// serializeElectionState returns the serialization of the passed election state.
+func serializeElectionState(state ElectionState) []byte {
+	// Calculate the full size needed to serialize the es
+	serializedLen := 8 + len(state.NetworkSteward)
+
+	serializedData := make([]byte, serializedLen)
+	byteOrder.PutUint64(serializedData[0:8], uint64(state.Disapproval))
+	copy(serializedData[8:8+len(state.NetworkSteward)], state.NetworkSteward[:])
+	return serializedData[:]
+}
+
+func deserializeElectionState(serialized []byte) (ElectionState, error) {
+	if len(serialized) < 8 {
+		d := fmt.Sprintf("corrupt election state [%v]", hex.EncodeToString(serialized))
+		return ElectionState{}, database.Error{
+			ErrorCode:   database.ErrCorruption,
+			Description: d,
+		}
+	}
+	state := ElectionState{}
+	state.Disapproval = int64(byteOrder.Uint64(serialized[0:8]))
+	state.NetworkSteward = serialized[8:]
+	return state, nil
+}
+
+func dbPutElectionState(dbTx database.Tx, node *blockNode, newEs *ElectionState) error {
+	electionBucket := dbTx.Metadata().Bucket(electionStateBucketName)
+	serialized := serializeElectionState(*newEs)
+	return electionBucket.Put(node.hash[:], serialized)
+}
+
+func dbFetchElectionStateByNode(dbTx database.Tx, node *blockNode) (*ElectionState, error) {
+	electionBucket := dbTx.Metadata().Bucket(electionStateBucketName)
+	serialized := electionBucket.Get(node.hash[:])
+	es, err := deserializeElectionState(serialized)
+	if err != nil {
+		return nil, err
+	}
+	return &es, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -687,6 +734,7 @@ func deserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	}
 	if isCoinBase {
 		entry.packedFlags |= tfCoinBase
+		dirtyGuessIsNetworkStewardPayment(entry)
 	}
 
 	return entry, nil
@@ -1006,7 +1054,8 @@ func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := btcutil.NewBlock(b.chainParams.GenesisBlock)
 	genesisBlock.SetHeight(0)
-	header := &genesisBlock.MsgBlock().Header
+	mBlock := genesisBlock.MsgBlock()
+	header := &mBlock.Header
 	node := newBlockNode(header, nil)
 	node.status = statusDataStored | statusValid
 	b.bestChain.SetTip(node)
@@ -1014,13 +1063,18 @@ func (b *BlockChain) createChainState() error {
 	// Add the new node to the index which is used for faster lookups.
 	b.index.addNode(node)
 
+	esState := ElectionState{
+		NetworkSteward: b.chainParams.InitialNetworkSteward,
+		Disapproval:    0,
+	}
+
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
 	numTxns := uint64(len(genesisBlock.MsgBlock().Transactions))
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(GetBlockWeight(genesisBlock))
 	b.stateSnapshot = newBestState(node, blockSize, blockWeight, numTxns,
-		numTxns, time.Unix(node.timestamp, 0))
+		numTxns, time.Unix(node.timestamp, 0), &esState)
 
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -1088,6 +1142,16 @@ func (b *BlockChain) createChainState() error {
 
 		// Store the current best chain state into the database.
 		err = dbPutBestState(dbTx, b.stateSnapshot, node.workSum)
+		if err != nil {
+			return err
+		}
+
+		// Store the election state.
+		_, err = meta.CreateBucket(electionStateBucketName)
+		if err != nil {
+			return err
+		}
+		err = dbPutElectionState(dbTx, node, &esState)
 		if err != nil {
 			return err
 		}
@@ -1240,12 +1304,17 @@ func (b *BlockChain) initChainState() error {
 			}
 		}
 
+		esState, err := dbFetchElectionStateByNode(dbTx, tip)
+		if err != nil {
+			return err
+		}
+
 		// Initialize the state related to the best block.
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(GetBlockWeight(btcutil.NewBlock(&block)))
 		numTxns := uint64(len(block.Transactions))
 		b.stateSnapshot = newBestState(tip, blockSize, blockWeight,
-			numTxns, state.totalTxns, tip.CalcPastMedianTime())
+			numTxns, state.totalTxns, tip.CalcPastMedianTime(), esState)
 
 		return nil
 	})

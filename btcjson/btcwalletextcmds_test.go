@@ -11,10 +11,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcjson"
+	"github.com/pkt-cash/pktd/btcjson"
 )
 
-// TestBtcWalletExtCmds tests all of the btcwallet extended commands marshal and
+// TestBtcWalletExtCmds tests all of the pktwallet extended commands marshal and
 // unmarshal into valid results include handling of optional fields being
 // omitted in the marshalled command, while optional fields with defaults have
 // the default assigned on unmarshalled commands.

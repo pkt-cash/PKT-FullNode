@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,11 +8,12 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // txoFlags is a bitmask defining additional information and state for a
@@ -28,6 +30,11 @@ const (
 	// tfModified indicates that a txout has been modified since it was
 	// loaded.
 	tfModified
+
+	// tfNetworkSteward indicates that a txout has been identified as a payment
+	// of the tax to the network steward, and thus will be subject to expiration
+	// rules.
+	tfNetworkSteward
 )
 
 // UtxoEntry houses details about an individual transaction output in a utxo
@@ -50,6 +57,12 @@ type UtxoEntry struct {
 	// since it was loaded.  This approach is used in order to reduce memory
 	// usage since there will be a lot of these in memory.
 	packedFlags txoFlags
+}
+
+// isNetworkSteward returns whether or not this output has been identified as
+// a payment of the Network Steward mining tax.
+func (entry *UtxoEntry) isNetworkSteward() bool {
+	return entry.packedFlags&tfNetworkSteward == tfNetworkSteward
 }
 
 // isModified returns whether or not the output has been modified since it was
@@ -170,6 +183,7 @@ func (view *UtxoViewpoint) addTxOut(outpoint wire.OutPoint, txOut *wire.TxOut, i
 	if isCoinBase {
 		entry.packedFlags |= tfCoinBase
 	}
+	dirtyGuessIsNetworkStewardPayment(entry)
 }
 
 // AddTxOut adds the specified output of the passed transaction to the view if
@@ -304,6 +318,28 @@ func (view *UtxoViewpoint) fetchEntryByHash(db database.DB, hash *chainhash.Hash
 	return entry, err
 }
 
+// dirtyGuessIsNetworkStewardPayment tries to determine whether this utxo is a
+// payment to the network steward. Ideally the UTXO would carry this flag into
+// the spent txo database, but in the interest of compactness, that datastructure
+// has no extensibility, so rather than rewrite that entire codebase, we'll simply
+// treat any coinbase txo which pays exactly the amount of the network steward tax,
+// as a network steward tax.
+// However, we need to be sure that we apply this same rule all of the time, so that
+// the consensus rules do not spontanously change after a transaction is rolled back.
+func dirtyGuessIsNetworkStewardPayment(entry *UtxoEntry) {
+	if !globalcfg.HasNetworkSteward() {
+		return
+	}
+	if entry.packedFlags|tfCoinBase != tfCoinBase {
+		return
+	}
+	subsidy := pktCalcBlockSubsidy(pktPeriodForBlock(entry.blockHeight))
+	tax := PktCalcNetworkStewardPayout(subsidy)
+	if entry.amount == tax {
+		entry.packedFlags |= tfNetworkSteward
+	}
+}
+
 // disconnectTransactions updates the view by removing all of the transactions
 // created by the passed block, restoring all utxos the transactions spent by
 // using the provided spent txo information, and setting the best hash for the
@@ -357,6 +393,7 @@ func (view *UtxoViewpoint) disconnectTransactions(db database.DB, block *btcutil
 					blockHeight: block.Height(),
 					packedFlags: packedFlags,
 				}
+				dirtyGuessIsNetworkStewardPayment(entry)
 
 				view.entries[prevOut] = entry
 			}
@@ -429,6 +466,7 @@ func (view *UtxoViewpoint) disconnectTransactions(db database.DB, block *btcutil
 			if stxo.IsCoinBase {
 				entry.packedFlags |= tfCoinBase
 			}
+			dirtyGuessIsNetworkStewardPayment(entry)
 		}
 	}
 

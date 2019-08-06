@@ -1,5 +1,6 @@
 // Copyright (c) 2013-2017 The btcsuite developers
 // Copyright (c) 2015-2017 The Decred developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -27,21 +28,23 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/blockchain/indexers"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/mempool"
-	"github.com/btcsuite/btcd/mining"
-	"github.com/btcsuite/btcd/mining/cpuminer"
-	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/websocket"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/blockchain/indexers"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/mining"
+	"github.com/pkt-cash/pktd/mining/cpuminer"
+	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // API version constants
@@ -156,8 +159,11 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getmininginfo":         handleGetMiningInfo,
 	"getnettotals":          handleGetNetTotals,
 	"getnetworkhashps":      handleGetNetworkHashPS,
+	"getnetworksteward":     handleGetNetworkSteward,
 	"getpeerinfo":           handleGetPeerInfo,
 	"getrawmempool":         handleGetRawMempool,
+	"getrawblocktemplate":   handleGetRawBlockTemplate,
+	"checkpcshare":          handleCheckPcShare,
 	"getrawtransaction":     handleGetRawTransaction,
 	"gettxout":              handleGetTxOut,
 	"help":                  handleHelp,
@@ -175,11 +181,12 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"version":               handleVersion,
 }
 
-// list of commands that we recognize, but for which btcd has no support because
+// list of commands that we recognize, but for which pktd has no support because
 // it lacks support for wallet functionality. For these commands the user
-// should ask a connected instance of btcwallet.
+// should ask a connected instance of pktwallet.
 var rpcAskWallet = map[string]struct{}{
 	"addmultisigaddress":     {},
+	"addp2shscript":          {},
 	"backupwallet":           {},
 	"createencryptedwallet":  {},
 	"createmultisig":         {},
@@ -354,7 +361,7 @@ func handleUnimplemented(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 
 // handleAskWallet is the handler for commands that are recognized as valid, but
 // are unable to answer correctly since it involves wallet state.
-// These commands will be implemented in btcwallet.
+// These commands will be implemented in pktwallet.
 func handleAskWallet(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	return nil, ErrRPCNoWallet
 }
@@ -543,7 +550,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 	params := s.cfg.ChainParams
 	for encodedAddr, amount := range c.Amounts {
 		// Ensure amount is in the valid range for monetary amounts.
-		if amount <= 0 || amount > btcutil.MaxSatoshi {
+		if amount <= 0 || amount > float64(globalcfg.MaxSatoshi()) {
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCType,
 				Message: "Invalid amount",
@@ -587,7 +594,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 		}
 
 		// Convert the amount to satoshi.
-		satoshi, err := btcutil.NewAmount(amount)
+		satoshi, err := globalcfg.NewAmount(amount)
 		if err != nil {
 			context := "Failed to convert amount"
 			return nil, internalRPCError(err.Error(), context)
@@ -991,7 +998,7 @@ func handleGetAddedNodeInfo(s *rpcServer, cmd interface{}, closeChan <-chan stru
 		default:
 			// Do a DNS lookup for the address.  If the lookup fails, just
 			// use the host.
-			ips, err := btcdLookup(host)
+			ips, err := pktdLookup(host)
 			if err != nil {
 				ipList = make([]string, 1)
 				ipList[0] = host
@@ -1570,7 +1577,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// block template doesn't include the coinbase, so the caller
 		// will ultimately create their own coinbase which pays to the
 		// appropriate address(es).
-		blkTemplate, err := generator.NewBlockTemplate(payAddr)
+		blkTemplate, err := generator.NewBlockTemplate(payAddr, nil)
 		if err != nil {
 			return internalRPCError("Failed to create new block "+
 				"template: "+err.Error(), "")
@@ -1668,7 +1675,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	msgBlock := template.Block
 	header := &msgBlock.Header
 	adjustedTime := state.timeSource.AdjustedTime()
-	maxTime := adjustedTime.Add(time.Second * blockchain.MaxTimeOffsetSeconds)
+	maxTime := adjustedTime.Add(time.Second * globalcfg.GetMaxTimeOffsetSeconds())
 	if header.Timestamp.After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
@@ -1938,14 +1945,14 @@ func handleGetBlockTemplateRequest(s *rpcServer, request *btcjson.TemplateReques
 	// way to relay a found block or receive transactions to work on.
 	// However, allow this state when running in the regression test or
 	// simulation test mode.
-	if !(cfg.RegressionTest || cfg.SimNet) &&
-		s.cfg.ConnMgr.ConnectedCount() == 0 {
+	// if !(cfg.RegressionTest || cfg.SimNet) &&
+	// 	s.cfg.ConnMgr.ConnectedCount() == 0 {
 
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCClientNotConnected,
-			Message: "Bitcoin is not connected",
-		}
-	}
+	// 	return nil, &btcjson.RPCError{
+	// 		Code:    btcjson.ErrRPCClientNotConnected,
+	// 		Message: "Bitcoin is not connected",
+	// 	}
+	// }
 
 	// No point in generating or accepting work before the chain is synced.
 	currentHeight := s.cfg.Chain.BestSnapshot().Height
@@ -1979,6 +1986,164 @@ func handleGetBlockTemplateRequest(s *rpcServer, request *btcjson.TemplateReques
 		return nil, err
 	}
 	return state.blockTemplateResult(useCoinbaseValue, nil)
+}
+
+func handleGetRawBlockTemplate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+
+	if len(cfg.miningAddrs) == 0 {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCInternal.Code,
+			Message: "A coinbase transaction has been requested, " +
+				"but the server has not been configured with " +
+				"any payment addresses via --miningaddr",
+		}
+	}
+
+	// Protect concurrent access when updating block templates.
+	state := s.gbtWorkState
+	state.Lock()
+	defer state.Unlock()
+
+	if err := state.updateBlockTemplate(s, false); err != nil {
+		return nil, err
+	}
+	msgBlock := state.template.Block
+
+	// Mutate the coinbase but then put it back after
+	coinbase := msgBlock.Transactions[0]
+	packetcrypt.InsertCoinbaseCommit(coinbase, wire.NewPcCoinbaseCommit())
+	defer func() { coinbase.TxOut = coinbase.TxOut[:len(coinbase.TxOut)-1] }()
+
+	block := btcutil.NewBlock(msgBlock)
+	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
+	proof := blockchain.GetMerkleBranch(0, merkles)
+	oldRoot := msgBlock.Header.MerkleRoot
+	msgBlock.Header.MerkleRoot = *merkles[len(merkles)-1]
+	defer func() { msgBlock.Header.MerkleRoot = oldRoot }()
+
+	headerBuf := bytes.NewBuffer(make([]byte, 0, 80))
+	if err := msgBlock.Header.BtcEncode(headerBuf, 0, 0); err != nil {
+		return nil, err
+	}
+
+	proofStr := make([]string, 0, len(proof))
+	for i := 0; i < len(proof); i++ {
+		proofStr = append(proofStr, hex.EncodeToString(proof[i][:]))
+	}
+
+	transactionsStr := make([]string, 0, len(msgBlock.Transactions))
+	for i := 0; i < len(msgBlock.Transactions); i++ {
+		txBuf := bytes.NewBuffer(make([]byte, 0))
+		if err := msgBlock.Transactions[i].BtcEncode(txBuf, 0, wire.WitnessEncoding); err != nil {
+			return nil, err
+		}
+		transactionsStr = append(transactionsStr, hex.EncodeToString(txBuf.Bytes()))
+	}
+
+	txBuf := bytes.NewBuffer(make([]byte, 0))
+	if err := coinbase.BtcEncode(txBuf, 0, 0); err != nil {
+		return nil, err
+	}
+	cbnw := hex.EncodeToString(txBuf.Bytes())
+
+	height, _ := blockchain.ExtractCoinbaseHeight(btcutil.NewTx(coinbase))
+
+	return &btcjson.GetRawBlockTemplateResult{
+		Height:            height,
+		Header:            hex.EncodeToString(headerBuf.Bytes()),
+		CoinbaseNoWitness: cbnw,
+		MerkleBranch:      proofStr,
+		Transactions:      transactionsStr,
+	}, nil
+}
+
+func handleCheckPcShare(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	cx := cmd.(*btcjson.CheckPcShareCmd)
+	c := cx.Request
+	if c == nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCDeserialization,
+			Message: "Share decode failed: request missing",
+		}
+	}
+
+	hexStr := c.HexBlock
+	if len(hexStr)%2 != 0 {
+		hexStr = "0" + hexStr
+	}
+	serializedBlock, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, rpcDecodeHexError(hexStr)
+	}
+
+	block, err := btcutil.NewBlockFromBytes(serializedBlock)
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCDeserialization,
+			Message: "Share decode failed: " + err.Error(),
+		}
+	}
+
+	hexStr = c.Coinbase
+	if len(hexStr)%2 != 0 {
+		hexStr = "0" + hexStr
+	}
+	serializedTx, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, rpcDecodeHexError(hexStr)
+	}
+	buf := bytes.NewBuffer(serializedTx)
+
+	mb := block.MsgBlock()
+	mb.Transactions = append(mb.Transactions, &wire.MsgTx{})
+	if err := mb.Transactions[0].BtcDecode(buf, 0, 0); err != nil {
+		return nil, err
+	}
+
+	// Check #1, does the merkle branch match + the coinbase match the merkle root?
+	txHash := mb.Transactions[0].TxHash()
+	for _, hashHex := range c.MerkleBranch {
+		hash, err := hex.DecodeString(hashHex)
+		if err != nil {
+			return nil, rpcDecodeHexError(hashHex)
+		}
+		var buf [64]byte
+		copy(buf[:32], txHash[:])
+		copy(buf[32:], hash)
+		txHash = chainhash.DoubleHashH(buf[:])
+	}
+	if bytes.Compare(txHash[:], mb.Header.MerkleRoot[:]) != 0 {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCVerify,
+			Message: fmt.Sprintf("Share validation failed: merkle root mismatch, expected [%s]"+
+				" but got [%s]", hex.EncodeToString(mb.Header.MerkleRoot[:]),
+				hex.EncodeToString(txHash[:])),
+		}
+	}
+
+	// Check #2, do the anns reference real blocks?
+	var parentHashes [4]*chainhash.Hash
+	for i, ann := range mb.Pcp.Announcements {
+		height := ann.GetParentBlockHeight()
+		parentHashes[i], err = s.cfg.Chain.BlockHashByHeight(int32(height))
+		if err != nil {
+			return nil, &btcjson.RPCError{
+				Code: btcjson.ErrRPCVerify,
+				Message: fmt.Sprintf("Share validation failed: could not get parent "+
+					"hash at height [%d] for announcement [%d]", height, i),
+			}
+		}
+	}
+
+	// Check #3, does it hash?
+	blockOk, err := packetcrypt.ValidatePcBlock(mb, c.Height, c.ShareTarget, parentHashes[:])
+	if err != nil {
+		return nil, err
+	}
+	if blockOk {
+		return "RESUBMIT_AS_BLOCK", nil
+	}
+	return "OK", nil
 }
 
 // chainErrToGBTErrString converts an error returned from btcchain to a string
@@ -2473,6 +2638,15 @@ func handleGetNetworkHashPS(s *rpcServer, cmd interface{}, closeChan <-chan stru
 
 	hashesPerSec := new(big.Int).Div(totalWork, big.NewInt(timeDiff))
 	return hashesPerSec.Int64(), nil
+}
+
+func handleGetNetworkSteward(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	best := s.cfg.Chain.BestSnapshot()
+	return &btcjson.GetNetworkStewardResult{
+		Script:        hex.EncodeToString(best.Elect.NetworkSteward),
+		VotesAgainst:  best.Elect.Disapproval,
+		TotalPossible: blockchain.PktCalcTotalMoney(best.Height),
+	}, nil
 }
 
 // handleGetPeerInfo implements the getpeerinfo command.
@@ -3440,7 +3614,7 @@ func handleStop(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (inter
 	case s.requestProcessShutdown <- struct{}{}:
 	default:
 	}
-	return "btcd stopping.", nil
+	return "pktd stopping.", nil
 }
 
 // handleSubmitBlock implements the submitblock command.
@@ -3617,7 +3791,7 @@ func handleVerifyMessage(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 // NOTE: This is a btcsuite extension ported from github.com/decred/dcrd.
 func handleVersion(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	result := map[string]btcjson.VersionResult{
-		"btcdjsonrpcapi": {
+		"pktdjsonrpcapi": {
 			VersionString: jsonrpcSemverString,
 			Major:         jsonrpcSemverMajor,
 			Minor:         jsonrpcSemverMinor,
@@ -4038,7 +4212,7 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 
 // jsonAuthFail sends a message back to the client if the http auth is rejected.
 func jsonAuthFail(w http.ResponseWriter) {
-	w.Header().Add("WWW-Authenticate", `Basic realm="btcd RPC"`)
+	w.Header().Add("WWW-Authenticate", `Basic realm="pktd RPC"`)
 	http.Error(w, "401 Unauthorized.", http.StatusUnauthorized)
 }
 
@@ -4119,7 +4293,7 @@ func (s *rpcServer) Start() {
 func genCertPair(certFile, keyFile string) error {
 	rpcsLog.Infof("Generating TLS certificates...")
 
-	org := "btcd autogenerated cert"
+	org := "pktd autogenerated cert"
 	validUntil := time.Now().Add(10 * 365 * 24 * time.Hour)
 	cert, key, err := btcutil.NewTLSCertPair(org, validUntil, nil)
 	if err != nil {

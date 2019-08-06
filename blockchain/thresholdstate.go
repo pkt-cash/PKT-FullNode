@@ -1,4 +1,5 @@
 // Copyright (c) 2016-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,8 +7,9 @@ package blockchain
 
 import (
 	"fmt"
+	"math"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // ThresholdState define the various threshold states used when voting on
@@ -127,6 +129,12 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+
+	// Handle the case where it's hard-wired in the parameters
+	if checker.BeginTime() == math.MaxInt64 && checker.EndTime() == math.MaxInt64 {
+		return ThresholdActive, nil
+	}
+
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := int32(checker.MinerConfirmationWindow())

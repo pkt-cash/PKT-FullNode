@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // AddNodeSubCmd defines the type used in the addnode JSON-RPC command for the
@@ -433,6 +434,15 @@ func NewGetNetworkHashPSCmd(numBlocks, height *int) *GetNetworkHashPSCmd {
 	}
 }
 
+// GetNetworkStewardCmd defines the getnetworksteward JSON-RPC command.
+type GetNetworkStewardCmd struct{}
+
+// NewGetNetworkStewardCmd returns a new instance which can be used to issue a getnetworksteward
+// JSON-RPC command.
+func NewGetNetworkStewardCmd() *GetNetworkStewardCmd {
+	return &GetNetworkStewardCmd{}
+}
+
 // GetPeerInfoCmd defines the getpeerinfo JSON-RPC command.
 type GetPeerInfoCmd struct{}
 
@@ -440,6 +450,24 @@ type GetPeerInfoCmd struct{}
 // JSON-RPC command.
 func NewGetPeerInfoCmd() *GetPeerInfoCmd {
 	return &GetPeerInfoCmd{}
+}
+
+type GetRawBlockTemplateCmd struct{}
+
+func NewGetRawBlockTemplateCmd() *GetRawBlockTemplateCmd {
+	return &GetRawBlockTemplateCmd{}
+}
+
+type CheckPcShareCmdStructure struct {
+	ShareTarget  uint32   `json:"sharetarget"`
+	Height       int32    `json:"height"`
+	HexBlock     string   `json:"hexblock"`
+	Coinbase     string   `json:"coinbase"`
+	MerkleBranch []string `json:"merklebranch"`
+}
+
+type CheckPcShareCmd struct {
+	Request *CheckPcShareCmdStructure
 }
 
 // GetRawMempoolCmd defines the getmempool JSON-RPC command.
@@ -802,8 +830,11 @@ func init() {
 	MustRegisterCmd("getmininginfo", (*GetMiningInfoCmd)(nil), flags)
 	MustRegisterCmd("getnetworkinfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("getnettotals", (*GetNetTotalsCmd)(nil), flags)
+	MustRegisterCmd("getnetworksteward", (*GetNetworkStewardCmd)(nil), flags)
 	MustRegisterCmd("getnetworkhashps", (*GetNetworkHashPSCmd)(nil), flags)
 	MustRegisterCmd("getpeerinfo", (*GetPeerInfoCmd)(nil), flags)
+	MustRegisterCmd("getrawblocktemplate", (*GetRawBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("checkpcshare", (*CheckPcShareCmd)(nil), flags)
 	MustRegisterCmd("getrawmempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("getrawtransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("gettxout", (*GetTxOutCmd)(nil), flags)

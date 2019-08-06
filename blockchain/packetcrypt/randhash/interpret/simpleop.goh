@@ -1,0 +1,107 @@
+// Copyright (c) 2019 Caleb James DeLisle
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package interpret
+
+import (
+	"fmt"
+	"github.com/btcsuite/btcd/blockchain/packetcrypt/randhash/opcodes"
+)
+
+#define DEBUG
+#ifdef DEBUG
+#define DEBUGF(_fmt, ...) if debug { pad(ctx); fmt.Printf(_fmt, __VA_ARGS__) }
+#else
+#define DEBUGF(fmt, ...)
+#endif
+#define TEST1(x, ...)
+#define TEST2(x, ...)
+#define TEST42(x, ...)
+#define TEST44(x, ...)
+
+func doOp(ctx *Context, insn uint32, op opcodes.OpCode) {
+
+    switch op {
+    #define OpCodes_1_1
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        a := getA(ctx, insn); \
+        out := OP(a); \
+        DEBUGF("%s %08x -> %08x\n", #OP, a, out); \
+        TEST1(optest11_ ## OP, OP, a); \
+        out1(ctx, out);
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_2_1
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        a := getA(ctx, insn); b := getB(ctx, insn); \
+        out := OP(a, b); \
+        DEBUGF("%s %08x %08x -> %08x\n", #OP, a, b, out); \
+        TEST2(optest21_ ## OP, OP, a, b); \
+        out1(ctx, out);
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_2_2
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        a := getA(ctx, insn); b := getB(ctx, insn); \
+        out := OP(a, b); \
+        DEBUGF("%s %08x %08x -> %08x %08x\n", #OP, a, b, uint32(out), uint32(out >> 32)); \
+        TEST2(optest22_ ## OP, OP, a, b); \
+        out2(ctx, out);
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_4_2
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        a := getA2(ctx, insn); b := getB2(ctx, insn); \
+        out := OP(a.lo, a.hi, b.lo, b.hi); \
+        DEBUGF("%s %08x %08x %08x %08x -> %08x %08x\n", #OP, a.lo, a.hi, b.lo, b.hi, \
+            uint32(out), uint32(out >> 32)); \
+        TEST42(optest42_ ## OP, OP, a, b); \
+        out2(ctx, out);
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_4_4
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        a := getA2(ctx, insn); b := getB2(ctx, insn); \
+        out := OP(a.lo, a.hi, b.lo, b.hi); \
+        DEBUGF("%s %08x %08x %08x %08x -> %08x %08x %08x %08x\n", #OP, \
+            a.lo, a.hi, b.lo, b.hi, U128_0(out), U128_1(out), U128_2(out), U128_3(out)); \
+        TEST44(optest44_ ## OP, OP, a, b); \
+        out4(ctx, out);
+    #include "../opcodes/OpCodes.h"
+
+        default: {
+            fmt.Printf("Unexpected instruction %s", op.String())
+            panic("unexpected instruction")
+        }
+    }
+}
+
+func TestOp(inout []uint32, op opcodes.OpCode) {
+    switch op {
+    #define OpCodes_1_1
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        out1x(inout, OP(inout[0]));
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_2_1
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        out1x(inout, OP(inout[0], inout[1]));
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_2_2
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        out2x(inout, OP(inout[0], inout[1]));
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_4_2
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        out2x(inout, OP(inout[0], inout[1], inout[2], inout[3]));
+    #include "../opcodes/OpCodes.h"
+
+    #define OpCodes_4_4
+    #define OpCodes_VISITOR(OP) case opcodes.OpCode_ ## OP : \
+        out4x(inout, OP(inout[0], inout[1], inout[2], inout[3]));
+    #include "../opcodes/OpCodes.h"
+    }
+}

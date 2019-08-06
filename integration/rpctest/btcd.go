@@ -18,22 +18,22 @@ var (
 	compileMtx sync.Mutex
 
 	// executablePath is the path to the compiled executable. This is the empty
-	// string until btcd is compiled. This should not be accessed directly;
-	// instead use the function btcdExecutablePath().
+	// string until pktd is compiled. This should not be accessed directly;
+	// instead use the function pktdExecutablePath().
 	executablePath string
 )
 
-// btcdExecutablePath returns a path to the btcd executable to be used by
+// pktdExecutablePath returns a path to the pktd executable to be used by
 // rpctests. To ensure the code tests against the most up-to-date version of
-// btcd, this method compiles btcd the first time it is called. After that, the
+// pktd, this method compiles pktd the first time it is called. After that, the
 // generated binary is used for subsequent test harnesses. The executable file
 // is not cleaned up, but since it lives at a static path in a temp directory,
 // it is not a big deal.
-func btcdExecutablePath() (string, error) {
+func pktdExecutablePath() (string, error) {
 	compileMtx.Lock()
 	defer compileMtx.Unlock()
 
-	// If btcd has already been compiled, just use that.
+	// If pktd has already been compiled, just use that.
 	if len(executablePath) != 0 {
 		return executablePath, nil
 	}
@@ -43,17 +43,17 @@ func btcdExecutablePath() (string, error) {
 		return "", err
 	}
 
-	// Build btcd and output an executable in a static temp path.
-	outputPath := filepath.Join(testDir, "btcd")
+	// Build pktd and output an executable in a static temp path.
+	outputPath := filepath.Join(testDir, "pktd")
 	if runtime.GOOS == "windows" {
 		outputPath += ".exe"
 	}
 	cmd := exec.Command(
-		"go", "build", "-o", outputPath, "github.com/btcsuite/btcd",
+		"go", "build", "-o", outputPath, "github.com/pkt-cash/pktd",
 	)
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("Failed to build btcd: %v", err)
+		return "", fmt.Errorf("Failed to build pktd: %v", err)
 	}
 
 	// Save executable path so future calls do not recompile.

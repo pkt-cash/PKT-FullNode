@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,9 +8,9 @@ package txscript
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -185,6 +186,7 @@ func GetScriptClass(script []byte) ScriptClass {
 	if err != nil {
 		return NonStandardTy
 	}
+	pops = stripVote(pops)
 	return typeOfScript(pops)
 }
 
@@ -382,85 +384,139 @@ func CalcMultiSigStats(script []byte) (int, int, error) {
 	return numPubKeys, numSigs, nil
 }
 
-// payToPubKeyHashScript creates a new script to pay a transaction
+// payToPubKeyHashScriptBuilder creates a new script to pay a transaction
 // output to a 20-byte pubkey hash. It is expected that the input is a valid
 // hash.
-func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+func payToPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).
-		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).
-		Script()
+		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG)
+}
+func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+	return payToPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
-// payToWitnessPubKeyHashScript creates a new script to pay to a version 0
+// payToWitnessPubKeyHashScriptBuilder creates a new script to pay to a version 0
 // pubkey hash witness program. The passed hash is expected to be valid.
+func payToWitnessPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
+	return NewScriptBuilder().AddOp(OP_0).AddData(pubKeyHash)
+}
 func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_0).AddData(pubKeyHash).Script()
+	return payToWitnessPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
-// payToScriptHashScript creates a new script to pay a transaction output to a
+// payToScriptHashScriptBuilder creates a new script to pay a transaction output to a
 // script hash. It is expected that the input is a valid hash.
-func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
+func payToScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_HASH160).AddData(scriptHash).
-		AddOp(OP_EQUAL).Script()
+		AddOp(OP_EQUAL)
+}
+func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
+	return payToScriptHashScriptBuilder(scriptHash).Script()
 }
 
-// payToWitnessPubKeyHashScript creates a new script to pay to a version 0
+// payToWitnessScriptHashScriptBuilder creates a new script to pay to a version 0
 // script hash witness program. The passed hash is expected to be valid.
+func payToWitnessScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
+	return NewScriptBuilder().AddOp(OP_0).AddData(scriptHash)
+}
 func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_0).AddData(scriptHash).Script()
+	return payToWitnessScriptHashScriptBuilder(scriptHash).Script()
 }
 
-// payToPubkeyScript creates a new script to pay a transaction output to a
+// payToPubKeyScriptBuilder creates a new script to pay a transaction output to a
 // public key. It is expected that the input is a valid pubkey.
-func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
+func payToPubKeyScriptBuilder(serializedPubKey []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddData(serializedPubKey).
-		AddOp(OP_CHECKSIG).Script()
+		AddOp(OP_CHECKSIG)
+}
+func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
+	return payToPubKeyScriptBuilder(serializedPubKey).Script()
 }
 
-// PayToAddrScript creates a new script to pay a transaction output to a the
-// specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
-	const nilAddrErrStr = "unable to generate payment script for nil address"
+// appendVote adds a vote to the end of a ScriptBuilder if a voteFor and/or voteAgainst
+// is specified. If neither is specified then it will not alter the ScriptBuilder at
+// all. The result is the same ScriptBuilder which was passed in.
+func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
+	if voteFor == nil && voteAgainst == nil {
+		return sb
+	}
+	if voteFor != nil {
+		sb = sb.AddData(voteFor)
+	} else {
+		sb = sb.AddOp(OP_0)
+	}
+	if voteAgainst != nil {
+		sb = sb.AddData(voteAgainst)
+	} else {
+		sb = sb.AddOp(OP_0)
+	}
+	return sb.AddOp(OP_VOTE)
+}
+
+// PayToAddrScriptWithVote creates a new script to pay a transaction output to a the
+// specified address and adds a vote for the specified network steward, if voteFor
+// and/or voteAgainst are non-null and if the address type is non-segwit.
+func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, error) {
+	if addr == nil {
+		return nil, scriptError(ErrUnsupportedAddress,
+			"unable to generate payment script for nil address")
+	}
 
 	switch addr := addr.(type) {
 	case *btcutil.AddressPubKeyHash:
-		if addr == nil {
-			return nil, scriptError(ErrUnsupportedAddress,
-				nilAddrErrStr)
-		}
-		return payToPubKeyHashScript(addr.ScriptAddress())
+		return appendVote(payToPubKeyHashScriptBuilder(addr.ScriptAddress()),
+			voteFor, voteAgainst).Script()
 
 	case *btcutil.AddressScriptHash:
-		if addr == nil {
-			return nil, scriptError(ErrUnsupportedAddress,
-				nilAddrErrStr)
-		}
-		return payToScriptHashScript(addr.ScriptAddress())
+		return appendVote(payToScriptHashScriptBuilder(addr.ScriptAddress()),
+			voteFor, voteAgainst).Script()
 
 	case *btcutil.AddressPubKey:
-		if addr == nil {
-			return nil, scriptError(ErrUnsupportedAddress,
-				nilAddrErrStr)
-		}
-		return payToPubKeyScript(addr.ScriptAddress())
+		return appendVote(payToPubKeyScriptBuilder(addr.ScriptAddress()),
+			voteFor, voteAgainst).Script()
 
 	case *btcutil.AddressWitnessPubKeyHash:
-		if addr == nil {
-			return nil, scriptError(ErrUnsupportedAddress,
-				nilAddrErrStr)
-		}
 		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
+
 	case *btcutil.AddressWitnessScriptHash:
-		if addr == nil {
-			return nil, scriptError(ErrUnsupportedAddress,
-				nilAddrErrStr)
-		}
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
 	}
 
 	str := fmt.Sprintf("unable to generate payment script for unsupported "+
 		"address type %T", addr)
 	return nil, scriptError(ErrUnsupportedAddress, str)
+}
+
+// PayToAddrScript creates a new script to pay a transaction output to the
+// specified address.
+func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+	return PayToAddrScriptWithVote(addr, nil, nil)
+}
+
+// stripVote removes any votes from a script so that it will appear as a cannonical
+// transaction.
+func stripVote(pops []parsedOpcode) []parsedOpcode {
+	out := make([]parsedOpcode, 0, len(pops))
+	for _, pop := range pops {
+		out = append(out, pop)
+		if pop.opcode.value != OP_VOTE {
+			continue
+		}
+		if len(out) < 3 {
+			continue
+		}
+		last := out[len(out)-2]
+		secondLast := out[len(out)-3]
+		if last.opcode.value != OP_0 && !canonicalPush(last) {
+			continue
+		}
+		if secondLast.opcode.value != OP_0 && !canonicalPush(secondLast) {
+			continue
+		}
+		// pop second op, last op, vote
+		out = out[:len(out)-3]
+	}
+	return out
 }
 
 // NullDataScript creates a provably-prunable script containing OP_RETURN
@@ -531,6 +587,8 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 	if err != nil {
 		return NonStandardTy, nil, 0, err
 	}
+
+	pops = stripVote(pops)
 
 	scriptClass := typeOfScript(pops)
 	switch scriptClass {

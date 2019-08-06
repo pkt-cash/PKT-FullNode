@@ -1,0 +1,49 @@
+// Copyright (c) 2019 Caleb James DeLisle
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+package opcodes
+
+type OpCode byte
+const (
+    #define OpCodes_ALL
+    #define OpCodes_VISITOR(x) OpCode_ ## x = iota;
+    #include "OpCodes.h"
+
+    OpCode__MAX
+)
+
+func (o OpCode) String() string {
+    switch o {
+        #define OpCodes_ALL
+        #define OpCodes_VISITOR(x) case OpCode_ ## x: return #x;
+        #include "OpCodes.h"
+        default: return "unknown";
+    }
+}
+
+var CODES_1_1 = [...]OpCode{
+    #define OpCodes_1_1
+    #define OpCodes_VISITOR(x) OpCode_ ## x,
+    #include "OpCodes.h"
+};
+var CODES_2_1 = [...]OpCode{
+    #define OpCodes_2_1
+    #define OpCodes_VISITOR(x) OpCode_ ## x,
+    #include "OpCodes.h"
+};
+var CODES_2_2 = [...]OpCode{
+    #define OpCodes_2_2
+    #define OpCodes_VISITOR(x) OpCode_ ## x,
+    #include "OpCodes.h"
+};
+var CODES_4_2 = [...]OpCode{
+    #define OpCodes_4_2
+    #define OpCodes_VISITOR(x) OpCode_ ## x,
+    #include "OpCodes.h"
+};
+var CODES_4_4 = [...]OpCode{
+    #define OpCodes_4_4
+    #define OpCodes_VISITOR(x) OpCode_ ## x,
+    #include "OpCodes.h"
+};

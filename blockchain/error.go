@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -184,6 +185,14 @@ const (
 	// the expected value.
 	ErrBadCoinbaseHeight
 
+	// ErrMissingCoinbaseTax indicates that the tax payment was missing or
+	// not enough.
+	ErrMissingCoinbaseTax
+
+	// ErrBadCoinbaseTax indicates that the tax was paid to the wrong
+	// network steward key.
+	ErrBadCoinbaseNetworkSteward
+
 	// ErrScriptMalformed indicates a transaction script is malformed in
 	// some way.  For example, it might be longer than the maximum allowed
 	// length or fail to parse.
@@ -220,6 +229,22 @@ const (
 	// current chain tip. This is not a block validation rule, but is required
 	// for block proposals submitted via getblocktemplate RPC.
 	ErrPrevBlockNotBest
+
+	// ErrBadPow indicates that the proof of work was somehow malformed
+	ErrBadPow
+
+	// ErrPowBadCoinbase indicates that the coinbase commitment is malformed for
+	// the pow.
+	ErrPowBadCoinbase
+
+	// ErrPowCannotVerify indicates that the pow cannot be verified because there
+	// is a missing block header required to check one of the announcements.
+	ErrPowCannotVerify
+
+	// ErrNetworkStewardOldSpend indicates that a transaction tried to spend
+	// coins in the network steward wallet which are older than the age limit
+	// for network steward payouts.
+	ErrNetworkStewardOldSpend
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -259,6 +284,8 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrBadCoinbaseValue:          "ErrBadCoinbaseValue",
 	ErrMissingCoinbaseHeight:     "ErrMissingCoinbaseHeight",
 	ErrBadCoinbaseHeight:         "ErrBadCoinbaseHeight",
+	ErrMissingCoinbaseTax:        "ErrMissingCoinbaseTax",
+	ErrBadCoinbaseNetworkSteward: "ErrBadCoinbaseNetworkSteward",
 	ErrScriptMalformed:           "ErrScriptMalformed",
 	ErrScriptValidation:          "ErrScriptValidation",
 	ErrUnexpectedWitness:         "ErrUnexpectedWitness",
@@ -267,6 +294,9 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrPreviousBlockUnknown:      "ErrPreviousBlockUnknown",
 	ErrInvalidAncestorBlock:      "ErrInvalidAncestorBlock",
 	ErrPrevBlockNotBest:          "ErrPrevBlockNotBest",
+	ErrBadPow:                    "ErrBadPow",
+	ErrPowBadCoinbase:            "ErrPowBadCoinbase",
+	ErrPowCannotVerify:           "ErrPowCannotVerify",
 }
 
 // String returns the ErrorCode as a human-readable name.

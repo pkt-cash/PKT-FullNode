@@ -1,0 +1,64 @@
+// Copyright (c) 2019 Caleb James DeLisle
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+// generate go: gcc -E -P -DGOLANG=1 ./src/OpTemplate2.h  > ./src/OpTemplate2.go
+
+#define GOLANG 1
+
+#define uint8_t uint8
+#define uint16_t uint16
+#define uint32_t uint32
+#define uint64_t uint64
+#define int8_t int8
+#define int16_t int16
+#define int32_t int32
+#define int64_t int64
+
+#define var(type, name, val) name := type(val)
+#define lnot(val) (^(val))
+
+#define SCOPE(x) x
+
+#define MKFUN4(rett, name, t0, n0, t1, n1, t2, n2, t3, n3, impl) \
+    func name(n0 t0, n1 t1, n2 t2, n3 t3) rett impl ;
+#define MKFUN2(rett, name, t0, n0, t1, n1, impl) \
+    func name(n0 t0, n1 t1) rett impl ;
+#define MKFUN1(rett, name, t0, n0, impl) \
+    func name(n0 t0) rett impl ;
+
+#define POPCOUNT8_IMPL(a) bits.OnesCount8(a)
+#define POPCOUNT16_IMPL(a) bits.OnesCount16(a)
+#define POPCOUNT32_IMPL(a) bits.OnesCount32(a)
+#define POPCOUNT64_IMPL(a) bits.OnesCount64(a)
+
+#define CLZ8_IMPL(a) bits.LeadingZeros8(a)
+#define CLZ16_IMPL(a) bits.LeadingZeros16(a)
+#define CLZ32_IMPL(a) bits.LeadingZeros32(a)
+#define CLZ64_IMPL(a) bits.LeadingZeros64(a)
+
+#define CTZ8_IMPL(a) bits.TrailingZeros8(a)
+#define CTZ16_IMPL(a) bits.TrailingZeros16(a)
+#define CTZ32_IMPL(a) bits.TrailingZeros32(a)
+#define CTZ64_IMPL(a) bits.TrailingZeros64(a)
+
+#define BSWAP16_IMPL(a) bits.ReverseBytes16(a)
+#define BSWAP32_IMPL(a) bits.ReverseBytes32(a)
+#define BSWAP64_IMPL(a) bits.ReverseBytes64(a)
+
+
+package interpret
+
+import (
+	"encoding/binary"
+	"math/bits"
+)
+
+func bint(x bool) int {
+    if x {
+        return 1
+    }
+    return 0
+}
+
+#include "OpTemplate2.h"

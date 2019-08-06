@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,9 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/database"
 )
 
 // BehaviorFlags is a bitmask defining tweaks to the normal behavior when
@@ -170,13 +172,21 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 		return false, false, err
 	}
 
+	blockHeader := &block.MsgBlock().Header
+
+	if globalcfg.GetProofOfWorkAlgorithm() != globalcfg.PowPacketCrypt {
+	} else if flags&BFNoPoWCheck == BFNoPoWCheck {
+	} else if err = b.pcCheckProofOfWork(block); err != nil {
+		prevHashExists, _ := b.blockExists(&blockHeader.PrevBlock)
+		return false, !prevHashExists, err
+	}
+
 	// Find the previous checkpoint and perform some additional checks based
 	// on the checkpoint.  This provides a few nice properties such as
 	// preventing old side chain blocks before the last checkpoint,
 	// rejecting easy to mine, but otherwise bogus, blocks that could be
 	// used to eat memory, and ensuring expected (versus claimed) proof of
 	// work requirements since the previous checkpoint are met.
-	blockHeader := &block.MsgBlock().Header
 	checkpointNode, err := b.findPreviousCheckpoint()
 	if err != nil {
 		return false, false, err

@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -234,6 +235,13 @@ type GetNetworkInfoResult struct {
 	Warnings        string                 `json:"warnings"`
 }
 
+// GetNetworkStewardResult models the data returned from the getnetworksteward command.
+type GetNetworkStewardResult struct {
+	Script        string `json:"script"`
+	VotesAgainst  int64  `json:"votesagainst"`
+	TotalPossible int64  `json:"totalpossible"`
+}
+
 // GetPeerInfoResult models the data returned from the getpeerinfo command.
 type GetPeerInfoResult struct {
 	ID             int32   `json:"id"`
@@ -257,6 +265,14 @@ type GetPeerInfoResult struct {
 	BanScore       int32   `json:"banscore"`
 	FeeFilter      int64   `json:"feefilter"`
 	SyncNode       bool    `json:"syncnode"`
+}
+
+type GetRawBlockTemplateResult struct {
+	Height            int32    `json:"height"`
+	Header            string   `json:"header"`
+	CoinbaseNoWitness string   `json:"coinbase_no_witness"`
+	MerkleBranch      []string `json:"merklebranch"`
+	Transactions      []string `json:"transactions"`
 }
 
 // GetRawMempoolVerboseResult models the data returned from the getrawmempool

@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,13 +15,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	_ "github.com/btcsuite/btcd/database/ffldb"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/blockchain/testdata"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/database"
+	_ "github.com/pkt-cash/pktd/database/ffldb"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -59,60 +61,9 @@ func isSupportedDbType(dbType string) bool {
 
 // loadBlocks reads files containing bitcoin block data (gzipped but otherwise
 // in the format bitcoind writes) from disk and returns them as an array of
-// btcutil.Block.  This is largely borrowed from the test code in btcdb.
+// btcutil.Block.  This is largely borrowed from the test code in pktdb.
 func loadBlocks(filename string) (blocks []*btcutil.Block, err error) {
-	filename = filepath.Join("testdata/", filename)
-
-	var network = wire.MainNet
-	var dr io.Reader
-	var fi io.ReadCloser
-
-	fi, err = os.Open(filename)
-	if err != nil {
-		return
-	}
-
-	if strings.HasSuffix(filename, ".bz2") {
-		dr = bzip2.NewReader(fi)
-	} else {
-		dr = fi
-	}
-	defer fi.Close()
-
-	var block *btcutil.Block
-
-	err = nil
-	for height := int64(1); err == nil; height++ {
-		var rintbuf uint32
-		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
-		if err == io.EOF {
-			// hit end of file at expected offset: no warning
-			height--
-			err = nil
-			break
-		}
-		if err != nil {
-			break
-		}
-		if rintbuf != uint32(network) {
-			break
-		}
-		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
-		blocklen := rintbuf
-
-		rbytes := make([]byte, blocklen)
-
-		// read block
-		dr.Read(rbytes)
-
-		block, err = btcutil.NewBlockFromBytes(rbytes)
-		if err != nil {
-			return
-		}
-		blocks = append(blocks, block)
-	}
-
-	return
+	return testdata.LoadBlocks(filepath.Join("testdata/", filename))
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis

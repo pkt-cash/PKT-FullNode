@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,6 +8,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"runtime"
 )
 
 // shutdownRequestChannel is used to initiate shutdown from one of the
@@ -30,11 +32,11 @@ func interruptListener() <-chan struct{} {
 		// channel to notify the caller.
 		select {
 		case sig := <-interruptChannel:
-			btcdLog.Infof("Received signal (%s).  Shutting down...",
+			pktdLog.Infof("Received signal (%s).  Shutting down...",
 				sig)
 
 		case <-shutdownRequestChannel:
-			btcdLog.Info("Shutdown requested.  Shutting down...")
+			pktdLog.Info("Shutdown requested.  Shutting down...")
 		}
 		close(c)
 
@@ -44,11 +46,14 @@ func interruptListener() <-chan struct{} {
 		for {
 			select {
 			case sig := <-interruptChannel:
-				btcdLog.Infof("Received signal (%s).  Already "+
+				pktdLog.Infof("Received signal (%s).  Already "+
 					"shutting down...", sig)
+				buf := make([]byte, 1<<20)
+				stacklen := runtime.Stack(buf, true)
+				pktdLog.Infof("*** goroutine dump...\n%s\n*** end\n", buf[:stacklen])
 
 			case <-shutdownRequestChannel:
-				btcdLog.Info("Shutdown requested.  Already " +
+				pktdLog.Info("Shutdown requested.  Already " +
 					"shutting down...")
 			}
 		}

@@ -1,5 +1,6 @@
 // Copyright (c) 2013-2018 The btcsuite developers
 // Copyright (c) 2015-2018 The Decred developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -67,11 +68,12 @@ type BestState struct {
 	NumTxns     uint64         // The number of txns in the block.
 	TotalTxns   uint64         // The total number of txns in the chain.
 	MedianTime  time.Time      // Median time as per CalcPastMedianTime.
+	Elect       ElectionState  // Current network steward and disapproval rating
 }
 
 // newBestState returns a new best stats instance for the given parameters.
 func newBestState(node *blockNode, blockSize, blockWeight, numTxns,
-	totalTxns uint64, medianTime time.Time) *BestState {
+	totalTxns uint64, medianTime time.Time, elect *ElectionState) *BestState {
 
 	return &BestState{
 		Hash:        node.hash,
@@ -82,6 +84,7 @@ func newBestState(node *blockNode, blockSize, blockWeight, numTxns,
 		NumTxns:     numTxns,
 		TotalTxns:   totalTxns,
 		MedianTime:  medianTime,
+		Elect:       *elect,
 	}
 }
 
@@ -559,7 +562,7 @@ func (b *BlockChain) getReorganizeNodes(node *blockNode) (*list.List, *list.List
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
-	view *UtxoViewpoint, stxos []SpentTxOut) error {
+	view *UtxoViewpoint, stxos []SpentTxOut, newEs *ElectionState) error {
 
 	// Make sure it's extending the end of the best chain.
 	prevHash := &block.MsgBlock().Header.PrevBlock
@@ -605,12 +608,18 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
 	blockSize := uint64(block.MsgBlock().SerializeSize())
 	blockWeight := uint64(GetBlockWeight(block))
 	state := newBestState(node, blockSize, blockWeight, numTxns,
-		curTotalTxns+numTxns, node.CalcPastMedianTime())
+		curTotalTxns+numTxns, node.CalcPastMedianTime(), newEs)
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
 		err := dbPutBestState(dbTx, state, node.workSum)
+		if err != nil {
+			return err
+		}
+
+		// Insert the election state
+		err = dbPutElectionState(dbTx, node, newEs)
 		if err != nil {
 			return err
 		}
@@ -691,11 +700,17 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	}
 
 	// Load the previous block since some details for it are needed below.
+	// Also load the previous election state in order to update the best state
 	prevNode := node.parent
 	var prevBlock *btcutil.Block
+	var prevEs *ElectionState
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		prevBlock, err = dbFetchBlockByNode(dbTx, prevNode)
+		if err != nil {
+			return err
+		}
+		prevEs, err = dbFetchElectionStateByNode(dbTx, prevNode)
 		return err
 	})
 	if err != nil {
@@ -718,7 +733,7 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	blockWeight := uint64(GetBlockWeight(prevBlock))
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
 	state := newBestState(prevNode, blockSize, blockWeight, numTxns,
-		newTotalTxns, prevNode.CalcPastMedianTime())
+		newTotalTxns, prevNode.CalcPastMedianTime(), prevEs)
 
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
@@ -974,7 +989,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// In the case the block is determined to be invalid due to a
 		// rule violation, mark it as invalid and mark all of its
 		// descendants as having an invalid ancestor.
-		err = b.checkConnectBlock(n, block, view, nil)
+		_, err = b.checkConnectBlock(n, block, view, nil)
 		if err != nil {
 			if _, ok := err.(RuleError); ok {
 				b.index.SetStatusFlags(n, statusValidateFailed)
@@ -1047,8 +1062,13 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 			return err
 		}
 
+		esState, err := b.electionProcessBlock(view, n.height)
+		if err != nil {
+			return err
+		}
+
 		// Update the database and chain state.
-		err = b.connectBlock(n, block, view, stxos)
+		err = b.connectBlock(n, block, view, stxos, esState)
 		if err != nil {
 			return err
 		}
@@ -1100,6 +1120,10 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 	// most common case.
 	parentHash := &block.MsgBlock().Header.PrevBlock
 	if parentHash.IsEqual(&b.bestChain.Tip().hash) {
+		// We're going to get the election state from either checkConnectBlock or
+		// in the case of fastAdd, from electionProcessBlock() directly
+		var nextEs *ElectionState
+
 		// Skip checks if node has already been fully validated.
 		fastAdd = fastAdd || b.index.NodeStatus(node).KnownValid()
 
@@ -1110,7 +1134,8 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 		view.SetBestHash(parentHash)
 		stxos := make([]SpentTxOut, 0, countSpentOutputs(block))
 		if !fastAdd {
-			err := b.checkConnectBlock(node, block, view, &stxos)
+			var err error
+			nextEs, err = b.checkConnectBlock(node, block, view, &stxos)
 			if err == nil {
 				b.index.SetStatusFlags(node, statusValid)
 			} else if _, ok := err.(RuleError); ok {
@@ -1139,10 +1164,14 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			if err != nil {
 				return false, err
 			}
+			nextEs, err = b.electionProcessBlock(view, node.height)
+			if err != nil {
+				return false, err
+			}
 		}
 
 		// Connect the block to the main chain.
-		err := b.connectBlock(node, block, view, stxos)
+		err := b.connectBlock(node, block, view, stxos, nextEs)
 		if err != nil {
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the

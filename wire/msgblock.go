@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,7 +10,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
 
 // defaultTransactionAlloc is the default size used for the backing array
@@ -42,6 +44,7 @@ type TxLoc struct {
 // response to a getdata message (MsgGetData) for a given block hash.
 type MsgBlock struct {
 	Header       BlockHeader
+	Pcp          *PacketCryptProof
 	Transactions []*MsgTx
 }
 
@@ -65,6 +68,16 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 	err := readBlockHeader(r, pver, &msg.Header)
 	if err != nil {
 		return err
+	}
+
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt ||
+		enc&PacketCryptEncoding == PacketCryptEncoding {
+		if msg.Pcp == nil {
+			msg.Pcp = &PacketCryptProof{}
+		}
+		if err = msg.Pcp.BtcDecode(r, pver, enc); err != nil {
+			return err
+		}
 	}
 
 	txCount, err := ReadVarInt(r, pver)
@@ -137,6 +150,13 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 		return nil, err
 	}
 
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
+		pcp := &PacketCryptProof{}
+		if err = pcp.BtcDecode(r, 0, 0); err != nil {
+			return nil, err
+		}
+	}
+
 	txCount, err := ReadVarInt(r, 0)
 	if err != nil {
 		return nil, err
@@ -174,9 +194,20 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+
 	err := writeBlockHeader(w, pver, &msg.Header)
 	if err != nil {
 		return err
+	}
+
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt &&
+		enc&NoPacketCryptEncoding != NoPacketCryptEncoding {
+		if msg.Pcp == nil {
+			return fmt.Errorf("proof of work is not defined")
+		}
+		if err = msg.Pcp.BtcEncode(w, pver, enc); err != nil {
+			return err
+		}
 	}
 
 	err = WriteVarInt(w, pver, uint64(len(msg.Transactions)))
@@ -230,6 +261,12 @@ func (msg *MsgBlock) SerializeSize() int {
 	// transactions.
 	n := blockHeaderLen + VarIntSerializeSize(uint64(len(msg.Transactions)))
 
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
+		if msg.Pcp != nil {
+			n += msg.Pcp.SerializeSize()
+		}
+	}
+
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
 	}
@@ -243,6 +280,12 @@ func (msg *MsgBlock) SerializeSizeStripped() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
 	n := blockHeaderLen + VarIntSerializeSize(uint64(len(msg.Transactions)))
+
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
+		if msg.Pcp != nil {
+			n += msg.Pcp.SerializeSize()
+		}
+	}
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()

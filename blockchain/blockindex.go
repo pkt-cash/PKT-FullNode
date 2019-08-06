@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // blockStatus is a bit field representing the validation state of the block.
@@ -185,6 +186,7 @@ func (node *blockNode) RelativeAncestor(distance int32) *blockNode {
 func (node *blockNode) CalcPastMedianTime() time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
 	// the median per the number defined by the constant medianTimeBlocks.
+	medianTimeBlocks := globalcfg.GetMedianTimeBlocks()
 	timestamps := make([]int64, medianTimeBlocks)
 	numNodes := 0
 	iterNode := node

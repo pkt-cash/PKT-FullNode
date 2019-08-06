@@ -10,7 +10,7 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // MessageHeaderSize is the number of bytes in a bitcoin message header.
@@ -71,6 +71,14 @@ const (
 	// using the default Bitcoin wire protocol specification. For transaction
 	// messages, the new encoding format detailed in BIP0144 will be used.
 	WitnessEncoding
+
+	// PacketCryptEncoding indicates that we should force decoding of the
+	// PacketCrypt proof.
+	PacketCryptEncoding
+
+	// NoPacketCryptEncoding indicates that we should avoid encoding of the
+	// PacketCrypt proof.
+	NoPacketCryptEncoding
 )
 
 // LatestEncoding is the most recently specified encoding for the Bitcoin wire

@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -157,15 +158,23 @@ const (
 
 	// SimNet represents the simulation test network.
 	SimNet BitcoinNet = 0x12141c16
+
+	// PktTestNet represents the pkt.cash test network.
+	PktTestNet BitcoinNet = 0x070911fc
+
+	// PktMainNet represents the pkt.cash main network.
+	PktMainNet BitcoinNet = 0x082f00fc
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for
 // pretty printing.
 var bnStrings = map[BitcoinNet]string{
-	MainNet:  "MainNet",
-	TestNet:  "TestNet",
-	TestNet3: "TestNet3",
-	SimNet:   "SimNet",
+	MainNet:    "MainNet",
+	TestNet:    "TestNet",
+	TestNet3:   "TestNet3",
+	SimNet:     "SimNet",
+	PktTestNet: "PktTestNet",
+	PktMainNet: "PktMainNet",
 }
 
 // String returns the BitcoinNet in human-readable form.

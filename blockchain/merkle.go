@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,10 +9,11 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/bits"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 const (
@@ -152,6 +154,24 @@ func BuildMerkleTreeStore(transactions []*btcutil.Tx, witness bool) []*chainhash
 	}
 
 	return merkles
+}
+
+// GetMerkleBranch takes a transaction index and a merkle store and outputs a
+// hash branch needed to prove a particular transaction.
+func GetMerkleBranch(txIndex int, tree []*chainhash.Hash) []*chainhash.Hash {
+	if len(tree) < 2 {
+		return make([]*chainhash.Hash, 0)
+	}
+	depth := bits.TrailingZeros32(uint32((len(tree) + 1) / 2))
+	out := make([]*chainhash.Hash, 0, depth)
+	ino := txIndex
+	idx := 0
+	for o := depth; o > 0; o-- {
+		out = append(out, tree[idx+(ino^1)])
+		idx += 1 << uint(o)
+		ino >>= 1
+	}
+	return out
 }
 
 // ExtractWitnessCommitment attempts to locate, and return the witness

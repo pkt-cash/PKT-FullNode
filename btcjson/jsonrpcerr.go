@@ -81,7 +81,7 @@ const (
 	ErrRPCTxAlreadyInChain  RPCErrorCode = -27
 )
 
-// Errors that are specific to btcd.
+// Errors that are specific to pktd.
 const (
 	ErrRPCNoWallet      RPCErrorCode = -1
 	ErrRPCUnimplemented RPCErrorCode = -1

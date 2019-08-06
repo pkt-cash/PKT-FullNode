@@ -1,4 +1,5 @@
 // Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2019 Caleb James DeLisle
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -158,4 +159,13 @@ type ValidateAddressWalletResult struct {
 type GetBestBlockResult struct {
 	Hash   string `json:"hash"`
 	Height int32  `json:"height"`
+}
+
+// SetNetworkStewardVoteResult is the result of the wallet command setnetworkstewardvote
+type SetNetworkStewardVoteResult struct{}
+
+// GetNetworkStewardVoteResult is the result of the wallet command getnetworkstewardvote
+type GetNetworkStewardVoteResult struct {
+	VoteFor     string `json:"votefor,omitempty"`
+	VoteAgainst string `json:"voteagainst,omitempty"`
 }

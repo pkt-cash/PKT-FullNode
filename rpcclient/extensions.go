@@ -12,10 +12,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/btcutil"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -46,7 +46,7 @@ func (r FutureDebugLevelResult) Receive() (string, error) {
 //
 // See DebugLevel for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) DebugLevelAsync(levelSpec string) FutureDebugLevelResult {
 	cmd := btcjson.NewDebugLevelCmd(levelSpec)
 	return c.sendCmd(cmd)
@@ -61,7 +61,7 @@ func (c *Client) DebugLevelAsync(levelSpec string) FutureDebugLevelResult {
 // Additionally, the special keyword 'show' can be used to get a list of the
 // available subsystems.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) DebugLevel(levelSpec string) (string, error) {
 	return c.DebugLevelAsync(levelSpec).Receive()
 }
@@ -82,20 +82,20 @@ func (r FutureCreateEncryptedWalletResult) Receive() error {
 //
 // See CreateEncryptedWallet for the blocking version and more details.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a pktwallet extension.
 func (c *Client) CreateEncryptedWalletAsync(passphrase string) FutureCreateEncryptedWalletResult {
 	cmd := btcjson.NewCreateEncryptedWalletCmd(passphrase)
 	return c.sendCmd(cmd)
 }
 
 // CreateEncryptedWallet requests the creation of an encrypted wallet.  Wallets
-// managed by btcwallet are only written to disk with encrypted private keys,
+// managed by pktwallet are only written to disk with encrypted private keys,
 // and generating wallets on the fly is impossible as it requires user input for
 // the encryption passphrase.  This RPC specifies the passphrase and instructs
 // the wallet creation.  This may error if a wallet is already opened, or the
 // new wallet cannot be written to disk.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a pktwallet extension.
 func (c *Client) CreateEncryptedWallet(passphrase string) error {
 	return c.CreateEncryptedWalletAsync(passphrase).Receive()
 }
@@ -127,7 +127,7 @@ func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactio
 //
 // See ListAddressTransactions for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) ListAddressTransactionsAsync(addresses []btcutil.Address, account string) FutureListAddressTransactionsResult {
 	// Convert addresses to strings.
 	addrs := make([]string, 0, len(addresses))
@@ -141,7 +141,7 @@ func (c *Client) ListAddressTransactionsAsync(addresses []btcutil.Address, accou
 // ListAddressTransactions returns information about all transactions associated
 // with the provided addresses.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a pktwallet extension.
 func (c *Client) ListAddressTransactions(addresses []btcutil.Address, account string) ([]btcjson.ListTransactionsResult, error) {
 	return c.ListAddressTransactionsAsync(addresses, account).Receive()
 }
@@ -180,7 +180,7 @@ func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, error) {
 //
 // See GetBestBlock for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) GetBestBlockAsync() FutureGetBestBlockResult {
 	cmd := btcjson.NewGetBestBlockCmd()
 	return c.sendCmd(cmd)
@@ -189,7 +189,7 @@ func (c *Client) GetBestBlockAsync() FutureGetBestBlockResult {
 // GetBestBlock returns the hash and height of the block in the longest (best)
 // chain.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) GetBestBlock() (*chainhash.Hash, int32, error) {
 	return c.GetBestBlockAsync().Receive()
 }
@@ -222,7 +222,7 @@ func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, error) {
 //
 // See GetCurrentNet for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 	cmd := btcjson.NewGetCurrentNetCmd()
 	return c.sendCmd(cmd)
@@ -230,7 +230,7 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 
 // GetCurrentNet returns the network the server is running on.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a pktd extension.
 func (c *Client) GetCurrentNet() (wire.BitcoinNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
@@ -358,7 +358,7 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
 //
 // See ExportWatchingWallet for the blocking version and more details.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a pktwallet extension.
 func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingWalletResult {
 	cmd := btcjson.NewExportWatchingWalletCmd(&account, btcjson.Bool(true))
 	return c.sendCmd(cmd)
@@ -366,10 +366,10 @@ func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingW
 
 // ExportWatchingWallet returns the raw bytes for a watching-only version of
 // wallet.bin and tx.bin, respectively, for the specified account that can be
-// used by btcwallet to enable a wallet which does not have the private keys
+// used by pktwallet to enable a wallet which does not have the private keys
 // necessary to spend funds.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a pktwallet extension.
 func (c *Client) ExportWatchingWallet(account string) ([]byte, []byte, error) {
 	return c.ExportWatchingWalletAsync(account).Receive()
 }
