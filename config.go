@@ -548,10 +548,6 @@ func loadConfig() (*config, []string, error) {
 	if cfg.PktTest {
 		numNets++
 		activeNetParams = &pktTestNetParams
-		// TODO(cjd): this is trash, but CompactToBig is a util function and it shouldn't
-		// be in blockchain, but it is, and trying to call it from cfg is a dependency
-		// loop. And duplicating the powlimit twice in the config is also trash...
-		activeNetParams.PowLimit = blockchain.CompactToBig(activeNetParams.PowLimitBits)
 	}
 	if cfg.BtcMainNet {
 		numNets++
@@ -579,6 +575,11 @@ func loadConfig() (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
+
+	// TODO(cjd): this is trash, but CompactToBig is a util function and it shouldn't
+	// be in blockchain, but it is, and trying to call it from cfg is a dependency
+	// loop. And duplicating the powlimit twice in the config is also trash...
+	activeNetParams.PowLimit = blockchain.CompactToBig(activeNetParams.PowLimitBits)
 
 	if ok := globalcfg.SelectConfig(activeNetParams.GlobalConf); !ok {
 		err = fmt.Errorf("globalcfg.SelectConfig() called twice")
