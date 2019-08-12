@@ -142,7 +142,7 @@ func Init(s *State, seed []byte, nonce uint64) {
 	s.MakeFuzzable()
 }
 
-func Update(state *State, item []byte, randHashCycles int, progBuf *Context) bool {
+func Update(state *State, item []byte, contentBlock []byte, randHashCycles int, progBuf *Context) bool {
 	if randHashCycles > 0 {
 		prog, err := randgen.Generate(item[32*31:])
 		if err != nil {
@@ -152,7 +152,11 @@ func Update(state *State, item []byte, randHashCycles int, progBuf *Context) boo
 			return false
 		}
 	}
-	copy(state.Bytes[32:], item[:])
+	copy(state.Bytes[32:], item)
+	if contentBlock != nil {
+		// TODO(cjd): Hard fork to include content proof in the hashing
+		//copy(state.Bytes[32+1024:], contentBlock)
+	}
 	state.MakeFuzzable()
 	CryptoCycle(state)
 	if state.IsFailed() {

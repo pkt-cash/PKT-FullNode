@@ -6,6 +6,7 @@ package packetcrypt
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 	var hash [32]byte
 
 	if _, err := io.ReadFull(cpb, hash[:]); err != nil {
-		return fmt.Errorf("unable to read ann content proof [%s]", err)
+		return fmt.Errorf("checkContentProof: 0 unable to read ann content proof [%s]", err)
 	}
 	blockSize := uint32(32)
 	for i := 0; i < depth; i++ {
@@ -48,7 +49,7 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 		}
 		copy(buf[((blockToProve)&1)*32:][:32], hash[:])
 		if _, err := io.ReadFull(cpb, buf[((^blockToProve)&1)*32:][:32]); err != nil {
-			return fmt.Errorf("unable to read ann content proof [%s]", err)
+			return fmt.Errorf("checkContentProof: 1 unable to read ann content proof [%s]", err)
 		}
 		blockToProve >>= 1
 		blockSize <<= 1
@@ -61,6 +62,13 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 		return errors.New("announcement content proof hash mismatch")
 	}
 	return nil
+}
+
+func contentProofIdx2(mb *wire.MsgBlock) uint32 {
+	b2 := blake2b.New256()
+	mb.Header.Serialize(b2)
+	buf := b2.Sum(nil)
+	return binary.LittleEndian.Uint32(buf) ^ mb.Pcp.Nonce
 }
 
 func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annParentHashes []*chainhash.Hash) (bool, error) {
@@ -83,24 +91,22 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	}
 
 	// Check content proofs
-	if mb.Pcp.ContentProof == nil {
-		for _, ann := range mb.Pcp.Announcements {
-			if ann.GetContentLength() > 32 {
-				return false, errors.New("missing announcement content proof")
-			}
+	proofIdx := mb.Pcp.ContentProofIndex()
+	//proofIdx := contentProofIdx2(mb) TODO(cjd): switch this
+	contentProofs, err := mb.Pcp.SplitContentProof(proofIdx)
+	if err != nil {
+		return false, err
+	}
+	for i, ann := range mb.Pcp.Announcements {
+		if ann.GetContentLength() <= 32 {
+			continue
 		}
-	} else {
-		proofIdx := mb.Pcp.ContentProofIndex()
-		contentBuf := bytes.NewBuffer(mb.Pcp.ContentProof)
-		for _, ann := range mb.Pcp.Announcements {
-			if ann.GetContentLength() <= 32 {
-			} else if err := checkContentProof(&ann, proofIdx, contentBuf); err != nil {
-				return false, err
-			}
+		if contentProofs[i] == nil {
+			return false, errors.New("missing announcement content proof")
 		}
-		if contentBuf.Len() > 0 {
-			return false, fmt.Errorf("%d dangling bytes at the end of the content proof",
-				contentBuf.Len())
+		contentBuf := bytes.NewBuffer(contentProofs[i])
+		if err := checkContentProof(&ann, proofIdx, contentBuf); err != nil {
+			return false, err
 		}
 	}
 
@@ -112,7 +118,8 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	if cbc == nil {
 		return false, errors.New("missing packetcrypt commitment")
 	}
-	return block.ValidatePcProof(mb.Pcp, height, &mb.Header, cbc, shareTarget, annParentHashes)
+	return block.ValidatePcProof(
+		mb.Pcp, height, &mb.Header, cbc, shareTarget, annParentHashes, contentProofs)
 }
 
 var pcCoinbasePrefix = [...]byte{0x6a, 0x30, 0x09, 0xf9, 0x11, 0x02}

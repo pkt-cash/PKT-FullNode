@@ -38,6 +38,7 @@ func isPcHashOk(
 	proof *wire.PacketCryptProof,
 	cb *wire.PcCoinbaseCommit,
 	shareTarget uint32,
+	contentProofs [][]byte,
 ) (bool, bool) {
 	ccState := new(cryptocycle.State)
 
@@ -52,10 +53,14 @@ func isPcHashOk(
 	for j := 0; j < 4; j++ {
 		indexesOut[j] = cryptocycle.GetItemNo(ccState)
 		it := &proof.Announcements[j]
-		if !cryptocycle.Update(ccState, it.Header[:], 0, nil) {
+		cp := contentProofs[j]
+		if cp != nil {
+			cp = cp[:32]
+		}
+		if !cryptocycle.Update(ccState, it.Header[:], cp, 0, nil) {
 			// This will never happen as the code is today, but it's a defense to
 			// check in case some other check gets refactored into cryptocycle.Update()
-			return false, false
+			panic("should never happen")
 		}
 	}
 	cryptocycle.Smul(ccState)
@@ -83,6 +88,7 @@ func ValidatePcProof(
 	cb *wire.PcCoinbaseCommit,
 	shareTarget uint32,
 	blockHashes []*chainhash.Hash,
+	contentProofs [][]byte,
 ) (bool, error) {
 	// Check cb magic
 	if cb.Magic() != wire.PcCoinbaseCommitMagic ||
@@ -92,7 +98,7 @@ func ValidatePcProof(
 
 	// Check that the block has the declared amount of work
 	var annIndexes [4]uint64
-	blockOk, shareOk := isPcHashOk(&annIndexes, blockHeader, pcp, cb, shareTarget)
+	shareOk, blockOk := isPcHashOk(&annIndexes, blockHeader, pcp, cb, shareTarget, contentProofs)
 	if !shareOk {
 		return false, errors.New("Validate_checkBlock_INSUF_POW")
 	}

@@ -7,9 +7,11 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/dchest/blake2b"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 )
 
 // PcCoinbaseCommitMagic is the first 4 bytes of the commitment
@@ -85,6 +87,46 @@ func (h *PacketCryptProof) ContentProofIndex() uint32 {
 	b2.Write(h.AnnProof)
 	sum := b2.Sum(nil)
 	return binary.LittleEndian.Uint32(sum[:4])
+}
+
+// SplitContentProof splits the content proof into the proofs for the
+// 4 individual announcements.
+func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, error) {
+	if h.ContentProof == nil {
+		return make([][]byte, 4), nil
+	}
+	cpb := bytes.NewBuffer(h.ContentProof)
+	out := make([][]byte, 4)
+	for i, ann := range h.Announcements {
+		contentLength := ann.GetContentLength()
+		if contentLength <= 32 {
+			continue
+		}
+		totalBlocks := contentLength / 32
+		if totalBlocks*32 < contentLength {
+			totalBlocks++
+		}
+		blockToProve := proofIdx % totalBlocks
+		depth := pcutil.Log2ceil(uint64(totalBlocks))
+		length := 32
+		blockSize := uint32(32)
+		for i := 0; i < depth; i++ {
+			if blockSize*(blockToProve^1) >= contentLength {
+				blockToProve >>= 1
+				blockSize <<= 1
+				continue
+			}
+			length += 32
+			blockToProve >>= 1
+			blockSize <<= 1
+		}
+		b := make([]byte, length)
+		if _, err := io.ReadFull(cpb, b[:]); err != nil {
+			return nil, fmt.Errorf("SplitContentProof: unable to read ann content proof [%s]", err)
+		}
+		out[i] = b
+	}
+	return out, nil
 }
 
 // BtcDecode decodes a PacketCryptProof from a reader

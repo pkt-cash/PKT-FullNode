@@ -84,7 +84,8 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*cha
 		itemNo = int(cryptocycle.GetItemNo(&ctx.ccState) % announceTableSz)
 		// only half of the seed is used
 		MkItem(itemNo, &ctx.itemBytes, ctx.annHash0[:32])
-		if !cryptocycle.Update(&ctx.ccState, ctx.itemBytes[:], util.Conf_AnnHash_RANDHASH_CYCLES, &ctx.progBuf) {
+		if !cryptocycle.Update(
+			&ctx.ccState, ctx.itemBytes[:], nil, util.Conf_AnnHash_RANDHASH_CYCLES, &ctx.progBuf) {
 			return nil, errors.New("Validate_checkAnn_INVAL")
 		}
 	}
