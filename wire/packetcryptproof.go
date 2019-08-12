@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dchest/blake2b"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 )
 
@@ -73,20 +72,6 @@ type PacketCryptProof struct {
 	ContentProof    []byte
 	AnnProof        []byte
 	UnknownEntities []PacketCryptEntity
-}
-
-// ContentProofIndex gets a uint32 based on the 4 announcements
-// this is used to get the block of the content which will be proven in each of the
-// content proofs for each of the announcements
-func (h *PacketCryptProof) ContentProofIndex() uint32 {
-	b2 := blake2b.New256()
-	writeElement(b2, h.Nonce)
-	for _, ann := range h.Announcements {
-		b2.Write(ann.Header[:])
-	}
-	b2.Write(h.AnnProof)
-	sum := b2.Sum(nil)
-	return binary.LittleEndian.Uint32(sum[:4])
 }
 
 // SplitContentProof splits the content proof into the proofs for the

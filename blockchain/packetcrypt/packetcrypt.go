@@ -91,8 +91,7 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	}
 
 	// Check content proofs
-	proofIdx := mb.Pcp.ContentProofIndex()
-	//proofIdx := contentProofIdx2(mb) TODO(cjd): switch this
+	proofIdx := contentProofIdx2(mb)
 	contentProofs, err := mb.Pcp.SplitContentProof(proofIdx)
 	if err != nil {
 		return false, err

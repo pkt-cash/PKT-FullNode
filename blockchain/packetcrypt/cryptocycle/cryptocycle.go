@@ -154,8 +154,7 @@ func Update(state *State, item []byte, contentBlock []byte, randHashCycles int, 
 	}
 	copy(state.Bytes[32:], item)
 	if contentBlock != nil {
-		// TODO(cjd): Hard fork to include content proof in the hashing
-		//copy(state.Bytes[32+1024:], contentBlock)
+		copy(state.Bytes[32+1024:], contentBlock)
 	}
 	state.MakeFuzzable()
 	CryptoCycle(state)
