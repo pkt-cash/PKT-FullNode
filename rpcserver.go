@@ -130,55 +130,56 @@ type commandHandler func(*rpcServer, interface{}, <-chan struct{}) (interface{},
 // a dependency loop.
 var rpcHandlers map[string]commandHandler
 var rpcHandlersBeforeInit = map[string]commandHandler{
-	"addnode":               handleAddNode,
-	"createrawtransaction":  handleCreateRawTransaction,
-	"debuglevel":            handleDebugLevel,
-	"decoderawtransaction":  handleDecodeRawTransaction,
-	"decodescript":          handleDecodeScript,
-	"estimatefee":           handleEstimateFee,
-	"generate":              handleGenerate,
-	"getaddednodeinfo":      handleGetAddedNodeInfo,
-	"getbestblock":          handleGetBestBlock,
-	"getbestblockhash":      handleGetBestBlockHash,
-	"getblock":              handleGetBlock,
-	"getblockchaininfo":     handleGetBlockChainInfo,
-	"getblockcount":         handleGetBlockCount,
-	"getblockhash":          handleGetBlockHash,
-	"getblockheader":        handleGetBlockHeader,
-	"getblocktemplate":      handleGetBlockTemplate,
-	"getcfilter":            handleGetCFilter,
-	"getcfilterheader":      handleGetCFilterHeader,
-	"getconnectioncount":    handleGetConnectionCount,
-	"getcurrentnet":         handleGetCurrentNet,
-	"getdifficulty":         handleGetDifficulty,
-	"getgenerate":           handleGetGenerate,
-	"gethashespersec":       handleGetHashesPerSec,
-	"getheaders":            handleGetHeaders,
-	"getinfo":               handleGetInfo,
-	"getmempoolinfo":        handleGetMempoolInfo,
-	"getmininginfo":         handleGetMiningInfo,
-	"getnettotals":          handleGetNetTotals,
-	"getnetworkhashps":      handleGetNetworkHashPS,
-	"getnetworksteward":     handleGetNetworkSteward,
-	"getpeerinfo":           handleGetPeerInfo,
-	"getrawmempool":         handleGetRawMempool,
-	"getrawblocktemplate":   handleGetRawBlockTemplate,
-	"checkpcshare":          handleCheckPcShare,
-	"getrawtransaction":     handleGetRawTransaction,
-	"gettxout":              handleGetTxOut,
-	"help":                  handleHelp,
-	"node":                  handleNode,
-	"ping":                  handlePing,
-	"searchrawtransactions": handleSearchRawTransactions,
-	"sendrawtransaction":    handleSendRawTransaction,
-	"setgenerate":           handleSetGenerate,
-	"stop":                  handleStop,
-	"submitblock":           handleSubmitBlock,
-	"uptime":                handleUptime,
-	"validateaddress":       handleValidateAddress,
-	"verifychain":           handleVerifyChain,
-	"verifymessage":         handleVerifyMessage,
-	"version":               handleVersion,
+	"addnode":                handleAddNode,
+	"configureminingpayouts": handleConfigureMiningPayouts,
+	"createrawtransaction":   handleCreateRawTransaction,
+	"debuglevel":             handleDebugLevel,
+	"decoderawtransaction":   handleDecodeRawTransaction,
+	"decodescript":           handleDecodeScript,
+	"estimatefee":            handleEstimateFee,
+	"generate":               handleGenerate,
+	"getaddednodeinfo":       handleGetAddedNodeInfo,
+	"getbestblock":           handleGetBestBlock,
+	"getbestblockhash":       handleGetBestBlockHash,
+	"getblock":               handleGetBlock,
+	"getblockchaininfo":      handleGetBlockChainInfo,
+	"getblockcount":          handleGetBlockCount,
+	"getblockhash":           handleGetBlockHash,
+	"getblockheader":         handleGetBlockHeader,
+	"getblocktemplate":       handleGetBlockTemplate,
+	"getcfilter":             handleGetCFilter,
+	"getcfilterheader":       handleGetCFilterHeader,
+	"getconnectioncount":     handleGetConnectionCount,
+	"getcurrentnet":          handleGetCurrentNet,
+	"getdifficulty":          handleGetDifficulty,
+	"getgenerate":            handleGetGenerate,
+	"gethashespersec":        handleGetHashesPerSec,
+	"getheaders":             handleGetHeaders,
+	"getinfo":                handleGetInfo,
+	"getmempoolinfo":         handleGetMempoolInfo,
+	"getmininginfo":          handleGetMiningInfo,
+	"getnettotals":           handleGetNetTotals,
+	"getnetworkhashps":       handleGetNetworkHashPS,
+	"getnetworksteward":      handleGetNetworkSteward,
+	"getpeerinfo":            handleGetPeerInfo,
+	"getrawmempool":          handleGetRawMempool,
+	"getrawblocktemplate":    handleGetRawBlockTemplate,
+	"checkpcshare":           handleCheckPcShare,
+	"getrawtransaction":      handleGetRawTransaction,
+	"gettxout":               handleGetTxOut,
+	"help":                   handleHelp,
+	"node":                   handleNode,
+	"ping":                   handlePing,
+	"searchrawtransactions":  handleSearchRawTransactions,
+	"sendrawtransaction":     handleSendRawTransaction,
+	"setgenerate":            handleSetGenerate,
+	"stop":                   handleStop,
+	"submitblock":            handleSubmitBlock,
+	"uptime":                 handleUptime,
+	"validateaddress":        handleValidateAddress,
+	"verifychain":            handleVerifyChain,
+	"verifymessage":          handleVerifyMessage,
+	"version":                handleVersion,
 }
 
 // list of commands that we recognize, but for which pktd has no support because
@@ -335,13 +336,14 @@ func rpcNoTxInfoError(txHash *chainhash.Hash) *btcjson.RPCError {
 // getblocktemplate.
 type gbtWorkState struct {
 	sync.Mutex
-	lastTxUpdate  time.Time
-	lastGenerated time.Time
-	prevHash      *chainhash.Hash
-	minTimestamp  time.Time
-	template      *mining.BlockTemplate
-	notifyMap     map[chainhash.Hash]map[int64]chan struct{}
-	timeSource    blockchain.MedianTimeSource
+	lastTxUpdate     time.Time
+	lastGenerated    time.Time
+	prevHash         *chainhash.Hash
+	minTimestamp     time.Time
+	template         *mining.BlockTemplate
+	notifyMap        map[chainhash.Hash]map[int64]chan struct{}
+	timeSource       blockchain.MedianTimeSource
+	withPayAddresses bool
 }
 
 // newGbtWorkState returns a new instance of a gbtWorkState with all internal
@@ -1554,6 +1556,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 	latestHash := &s.cfg.Chain.BestSnapshot().Hash
 	template := state.template
 	if template == nil || state.prevHash == nil ||
+		state.withPayAddresses != !useCoinbaseValue ||
 		!state.prevHash.IsEqual(latestHash) ||
 		(state.lastTxUpdate != lastTxUpdate &&
 			time.Now().After(state.lastGenerated.Add(time.Second*
@@ -1564,12 +1567,9 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// again.
 		state.prevHash = nil
 
-		// Choose a payment address at random if the caller requests a
-		// full coinbase as opposed to only the pertinent details needed
-		// to create their own coinbase.
-		var payAddr btcutil.Address
+		var payAddrs map[btcutil.Address]float64
 		if !useCoinbaseValue {
-			payAddr = cfg.miningAddrs[rand.Intn(len(cfg.miningAddrs))]
+			payAddrs = cfg.miningAddrs
 		}
 
 		// Create a new block template that has a coinbase which anyone
@@ -1577,7 +1577,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// block template doesn't include the coinbase, so the caller
 		// will ultimately create their own coinbase which pays to the
 		// appropriate address(es).
-		blkTemplate, err := generator.NewBlockTemplate(payAddr, nil)
+		blkTemplate, err := generator.NewBlockTemplate(payAddrs, nil)
 		if err != nil {
 			return internalRPCError("Failed to create new block "+
 				"template: "+err.Error(), "")
@@ -1600,6 +1600,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		state.lastTxUpdate = lastTxUpdate
 		state.prevHash = latestHash
 		state.minTimestamp = minTimestamp
+		state.withPayAddresses = len(payAddrs) > 0
 
 		rpcsLog.Debugf("Generated block template (timestamp %v, "+
 			"target %s, merkle root %s)",
@@ -1615,32 +1616,6 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// transactions haven't change or it hasn't been long enough to
 		// trigger a new block template to be generated.  So, update the
 		// existing block template.
-
-		// When the caller requires a full coinbase as opposed to only
-		// the pertinent details needed to create their own coinbase,
-		// add a payment address to the output of the coinbase of the
-		// template if it doesn't already have one.  Since this requires
-		// mining addresses to be specified via the config, an error is
-		// returned if none have been specified.
-		if !useCoinbaseValue && !template.ValidPayAddress {
-			// Choose a payment address at random.
-			payToAddr := cfg.miningAddrs[rand.Intn(len(cfg.miningAddrs))]
-
-			// Update the block coinbase output of the template to
-			// pay to the randomly selected payment address.
-			pkScript, err := txscript.PayToAddrScript(payToAddr)
-			if err != nil {
-				context := "Failed to create pay-to-addr script"
-				return internalRPCError(err.Error(), context)
-			}
-			template.Block.Transactions[0].TxOut[0].PkScript = pkScript
-			template.ValidPayAddress = true
-
-			// Update the merkle root.
-			block := btcutil.NewBlock(template.Block)
-			merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-			template.Block.Header.MerkleRoot = *merkles[len(merkles)-1]
-		}
 
 		// Set locals for convenience.
 		msgBlock = template.Block
@@ -2533,6 +2508,40 @@ func handleGetMiningInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 		TestNet:            cfg.TestNet3,
 	}
 	return &result, nil
+}
+
+func handleConfigureMiningPayouts(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*btcjson.ConfigureMiningPayoutsCmd)
+	m := make(map[btcutil.Address]float64)
+	sum := float64(0)
+	for k, v := range c.PayoutPercents {
+		addr, err := btcutil.DecodeAddress(k, s.cfg.ChainParams)
+		if err != nil {
+			return nil, fmt.Errorf("Address [%s] could not be decoded [%s]", k, err)
+		}
+		sum += v
+		m[addr] = v
+	}
+
+	if len(m) == 0 || sum == 0 {
+		return nil, fmt.Errorf("You must specify at least one address to pay to")
+	}
+
+	state := s.gbtWorkState
+	state.Lock()
+	defer state.Unlock()
+
+	// drop the template
+	state.template = nil
+
+	// Set the mining addresses
+	cfg.miningAddrs = m
+
+	if err := state.updateBlockTemplate(s, true); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // handleGetNetTotals implements the getnettotals command.

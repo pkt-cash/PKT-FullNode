@@ -252,25 +252,7 @@ func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address, taxScript []byte) (*btcutil.Tx, error) {
-	// Create the script to pay to the provided payment address if one was
-	// specified.  Otherwise create a script that allows the coinbase to be
-	// redeemable by anyone.
-	var pkScript []byte
-	if addr != nil {
-		var err error
-		pkScript, err = txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		var err error
-		scriptBuilder := txscript.NewScriptBuilder()
-		pkScript, err = scriptBuilder.AddOp(txscript.OP_TRUE).Script()
-		if err != nil {
-			return nil, err
-		}
-	}
+func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addrs map[btcutil.Address]float64, taxScript []byte) (*btcutil.Tx, error) {
 
 	tx := wire.NewMsgTx(wire.TxVersion)
 	tx.AddTxIn(&wire.TxIn{
@@ -283,10 +265,57 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 	})
 	subsidy := blockchain.CalcBlockSubsidy(nextBlockHeight, params)
 	tax := blockchain.PktCalcNetworkStewardPayout(subsidy)
-	tx.AddTxOut(&wire.TxOut{
-		Value:    subsidy - tax,
-		PkScript: pkScript,
-	})
+
+	if addrs != nil {
+		sum := float64(0)
+		for _, pct := range addrs {
+			sum += pct
+		}
+		coins := subsidy - tax
+		coinsToDate := int64(0)
+		count := len(addrs)
+		i := 1
+		for addr, pct := range addrs {
+			var err error
+			pkScript, err := txscript.PayToAddrScript(addr)
+			if err != nil {
+				return nil, err
+			}
+			realPct := pct / sum
+			amt := int64(float64(coins) * realPct)
+			if coinsToDate+amt > coins {
+				amt2 := coins - coinsToDate
+				diff := float64(amt-amt2) / float64(btcutil.SatoshiPerBitcoin)
+				log.Infof("Shaved [%v] coins off from address [%s] to make exact total",
+					diff, addr.EncodeAddress())
+				amt = amt2
+			}
+			if count == i && coinsToDate+amt < coins {
+				amt2 := coins - coinsToDate
+				diff := float64(amt2-amt) / float64(btcutil.SatoshiPerBitcoin)
+				log.Infof("Gave away [%v] coins off from address [%s] to make exact total",
+					diff, addr.EncodeAddress())
+				amt = amt2
+			}
+			coinsToDate += amt
+			i++
+			tx.AddTxOut(&wire.TxOut{
+				Value:    amt,
+				PkScript: pkScript,
+			})
+		}
+	} else {
+		var err error
+		scriptBuilder := txscript.NewScriptBuilder()
+		pkScript, err := scriptBuilder.AddOp(txscript.OP_TRUE).Script()
+		if err != nil {
+			return nil, err
+		}
+		tx.AddTxOut(&wire.TxOut{
+			Value:    subsidy - tax,
+			PkScript: pkScript,
+		})
+	}
 	tx.AddTxOut(&wire.TxOut{
 		Value:    tax,
 		PkScript: taxScript,
@@ -448,7 +477,7 @@ func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
 //  |  transactions (while block size   |   |
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
-func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, cbc *wire.PcCoinbaseCommit) (*BlockTemplate, error) {
+func (g *BlkTmplGenerator) NewBlockTemplate(payToAddresses map[btcutil.Address]float64, cbc *wire.PcCoinbaseCommit) (*BlockTemplate, error) {
 	// Extend the most recently known best block.
 	best := g.chain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
@@ -467,7 +496,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, cbc *w
 		return nil, err
 	}
 	coinbaseTx, err := createCoinbaseTx(g.chainParams, coinbaseScript,
-		nextBlockHeight, payToAddress, best.Elect.NetworkSteward)
+		nextBlockHeight, payToAddresses, best.Elect.NetworkSteward)
 	if err != nil {
 		return nil, err
 	}
@@ -903,7 +932,7 @@ mempoolLoop:
 		Fees:              txFees,
 		SigOpCosts:        txSigOpCosts,
 		Height:            nextBlockHeight,
-		ValidPayAddress:   payToAddress != nil,
+		ValidPayAddress:   len(payToAddresses) > 0,
 		WitnessCommitment: witnessCommitment,
 	}, nil
 }

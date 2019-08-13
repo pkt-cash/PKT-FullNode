@@ -58,9 +58,9 @@ type Config struct {
 	// generate block templates that the miner will attempt to solve.
 	BlockTemplateGenerator *mining.BlkTmplGenerator
 
-	// MiningAddrs is a list of payment addresses to use for the generated
-	// blocks.  Each generated block will randomly choose one of them.
-	MiningAddrs []btcutil.Address
+	// MiningAddrs is a map of payment addresses to percentages to use for
+	// the generated blocks. Each generated block will pay all of them.
+	MiningAddrs map[btcutil.Address]float64
 
 	// ProcessBlock defines the function to call with any solved blocks.
 	// It typically must run the provided block through the same set of
@@ -336,12 +336,11 @@ out:
 
 		// Choose a payment address at random.
 		rand.Seed(time.Now().UnixNano())
-		payToAddr := m.cfg.MiningAddrs[rand.Intn(len(m.cfg.MiningAddrs))]
 
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := m.g.NewBlockTemplate(payToAddr, nil)
+		template, err := m.g.NewBlockTemplate(m.cfg.MiningAddrs, nil)
 		m.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
@@ -590,12 +589,11 @@ func (m *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 
 		// Choose a payment address at random.
 		rand.Seed(time.Now().UnixNano())
-		payToAddr := m.cfg.MiningAddrs[rand.Intn(len(m.cfg.MiningAddrs))]
 
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := m.g.NewBlockTemplate(payToAddr, nil)
+		template, err := m.g.NewBlockTemplate(m.cfg.MiningAddrs, nil)
 		m.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+

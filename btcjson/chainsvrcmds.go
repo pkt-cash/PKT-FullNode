@@ -434,6 +434,10 @@ func NewGetNetworkHashPSCmd(numBlocks, height *int) *GetNetworkHashPSCmd {
 	}
 }
 
+type ConfigureMiningPayoutsCmd struct {
+	PayoutPercents map[string]float64 `json:"payoutpercents"`
+}
+
 // GetNetworkStewardCmd defines the getnetworksteward JSON-RPC command.
 type GetNetworkStewardCmd struct{}
 
@@ -806,6 +810,7 @@ func init() {
 	flags := UsageFlag(0)
 
 	MustRegisterCmd("addnode", (*AddNodeCmd)(nil), flags)
+	MustRegisterCmd("configureminingpayouts", (*ConfigureMiningPayoutsCmd)(nil), flags)
 	MustRegisterCmd("createrawtransaction", (*CreateRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("decoderawtransaction", (*DecodeRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("decodescript", (*DecodeScriptCmd)(nil), flags)

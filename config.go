@@ -176,7 +176,7 @@ type config struct {
 	oniondial            func(string, string, time.Duration) (net.Conn, error)
 	dial                 func(string, string, time.Duration) (net.Conn, error)
 	addCheckpoints       []chaincfg.Checkpoint
-	miningAddrs          []btcutil.Address
+	miningAddrs          map[btcutil.Address]float64
 	minRelayTxFee        btcutil.Amount
 	whitelists           []*net.IPNet
 }
@@ -898,7 +898,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Check mining addresses are valid and saved parsed versions.
-	cfg.miningAddrs = make([]btcutil.Address, 0, len(cfg.MiningAddrs))
+	cfg.miningAddrs = make(map[btcutil.Address]float64)
 	for _, strAddr := range cfg.MiningAddrs {
 		addr, err := btcutil.DecodeAddress(strAddr, activeNetParams.Params)
 		if err != nil {
@@ -915,7 +915,7 @@ func loadConfig() (*config, []string, error) {
 			fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, nil, err
 		}
-		cfg.miningAddrs = append(cfg.miningAddrs, addr)
+		cfg.miningAddrs[addr] = float64(1)
 	}
 
 	// Ensure there is at least one mining address when the generate flag is

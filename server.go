@@ -22,6 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/btcutil/bloom"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
@@ -37,8 +39,6 @@ import (
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/bloom"
 )
 
 const (
