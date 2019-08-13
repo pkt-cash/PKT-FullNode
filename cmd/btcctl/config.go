@@ -13,9 +13,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pkt-cash/pktd/btcjson"
-	"github.com/pkt-cash/btcutil"
 	flags "github.com/jessevdk/go-flags"
+	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcjson"
 )
 
 const (
@@ -104,6 +104,9 @@ type config struct {
 	ProxyUser     string `long:"proxyuser" description:"Username for proxy server"`
 	ProxyPass     string `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
 	TestNet3      bool   `long:"testnet" description:"Connect to testnet"`
+	PktTest       bool   `long:"pkttest" description:"Use the pkt.cash test network"`
+	BtcMainNet    bool   `long:"btc" description:"Use the bitcoin main network"`
+	PktMainNet    bool   `long:"pkt" description:"Use the pkt.cash main network"`
 	SimNet        bool   `long:"simnet" description:"Connect to the simulation test network"`
 	TLSSkipVerify bool   `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
 	Wallet        bool   `long:"wallet" description:"Connect to wallet"`
@@ -111,7 +114,12 @@ type config struct {
 
 // normalizeAddress returns addr with the passed default port appended if
 // there is not already a port specified.
-func normalizeAddress(addr string, useTestNet3, useSimNet, useWallet bool) string {
+func normalizeAddress(addr string,
+	useTestNet3,
+	useSimNet,
+	useBtcMain,
+	usePktTest,
+	useWallet bool) string {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		var defaultPort string
@@ -128,11 +136,23 @@ func normalizeAddress(addr string, useTestNet3, useSimNet, useWallet bool) strin
 			} else {
 				defaultPort = "18556"
 			}
-		default:
+		case useBtcMain:
 			if useWallet {
 				defaultPort = "8332"
 			} else {
 				defaultPort = "8334"
+			}
+		case usePktTest:
+			if useWallet {
+				defaultPort = "18333"
+			} else {
+				defaultPort = "18335"
+			}
+		default:
+			if useWallet {
+				defaultPort = "8333"
+			} else {
+				defaultPort = "8335"
 			}
 		}
 
@@ -274,7 +294,7 @@ func loadConfig() (*config, []string, error) {
 	// Add default port to RPC server based on --testnet and --wallet flags
 	// if needed.
 	cfg.RPCServer = normalizeAddress(cfg.RPCServer, cfg.TestNet3,
-		cfg.SimNet, cfg.Wallet)
+		cfg.SimNet, cfg.BtcMainNet, cfg.PktTest, cfg.Wallet)
 
 	return &cfg, remainingArgs, nil
 }
