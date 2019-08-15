@@ -917,6 +917,7 @@ func init() {
 	mustRegister(&MainNetParams)
 	mustRegister(&TestNet3Params)
 	mustRegister(&PktTestNetParams)
+	mustRegister(&PktMainNetParams)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
 }
