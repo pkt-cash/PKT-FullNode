@@ -588,7 +588,8 @@ var PktTestNetParams = Params{
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
-	Bech32HRPSegwit: "tp", // always tp for test net
+	// https://github.com/satoshilabs/slips/blob/master/slip-0173.md
+	Bech32HRPSegwit: "tpk",
 
 	// Address encoding magics
 	PubKeyHashAddrID:        0x6f, // starts with m or n
@@ -603,7 +604,7 @@ var PktTestNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 252,
+	HDCoinType: 1,
 }
 
 // PktMainNetParams defines the network parameters for the pkt.cash network.
@@ -683,22 +684,24 @@ var PktMainNetParams = Params{
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
-	Bech32HRPSegwit: "pk", // always tm for test net
+	// https://github.com/satoshilabs/slips/blob/master/slip-0173.md
+	Bech32HRPSegwit: "pkt",
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x6f, // starts with m or n
-	ScriptHashAddrID:        0xc4, // starts with 2
-	WitnessPubKeyHashAddrID: 0x03, // starts with QW
-	WitnessScriptHashAddrID: 0x28, // starts with T7n
-	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	PubKeyHashAddrID:        0x75, // starts with p
+	ScriptHashAddrID:        0x38, // starts with P
+	WitnessPubKeyHashAddrID: 0xa3, // starts with P2
+	WitnessScriptHashAddrID: 0x22, // starts with PCZ
+	PrivateKeyID:            0xe0, // starts with 8 (uncompressed) or a (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
-	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
-	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+	HDPrivateKeyID: [4]byte{0x6b, 0x86, 0x3b, 0xed}, // starts with PpvtX
+	HDPublicKeyID:  [4]byte{0x6b, 0x85, 0xc5, 0x3f}, // starts with PpubX
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+	HDCoinType: 390,
 }
 
 // SimNetParams defines the network parameters for the simulation test Bitcoin
