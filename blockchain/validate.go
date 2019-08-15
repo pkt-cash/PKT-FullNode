@@ -1248,16 +1248,12 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block,
 				continue
 			}
 			if txOut.Value != expectedTax {
-				str := fmt.Sprintf("coinbase transaction for block pays %v "+
-					"to the network steward which is not the expected value of %v",
-					txOut.Value, expectedTax)
-				return nil, ruleError(ErrMissingCoinbaseTax, str)
+				continue
 			}
 			found = true
-			break
 		}
 		if !found {
-			str := fmt.Sprintf("coinbase transaction does not contain a "+
+			str := fmt.Sprintf("coinbase transaction does not contain a proper "+
 				"payment to network steward [%s]", hex.EncodeToString(oldEs.NetworkSteward))
 			return nil, ruleError(ErrBadCoinbaseNetworkSteward, str)
 		}

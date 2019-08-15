@@ -185,10 +185,6 @@ const (
 	// the expected value.
 	ErrBadCoinbaseHeight
 
-	// ErrMissingCoinbaseTax indicates that the tax payment was missing or
-	// not enough.
-	ErrMissingCoinbaseTax
-
 	// ErrBadCoinbaseTax indicates that the tax was paid to the wrong
 	// network steward key.
 	ErrBadCoinbaseNetworkSteward
@@ -284,7 +280,6 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrBadCoinbaseValue:          "ErrBadCoinbaseValue",
 	ErrMissingCoinbaseHeight:     "ErrMissingCoinbaseHeight",
 	ErrBadCoinbaseHeight:         "ErrBadCoinbaseHeight",
-	ErrMissingCoinbaseTax:        "ErrMissingCoinbaseTax",
 	ErrBadCoinbaseNetworkSteward: "ErrBadCoinbaseNetworkSteward",
 	ErrScriptMalformed:           "ErrScriptMalformed",
 	ErrScriptValidation:          "ErrScriptValidation",
