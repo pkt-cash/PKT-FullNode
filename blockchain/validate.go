@@ -1254,6 +1254,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block,
 				return nil, ruleError(ErrMissingCoinbaseTax, str)
 			}
 			found = true
+			break
 		}
 		if !found {
 			str := fmt.Sprintf("coinbase transaction does not contain a "+
