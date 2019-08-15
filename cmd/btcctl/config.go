@@ -144,15 +144,15 @@ func normalizeAddress(addr string,
 			}
 		case usePktTest:
 			if useWallet {
-				defaultPort = "18333"
+				defaultPort = "64511"
 			} else {
-				defaultPort = "18335"
+				defaultPort = "64513"
 			}
 		default:
 			if useWallet {
-				defaultPort = "8333"
+				defaultPort = "64763"
 			} else {
-				defaultPort = "8335"
+				defaultPort = "64765"
 			}
 		}
 

@@ -54,14 +54,14 @@ var testNet3Params = params{
 // than the reference implementation - see the mainNetParams comment for details.
 var pktTestNetParams = params{
 	Params:  &chaincfg.PktTestNetParams,
-	rpcPort: "18335",
+	rpcPort: "64513",
 }
 
 // pktMainNetParams contains parameters specific to the pkt.cash main network
 // (wire.PktMainNet).
 var pktMainNetParams = params{
 	Params:  &chaincfg.PktMainNetParams,
-	rpcPort: "8335",
+	rpcPort: "64765",
 }
 
 // simNetParams contains parameters specific to the simulation test network
