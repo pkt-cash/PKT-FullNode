@@ -23,29 +23,24 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 )
 
-// #cgo CFLAGS:  -I/Users/user/wrk/play/PacketCrypt/include
+// #cgo CFLAGS:  -I/Users/user/wrk/play/PacketCrypt/include -I/Users/user/wrk/play/PacketCrypt/src
 // #cgo LDFLAGS: -L/Users/user/wrk/play/PacketCrypt -lpacketcrypt -lcrypto -L/usr/local/Cellar/libsodium/1.0.17/lib/ -lsodium
 // #include "packetcrypt/AnnMiner.h"
 // #include "packetcrypt/BlockMiner.h"
 // #include "packetcrypt/PacketCrypt.h"
 // #include "packetcrypt/Validate.h"
-//
-// void CryptoCycle_crypt(void* msg);
-// void CryptoCycle_init(void* state, void* seed, uint64_t nonce);
-// void CryptoCycle_update(void* state, void* item, int rhCycles, void* progBuf);
-// void CryptoCycle_final(void* state);
-//
-// int RandGen_generate(void* buf, void* seed);
-// void Hash_expand(void* buff, uint32_t len, void* seed, uint32_t num);
-// int RandHash_interpret(void* prog, void* ccState, void* memory, int progLen, uint32_t memorySizeBytes, int cycles);
-// void RandHashOps_doOp(void* inout, uint32_t op);
+// #include "CryptoCycle.h"
+// #include "RandGen.h"
+// #include "RandHash.h"
+// #include "RandHashOps.h"
+// #include "Hash.h"
 //
 // #include <stdlib.h>
 import "C"
 
 func CryptoCycle(msg []byte) {
 	ptr := C.CBytes(msg)
-	C.CryptoCycle_crypt(ptr)
+	C.CryptoCycle_crypt((*C.CryptoCycle_Header_t)(ptr))
 	msg2 := C.GoBytes(ptr, C.int(len(msg)))
 	copy(msg, msg2)
 	C.free(ptr)
@@ -55,40 +50,77 @@ type PcAnn struct {
 	ch           chan wire.PacketCryptAnn
 	pipeR, pipeW *os.File
 	annMiner     *C.struct_AnnMiner_s
+	content unsafe.Pointer
 }
 
 func freePcAnn(pc *PcAnn) {
 	pc.pipeR.Close()
 	pc.pipeW.Close()
 	C.AnnMiner_free(pc.annMiner)
+	C.free(pc.content)
 }
 
+/*
+typedef struct AnnMiner_Request_s {
+    // the bitcoin format hash target which must be beaten in order to
+    // output the resulting announcement.
+    uint32_t workTarget;
+
+    // the block number of the most recent block
+    uint32_t parentBlockHeight;
+
+    // the hash of the most recent block (for proving the time when the ann was created)
+    uint8_t parentBlockHash[32];
+
+    // a 32 byte pubkey, if all zeros then it is considered that the ann need not be signed
+    uint8_t signingKey[32];
+
+    // the type of the announcement content
+    uint32_t contentType;
+
+    // the length of the content
+    uint32_t contentLen;
+} AnnMiner_Request_t;
+*/
+
 func (p *PcAnn) Start(
-	contentHash []byte,
-	contentType uint64,
+	contentType uint32,
+	content []byte,
 	workTarget uint32,
 	parentBlockHeight uint32,
 	parentBlockHash *chainhash.Hash,
+	signingKey []byte,
 ) {
-	annHeader := make([]byte, 56)
-	binary.LittleEndian.PutUint32(annHeader[8:12], workTarget)
-	binary.LittleEndian.PutUint32(annHeader[12:16], parentBlockHeight)
-	binary.LittleEndian.PutUint64(annHeader[16:24], contentType)
-	copy(annHeader[24:], contentHash)
+	annHeader := make([]byte, 80)
+	binary.LittleEndian.PutUint32(annHeader[:4], workTarget)
+	binary.LittleEndian.PutUint32(annHeader[4:8], parentBlockHeight)
+	copy(annHeader[8:40], parentBlockHash[:])
+	if len(signingKey) > 0 {
+		if len(signingKey) != 32 {
+			panic("expected 32 byte signing key")
+		}
+		copy(annHeader[40:72], parentBlockHash[:])
+	}
+	copy(annHeader[8:40], parentBlockHash[:])
+	binary.LittleEndian.PutUint32(annHeader[72:76], contentType)
+	binary.LittleEndian.PutUint32(annHeader[76:80], uint32(len(content)))
 
 	ahP := C.CBytes(annHeader)
-	pbhP := C.CBytes(parentBlockHash[:])
+	cP := C.CBytes(content)
 
-	ah := (*C.PacketCrypt_AnnounceHdr_t)(ahP)
-	pbha := (*C.uchar)(pbhP)
-	C.AnnMiner_start(p.annMiner, ah, pbha)
+	C.AnnMiner_start(p.annMiner, (*C.AnnMiner_Request_t)(ahP), (*C.uint8_t)(cP))
 
 	C.free(ahP)
-	C.free(pbhP)
+
+	// We can't free this directly because it's used in place
+	C.free(p.content)
+	p.content = cP
 }
 
 func (p *PcAnn) Stop() {
 	C.AnnMiner_stop(p.annMiner)
+	C.free(p.content)
+	p.content = C.NULL
 }
 
 func getThing(f *os.File) *bytes.Buffer {
@@ -121,7 +153,7 @@ func blockReader(bm *PcBlk, ch chan PcBlockMineResult, f *os.File) {
 			return
 		}
 		res := PcBlockMineResult{}
-		if err := res.Header.BtcDecode(b, 0, wire.PcAnnNoContent); err != nil {
+		if err := res.Header.BtcDecode(b, 0, 0); err != nil {
 			panic("failed to decode block header")
 		}
 		var buf [8]byte
@@ -149,7 +181,7 @@ func annReader(bm *PcAnn, ch chan wire.PacketCryptAnn, f *os.File) {
 			return
 		}
 		res := wire.PacketCryptAnn{}
-		if err := res.BtcDecode(b, 0, wire.PcAnnNoContent); err != nil {
+		if err := res.BtcDecode(b, 0, 0); err != nil {
 			panic("failed to decode announcement")
 		}
 		ch <- res
@@ -200,7 +232,7 @@ func PcAnnNew(ch chan wire.PacketCryptAnn, numWorkers uint32) (*PcAnn, error) {
 	outFilesP := C.CBytes(outFiles)
 	numOutFiles := C.int(1)
 	sendPtr := C.int(1)
-	am := C.AnnMiner_create(threads, (*C.int)(outFilesP), numOutFiles, sendPtr)
+	am := C.AnnMiner_create((C.uint32_t)(0), threads, (*C.int)(outFilesP), numOutFiles, sendPtr)
 	C.free(outFilesP)
 	out := PcAnn{
 		ch:       ch,
@@ -247,7 +279,7 @@ func validatePcProof(
 
 	buf := bytes.NewBuffer(
 		make([]byte, 0, hapLen+32*4))
-	if err := blockHeader.BtcEncode(buf, 0, wire.PcAnnNoContent); err != nil {
+	if err := blockHeader.BtcEncode(buf, 0, 0); err != nil {
 		return err
 	}
 	hn := make([]byte, 8)
@@ -282,6 +314,7 @@ func validatePcProof(
 		C.uint32_t(blockHeader.Bits),
 		(*C.PacketCrypt_Coinbase_t)(cbcPtr),
 		(*C.uint8_t)(hashes),
+		(**C.uint8_t)(C.NULL),
 		(*C.uchar)(workHashOut),
 		(*C.PacketCrypt_ValidateCtx_t)(vctx),
 	)
@@ -315,7 +348,7 @@ func (bm *PcBlk) AddAnns(anns []*wire.PacketCryptAnn) {
 	//bytes := C.GoBytes(ptr, C.int(len(anns)*1024))
 	bytes := make([]byte, len(anns)*1024)
 	for i := 0; i < len(anns); i++ {
-		if anns[i].MissingContent() {
+		if anns[i].GetContentLength() > 32 {
 			panic("AddAnns called on announcement with content missing")
 		}
 		if anns[i].GetWorkTarget() == 0 {
@@ -324,7 +357,12 @@ func (bm *PcBlk) AddAnns(anns []*wire.PacketCryptAnn) {
 		copy(bytes[i*1024:(i+1)*1024], anns[i].Header[:])
 	}
 	ptr := C.CBytes(bytes)
-	C.BlockMiner_addAnns(bm.blkMiner, (*C.PacketCrypt_Announce_t)(ptr), C.uint64_t(len(anns)), 1)
+	C.BlockMiner_addAnns(
+		bm.blkMiner,
+		(*C.PacketCrypt_Announce_t)(ptr),
+		(**C.uchar)(C.NULL),
+		C.uint64_t(len(anns)),
+		1)
 }
 
 func (bm *PcBlk) Start(header *wire.BlockHeader) error {
@@ -419,7 +457,7 @@ func CryptoCycleInit(state, seed []byte, nonce uint64) {
 	}
 	stateP := C.CBytes(state)
 	seedP := C.CBytes(seed)
-	C.CryptoCycle_init(stateP, seedP, C.uint64_t(nonce))
+	C.CryptoCycle_init((*C.CryptoCycle_State_t)(stateP), (*C.Buf32_t)(seedP), C.uint64_t(nonce))
 	state1 := C.GoBytes(stateP, C.int(len(state)))
 	copy(state, state1)
 	C.free(stateP)
@@ -433,7 +471,12 @@ func CryptoCycleUpdate(state, item []byte, rhCycles int) {
 	stateP := C.CBytes(state)
 	itemP := C.CBytes(item)
 	progBufP := C.malloc(util.Conf_RandGen_MAX_INSNS * 4)
-	C.CryptoCycle_update(stateP, itemP, C.int(rhCycles), progBufP)
+	C.CryptoCycle_update(
+		(*C.CryptoCycle_State_t)(stateP),
+		(*C.CryptoCycle_Item_t)(itemP),
+		(*C.uint8_t)(C.NULL),
+		C.int(rhCycles),
+		(*C.PacketCrypt_ValidateCtx_t)(progBufP))
 	state1 := C.GoBytes(stateP, C.int(len(state)))
 	copy(state, state1)
 	C.free(stateP)
@@ -446,7 +489,7 @@ func CryptoCycleFinal(state []byte) {
 		panic("bad lengths")
 	}
 	stateP := C.CBytes(state)
-	C.CryptoCycle_final(stateP)
+	C.CryptoCycle_final((*C.CryptoCycle_State_t)(stateP))
 	state1 := C.GoBytes(stateP, C.int(len(state)))
 	copy(state, state1)
 	C.free(stateP)
@@ -455,7 +498,7 @@ func CryptoCycleFinal(state []byte) {
 func Generate(seed []byte) ([]uint32, error) {
 	out2C := C.malloc(4 * util.Conf_RandGen_MAX_INSNS)
 	seedC := C.CBytes(seed)
-	ret := C.RandGen_generate(out2C, seedC)
+	ret := C.RandGen_generate((*C.uint)(out2C), (*C.Buf32_t)(seedC))
 	if ret < 0 {
 		if ret == -2 {
 			return nil, errors.New("insn count < Conf_RandGen_MIN_INSNS")
@@ -479,9 +522,9 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
 	memoryP := C.CBytes(memory)
 
 	ret := C.RandHash_interpret(
-		progP,
-		ccStateP,
-		memoryP,
+		(*C.uint)(progP),
+		(*C.CryptoCycle_State_t)(ccStateP),
+		(*C.uint32_t)(memoryP),
 		C.int(len(prog)),
 		C.uint32_t(len(memory)),
 		C.int(cycles))
@@ -513,7 +556,7 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
 func HashExpand(len uint32, seed []uint8, num uint32) []byte {
 	outC := C.malloc(C.size_t(len))
 	seedC := C.CBytes(seed)
-	C.Hash_expand(outC, C.uint32_t(len), seedC, C.uint32_t(num))
+	C.Hash_expand((*C.uint8_t)(outC), C.uint32_t(len), (*C.uint8_t)(seedC), C.uint32_t(num))
 	out := C.GoBytes(outC, C.int(len))
 	C.free(outC)
 	C.free(seedC)
@@ -522,7 +565,7 @@ func HashExpand(len uint32, seed []uint8, num uint32) []byte {
 
 func RandHashDoOp(inout []uint32, op opcodes.OpCode) {
 	inoutP := C.CBytes(pcutil.BFromU32(nil, inout))
-	C.RandHashOps_doOp(inoutP, C.uint32_t(op))
+	C.RandHashOps_doOp((*C.uint32_t)(inoutP), C.uint32_t(op))
 	inoutB := C.GoBytes(inoutP, C.int(len(inout)*4))
 	C.free(inoutP)
 	pcutil.U32FromB(inout, inoutB)

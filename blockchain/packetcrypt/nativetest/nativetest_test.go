@@ -149,7 +149,7 @@ func mineGenesisAnnouncements(t *testing.T) []*wire.PacketCryptAnn {
 		t.Errorf("%v", err)
 		return nil
 	}
-	m.Start(parentHash[:], uint64(0), 0x200fffff, uint32(parentBlockHeight), &parentHash)
+	m.Start(0, nil, 0x200fffff, uint32(parentBlockHeight), &parentHash, nil)
 	var anns [4096]*wire.PacketCryptAnn
 	for i := 0; i < 4096; i++ {
 		ann := <-ch
@@ -249,7 +249,7 @@ func TestMineAnn(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	m.Start(parentHash[:], uint64(0), 0x207fffff, uint32(parentBlockHeight), &parentHash)
+	m.Start(uint32(0), nil, 0x207fffff, uint32(parentBlockHeight), &parentHash, nil)
 	ann := <-ch
 	go func() { m.Stop() }()
 	for len(ch) > 0 {
@@ -278,7 +278,7 @@ func TestCryptoCycle(t *testing.T) {
 		}
 
 		nativetest.CryptoCycleUpdate(state1, item1, 4)
-		cryptocycle.Update(ccState, item1, 4, ctx)
+		cryptocycle.Update(ccState, item1, nil, 4, ctx)
 
 		if bytes.Compare(ccState.Bytes[:], state1) != 0 {
 			t.Errorf("update different with %v", hex.EncodeToString(seed))
@@ -320,7 +320,7 @@ func TestValidateAnns(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	m.Start(parentHash[:], uint64(0), 0x207fffff, uint32(parentBlockHeight), &parentHash)
+	m.Start(uint32(0), nil, 0x207fffff, uint32(parentBlockHeight), &parentHash, nil)
 	for i := 0; i < 1000; i++ {
 		ann := <-ch
 		_, err := nativetest.ValidatePcAnn(t, &ann, &parentHash)

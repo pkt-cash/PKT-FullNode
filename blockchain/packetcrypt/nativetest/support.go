@@ -21,11 +21,6 @@ func validatePcBlock(mb *wire.MsgBlock, height int32, annParentHashes []*chainha
 	if mb.Pcp == nil {
 		return errors.New("missing packetcrypt proof")
 	}
-	for _, ann := range mb.Pcp.Announcements {
-		if ann.MissingContent() {
-			return errors.New("missing packetcrypt content")
-		}
-	}
 	coinbase := mb.Transactions[0]
 	if coinbase == nil {
 		return errors.New("missing coinbase")
