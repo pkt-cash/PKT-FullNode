@@ -220,7 +220,7 @@ func pktCalcBlockSubsidy(period int32) int64 {
 // in the block at the given height. It starts as 4166 pkt per block at block
 // zero and then degrades by 10% every 144000 blocks.
 func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
-	if chainParams.Net == wire.PktTestNet {
+	if chainParams.GlobalConf.HasNetworkSteward {
 		return pktCalcBlockSubsidy(pktPeriodForBlock(height))
 	}
 	return bitcoinCalcBlockSubsidy(height, chainParams)
