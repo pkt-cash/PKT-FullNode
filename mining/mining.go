@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
 
 const (
@@ -285,14 +286,14 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 			amt := int64(float64(coins) * realPct)
 			if coinsToDate+amt > coins {
 				amt2 := coins - coinsToDate
-				diff := float64(amt-amt2) / float64(btcutil.SatoshiPerBitcoin)
+				diff := float64(amt-amt2) / float64(globalcfg.SatoshiPerBitcoin())
 				log.Infof("Shaved [%v] coins off from address [%s] to make exact total",
 					diff, addr.EncodeAddress())
 				amt = amt2
 			}
 			if count == i && coinsToDate+amt < coins {
 				amt2 := coins - coinsToDate
-				diff := float64(amt2-amt) / float64(btcutil.SatoshiPerBitcoin)
+				diff := float64(amt2-amt) / float64(globalcfg.SatoshiPerBitcoin())
 				log.Infof("Gave away [%v] coins off from address [%s] to make exact total",
 					diff, addr.EncodeAddress())
 				amt = amt2
