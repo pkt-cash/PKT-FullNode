@@ -206,6 +206,12 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 			}
 		case pcpType:
 			{
+				if length <= (1024*4)+4 {
+					return fmt.Errorf("readPacketCryptProof run pcp, len [%d]", length)
+				}
+				if length > 131072 {
+					return fmt.Errorf("readPacketCryptProof oversize pcp, len [%d]", length)
+				}
 				readElement(r, &pcp.Nonce)
 				for i := 0; i < 4; i++ {
 					if err := pcp.Announcements[i].BtcDecode(r, pver, enc); err != nil {
