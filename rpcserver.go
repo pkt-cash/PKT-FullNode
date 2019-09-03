@@ -158,6 +158,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getinfo":                handleGetInfo,
 	"getmempoolinfo":         handleGetMempoolInfo,
 	"getmininginfo":          handleGetMiningInfo,
+	"getminingpayouts":       handleGetMiningPayouts,
 	"getnettotals":           handleGetNetTotals,
 	"getnetworkhashps":       handleGetNetworkHashPS,
 	"getnetworksteward":      handleGetNetworkSteward,
@@ -2542,6 +2543,37 @@ func handleConfigureMiningPayouts(s *rpcServer, cmd interface{}, closeChan <-cha
 	}
 
 	return nil, nil
+}
+
+func handleGetMiningPayouts(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	state := s.gbtWorkState
+	state.Lock()
+	defer state.Unlock()
+
+	if err := state.updateBlockTemplate(s, false); err != nil {
+		return nil, err
+	}
+	cb := state.template.Block.Transactions[0]
+	m := make(map[string]float64)
+	for i, out := range cb.TxOut {
+		if out.Value == 0 {
+			// flagging output
+			continue
+		}
+		if i == len(cb.TxOut)-1 {
+			// network steward payment
+			continue
+		}
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, s.cfg.ChainParams)
+		amt := btcutil.Amount(out.Value).ToBTC()
+		if err != nil || len(addrs) != 1 {
+			m[fmt.Sprintf("nonstandard[%s]%d", hex.EncodeToString(out.PkScript), len(out.PkScript))] = amt
+		} else {
+			sAddr := addrs[0].EncodeAddress()
+			m[sAddr] = amt
+		}
+	}
+	return m, nil
 }
 
 // handleGetNetTotals implements the getnettotals command.

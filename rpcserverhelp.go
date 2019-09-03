@@ -688,7 +688,7 @@ var helpDescsEnUS = map[string]string{
 // pointer to the type (or nil to indicate no return value).
 var rpcResultTypes = map[string][]interface{}{
 	"addnode":                nil,
-	"configureminingpayouts": {(*btcjson.ConfigureMiningPayoutsCmd)(nil)},
+	"configureminingpayouts": nil,
 	"createrawtransaction":   {(*string)(nil)},
 	"debuglevel":             {(*string)(nil), (*string)(nil)},
 	"decoderawtransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
@@ -715,6 +715,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getinfo":                {(*btcjson.InfoChainResult)(nil)},
 	"getmempoolinfo":         {(*btcjson.GetMempoolInfoResult)(nil)},
 	"getmininginfo":          {(*btcjson.GetMiningInfoResult)(nil)},
+	"getminingpayouts":       {(*btcjson.GetMiningPayoutsResult)(nil)},
 	"getnettotals":           {(*btcjson.GetNetTotalsResult)(nil)},
 	"getnetworksteward":      {(*btcjson.GetNetworkStewardResult)(nil)},
 	"getnetworkhashps":       {(*int64)(nil)},

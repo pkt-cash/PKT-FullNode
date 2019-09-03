@@ -438,6 +438,8 @@ type ConfigureMiningPayoutsCmd struct {
 	PayoutPercents map[string]float64 `json:"payoutpercents"`
 }
 
+type GetMiningPayoutsResult map[string]float64
+
 // GetNetworkStewardCmd defines the getnetworksteward JSON-RPC command.
 type GetNetworkStewardCmd struct{}
 
@@ -833,6 +835,7 @@ func init() {
 	MustRegisterCmd("getmempoolentry", (*GetMempoolEntryCmd)(nil), flags)
 	MustRegisterCmd("getmempoolinfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("getmininginfo", (*GetMiningInfoCmd)(nil), flags)
+	MustRegisterCmd("getminingpayouts", (*struct{})(nil), flags)
 	MustRegisterCmd("getnetworkinfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("getnettotals", (*GetNetTotalsCmd)(nil), flags)
 	MustRegisterCmd("getnetworksteward", (*GetNetworkStewardCmd)(nil), flags)
