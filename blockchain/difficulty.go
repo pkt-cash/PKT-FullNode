@@ -230,7 +230,8 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 		// For networks that support it, allow special reduction of the
 		// required difficulty once too much time has elapsed without
 		// mining a block.
-		if b.chainParams.ReduceMinDifficulty {
+		if b.chainParams.ReduceMinDifficulty ||
+			(b.chainParams.HDCoinType == 390 && lastNode.height < 50000) {
 			// Return minimum difficulty when more than the desired
 			// amount of time has elapsed without mining a block.
 			reductionTime := int64(b.chainParams.MinDiffReductionTime /

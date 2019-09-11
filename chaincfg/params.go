@@ -650,7 +650,7 @@ var PktMainNetParams = Params{
 	TargetTimespan:           (time.Hour * 24 * 14) / 10, // 14 days
 	TargetTimePerBlock:       time.Minute,                // 1 minute
 	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
-	ReduceMinDifficulty:      true,
+	ReduceMinDifficulty:      false,
 	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
 	GenerateSupported:        false,
 

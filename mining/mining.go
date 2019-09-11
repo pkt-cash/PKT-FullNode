@@ -16,9 +16,9 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
 
 const (
@@ -948,11 +948,13 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	// The new timestamp is potentially adjusted to ensure it comes after
 	// the median time of the last several blocks per the chain consensus
 	// rules.
-	newTime := medianAdjustedTime(g.chain.BestSnapshot(), g.timeSource)
+	snap := g.chain.BestSnapshot()
+	newTime := medianAdjustedTime(snap, g.timeSource)
 	msgBlock.Header.Timestamp = newTime
 
 	// Recalculate the difficulty if running on a network that requires it.
-	if g.chainParams.ReduceMinDifficulty {
+	if g.chainParams.ReduceMinDifficulty ||
+		(g.chainParams.HDCoinType == 390 && snap.Height < 50000) {
 		difficulty, err := g.chain.CalcNextRequiredDifficulty(newTime)
 		if err != nil {
 			return err
