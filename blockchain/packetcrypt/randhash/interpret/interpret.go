@@ -22,7 +22,7 @@ type Uint64 struct {
 // Also be careful not to change these without also checking the buffers
 // which are passed to RandHash_execute()
 const RandHash_MEMORY_SZ int = 256
-const RandHash_INOUT_SZ int = 256
+const RandHash_INOUT_SZ int64 = 256
 
 func getReg(stack []uint32, index uint32) uint32 {
 	if index < 0 || index > uint32(len(stack)) {
@@ -92,7 +92,7 @@ type Context struct {
 	hashIn    []byte
 	hashOut   []byte
 	memory    []byte
-	hashctr   int
+	hashctr   int64
 	loopCycle int
 }
 
@@ -149,7 +149,7 @@ func interpret(ctx *Context, pc int) int {
 			out1(ctx, hi)
 
 		case opcodes.OpCode_IN:
-			idx := int(uint32(util.DecodeInsn_imm(insn))) % RandHash_INOUT_SZ
+			idx := int64(uint32(util.DecodeInsn_imm(insn))) % RandHash_INOUT_SZ
 			hi := binary.LittleEndian.Uint32(ctx.hashIn[idx*4:][:4])
 			if debug {
 				pad(ctx)
@@ -258,7 +258,7 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
 	ctx.memory = memory
 	ctx.hashIn = ccState[:len(ccState)/2]
 	ctx.hashOut = ccState[len(ccState)/2:]
-	if len(ccState)/4/2 != RandHash_INOUT_SZ {
+	if int64(len(ccState))/4/2 != RandHash_INOUT_SZ {
 		panic("weird size")
 	}
 	ctx.prog = prog
