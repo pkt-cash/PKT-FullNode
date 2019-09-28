@@ -2072,7 +2072,7 @@ func handleCheckPcShare(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 
 	mb := block.MsgBlock()
 	mb.Transactions = append(mb.Transactions, &wire.MsgTx{})
-	if err := mb.Transactions[0].BtcDecode(buf, 0, 0); err != nil {
+	if err := mb.Transactions[0].BtcDecode(buf, 0, wire.WitnessEncoding); err != nil {
 		return nil, err
 	}
 
