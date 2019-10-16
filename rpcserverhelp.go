@@ -428,7 +428,24 @@ var helpDescsEnUS = map[string]string{
 	// GetMiningInfoCmd help.
 	"getmininginfo--synopsis": "Returns a JSON object containing mining-related information.",
 
-	"getnetworksteward--synopsis": "Returns information about the network steward, if using a chain with one",
+	// GetMiningPayouts help.
+	"getminingpayouts--synopsis":       "Get the addresses who will be paid out to in a block template.",
+	"getminingpayouts--result0--desc":  "The list of addresses which will be paid out from block mining.",
+	"getminingpayouts--result0--key":   "Address to be paid.",
+	"getminingpayouts--result0--value": "Percent that each address will be paid.",
+
+	// ConfigureMiningPayouts help.
+	"configureminingpayouts--synopsis":             "Configure who to pay out to when making a block template.",
+	"configureminingpayouts-payoutpercents":        "Map of who to pay out to when making a block template.",
+	"configureminingpayouts-payoutpercents--desc":  "Which addresses should be paid when making a block template.",
+	"configureminingpayouts-payoutpercents--key":   "Which address to pay.",
+	"configureminingpayouts-payoutpercents--value": "Percent that each address should be paid.",
+
+	// GetNetworkSteward help.
+	"getnetworksteward--synopsis":           "Returns information about the network steward, if using a chain with one",
+	"getnetworkstewardresult-totalpossible": "Total coins existing",
+	"getnetworkstewardresult-votesagainst":  "Total coins voting against the current network steward",
+	"getnetworkstewardresult-script":        "Payment script for current network steward",
 
 	// GetNetworkHashPSCmd help.
 	"getnetworkhashps--synopsis": "Returns the estimated network hashes per second for the block heights provided by the parameters.",
@@ -479,6 +496,15 @@ var helpDescsEnUS = map[string]string{
 	"getrawblocktemplateresult-coinbase":     "Coinbase transaction as hex",
 	"getrawblocktemplateresult-merklebranch": "Merkle branch for proving the coinbase, hex string",
 	"getrawblocktemplateresult-transactions": "Hex string of all transactions other than the coinbase",
+
+	"checkpcsharecmdstructure-merklebranch": "The merkle branch for proving the coinbase",
+	"checkpcsharecmdstructure-coinbase":     "The hex encoded coinbase transaction",
+	"checkpcsharecmdstructure-hexblock":     "The hex encoded block",
+	"checkpcsharecmdstructure-height":       "The height of the share to check",
+	"checkpcsharecmdstructure-sharetarget":  "Difficulty target for the share to validate against",
+	"checkpcshare--result0":                 "OK or RESUBMIT_AS_BLOCK, or an error in case the packetcrypt share was not valid",
+	"checkpcshare-request":                  "The share to validate",
+	"checkpcshare--synopsis":                "Check a PacketCrypt work share against a given share target",
 
 	// GetRawMempoolVerboseResult help.
 	"getrawmempoolverboseresult-size":             "Transaction size in bytes",
