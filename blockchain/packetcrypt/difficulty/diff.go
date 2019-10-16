@@ -20,14 +20,18 @@ func bn256() *big.Int {
 
 var bigOne = big.NewInt(1)
 
-func workForTarget(target *big.Int) *big.Int {
+// WorkForTarget calculates an estimated number of hashes which must take place in order to meet
+// a particular target
+func WorkForTarget(target *big.Int) *big.Int {
 	out := bn256()
 	tarPlusOne := new(big.Int).Add(target, bigOne)
 	out.Div(out, tarPlusOne)
 	return out
 }
 
-func targetForWork(work *big.Int) *big.Int {
+// TargetForWork produces a target to meet based on a desired number of hashes of work to
+// achieve it.
+func TargetForWork(work *big.Int) *big.Int {
 	out := bn256()
 	if work.Sign() == 0 {
 		// 0 work, min difficulty
@@ -65,12 +69,12 @@ func GetEffectiveTarget(blockHeaderTarget uint32, minAnnTarget uint32, annCount 
 	bnBlockHeaderTarget := CompactToBig(blockHeaderTarget)
 	bnMinAnnTarget := CompactToBig(minAnnTarget)
 
-	bnBlockHeaderWork := workForTarget(bnBlockHeaderTarget)
-	bnMinAnnWork := workForTarget(bnMinAnnTarget)
+	bnBlockHeaderWork := WorkForTarget(bnBlockHeaderTarget)
+	bnMinAnnWork := WorkForTarget(bnMinAnnTarget)
 
 	bnEffectiveWork := getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork, annCount)
 
-	bnEffectiveTarget := targetForWork(bnEffectiveWork)
+	bnEffectiveTarget := TargetForWork(bnEffectiveWork)
 	effectiveTarget := BigToCompact(bnEffectiveTarget)
 
 	if effectiveTarget > 0x207fffff {
@@ -104,9 +108,9 @@ func GetAgedAnnTarget(target, annAgeBlocks uint32) uint32 {
 		return BigToCompact(bnAnnTar)
 	}
 	annAgeBlocks -= util.Conf_PacketCrypt_ANN_WAIT_PERIOD
-	bnAnnWork := workForTarget(bnAnnTar)
+	bnAnnWork := WorkForTarget(bnAnnTar)
 	bnAnnWork.Div(bnAnnWork, big.NewInt(int64(annAgeBlocks)))
-	bnAnnAgedTar := targetForWork(bnAnnWork)
+	bnAnnAgedTar := TargetForWork(bnAnnWork)
 	out := BigToCompact(bnAnnAgedTar)
 	if out > 0x207fffff {
 		return 0xffffffff
@@ -120,6 +124,6 @@ func IsAnnMinDiffOk(target uint32) bool {
 	if target == 0 || target > 0x20ffffff {
 		return false
 	}
-	work := workForTarget(CompactToBig(target))
+	work := WorkForTarget(CompactToBig(target))
 	return work.Sign() > 0 && work.Cmp(bn256()) < 0
 }
