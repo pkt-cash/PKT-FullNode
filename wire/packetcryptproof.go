@@ -267,6 +267,9 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 					return err
 				}
 				pcp.Version = int(ver)
+				if VarIntSerializeSize(ver) != int(length) {
+					return messageError("readPacketCryptProof", "Dangling bytes after version field")
+				}
 			}
 		default:
 			{
