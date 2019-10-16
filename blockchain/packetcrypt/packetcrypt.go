@@ -21,8 +21,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func ValidatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, error) {
-	return announce.CheckAnn(p, parentBlockHash)
+func ValidatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
+	return announce.CheckAnn(p, parentBlockHash, packetCryptVersion)
 }
 
 func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader) error {
@@ -92,21 +92,27 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 
 	// Check content proofs
 	proofIdx := contentProofIdx2(mb)
-	contentProofs, err := mb.Pcp.SplitContentProof(proofIdx)
-	if err != nil {
-		return false, err
-	}
-	for i, ann := range mb.Pcp.Announcements {
-		if ann.GetContentLength() <= 32 {
-			continue
-		}
-		if contentProofs[i] == nil {
-			return false, errors.New("missing announcement content proof")
-		}
-		contentBuf := bytes.NewBuffer(contentProofs[i])
-		if err := checkContentProof(&ann, proofIdx, contentBuf); err != nil {
+	var contentProofs [][]byte
+	if mb.Pcp.Version == 1 {
+		var err error
+		contentProofs, err = mb.Pcp.SplitContentProof(proofIdx)
+		if err != nil {
 			return false, err
 		}
+		for i, ann := range mb.Pcp.Announcements {
+			if ann.GetContentLength() <= 32 {
+				continue
+			}
+			if contentProofs[i] == nil {
+				return false, errors.New("missing announcement content proof")
+			}
+			contentBuf := bytes.NewBuffer(contentProofs[i])
+			if err := checkContentProof(&ann, proofIdx, contentBuf); err != nil {
+				return false, err
+			}
+		}
+	} else if mb.Pcp.ContentProof != nil {
+		return false, fmt.Errorf("For PcP type [%d] content proof must be nil", mb.Pcp.Version)
 	}
 
 	coinbase := mb.Transactions[0]
@@ -118,7 +124,7 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 		return false, errors.New("missing packetcrypt commitment")
 	}
 	return block.ValidatePcProof(
-		mb.Pcp, height, &mb.Header, cbc, shareTarget, annParentHashes, contentProofs)
+		mb.Pcp, height, &mb.Header, cbc, shareTarget, annParentHashes, contentProofs, mb.Pcp.Version)
 }
 
 var pcCoinbasePrefix = [...]byte{0x6a, 0x30, 0x09, 0xf9, 0x11, 0x02}

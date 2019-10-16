@@ -23,9 +23,9 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 )
 
-func isWorkOk(ccState *cryptocycle.State, cb *wire.PcCoinbaseCommit, target uint32) bool {
+func isWorkOk(ccState *cryptocycle.State, cb *wire.PcCoinbaseCommit, target uint32, packetCryptVersion int) bool {
 	effectiveTarget := difficulty.GetEffectiveTarget(
-		target, cb.AnnMinDifficulty(), cb.AnnCount())
+		target, cb.AnnMinDifficulty(), cb.AnnCount(), packetCryptVersion)
 
 	log.Debugf("Validating PacketCryptProof with work hash [%s] target [%08x]",
 		hex.EncodeToString(ccState.Bytes[:32]), effectiveTarget)
@@ -39,6 +39,7 @@ func isPcHashOk(
 	cb *wire.PcCoinbaseCommit,
 	shareTarget uint32,
 	contentProofs [][]byte,
+	packetCryptVersion int,
 ) (bool, bool) {
 	ccState := new(cryptocycle.State)
 
@@ -53,9 +54,12 @@ func isPcHashOk(
 	for j := 0; j < 4; j++ {
 		indexesOut[j] = cryptocycle.GetItemNo(ccState)
 		it := &proof.Announcements[j]
-		cp := contentProofs[j]
-		if cp != nil {
-			cp = cp[:32]
+		var cp []byte
+		if contentProofs != nil {
+			cp = contentProofs[j]
+			if cp != nil {
+				cp = cp[:32]
+			}
 		}
 		if !cryptocycle.Update(ccState, it.Header[:], cp, 0, nil) {
 			// This will never happen as the code is today, but it's a defense to
@@ -66,10 +70,10 @@ func isPcHashOk(
 	cryptocycle.Smul(ccState)
 	cryptocycle.Final(ccState)
 
-	if isWorkOk(ccState, cb, blockHeader.Bits) {
+	if isWorkOk(ccState, cb, blockHeader.Bits, packetCryptVersion) {
 		return true, true
 	}
-	if shareTarget != 0 && isWorkOk(ccState, cb, shareTarget) {
+	if shareTarget != 0 && isWorkOk(ccState, cb, shareTarget, packetCryptVersion) {
 		return true, false
 	}
 	fmt.Printf("isPcHashOk failed [%s] [%x]", hex.EncodeToString(ccState.Bytes[:32]), shareTarget)
@@ -89,16 +93,17 @@ func ValidatePcProof(
 	shareTarget uint32,
 	blockHashes []*chainhash.Hash,
 	contentProofs [][]byte,
+	packetCryptVersion int,
 ) (bool, error) {
 	// Check cb magic
 	if cb.Magic() != wire.PcCoinbaseCommitMagic ||
-		!difficulty.IsAnnMinDiffOk(cb.AnnMinDifficulty()) {
+		!difficulty.IsAnnMinDiffOk(cb.AnnMinDifficulty(), packetCryptVersion) {
 		return false, errors.New("Validate_checkBlock_BAD_COINBASE")
 	}
 
 	// Check that the block has the declared amount of work
 	var annIndexes [4]uint64
-	shareOk, blockOk := isPcHashOk(&annIndexes, blockHeader, pcp, cb, shareTarget, contentProofs)
+	shareOk, blockOk := isPcHashOk(&annIndexes, blockHeader, pcp, cb, shareTarget, contentProofs, packetCryptVersion)
 	if !shareOk {
 		return false, errors.New("Validate_checkBlock_INSUF_POW")
 	}
@@ -107,7 +112,7 @@ func ValidatePcProof(
 	var annHashes [4][32]byte
 	for i := 0; i < 4; i++ {
 		ann := &pcp.Announcements[i]
-		if _, err := announce.CheckAnn(ann, blockHashes[i]); err != nil {
+		if _, err := announce.CheckAnn(ann, blockHashes[i], packetCryptVersion); err != nil {
 			return false, err
 		}
 		effectiveAnnTarget := uint32(0xffffffff)
@@ -115,7 +120,7 @@ func ValidatePcProof(
 			effectiveAnnTarget = ann.GetWorkTarget()
 		} else {
 			age := uint32(blockHeight) - ann.GetParentBlockHeight()
-			effectiveAnnTarget = difficulty.GetAgedAnnTarget(ann.GetWorkTarget(), age)
+			effectiveAnnTarget = difficulty.GetAgedAnnTarget(ann.GetWorkTarget(), age, packetCryptVersion)
 		}
 		if effectiveAnnTarget > cb.AnnMinDifficulty() {
 			return false, errors.New("Validate_checkBlock_ANN_INSUF_POW")

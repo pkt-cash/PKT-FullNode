@@ -394,6 +394,10 @@ func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) error {
 		return err
 	}
 
+	if !globalcfg.IsPacketCryptAllowedVersion(pcp.Version, height) {
+		return ruleError(ErrBadPow, "Unallowed PacketCrypt proof version")
+	}
+
 	hashes := make([]*chainhash.Hash, len(pcp.Announcements))
 	for i := 0; i < len(pcp.Announcements); i++ {
 		ph := pcp.Announcements[i].GetParentBlockHeight()

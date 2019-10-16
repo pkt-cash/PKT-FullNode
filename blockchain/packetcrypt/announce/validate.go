@@ -66,7 +66,7 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 	return bytes.Compare(buf[64*(itemNo&1):][:64], merkleProof[64*announceMerkleDepth:]) == 0
 }
 
-func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, error) {
+func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
 	ctx := new(context)
 	copy(ctx.ann.GetAnnounceHeader(), pcAnn.GetAnnounceHeader())
 	copy(ctx.ann.GetMerkleProof()[:32], parentBlockHash[:])
@@ -78,6 +78,9 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*cha
 	var softNonceBuf [4]byte
 	copy(softNonceBuf[:], pcAnn.GetSoftNonce())
 	softNonce := binary.LittleEndian.Uint32(softNonceBuf[:])
+	if softNonce > difficulty.AnnSoftNonceMax(pcAnn.GetWorkTarget(), packetCryptVersion) {
+		return nil, errors.New("Validate_checkAnn_SOFT_NONCE_HIGH")
+	}
 	cryptocycle.Init(&ctx.ccState, ctx.annHash1[:32], uint64(softNonce))
 	itemNo := -1
 	for i := 0; i < 4; i++ {

@@ -42,7 +42,7 @@ func TargetForWork(work *big.Int) *big.Int {
 	return out
 }
 
-func getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork *big.Int, annCount uint64) *big.Int {
+func getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork *big.Int, annCount uint64, packetCryptVersion int) *big.Int {
 	if bnMinAnnWork.Sign() == 0 || annCount == 0 {
 		// there are no announcements or zero announcement work, set work to maximum
 		return new(big.Int).Sub(bn256(), bigOne)
@@ -54,10 +54,23 @@ func getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork *big.Int, annCo
 	out.Mul(out, out)
 	out.Mul(out, bnBlockHeaderWork)
 
+	if packetCryptVersion >= 2 {
+		// Difficulty *= 1024
+		out.Rsh(out, 10)
+	}
+
 	// out /= bnMinAnnWork
 	out.Div(out, bnMinAnnWork)
+
+	bigCount := new(big.Int).SetUint64(annCount)
+
+	if packetCryptVersion >= 2 {
+		// annCount = annCount**2
+		bigCount.Mul(bigCount, bigCount)
+	}
+
 	// out /= annCount
-	out.Div(out, new(big.Int).SetUint64(annCount))
+	out.Div(out, bigCount)
 
 	return out
 }
@@ -65,14 +78,14 @@ func getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork *big.Int, annCo
 // GetEffectiveTarget gives the effective target to beat based on the target in the
 // block header, the minimum work (highest target) of any announcement and the number
 // of announcements which were mined with.
-func GetEffectiveTarget(blockHeaderTarget uint32, minAnnTarget uint32, annCount uint64) uint32 {
+func GetEffectiveTarget(blockHeaderTarget uint32, minAnnTarget uint32, annCount uint64, packetCryptVersion int) uint32 {
 	bnBlockHeaderTarget := CompactToBig(blockHeaderTarget)
 	bnMinAnnTarget := CompactToBig(minAnnTarget)
 
 	bnBlockHeaderWork := WorkForTarget(bnBlockHeaderTarget)
 	bnMinAnnWork := WorkForTarget(bnMinAnnTarget)
 
-	bnEffectiveWork := getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork, annCount)
+	bnEffectiveWork := getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork, annCount, packetCryptVersion)
 
 	bnEffectiveTarget := TargetForWork(bnEffectiveWork)
 	effectiveTarget := BigToCompact(bnEffectiveTarget)
@@ -93,11 +106,32 @@ func IsOk(hash []byte, target uint32) bool {
 	return th.Cmp(bh) >= 0
 }
 
+func getAgedAnnTarget2(target, annAgeBlocks uint32) uint32 {
+	if annAgeBlocks < util.Conf_PacketCrypt_ANN_WAIT_PERIOD {
+		// announcement is not ready yet
+		return 0xffffffff
+	}
+	if annAgeBlocks == util.Conf_PacketCrypt_ANN_WAIT_PERIOD {
+		// fresh ann, no aging
+		return target
+	}
+	annAgeBlocks -= util.Conf_PacketCrypt_ANN_WAIT_PERIOD
+	bnAnnTar := CompactToBig(target)
+	bnAnnTar = bnAnnTar.Lsh(bnAnnTar, uint(annAgeBlocks))
+	if bnAnnTar.BitLen() > 255 {
+		return 0xffffffff
+	}
+	return BigToCompact(bnAnnTar)
+}
+
 // GetAgedAnnTarget returns the target which will be used for valuing the announcement.
 // The minAnnWork committed in the coinbase must not be less work (higher number) than
 // the highest (least work) aged target for any announcement mined in that block.
 // If the announcement is not valid for adding to the block, return 0xffffffff
-func GetAgedAnnTarget(target, annAgeBlocks uint32) uint32 {
+func GetAgedAnnTarget(target, annAgeBlocks uint32, packetCryptVersion int) uint32 {
+	if packetCryptVersion >= 2 {
+		return getAgedAnnTarget2(target, annAgeBlocks)
+	}
 	if annAgeBlocks < util.Conf_PacketCrypt_ANN_WAIT_PERIOD {
 		// announcement is not ready yet
 		return 0xffffffff
@@ -118,12 +152,38 @@ func GetAgedAnnTarget(target, annAgeBlocks uint32) uint32 {
 	return out
 }
 
+func isAnnMinDiffOk2(target uint32) bool {
+	if target == 0 || target > 0x207fffff {
+		return false
+	}
+	big := CompactToBig(target)
+	if big.Sign() <= 0 {
+		return false
+	}
+	work := WorkForTarget(big)
+	return work.Sign() > 0 && work.Cmp(bn256()) < 0
+}
+
 // IsAnnMinDiffOk is kind of a sanity check to make sure that the miner doesn't provide
 // "silly" results which might trigger wrong behavior from the diff computation
-func IsAnnMinDiffOk(target uint32) bool {
+func IsAnnMinDiffOk(target uint32, packetCryptVersion int) bool {
+	if packetCryptVersion >= 2 {
+		return isAnnMinDiffOk2(target)
+	}
 	if target == 0 || target > 0x20ffffff {
 		return false
 	}
 	work := WorkForTarget(CompactToBig(target))
 	return work.Sign() > 0 && work.Cmp(bn256()) < 0
+}
+
+func AnnSoftNonceMax(target uint32, packetCryptVersion int) uint32 {
+	if packetCryptVersion < 2 {
+		return 0x00ffffff
+	}
+	bits := 22 - pcutil.Log2floor(uint64(target&0x007fffff)) + ((0x20 - int(target>>24)) * 8) + 10
+	if bits >= 24 {
+		return 0x00ffffff
+	}
+	return 0x00ffffff >> uint32(24-bits)
 }

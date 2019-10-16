@@ -57,21 +57,17 @@ const endType = 0
 const pcpType = 1
 const signaturesType = 2
 const contentProofsType = 3
-
-type PacketCryptEntity struct {
-	Type    uint32
-	Content []byte
-}
+const versionType = 4
 
 // PacketCryptProof is the in-memory representation of the proof which sits between the header and
 // the block content
 type PacketCryptProof struct {
-	Nonce           uint32
-	Announcements   [4]PacketCryptAnn
-	Signatures      [4][]byte
-	ContentProof    []byte
-	AnnProof        []byte
-	UnknownEntities []PacketCryptEntity
+	Nonce         uint32
+	Announcements [4]PacketCryptAnn
+	Signatures    [4][]byte
+	ContentProof  []byte
+	AnnProof      []byte
+	Version       int
 }
 
 // SplitContentProof splits the content proof into the proofs for the
@@ -111,6 +107,10 @@ func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, error) 
 		}
 		out[i] = b
 	}
+	if cpb.Len() != 0 {
+		return nil, fmt.Errorf("SplitContentProof: [%d] dangling bytes after the content proof",
+			cpb.Len())
+	}
 	return out, nil
 }
 
@@ -146,7 +146,14 @@ func PcProofFromBytes(b []byte) *PacketCryptProof {
 
 // SerializeSize gets the size of the PacketCryptProof when serialized
 func (h *PacketCryptProof) SerializeSize() int {
-	out := 4 + PcAnnSerializeSize*4
+	out := 0
+	{
+		out += VarIntSerializeSize(versionType)
+		verLen := VarIntSerializeSize(uint64(h.Version))
+		out += VarIntSerializeSize(uint64(verLen))
+		out += verLen
+	}
+	out += 4 + PcAnnSerializeSize*4
 	{
 		pcplen := 1024*4 + 4 + len(h.AnnProof)
 		out += VarIntSerializeSize(pcpType)
@@ -172,13 +179,6 @@ func (h *PacketCryptProof) SerializeSize() int {
 			out += clen
 		}
 	}
-	{
-		for i := 0; i < len(h.UnknownEntities); i++ {
-			out += VarIntSerializeSize(uint64(h.UnknownEntities[i].Type))
-			out += VarIntSerializeSize(uint64(len(h.UnknownEntities[i].Content)))
-			out += len(h.UnknownEntities[i].Content)
-		}
-	}
 	out += VarIntSerializeSize(endType)
 	out += VarIntSerializeSize(0)
 
@@ -187,6 +187,7 @@ func (h *PacketCryptProof) SerializeSize() int {
 
 func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) error {
 	hasPcp := false
+	pcp.Version = 1
 	for {
 		t, err := ReadVarInt(r, 0)
 		if err != nil {
@@ -207,7 +208,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 		case pcpType:
 			{
 				if length <= (1024*4)+4 {
-					return fmt.Errorf("readPacketCryptProof run pcp, len [%d]", length)
+					return fmt.Errorf("readPacketCryptProof runt pcp, len [%d]", length)
 				}
 				if length > 131072 {
 					return fmt.Errorf("readPacketCryptProof oversize pcp, len [%d]", length)
@@ -259,16 +260,20 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 					return err
 				}
 			}
-		default:
+		case versionType:
 			{
-				e := PacketCryptEntity{
-					Type:    uint32(t),
-					Content: make([]byte, length),
-				}
-				if _, err := io.ReadFull(r, e.Content); err != nil {
+				ver, err := ReadVarInt(r, 0)
+				if err != nil {
 					return err
 				}
-				pcp.UnknownEntities = append(pcp.UnknownEntities, e)
+				pcp.Version = int(ver)
+			}
+		default:
+			{
+				x := make([]byte, length)
+				if _, err := io.ReadFull(r, x); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -326,18 +331,6 @@ func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *P
 			if _, err := w.Write(pcp.ContentProof); err != nil {
 				return err
 			}
-		}
-	}
-
-	for _, e := range pcp.UnknownEntities {
-		if err := WriteVarInt(w, 0, uint64(e.Type)); err != nil {
-			return err
-		}
-		if err := WriteVarInt(w, 0, uint64(len(e.Content))); err != nil {
-			return err
-		}
-		if _, err := w.Write(e.Content); err != nil {
-			return err
 		}
 	}
 
