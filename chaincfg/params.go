@@ -646,8 +646,8 @@ var PktMainNetParams = Params{
 	BIP0065Height:            0,
 	BIP0066Height:            0,
 	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 2100000,
-	TargetTimespan:           (time.Hour * 24 * 14) / 10, // 14 days
+	SubsidyReductionInterval: -1,
+	TargetTimespan:           (time.Hour * 24 * 14) / 10, // 1.4 days
 	TargetTimePerBlock:       time.Minute,                // 1 minute
 	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
 	ReduceMinDifficulty:      false,
@@ -655,7 +655,18 @@ var PktMainNetParams = Params{
 	GenerateSupported:        false,
 
 	// Checkpoints ordered from oldest to newest.
-	Checkpoints: []Checkpoint{},
+	Checkpoints: []Checkpoint{
+		{1 << 13, newHashFromStr("2b6b3d2951d365f26fd5b5362ab8dd5695ea6f5bd6c19ea9b16eb63a3de95ede")},
+		{2 << 13, newHashFromStr("462d3eee0c728cfbb2ba64b6cc221d3176be10494cade158d45ee6007137ed42")},
+		{3 << 13, newHashFromStr("82138a230458214e98a6c708f32b2ab3fced21bbb2c752dd26250a3cf29cfb15")},
+		{4 << 13, newHashFromStr("9e2f78040c97b244fcbbf9dd528e02f3aaa54705d04408e3079ee98f427cb1fa")},
+		{5 << 13, newHashFromStr("08e6918278fe6d856d8fd17e72724ce0dffd0050497d1fcec6ca1632564be05e")},
+		{6 << 13, newHashFromStr("93750d17acef2c270c90b2a6fc7d0867628ce8d656e54b3ab2057806a6cfe737")},
+		{7 << 13, newHashFromStr("bbc2ef64b1c3963d900b229a5e9120a641c31c55d48ed911f167c23bed660774")},
+		{8 << 13, newHashFromStr("26e5ca803a949a5ee09926a1042408e9c1ca0cfc4950c134791fa5eb2624183c")},
+		{9 << 13, newHashFromStr("461c001b8cab33692f86e34fcd5e2657681be91ac1197139b8304346c0c4993f")},
+		{10 << 13, newHashFromStr("e1b107cdfea386d284741b28a097a3057ce008225b7e42692eb06afd0398f887")},
+	},
 
 	// Consensus rule change deployments.
 	//
