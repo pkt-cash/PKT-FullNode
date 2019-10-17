@@ -93,7 +93,7 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	// Check content proofs
 	proofIdx := contentProofIdx2(mb)
 	var contentProofs [][]byte
-	if mb.Pcp.Version == 1 {
+	if mb.Pcp.Version <= 1 {
 		var err error
 		contentProofs, err = mb.Pcp.SplitContentProof(proofIdx)
 		if err != nil {

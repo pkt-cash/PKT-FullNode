@@ -14,5 +14,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/pkt-cash/btcutil v0.0.0-20190820145949-0b35535b1374
+	github.com/pkt-cash/neutrino v0.0.0-20190816213044-d61790b8b163 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )

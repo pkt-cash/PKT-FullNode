@@ -67,7 +67,9 @@ type PacketCryptProof struct {
 	Signatures    [4][]byte
 	ContentProof  []byte
 	AnnProof      []byte
-	Version       int
+
+	// 0 means no version specified, 1 is the first version
+	Version int
 }
 
 // SplitContentProof splits the content proof into the proofs for the
@@ -147,7 +149,7 @@ func PcProofFromBytes(b []byte) *PacketCryptProof {
 // SerializeSize gets the size of the PacketCryptProof when serialized
 func (h *PacketCryptProof) SerializeSize() int {
 	out := 0
-	{
+	if h.Version > 0 {
 		out += VarIntSerializeSize(versionType)
 		verLen := VarIntSerializeSize(uint64(h.Version))
 		out += VarIntSerializeSize(uint64(verLen))
@@ -187,7 +189,6 @@ func (h *PacketCryptProof) SerializeSize() int {
 
 func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) error {
 	hasPcp := false
-	pcp.Version = 1
 	for {
 		t, err := ReadVarInt(r, 0)
 		if err != nil {
@@ -334,6 +335,18 @@ func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *P
 			if _, err := w.Write(pcp.ContentProof); err != nil {
 				return err
 			}
+		}
+	}
+
+	if pcp.Version > 0 {
+		if err := WriteVarInt(w, 0, versionType); err != nil {
+			return err
+		}
+		if err := WriteVarInt(w, 0, uint64(VarIntSerializeSize(uint64(pcp.Version)))); err != nil {
+			return err
+		}
+		if err := WriteVarInt(w, 0, uint64(pcp.Version)); err != nil {
+			return err
 		}
 	}
 
