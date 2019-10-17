@@ -101,7 +101,7 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"AMGR": amgrLog,
 	"CMGR": cmgrLog,
 	"BCDB": bcdbLog,
-	"BTCD": pktdLog,
+	"PKTD": pktdLog,
 	"CHAN": chanLog,
 	"DISC": discLog,
 	"INDX": indxLog,
