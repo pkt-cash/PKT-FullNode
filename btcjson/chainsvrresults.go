@@ -46,6 +46,7 @@ type GetBlockVerboseResult struct {
 	Difficulty    float64       `json:"difficulty"`
 	PreviousHash  string        `json:"previousblockhash"`
 	NextHash      string        `json:"nextblockhash,omitempty"`
+	PcpHex        string        `json:"packetcryptproof,omitempty"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig

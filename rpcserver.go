@@ -1169,6 +1169,17 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		blockReply.RawTx = rawTxns
 	}
 
+	if c.VerbosePcp != nil && *c.VerbosePcp {
+		pcp := blk.MsgBlock().Pcp
+		if pcp == nil {
+			blockReply.PcpHex = "nil"
+		} else {
+			buf := bytes.NewBuffer(make([]byte, 0, pcp.SerializeSize()))
+			_ = pcp.Serialize(buf)
+			blockReply.PcpHex = hex.EncodeToString(buf.Bytes())
+		}
+	}
+
 	return blockReply, nil
 }
 

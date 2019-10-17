@@ -130,9 +130,10 @@ func NewGetBestBlockHashCmd() *GetBestBlockHashCmd {
 
 // GetBlockCmd defines the getblock JSON-RPC command.
 type GetBlockCmd struct {
-	Hash      string
-	Verbose   *bool `jsonrpcdefault:"true"`
-	VerboseTx *bool `jsonrpcdefault:"false"`
+	Hash       string
+	Verbose    *bool `jsonrpcdefault:"true"`
+	VerboseTx  *bool `jsonrpcdefault:"false"`
+	VerbosePcp *bool `jsonrpcdefault:"false"`
 }
 
 // NewGetBlockCmd returns a new instance which can be used to issue a getblock
