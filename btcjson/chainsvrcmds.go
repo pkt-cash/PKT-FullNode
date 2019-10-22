@@ -477,6 +477,16 @@ type CheckPcShareCmd struct {
 	Request *CheckPcShareCmdStructure
 }
 
+type CheckPcAnnCmd struct {
+	AnnHex     string  `json:"annhex"`
+	PcVersion  *int    `json:"pcversion"`
+	ParentHash *string `json:"parenthash"`
+}
+
+type CheckPcAnnResult struct {
+	WorkHash string `json:"workhash"`
+}
+
 // GetRawMempoolCmd defines the getmempool JSON-RPC command.
 type GetRawMempoolCmd struct {
 	Verbose *bool `jsonrpcdefault:"false"`
@@ -844,6 +854,7 @@ func init() {
 	MustRegisterCmd("getpeerinfo", (*GetPeerInfoCmd)(nil), flags)
 	MustRegisterCmd("getrawblocktemplate", (*GetRawBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("checkpcshare", (*CheckPcShareCmd)(nil), flags)
+	MustRegisterCmd("checkpcann", (*CheckPcAnnCmd)(nil), flags)
 	MustRegisterCmd("getrawmempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("getrawtransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("gettxout", (*GetTxOutCmd)(nil), flags)

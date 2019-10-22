@@ -166,6 +166,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getrawmempool":          handleGetRawMempool,
 	"getrawblocktemplate":    handleGetRawBlockTemplate,
 	"checkpcshare":           handleCheckPcShare,
+	"checkpcann":             handleCheckPcAnn,
 	"getrawtransaction":      handleGetRawTransaction,
 	"gettxout":               handleGetTxOut,
 	"help":                   handleHelp,
@@ -2131,6 +2132,45 @@ func handleCheckPcShare(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 		return "RESUBMIT_AS_BLOCK", nil
 	}
 	return "OK", nil
+}
+
+func handleCheckPcAnn(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	cx := cmd.(*btcjson.CheckPcAnnCmd)
+	annBytes, err := hex.DecodeString(cx.AnnHex)
+	if err != nil {
+		return nil, rpcDecodeHexError(cx.AnnHex)
+	}
+	annBuf := bytes.NewBuffer(annBytes)
+	ann := wire.PacketCryptAnn{}
+	if err := ann.BtcDecode(annBuf, 0, 0); err != nil {
+		return nil, err
+	}
+	var parentHash *chainhash.Hash
+	if cx.ParentHash != nil {
+		parentHash, err = chainhash.NewHashFromStr(*cx.ParentHash)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		height := ann.GetParentBlockHeight()
+		parentHash, err = s.cfg.Chain.BlockHashByHeight(int32(height))
+		if err != nil {
+			return nil, &btcjson.RPCError{
+				Code:    btcjson.ErrRPCVerify,
+				Message: fmt.Sprintf("Could not get parent hash at height [%d]", height),
+			}
+		}
+	}
+	// This is a default assumption, it should be updated when new versions are released.
+	version := 1
+	if cx.PcVersion != nil {
+		version = *cx.PcVersion
+	}
+	workHash, err := packetcrypt.ValidatePcAnn(&ann, parentHash, version)
+	if err != nil {
+		return nil, err
+	}
+	return &btcjson.CheckPcAnnResult{WorkHash: workHash.String()}, nil
 }
 
 // chainErrToGBTErrString converts an error returned from btcchain to a string

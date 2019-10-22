@@ -177,10 +177,7 @@ func IsAnnMinDiffOk(target uint32, packetCryptVersion int) bool {
 	return work.Sign() > 0 && work.Cmp(bn256()) < 0
 }
 
-func AnnSoftNonceMax(target uint32, packetCryptVersion int) uint32 {
-	if packetCryptVersion < 2 {
-		return 0x00ffffff
-	}
+func Pc2AnnSoftNonceMax(target uint32) uint32 {
 	bits := 22 - pcutil.Log2floor(uint64(target&0x007fffff)) + ((0x20 - int(target>>24)) * 8) + 10
 	if bits >= 24 {
 		return 0x00ffffff

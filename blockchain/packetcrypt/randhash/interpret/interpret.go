@@ -250,7 +250,7 @@ func interpret(ctx *Context, pc int) int {
 }
 
 func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
-	if len(memory) < RandHash_MEMORY_SZ {
+	if len(memory) < RandHash_MEMORY_SZ*4 {
 		panic("memory size too small")
 	}
 	ctx := Context{}

@@ -13,6 +13,8 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/interpret"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/randgen"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -55,6 +57,57 @@ func MkItem(itemNo int, item *[1024]byte, seed []byte) {
 	memocycle(item, announceItemHashcount, util.Conf_AnnHash_MEMOHASH_CYCLES)
 }
 
+type mkItem2Program struct {
+	memory [8192]byte
+	prog   []uint32
+}
+
+func mkItem2Prog(out *mkItem2Program, seed []byte) int {
+	pcutil.HashExpand(out.memory[:], seed, 0)
+	prog, err := randgen.Generate(seed)
+	if err != nil {
+		return -1
+	}
+	for i := 0; i < len(prog); i++ {
+		binary.LittleEndian.PutUint32(out.memory[i*4:i*4+4], prog[i])
+	}
+	out.prog = prog
+	return 0
+}
+
+func mkItem2(itemNo int, item []byte, seed []byte, prog *mkItem2Program) int {
+	state := cryptocycle.State{}
+	cryptocycle.Init(&state, seed, uint64(itemNo))
+	memoryBeginning := itemNo % ((len(prog.memory) / 4) - interpret.RandHash_MEMORY_SZ)
+	memoryEnd := memoryBeginning + interpret.RandHash_MEMORY_SZ
+	memorySlice := prog.memory[4*memoryBeginning : 4*memoryEnd]
+	if interpret.Interpret(prog.prog, state.Bytes[:], memorySlice, 2) != nil {
+		return -1
+	}
+	state.MakeFuzzable()
+	cryptocycle.CryptoCycle(&state)
+	if state.IsFailed() {
+		panic("CryptoCycle went into a failed state, should not happen")
+	}
+	copy(item, state.Bytes[:1024])
+	return 0
+}
+
+func annDecrypt(pcAnn *wire.PacketCryptAnn, state *cryptocycle.State) *wire.PacketCryptAnn {
+	out := wire.PacketCryptAnn{}
+	copy(out.Header[:], pcAnn.Header[:])
+	j := 0
+	for i := wire.PcAnnHeaderLen; i < wire.PcAnnHeaderLen+wire.PcAnnMerkleProofLen-64; i++ {
+		out.Header[i] ^= state.Bytes[j]
+		j++
+	}
+	for i := wire.PcAnnHeaderLen + wire.PcAnnMerkleProofLen; i < 1024; i++ {
+		out.Header[i] ^= state.Bytes[j]
+		j++
+	}
+	return &out
+}
+
 func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 	var buf [128]byte
 	copy(buf[64*(itemNo&1):][:64], item4Hash[:])
@@ -67,6 +120,9 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 }
 
 func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
+	if (packetCryptVersion <= 1) != (pcAnn.GetVersion() == 0) {
+		return nil, errors.New("Validate_checkAnn_ANN_VERSION_MISMATCH")
+	}
 	ctx := new(context)
 	copy(ctx.ann.GetAnnounceHeader(), pcAnn.GetAnnounceHeader())
 	copy(ctx.ann.GetMerkleProof()[:32], parentBlockHash[:])
@@ -78,32 +134,68 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 	var softNonceBuf [4]byte
 	copy(softNonceBuf[:], pcAnn.GetSoftNonce())
 	softNonce := binary.LittleEndian.Uint32(softNonceBuf[:])
-	if softNonce > difficulty.AnnSoftNonceMax(pcAnn.GetWorkTarget(), packetCryptVersion) {
-		return nil, errors.New("Validate_checkAnn_SOFT_NONCE_HIGH")
+	mkItemSeed := ctx.annHash0[:32]
+	randHashCycles := util.Conf_AnnHash_RANDHASH_CYCLES
+	version := pcAnn.GetVersion()
+	prog := mkItem2Program{}
+	if version > 0 {
+		randHashCycles = 0
+		if softNonce > difficulty.Pc2AnnSoftNonceMax(pcAnn.GetWorkTarget()) {
+			return nil, errors.New("Validate_checkAnn_SOFT_NONCE_HIGH")
+		}
+		buf := make([]byte, 64*2)
+		copy(buf[:64], pcAnn.GetMerkleProof()[13*64:])
+		copy(buf[64:], ctx.annHash0[:])
+		pcutil.HashCompress64(buf[:64], buf[:])
+		mkItemSeed = buf[:64]
+		if mkItem2Prog(&prog, mkItemSeed[:32]) != 0 {
+			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM")
+		}
 	}
 	cryptocycle.Init(&ctx.ccState, ctx.annHash1[:32], uint64(softNonce))
 	itemNo := -1
 	for i := 0; i < 4; i++ {
 		itemNo = int(cryptocycle.GetItemNo(&ctx.ccState) % announceTableSz)
-		// only half of the seed is used
-		MkItem(itemNo, &ctx.itemBytes, ctx.annHash0[:32])
+		if version > 0 {
+			if mkItem2(itemNo, ctx.itemBytes[:], mkItemSeed[32:], &prog) != 0 {
+				return nil, errors.New("Validate_checkAnn_BAD_PROGRAM_EXEC")
+			}
+		} else {
+			// only 32 bytes of the seed are used
+			MkItem(itemNo, &ctx.itemBytes, mkItemSeed)
+		}
 		if !cryptocycle.Update(
-			&ctx.ccState, ctx.itemBytes[:], nil, util.Conf_AnnHash_RANDHASH_CYCLES, &ctx.progBuf) {
+			&ctx.ccState, ctx.itemBytes[:], nil, randHashCycles, &ctx.progBuf) {
 			return nil, errors.New("Validate_checkAnn_INVAL")
 		}
 	}
 
-	if bytes.Compare(ctx.itemBytes[:wire.PcItem4PrefixLen], pcAnn.GetItem4Prefix()) != 0 {
-		return nil, errors.New("Validate_checkAnn_INVAL_ITEM4")
+	cryptocycle.Final(&ctx.ccState)
+	if version > 0 {
+		pcAnn = annDecrypt(pcAnn, &ctx.ccState)
 	}
 
+	//fmt.Printf("%s\n", hex.EncodeToString(pcAnn.Header[:]))
+
+	if version > 0 {
+		if !pcutil.IsZero(pcAnn.GetItem4Prefix()) {
+			return nil, errors.New("Validate_checkAnn_INVAL_ITEM4")
+		}
+		if mkItem2Prog(&prog, ctx.annHash0[:32]) != 0 {
+			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM0")
+		}
+		if mkItem2(itemNo, ctx.itemBytes[:], ctx.annHash0[32:], &prog) != 0 {
+			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM0_EXEC")
+		}
+	} else if bytes.Compare(ctx.itemBytes[:wire.PcItem4PrefixLen], pcAnn.GetItem4Prefix()) != 0 {
+		return nil, errors.New("Validate_checkAnn_INVAL_ITEM4")
+	}
 	pcutil.HashCompress64(ctx.item4Hash[:], ctx.itemBytes[:])
 	if !merkleIsValid(pcAnn.GetMerkleProof(), &ctx.item4Hash, itemNo) {
 		return nil, errors.New("Validate_checkAnn_INVAL_MERKLE")
 	}
 
 	target := pcAnn.GetWorkTarget()
-	cryptocycle.Final(&ctx.ccState)
 
 	h := chainhash.Hash{}
 	copy(h[:], ctx.ccState.Bytes[:32])

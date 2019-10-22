@@ -28,6 +28,11 @@ const PcAnnMerkleProofLen = 896
 // PcItem4PrefixLen is the length of the item 4 prefix which follows the merkle proof
 const PcItem4PrefixLen = PcAnnSerializeSize - (PcAnnHeaderLen + PcAnnMerkleProofLen)
 
+// GetVersion gets the version number of the announcement.
+func (p *PacketCryptAnn) GetVersion() uint {
+	return uint(p.Header[0])
+}
+
 // GetAnnounceHeader provides the header without the merkle proof
 func (p *PacketCryptAnn) GetAnnounceHeader() []byte {
 	return p.Header[:PcAnnHeaderLen]
