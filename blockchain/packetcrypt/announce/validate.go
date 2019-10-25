@@ -122,7 +122,7 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
 	if pcAnn.GetVersion() > 0 && pcAnn.GetParentBlockHeight() < 103869 {
 		return nil, errors.New("Validate_checkAnn_ANN_VERSION_NOT_ALLOWED")
-	} else if packetCryptVersion > 0 && pcAnn.GetVersion() == 0 {
+	} else if packetCryptVersion > 1 && pcAnn.GetVersion() == 0 {
 		return nil, errors.New("Validate_checkAnn_ANN_VERSION_MISMATCH")
 	}
 	ctx := new(context)
