@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da
+	github.com/aead/siphash v1.0.1
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/btcsuite/golangcrypto v0.0.0-20150304025918-53f62d9b43e8
@@ -13,6 +14,7 @@ require (
 	github.com/dchest/blake2b v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
+	github.com/kkdai/bstream v1.0.0
 	github.com/pkt-cash/btcutil v0.0.0-20190820145949-0b35535b1374
 	github.com/pkt-cash/neutrino v0.0.0-20190816213044-d61790b8b163 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
