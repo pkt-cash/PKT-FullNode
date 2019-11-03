@@ -18,7 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/database/internal/treap"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/comparer"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"

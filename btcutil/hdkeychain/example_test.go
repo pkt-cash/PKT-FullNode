@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/btcutil/hdkeychain"
+	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 )
 
 // This example demonstrates how to generate a cryptographically random seed

@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"golang.org/x/crypto/ripemd160"
 )
 

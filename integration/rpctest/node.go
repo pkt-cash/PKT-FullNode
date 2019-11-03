@@ -15,7 +15,7 @@ import (
 	"time"
 
 	rpc "github.com/pkt-cash/pktd/rpcclient"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // nodeConfig contains all the args, and data required to launch a pktd process

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if

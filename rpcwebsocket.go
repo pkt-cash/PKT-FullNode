@@ -27,7 +27,7 @@ import (
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 
 	"github.com/btcsuite/websocket"
 	"golang.org/x/crypto/ripemd160"

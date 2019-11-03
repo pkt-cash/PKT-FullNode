@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil/bloom"
+	"github.com/pkt-cash/pktd/btcutil/bloom"
 )
 
 // This example demonstrates how to create a new bloom filter, add a transaction

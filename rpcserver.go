@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/websocket"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"

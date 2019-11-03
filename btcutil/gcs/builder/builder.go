@@ -13,7 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
 )
 
 const (

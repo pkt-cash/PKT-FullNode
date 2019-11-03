@@ -11,7 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // PeerNotifier exposes methods to notify peers of status changes to
