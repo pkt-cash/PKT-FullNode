@@ -20,7 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/netparams"
 	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
-	"github.com/pkt-cash/neutrino"
+	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"

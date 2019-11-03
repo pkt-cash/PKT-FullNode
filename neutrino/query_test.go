@@ -16,13 +16,13 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
-	"github.com/pkt-cash/neutrino/cache"
-	"github.com/pkt-cash/neutrino/cache/lru"
-	"github.com/pkt-cash/neutrino/filterdb"
-	"github.com/pkt-cash/neutrino/headerfs"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/neutrino/cache"
+	"github.com/pkt-cash/pktd/neutrino/cache/lru"
+	"github.com/pkt-cash/pktd/neutrino/filterdb"
+	"github.com/pkt-cash/pktd/neutrino/headerfs"
 )
 
 var (

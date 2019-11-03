@@ -6,11 +6,11 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/neutrino/cache"
-	"github.com/pkt-cash/neutrino/cache/lru"
-	"github.com/pkt-cash/neutrino/filterdb"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/neutrino/cache"
+	"github.com/pkt-cash/pktd/neutrino/cache/lru"
+	"github.com/pkt-cash/pktd/neutrino/filterdb"
 )
 
 // TestBlockFilterCaches tests that we can put and retrieve elements from all

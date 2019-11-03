@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/libpktwallet/wtxmgr"
-	"github.com/pkt-cash/neutrino/blockntfns"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 )
 
 var (

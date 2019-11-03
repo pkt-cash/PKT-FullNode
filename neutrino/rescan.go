@@ -16,12 +16,12 @@ import (
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
-	"github.com/pkt-cash/libpktwallet/waddrmgr"
-	"github.com/pkt-cash/neutrino/blockntfns"
-	"github.com/pkt-cash/neutrino/headerfs"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/neutrino/blockntfns"
+	"github.com/pkt-cash/pktd/neutrino/headerfs"
 )
 
 var (

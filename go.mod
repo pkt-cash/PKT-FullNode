@@ -15,7 +15,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/kkdai/bstream v1.0.0
-	github.com/pkt-cash/libpktwallet v0.0.0-20190923150213-473a38ba85d7 // indirect
-	github.com/pkt-cash/neutrino v0.0.0-20190816213044-d61790b8b163 // indirect
+	github.com/lightningnetwork/lnd/queue v1.0.1
 	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 )

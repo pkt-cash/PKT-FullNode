@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/pkt-cash/libpktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 var (

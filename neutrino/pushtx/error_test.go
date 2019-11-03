@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/neutrino/pushtx"
 )
 
 // TestParseBroadcastErrorCode ensures that we properly construct a

@@ -11,10 +11,10 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
-	"github.com/pkt-cash/libpktwallet/walletdb"
-	"github.com/pkt-cash/neutrino/headerfs"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/neutrino/headerfs"
 )
 
 func decodeHashNoError(str string) *chainhash.Hash {

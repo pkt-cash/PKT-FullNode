@@ -18,7 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/jrick/logrotate/rotator"
-	"github.com/pkt-cash/neutrino"
+	"github.com/pkt-cash/pktd/neutrino"
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and

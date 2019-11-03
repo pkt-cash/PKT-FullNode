@@ -11,13 +11,13 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/pkt-cash/neutrino/cache"
-	"github.com/pkt-cash/neutrino/filterdb"
-	"github.com/pkt-cash/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/neutrino/cache"
+	"github.com/pkt-cash/pktd/neutrino/filterdb"
+	"github.com/pkt-cash/pktd/neutrino/pushtx"
 )
 
 var (
@@ -1240,7 +1240,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 
 		case filter, ok = <-query.filterChan:
 			if !ok {
-				// Query has finished, if we have a result we'll return it.				
+				// Query has finished, if we have a result we'll return it.
 				return resultFilter, nil
 			}
 

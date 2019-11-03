@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/libpktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 )
 
 // getUtxoResult is a simple pair type holding a spend report and error.

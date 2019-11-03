@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/neutrino/blockntfns"
+	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 )
 
 // createTx is a helper method to create random transactions that spend

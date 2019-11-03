@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkt-cash/libpktwallet/walletdb"
-	_ "github.com/pkt-cash/libpktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
 
 func createTestIndex() (func(), *headerIndex, error) {

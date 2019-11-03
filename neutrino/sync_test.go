@@ -23,14 +23,14 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/btcsuite/btclog"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs/builder"
-	"github.com/pkt-cash/libpktwallet/waddrmgr"
-	"github.com/pkt-cash/libpktwallet/wallet/txauthor"
-	"github.com/pkt-cash/libpktwallet/walletdb"
-	_ "github.com/pkt-cash/libpktwallet/walletdb/bdb"
-	"github.com/pkt-cash/neutrino"
-	"github.com/pkt-cash/neutrino/banman"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/neutrino/banman"
 )
 
 var (
