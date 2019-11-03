@@ -7,13 +7,13 @@ package builder
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil/gcs"
 )
 
 const (
@@ -35,12 +35,12 @@ type GCSBuilder struct {
 	// data is a set of entries represented as strings. This is done to
 	// deduplicate items as they are added.
 	data map[string]struct{}
-	err  error
+	err  er.R
 }
 
 // RandomKey is a utility function that returns a cryptographically random
 // [gcs.KeySize]byte usable as a key for a GCS filter.
-func RandomKey() ([gcs.KeySize]byte, error) {
+func RandomKey() ([gcs.KeySize]byte, er.R) {
 	var key [gcs.KeySize]byte
 
 	// Read a byte slice from rand.Reader.
@@ -50,7 +50,7 @@ func RandomKey() ([gcs.KeySize]byte, error) {
 	// This shouldn't happen unless the user is on a system that doesn't
 	// have a system CSPRNG. OK to panic in this case.
 	if err != nil {
-		return key, err
+		return key, er.E(err)
 	}
 
 	// Copy the byte slice to a [gcs.KeySize]byte array and return it.
@@ -68,7 +68,7 @@ func DeriveKey(keyHash *chainhash.Hash) [gcs.KeySize]byte {
 
 // Key retrieves the key with which the builder will build a filter. This is
 // useful if the builder is created with a random initial key.
-func (b *GCSBuilder) Key() ([gcs.KeySize]byte, error) {
+func (b *GCSBuilder) Key() ([gcs.KeySize]byte, er.R) {
 	// Do nothing if the builder's errored out.
 	if b.err != nil {
 		return [gcs.KeySize]byte{}, b.err
@@ -109,7 +109,7 @@ func (b *GCSBuilder) SetP(p uint8) *GCSBuilder {
 
 	// Basic sanity check.
 	if p > 32 {
-		b.err = gcs.ErrPTooBig
+		b.err = er.E(gcs.ErrPTooBig)
 		return b
 	}
 
@@ -126,7 +126,7 @@ func (b *GCSBuilder) SetM(m uint64) *GCSBuilder {
 
 	// Basic sanity check.
 	if m > uint64(math.MaxUint32) {
-		b.err = gcs.ErrPTooBig
+		b.err = er.E(gcs.ErrPTooBig)
 		return b
 	}
 
@@ -200,7 +200,7 @@ func (b *GCSBuilder) AddWitness(witness wire.TxWitness) *GCSBuilder {
 
 // Build returns a function which builds a GCS filter with the given parameters
 // and data.
-func (b *GCSBuilder) Build() (*gcs.Filter, error) {
+func (b *GCSBuilder) Build() (*gcs.Filter, er.R) {
 	// Do nothing if the builder's already errored out.
 	if b.err != nil {
 		return nil, b.err
@@ -209,10 +209,10 @@ func (b *GCSBuilder) Build() (*gcs.Filter, error) {
 	// We'll ensure that all the parmaters we need to actually build the
 	// filter properly are set.
 	if b.p == 0 {
-		return nil, fmt.Errorf("p value is not set, cannot build")
+		return nil, er.Errorf("p value is not set, cannot build")
 	}
 	if b.m == 0 {
-		return nil, fmt.Errorf("m value is not set, cannot build")
+		return nil, er.Errorf("m value is not set, cannot build")
 	}
 
 	dataSlice := make([][]byte, 0, len(b.data))
@@ -296,7 +296,7 @@ func WithRandomKey() *GCSBuilder {
 // BuildBasicFilter builds a basic GCS filter from a block. A basic GCS filter
 // will contain all the previous output scripts spent by inputs within a block,
 // as well as the data pushes within all the outputs created within a block.
-func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filter, error) {
+func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filter, er.R) {
 	blockHash := block.BlockHash()
 	b := WithKeyHash(&blockHash)
 
@@ -342,7 +342,7 @@ func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filte
 }
 
 // GetFilterHash returns the double-SHA256 of the filter.
-func GetFilterHash(filter *gcs.Filter) (chainhash.Hash, error) {
+func GetFilterHash(filter *gcs.Filter) (chainhash.Hash, er.R) {
 	filterData, err := filter.NBytes()
 	if err != nil {
 		return chainhash.Hash{}, err
@@ -353,7 +353,7 @@ func GetFilterHash(filter *gcs.Filter) (chainhash.Hash, error) {
 
 // MakeHeaderForFilter makes a filter chain header for a filter, given the
 // filter and the previous filter chain header.
-func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) (chainhash.Hash, error) {
+func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) (chainhash.Hash, er.R) {
 	filterTip := make([]byte, 2*chainhash.HashSize)
 	filterHash, err := GetFilterHash(filter)
 	if err != nil {

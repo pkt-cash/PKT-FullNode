@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 )
 
@@ -297,7 +298,7 @@ func TestGCSFilterMatch(t *testing.T) {
 }
 
 // AnyMatcher is the function signature of our matching algorithms.
-type AnyMatcher func(key [gcs.KeySize]byte, data [][]byte) (bool, error)
+type AnyMatcher func(key [gcs.KeySize]byte, data [][]byte) (bool, er.R)
 
 // TestGCSFilterMatchAnySuite checks that all of our matching algorithms
 // properly match a list correctly when using built or copied filters, logging

@@ -8,13 +8,14 @@ import (
 	"errors"
 
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/gcs"
-	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 )
 
 const (
@@ -166,9 +167,9 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 	if err != nil {
 		return err
 	}
-	err = dbStoreFilterIdxEntry(dbTx, fkey, h, filterBytes)
-	if err != nil {
-		return err
+	errr := dbStoreFilterIdxEntry(dbTx, fkey, h, filterBytes)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Next store the filter hash.
@@ -176,9 +177,9 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 	if err != nil {
 		return err
 	}
-	err = dbStoreFilterIdxEntry(dbTx, hashkey, h, filterHash[:])
-	if err != nil {
-		return err
+	errr = dbStoreFilterIdxEntry(dbTx, hashkey, h, filterHash[:])
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Then fetch the previous block's filter header.
