@@ -14,7 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // Naming

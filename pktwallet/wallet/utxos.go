@@ -8,7 +8,7 @@ package wallet
 import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // OutputSelectionPolicy describes the rules for selecting an output from the

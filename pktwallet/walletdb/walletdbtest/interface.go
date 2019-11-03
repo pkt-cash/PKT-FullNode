@@ -9,7 +9,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // errSubTestFail is used to signal that a sub test returned false.

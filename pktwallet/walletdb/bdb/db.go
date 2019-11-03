@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/coreos/bbolt"
 )
 

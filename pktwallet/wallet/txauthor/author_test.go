@@ -9,10 +9,10 @@ import (
 
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/btcutil"
-	. "github.com/pkt-cash/pktwallet/wallet/txauthor"
-	"github.com/pkt-cash/pktwallet/wallet/txrules"
+	. "github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 
-	"github.com/pkt-cash/pktwallet/wallet/internal/txsizes"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/internal/txsizes"
 )
 
 func p2pkhOutputs(amounts ...btcutil.Amount) []*wire.TxOut {

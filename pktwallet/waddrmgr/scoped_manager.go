@@ -9,8 +9,8 @@ import (
 	"github.com/pkt-cash/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktwallet/internal/zero"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // DerivationPath represents a derivation path from a particular key manager's

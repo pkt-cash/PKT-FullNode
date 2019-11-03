@@ -6,8 +6,8 @@ import (
 	"github.com/pkt-cash/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 )
 
 // isCurrentDelta is the delta duration we'll use from the present time to

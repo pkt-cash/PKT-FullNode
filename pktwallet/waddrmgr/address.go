@@ -13,8 +13,8 @@ import (
 	"github.com/pkt-cash/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktwallet/internal/zero"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // AddressType represents the various address types waddrmgr is currently able

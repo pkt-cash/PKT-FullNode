@@ -9,8 +9,8 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	_ "github.com/pkt-cash/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
 
 const (

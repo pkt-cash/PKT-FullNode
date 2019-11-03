@@ -12,10 +12,10 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/chain"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktwallet/walletdb"
-	"github.com/pkt-cash/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 )
 
 const (

@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
-	"github.com/pkt-cash/pktwallet/chain"
-	"github.com/pkt-cash/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/btcsuite/websocket"
 )
 

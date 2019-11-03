@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktwallet/walletdb"
-	_ "github.com/pkt-cash/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
 
 var (

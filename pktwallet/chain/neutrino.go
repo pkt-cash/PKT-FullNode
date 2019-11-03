@@ -15,8 +15,8 @@ import (
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	libwaddrmgr "github.com/pkt-cash/libpktwallet/waddrmgr"
 )
 

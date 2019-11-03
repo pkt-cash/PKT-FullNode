@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // BlockStamp defines a block (by height and a unique hash) and is used to mark

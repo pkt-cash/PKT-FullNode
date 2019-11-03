@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pkt-cash/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
 // Harness holds the BranchRecoveryState being tested, the recovery window being

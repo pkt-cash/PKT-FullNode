@@ -17,13 +17,13 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/pktwallet/netparams"
-	"github.com/pkt-cash/pktwallet/internal/cfgutil"
-	"github.com/pkt-cash/pktwallet/internal/legacy/keystore"
+	"github.com/pkt-cash/pktd/pktwallet/netparams"
+	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
+	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
 	"github.com/pkt-cash/neutrino"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
 const (

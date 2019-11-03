@@ -14,15 +14,15 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/pktwallet/netparams"
-	"github.com/pkt-cash/pktwallet/internal/cfgutil"
+	"github.com/pkt-cash/pktd/pktwallet/netparams"
+	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktwallet/wallet/txauthor"
-	"github.com/pkt-cash/pktwallet/wallet/txrules"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 )
 
 var (

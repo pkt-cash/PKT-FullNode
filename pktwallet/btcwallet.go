@@ -16,9 +16,9 @@ import (
 
 	libwalletdb "github.com/pkt-cash/libpktwallet/walletdb"
 	"github.com/pkt-cash/neutrino"
-	"github.com/pkt-cash/pktwallet/chain"
-	"github.com/pkt-cash/pktwallet/rpc/legacyrpc"
-	"github.com/pkt-cash/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
 var (

@@ -9,9 +9,9 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/btcutil"
 	"github.com/pkt-cash/btcutil/hdkeychain"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktwallet/walletdb"
-	"github.com/pkt-cash/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 )
 
 // RecoveryManager maintains the state required to recover previously used

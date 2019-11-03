@@ -1,8 +1,8 @@
 package wtxmgr
 
 import (
-	"github.com/pkt-cash/pktwallet/walletdb"
-	"github.com/pkt-cash/pktwallet/walletdb/migration"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb/migration"
 )
 
 // versions is a list of the different database versions. The last entry should

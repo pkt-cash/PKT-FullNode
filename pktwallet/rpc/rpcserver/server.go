@@ -31,14 +31,14 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/btcutil"
 	"github.com/pkt-cash/btcutil/hdkeychain"
-	"github.com/pkt-cash/pktwallet/chain"
-	"github.com/pkt-cash/pktwallet/internal/cfgutil"
-	"github.com/pkt-cash/pktwallet/internal/zero"
-	"github.com/pkt-cash/pktwallet/netparams"
-	pb "github.com/pkt-cash/pktwallet/rpc/walletrpc"
-	"github.com/pkt-cash/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktwallet/wallet"
-	"github.com/pkt-cash/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
+	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
+	"github.com/pkt-cash/pktd/pktwallet/netparams"
+	pb "github.com/pkt-cash/pktd/pktwallet/rpc/walletrpc"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // Public API version constants
