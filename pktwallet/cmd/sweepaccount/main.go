@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/netparams"
 	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
 	"github.com/pkt-cash/pktd/btcjson"

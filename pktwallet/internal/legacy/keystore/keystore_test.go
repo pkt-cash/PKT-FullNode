@@ -15,7 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 )
 

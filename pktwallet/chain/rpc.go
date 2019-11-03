@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/btcjson"

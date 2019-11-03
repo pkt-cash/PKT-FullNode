@@ -14,7 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
 	"github.com/pkt-cash/pktd/pktwallet/internal/prompt"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"

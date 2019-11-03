@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // Note: The following common types should never reference the Wallet type.

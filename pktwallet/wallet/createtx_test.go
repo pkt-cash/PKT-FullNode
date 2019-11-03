@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/btcutil/hdkeychain"
+	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"

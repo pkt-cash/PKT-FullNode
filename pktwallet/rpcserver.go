@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/rpcserver"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"

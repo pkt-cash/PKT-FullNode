@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkt-cash/btcutil/hdkeychain"
+	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
 	"github.com/btcsuite/golangcrypto/ssh/terminal"
 )
