@@ -8,16 +8,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/cache"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -1098,11 +1098,11 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	// TODO(halseth): for an LRU we could take care to insert the next
 	// height filter last.
 	dbFilterType := filterdb.RegularFilter
-	evict, err := s.putFilterToCache(
+	evict, errr := s.putFilterToCache(
 		&response.BlockHash, dbFilterType, gotFilter,
 	)
-	if err != nil {
-		log.Warnf("Couldn't write filter to cache: %v", err)
+	if errr != nil {
+		log.Warnf("Couldn't write filter to cache: %v", errr)
 	}
 
 	// TODO(halseth): dynamically increase/decrease the batch size to match
@@ -1117,12 +1117,12 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	qo := defaultQueryOptions()
 	qo.applyQueryOptions(q.options...)
 	if qo.persistToDisk {
-		err = s.FilterDB.PutFilter(
+		errr := s.FilterDB.PutFilter(
 			&response.BlockHash, gotFilter, dbFilterType,
 		)
-		if err != nil {
+		if errr != nil {
 			log.Warnf("Couldn't write filter to filterDB: "+
-				"%v", err)
+				"%v", errr)
 		}
 
 		log.Tracef("Wrote filter for block %s, type %d",
