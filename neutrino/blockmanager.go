@@ -2632,8 +2632,30 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 }
 
 func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
-	maxTimestamp time.Time, reorgAttempt bool) error {
-	panic("checkheadersanity is unimplemented for pkt chain")
+	maxTimestamp time.Time, reorgAttempt bool) er.R {
+	diff, err := b.calcNextRequiredDifficulty(
+		blockHeader.Timestamp, reorgAttempt)
+	if err != nil {
+		return er.E(err)
+	}
+	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowSha256 {
+		stubBlock := btcutil.NewBlock(&wire.MsgBlock{
+			Header: *blockHeader,
+		})
+		err = blockchain.ShaCheckProofOfWork(stubBlock,
+			blockchain.CompactToBig(diff))
+		if err != nil {
+			return er.E(err)
+		}
+	} else {
+		//log.Warn("We need to be checking packetcrypt proofs here, this is currently insecure")
+	}
+	// Ensure the block time is not too far in the future.
+	if blockHeader.Timestamp.After(maxTimestamp) {
+		return er.Errorf("block timestamp of %v is too far in the "+
+			"future", blockHeader.Timestamp)
+	}
+	return nil
 }
 
 /*

@@ -14,8 +14,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -377,6 +377,13 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 	}
 
 	return nil
+}
+
+// ShaCheckProofOfWork ensures the block header bits which indicate the target
+// difficulty is in min/max range and that the block hash is less than the
+// target difficulty as claimed.
+func ShaCheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
+	return checkProofOfWork(&block.MsgBlock().Header, powLimit, BFNone)
 }
 
 func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) error {
