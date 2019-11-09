@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"log"
 	"path/filepath"

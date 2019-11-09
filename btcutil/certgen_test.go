@@ -7,6 +7,7 @@ package btcutil_test
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"testing"
 	"time"

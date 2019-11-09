@@ -3,6 +3,7 @@ package waddrmgr
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -77,7 +78,7 @@ func (m *MigrationManager) Namespace() walletdb.ReadWriteBucket {
 // CurrentVersion returns the current version of the service's database.
 //
 // NOTE: This method is part of the migration.Manager interface.
-func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, error) {
+func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, er.R) {
 	if ns == nil {
 		ns = m.ns
 	}
@@ -88,7 +89,7 @@ func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, error
 //
 // NOTE: This method is part of the migration.Manager interface.
 func (m *MigrationManager) SetVersion(ns walletdb.ReadWriteBucket,
-	version uint32) error {
+	version uint32) er.R {
 
 	if ns == nil {
 		ns = m.ns
@@ -106,7 +107,7 @@ func (m *MigrationManager) Versions() []migration.Version {
 // upgradeToVersion2 upgrades the database from version 1 to version 2
 // 'usedAddrBucketName' a bucket for storing addrs flagged as marked is
 // initialized and it will be updated on the next rescan.
-func upgradeToVersion2(ns walletdb.ReadWriteBucket) error {
+func upgradeToVersion2(ns walletdb.ReadWriteBucket) er.R {
 	currentMgrVersion := uint32(2)
 
 	_, err := ns.CreateBucketIfNotExists(usedAddrBucketName)
@@ -123,12 +124,12 @@ func upgradeToVersion2(ns walletdb.ReadWriteBucket) error {
 // to the fact that in version 5, we now store the encrypted master private
 // keys on disk. However, using the BIP0044 key scope, users will still be able
 // to create old p2pkh addresses.
-func upgradeToVersion5(ns walletdb.ReadWriteBucket) error {
+func upgradeToVersion5(ns walletdb.ReadWriteBucket) er.R {
 	// First, we'll check if there are any existing segwit addresses, which
 	// can't be upgraded to the new version. If so, we abort and warn the
 	// user.
 	err := ns.NestedReadBucket(addrBucketName).ForEach(
-		func(k []byte, v []byte) error {
+		func(k []byte, v []byte) er.R {
 			row, err := deserializeAddressRow(v)
 			if err != nil {
 				return err
@@ -240,14 +241,14 @@ func upgradeToVersion5(ns walletdb.ReadWriteBucket) error {
 // migrateRecursively moves a nested bucket from one bucket to another,
 // recursing into nested buckets as required.
 func migrateRecursively(src, dst walletdb.ReadWriteBucket,
-	bucketKey []byte) error {
+	bucketKey []byte) er.R {
 	// Within this bucket key, we'll migrate over, then delete each key.
 	bucketToMigrate := src.NestedReadWriteBucket(bucketKey)
 	newBucket, err := dst.CreateBucketIfNotExists(bucketKey)
 	if err != nil {
 		return err
 	}
-	err = bucketToMigrate.ForEach(func(k, v []byte) error {
+	err = bucketToMigrate.ForEach(func(k, v []byte) er.R {
 		if nestedBucket := bucketToMigrate.
 			NestedReadBucket(k); nestedBucket != nil {
 			// We have a nested bucket, so recurse into it.
@@ -279,7 +280,7 @@ func migrateRecursively(src, dst walletdb.ReadWriteBucket,
 // being set as we do not store block timestamps, so a sanity check must be done
 // upon starting the wallet to ensure we do not potentially miss any relevant
 // events when rescanning.
-func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
+func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 	// We'll need to jump through some hoops in order to determine the
 	// corresponding block height for our birthday timestamp. Since we do
 	// not store block timestamps, we'll need to estimate our height by
@@ -363,7 +364,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 // resetSyncedBlockToBirthday is a migration that resets the wallet's currently
 // synced block to its birthday block. This essentially serves as a migration to
 // force a rescan of the wallet.
-func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) error {
+func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) er.R {
 	syncBucket := ns.NestedReadWriteBucket(syncBucketName)
 	if syncBucket == nil {
 		return errors.New("sync bucket does not exist")
@@ -380,7 +381,7 @@ func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) error {
 // storeMaxReorgDepth is a migration responsible for allowing the wallet to only
 // maintain MaxReorgDepth block hashes stored in order to recover from long
 // reorgs.
-func storeMaxReorgDepth(ns walletdb.ReadWriteBucket) error {
+func storeMaxReorgDepth(ns walletdb.ReadWriteBucket) er.R {
 	// Retrieve the current tip of the wallet. We'll use this to determine
 	// the highest stale height we currently have stored within it.
 	syncedTo, err := fetchSyncedTo(ns)

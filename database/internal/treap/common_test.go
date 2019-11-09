@@ -7,6 +7,7 @@ package treap
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"reflect"
 	"testing"

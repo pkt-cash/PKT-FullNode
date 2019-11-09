@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 )
 
@@ -148,7 +149,7 @@ type Alert struct {
 }
 
 // Serialize encodes the alert to w using the alert protocol encoding format.
-func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
+func (alert *Alert) Serialize(w io.Writer, pver uint32) er.R {
 	err := writeElements(w, alert.Version, alert.RelayUntil,
 		alert.Expiration, alert.ID, alert.Cancel)
 	if err != nil {
@@ -211,7 +212,7 @@ func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
 
 // Deserialize decodes from r into the receiver using the alert protocol
 // encoding format.
-func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
+func (alert *Alert) Deserialize(r io.Reader, pver uint32) er.R {
 	err := readElements(r, &alert.Version, &alert.RelayUntil,
 		&alert.Expiration, &alert.ID, &alert.Cancel)
 	if err != nil {
@@ -302,7 +303,7 @@ func NewAlert(version int32, relayUntil int64, expiration int64,
 
 // NewAlertFromPayload returns an Alert with values deserialized from the
 // serialized payload.
-func NewAlertFromPayload(serializedPayload []byte, pver uint32) (*Alert, error) {
+func NewAlertFromPayload(serializedPayload []byte, pver uint32) (*Alert, er.R) {
 	var alert Alert
 	r := bytes.NewReader(serializedPayload)
 	err := alert.Deserialize(r, pver)
@@ -333,8 +334,8 @@ type MsgAlert struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-	var err error
+func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
+	var err er.R
 
 	msg.SerializedPayload, err = ReadVarBytes(r, pver, MaxMessagePayload,
 		"alert serialized payload")
@@ -354,8 +355,8 @@ func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-	var err error
+func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
+	var err er.R
 	var serializedpayload []byte
 	if msg.Payload != nil {
 		// try to Serialize Payload if possible

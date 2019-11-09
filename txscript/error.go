@@ -6,6 +6,7 @@ package txscript
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ErrorCode identifies a kind of script error.
@@ -447,7 +448,7 @@ func scriptError(c ErrorCode, desc string) Error {
 
 // IsErrorCode returns whether or not the provided error is a script error with
 // the provided error code.
-func IsErrorCode(err error, c ErrorCode) bool {
+func IsErrorCode(err er.R, c ErrorCode) bool {
 	serr, ok := err.(Error)
 	return ok && serr.ErrorCode == c
 }

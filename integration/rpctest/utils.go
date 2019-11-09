@@ -5,6 +5,7 @@
 package rpctest
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"time"
 
@@ -33,7 +34,7 @@ const (
 // passed JoinType. This function be used to to ensure all active test
 // harnesses are at a consistent state before proceeding to an assertion or
 // check within rpc tests.
-func JoinNodes(nodes []*Harness, joinType JoinType) error {
+func JoinNodes(nodes []*Harness, joinType JoinType) er.R {
 	switch joinType {
 	case Blocks:
 		return syncBlocks(nodes)
@@ -44,7 +45,7 @@ func JoinNodes(nodes []*Harness, joinType JoinType) error {
 }
 
 // syncMempools blocks until all nodes have identical mempools.
-func syncMempools(nodes []*Harness) error {
+func syncMempools(nodes []*Harness) er.R {
 	poolsMatch := false
 
 retry:
@@ -76,7 +77,7 @@ retry:
 }
 
 // syncBlocks blocks until all nodes report the same best chain.
-func syncBlocks(nodes []*Harness) error {
+func syncBlocks(nodes []*Harness) er.R {
 	blocksMatch := false
 
 retry:
@@ -107,7 +108,7 @@ retry:
 // harness and the "to" harness.  The connection made is flagged as persistent,
 // therefore in the case of disconnects, "from" will attempt to reestablish a
 // connection to the "to" harness.
-func ConnectNode(from *Harness, to *Harness) error {
+func ConnectNode(from *Harness, to *Harness) er.R {
 	peerInfo, err := from.Node.GetPeerInfo()
 	if err != nil {
 		return err
@@ -135,7 +136,7 @@ func ConnectNode(from *Harness, to *Harness) error {
 }
 
 // TearDownAll tears down all active test harnesses.
-func TearDownAll() error {
+func TearDownAll() er.R {
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
 

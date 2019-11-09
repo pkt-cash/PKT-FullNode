@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -24,7 +25,7 @@ import (
 
 // scriptTestName returns a descriptive test name for the given reference script
 // test data.
-func scriptTestName(test []interface{}) (string, error) {
+func scriptTestName(test []interface{}) (string, er.R) {
 	// Account for any optional leading witness data.
 	var witnessOffset int
 	if _, ok := test[0].([]interface{}); ok {
@@ -52,7 +53,7 @@ func scriptTestName(test []interface{}) (string, error) {
 }
 
 // parse hex string into a []byte.
-func parseHex(tok string) ([]byte, error) {
+func parseHex(tok string) ([]byte, er.R) {
 	if !strings.HasPrefix(tok, "0x") {
 		return nil, errors.New("not a hex number")
 	}
@@ -61,7 +62,7 @@ func parseHex(tok string) ([]byte, error) {
 
 // parseWitnessStack parses a json array of witness items encoded as hex into a
 // slice of witness elements.
-func parseWitnessStack(elements []interface{}) ([][]byte, error) {
+func parseWitnessStack(elements []interface{}) ([][]byte, er.R) {
 	witness := make([][]byte, len(elements))
 	for i, e := range elements {
 		witElement, err := hex.DecodeString(e.(string))
@@ -90,7 +91,7 @@ var shortFormOps map[string]byte
 //     0x14 is OP_DATA_20)
 //   - Single quoted strings are pushed as data
 //   - Anything else is an error
-func parseShortForm(script string) ([]byte, error) {
+func parseShortForm(script string) ([]byte, er.R) {
 	// Only create the short form opcode map once.
 	if shortFormOps == nil {
 		ops := make(map[string]byte)
@@ -152,7 +153,7 @@ func parseShortForm(script string) ([]byte, error) {
 
 // parseScriptFlags parses the provided flags string from the format used in the
 // reference tests into ScriptFlags suitable for use in the script engine.
-func parseScriptFlags(flagStr string) (ScriptFlags, error) {
+func parseScriptFlags(flagStr string) (ScriptFlags, er.R) {
 	var flags ScriptFlags
 
 	sFlags := strings.Split(flagStr, ",")
@@ -204,7 +205,7 @@ func parseScriptFlags(flagStr string) (ScriptFlags, error) {
 // parseExpectedResult parses the provided expected result string into allowed
 // script error codes.  An error is returned if the expected result string is
 // not supported.
-func parseExpectedResult(expected string) ([]ErrorCode, error) {
+func parseExpectedResult(expected string) ([]ErrorCode, er.R) {
 	switch expected {
 	case "OK":
 		return nil, nil

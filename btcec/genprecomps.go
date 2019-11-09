@@ -14,6 +14,7 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"log"
 	"os"
 

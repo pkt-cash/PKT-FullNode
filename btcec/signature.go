@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash"
 	"math/big"
 )
@@ -90,7 +91,7 @@ func (sig *Signature) IsEqual(otherSig *Signature) bool {
 // 0x30 + <1-byte> + 0x02 + 0x01 + <byte> + 0x2 + 0x01 + <byte>
 const MinSigLen = 8
 
-func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, error) {
+func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) {
 	// Originally this code used encoding/asn1 in order to parse the
 	// signature, but a number of problems were found with this approach.
 	// Despite the fact that signatures are stored as DER, the difference
@@ -208,14 +209,14 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, error)
 // ParseSignature parses a signature in BER format for the curve type `curve'
 // into a Signature type, perfoming some basic sanity checks.  If parsing
 // according to the more strict DER format is needed, use ParseDERSignature.
-func ParseSignature(sigStr []byte, curve elliptic.Curve) (*Signature, error) {
+func ParseSignature(sigStr []byte, curve elliptic.Curve) (*Signature, er.R) {
 	return parseSig(sigStr, curve, false)
 }
 
 // ParseDERSignature parses a signature in DER format for the curve type
 // `curve` into a Signature type.  If parsing according to the less strict
 // BER format is needed, use ParseSignature.
-func ParseDERSignature(sigStr []byte, curve elliptic.Curve) (*Signature, error) {
+func ParseDERSignature(sigStr []byte, curve elliptic.Curve) (*Signature, er.R) {
 	return parseSig(sigStr, curve, true)
 }
 
@@ -242,7 +243,7 @@ func canonicalizeInt(val *big.Int) []byte {
 // possibly be misinterpreted as a negative number (even though OpenSSL
 // treats all numbers as unsigned), or if there is any unnecessary
 // leading zero padding.
-func canonicalPadding(b []byte) error {
+func canonicalPadding(b []byte) er.R {
 	switch {
 	case b[0]&0x80 == 0x80:
 		return errNegativeValue
@@ -283,7 +284,7 @@ func hashToInt(hash []byte, c elliptic.Curve) *big.Int {
 // case in step 1.6. This counter is used in the bitcoin compressed signature
 // format and thus we match bitcoind's behaviour here.
 func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
-	iter int, doChecks bool) (*PublicKey, error) {
+	iter int, doChecks bool) (*PublicKey, er.R) {
 	// 1.1 x = (n * i) + r
 	Rx := new(big.Int).Mul(curve.Params().N,
 		new(big.Int).SetInt64(int64(iter/2)))
@@ -349,7 +350,7 @@ func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 // <(byte of 27+public key solution)+4 if compressed >< padded bytes for signature R><padded bytes for signature S>
 // where the R and S parameters are padde up to the bitlengh of the curve.
 func SignCompact(curve *KoblitzCurve, key *PrivateKey,
-	hash []byte, isCompressedKey bool) ([]byte, error) {
+	hash []byte, isCompressedKey bool) ([]byte, er.R) {
 	sig, err := key.Sign(hash)
 	if err != nil {
 		return nil, err
@@ -396,7 +397,7 @@ func SignCompact(curve *KoblitzCurve, key *PrivateKey,
 // key will be returned as well as a boolen if the original key was compressed
 // or not, else an error will be returned.
 func RecoverCompact(curve *KoblitzCurve, signature,
-	hash []byte) (*PublicKey, bool, error) {
+	hash []byte) (*PublicKey, bool, er.R) {
 	bitlen := (curve.BitSize + 7) / 8
 	if len(signature) != 1+bitlen*2 {
 		return nil, false, errors.New("invalid compact signature size")
@@ -419,7 +420,7 @@ func RecoverCompact(curve *KoblitzCurve, signature,
 }
 
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979 and BIP 62.
-func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, error) {
+func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, er.R) {
 
 	privkey := privateKey.ToECDSA()
 	N := S256().N

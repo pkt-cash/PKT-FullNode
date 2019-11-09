@@ -3,6 +3,7 @@ package waddrmgr
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -35,7 +36,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 	}
 
 	// We'll write all of the blocks to the database.
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		for _, block := range blocks {
 			if err := PutSyncedTo(ns, block); err != nil {
@@ -50,7 +51,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 
 	// We should be able to retrieve them all as we have MaxReorgDepth
 	// blocks.
-	err = walletdb.View(db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(db, func(tx walletdb.ReadTx) er.R {
 		ns := tx.ReadBucket(waddrmgrNamespaceKey)
 		syncedTo, err := fetchSyncedTo(ns)
 		if err != nil {
@@ -90,7 +91,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 	binary.BigEndian.PutUint32(newBlockHash[:], uint32(newBlockHeight))
 	newBlock := &BlockStamp{Height: newBlockHeight, Hash: newBlockHash}
 
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		return PutSyncedTo(ns, newBlock)
 	})
@@ -101,7 +102,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 	// Extending the chain would cause us to exceed our MaxReorgDepth blocks
 	// stored, so we should see the first block we ever added to now be
 	// removed.
-	err = walletdb.View(db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(db, func(tx walletdb.ReadTx) er.R {
 		ns := tx.ReadBucket(waddrmgrNamespaceKey)
 		syncedTo, err := fetchSyncedTo(ns)
 		if err != nil {

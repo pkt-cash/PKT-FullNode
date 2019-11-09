@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"time"
@@ -61,7 +62,7 @@ func (s *pktdService) Execute(args []string, r <-chan svc.ChangeRequest, changes
 	// quickly.  Shutdown (along with a potential error) is reported via
 	// doneChan.  serverChan is notified with the main server instance once
 	// it is started so it can be gracefully stopped.
-	doneChan := make(chan error)
+	doneChan := make(chan er.R)
 	serverChan := make(chan *server)
 	go func() {
 		err := pktdMain(serverChan)
@@ -113,7 +114,7 @@ loop:
 // installService attempts to install the pktd service.  Typically this should
 // be done by the msi installer, but it is provided here since it can be useful
 // for development.
-func installService() error {
+func installService() er.R {
 	// Get the path of the current executable.  This is needed because
 	// os.Args[0] can vary depending on how the application was launched.
 	// For example, under cmd.exe it will only be the name of the app
@@ -163,7 +164,7 @@ func installService() error {
 // be done by the msi uninstaller, but it is provided here since it can be
 // useful for development.  Not the eventlog entry is intentionally not removed
 // since it would invalidate any existing event log messages.
-func removeService() error {
+func removeService() er.R {
 	// Connect to the windows service manager.
 	serviceManager, err := mgr.Connect()
 	if err != nil {
@@ -183,7 +184,7 @@ func removeService() error {
 }
 
 // startService attempts to start the pktd service.
-func startService() error {
+func startService() er.R {
 	// Connect to the windows service manager.
 	serviceManager, err := mgr.Connect()
 	if err != nil {
@@ -208,7 +209,7 @@ func startService() error {
 // controlService allows commands which change the status of the service.  It
 // also waits for up to 10 seconds for the service to change to the passed
 // state.
-func controlService(c svc.Cmd, to svc.State) error {
+func controlService(c svc.Cmd, to svc.State) er.R {
 	// Connect to the windows service manager.
 	serviceManager, err := mgr.Connect()
 	if err != nil {
@@ -248,8 +249,8 @@ func controlService(c svc.Cmd, to svc.State) error {
 // performServiceCommand attempts to run one of the supported service commands
 // provided on the command line via the service command flag.  An appropriate
 // error is returned if an invalid command is specified.
-func performServiceCommand(command string) error {
-	var err error
+func performServiceCommand(command string) er.R {
+	var err er.R
 	switch command {
 	case "install":
 		err = installService()
@@ -274,7 +275,7 @@ func performServiceCommand(command string) error {
 // the service control manager to start the long-running server.  A flag is
 // returned to the caller so the application can determine whether to exit (when
 // running as a service) or launch in normal interactive mode.
-func serviceMain() (bool, error) {
+func serviceMain() (bool, er.R) {
 	// Don't run as a service if we're running interactively (or that can't
 	// be determined due to an error).
 	isInteractive, err := svc.IsAnInteractiveSession()

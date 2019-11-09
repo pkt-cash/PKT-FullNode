@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -24,14 +25,14 @@ func TestBtcWalletExtCmds(t *testing.T) {
 	testID := int(1)
 	tests := []struct {
 		name         string
-		newCmd       func() (interface{}, error)
+		newCmd       func() (interface{}, er.R)
 		staticCmd    func() interface{}
 		marshalled   string
 		unmarshalled interface{}
 	}{
 		{
 			name: "createnewaccount",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("createnewaccount", "acct")
 			},
 			staticCmd: func() interface{} {
@@ -44,7 +45,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "dumpwallet",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("dumpwallet", "filename")
 			},
 			staticCmd: func() interface{} {
@@ -57,7 +58,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "importaddress",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importaddress", "1Address", "")
 			},
 			staticCmd: func() interface{} {
@@ -71,7 +72,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "importaddress optional",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importaddress", "1Address", "acct", false)
 			},
 			staticCmd: func() interface{} {
@@ -86,7 +87,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "importpubkey",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importpubkey", "031234")
 			},
 			staticCmd: func() interface{} {
@@ -100,7 +101,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "importpubkey optional",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importpubkey", "031234", false)
 			},
 			staticCmd: func() interface{} {
@@ -114,7 +115,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "importwallet",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importwallet", "filename")
 			},
 			staticCmd: func() interface{} {
@@ -127,7 +128,7 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		},
 		{
 			name: "renameaccount",
-			newCmd: func() (interface{}, error) {
+			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("renameaccount", "oldacct", "newacct")
 			},
 			staticCmd: func() interface{} {

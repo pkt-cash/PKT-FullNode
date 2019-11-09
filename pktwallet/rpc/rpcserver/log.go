@@ -15,6 +15,7 @@
 package rpcserver
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"strings"
 

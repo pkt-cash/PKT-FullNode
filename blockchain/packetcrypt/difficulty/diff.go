@@ -5,6 +5,7 @@
 package difficulty
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"strings"
 
@@ -19,7 +20,7 @@ import (
 
 // ProvideSeed is used to prompt for the wallet seed which maybe required during
 // upgrades.
-func ProvideSeed() ([]byte, error) {
+func ProvideSeed() ([]byte, er.R) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("Enter existing wallet seed: ")
@@ -46,7 +47,7 @@ func ProvideSeed() ([]byte, error) {
 
 // ProvidePrivPassphrase is used to prompt for the private passphrase which
 // maybe required during upgrades.
-func ProvidePrivPassphrase() ([]byte, error) {
+func ProvidePrivPassphrase() ([]byte, er.R) {
 	prompt := "Enter the private passphrase of your wallet: "
 	for {
 		fmt.Print(prompt)
@@ -67,7 +68,7 @@ func ProvidePrivPassphrase() ([]byte, error) {
 // promptList prompts the user with the given prefix, list of valid responses,
 // and default list entry to use.  The function will repeat the prompt to the
 // user until they enter a valid response.
-func promptList(reader *bufio.Reader, prefix string, validResponses []string, defaultEntry string) (string, error) {
+func promptList(reader *bufio.Reader, prefix string, validResponses []string, defaultEntry string) (string, er.R) {
 	// Setup the prompt according to the parameters.
 	validStrings := strings.Join(validResponses, "/")
 	var prompt string
@@ -101,7 +102,7 @@ func promptList(reader *bufio.Reader, prefix string, validResponses []string, de
 // promptListBool prompts the user for a boolean (yes/no) with the given prefix.
 // The function will repeat the prompt to the user until they enter a valid
 // reponse.
-func promptListBool(reader *bufio.Reader, prefix string, defaultEntry string) (bool, error) {
+func promptListBool(reader *bufio.Reader, prefix string, defaultEntry string) (bool, er.R) {
 	// Setup the valid responses.
 	valid := []string{"n", "no", "y", "yes"}
 	response, err := promptList(reader, prefix, valid, defaultEntry)
@@ -114,7 +115,7 @@ func promptListBool(reader *bufio.Reader, prefix string, defaultEntry string) (b
 // promptPass prompts the user for a passphrase with the given prefix.  The
 // function will ask the user to confirm the passphrase and will repeat the
 // prompts until they enter a matching response.
-func promptPass(reader *bufio.Reader, prefix string, confirm bool) ([]byte, error) {
+func promptPass(reader *bufio.Reader, prefix string, confirm bool) ([]byte, er.R) {
 	// Prompt the user until they enter a passphrase.
 	prompt := fmt.Sprintf("%s: ", prefix)
 	for {
@@ -155,7 +156,7 @@ func promptPass(reader *bufio.Reader, prefix string, confirm bool) ([]byte, erro
 // On the other hand, when the legacy keystore is nil, the user is prompted for
 // a new private passphrase.  All prompts are repeated until the user enters a
 // valid response.
-func PrivatePass(reader *bufio.Reader, legacyKeyStore *keystore.Store) ([]byte, error) {
+func PrivatePass(reader *bufio.Reader, legacyKeyStore *keystore.Store) ([]byte, er.R) {
 	// When there is not an existing legacy wallet, simply prompt the user
 	// for a new private passphase and return it.
 	if legacyKeyStore == nil {
@@ -198,7 +199,7 @@ func PrivatePass(reader *bufio.Reader, legacyKeyStore *keystore.Store) ([]byte, 
 // if they are sure they want to use the same passphrase for both.  Finally, all
 // prompts are repeated until the user enters a valid response.
 func PublicPass(reader *bufio.Reader, privPass []byte,
-	defaultPubPassphrase, configPubPassphrase []byte) ([]byte, error) {
+	defaultPubPassphrase, configPubPassphrase []byte) ([]byte, er.R) {
 
 	pubPass := defaultPubPassphrase
 	usePubPass, err := promptListBool(reader, "Do you want "+
@@ -260,7 +261,7 @@ func PublicPass(reader *bufio.Reader, privPass []byte,
 // the user along with prompting them for confirmation.  When the user answers
 // yes, a the user is prompted for it.  All prompts are repeated until the user
 // enters a valid response.
-func Seed(reader *bufio.Reader) ([]byte, error) {
+func Seed(reader *bufio.Reader) ([]byte, er.R) {
 	// Ascertain the wallet generation seed.
 	useUserSeed, err := promptListBool(reader, "Do you have an "+
 		"existing wallet seed you want to use?", "no")

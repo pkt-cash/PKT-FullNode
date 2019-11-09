@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -84,7 +85,7 @@ func (b *BlockChain) verifyCheckpoint(height int32, hash *chainhash.Hash) bool {
 // should really only happen for blocks before the first checkpoint).
 //
 // This function MUST be called with the chain lock held (for reads).
-func (b *BlockChain) findPreviousCheckpoint() (*blockNode, error) {
+func (b *BlockChain) findPreviousCheckpoint() (*blockNode, er.R) {
 	if !b.HasCheckpoints() {
 		return nil, nil
 	}
@@ -197,7 +198,7 @@ func isNonstandardTransaction(tx *btcutil.Tx) bool {
 // decision and then manually added to the list of checkpoints for a network.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, error) {
+func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, er.R) {
 	b.chainLock.RLock()
 	defer b.chainLock.RUnlock()
 

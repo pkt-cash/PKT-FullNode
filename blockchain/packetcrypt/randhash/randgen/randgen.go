@@ -7,6 +7,7 @@ package randgen
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
@@ -336,7 +337,7 @@ out:
 	return 0
 }
 
-func Generate(seed []byte) ([]uint32, error) {
+func Generate(seed []byte) ([]uint32, er.R) {
 	budget := util.Conf_RandGen_INITIAL_BUDGET
 	ctx := randGen{}
 	copy(ctx.randseed[:], seed[:32])

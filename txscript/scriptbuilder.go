@@ -7,6 +7,7 @@ package txscript
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -49,7 +50,7 @@ func (e ErrScriptNotCanonical) Error() string {
 // 	fmt.Printf("Final multi-sig script: %x\n", script)
 type ScriptBuilder struct {
 	script []byte
-	err    error
+	err    er.R
 }
 
 // AddOp pushes the passed opcode to the end of the script.  The script will not
@@ -261,7 +262,7 @@ func (b *ScriptBuilder) Reset() *ScriptBuilder {
 // Script returns the currently built script.  When any errors occurred while
 // building the script, the script will be returned up the point of the first
 // error along with the error.
-func (b *ScriptBuilder) Script() ([]byte, error) {
+func (b *ScriptBuilder) Script() ([]byte, er.R) {
 	return b.script, b.err
 }
 

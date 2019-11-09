@@ -12,10 +12,10 @@ type Cache interface {
 	// Put stores the given (key,value) pair, replacing existing value if
 	// key already exists. The return value indicates whether items had to
 	// be evicted to make room for the new element.
-	Put(key interface{}, value Value) (bool, error)
+	Put(key interface{}, value Value) (bool, er.R)
 
 	// Get returns the value for a given key.
-	Get(key interface{}) (Value, error)
+	Get(key interface{}) (Value, er.R)
 
 	// Len returns number of elements in the cache.
 	Len() int
@@ -25,5 +25,5 @@ type Cache interface {
 type Value interface {
 	// Size determines how big this entry would be in the cache. For
 	// example, for a filter, it could be the size of the filter in bytes.
-	Size() (uint64, error)
+	Size() (uint64, er.R)
 }

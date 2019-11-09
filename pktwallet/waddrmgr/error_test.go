@@ -7,6 +7,7 @@ package waddrmgr_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
@@ -115,7 +116,7 @@ func TestManagerError(t *testing.T) {
 // TestIsError tests the IsError func.
 func TestIsError(t *testing.T) {
 	tests := []struct {
-		err  error
+		err  er.R
 		code waddrmgr.ErrorCode
 		exp  bool
 	}{

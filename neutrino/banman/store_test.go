@@ -1,6 +1,7 @@
 package banman_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"

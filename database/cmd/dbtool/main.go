@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,11 +23,11 @@ const (
 
 var (
 	log             btclog.Logger
-	shutdownChannel = make(chan error)
+	shutdownChannel = make(chan er.R)
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB() (database.DB, error) {
+func loadBlockDB() (database.DB, er.R) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
@@ -59,7 +60,7 @@ func loadBlockDB() (database.DB, error) {
 
 // realMain is the real main function for the utility.  It is necessary to work
 // around the fact that deferred functions do not run when os.Exit() is called.
-func realMain() error {
+func realMain() er.R {
 	// Setup logging.
 	backendLogger := btclog.NewBackend(os.Stdout)
 	defer os.Stdout.Sync()

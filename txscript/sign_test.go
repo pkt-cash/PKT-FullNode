@@ -7,6 +7,7 @@ package txscript
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -24,12 +25,12 @@ type addressToKey struct {
 func mkGetKey(keys map[string]addressToKey) KeyDB {
 	if keys == nil {
 		return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
-			bool, error) {
+			bool, er.R) {
 			return nil, false, errors.New("nope")
 		})
 	}
 	return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
-		bool, error) {
+		bool, er.R) {
 		a2k, ok := keys[addr.EncodeAddress()]
 		if !ok {
 			return nil, false, errors.New("nope")
@@ -40,11 +41,11 @@ func mkGetKey(keys map[string]addressToKey) KeyDB {
 
 func mkGetScript(scripts map[string][]byte) ScriptDB {
 	if scripts == nil {
-		return ScriptClosure(func(addr btcutil.Address) ([]byte, error) {
+		return ScriptClosure(func(addr btcutil.Address) ([]byte, er.R) {
 			return nil, errors.New("nope")
 		})
 	}
-	return ScriptClosure(func(addr btcutil.Address) ([]byte, error) {
+	return ScriptClosure(func(addr btcutil.Address) ([]byte, er.R) {
 		script, ok := scripts[addr.EncodeAddress()]
 		if !ok {
 			return nil, errors.New("nope")
@@ -53,7 +54,7 @@ func mkGetScript(scripts map[string][]byte) ScriptDB {
 	})
 }
 
-func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript, pkScript []byte) error {
+func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript, pkScript []byte) er.R {
 	tx.TxIn[idx].SignatureScript = sigScript
 	vm, err := NewEngine(pkScript, tx, idx,
 		ScriptBip16|ScriptVerifyDERSignatures, nil, nil, inputAmt)
@@ -73,7 +74,7 @@ func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
 	hashType SigHashType, kdb KeyDB, sdb ScriptDB,
-	previousScript []byte) error {
+	previousScript []byte) er.R {
 
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
@@ -1650,7 +1651,7 @@ nexttest:
 		}
 
 		var script []byte
-		var err error
+		var err er.R
 		for j := range tx.TxIn {
 			var idx int
 			if sigScriptTests[i].inputs[j].indexOutOfRange {

@@ -11,6 +11,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math/rand"
 	"net"
@@ -209,13 +210,13 @@ type MessageListeners struct {
 	// useful for circumstances such as keeping track of server-wide byte
 	// counts or working with custom message types for which the peer does
 	// not directly provide a callback.
-	OnRead func(p *Peer, bytesRead int, msg wire.Message, err error)
+	OnRead func(p *Peer, bytesRead int, msg wire.Message, err er.R)
 
 	// OnWrite is invoked when we write a bitcoin message to a peer.  It
 	// consists of the number of bytes written, the message, and whether or
 	// not an error in the write occurred.  This can be useful for
 	// circumstances such as keeping track of server-wide byte counts.
-	OnWrite func(p *Peer, bytesWritten int, msg wire.Message, err error)
+	OnWrite func(p *Peer, bytesWritten int, msg wire.Message, err er.R)
 }
 
 // Config is the struct to hold configuration options useful to Peer.
@@ -290,7 +291,7 @@ func minUint32(a, b uint32) uint32 {
 // newNetAddress attempts to extract the IP address and port from the passed
 // net.Addr interface and create a bitcoin NetAddress structure using that
 // information.
-func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, error) {
+func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 	// addr will be a net.TCPAddr when not using a proxy.
 	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
 		ip := tcpAddr.IP
@@ -384,7 +385,7 @@ type StatsSnap struct {
 
 // HashFunc is a function which returns a block hash, height and error
 // It is used as a callback to get newest block details.
-type HashFunc func() (hash *chainhash.Hash, height int32, err error)
+type HashFunc func() (hash *chainhash.Hash, height int32, err er.R)
 
 // AddrFunc is a func which takes an address and returns a related address.
 type AddrFunc func(remoteAddr *wire.NetAddress) *wire.NetAddress
@@ -392,7 +393,7 @@ type AddrFunc func(remoteAddr *wire.NetAddress) *wire.NetAddress
 // HostToNetAddrFunc is a func which takes a host, port, services and returns
 // the netaddress.
 type HostToNetAddrFunc func(host string, port uint16,
-	services wire.ServiceFlag) (*wire.NetAddress, error)
+	services wire.ServiceFlag) (*wire.NetAddress, er.R)
 
 // NOTE: The overall data flow of a peer is split into 3 goroutines.  Inbound
 // messages are read via the inHandler goroutine and generally dispatched to
@@ -817,7 +818,7 @@ func (p *Peer) IsWitnessEnabled() bool {
 // message will be sent if there are no entries in the provided addresses slice.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, error) {
+func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er.R) {
 	addressCount := len(addresses)
 
 	// Nothing to send.
@@ -849,7 +850,7 @@ func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er
 // and stop hash.  It will ignore back-to-back duplicate requests.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) error {
+func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) er.R {
 	// Extract the begin hash from the block locator, if one was specified,
 	// to use for filtering duplicate getblocks requests.
 	var beginHash *chainhash.Hash
@@ -893,7 +894,7 @@ func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chain
 // and stop hash.  It will ignore back-to-back duplicate requests.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) error {
+func (p *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) er.R {
 	// Extract the begin hash from the block locator, if one was specified,
 	// to use for filtering duplicate getheaders requests.
 	var beginHash *chainhash.Hash
@@ -1006,7 +1007,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 }
 
 // readMessage reads the next bitcoin message from the peer with logging.
-func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, error) {
+func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, er.R) {
 	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.conn,
 		p.ProtocolVersion(), p.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&p.bytesReceived, uint64(n))
@@ -1039,7 +1040,7 @@ func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte,
 }
 
 // writeMessage sends a bitcoin message to the peer with logging.
-func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
+func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 	// Don't do anything if we're disconnecting.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
 		return nil
@@ -1082,7 +1083,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
 // isAllowedReadError returns whether or not the passed error is allowed without
 // disconnecting the peer.  In particular, regression tests need to be allowed
 // to send malformed messages without the peer being disconnected.
-func (p *Peer) isAllowedReadError(err error) bool {
+func (p *Peer) isAllowedReadError(err er.R) bool {
 	// Only allow read errors in regression test mode.
 	if p.cfg.ChainParams.Net != wire.TestNet {
 		return false
@@ -1111,7 +1112,7 @@ func (p *Peer) isAllowedReadError(err error) bool {
 // shouldHandleReadError returns whether or not the passed error, which is
 // expected to have come from reading from the remote peer in the inHandler,
 // should be logged and responded to with a reject message.
-func (p *Peer) shouldHandleReadError(err error) bool {
+func (p *Peer) shouldHandleReadError(err er.R) bool {
 	// No logging or reject message when the peer is being forcibly
 	// disconnected.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
@@ -1697,7 +1698,7 @@ cleanup:
 // shouldLogWriteError returns whether or not the passed error, which is
 // expected to have come from writing to the remote peer in the outHandler,
 // should be logged.
-func (p *Peer) shouldLogWriteError(err error) bool {
+func (p *Peer) shouldLogWriteError(err er.R) bool {
 	// No logging when the peer is being forcibly disconnected.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
 		return false
@@ -1887,7 +1888,7 @@ func (p *Peer) Disconnect() {
 // readRemoteVersionMsg waits for the next message to arrive from the remote
 // peer.  If the next message is not a version message or the version is not
 // acceptable then return an error.
-func (p *Peer) readRemoteVersionMsg() error {
+func (p *Peer) readRemoteVersionMsg() er.R {
 	// Read their version message.
 	remoteMsg, _, err := p.readMessage(wire.LatestEncoding)
 	if err != nil {
@@ -1983,10 +1984,10 @@ func (p *Peer) readRemoteVersionMsg() error {
 
 // localVersionMsg creates a version message that can be used to send to the
 // remote peer.
-func (p *Peer) localVersionMsg() (*wire.MsgVersion, error) {
+func (p *Peer) localVersionMsg() (*wire.MsgVersion, er.R) {
 	var blockNum int32
 	if p.cfg.NewestBlock != nil {
-		var err error
+		var err er.R
 		_, blockNum, err = p.cfg.NewestBlock()
 		if err != nil {
 			return nil, err
@@ -2044,7 +2045,7 @@ func (p *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 }
 
 // writeLocalVersionMsg writes our version message to the remote peer.
-func (p *Peer) writeLocalVersionMsg() error {
+func (p *Peer) writeLocalVersionMsg() er.R {
 	localVerMsg, err := p.localVersionMsg()
 	if err != nil {
 		return err
@@ -2056,7 +2057,7 @@ func (p *Peer) writeLocalVersionMsg() error {
 // negotiateInboundProtocol waits to receive a version message from the peer
 // then sends our version message. If the events do not occur in that order then
 // it returns an error.
-func (p *Peer) negotiateInboundProtocol() error {
+func (p *Peer) negotiateInboundProtocol() er.R {
 	if err := p.readRemoteVersionMsg(); err != nil {
 		return err
 	}
@@ -2067,7 +2068,7 @@ func (p *Peer) negotiateInboundProtocol() error {
 // negotiateOutboundProtocol sends our version message then waits to receive a
 // version message from the peer.  If the events do not occur in that order then
 // it returns an error.
-func (p *Peer) negotiateOutboundProtocol() error {
+func (p *Peer) negotiateOutboundProtocol() er.R {
 	if err := p.writeLocalVersionMsg(); err != nil {
 		return err
 	}
@@ -2076,10 +2077,10 @@ func (p *Peer) negotiateOutboundProtocol() error {
 }
 
 // start begins processing input and output messages.
-func (p *Peer) start() error {
+func (p *Peer) start() er.R {
 	log.Tracef("Starting peer %s", p)
 
-	negotiateErr := make(chan error, 1)
+	negotiateErr := make(chan er.R, 1)
 	go func() {
 		if p.inbound {
 			negotiateErr <- p.negotiateInboundProtocol()
@@ -2204,7 +2205,7 @@ func NewInboundPeer(cfg *Config) *Peer {
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string) (*Peer, error) {
+func NewOutboundPeer(cfg *Config, addr string) (*Peer, er.R) {
 	p := newPeerBase(cfg, false)
 	p.addr = addr
 

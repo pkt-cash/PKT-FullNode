@@ -6,6 +6,7 @@ package legacyrpc
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
@@ -21,19 +22,19 @@ type (
 	// DeserializationError describes a failed deserializaion due to bad
 	// user input.  It corresponds to btcjson.ErrRPCDeserialization.
 	DeserializationError struct {
-		error
+		er.R
 	}
 
 	// InvalidParameterError describes an invalid parameter passed by
 	// the user.  It corresponds to btcjson.ErrRPCInvalidParameter.
 	InvalidParameterError struct {
-		error
+		er.R
 	}
 
 	// ParseError describes a failed parse due to bad user input.  It
 	// corresponds to btcjson.ErrRPCParse.
 	ParseError struct {
-		error
+		er.R
 	}
 )
 

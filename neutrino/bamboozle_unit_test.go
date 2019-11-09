@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -46,7 +47,7 @@ type resolveFilterTestCase struct {
 	banThreshold int
 	peerFilters  map[string]*gcs.Filter
 	badPeers     []string
-	expectedErr  error
+	expectedErr  er.R
 }
 
 var (

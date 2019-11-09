@@ -7,6 +7,7 @@ package btcutil
 import (
 	"bytes"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/base58"
@@ -49,7 +50,7 @@ type WIF struct {
 // as a string encoded in the Wallet Import Format.  The compress argument
 // specifies whether the address intended to be imported or exported was created
 // by serializing the public key compressed rather than uncompressed.
-func NewWIF(privKey *btcec.PrivateKey, net *chaincfg.Params, compress bool) (*WIF, error) {
+func NewWIF(privKey *btcec.PrivateKey, net *chaincfg.Params, compress bool) (*WIF, er.R) {
 	if net == nil {
 		return nil, errors.New("no network")
 	}
@@ -82,7 +83,7 @@ func (w *WIF) IsForNet(net *chaincfg.Params) bool {
 // is of an impossible length or the expected compressed pubkey magic number
 // does not equal the expected value of 0x01.  ErrChecksumMismatch is returned
 // if the expected WIF checksum does not match the calculated checksum.
-func DecodeWIF(wif string) (*WIF, error) {
+func DecodeWIF(wif string) (*WIF, er.R) {
 	decoded := base58.Decode(wif)
 	decodedLen := len(decoded)
 	var compress bool

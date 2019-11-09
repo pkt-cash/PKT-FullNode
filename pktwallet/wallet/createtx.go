@@ -7,6 +7,7 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -40,7 +41,7 @@ func makeInputSource(eligible []wtxmgr.Credit) txauthor.InputSource {
 	currentInputValues := make([]btcutil.Amount, 0, len(eligible))
 
 	return func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn,
-		[]btcutil.Amount, [][]byte, error) {
+		[]btcutil.Amount, [][]byte, er.R) {
 
 		for currentTotal < target && len(eligible) != 0 {
 			nextCredit := &eligible[0]
@@ -62,7 +63,7 @@ type secretSource struct {
 	addrmgrNs walletdb.ReadBucket
 }
 
-func (s secretSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool, error) {
+func (s secretSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool, er.R) {
 	ma, err := s.Address(s.addrmgrNs, addr)
 	if err != nil {
 		return nil, false, err
@@ -81,7 +82,7 @@ func (s secretSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool, err
 	return privKey, ma.Compressed(), nil
 }
 
-func (s secretSource) GetScript(addr btcutil.Address) ([]byte, error) {
+func (s secretSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 	ma, err := s.Address(s.addrmgrNs, addr)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func (s secretSource) GetScript(addr btcutil.Address) ([]byte, error) {
 // input scripts added and SHOULD NOT be broadcasted.
 func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool, changeAddress *string) (
-	tx *txauthor.AuthoredTx, err error) {
+	tx *txauthor.AuthoredTx, err er.R) {
 
 	chainClient, err := w.requireChainClient()
 	if err != nil {
@@ -134,12 +135,12 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	}
 
 	inputSource := makeInputSource(eligible)
-	changeSource := func() ([]byte, error) {
+	changeSource := func() ([]byte, er.R) {
 		// Derive the change output script.  As a hack to allow
 		// spending from the imported account, change addresses are
 		// created from account 0.
 		var changeAddr btcutil.Address
-		var err error
+		var err er.R
 		if changeAddress != nil {
 			changeAddr, err = btcutil.DecodeAddress(*changeAddress, w.ChainParams())
 		} else if account == waddrmgr.ImportedAddrAccount {
@@ -211,7 +212,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	return tx, nil
 }
 
-func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minconf int32, bs *waddrmgr.BlockStamp) ([]wtxmgr.Credit, error) {
+func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minconf int32, bs *waddrmgr.BlockStamp) ([]wtxmgr.Credit, er.R) {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -269,7 +270,7 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 // validateMsgTx verifies transaction input scripts for tx.  All previous output
 // scripts from outputs redeemed by the transaction, in the same order they are
 // spent, must be passed in the prevScripts slice.
-func validateMsgTx(tx *wire.MsgTx, prevScripts [][]byte, inputValues []btcutil.Amount) error {
+func validateMsgTx(tx *wire.MsgTx, prevScripts [][]byte, inputValues []btcutil.Amount) er.R {
 	hashCache := txscript.NewTxSigHashes(tx)
 	for i, prevScript := range prevScripts {
 		vm, err := txscript.NewEngine(prevScript, tx, i,

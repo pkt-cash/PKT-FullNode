@@ -6,6 +6,7 @@ package blockchain_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"os"
 	"path/filepath"

@@ -3,6 +3,7 @@ package chain
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"sync"
@@ -57,7 +58,7 @@ type BitcoindConn struct {
 // by the passed chain parameters, the connection will be disconnected.
 func NewBitcoindConn(chainParams *chaincfg.Params,
 	host, user, pass, zmqBlockHost, zmqTxHost string,
-	zmqPollInterval time.Duration) (*BitcoindConn, error) {
+	zmqPollInterval time.Duration) (*BitcoindConn, er.R) {
 
 	clientCfg := &rpcclient.ConnConfig{
 		Host:                 host,
@@ -112,7 +113,7 @@ func NewBitcoindConn(chainParams *chaincfg.Params,
 // It's possible for this function to fail due to a limited number of connection
 // attempts. This is done to prevent waiting forever on the connection to be
 // established in the case that the node is down.
-func (c *BitcoindConn) Start() error {
+func (c *BitcoindConn) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 		return nil
 	}
@@ -317,7 +318,7 @@ func (c *BitcoindConn) txEventHandler() {
 }
 
 // getCurrentNet returns the network on which the bitcoind node is running.
-func (c *BitcoindConn) getCurrentNet() (wire.BitcoinNet, error) {
+func (c *BitcoindConn) getCurrentNet() (wire.BitcoinNet, er.R) {
 	hash, err := c.client.GetBlockHash(0)
 	if err != nil {
 		return 0, err

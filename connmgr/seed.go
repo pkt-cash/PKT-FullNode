@@ -6,6 +6,7 @@ package connmgr
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	mrand "math/rand"
 	"net"
 	"strconv"
@@ -27,7 +28,7 @@ const (
 type OnSeed func(addrs []*wire.NetAddress)
 
 // LookupFunc is the signature of the DNS lookup function.
-type LookupFunc func(string) ([]net.IP, error)
+type LookupFunc func(string) ([]net.IP, er.R)
 
 // SeedFromDNS uses DNS seeding to populate the address manager with peers.
 func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,

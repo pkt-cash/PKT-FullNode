@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"io/ioutil"
 	"os"
@@ -194,7 +195,7 @@ type secSource struct {
 	params  *chaincfg.Params
 }
 
-func (s *secSource) add(privKey *btcec.PrivateKey) (btcutil.Address, error) {
+func (s *secSource) add(privKey *btcec.PrivateKey) (btcutil.Address, er.R) {
 	pubKeyHash := btcutil.Hash160(privKey.PubKey().SerializeCompressed())
 	addr, err := btcutil.NewAddressWitnessPubKeyHash(pubKeyHash, s.params)
 	if err != nil {
@@ -219,7 +220,7 @@ func (s *secSource) add(privKey *btcec.PrivateKey) (btcutil.Address, error) {
 
 // GetKey is required by the txscript.KeyDB interface
 func (s *secSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool,
-	error) {
+	er.R) {
 	privKey, ok := s.keys[addr.String()]
 	if !ok {
 		return nil, true, fmt.Errorf("No key for address %s", addr)
@@ -228,7 +229,7 @@ func (s *secSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool,
 }
 
 // GetScript is required by the txscript.ScriptDB interface
-func (s *secSource) GetScript(addr btcutil.Address) ([]byte, error) {
+func (s *secSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 	script, ok := s.scripts[addr.String()]
 	if !ok {
 		return nil, fmt.Errorf("No script for address %s", addr)
@@ -297,7 +298,7 @@ func testInitialSync(harness *neutrinoHarness, t *testing.T) {
 // Variables used to track state between multiple rescan tests.
 var (
 	quitRescan                chan struct{}
-	errChan                   <-chan error
+	errChan                   <-chan er.R
 	rescan                    *neutrino.Rescan
 	startBlock                waddrmgr.BlockStamp
 	secSrc                    *secSource
@@ -452,7 +453,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 	// Spend the outputs we sent ourselves over two blocks.
 	inSrc := func(tx wire.MsgTx) func(target btcutil.Amount) (
 		total btcutil.Amount, inputs []*wire.TxIn,
-		inputValues []btcutil.Amount, scripts [][]byte, err error) {
+		inputValues []btcutil.Amount, scripts [][]byte, err er.R) {
 		ourIndex := 1 << 30 // Should work on 32-bit systems
 		for i, txo := range tx.TxOut {
 			if bytes.Equal(txo.PkScript, script1) ||
@@ -462,7 +463,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 		}
 		return func(target btcutil.Amount) (total btcutil.Amount,
 			inputs []*wire.TxIn, inputValues []btcutil.Amount,
-			scripts [][]byte, err error) {
+			scripts [][]byte, err er.R) {
 			if ourIndex == 1<<30 {
 				err = fmt.Errorf("Couldn't find our address " +
 					"in the passed transaction's outputs.")
@@ -512,7 +513,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 		// Fee rate is satoshis per kilobyte
 		1024000,
 		inSrc(*tx1),
-		func() ([]byte, error) {
+		func() ([]byte, er.R) {
 			return script3, nil
 		},
 	)
@@ -554,7 +555,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 		// Fee rate is satoshis per kilobyte
 		1024000,
 		inSrc(*tx2),
-		func() ([]byte, error) {
+		func() ([]byte, er.R) {
 			return script3, nil
 		},
 	)
@@ -648,7 +649,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 	}
 }
 
-func fetchPrevInputScripts(block *wire.MsgBlock, client *rpctest.Harness) ([][]byte, error) {
+func fetchPrevInputScripts(block *wire.MsgBlock, client *rpctest.Harness) ([][]byte, er.R) {
 	var inputScripts [][]byte
 	for i, tx := range block.Transactions {
 		if i == 0 {
@@ -810,7 +811,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 	}
 	// Keep track of an error channel with enough buffer space to track one
 	// error per block.
-	errChan := make(chan error, haveBest.Height)
+	errChan := make(chan er.R, haveBest.Height)
 	// Test getting all of the blocks and filters.
 	var wg sync.WaitGroup
 	workerQueue := make(chan struct{}, numQueryThreads)
@@ -987,7 +988,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 	// Close the error channel to make the error monitoring goroutine
 	// finish.
 	close(errChan)
-	var lastErr error
+	var lastErr er.R
 	for err := range errChan {
 		if err != nil {
 			t.Errorf("%s", err)
@@ -1150,7 +1151,7 @@ func TestNeutrinoSync(t *testing.T) {
 // csd does a connect-sync-disconnect between nodes in order to support
 // reorg testing. It brings up and tears down a temporary node, otherwise the
 // nodes try to reconnect to each other which results in unintended reorgs.
-func csd(harnesses []*rpctest.Harness) error {
+func csd(harnesses []*rpctest.Harness) er.R {
 	hTemp, err := rpctest.New(&chaincfg.SimNetParams, nil, nil)
 	if err != nil {
 		return err
@@ -1173,7 +1174,7 @@ func csd(harnesses []*rpctest.Harness) error {
 // checkErrChan tries to read the passed error channel if possible and logs the
 // error it found, if any. This is useful to help troubleshoot any timeouts
 // during a rescan.
-func checkErrChan(t *testing.T, errChan <-chan error) {
+func checkErrChan(t *testing.T, errChan <-chan er.R) {
 	select {
 	case err := <-errChan:
 		t.Logf("Got error from rescan: %s", err)
@@ -1183,7 +1184,7 @@ func checkErrChan(t *testing.T, errChan <-chan error) {
 
 // waitForSync waits for the ChainService to sync to the current chain state.
 func waitForSync(t *testing.T, svc *neutrino.ChainService,
-	correctSyncNode *rpctest.Harness) error {
+	correctSyncNode *rpctest.Harness) er.R {
 	knownBestHash, knownBestHeight, err :=
 		correctSyncNode.Node.GetBestBlock()
 	if err != nil {
@@ -1352,7 +1353,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 // notifications continue until the `quit` channel is closed.
 func startRescan(t *testing.T, svc *neutrino.ChainService, addr btcutil.Address,
 	startBlock *waddrmgr.BlockStamp, quit <-chan struct{}) (
-	*neutrino.Rescan, <-chan error) {
+	*neutrino.Rescan, <-chan er.R) {
 	rescan := neutrino.NewRescan(
 		&neutrino.RescanChainSource{svc},
 		neutrino.QuitChan(quit),
@@ -1455,7 +1456,7 @@ func startRescan(t *testing.T, svc *neutrino.ChainService, addr btcutil.Address,
 
 // checkRescanStatus returns the number of relevant transactions we currently
 // know about and the currently known height.
-func checkRescanStatus() (int, int32, error) {
+func checkRescanStatus() (int, int32, er.R) {
 	var txCount [2]int
 	rescanMtx.RLock()
 	defer rescanMtx.RUnlock()

@@ -6,6 +6,7 @@ package hdkeychain_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"

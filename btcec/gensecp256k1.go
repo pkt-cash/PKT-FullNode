@@ -13,6 +13,7 @@ package btcec
 
 import (
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 )
 

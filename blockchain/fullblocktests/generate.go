@@ -14,6 +14,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"runtime"
 	"time"
@@ -197,7 +198,7 @@ type testGenerator struct {
 
 // makeTestGenerator returns a test generator instance initialized with the
 // genesis block as the tip.
-func makeTestGenerator(params *chaincfg.Params) (testGenerator, error) {
+func makeTestGenerator(params *chaincfg.Params) (testGenerator, er.R) {
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), []byte{0x01})
 	genesis := params.GenesisBlock
 	genesisHash := genesis.BlockHash()
@@ -243,7 +244,7 @@ func pushDataScript(items ...[]byte) []byte {
 // standardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks.
-func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, error) {
+func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, er.R) {
 	return txscript.NewScriptBuilder().AddInt64(int64(blockHeight)).
 		AddInt64(int64(extraNonce)).Script()
 }
@@ -788,7 +789,7 @@ func (g *testGenerator) assertTipBlockTxOutOpReturn(txIndex, txOutIndex uint32) 
 // contains additional information about the expected result, however that
 // information can be ignored when doing comparison tests between two
 // independent versions over the peer-to-peer network.
-func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
+func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	// In order to simplify the generation code which really should never
 	// fail unless the test code itself is broken, panics are used
 	// internally.  This deferred func ensures any panics don't escape the
@@ -801,7 +802,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 			switch rt := r.(type) {
 			case string:
 				err = errors.New(rt)
-			case error:
+			case er.R:
 				err = rt
 			default:
 				err = errors.New("Unknown panic")

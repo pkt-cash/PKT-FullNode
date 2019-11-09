@@ -6,6 +6,7 @@ package interpret
 
 import (
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/bits"
 )
 

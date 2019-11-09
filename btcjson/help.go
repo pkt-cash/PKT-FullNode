@@ -7,6 +7,7 @@ package btcjson
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
 	"text/tabwriter"
@@ -502,7 +503,7 @@ func isValidResultType(kind reflect.Kind) bool {
 //   "help--condition1": "command specified"
 //   "help--result0":    "List of commands"
 //   "help--result1":    "Help for specified command"
-func GenerateHelp(method string, descs map[string]string, resultTypes ...interface{}) (string, error) {
+func GenerateHelp(method string, descs map[string]string, resultTypes ...interface{}) (string, er.R) {
 	// Look up details about the provided method and error out if not
 	// registered.
 	registerLock.RLock()

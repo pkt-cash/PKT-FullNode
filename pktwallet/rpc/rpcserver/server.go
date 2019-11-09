@@ -18,6 +18,7 @@ package rpcserver
 import (
 	"bytes"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
@@ -55,12 +56,12 @@ const (
 // This function is by no means complete and should be expanded based on other
 // known errors.  Any RPC handler not returning a gRPC error (with grpc.Errorf)
 // should return this result instead.
-func translateError(err error) error {
+func translateError(err er.R) er.R {
 	code := errorCode(err)
 	return grpc.Errorf(code, "%s", err.Error())
 }
 
-func errorCode(err error) codes.Code {
+func errorCode(err er.R) codes.Code {
 	// waddrmgr.IsError is convenient, but not granular enough when the
 	// underlying error has to be checked.  Unwrap the underlying error
 	// if it exists.
@@ -122,7 +123,7 @@ func StartVersionService(server *grpc.Server) {
 	pb.RegisterVersionServiceServer(server, &versionServer{})
 }
 
-func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.VersionResponse, error) {
+func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.VersionResponse, er.R) {
 	return &pb.VersionResponse{
 		VersionString: semverString,
 		Major:         semverMajor,
@@ -138,18 +139,18 @@ func StartWalletService(server *grpc.Server, wallet *wallet.Wallet) {
 	pb.RegisterWalletServiceServer(server, service)
 }
 
-func (s *walletServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, error) {
+func (s *walletServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, er.R) {
 	return &pb.PingResponse{}, nil
 }
 
 func (s *walletServer) Network(ctx context.Context, req *pb.NetworkRequest) (
-	*pb.NetworkResponse, error) {
+	*pb.NetworkResponse, er.R) {
 
 	return &pb.NetworkResponse{ActiveNetwork: uint32(s.wallet.ChainParams().Net)}, nil
 }
 
 func (s *walletServer) AccountNumber(ctx context.Context, req *pb.AccountNumberRequest) (
-	*pb.AccountNumberResponse, error) {
+	*pb.AccountNumberResponse, er.R) {
 
 	accountNum, err := s.wallet.AccountNumber(waddrmgr.KeyScopeBIP0044, req.AccountName)
 	if err != nil {
@@ -160,7 +161,7 @@ func (s *walletServer) AccountNumber(ctx context.Context, req *pb.AccountNumberR
 }
 
 func (s *walletServer) Accounts(ctx context.Context, req *pb.AccountsRequest) (
-	*pb.AccountsResponse, error) {
+	*pb.AccountsResponse, er.R) {
 
 	resp, err := s.wallet.Accounts(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
@@ -186,7 +187,7 @@ func (s *walletServer) Accounts(ctx context.Context, req *pb.AccountsRequest) (
 }
 
 func (s *walletServer) RenameAccount(ctx context.Context, req *pb.RenameAccountRequest) (
-	*pb.RenameAccountResponse, error) {
+	*pb.RenameAccountResponse, er.R) {
 
 	err := s.wallet.RenameAccount(waddrmgr.KeyScopeBIP0044, req.AccountNumber, req.NewName)
 	if err != nil {
@@ -197,7 +198,7 @@ func (s *walletServer) RenameAccount(ctx context.Context, req *pb.RenameAccountR
 }
 
 func (s *walletServer) NextAccount(ctx context.Context, req *pb.NextAccountRequest) (
-	*pb.NextAccountResponse, error) {
+	*pb.NextAccountResponse, er.R) {
 
 	defer zero.Bytes(req.Passphrase)
 
@@ -223,11 +224,11 @@ func (s *walletServer) NextAccount(ctx context.Context, req *pb.NextAccountReque
 }
 
 func (s *walletServer) NextAddress(ctx context.Context, req *pb.NextAddressRequest) (
-	*pb.NextAddressResponse, error) {
+	*pb.NextAddressResponse, er.R) {
 
 	var (
 		addr btcutil.Address
-		err  error
+		err  er.R
 	)
 	switch req.Kind {
 	case pb.NextAddressRequest_BIP0044_EXTERNAL:
@@ -245,7 +246,7 @@ func (s *walletServer) NextAddress(ctx context.Context, req *pb.NextAddressReque
 }
 
 func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPrivateKeyRequest) (
-	*pb.ImportPrivateKeyResponse, error) {
+	*pb.ImportPrivateKeyResponse, er.R) {
 
 	defer zero.Bytes(req.Passphrase)
 
@@ -280,7 +281,7 @@ func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPriva
 }
 
 func (s *walletServer) Balance(ctx context.Context, req *pb.BalanceRequest) (
-	*pb.BalanceResponse, error) {
+	*pb.BalanceResponse, er.R) {
 
 	account := req.AccountNumber
 	reqConfs := req.RequiredConfirmations
@@ -318,7 +319,7 @@ func confirms(txHeight, curHeight int32) int32 {
 }
 
 func (s *walletServer) FundTransaction(ctx context.Context, req *pb.FundTransactionRequest) (
-	*pb.FundTransactionResponse, error) {
+	*pb.FundTransactionResponse, er.R) {
 
 	policy := wallet.OutputSelectionPolicy{
 		Account:               req.Account,
@@ -367,7 +368,7 @@ func (s *walletServer) FundTransaction(ctx context.Context, req *pb.FundTransact
 }
 
 func marshalGetTransactionsResult(wresp *wallet.GetTransactionsResult) (
-	*pb.GetTransactionsResponse, error) {
+	*pb.GetTransactionsResponse, er.R) {
 
 	resp := &pb.GetTransactionsResponse{
 		MinedTransactions:   marshalBlocks(wresp.MinedTransactions),
@@ -380,7 +381,7 @@ func marshalGetTransactionsResult(wresp *wallet.GetTransactionsResult) (
 // - MinimumRecentTransactions is ignored.
 // - Wrong error codes when a block height or hash is not recognized
 func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (
-	resp *pb.GetTransactionsResponse, err error) {
+	resp *pb.GetTransactionsResponse, err er.R) {
 
 	var startBlock, endBlock *wallet.BlockIdentifier
 	if req.StartingBlockHash != nil && req.StartingBlockHeight != 0 {
@@ -433,14 +434,14 @@ func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransacti
 }
 
 func (s *walletServer) ChangePassphrase(ctx context.Context, req *pb.ChangePassphraseRequest) (
-	*pb.ChangePassphraseResponse, error) {
+	*pb.ChangePassphraseResponse, er.R) {
 
 	defer func() {
 		zero.Bytes(req.OldPassphrase)
 		zero.Bytes(req.NewPassphrase)
 	}()
 
-	var err error
+	var err er.R
 	switch req.Key {
 	case pb.ChangePassphraseRequest_PRIVATE:
 		err = s.wallet.ChangePrivatePassphrase(req.OldPassphrase, req.NewPassphrase)
@@ -458,7 +459,7 @@ func (s *walletServer) ChangePassphrase(ctx context.Context, req *pb.ChangePassp
 // BUGS:
 // - InputIndexes request field is ignored.
 func (s *walletServer) SignTransaction(ctx context.Context, req *pb.SignTransactionRequest) (
-	*pb.SignTransactionResponse, error) {
+	*pb.SignTransactionResponse, er.R) {
 
 	defer zero.Bytes(req.Passphrase)
 
@@ -510,7 +511,7 @@ func (s *walletServer) SignTransaction(ctx context.Context, req *pb.SignTransact
 //   transactions from the database when they are rejected by the network, other
 //   than double spending them.
 func (s *walletServer) PublishTransaction(ctx context.Context, req *pb.PublishTransactionRequest) (
-	*pb.PublishTransactionResponse, error) {
+	*pb.PublishTransactionResponse, er.R) {
 
 	var msgTx wire.MsgTx
 	err := msgTx.Deserialize(bytes.NewReader(req.SignedTransaction))
@@ -604,7 +605,7 @@ func marshalAccountBalances(v []wallet.AccountBalance) []*pb.AccountBalance {
 }
 
 func (s *walletServer) TransactionNotifications(req *pb.TransactionNotificationsRequest,
-	svr pb.WalletService_TransactionNotificationsServer) error {
+	svr pb.WalletService_TransactionNotificationsServer) er.R {
 
 	n := s.wallet.NtfnServer.TransactionNotifications()
 	defer n.Done()
@@ -631,7 +632,7 @@ func (s *walletServer) TransactionNotifications(req *pb.TransactionNotifications
 }
 
 func (s *walletServer) SpentnessNotifications(req *pb.SpentnessNotificationsRequest,
-	svr pb.WalletService_SpentnessNotificationsServer) error {
+	svr pb.WalletService_SpentnessNotificationsServer) er.R {
 
 	if req.NoNotifyUnspent && req.NoNotifySpent {
 		return grpc.Errorf(codes.InvalidArgument,
@@ -672,7 +673,7 @@ func (s *walletServer) SpentnessNotifications(req *pb.SpentnessNotificationsRequ
 }
 
 func (s *walletServer) AccountNotifications(req *pb.AccountNotificationsRequest,
-	svr pb.WalletService_AccountNotificationsServer) error {
+	svr pb.WalletService_AccountNotificationsServer) er.R {
 
 	n := s.wallet.NtfnServer.AccountNotifications()
 	defer n.Done()
@@ -709,7 +710,7 @@ func StartWalletLoaderService(server *grpc.Server, loader *wallet.Loader,
 }
 
 func (s *loaderServer) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (
-	*pb.CreateWalletResponse, error) {
+	*pb.CreateWalletResponse, er.R) {
 
 	defer func() {
 		zero.Bytes(req.PrivatePassphrase)
@@ -739,7 +740,7 @@ func (s *loaderServer) CreateWallet(ctx context.Context, req *pb.CreateWalletReq
 }
 
 func (s *loaderServer) OpenWallet(ctx context.Context, req *pb.OpenWalletRequest) (
-	*pb.OpenWalletResponse, error) {
+	*pb.OpenWalletResponse, er.R) {
 
 	// Use an insecure public passphrase when the request's is empty.
 	pubPassphrase := req.PublicPassphrase
@@ -762,7 +763,7 @@ func (s *loaderServer) OpenWallet(ctx context.Context, req *pb.OpenWalletRequest
 }
 
 func (s *loaderServer) WalletExists(ctx context.Context, req *pb.WalletExistsRequest) (
-	*pb.WalletExistsResponse, error) {
+	*pb.WalletExistsResponse, er.R) {
 
 	exists, err := s.loader.WalletExists()
 	if err != nil {
@@ -772,7 +773,7 @@ func (s *loaderServer) WalletExists(ctx context.Context, req *pb.WalletExistsReq
 }
 
 func (s *loaderServer) CloseWallet(ctx context.Context, req *pb.CloseWalletRequest) (
-	*pb.CloseWalletResponse, error) {
+	*pb.CloseWalletResponse, er.R) {
 
 	err := s.loader.UnloadWallet()
 	if err == wallet.ErrNotLoaded {
@@ -786,7 +787,7 @@ func (s *loaderServer) CloseWallet(ctx context.Context, req *pb.CloseWalletReque
 }
 
 func (s *loaderServer) StartConsensusRpc(ctx context.Context, req *pb.StartConsensusRpcRequest) (
-	*pb.StartConsensusRpcResponse, error) {
+	*pb.StartConsensusRpcResponse, er.R) {
 
 	defer zero.Bytes(req.Password)
 

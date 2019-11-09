@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
@@ -119,7 +120,7 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 	return bytes.Compare(buf[64*(itemNo&1):][:64], merkleProof[64*announceMerkleDepth:]) == 0
 }
 
-func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
+func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, er.R) {
 	if pcAnn.GetVersion() > 0 && pcAnn.GetParentBlockHeight() < 103869 {
 		return nil, errors.New("Validate_checkAnn_ANN_VERSION_NOT_ALLOWED")
 	} else if packetCryptVersion > 1 && pcAnn.GetVersion() == 0 {

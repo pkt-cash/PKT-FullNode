@@ -5,6 +5,7 @@
 package blockchain
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"sort"
 	"sync"
@@ -323,14 +324,14 @@ func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockStatus) {
 
 // flushToDB writes all dirty block nodes to the database. If all writes
 // succeed, this clears the dirty set.
-func (bi *blockIndex) flushToDB() error {
+func (bi *blockIndex) flushToDB() er.R {
 	bi.Lock()
 	if len(bi.dirty) == 0 {
 		bi.Unlock()
 		return nil
 	}
 
-	err := bi.db.Update(func(dbTx database.Tx) error {
+	err := bi.db.Update(func(dbTx database.Tx) er.R {
 		for node := range bi.dirty {
 			err := dbStoreBlockNode(dbTx, node)
 			if err != nil {

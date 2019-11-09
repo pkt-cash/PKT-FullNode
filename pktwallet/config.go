@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"os"
 	"os/user"
@@ -145,7 +146,7 @@ func cleanAndExpandPath(path string) string {
 
 	homeDir := ""
 	var u *user.User
-	var err error
+	var err er.R
 	if userName == "" {
 		u, err = user.Current()
 	} else {
@@ -198,7 +199,7 @@ func supportedSubsystems() []string {
 // parseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
-func parseAndSetDebugLevels(debugLevel string) error {
+func parseAndSetDebugLevels(debugLevel string) er.R {
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
@@ -258,7 +259,7 @@ func parseAndSetDebugLevels(debugLevel string) error {
 // The above results in pktwallet functioning properly without any config
 // settings while still allowing the user to override settings with config files
 // and command line options.  Command line options always take precedence.
-func loadConfig() (*config, []string, error) {
+func loadConfig() (*config, []string, er.R) {
 	// Default config.
 	cfg := config{
 		DebugLevel:             defaultLogLevel,
@@ -303,7 +304,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Load additional config from file.
-	var configFileError error
+	var configFileError er.R
 	parser := flags.NewParser(&cfg, flags.Default)
 	configFilePath := preCfg.ConfigFile.Value
 	if preCfg.ConfigFile.ExplicitlySet() {

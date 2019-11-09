@@ -8,6 +8,7 @@ package neutrino
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/connmgr"
@@ -32,18 +33,18 @@ type getAddedNodesMsg struct {
 
 type disconnectNodeMsg struct {
 	cmp   func(*ServerPeer) bool
-	reply chan error
+	reply chan er.R
 }
 
 type connectNodeMsg struct {
 	addr      string
 	permanent bool
-	reply     chan error
+	reply     chan er.R
 }
 
 type removeNodeMsg struct {
 	cmp   func(*ServerPeer) bool
-	reply chan error
+	reply chan er.R
 }
 
 type forAllPeersMsg struct {
@@ -225,8 +226,8 @@ func (s *ChainService) Peers() []*ServerPeer {
 // DisconnectNodeByAddr disconnects a peer by target address. Both outbound and
 // inbound nodes will be searched for the target node. An error message will
 // be returned if the peer was not found.
-func (s *ChainService) DisconnectNodeByAddr(addr string) error {
-	replyChan := make(chan error)
+func (s *ChainService) DisconnectNodeByAddr(addr string) er.R {
+	replyChan := make(chan er.R)
 
 	select {
 	case s.query <- disconnectNodeMsg{
@@ -242,8 +243,8 @@ func (s *ChainService) DisconnectNodeByAddr(addr string) error {
 // DisconnectNodeByID disconnects a peer by target node id. Both outbound and
 // inbound nodes will be searched for the target node. An error message will be
 // returned if the peer was not found.
-func (s *ChainService) DisconnectNodeByID(id int32) error {
-	replyChan := make(chan error)
+func (s *ChainService) DisconnectNodeByID(id int32) er.R {
+	replyChan := make(chan er.R)
 
 	select {
 	case s.query <- disconnectNodeMsg{
@@ -258,8 +259,8 @@ func (s *ChainService) DisconnectNodeByID(id int32) error {
 
 // RemoveNodeByAddr removes a peer from the list of persistent peers if
 // present. An error will be returned if the peer was not found.
-func (s *ChainService) RemoveNodeByAddr(addr string) error {
-	replyChan := make(chan error)
+func (s *ChainService) RemoveNodeByAddr(addr string) er.R {
+	replyChan := make(chan er.R)
 
 	select {
 	case s.query <- removeNodeMsg{
@@ -274,8 +275,8 @@ func (s *ChainService) RemoveNodeByAddr(addr string) error {
 
 // RemoveNodeByID removes a peer by node ID from the list of persistent peers
 // if present. An error will be returned if the peer was not found.
-func (s *ChainService) RemoveNodeByID(id int32) error {
-	replyChan := make(chan error)
+func (s *ChainService) RemoveNodeByID(id int32) er.R {
+	replyChan := make(chan er.R)
 
 	select {
 	case s.query <- removeNodeMsg{
@@ -291,8 +292,8 @@ func (s *ChainService) RemoveNodeByID(id int32) error {
 // ConnectNode adds `addr' as a new outbound peer. If permanent is true then the
 // peer will be persistent and reconnect if the connection is lost.
 // It is an error to call this with an already existing peer.
-func (s *ChainService) ConnectNode(addr string, permanent bool) error {
-	replyChan := make(chan error)
+func (s *ChainService) ConnectNode(addr string, permanent bool) er.R {
+	replyChan := make(chan er.R)
 
 	select {
 	case s.query <- connectNodeMsg{

@@ -7,6 +7,7 @@ package rpcclient
 import (
 	"encoding/json"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
@@ -17,7 +18,7 @@ type FutureRawResult chan *response
 
 // Receive waits for the response promised by the future and returns the raw
 // response, or an error if the request was unsuccessful.
-func (r FutureRawResult) Receive() (json.RawMessage, error) {
+func (r FutureRawResult) Receive() (json.RawMessage, er.R) {
 	return receiveFuture(r)
 }
 
@@ -73,6 +74,6 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 // requests that are not handled by this client package, or to proxy partially
 // unmarshaled requests to another JSON-RPC server if a request cannot be
 // handled directly.
-func (c *Client) RawRequest(method string, params []json.RawMessage) (json.RawMessage, error) {
+func (c *Client) RawRequest(method string, params []json.RawMessage) (json.RawMessage, er.R) {
 	return c.RawRequestAsync(method, params).Receive()
 }

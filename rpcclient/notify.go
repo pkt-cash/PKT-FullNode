@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -487,7 +488,7 @@ func (e wrongNumParams) Error() string {
 // parseChainNtfnParams parses out the block hash and height from the parameters
 // of blockconnected and blockdisconnected notifications.
 func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
-	int32, time.Time, error) {
+	int32, time.Time, er.R) {
 
 	if len(params) != 3 {
 		return nil, 0, time.Time{}, wrongNumParams(len(params))
@@ -532,7 +533,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
-	*wire.BlockHeader, []*btcutil.Tx, error) {
+	*wire.BlockHeader, []*btcutil.Tx, er.R) {
 
 	if len(params) < 3 {
 		return 0, nil, nil, wrongNumParams(len(params))
@@ -588,7 +589,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
-	*wire.BlockHeader, error) {
+	*wire.BlockHeader, er.R) {
 	if len(params) < 2 {
 		return 0, nil, wrongNumParams(len(params))
 	}
@@ -616,7 +617,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	return blockHeight, &blockHeader, nil
 }
 
-func parseHexParam(param json.RawMessage) ([]byte, error) {
+func parseHexParam(param json.RawMessage) ([]byte, er.R) {
 	var s string
 	err := json.Unmarshal(param, &s)
 	if err != nil {
@@ -627,7 +628,7 @@ func parseHexParam(param json.RawMessage) ([]byte, error) {
 
 // parseRelevantTxAcceptedParams parses out the parameter included in a
 // relevanttxaccepted notification.
-func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte, err error) {
+func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte, err er.R) {
 	if len(params) < 1 {
 		return nil, wrongNumParams(len(params))
 	}
@@ -639,7 +640,7 @@ func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte
 // the block it's mined in from the parameters of recvtx and redeemingtx
 // notifications.
 func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
-	*btcjson.BlockDetails, error) {
+	*btcjson.BlockDetails, er.R) {
 
 	if len(params) == 0 || len(params) > 2 {
 		return nil, nil, wrongNumParams(len(params))
@@ -681,7 +682,7 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 
 // parseRescanProgressParams parses out the height of the last rescanned block
 // from the parameters of rescanfinished and rescanprogress notifications.
-func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32, time.Time, error) {
+func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32, time.Time, er.R) {
 	if len(params) != 3 {
 		return nil, 0, time.Time{}, wrongNumParams(len(params))
 	}
@@ -719,7 +720,7 @@ func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32
 // parseTxAcceptedNtfnParams parses out the transaction hash and total amount
 // from the parameters of a txaccepted notification.
 func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
-	btcutil.Amount, error) {
+	btcutil.Amount, er.R) {
 
 	if len(params) != 2 {
 		return nil, 0, wrongNumParams(len(params))
@@ -757,7 +758,7 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // parseTxAcceptedVerboseNtfnParams parses out details about a raw transaction
 // from the parameters of a txacceptedverbose notification.
 func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawResult,
-	error) {
+	er.R) {
 
 	if len(params) != 1 {
 		return nil, wrongNumParams(len(params))
@@ -778,7 +779,7 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 
 // parseBtcdConnectedNtfnParams parses out the connection status of pktd
 // and pktwallet from the parameters of a pktdconnected notification.
-func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
+func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, er.R) {
 	if len(params) != 1 {
 		return false, wrongNumParams(len(params))
 	}
@@ -797,7 +798,7 @@ func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 // and whether or not the balance is confirmed or unconfirmed from the
 // parameters of an accountbalance notification.
 func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
-	balance btcutil.Amount, confirmed bool, err error) {
+	balance btcutil.Amount, confirmed bool, err er.R) {
 
 	if len(params) != 3 {
 		return "", 0, false, wrongNumParams(len(params))
@@ -834,7 +835,7 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 // parseWalletLockStateNtfnParams parses out the account name and locked
 // state of an account from the parameters of a walletlockstate notification.
 func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
-	locked bool, err error) {
+	locked bool, err er.R) {
 
 	if len(params) != 2 {
 		return "", false, wrongNumParams(len(params))
@@ -861,7 +862,7 @@ type FutureNotifyBlocksResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the registration was not successful.
-func (r FutureNotifyBlocksResult) Receive() error {
+func (r FutureNotifyBlocksResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -899,7 +900,7 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 // OnBlockConnected or OnBlockDisconnected.
 //
 // NOTE: This is a pktd extension and requires a websocket connection.
-func (c *Client) NotifyBlocks() error {
+func (c *Client) NotifyBlocks() er.R {
 	return c.NotifyBlocksAsync().Receive()
 }
 
@@ -911,7 +912,7 @@ type FutureNotifySpentResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the registration was not successful.
-func (r FutureNotifySpentResult) Receive() error {
+func (r FutureNotifySpentResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -985,7 +986,7 @@ func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentR
 // NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilter instead.
-func (c *Client) NotifySpent(outpoints []*wire.OutPoint) error {
+func (c *Client) NotifySpent(outpoints []*wire.OutPoint) er.R {
 	return c.NotifySpentAsync(outpoints).Receive()
 }
 
@@ -995,7 +996,7 @@ type FutureNotifyNewTransactionsResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the registration was not successful.
-func (r FutureNotifyNewTransactionsResult) Receive() error {
+func (r FutureNotifyNewTransactionsResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -1034,7 +1035,7 @@ func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransac
 // true).
 //
 // NOTE: This is a pktd extension and requires a websocket connection.
-func (c *Client) NotifyNewTransactions(verbose bool) error {
+func (c *Client) NotifyNewTransactions(verbose bool) er.R {
 	return c.NotifyNewTransactionsAsync(verbose).Receive()
 }
 
@@ -1046,7 +1047,7 @@ type FutureNotifyReceivedResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the registration was not successful.
-func (r FutureNotifyReceivedResult) Receive() error {
+func (r FutureNotifyReceivedResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -1120,7 +1121,7 @@ func (c *Client) NotifyReceivedAsync(addresses []btcutil.Address) FutureNotifyRe
 // NOTE: This is a pktd extension and requires a websocket connection.
 //
 // NOTE: Deprecated. Use LoadTxFilter instead.
-func (c *Client) NotifyReceived(addresses []btcutil.Address) error {
+func (c *Client) NotifyReceived(addresses []btcutil.Address) er.R {
 	return c.NotifyReceivedAsync(addresses).Receive()
 }
 
@@ -1132,7 +1133,7 @@ type FutureRescanResult chan *response
 
 // Receive waits for the response promised by the future and returns an error
 // if the rescan was not successful.
-func (r FutureRescanResult) Receive() error {
+func (r FutureRescanResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -1219,7 +1220,7 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 // NOTE: Deprecated. Use RescanBlocks instead.
 func (c *Client) Rescan(startBlock *chainhash.Hash,
 	addresses []btcutil.Address,
-	outpoints []*wire.OutPoint) error {
+	outpoints []*wire.OutPoint) er.R {
 
 	return c.RescanAsync(startBlock, addresses, outpoints).Receive()
 }
@@ -1297,7 +1298,7 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 // NOTE: Deprecated. Use RescanBlocks instead.
 func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
 	addresses []btcutil.Address, outpoints []*wire.OutPoint,
-	endBlock *chainhash.Hash) error {
+	endBlock *chainhash.Hash) er.R {
 
 	return c.RescanEndBlockAsync(startBlock, addresses, outpoints,
 		endBlock).Receive()
@@ -1315,7 +1316,7 @@ type FutureLoadTxFilterResult chan *response
 //
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func (r FutureLoadTxFilterResult) Receive() error {
+func (r FutureLoadTxFilterResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -1353,6 +1354,6 @@ func (c *Client) LoadTxFilterAsync(reload bool, addresses []btcutil.Address,
 //
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func (c *Client) LoadTxFilter(reload bool, addresses []btcutil.Address, outPoints []wire.OutPoint) error {
+func (c *Client) LoadTxFilter(reload bool, addresses []btcutil.Address, outPoints []wire.OutPoint) er.R {
 	return c.LoadTxFilterAsync(reload, addresses, outPoints).Receive()
 }

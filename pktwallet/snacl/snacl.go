@@ -10,6 +10,7 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"runtime/debug"
 
@@ -45,7 +46,7 @@ const (
 type CryptoKey [KeySize]byte
 
 // Encrypt encrypts the passed data.
-func (ck *CryptoKey) Encrypt(in []byte) ([]byte, error) {
+func (ck *CryptoKey) Encrypt(in []byte) ([]byte, er.R) {
 	var nonce [NonceSize]byte
 	_, err := io.ReadFull(prng, nonce[:])
 	if err != nil {
@@ -57,7 +58,7 @@ func (ck *CryptoKey) Encrypt(in []byte) ([]byte, error) {
 
 // Decrypt decrypts the passed data.  The must be the output of the Encrypt
 // function.
-func (ck *CryptoKey) Decrypt(in []byte) ([]byte, error) {
+func (ck *CryptoKey) Decrypt(in []byte) ([]byte, er.R) {
 	if len(in) < NonceSize {
 		return nil, ErrMalformed
 	}
@@ -83,7 +84,7 @@ func (ck *CryptoKey) Zero() {
 }
 
 // GenerateCryptoKey generates a new crypotgraphically random key.
-func GenerateCryptoKey() (*CryptoKey, error) {
+func GenerateCryptoKey() (*CryptoKey, er.R) {
 	var key CryptoKey
 	_, err := io.ReadFull(prng, key[:])
 	if err != nil {
@@ -110,7 +111,7 @@ type SecretKey struct {
 }
 
 // deriveKey fills out the Key field.
-func (sk *SecretKey) deriveKey(password *[]byte) error {
+func (sk *SecretKey) deriveKey(password *[]byte) er.R {
 	key, err := scrypt.Key(*password, sk.Parameters.Salt[:],
 		sk.Parameters.N,
 		sk.Parameters.R,
@@ -160,7 +161,7 @@ func (sk *SecretKey) Marshal() []byte {
 
 // Unmarshal unmarshalls the parameters needed to derive the secret key from a
 // passphrase into sk.
-func (sk *SecretKey) Unmarshal(marshalled []byte) error {
+func (sk *SecretKey) Unmarshal(marshalled []byte) er.R {
 	if sk.Key == nil {
 		sk.Key = (*CryptoKey)(&[KeySize]byte{})
 	}
@@ -197,7 +198,7 @@ func (sk *SecretKey) Zero() {
 // DeriveKey derives the underlying secret key and ensures it matches the
 // expected digest.  This should only be called after previously calling the
 // Zero function or on an initial Unmarshal.
-func (sk *SecretKey) DeriveKey(password *[]byte) error {
+func (sk *SecretKey) DeriveKey(password *[]byte) er.R {
 	if err := sk.deriveKey(password); err != nil {
 		return err
 	}
@@ -212,17 +213,17 @@ func (sk *SecretKey) DeriveKey(password *[]byte) error {
 }
 
 // Encrypt encrypts in bytes and returns a JSON blob.
-func (sk *SecretKey) Encrypt(in []byte) ([]byte, error) {
+func (sk *SecretKey) Encrypt(in []byte) ([]byte, er.R) {
 	return sk.Key.Encrypt(in)
 }
 
 // Decrypt takes in a JSON blob and returns it's decrypted form.
-func (sk *SecretKey) Decrypt(in []byte) ([]byte, error) {
+func (sk *SecretKey) Decrypt(in []byte) ([]byte, er.R) {
 	return sk.Key.Decrypt(in)
 }
 
 // NewSecretKey returns a SecretKey structure based on the passed parameters.
-func NewSecretKey(password *[]byte, N, r, p int) (*SecretKey, error) {
+func NewSecretKey(password *[]byte, N, r, p int) (*SecretKey, er.R) {
 	sk := SecretKey{
 		Key: (*CryptoKey)(&[KeySize]byte{}),
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 // top-level bucket before and after a migration. This can be used to ensure
 // the correctness of migrations.
 func applyMigration(t *testing.T, beforeMigration, afterMigration,
-	migration func(walletdb.ReadWriteBucket) error, shouldFail bool) {
+	migration func(walletdb.ReadWriteBucket) er.R, shouldFail bool) {
 
 	t.Helper()
 
@@ -28,7 +29,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 	// First, we'll run the beforeMigration closure, which contains the
 	// database modifications/assertions needed before proceeding with the
 	// migration.
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -41,7 +42,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 
 	// Then, we'll run the migration itself and fail if it does not match
 	// its expected result.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -57,7 +58,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 	// Finally, we'll run the afterMigration closure, which contains the
 	// assertions needed in order to guarantee than the migration was
 	// successful.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -75,7 +76,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 	t.Parallel()
 
 	var expectedHeight int32
-	beforeMigration := func(ns walletdb.ReadWriteBucket) error {
+	beforeMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		// To test this migration, we'll start by writing to disk 10
 		// random blocks.
 		block := &BlockStamp{}
@@ -113,7 +114,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 
 	// After the migration has completed, we should see that the birthday
 	// block now exists and is set to the correct expected height.
-	afterMigration := func(ns walletdb.ReadWriteBucket) error {
+	afterMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		birthdayBlock, err := FetchBirthdayBlock(ns)
 		if err != nil {
 			return err
@@ -145,7 +146,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 	chainParams := chaincfg.MainNetParams
 
 	var expectedHeight int32
-	beforeMigration := func(ns walletdb.ReadWriteBucket) error {
+	beforeMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		// To test this migration, we'll start by writing to disk 999
 		// random blocks to simulate a synced chain with height 1000.
 		block := &BlockStamp{}
@@ -197,7 +198,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 
 	// After the migration has completed, we should see that the birthday
 	// block now exists and is set to the correct expected height.
-	afterMigration := func(ns walletdb.ReadWriteBucket) error {
+	afterMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		birthdayBlock, err := FetchBirthdayBlock(ns)
 		if err != nil {
 			return err
@@ -224,7 +225,7 @@ func TestMigrationResetSyncedBlockToBirthday(t *testing.T) {
 	t.Parallel()
 
 	var birthdayBlock BlockStamp
-	beforeMigration := func(ns walletdb.ReadWriteBucket) error {
+	beforeMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		// To test this migration, we'll assume we're synced to a chain
 		// of 100 blocks, with our birthday being the 50th block.
 		block := &BlockStamp{}
@@ -250,7 +251,7 @@ func TestMigrationResetSyncedBlockToBirthday(t *testing.T) {
 		return PutBirthdayBlock(ns, birthdayBlock)
 	}
 
-	afterMigration := func(ns walletdb.ReadWriteBucket) error {
+	afterMigration := func(ns walletdb.ReadWriteBucket) er.R {
 		// After the migration has succeeded, we should see that the
 		// database's synced block now reflects the birthday block.
 		syncedBlock, err := fetchSyncedTo(ns)
@@ -287,10 +288,10 @@ func TestMigrationResetSyncedBlockToBirthdayWithNoBirthdayBlock(t *testing.T) {
 	// To replicate the scenario where the database is not aware of a
 	// birthday block, we won't set one. This should cause the migration to
 	// fail.
-	beforeMigration := func(walletdb.ReadWriteBucket) error {
+	beforeMigration := func(walletdb.ReadWriteBucket) er.R {
 		return nil
 	}
-	afterMigration := func(walletdb.ReadWriteBucket) error {
+	afterMigration := func(walletdb.ReadWriteBucket) er.R {
 		return nil
 	}
 	applyMigration(
@@ -346,7 +347,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 			// the blocks created. This simulates the behavior of an
 			// existing synced chain. We won't use PutSyncedTo as
 			// that would remove the stale entries on its own.
-			beforeMigration := func(ns walletdb.ReadWriteBucket) error {
+			beforeMigration := func(ns walletdb.ReadWriteBucket) er.R {
 				if testCase.numBlocks == 0 {
 					return nil
 				}
@@ -406,7 +407,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 			// After the migration, we'll ensure we're unable to
 			// find all the block hashes that should have been
 			// removed.
-			afterMigration := func(ns walletdb.ReadWriteBucket) error {
+			afterMigration := func(ns walletdb.ReadWriteBucket) er.R {
 				maxStaleHeight := staleHeight(testCase.numBlocks)
 				for _, block := range blocks {
 					if block.Height <= maxStaleHeight {

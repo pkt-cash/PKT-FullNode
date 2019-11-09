@@ -3,6 +3,7 @@ package migration_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -26,11 +27,11 @@ func (m *mockMigrationManager) Namespace() walletdb.ReadWriteBucket {
 	return nil
 }
 
-func (m *mockMigrationManager) CurrentVersion(_ walletdb.ReadBucket) (uint32, error) {
+func (m *mockMigrationManager) CurrentVersion(_ walletdb.ReadBucket) (uint32, er.R) {
 	return m.currentVersion, nil
 }
 
-func (m *mockMigrationManager) SetVersion(_ walletdb.ReadWriteBucket, version uint32) error {
+func (m *mockMigrationManager) SetVersion(_ walletdb.ReadWriteBucket, version uint32) er.R {
 	m.currentVersion = version
 	return nil
 }
@@ -237,7 +238,7 @@ func TestUpgradeSameVersion(t *testing.T) {
 			},
 			{
 				Number: 1,
-				Migration: func(walletdb.ReadWriteBucket) error {
+				Migration: func(walletdb.ReadWriteBucket) er.R {
 					return errors.New("migration should " +
 						"not happen due to already " +
 						"being on the latest version")
@@ -263,7 +264,7 @@ func TestUpgradeNewVersion(t *testing.T) {
 		},
 		{
 			Number: 1,
-			Migration: func(walletdb.ReadWriteBucket) error {
+			Migration: func(walletdb.ReadWriteBucket) er.R {
 				return nil
 			},
 		},
@@ -299,7 +300,7 @@ func TestUpgradeMultipleVersions(t *testing.T) {
 		},
 		{
 			Number: 1,
-			Migration: func(walletdb.ReadWriteBucket) error {
+			Migration: func(walletdb.ReadWriteBucket) er.R {
 				if previousVersion != 0 {
 					return fmt.Errorf("expected previous "+
 						"version to be %d, got %d", 0,
@@ -312,7 +313,7 @@ func TestUpgradeMultipleVersions(t *testing.T) {
 		},
 		{
 			Number: 2,
-			Migration: func(walletdb.ReadWriteBucket) error {
+			Migration: func(walletdb.ReadWriteBucket) er.R {
 				if previousVersion != 1 {
 					return fmt.Errorf("expected previous "+
 						"version to be %d, got %d", 1,

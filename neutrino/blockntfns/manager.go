@@ -3,6 +3,7 @@ package blockntfns
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 
@@ -27,7 +28,7 @@ type newSubscription struct {
 	ntfnQueue *queue.ConcurrentQueue
 
 	bestHeight uint32
-	errChan    chan error
+	errChan    chan er.R
 
 	quit chan struct{}
 	wg   sync.WaitGroup
@@ -59,7 +60,7 @@ type NotificationSource interface {
 	// starting from the given height to the tip of the chain.
 	//
 	// TODO(wilmer): extend with best hash to track reorgs.
-	NotificationsSinceHeight(uint32) ([]BlockNtfn, uint32, error)
+	NotificationsSinceHeight(uint32) ([]BlockNtfn, uint32, er.R)
 }
 
 // Subscription represents an intent to receive notifications about the latest
@@ -195,7 +196,7 @@ func (m *SubscriptionManager) subscriptionHandler() {
 // returned. A Cancel closure is also provided, in the event that the client
 // wishes to no longer receive any notifications.
 func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
-	error) {
+	er.R) {
 
 	// We'll start by constructing the internal messages that the
 	// subscription handler will use to register the new client.
@@ -204,7 +205,7 @@ func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
 		ntfnChan:   make(chan BlockNtfn, 20),
 		ntfnQueue:  queue.NewConcurrentQueue(20),
 		bestHeight: bestHeight,
-		errChan:    make(chan error, 1),
+		errChan:    make(chan er.R, 1),
 		quit:       make(chan struct{}),
 	}
 
@@ -274,7 +275,7 @@ func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
 }
 
 // handleNewSubscription handles a request to create a new block subscription.
-func (m *SubscriptionManager) handleNewSubscription(sub *newSubscription) error {
+func (m *SubscriptionManager) handleNewSubscription(sub *newSubscription) er.R {
 	log.Infof("Registering block subscription: id=%d", sub.id)
 
 	// We'll start by retrieving a backlog of notifications from the

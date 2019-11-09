@@ -8,6 +8,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -49,7 +50,7 @@ type MsgBlock struct {
 }
 
 // AddTransaction adds a transaction to the message.
-func (msg *MsgBlock) AddTransaction(tx *MsgTx) error {
+func (msg *MsgBlock) AddTransaction(tx *MsgTx) er.R {
 	msg.Transactions = append(msg.Transactions, tx)
 	return nil
 
@@ -64,7 +65,7 @@ func (msg *MsgBlock) ClearTransactions() {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
-func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	err := readBlockHeader(r, pver, &msg.Header)
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 // all.  As of the time this comment was written, the encoded block is the same
 // in both instances, but there is a distinct difference and separating the two
 // allows the API to be flexible enough to deal with changes.
-func (msg *MsgBlock) Deserialize(r io.Reader) error {
+func (msg *MsgBlock) Deserialize(r io.Reader) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of BtcDecode.
@@ -131,7 +132,7 @@ func (msg *MsgBlock) Deserialize(r io.Reader) error {
 // DeserializeNoWitness decodes a block from r into the receiver similar to
 // Deserialize, however DeserializeWitness strips all (if any) witness data
 // from the transactions within the block before encoding them.
-func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) error {
+func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) er.R {
 	return msg.BtcDecode(r, 0, BaseEncoding)
 }
 
@@ -139,7 +140,7 @@ func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) error {
 // a byte buffer instead of a generic reader and returns a slice containing the
 // start and length of each transaction within the raw data that is being
 // deserialized.
-func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
+func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, er.R) {
 	fullLen := r.Len()
 
 	// At the current time, there is no difference between the wire encoding
@@ -193,7 +194,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // This is part of the Message interface implementation.
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
-func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 
 	err := writeBlockHeader(w, pver, &msg.Header)
 	if err != nil {
@@ -234,7 +235,7 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 // time this comment was written, the encoded block is the same in both
 // instances, but there is a distinct difference and separating the two allows
 // the API to be flexible enough to deal with changes.
-func (msg *MsgBlock) Serialize(w io.Writer) error {
+func (msg *MsgBlock) Serialize(w io.Writer) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of BtcEncode.
@@ -250,7 +251,7 @@ func (msg *MsgBlock) Serialize(w io.Writer) error {
 // This method is provided in additon to the regular Serialize, in order to
 // allow one to selectively encode transaction witness data to non-upgraded
 // peers which are unaware of the new encoding.
-func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
+func (msg *MsgBlock) SerializeNoWitness(w io.Writer) er.R {
 	return msg.BtcEncode(w, 0, BaseEncoding)
 }
 
@@ -315,7 +316,7 @@ func (msg *MsgBlock) BlockHash() chainhash.Hash {
 }
 
 // TxHashes returns a slice of hashes of all of transactions in this block.
-func (msg *MsgBlock) TxHashes() ([]chainhash.Hash, error) {
+func (msg *MsgBlock) TxHashes() ([]chainhash.Hash, er.R) {
 	hashList := make([]chainhash.Hash, 0, len(msg.Transactions))
 	for _, tx := range msg.Transactions {
 		hashList = append(hashList, tx.TxHash())

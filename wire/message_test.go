@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"reflect"
@@ -244,7 +245,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 		pver    uint32     // Protocol version for wire encoding
 		btcnet  BitcoinNet // Bitcoin network for wire encoding
 		max     int        // Max size of fixed buffer to induce errors
-		readErr error      // Expected read error
+		readErr er.R       // Expected read error
 		bytes   int        // Expected num bytes read
 	}{
 		// Latest protocol version with intentional read errors.
@@ -411,7 +412,7 @@ func TestWriteMessageWireErrors(t *testing.T) {
 		pver   uint32     // Protocol version for wire encoding
 		btcnet BitcoinNet // Bitcoin network for wire encoding
 		max    int        // Max size of fixed buffer to induce errors
-		err    error      // Expected error
+		err    er.R       // Expected error
 		bytes  int        // Expected num bytes written
 	}{
 		// Command too long.

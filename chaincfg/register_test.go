@@ -2,6 +2,7 @@ package chaincfg_test
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
 	"testing"
@@ -26,7 +27,7 @@ func TestRegister(t *testing.T) {
 	type registerTest struct {
 		name   string
 		params *Params
-		err    error
+		err    er.R
 	}
 	type magicTest struct {
 		magic byte
@@ -39,7 +40,7 @@ func TestRegister(t *testing.T) {
 	type hdTest struct {
 		priv []byte
 		want []byte
-		err  error
+		err  er.R
 	}
 
 	tests := []struct {

@@ -6,6 +6,7 @@ package chainhash
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 

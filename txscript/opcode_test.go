@@ -7,6 +7,7 @@ package txscript
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 	"strings"
 	"testing"

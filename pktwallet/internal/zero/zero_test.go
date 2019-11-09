@@ -6,6 +6,7 @@ package zero_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func makeOneBytes(n int) []byte {
 	return b
 }
 
-func checkZeroBytes(b []byte) error {
+func checkZeroBytes(b []byte) er.R {
 	for i, v := range b {
 		if v != 0 {
 			return fmt.Errorf("b[%d] = %d", i, v)
@@ -62,7 +63,7 @@ func TestBytes(t *testing.T) {
 	}
 }
 
-func checkZeroWords(b []big.Word) error {
+func checkZeroWords(b []big.Word) er.R {
 	for i, v := range b {
 		if v != 0 {
 			return fmt.Errorf("b[%d] = %d", i, v)

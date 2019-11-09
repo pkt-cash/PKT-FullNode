@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"runtime"
 	"time"
@@ -29,7 +30,7 @@ type txValidateItem struct {
 type txValidator struct {
 	validateChan chan *txValidateItem
 	quitChan     chan struct{}
-	resultChan   chan error
+	resultChan   chan er.R
 	utxoView     *UtxoViewpoint
 	flags        txscript.ScriptFlags
 	sigCache     *txscript.SigCache
@@ -40,7 +41,7 @@ type txValidator struct {
 // result channel while respecting the quit channel.  This allows orderly
 // shutdown when the validation process is aborted early due to a validation
 // error in one of the other goroutines.
-func (v *txValidator) sendResult(result error) {
+func (v *txValidator) sendResult(result er.R) {
 	select {
 	case v.resultChan <- result:
 	case <-v.quitChan:
@@ -115,7 +116,7 @@ out:
 
 // Validate validates the scripts for all of the passed transaction inputs using
 // multiple goroutines.
-func (v *txValidator) Validate(items []*txValidateItem) error {
+func (v *txValidator) Validate(items []*txValidateItem) er.R {
 	if len(items) == 0 {
 		return nil
 	}
@@ -178,7 +179,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
-		resultChan:   make(chan error),
+		resultChan:   make(chan er.R),
 		utxoView:     utxoView,
 		sigCache:     sigCache,
 		hashCache:    hashCache,
@@ -190,7 +191,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 // using multiple goroutines.
 func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 	flags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache) error {
+	hashCache *txscript.HashCache) er.R {
 
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.
@@ -242,7 +243,7 @@ func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 // the passed block using multiple goroutines.
 func checkBlockScripts(block *btcutil.Block, utxoView *UtxoViewpoint,
 	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache) error {
+	hashCache *txscript.HashCache) er.R {
 
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.

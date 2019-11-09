@@ -6,6 +6,7 @@ package netsync
 
 import (
 	"container/list"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"net"
 	"sync"
@@ -102,7 +103,7 @@ type getSyncPeerMsg struct {
 // processBlockMsg.
 type processBlockResponse struct {
 	isOrphan bool
-	err      error
+	err      er.R
 }
 
 // processBlockMsg is a message type to be sent across the message channel
@@ -1006,7 +1007,7 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 // inventory can be when it is in different states such as blocks that are part
 // of the main chain, on a side chain, in the orphan pool, and transactions that
 // are in the memory pool (either the main pool or orphan pool).
-func (sm *SyncManager) haveInventory(invVect *wire.InvVect) (bool, error) {
+func (sm *SyncManager) haveInventory(invVect *wire.InvVect) (bool, er.R) {
 	switch invVect.Type {
 	case wire.InvTypeWitnessBlock:
 		fallthrough
@@ -1523,7 +1524,7 @@ func (sm *SyncManager) Start() {
 
 // Stop gracefully shuts down the sync manager by stopping all asynchronous
 // handlers and waiting for them to finish.
-func (sm *SyncManager) Stop() error {
+func (sm *SyncManager) Stop() er.R {
 	if atomic.AddInt32(&sm.shutdown, 1) != 1 {
 		log.Warnf("Sync manager is already in the process of " +
 			"shutting down")
@@ -1545,7 +1546,7 @@ func (sm *SyncManager) SyncPeerID() int32 {
 
 // ProcessBlock makes use of ProcessBlock on an internal instance of a block
 // chain.
-func (sm *SyncManager) ProcessBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
+func (sm *SyncManager) ProcessBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, er.R) {
 	reply := make(chan processBlockResponse, 1)
 	sm.msgChan <- processBlockMsg{block: block, flags: flags, reply: reply}
 	response := <-reply
@@ -1572,7 +1573,7 @@ func (sm *SyncManager) Pause() chan<- struct{} {
 
 // New constructs a new SyncManager. Use Start to begin processing asynchronous
 // block, tx, and inv updates.
-func New(config *Config) (*SyncManager, error) {
+func New(config *Config) (*SyncManager, er.R) {
 	sm := SyncManager{
 		peerNotifier:    config.PeerNotifier,
 		chain:           config.Chain,

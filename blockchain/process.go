@@ -7,6 +7,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -39,7 +40,7 @@ const (
 // the main chain or any side chains.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
+func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, er.R) {
 	// Check block index first (could be main chain or side chain blocks).
 	if b.index.HaveBlock(hash) {
 		return true, nil
@@ -47,8 +48,8 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 
 	// Check in the database.
 	var exists bool
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		exists, err = dbTx.HasBlock(hash)
 		if err != nil || !exists {
 			return err
@@ -82,7 +83,7 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 // are needed to pass along to maybeAcceptBlock.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) error {
+func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) er.R {
 	// Start with processing at least the passed hash.  Leave a little room
 	// for additional orphan blocks that need to be processed without
 	// needing to grow the array in the common case.
@@ -141,7 +142,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) e
 // whether or not the block is an orphan.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bool, bool, error) {
+func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bool, bool, er.R) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 

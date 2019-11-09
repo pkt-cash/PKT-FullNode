@@ -6,6 +6,7 @@ package wallet
 
 import (
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
@@ -37,7 +38,7 @@ type RescanJob struct {
 	Addrs       []btcutil.Address
 	OutPoints   map[wire.OutPoint]btcutil.Address
 	BlockStamp  waddrmgr.BlockStamp
-	err         chan error
+	err         chan er.R
 }
 
 // rescanBatch is a collection of one or more RescanJobs that were merged
@@ -47,14 +48,14 @@ type rescanBatch struct {
 	addrs       []btcutil.Address
 	outpoints   map[wire.OutPoint]btcutil.Address
 	bs          waddrmgr.BlockStamp
-	errChans    []chan error
+	errChans    []chan er.R
 }
 
 // SubmitRescan submits a RescanJob to the RescanManager.  A channel is
 // returned with the final error of the rescan.  The channel is buffered
 // and does not need to be read to prevent a deadlock.
-func (w *Wallet) SubmitRescan(job *RescanJob) <-chan error {
-	errChan := make(chan error, 1)
+func (w *Wallet) SubmitRescan(job *RescanJob) <-chan er.R {
+	errChan := make(chan er.R, 1)
 	job.err = errChan
 	select {
 	case w.rescanAddJob <- job:
@@ -71,7 +72,7 @@ func (job *RescanJob) batch() *rescanBatch {
 		addrs:       job.Addrs,
 		outpoints:   job.OutPoints,
 		bs:          job.BlockStamp,
-		errChans:    []chan error{job.err},
+		errChans:    []chan er.R{job.err},
 	}
 }
 
@@ -97,7 +98,7 @@ func (b *rescanBatch) merge(job *RescanJob) {
 // done iterates through all error channels, duplicating sending the error
 // to inform callers that the rescan finished (or could not complete due
 // to an error).
-func (b *rescanBatch) done(err error) {
+func (b *rescanBatch) done(err er.R) {
 	for _, c := range b.errChans {
 		c <- err
 	}
@@ -273,14 +274,14 @@ out:
 // a wallet.  This is intended to be used to sync a wallet back up to the
 // current best block in the main chain, and is considered an initial sync
 // rescan.
-func (w *Wallet) Rescan(addrs []btcutil.Address, unspent []wtxmgr.Credit) error {
+func (w *Wallet) Rescan(addrs []btcutil.Address, unspent []wtxmgr.Credit) er.R {
 	return w.rescanWithTarget(addrs, unspent, nil)
 }
 
 // rescanWithTarget performs a rescan starting at the optional startStamp. If
 // none is provided, the rescan will begin from the manager's sync tip.
 func (w *Wallet) rescanWithTarget(addrs []btcutil.Address,
-	unspent []wtxmgr.Credit, startStamp *waddrmgr.BlockStamp) error {
+	unspent []wtxmgr.Credit, startStamp *waddrmgr.BlockStamp) er.R {
 
 	outpoints := make(map[wire.OutPoint]btcutil.Address, len(unspent))
 	for _, output := range unspent {

@@ -7,6 +7,7 @@ package blockchain
 import (
 	"bytes"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"reflect"
 	"testing"
@@ -19,7 +20,7 @@ import (
 // as expected.
 func TestErrNotInMainChain(t *testing.T) {
 	errStr := "no block at height 1 exists"
-	err := error(errNotInMainChain(errStr))
+	err := er.R(errNotInMainChain(errStr))
 
 	// Ensure the stringized output for the error is as expected.
 	if err.Error() != errStr {
@@ -141,7 +142,7 @@ func TestStxoDecodeErrors(t *testing.T) {
 		stxo       SpentTxOut
 		serialized []byte
 		bytesRead  int // Expected number of bytes read.
-		errType    error
+		errType    er.R
 	}{
 		{
 			name:       "nothing serialized",
@@ -343,7 +344,7 @@ func TestSpendJournalErrors(t *testing.T) {
 		name       string
 		blockTxns  []*wire.MsgTx
 		serialized []byte
-		errType    error
+		errType    er.R
 	}{
 		// Adapted from block 170 in main blockchain.
 		{
@@ -538,7 +539,7 @@ func TestUtxoEntryHeaderCodeErrors(t *testing.T) {
 		name    string
 		entry   *UtxoEntry
 		code    uint64
-		errType error
+		errType er.R
 	}{
 		{
 			name:    "Force assertion due to spent output",
@@ -572,7 +573,7 @@ func TestUtxoEntryDeserializeErrors(t *testing.T) {
 	tests := []struct {
 		name       string
 		serialized []byte
-		errType    error
+		errType    er.R
 	}{
 		{
 			name:       "no data after header code",
@@ -679,7 +680,7 @@ func TestBestChainStateDeserializeErrors(t *testing.T) {
 	tests := []struct {
 		name       string
 		serialized []byte
-		errType    error
+		errType    er.R
 	}{
 		{
 			name:       "nothing serialized",

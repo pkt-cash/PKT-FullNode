@@ -8,6 +8,7 @@ package limits
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"syscall"
 )
 
@@ -18,7 +19,7 @@ const (
 
 // SetLimits raises some process limits to values which allow pktd and
 // associated utilities to run.
-func SetLimits() error {
+func SetLimits() er.R {
 	var rLimit syscall.Rlimit
 
 	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)

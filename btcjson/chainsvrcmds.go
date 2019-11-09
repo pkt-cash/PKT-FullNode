@@ -11,6 +11,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -222,7 +223,7 @@ type TemplateRequest struct {
 
 // convertTemplateRequestField potentially converts the provided value as
 // needed.
-func convertTemplateRequestField(fieldName string, iface interface{}) (interface{}, error) {
+func convertTemplateRequestField(fieldName string, iface interface{}) (interface{}, er.R) {
 	switch val := iface.(type) {
 	case nil:
 		return nil, nil
@@ -242,7 +243,7 @@ func convertTemplateRequestField(fieldName string, iface interface{}) (interface
 // UnmarshalJSON provides a custom Unmarshal method for TemplateRequest.  This
 // is necessary because the SigOpLimit and SizeLimit fields can only be specific
 // types.
-func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
+func (t *TemplateRequest) UnmarshalJSON(data []byte) er.R {
 	type templateRequest TemplateRequest
 
 	request := (*templateRequest)(t)

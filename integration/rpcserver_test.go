@@ -10,6 +10,7 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"runtime/debug"
 	"testing"
@@ -103,7 +104,7 @@ var rpcTestCases = []rpctest.HarnessTestCase{
 var primaryHarness *rpctest.Harness
 
 func TestMain(m *testing.M) {
-	var err error
+	var err er.R
 
 	// In order to properly test scenarios on as if we were on mainnet,
 	// ensure that non-standard transactions aren't accepted into the

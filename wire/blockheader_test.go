@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 	"time"

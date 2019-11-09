@@ -2,6 +2,7 @@ package banman
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"reflect"
 	"testing"
@@ -15,7 +16,7 @@ func TestIPNetSerialization(t *testing.T) {
 	testCases := []struct {
 		name  string
 		ipNet *net.IPNet
-		err   error
+		err   er.R
 	}{
 		{
 			name: "ipv4 without mask",

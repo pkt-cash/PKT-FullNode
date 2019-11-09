@@ -7,6 +7,7 @@ package ffldb
 import (
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/util"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database/internal/treap"
 )
 
@@ -25,7 +26,7 @@ var _ iterator.Iterator = (*ldbTreapIter)(nil)
 // errors for this memory-only structure.
 //
 // This is part of the leveldb iterator.Iterator interface implementation.
-func (iter *ldbTreapIter) Error() error {
+func (iter *ldbTreapIter) Error() er.R {
 	return nil
 }
 

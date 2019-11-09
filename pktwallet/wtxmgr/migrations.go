@@ -1,6 +1,7 @@
 package wtxmgr
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb/migration"
 )
@@ -60,7 +61,7 @@ func (m *MigrationManager) Namespace() walletdb.ReadWriteBucket {
 // CurrentVersion returns the current version of the service's database.
 //
 // NOTE: This method is part of the migration.Manager interface.
-func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, error) {
+func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, er.R) {
 	if ns == nil {
 		ns = m.ns
 	}
@@ -71,7 +72,7 @@ func (m *MigrationManager) CurrentVersion(ns walletdb.ReadBucket) (uint32, error
 //
 // NOTE: This method is part of the migration.Manager interface.
 func (m *MigrationManager) SetVersion(ns walletdb.ReadWriteBucket,
-	version uint32) error {
+	version uint32) er.R {
 
 	if ns == nil {
 		ns = m.ns
@@ -88,7 +89,7 @@ func (m *MigrationManager) Versions() []migration.Version {
 
 // dropTransactionHistory is a migration that attempts to recreate the
 // transaction store with a clean state.
-func dropTransactionHistory(ns walletdb.ReadWriteBucket) error {
+func dropTransactionHistory(ns walletdb.ReadWriteBucket) er.R {
 	log.Info("Dropping wallet transaction history")
 
 	// To drop the store's transaction history, we'll need to remove all of

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -20,7 +21,7 @@ import (
 )
 
 func createTestBlockHeaderStore() (func(), walletdb.DB, string,
-	*blockHeaderStore, error) {
+	*blockHeaderStore, er.R) {
 	tempDir, err := ioutil.TempDir("", "store_test")
 	if err != nil {
 		return nil, nil, "", nil, err
@@ -223,7 +224,7 @@ func TestBlockHeaderStoreRecovery(t *testing.T) {
 	}
 }
 
-func createTestFilterHeaderStore() (func(), walletdb.DB, string, *FilterHeaderStore, error) {
+func createTestFilterHeaderStore() (func(), walletdb.DB, string, *FilterHeaderStore, er.R) {
 	tempDir, err := ioutil.TempDir("", "store_test")
 	if err != nil {
 		return nil, nil, "", nil, err
@@ -281,7 +282,7 @@ func TestFilterHeaderStoreOperations(t *testing.T) {
 
 	// We simulate the expected behavior of the block headers being written
 	// to disk before the filter headers are.
-	if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) error {
+	if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) er.R {
 		rootBucket := tx.ReadWriteBucket(indexBucket)
 
 		for _, header := range blockHeaders {
@@ -393,7 +394,7 @@ func TestFilterHeaderStoreRecovery(t *testing.T) {
 
 	// We simulate the expected behavior of the block headers being written
 	// to disk before the filter headers are.
-	if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) error {
+	if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) er.R {
 		rootBucket := tx.ReadWriteBucket(indexBucket)
 
 		for _, header := range blockHeaders {
@@ -531,7 +532,7 @@ func TestFilterHeaderStateAssertion(t *testing.T) {
 
 		// We simulate the expected behavior of the block headers being
 		// written to disk before the filter headers are.
-		if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) error {
+		if err := walletdb.Update(fhs.db, func(tx walletdb.ReadWriteTx) er.R {
 			rootBucket := tx.ReadWriteBucket(indexBucket)
 
 			for _, header := range filterHeaderChain {

@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -49,7 +50,7 @@ type coinSelectTest struct {
 	inputCoins    []coinset.Coin
 	targetValue   btcutil.Amount
 	expectedCoins []coinset.Coin
-	expectedError error
+	expectedError er.R
 }
 
 func testCoinSelector(tests []coinSelectTest, t *testing.T) {

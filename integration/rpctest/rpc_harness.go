@@ -6,6 +6,7 @@ package rpctest
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
@@ -98,7 +99,7 @@ type Harness struct {
 //
 // NOTE: This function is safe for concurrent access.
 func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
-	extraArgs []string) (*Harness, error) {
+	extraArgs []string) (*Harness, er.R) {
 
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
@@ -213,7 +214,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 //
 // NOTE: This method and TearDown should always be called from the same
 // goroutine as they are not concurrent safe.
-func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) error {
+func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) er.R {
 	// Start the pktd node itself. This spawns a new process which will be
 	// managed
 	if err := h.node.start(); err != nil {
@@ -271,7 +272,7 @@ func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) error {
 // killed, and temporary directories removed.
 //
 // This function MUST be called with the harness state mutex held (for writes).
-func (h *Harness) tearDown() error {
+func (h *Harness) tearDown() er.R {
 	if h.Node != nil {
 		h.Node.Shutdown()
 	}
@@ -294,7 +295,7 @@ func (h *Harness) tearDown() error {
 //
 // NOTE: This method and SetUp should always be called from the same goroutine
 // as they are not concurrent safe.
-func (h *Harness) TearDown() error {
+func (h *Harness) TearDown() er.R {
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
 
@@ -307,9 +308,9 @@ func (h *Harness) TearDown() error {
 // the time between subsequent attempts. If after h.maxConnRetries attempts,
 // we're not able to establish a connection, this function returns with an
 // error.
-func (h *Harness) connectRPCClient() error {
+func (h *Harness) connectRPCClient() er.R {
 	var client *rpcclient.Client
-	var err error
+	var err er.R
 
 	rpcConf := h.node.config.rpcConnConfig()
 	for i := 0; i < h.maxConnRetries; i++ {
@@ -333,7 +334,7 @@ func (h *Harness) connectRPCClient() error {
 // wallet.
 //
 // This function is safe for concurrent access.
-func (h *Harness) NewAddress() (btcutil.Address, error) {
+func (h *Harness) NewAddress() (btcutil.Address, er.R) {
 	return h.wallet.NewAddress()
 }
 
@@ -351,7 +352,7 @@ func (h *Harness) ConfirmedBalance() btcutil.Amount {
 //
 // This function is safe for concurrent access.
 func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	return h.wallet.SendOutputs(targetOutputs, feeRate)
 }
@@ -362,7 +363,7 @@ func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
 }
@@ -379,7 +380,7 @@ func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount, change bool) (*wire.MsgTx, error) {
+	feeRate btcutil.Amount, change bool) (*wire.MsgTx, er.R) {
 
 	return h.wallet.CreateTransaction(targetOutputs, feeRate, change)
 }
@@ -417,7 +418,7 @@ func (h *Harness) P2PAddress() string {
 //
 // This function is safe for concurrent access.
 func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
-	blockTime time.Time) (*btcutil.Block, error) {
+	blockTime time.Time) (*btcutil.Block, er.R) {
 	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
 		blockVersion, blockTime, []wire.TxOut{})
 }
@@ -438,7 +439,7 @@ func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
 // This function is safe for concurrent access.
 func (h *Harness) GenerateAndSubmitBlockWithCustomCoinbaseOutputs(
 	txns []*btcutil.Tx, blockVersion int32, blockTime time.Time,
-	mineTo []wire.TxOut) (*btcutil.Block, error) {
+	mineTo []wire.TxOut) (*btcutil.Block, er.R) {
 
 	h.Lock()
 	defer h.Unlock()
@@ -493,7 +494,7 @@ func generateListeningAddresses() (string, string) {
 }
 
 // baseDir is the directory path of the temp directory for all rpctest files.
-func baseDir() (string, error) {
+func baseDir() (string, er.R) {
 	dirPath := filepath.Join(os.TempDir(), "pktd", "rpctest")
 	err := os.MkdirAll(dirPath, 0755)
 	return dirPath, err

@@ -6,6 +6,7 @@ package walletdbtest
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"reflect"
 
@@ -125,7 +126,7 @@ func testReadWriteBucketInterface(tc *testContext, bucket walletdb.ReadWriteBuck
 	// Iterate all of the keys using ForEach while making sure the
 	// stored values are the expected values.
 	keysFound := make(map[string]struct{}, len(keyValues))
-	err := bucket.ForEach(func(k, v []byte) error {
+	err := bucket.ForEach(func(k, v []byte) er.R {
 		ks := string(k)
 		wantV, ok := keyValues[ks]
 		if !ok {
@@ -264,7 +265,7 @@ func testManualTxInterface(tc *testContext, bucketKey []byte) bool {
 	populateValues := func(writable, rollback bool, putValues map[string]string) bool {
 		var dbtx walletdb.ReadTx
 		var rootBucket walletdb.ReadBucket
-		var err error
+		var err er.R
 		if writable {
 			dbtx, err = db.BeginReadWriteTx()
 			if err != nil {
@@ -442,7 +443,7 @@ func testManualTxInterface(tc *testContext, bucketKey []byte) bool {
 // interfaces under it.
 func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	namespaceKeyBytes := []byte(namespaceKey)
-	err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		_, err := tx.CreateTopLevelBucket(namespaceKeyBytes)
 		return err
 	})
@@ -452,7 +453,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	}
 	defer func() {
 		// Remove the namespace now that the tests are done for it.
-		err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 			return tx.DeleteTopLevelBucket(namespaceKeyBytes)
 		})
 		if err != nil {
@@ -474,7 +475,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	}
 
 	// Test the bucket interface via a managed read-only transaction.
-	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) er.R {
 		rootBucket := tx.ReadBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadBucket: unexpected nil root bucket")
@@ -493,7 +494,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	// Also, put a series of values and force a rollback so the following
 	// code can ensure the values were not stored.
 	forceRollbackError := fmt.Errorf("force rollback")
-	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		rootBucket := tx.ReadWriteBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadWriteBucket: unexpected nil root bucket")
@@ -523,7 +524,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 
 	// Ensure the values that should have not been stored due to the forced
 	// rollback above were not actually stored.
-	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) er.R {
 		rootBucket := tx.ReadBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadBucket: unexpected nil root bucket")
@@ -543,7 +544,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	}
 
 	// Store a series of values via a managed read-write transaction.
-	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		rootBucket := tx.ReadWriteBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadWriteBucket: unexpected nil root bucket")
@@ -563,7 +564,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	}
 
 	// Ensure the values stored above were committed as expected.
-	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(tc.db, func(tx walletdb.ReadTx) er.R {
 		rootBucket := tx.ReadBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadBucket: unexpected nil root bucket")
@@ -583,7 +584,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 	}
 
 	// Clean up the values stored above in a managed read-write transaction.
-	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		rootBucket := tx.ReadWriteBucket(namespaceKeyBytes)
 		if rootBucket == nil {
 			return fmt.Errorf("ReadWriteBucket: unexpected nil root bucket")
@@ -610,7 +611,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 func testAdditionalErrors(tc *testContext) bool {
 	ns3Key := []byte("ns3")
 
-	err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		// Create a new namespace
 		rootBucket, err := tx.CreateTopLevelBucket(ns3Key)
 		if err != nil {

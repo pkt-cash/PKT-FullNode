@@ -7,6 +7,7 @@ package interpret
 import (
 	"fmt"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 func doOp(ctx *Context, insn uint32, op opcodes.OpCode) {

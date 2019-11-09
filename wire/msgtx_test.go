@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -414,8 +415,8 @@ func TestTxWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Force error in version.
 		{multiTx, multiTxEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -572,8 +573,8 @@ func TestTxSerializeErrors(t *testing.T) {
 		in       *MsgTx // Value to encode
 		buf      []byte // Serialized data
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Force error in version.
 		{multiTx, multiTxEncoded, 0, io.ErrShortWrite, io.EOF},
@@ -640,7 +641,7 @@ func TestTxOverflowErrors(t *testing.T) {
 		pver    uint32          // Protocol version for wire encoding
 		enc     MessageEncoding // Message encoding format
 		version uint32          // Transaction version
-		err     error           // Expected error
+		err     er.R            // Expected error
 	}{
 		// Transaction that claims to have ~uint64(0) inputs.
 		{

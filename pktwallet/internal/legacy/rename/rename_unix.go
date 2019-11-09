@@ -7,11 +7,12 @@
 package rename
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 )
 
 // Atomic provides an atomic file rename.  newpath is replaced if it
 // already exists.
-func Atomic(oldpath, newpath string) error {
+func Atomic(oldpath, newpath string) er.R {
 	return os.Rename(oldpath, newpath)
 }

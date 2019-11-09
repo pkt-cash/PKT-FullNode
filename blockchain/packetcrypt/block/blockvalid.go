@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
 
@@ -94,7 +95,7 @@ func ValidatePcProof(
 	blockHashes []*chainhash.Hash,
 	contentProofs [][]byte,
 	packetCryptVersion int,
-) (bool, error) {
+) (bool, er.R) {
 	// Check cb magic
 	if cb.Magic() != wire.PcCoinbaseCommitMagic ||
 		!difficulty.IsAnnMinDiffOk(cb.AnnMinDifficulty(), packetCryptVersion) {

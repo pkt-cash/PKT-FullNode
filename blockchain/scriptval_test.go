@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"runtime"
 	"testing"
 

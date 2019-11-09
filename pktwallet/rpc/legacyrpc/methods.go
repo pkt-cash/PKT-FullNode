@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
@@ -53,10 +54,10 @@ func confirms(txHeight, curHeight int32) int32 {
 // or any of the above special error classes, the server will respond with
 // the JSON-RPC appropiate error code.  All other errors use the wallet
 // catch-all error code, btcjson.ErrRPCWallet.
-type requestHandler func(interface{}, *wallet.Wallet) (interface{}, error)
+type requestHandler func(interface{}, *wallet.Wallet) (interface{}, er.R)
 
 // requestHandlerChain is a requestHandler that also takes a parameter for
-type requestHandlerChainRequired func(interface{}, *wallet.Wallet, *chain.RPCClient) (interface{}, error)
+type requestHandlerChainRequired func(interface{}, *wallet.Wallet, *chain.RPCClient) (interface{}, er.R)
 
 var rpcHandlers = map[string]struct {
 	handler          requestHandler
@@ -145,7 +146,7 @@ var rpcHandlers = map[string]struct {
 
 // unimplemented handles an unimplemented RPC request with the
 // appropiate error.
-func unimplemented(interface{}, *wallet.Wallet) (interface{}, error) {
+func unimplemented(interface{}, *wallet.Wallet) (interface{}, er.R) {
 	return nil, &btcjson.RPCError{
 		Code:    btcjson.ErrRPCUnimplemented,
 		Message: "Method unimplemented",
@@ -154,7 +155,7 @@ func unimplemented(interface{}, *wallet.Wallet) (interface{}, error) {
 
 // unsupported handles a standard bitcoind RPC request which is
 // unsupported by pktwallet due to design differences.
-func unsupported(interface{}, *wallet.Wallet) (interface{}, error) {
+func unsupported(interface{}, *wallet.Wallet) (interface{}, er.R) {
 	return nil, &btcjson.RPCError{
 		Code:    -1,
 		Message: "Request unsupported by pktwallet",
@@ -236,7 +237,7 @@ func lazyApplyHandler(request *btcjson.Request, w *wallet.Wallet, chainClient ch
 // makeResponse makes the JSON-RPC response struct for the result and error
 // returned by a requestHandler.  The returned response is not ready for
 // marshaling and sending off to a client, but must be
-func makeResponse(id, result interface{}, err error) btcjson.Response {
+func makeResponse(id, result interface{}, err er.R) btcjson.Response {
 	idPtr := idPointer(id)
 	if err != nil {
 		return btcjson.Response{
@@ -261,7 +262,7 @@ func makeResponse(id, result interface{}, err error) btcjson.Response {
 }
 
 // jsonError creates a JSON-RPC error from the Go error.
-func jsonError(err error) *btcjson.RPCError {
+func jsonError(err er.R) *btcjson.RPCError {
 	if err == nil {
 		return nil
 	}
@@ -292,7 +293,7 @@ func jsonError(err error) *btcjson.RPCError {
 
 // makeMultiSigScript is a helper function to combine common logic for
 // AddMultiSig and CreateMultiSig.
-func makeMultiSigScript(w *wallet.Wallet, keys []string, nRequired int) ([]byte, error) {
+func makeMultiSigScript(w *wallet.Wallet, keys []string, nRequired int) ([]byte, er.R) {
 	keysesPrecious := make([]*btcutil.AddressPubKey, len(keys))
 
 	// The address list will made up either of addreseses (pubkey hash), for
@@ -325,7 +326,7 @@ func makeMultiSigScript(w *wallet.Wallet, keys []string, nRequired int) ([]byte,
 	return txscript.MultiSigScript(keysesPrecious, nRequired)
 }
 
-func addP2shScript(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func addP2shScript(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.AddP2shScriptCmd)
 	if cmd.Account != nil && *cmd.Account != waddrmgr.ImportedAddrAccountName {
 		return nil, &ErrNotImportedAccount
@@ -350,7 +351,7 @@ func addP2shScript(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // addMultiSigAddress handles an addmultisigaddress request by adding a
 // multisig address to the given wallet.
-func addMultiSigAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func addMultiSigAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.AddMultisigAddressCmd)
 
 	// If an account is specified, ensure that is the imported account.
@@ -382,7 +383,7 @@ func addMultiSigAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error)
 
 // createMultiSig handles an createmultisig request by returning a
 // multisig address for the given inputs.
-func createMultiSig(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func createMultiSig(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.CreateMultisigCmd)
 
 	script, err := makeMultiSigScript(w, cmd.Keys, cmd.NRequired)
@@ -405,7 +406,7 @@ func createMultiSig(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // dumpPrivKey handles a dumpprivkey request with the private key
 // for a single address, or an appropiate error if the wallet
 // is locked.
-func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.DumpPrivKeyCmd)
 
 	addr, err := decodeAddress(cmd.Address, w.ChainParams())
@@ -425,7 +426,7 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // dumpWallet handles a dumpwallet request by returning  all private
 // keys in a wallet, or an appropiate error if the wallet is locked.
 // TODO: finish this to match bitcoind by writing the dump to a file.
-func dumpWallet(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func dumpWallet(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	keys, err := w.DumpPrivKeys()
 	if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
 		return nil, &ErrWalletUnlockNeeded
@@ -437,7 +438,7 @@ func dumpWallet(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
 // all addresses for an account, or an error if the requested account does
 // not exist.
-func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetAddressesByAccountCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
@@ -460,11 +461,11 @@ func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 // getBalance handles a getbalance request by returning the balance for an
 // account (wallet), or an error if the requested account does not
 // exist.
-func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetBalanceCmd)
 
 	var balance btcutil.Amount
-	var err error
+	var err er.R
 	accountName := "*"
 	if cmd.Account != nil {
 		accountName = *cmd.Account
@@ -491,7 +492,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // getBestBlock handles a getbestblock request by returning a JSON object
 // with the height and hash of the most recently processed block.
-func getBestBlock(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getBestBlock(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	blk := w.Manager.SyncedTo()
 	result := &btcjson.GetBestBlockResult{
 		Hash:   blk.Hash.String(),
@@ -502,14 +503,14 @@ func getBestBlock(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // getBestBlockHash handles a getbestblockhash request by returning the hash
 // of the most recently processed block.
-func getBestBlockHash(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getBestBlockHash(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	blk := w.Manager.SyncedTo()
 	return blk.Hash.String(), nil
 }
 
 // getBlockCount handles a getblockcount request by returning the chain height
 // of the most recently processed block.
-func getBlockCount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getBlockCount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	blk := w.Manager.SyncedTo()
 	return blk.Height, nil
 }
@@ -517,7 +518,7 @@ func getBlockCount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // getInfo handles a getinfo request by returning the a structure containing
 // information about the current state of pktwallet.
 // exist.
-func getInfo(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func getInfo(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	// Call down to pktd for all of the information in this command known
 	// by them.
 	info, err := chainClient.GetInfo()
@@ -543,7 +544,7 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (
 	return info, nil
 }
 
-func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, error) {
+func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, er.R) {
 	addr, err := btcutil.DecodeAddress(s, params)
 	if err != nil {
 		msg := fmt.Sprintf("Invalid address %q: decode failed with %#q", s, err)
@@ -565,7 +566,7 @@ func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, error) {
 
 // getAccount handles a getaccount request by returning the account name
 // associated with a single address.
-func getAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetAccountCmd)
 
 	addr, err := decodeAddress(cmd.Address, w.ChainParams())
@@ -592,7 +593,7 @@ func getAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // If the most recently-requested address has been used, a new address (the
 // next chained address in the keypool) is used.  This can fail if the keypool
 // runs out (and will return btcjson.ErrRPCWalletKeypoolRanOut if that happens).
-func getAccountAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getAccountAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetAccountAddressCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
@@ -607,7 +608,7 @@ func getAccountAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	return addr.EncodeAddress(), err
 }
 
-func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SetNetworkStewardVoteCmd)
 	acctName := "default"
 	if cmd.Account != nil {
@@ -634,7 +635,7 @@ func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	return result, w.PutNetworkStewardVote(account, waddrmgr.KeyScopeBIP0044, &vote)
 }
 
-func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetNetworkStewardVoteCmd)
 	acctName := "default"
 	if cmd.Account != nil {
@@ -664,7 +665,7 @@ func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, err
 
 // getUnconfirmedBalance handles a getunconfirmedbalance extension request
 // by returning the current unconfirmed balance of an account.
-func getUnconfirmedBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getUnconfirmedBalance(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetUnconfirmedBalanceCmd)
 
 	acctName := "default"
@@ -685,7 +686,7 @@ func getUnconfirmedBalance(icmd interface{}, w *wallet.Wallet) (interface{}, err
 
 // importPrivKey handles an importprivkey request by parsing
 // a WIF-encoded private key and adding it to an account.
-func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.
@@ -724,14 +725,14 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // keypoolRefill handles the keypoolrefill command. Since we handle the keypool
 // automatically this does nothing since refilling is never manually required.
-func keypoolRefill(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func keypoolRefill(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return nil, nil
 }
 
 // createNewAccount handles a createnewaccount request by creating and
 // returning a new account. If the last account has no transaction history
 // as per BIP 0044 a new account cannot be created so an error will be returned.
-func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.CreateNewAccountCmd)
 
 	// The wildcard * is reserved by the rpc server with the special meaning
@@ -753,7 +754,7 @@ func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // renameAccount handles a renameaccount request by renaming an account.
 // If the account does not exist an appropiate error will be returned.
-func renameAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func renameAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.RenameAccountCmd)
 
 	// The wildcard * is reserved by the rpc server with the special meaning
@@ -775,7 +776,7 @@ func renameAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // error is returned.
 // TODO: Follow BIP 0044 and warn if number of unused addresses exceeds
 // the gap limit.
-func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetNewAddressCmd)
 
 	acctName := "default"
@@ -800,7 +801,7 @@ func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //
 // Note: bitcoind allows specifying the account as an optional parameter,
 // but ignores the parameter.
-func getRawChangeAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getRawChangeAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetRawChangeAddressCmd)
 
 	acctName := "default"
@@ -822,7 +823,7 @@ func getRawChangeAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error
 
 // getReceivedByAccount handles a getreceivedbyaccount request by returning
 // the total amount received by addresses of an account.
-func getReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetReceivedByAccountCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
@@ -848,7 +849,7 @@ func getReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 
 // getReceivedByAddress handles a getreceivedbyaddress request by returning
 // the total amount received by a single address.
-func getReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetReceivedByAddressCmd)
 
 	addr, err := decodeAddress(cmd.Address, w.ChainParams())
@@ -865,7 +866,7 @@ func getReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 
 // getTransaction handles a gettransaction request by returning details about
 // a single transaction saved by wallet.
-func getTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func getTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetTransactionCmd)
 
 	txHash, err := chainhash.NewHashFromStr(cmd.Txid)
@@ -1026,14 +1027,14 @@ var helpDescsMu sync.Mutex // Help may execute concurrently, so synchronize acce
 // associated with a consensus RPC client.  The additional RPC client is used to
 // include help messages for methods implemented by the consensus server via RPC
 // passthrough.
-func helpWithChainRPC(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func helpWithChainRPC(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	return help(icmd, w, chainClient)
 }
 
 // helpNoChainRPC handles the help request when the RPC server has not been
 // associated with a consensus RPC client.  No help messages are included for
 // passthrough requests.
-func helpNoChainRPC(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func helpNoChainRPC(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return help(icmd, w, nil)
 }
 
@@ -1041,7 +1042,7 @@ func helpNoChainRPC(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // methods, or full help for a specific method.  The chainClient is optional,
 // and this is simply a helper function for the HelpNoChainRPC and
 // HelpWithChainRPC handlers.
-func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.HelpCmd)
 
 	// pktd returns different help messages depending on the kind of
@@ -1123,7 +1124,7 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 
 // listAccounts handles a listaccounts request by returning a map of account
 // names to their balances.
-func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListAccountsCmd)
 
 	accountBalances := map[string]float64{}
@@ -1140,7 +1141,7 @@ func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // listLockUnspent handles a listlockunspent request by returning an slice of
 // all locked outpoints.
-func listLockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listLockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return w.LockedOutpoints(), nil
 }
 
@@ -1154,7 +1155,7 @@ func listLockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //             default: one;
 //  "includeempty": whether or not to include addresses that have no transactions -
 //                  default: false.
-func listReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListReceivedByAccountCmd)
 
 	results, err := w.TotalReceivedForAccounts(
@@ -1186,7 +1187,7 @@ func listReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 //             default: one;
 //  "includeempty": whether or not to include addresses that have no transactions -
 //                  default: false.
-func listReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListReceivedByAddressCmd)
 
 	// Intermediate data for each address.
@@ -1223,7 +1224,7 @@ func listReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	} else {
 		endHeight = syncBlock.Height - int32(minConf) + 1
 	}
-	err = wallet.UnstableAPI(w).RangeTransactions(0, endHeight, func(details []wtxmgr.TxDetails) (bool, error) {
+	err = wallet.UnstableAPI(w).RangeTransactions(0, endHeight, func(details []wtxmgr.TxDetails) (bool, er.R) {
 		confirmations := confirms(details[0].Block.Height, syncBlock.Height)
 		for _, tx := range details {
 			for _, cred := range tx.Credits {
@@ -1276,7 +1277,7 @@ func listReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, err
 
 // listSinceBlock handles a listsinceblock request by returning an array of maps
 // with details of sent and received wallet transactions since the given block.
-func listSinceBlock(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func listSinceBlock(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListSinceBlockCmd)
 
 	syncBlock := w.Manager.SyncedTo()
@@ -1320,7 +1321,7 @@ func listSinceBlock(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCCl
 
 // listTransactions handles a listtransactions request by returning an
 // array of maps with details of sent and recevied wallet transactions.
-func listTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListTransactionsCmd)
 
 	// TODO: ListTransactions does not currently understand the difference
@@ -1345,7 +1346,7 @@ func listTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // transactions.  The form of the reply is identical to listtransactions,
 // but the array elements are limited to transaction details which are
 // about the addresess included in the request.
-func listAddressTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listAddressTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListAddressTransactionsCmd)
 
 	if cmd.Account != nil && *cmd.Account != "*" {
@@ -1372,7 +1373,7 @@ func listAddressTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, e
 // a map with details of sent and recevied wallet transactions.  This is
 // similar to ListTransactions, except it takes only a single optional
 // argument for the account name and replies with all transactions.
-func listAllTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listAllTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListAllTransactionsCmd)
 
 	if cmd.Account != nil && *cmd.Account != "*" {
@@ -1386,7 +1387,7 @@ func listAllTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error
 }
 
 // listUnspent handles the listunspent command.
-func listUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func listUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListUnspentCmd)
 
 	var addresses map[string]struct{}
@@ -1406,7 +1407,7 @@ func listUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 
 // lockUnspent handles the lockunspent command.
-func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.LockUnspentCmd)
 
 	switch {
@@ -1434,7 +1435,7 @@ func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // created transactions from a JSON object describing the output destinations
 // and amounts.
 func makeOutputs(pairs map[string]btcutil.Amount, vote *waddrmgr.NetworkStewardVote,
-	chainParams *chaincfg.Params) ([]*wire.TxOut, error) {
+	chainParams *chaincfg.Params) ([]*wire.TxOut, er.R) {
 	outputs := make([]*wire.TxOut, 0, len(pairs))
 	if vote == nil {
 		vote = &waddrmgr.NetworkStewardVote{}
@@ -1459,7 +1460,7 @@ func makeOutputs(pairs map[string]btcutil.Amount, vote *waddrmgr.NetworkStewardV
 // It returns the transaction hash in string format upon success
 // All errors are returned in btcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
-	account uint32, minconf int32, feeSatPerKb btcutil.Amount) (string, error) {
+	account uint32, minconf int32, feeSatPerKb btcutil.Amount) (string, er.R) {
 
 	vote, err := w.NetworkStewardVote(account, waddrmgr.KeyScopeBIP0044)
 	if err != nil {
@@ -1503,7 +1504,7 @@ func isNilOrEmpty(s *string) bool {
 // address.  Leftover inputs not sent to the payment address or a fee for
 // the miner are sent back to a new address in the wallet.  Upon success,
 // the TxID for the created transaction is returned.
-func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SendFromCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
@@ -1543,7 +1544,7 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) 
 		txrules.DefaultRelayFeePerKb)
 }
 
-func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.CreateTransactionCmd)
 	feeSatPerKb := txrules.DefaultRelayFeePerKb
 
@@ -1613,7 +1614,7 @@ func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RP
 	return hex.EncodeToString(b.Bytes()), nil
 }
 
-func resync(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func resync(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	w.ResyncChain()
 	return nil, nil
 }
@@ -1623,7 +1624,7 @@ func resync(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (i
 // payment addresses.  Leftover inputs not sent to the payment address
 // or a fee for the miner are sent back to a new address in the wallet.
 // Upon success, the TxID for the created transaction is returned.
-func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SendManyCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
@@ -1664,7 +1665,7 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // payment address.  Leftover inputs not sent to the payment address or a fee
 // for the miner are sent back to a new address in the wallet.  Upon success,
 // the TxID for the created transaction is returned.
-func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
@@ -1697,7 +1698,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 
 // setTxFee sets the transaction fee per kilobyte added to transactions.
-func setTxFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func setTxFee(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SetTxFeeCmd)
 
 	// Check that amount is not negative.
@@ -1711,7 +1712,7 @@ func setTxFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // signMessage signs the given message with the private key for the given
 // address
-func signMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func signMessage(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SignMessageCmd)
 
 	addr, err := decodeAddress(cmd.Address, w.ChainParams())
@@ -1738,7 +1739,7 @@ func signMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 
 // signRawTransaction handles the signrawtransaction command.
-func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, error) {
+func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SignRawTransactionCmd)
 
 	serializedTx, err := decodeHexStr(cmd.RawTx)
@@ -1912,7 +1913,7 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.R
 }
 
 // validateAddress handles the validateaddress command.
-func validateAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func validateAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ValidateAddressCmd)
 
 	result := btcjson.ValidateAddressWalletResult{}
@@ -1993,7 +1994,7 @@ func validateAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // verifyMessage handles the verifymessage command by verifying the provided
 // compact signature for the given address and message.
-func verifyMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func verifyMessage(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.VerifyMessageCmd)
 
 	addr, err := decodeAddress(cmd.Address, w.ChainParams())
@@ -2039,14 +2040,14 @@ func verifyMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // walletIsLocked handles the walletislocked extension request by
 // returning the current lock state (false for unlocked, true for locked)
 // of an account.
-func walletIsLocked(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func walletIsLocked(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return w.Locked(), nil
 }
 
 // walletLock handles a walletlock request by locking the all account
 // wallets, returning an error if any wallet is not encrypted (for example,
 // a watching-only wallet).
-func walletLock(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func walletLock(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	w.Lock()
 	return nil, nil
 }
@@ -2054,7 +2055,7 @@ func walletLock(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // walletPassphrase responds to the walletpassphrase request by unlocking
 // the wallet.  The decryption key is saved in the wallet until timeout
 // seconds expires, after which the wallet is locked.
-func walletPassphrase(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func walletPassphrase(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.WalletPassphraseCmd)
 
 	timeout := time.Second * time.Duration(cmd.Timeout)
@@ -2073,7 +2074,7 @@ func walletPassphrase(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //
 // If the old passphrase is correct and the passphrase is changed, all
 // wallets will be immediately locked.
-func walletPassphraseChange(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func walletPassphraseChange(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.WalletPassphraseChangeCmd)
 
 	err := w.ChangePrivatePassphrase([]byte(cmd.OldPassphrase),
@@ -2091,7 +2092,7 @@ func walletPassphraseChange(icmd interface{}, w *wallet.Wallet) (interface{}, er
 // leading '0' character if there is an odd number of bytes in the hex string.
 // This is to prevent an error for an invalid hex string when using an odd
 // number of bytes when calling hex.Decode.
-func decodeHexStr(hexStr string) ([]byte, error) {
+func decodeHexStr(hexStr string) ([]byte, er.R) {
 	if len(hexStr)%2 != 0 {
 		hexStr = "0" + hexStr
 	}

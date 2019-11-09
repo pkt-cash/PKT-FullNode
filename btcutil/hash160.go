@@ -6,6 +6,7 @@ package btcutil
 
 import (
 	"crypto/sha256"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash"
 
 	"golang.org/x/crypto/ripemd160"

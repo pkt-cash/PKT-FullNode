@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 	"time"
@@ -71,7 +72,7 @@ func createMockChainConn(genesis *wire.MsgBlock, n uint32,
 
 // GetBestBlock returns the hash and height of the best block known to the
 // backend.
-func (c *mockChainConn) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (c *mockChainConn) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	bestHash, ok := c.blockHashes[c.chainTip]
 	if !ok {
 		return nil, 0, fmt.Errorf("block with height %d not found",
@@ -82,7 +83,7 @@ func (c *mockChainConn) GetBestBlock() (*chainhash.Hash, int32, error) {
 }
 
 // GetBlockHash returns the hash of the block with the given height.
-func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, error) {
+func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 	hash, ok := c.blockHashes[uint32(height)]
 	if !ok {
 		return nil, fmt.Errorf("block with height %d not found", height)
@@ -92,7 +93,7 @@ func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, error) {
 }
 
 // GetBlockHeader returns the header for the block with the given hash.
-func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (*wire.BlockHeader, error) {
+func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (*wire.BlockHeader, er.R) {
 	block, ok := c.blocks[*hash]
 	if !ok {
 		return nil, fmt.Errorf("header for block %v not found", hash)
@@ -118,7 +119,7 @@ func (s *mockBirthdayStore) Birthday() time.Time {
 }
 
 // BirthdayBlock returns the birthday block of the wallet.
-func (s *mockBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, error) {
+func (s *mockBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, er.R) {
 	if s.birthdayBlock == nil {
 		err := waddrmgr.ManagerError{
 			ErrorCode: waddrmgr.ErrBirthdayBlockNotSet,
@@ -132,7 +133,7 @@ func (s *mockBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, error) {
 // SetBirthdayBlock updates the birthday block of the wallet to the given block.
 // The boolean can be used to signal whether this block should be sanity checked
 // the next time the wallet starts.
-func (s *mockBirthdayStore) SetBirthdayBlock(block waddrmgr.BlockStamp) error {
+func (s *mockBirthdayStore) SetBirthdayBlock(block waddrmgr.BlockStamp) er.R {
 	s.birthdayBlock = &block
 	s.birthdayBlockVerified = true
 	s.syncedTo = block

@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"time"
 
@@ -60,7 +61,7 @@ func (h *BlockHeader) BlockHash() chainhash.Hash {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
-func (h *BlockHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (h *BlockHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	return readBlockHeader(r, pver, h)
 }
 
@@ -68,14 +69,14 @@ func (h *BlockHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 // This is part of the Message interface implementation.
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
-func (h *BlockHeader) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (h *BlockHeader) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	return writeBlockHeader(w, pver, h)
 }
 
 // Deserialize decodes a block header from r into the receiver using a format
 // that is suitable for long-term storage such as a database while respecting
 // the Version field.
-func (h *BlockHeader) Deserialize(r io.Reader) error {
+func (h *BlockHeader) Deserialize(r io.Reader) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of readBlockHeader.
@@ -85,7 +86,7 @@ func (h *BlockHeader) Deserialize(r io.Reader) error {
 // Serialize encodes a block header from r into the receiver using a format
 // that is suitable for long-term storage such as a database while respecting
 // the Version field.
-func (h *BlockHeader) Serialize(w io.Writer) error {
+func (h *BlockHeader) Serialize(w io.Writer) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of writeBlockHeader.
@@ -113,7 +114,7 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
 // readBlockHeader reads a bitcoin block header from r.  See Deserialize for
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
-func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) error {
+func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) er.R {
 	return readElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		(*uint32Time)(&bh.Timestamp), &bh.Bits, &bh.Nonce)
 }
@@ -121,7 +122,7 @@ func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) error {
 // writeBlockHeader writes a bitcoin block header to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
-func writeBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) error {
+func writeBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) er.R {
 	sec := uint32(bh.Timestamp.Unix())
 	return writeElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		sec, bh.Bits, bh.Nonce)

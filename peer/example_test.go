@@ -7,6 +7,7 @@ package peer_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 // mockRemotePeer creates a basic inbound peer listening on the simnet port for
 // use with Example_peerConnection.  It does not return until the listner is
 // active.
-func mockRemotePeer() error {
+func mockRemotePeer() er.R {
 	// Configure peer to act as a simnet node that offers no services.
 	peerCfg := &peer.Config{
 		UserAgentName:    "peer",  // User agent name to advertise.

@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -44,20 +45,20 @@ type (
 // pktd RPC chain server, or an SPV library, as long as we write a driver for
 // it.
 type Interface interface {
-	Start() error
+	Start() er.R
 	Stop()
 	WaitForShutdown()
-	GetBestBlock() (*chainhash.Hash, int32, error)
-	GetBlock(*chainhash.Hash) (*wire.MsgBlock, error)
-	GetBlockHash(int64) (*chainhash.Hash, error)
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, error)
+	GetBestBlock() (*chainhash.Hash, int32, er.R)
+	GetBlock(*chainhash.Hash) (*wire.MsgBlock, er.R)
+	GetBlockHash(int64) (*chainhash.Hash, er.R)
+	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, er.R)
 	IsCurrent() bool
-	FilterBlocks(*FilterBlocksRequest) (*FilterBlocksResponse, error)
-	BlockStamp() (*waddrmgr.BlockStamp, error)
-	SendRawTransaction(*wire.MsgTx, bool) (*chainhash.Hash, error)
-	Rescan(*chainhash.Hash, []btcutil.Address, map[wire.OutPoint]btcutil.Address) error
-	NotifyReceived([]btcutil.Address) error
-	NotifyBlocks() error
+	FilterBlocks(*FilterBlocksRequest) (*FilterBlocksResponse, er.R)
+	BlockStamp() (*waddrmgr.BlockStamp, er.R)
+	SendRawTransaction(*wire.MsgTx, bool) (*chainhash.Hash, er.R)
+	Rescan(*chainhash.Hash, []btcutil.Address, map[wire.OutPoint]btcutil.Address) er.R
+	NotifyReceived([]btcutil.Address) er.R
+	NotifyBlocks() er.R
 	Notifications() <-chan interface{}
 	BackEnd() string
 }

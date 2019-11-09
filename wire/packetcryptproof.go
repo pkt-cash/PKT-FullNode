@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
@@ -74,7 +75,7 @@ type PacketCryptProof struct {
 
 // SplitContentProof splits the content proof into the proofs for the
 // 4 individual announcements.
-func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, error) {
+func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, er.R) {
 	if h.ContentProof == nil {
 		return make([][]byte, 4), nil
 	}
@@ -117,22 +118,22 @@ func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, error) 
 }
 
 // BtcDecode decodes a PacketCryptProof from a reader
-func (h *PacketCryptProof) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (h *PacketCryptProof) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	return readPacketCryptProof(r, pver, enc, h)
 }
 
 // BtcEncode encodes a PacketCryptProof to a writer
-func (h *PacketCryptProof) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (h *PacketCryptProof) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	return writePacketCryptProof(w, pver, enc, h)
 }
 
 // Deserialize reads a PacketCryptProof from the on-disk format
-func (h *PacketCryptProof) Deserialize(r io.Reader) error {
+func (h *PacketCryptProof) Deserialize(r io.Reader) er.R {
 	return readPacketCryptProof(r, 0, WitnessEncoding, h)
 }
 
 // Serialize writes a PacketCryptProof to the on-disk format
-func (h *PacketCryptProof) Serialize(w io.Writer) error {
+func (h *PacketCryptProof) Serialize(w io.Writer) er.R {
 	return writePacketCryptProof(w, 0, WitnessEncoding, h)
 }
 
@@ -187,7 +188,7 @@ func (h *PacketCryptProof) SerializeSize() int {
 	return out
 }
 
-func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) error {
+func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) er.R {
 	hasPcp := false
 	for {
 		t, err := ReadVarInt(r, 0)
@@ -283,7 +284,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 	}
 }
 
-func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) error {
+func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) er.R {
 
 	if err := WriteVarInt(w, 0, pcpType); err != nil {
 		return err

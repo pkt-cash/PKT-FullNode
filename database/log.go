@@ -6,6 +6,7 @@ package database
 
 import (
 	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // log is a logger that is initialized with no output filters.  This

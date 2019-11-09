@@ -2,6 +2,7 @@ package blockntfns_test
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ var emptyHeader wire.BlockHeader
 
 type mockNtfnSource struct {
 	blockChan         chan blockntfns.BlockNtfn
-	blocksSinceHeight func(uint32) ([]blockntfns.BlockNtfn, uint32, error)
+	blocksSinceHeight func(uint32) ([]blockntfns.BlockNtfn, uint32, er.R)
 }
 
 func newMockBlockSource() *mockNtfnSource {
@@ -27,7 +28,7 @@ func (s *mockNtfnSource) Notifications() <-chan blockntfns.BlockNtfn {
 }
 
 func (s *mockNtfnSource) NotificationsSinceHeight(
-	height uint32) ([]blockntfns.BlockNtfn, uint32, error) {
+	height uint32) ([]blockntfns.BlockNtfn, uint32, er.R) {
 
 	if s.blocksSinceHeight != nil {
 		return s.blocksSinceHeight(height)
@@ -213,7 +214,7 @@ func TestManagerHistoricalBacklog(t *testing.T) {
 	// We'll make NotificationsSinceHeight return an error to ensure that a
 	// client registration fails if it returns an error.
 	blockSource.blocksSinceHeight = func(uint32) ([]blockntfns.BlockNtfn,
-		uint32, error) {
+		uint32, er.R) {
 
 		return nil, 0, errors.New("")
 	}
@@ -231,7 +232,7 @@ func TestManagerHistoricalBacklog(t *testing.T) {
 	subCurrentHeight := uint32(chainTip / 2)
 	numBacklog := chainTip - subCurrentHeight
 	blockSource.blocksSinceHeight = func(uint32) ([]blockntfns.BlockNtfn,
-		uint32, error) {
+		uint32, er.R) {
 
 		blocks := make([]blockntfns.BlockNtfn, 0, numBacklog)
 		for i := uint32(subCurrentHeight + 1); i <= chainTip; i++ {

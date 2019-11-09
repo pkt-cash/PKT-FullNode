@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
@@ -80,7 +81,7 @@ func netName(chainParams *chaincfg.Params) string {
 // setupGlobalConfig examine the global configuration options for any conditions
 // which are invalid as well as performs any addition setup necessary after the
 // initial parse.
-func setupGlobalConfig() error {
+func setupGlobalConfig() er.R {
 	// Multiple networks can't be selected simultaneously.
 	// Count number of network flags passed; assign active network params
 	// while we're at it

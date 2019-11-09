@@ -6,6 +6,7 @@ package database_test
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/database"

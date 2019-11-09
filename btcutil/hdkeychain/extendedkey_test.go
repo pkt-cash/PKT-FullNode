@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"reflect"
 	"testing"
@@ -223,7 +224,7 @@ tests:
 		}
 
 		for _, childNum := range test.path {
-			var err error
+			var err er.R
 			extKey, err = extKey.Child(childNum)
 			if err != nil {
 				t.Errorf("err: %v", err)
@@ -380,7 +381,7 @@ tests:
 		}
 
 		for _, childNum := range test.path {
-			var err error
+			var err er.R
 			extKey, err = extKey.Child(childNum)
 			if err != nil {
 				t.Errorf("err: %v", err)
@@ -499,7 +500,7 @@ tests:
 		}
 
 		for _, childNum := range test.path {
-			var err error
+			var err er.R
 			extKey, err = extKey.Child(childNum)
 			if err != nil {
 				t.Errorf("err: %v", err)
@@ -524,7 +525,7 @@ func TestGenenerateSeed(t *testing.T) {
 	tests := []struct {
 		name   string
 		length uint8
-		err    error
+		err    er.R
 	}{
 		// Test various valid lengths.
 		{name: "16 bytes", length: 16},
@@ -563,7 +564,7 @@ func TestExtendedKeyAPI(t *testing.T) {
 		isPrivate  bool
 		parentFP   uint32
 		privKey    string
-		privKeyErr error
+		privKeyErr er.R
 		pubKey     string
 		address    string
 	}{
@@ -840,9 +841,9 @@ func TestErrors(t *testing.T) {
 	tests := []struct {
 		name      string
 		key       string
-		err       error
+		err       er.R
 		neuter    bool
-		neuterErr error
+		neuterErr er.R
 	}{
 		{
 			name: "invalid key length",

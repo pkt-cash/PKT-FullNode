@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
@@ -108,7 +109,7 @@ func mainInt() int {
 
 	fmt.Println("Dropping pktwallet transaction history")
 
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		err := tx.DeleteTopLevelBucket(wtxmgrNamespace)
 		if err != nil && err != walletdb.ErrBucketNotFound {
 			return err

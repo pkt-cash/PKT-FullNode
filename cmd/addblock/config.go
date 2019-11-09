@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
@@ -85,7 +86,7 @@ func netName(chainParams *chaincfg.Params) string {
 }
 
 // loadConfig initializes and parses the config using command line options.
-func loadConfig() (*config, []string, error) {
+func loadConfig() (*config, []string, er.R) {
 	// Default config.
 	cfg := config{
 		DataDir:  defaultDataDir,

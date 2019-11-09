@@ -6,6 +6,7 @@ package connmgr
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"sync"
 	"time"

@@ -7,6 +7,7 @@ package wallet
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
@@ -20,7 +21,7 @@ import (
 // otherwise an error is returned for a missing pubkey.
 //
 // This function only works with pubkeys and P2PKH addresses derived from them.
-func (w *Wallet) MakeMultiSigScript(addrs []btcutil.Address, nRequired int) ([]byte, error) {
+func (w *Wallet) MakeMultiSigScript(addrs []btcutil.Address, nRequired int) ([]byte, er.R) {
 	pubKeys := make([]*btcutil.AddressPubKey, len(addrs))
 
 	var dbtx walletdb.ReadTx
@@ -45,7 +46,7 @@ func (w *Wallet) MakeMultiSigScript(addrs []btcutil.Address, nRequired int) ([]b
 
 		case *btcutil.AddressPubKeyHash:
 			if dbtx == nil {
-				var err error
+				var err er.R
 				dbtx, err = w.db.BeginReadTx()
 				if err != nil {
 					return nil, err
@@ -72,9 +73,9 @@ func (w *Wallet) MakeMultiSigScript(addrs []btcutil.Address, nRequired int) ([]b
 }
 
 // ImportP2SHRedeemScript adds a P2SH redeem script to the wallet.
-func (w *Wallet) ImportP2SHRedeemScript(script []byte) (*btcutil.AddressScriptHash, error) {
+func (w *Wallet) ImportP2SHRedeemScript(script []byte) (*btcutil.AddressScriptHash, er.R) {
 	var p2shAddr *btcutil.AddressScriptHash
-	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 		// TODO(oga) blockstamp current block?
@@ -114,9 +115,9 @@ func (w *Wallet) ImportP2SHRedeemScript(script []byte) (*btcutil.AddressScriptHa
 }
 
 // ImportP2WSHRedeemScript adds a P2WSH redeem script to the wallet.
-func (w *Wallet) ImportP2WSHRedeemScript(script []byte) (*btcutil.AddressWitnessScriptHash, error) {
+func (w *Wallet) ImportP2WSHRedeemScript(script []byte) (*btcutil.AddressWitnessScriptHash, er.R) {
 	var p2shAddr *btcutil.AddressWitnessScriptHash
-	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 		// TODO(oga) blockstamp current block?

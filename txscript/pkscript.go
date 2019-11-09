@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -74,7 +75,7 @@ type PkScript struct {
 // ParsePkScript parses an output script into the PkScript struct.
 // ErrUnsupportedScriptType is returned when attempting to parse an unsupported
 // script type.
-func ParsePkScript(pkScript []byte) (PkScript, error) {
+func ParsePkScript(pkScript []byte) (PkScript, er.R) {
 	var outputScript PkScript
 	scriptClass, _, _, err := ExtractPkScriptAddrs(
 		pkScript, &chaincfg.MainNetParams,
@@ -141,7 +142,7 @@ func (s PkScript) Script() []byte {
 }
 
 // Address encodes the script into an address for the given chain.
-func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, error) {
+func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, er.R) {
 	_, addrs, _, err := ExtractPkScriptAddrs(s.Script(), chainParams)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse address: %v", err)
@@ -160,7 +161,7 @@ func (s PkScript) String() string {
 // input's signature script or witness.
 //
 // NOTE: Only P2PKH, P2SH, P2WSH, and P2WPKH redeem scripts are supported.
-func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, error) {
+func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, er.R) {
 	switch {
 	case len(sigScript) > 0:
 		return computeNonWitnessPkScript(sigScript)
@@ -173,7 +174,7 @@ func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, error)
 
 // computeNonWitnessPkScript computes the script of an output by looking at the
 // spending input's signature script.
-func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
+func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 	switch {
 	// Since we only support P2PKH and P2SH scripts as the only non-witness
 	// script types, we should expect to see a push only script.
@@ -231,7 +232,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
 
 // computeWitnessPkScript computes the script of an output by looking at the
 // spending input's witness.
-func computeWitnessPkScript(witness wire.TxWitness) (PkScript, error) {
+func computeWitnessPkScript(witness wire.TxWitness) (PkScript, er.R) {
 	// We'll use the last item of the witness stack to determine the proper
 	// witness type.
 	lastWitnessItem := witness[len(witness)-1]

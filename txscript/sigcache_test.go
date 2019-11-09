@@ -6,6 +6,7 @@ package txscript
 
 import (
 	"crypto/rand"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -15,7 +16,7 @@ import (
 // genRandomSig returns a random message, a signature of the message under the
 // public key and the public key. This function is used to generate randomized
 // test data.
-func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, error) {
+func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, er.R) {
 	privKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, nil, nil, err

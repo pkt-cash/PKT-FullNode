@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
@@ -19,7 +20,7 @@ type CacheableFilter struct {
 }
 
 // Size returns size of this filter in bytes.
-func (c *CacheableFilter) Size() (uint64, error) {
+func (c *CacheableFilter) Size() (uint64, er.R) {
 	f, err := c.Filter.NBytes()
 	if err != nil {
 		return 0, err

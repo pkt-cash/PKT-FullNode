@@ -6,6 +6,7 @@ package ffldb_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -113,7 +114,7 @@ func TestCreateOpenFail(t *testing.T) {
 	db.Close()
 
 	wantErrCode = database.ErrDbNotOpen
-	err = db.View(func(tx database.Tx) error {
+	err = db.View(func(tx database.Tx) er.R {
 		return nil
 	})
 	if !checkDbError(t, "View", err, wantErrCode) {
@@ -121,7 +122,7 @@ func TestCreateOpenFail(t *testing.T) {
 	}
 
 	wantErrCode = database.ErrDbNotOpen
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		return nil
 	})
 	if !checkDbError(t, "Update", err, wantErrCode) {
@@ -173,7 +174,7 @@ func TestPersistence(t *testing.T) {
 	}
 	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
 	genesisHash := chaincfg.MainNetParams.GenesisHash
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
 			return fmt.Errorf("Metadata: unexpected nil bucket")
@@ -216,7 +217,7 @@ func TestPersistence(t *testing.T) {
 
 	// Ensure the values previously stored in the 3rd namespace still exist
 	// and are correct.
-	err = db.View(func(tx database.Tx) error {
+	err = db.View(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
 			return fmt.Errorf("Metadata: unexpected nil bucket")

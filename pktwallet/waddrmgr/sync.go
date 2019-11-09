@@ -5,6 +5,7 @@
 package waddrmgr
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -48,7 +49,7 @@ func newSyncState(startBlock, syncedTo *BlockStamp) *syncState {
 // imported addresses will be used.  This effectively allows the manager to be
 // marked as unsynced back to the oldest known point any of the addresses have
 // appeared in the block chain.
-func (m *Manager) SetSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
+func (m *Manager) SetSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) er.R {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
@@ -84,7 +85,7 @@ func (m *Manager) SyncedTo() BlockStamp {
 // information is useful for comparing against the chain back-end to see if a
 // reorg is taking place and how far back it goes.
 func (m *Manager) BlockHash(ns walletdb.ReadBucket, height int32) (
-	*chainhash.Hash, error) {
+	*chainhash.Hash, er.R) {
 
 	return fetchBlockHash(ns, height)
 }
@@ -101,7 +102,7 @@ func (m *Manager) Birthday() time.Time {
 // SetBirthday sets the birthday, or earliest time a key could have been used,
 // for the manager.
 func (m *Manager) SetBirthday(ns walletdb.ReadWriteBucket,
-	birthday time.Time) error {
+	birthday time.Time) er.R {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
@@ -112,7 +113,7 @@ func (m *Manager) SetBirthday(ns walletdb.ReadWriteBucket,
 // BirthdayBlock returns the birthday block, or earliest block a key could have
 // been used, for the manager. A boolean is also returned to indicate whether
 // the birthday block has been verified as correct.
-func (m *Manager) BirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, bool, error) {
+func (m *Manager) BirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, bool, er.R) {
 	birthdayBlock, err := FetchBirthdayBlock(ns)
 	if err != nil {
 		return BlockStamp{}, false, err
@@ -126,7 +127,7 @@ func (m *Manager) BirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, bool, error
 // whether this birthday block should be sanity checked to determine if there
 // exists a better candidate to prevent less block fetching.
 func (m *Manager) SetBirthdayBlock(ns walletdb.ReadWriteBucket,
-	block BlockStamp, verified bool) error {
+	block BlockStamp, verified bool) er.R {
 
 	if err := PutBirthdayBlock(ns, block); err != nil {
 		return err

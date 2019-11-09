@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"os"
@@ -81,7 +82,7 @@ var (
 
 // runServiceCommand is only set to a real function on Windows.  It is used
 // to parse and execute service commands specified via the -s flag.
-var runServiceCommand func(string) error
+var runServiceCommand func(string) er.R
 
 // minUint32 is a helper function to return the minimum of two uint32s.
 // This avoids a math import and the need to cast to floats.
@@ -172,9 +173,9 @@ type config struct {
 	RelayNonStd          bool          `long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
 	RejectNonStd         bool          `long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
 	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
-	lookup               func(string) ([]net.IP, error)
-	oniondial            func(string, string, time.Duration) (net.Conn, error)
-	dial                 func(string, string, time.Duration) (net.Conn, error)
+	lookup               func(string) ([]net.IP, er.R)
+	oniondial            func(string, string, time.Duration) (net.Conn, er.R)
+	dial                 func(string, string, time.Duration) (net.Conn, er.R)
 	addCheckpoints       []chaincfg.Checkpoint
 	miningAddrs          map[btcutil.Address]float64
 	minRelayTxFee        btcutil.Amount
@@ -237,7 +238,7 @@ func supportedSubsystems() []string {
 // parseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
-func parseAndSetDebugLevels(debugLevel string) error {
+func parseAndSetDebugLevels(debugLevel string) er.R {
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
@@ -331,7 +332,7 @@ func normalizeAddresses(addrs []string, defaultPort string) []string {
 }
 
 // newCheckpointFromStr parses checkpoints in the '<height>:<hash>' format.
-func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
+func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, er.R) {
 	parts := strings.Split(checkpoint, ":")
 	if len(parts) != 2 {
 		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
@@ -363,7 +364,7 @@ func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
 
 // parseCheckpoints checks the checkpoint strings for valid syntax
 // ('<height>:<hash>') and parses them to chaincfg.Checkpoint instances.
-func parseCheckpoints(checkpointStrings []string) ([]chaincfg.Checkpoint, error) {
+func parseCheckpoints(checkpointStrings []string) ([]chaincfg.Checkpoint, er.R) {
 	if len(checkpointStrings) == 0 {
 		return nil, nil
 	}
@@ -409,7 +410,7 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 // The above results in pktd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
-func loadConfig() (*config, []string, error) {
+func loadConfig() (*config, []string, er.R) {
 	// Default config.
 	cfg := config{
 		ConfigFile:           defaultConfigFile,
@@ -478,7 +479,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Load additional config from file.
-	var configFileError error
+	var configFileError er.R
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
 	if !(preCfg.RegressionTest || preCfg.SimNet) || preCfg.ConfigFile !=
 		defaultConfigFile {
@@ -1047,7 +1048,7 @@ func loadConfig() (*config, []string, error) {
 		// unless the --noonion flag is set or there is an
 		// onion-specific proxy configured.
 		if !cfg.NoOnion && cfg.OnionProxy == "" {
-			cfg.lookup = func(host string) ([]net.IP, error) {
+			cfg.lookup = func(host string) ([]net.IP, er.R) {
 				return connmgr.TorLookupIP(host, cfg.Proxy)
 			}
 		}
@@ -1078,7 +1079,7 @@ func loadConfig() (*config, []string, error) {
 				"credentials ")
 		}
 
-		cfg.oniondial = func(network, addr string, timeout time.Duration) (net.Conn, error) {
+		cfg.oniondial = func(network, addr string, timeout time.Duration) (net.Conn, er.R) {
 			proxy := &socks.Proxy{
 				Addr:         cfg.OnionProxy,
 				Username:     cfg.OnionProxyUser,
@@ -1093,7 +1094,7 @@ func loadConfig() (*config, []string, error) {
 		// not a tor proxy, so override the DNS resolution to use the
 		// onion-specific proxy.
 		if cfg.Proxy != "" {
-			cfg.lookup = func(host string) ([]net.IP, error) {
+			cfg.lookup = func(host string) ([]net.IP, er.R) {
 				return connmgr.TorLookupIP(host, cfg.OnionProxy)
 			}
 		}
@@ -1104,7 +1105,7 @@ func loadConfig() (*config, []string, error) {
 	// Specifying --noonion means the onion address dial function results in
 	// an error.
 	if cfg.NoOnion {
-		cfg.oniondial = func(a, b string, t time.Duration) (net.Conn, error) {
+		cfg.oniondial = func(a, b string, t time.Duration) (net.Conn, er.R) {
 			return nil, errors.New("tor has been disabled")
 		}
 	}
@@ -1121,7 +1122,7 @@ func loadConfig() (*config, []string, error) {
 
 // createDefaultConfig copies the file sample-pktd.conf to the given destination path,
 // and populates it with some randomly generated RPC username and password.
-func createDefaultConfigFile(destinationPath string) error {
+func createDefaultConfigFile(destinationPath string) er.R {
 	// Create the destination directory if it does not exists
 	err := os.MkdirAll(filepath.Dir(destinationPath), 0700)
 	if err != nil {
@@ -1191,7 +1192,7 @@ func createDefaultConfigFile(destinationPath string) error {
 // example, .onion addresses will be dialed using the onion specific proxy if
 // one was specified, but will otherwise use the normal dial function (which
 // could itself use a proxy or not).
-func pktdDial(addr net.Addr) (net.Conn, error) {
+func pktdDial(addr net.Addr) (net.Conn, er.R) {
 	if strings.Contains(addr.String(), ".onion:") {
 		return cfg.oniondial(addr.Network(), addr.String(),
 			defaultConnectTimeout)
@@ -1206,7 +1207,7 @@ func pktdDial(addr net.Addr) (net.Conn, error) {
 //
 // Any attempt to resolve a tor address (.onion) will return an error since they
 // are not intended to be resolved outside of the tor proxy.
-func pktdLookup(host string) ([]net.IP, error) {
+func pktdLookup(host string) ([]net.IP, er.R) {
 	if strings.HasSuffix(host, ".onion") {
 		return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 	}

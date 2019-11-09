@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"time"
 
@@ -62,14 +63,14 @@ type Store interface {
 	// the given duration. A reason can also be provided to note why the IP
 	// network is being banned. The record will exist until a call to Status
 	// is made after the ban expiration.
-	BanIPNet(*net.IPNet, Reason, time.Duration) error
+	BanIPNet(*net.IPNet, Reason, time.Duration) er.R
 
 	// Status returns the ban status for a given IP network.
-	Status(*net.IPNet) (Status, error)
+	Status(*net.IPNet) (Status, er.R)
 }
 
 // NewStore returns a Store backed by a database.
-func NewStore(db walletdb.DB) (Store, error) {
+func NewStore(db walletdb.DB) (Store, er.R) {
 	return newBanStore(db)
 }
 
@@ -84,11 +85,11 @@ var _ Store = (*banStore)(nil)
 
 // newBanStore creates a concrete implementation of the Store interface backed
 // by a database.
-func newBanStore(db walletdb.DB) (*banStore, error) {
+func newBanStore(db walletdb.DB) (*banStore, er.R) {
 	s := &banStore{db: db}
 
 	// We'll ensure the expected buckets are created upon initialization.
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		banStore, err := tx.CreateTopLevelBucket(banStoreBucket)
 		if err != nil {
 			return err
@@ -111,8 +112,8 @@ func newBanStore(db walletdb.DB) (*banStore, error) {
 // given duration. A reason can also be provided to note why the IP network is
 // being banned. The record will exist until a call to Status is made after the
 // ban expiration.
-func (s *banStore) BanIPNet(ipNet *net.IPNet, reason Reason, duration time.Duration) error {
-	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) error {
+func (s *banStore) BanIPNet(ipNet *net.IPNet, reason Reason, duration time.Duration) er.R {
+	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
 		banStore := tx.ReadWriteBucket(banStoreBucket)
 		if banStore == nil {
 			return ErrCorruptedStore
@@ -138,7 +139,7 @@ func (s *banStore) BanIPNet(ipNet *net.IPNet, reason Reason, duration time.Durat
 
 // addBannedIPNet adds an entry to the ban store for the given IP network.
 func addBannedIPNet(banIndex, reasonIndex walletdb.ReadWriteBucket,
-	ipNetKey []byte, reason Reason, duration time.Duration) error {
+	ipNetKey []byte, reason Reason, duration time.Duration) er.R {
 
 	var v [8]byte
 	banExpiration := time.Now().Add(duration)
@@ -151,9 +152,9 @@ func addBannedIPNet(banIndex, reasonIndex walletdb.ReadWriteBucket,
 }
 
 // Status returns the ban status for a given IP network.
-func (s *banStore) Status(ipNet *net.IPNet) (Status, error) {
+func (s *banStore) Status(ipNet *net.IPNet) (Status, er.R) {
 	var banStatus Status
-	err := walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
 		banStore := tx.ReadWriteBucket(banStoreBucket)
 		if banStore == nil {
 			return ErrCorruptedStore
@@ -212,7 +213,7 @@ func fetchStatus(banIndex, reasonIndex walletdb.ReadWriteBucket,
 // removeBannedIPNet removes all references to a banned IP network within the
 // ban store.
 func removeBannedIPNet(banIndex, reasonIndex walletdb.ReadWriteBucket,
-	ipNetKey []byte) error {
+	ipNetKey []byte) er.R {
 
 	if err := banIndex.Delete(ipNetKey); err != nil {
 		return err

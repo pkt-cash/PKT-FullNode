@@ -1,6 +1,7 @@
 package filterdb
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -15,7 +16,7 @@ import (
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
 
-func createTestDatabase() (func(), FilterDatabase, error) {
+func createTestDatabase() (func(), FilterDatabase, er.R) {
 	tempDir, err := ioutil.TempDir("", "neutrino")
 	if err != nil {
 		return nil, nil, err
@@ -62,7 +63,7 @@ func TestGenesisFilterCreation(t *testing.T) {
 	}
 }
 
-func genRandFilter(numElements uint32) (*gcs.Filter, error) {
+func genRandFilter(numElements uint32) (*gcs.Filter, er.R) {
 	elements := make([][]byte, numElements)
 	for i := uint32(0); i < numElements; i++ {
 		var elem [20]byte

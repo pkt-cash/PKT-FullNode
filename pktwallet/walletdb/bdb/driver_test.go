@@ -6,6 +6,7 @@ package bdb_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"reflect"
 	"testing"
@@ -109,7 +110,7 @@ func TestPersistence(t *testing.T) {
 		"ns1key3": "foo3",
 	}
 	ns1Key := []byte("ns1")
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns1, err := tx.CreateTopLevelBucket(ns1Key)
 		if err != nil {
 			return err
@@ -139,7 +140,7 @@ func TestPersistence(t *testing.T) {
 
 	// Ensure the values previously stored in the 3rd namespace still exist
 	// and are correct.
-	err = walletdb.View(db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(db, func(tx walletdb.ReadTx) er.R {
 		ns1 := tx.ReadBucket(ns1Key)
 		if ns1 == nil {
 			return fmt.Errorf("ReadTx.ReadBucket: unexpected nil root bucket")

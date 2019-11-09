@@ -3,6 +3,7 @@ package headerfs
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
 
-func createTestIndex() (func(), *headerIndex, error) {
+func createTestIndex() (func(), *headerIndex, er.R) {
 	tempDir, err := ioutil.TempDir("", "neutrino")
 	if err != nil {
 		return nil, nil, err

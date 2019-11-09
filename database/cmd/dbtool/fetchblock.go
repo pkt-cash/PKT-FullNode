@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -22,7 +23,7 @@ var (
 )
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
-func (cmd *fetchBlockCmd) Execute(args []string) error {
+func (cmd *fetchBlockCmd) Execute(args []string) er.R {
 	// Setup the global config options and ensure they are valid.
 	if err := setupGlobalConfig(); err != nil {
 		return err
@@ -43,7 +44,7 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 	}
 	defer db.Close()
 
-	return db.View(func(tx database.Tx) error {
+	return db.View(func(tx database.Tx) er.R {
 		log.Infof("Fetching block %s", blockHash)
 		startTime := time.Now()
 		blockBytes, err := tx.FetchBlock(blockHash)

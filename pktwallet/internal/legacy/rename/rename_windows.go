@@ -29,6 +29,7 @@
 package rename
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"syscall"
 	"unsafe"
 )
@@ -42,13 +43,13 @@ const (
 	_MOVEFILE_REPLACE_EXISTING = 1
 )
 
-func moveFileEx(from *uint16, to *uint16, flags uint32) error {
+func moveFileEx(from *uint16, to *uint16, flags uint32) er.R {
 	r1, _, e1 := syscall.Syscall(procMoveFileExW.Addr(), 3,
 		uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)),
 		uintptr(flags))
 	if r1 == 0 {
 		if e1 != 0 {
-			return error(e1)
+			return er.R(e1)
 		} else {
 			return syscall.EINVAL
 		}
@@ -58,7 +59,7 @@ func moveFileEx(from *uint16, to *uint16, flags uint32) error {
 
 // Atomic provides an atomic file rename.  newpath is replaced if it
 // already exists.
-func Atomic(oldpath, newpath string) error {
+func Atomic(oldpath, newpath string) er.R {
 	from, err := syscall.UTF16PtrFromString(oldpath)
 	if err != nil {
 		return err

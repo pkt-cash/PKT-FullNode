@@ -8,6 +8,7 @@ package txrules
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
@@ -68,7 +69,7 @@ var (
 
 // CheckOutput performs simple consensus and policy tests on a transaction
 // output.
-func CheckOutput(output *wire.TxOut, relayFeePerKb btcutil.Amount) error {
+func CheckOutput(output *wire.TxOut, relayFeePerKb btcutil.Amount) er.R {
 	if output.Value < 0 {
 		return ErrAmountNegative
 	}

@@ -7,6 +7,7 @@ package nativetest
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -14,7 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 )
 
-func validatePcBlock(mb *wire.MsgBlock, height int32, annParentHashes []*chainhash.Hash) error {
+func validatePcBlock(mb *wire.MsgBlock, height int32, annParentHashes []*chainhash.Hash) er.R {
 	if len(annParentHashes) != 4 {
 		return errors.New("wrong number of annParentHashes")
 	}
@@ -32,7 +33,7 @@ func validatePcBlock(mb *wire.MsgBlock, height int32, annParentHashes []*chainha
 	return validatePcProof(mb.Pcp, height, &mb.Header, cbc, annParentHashes)
 }
 
-func ValidatePcBlock(t *testing.T, mb *wire.MsgBlock, height int32, annParentHashes []*chainhash.Hash) error {
+func ValidatePcBlock(t *testing.T, mb *wire.MsgBlock, height int32, annParentHashes []*chainhash.Hash) er.R {
 	err1 := validatePcBlock(mb, height, annParentHashes)
 	_, err2 := packetcrypt.ValidatePcBlock(mb, height, 0, annParentHashes)
 	if err1 != err2 {
@@ -46,7 +47,7 @@ func ValidatePcBlock(t *testing.T, mb *wire.MsgBlock, height int32, annParentHas
 	return err2
 }
 
-func ValidatePcAnn(t *testing.T, p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, error) {
+func ValidatePcAnn(t *testing.T, p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, er.R) {
 	hash1, err1 := validatePcAnn(p, parentBlockHash)
 	hash2, err2 := packetcrypt.ValidatePcAnn(p, parentBlockHash)
 	if err1 != err2 {

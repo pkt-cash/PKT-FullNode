@@ -1,6 +1,7 @@
 package wallet_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"runtime"
 	"testing"
 

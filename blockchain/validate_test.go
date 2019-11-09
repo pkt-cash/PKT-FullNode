@@ -5,6 +5,7 @@
 package blockchain
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"reflect"
 	"testing"
@@ -189,7 +190,7 @@ func TestCheckSerializedHeight(t *testing.T) {
 	tests := []struct {
 		sigScript  []byte // Serialized data
 		wantHeight int32  // Expected height
-		err        error  // Expected error type
+		err        er.R   // Expected error type
 	}{
 		// No serialized height length.
 		{[]byte{}, 0, missingHeightError},

@@ -9,6 +9,7 @@ package database
 
 import (
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -32,7 +33,7 @@ type Cursor interface {
 	//     nested bucket
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
-	Delete() error
+	Delete() er.R
 
 	// First positions the cursor at the first key/value pair and returns
 	// whether or not the pair exists.
@@ -80,7 +81,7 @@ type Bucket interface {
 	//     particular implementation
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
-	CreateBucket(key []byte) (Bucket, error)
+	CreateBucket(key []byte) (Bucket, er.R)
 
 	// CreateBucketIfNotExists creates and returns a new nested bucket with
 	// the given key if it does not already exist.
@@ -92,7 +93,7 @@ type Bucket interface {
 	//     particular implementation
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
-	CreateBucketIfNotExists(key []byte) (Bucket, error)
+	CreateBucketIfNotExists(key []byte) (Bucket, er.R)
 
 	// DeleteBucket removes a nested bucket with the given key.  This also
 	// includes removing all nested buckets and keys under the bucket being
@@ -103,7 +104,7 @@ type Bucket interface {
 	//   - ErrBucketNotFound if the specified bucket does not exist
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
-	DeleteBucket(key []byte) error
+	DeleteBucket(key []byte) er.R
 
 	// ForEach invokes the passed function with every key/value pair in the
 	// bucket.  This does not include nested buckets or the key/value pairs
@@ -122,7 +123,7 @@ type Bucket interface {
 	// results in undefined behavior.  Additionally, the slices must NOT
 	// be modified by the caller.  These constraints prevent additional data
 	// copies and allows support for memory-mapped database implementations.
-	ForEach(func(k, v []byte) error) error
+	ForEach(func(k, v []byte) er.R) er.R
 
 	// ForEachBucket invokes the passed function with the key of every
 	// nested bucket in the current bucket.  This does not include any
@@ -141,7 +142,7 @@ type Bucket interface {
 	// results in undefined behavior.  This constraint prevents additional
 	// data copies and allows support for memory-mapped database
 	// implementations.
-	ForEachBucket(func(k []byte) error) error
+	ForEachBucket(func(k []byte) er.R) er.R
 
 	// Cursor returns a new cursor, allowing for iteration over the bucket's
 	// key/value pairs and nested buckets in forward or backward order.
@@ -170,7 +171,7 @@ type Bucket interface {
 	// NOTE: The slices passed to this function must NOT be modified by the
 	// caller.  This constraint prevents the requirement for additional data
 	// copies and allows support for memory-mapped database implementations.
-	Put(key, value []byte) error
+	Put(key, value []byte) er.R
 
 	// Get returns the value for the given key.  Returns nil if the key does
 	// not exist in this bucket.  An empty slice is returned for keys that
@@ -192,7 +193,7 @@ type Bucket interface {
 	//   - ErrIncompatibleValue if the key is the same as an existing bucket
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
-	Delete(key []byte) error
+	Delete(key []byte) er.R
 }
 
 // BlockRegion specifies a particular region of a block identified by the
@@ -227,7 +228,7 @@ type Tx interface {
 	//   - ErrTxClosed if the transaction has already been closed
 	//
 	// Other errors are possible depending on the implementation.
-	StoreBlock(block *btcutil.Block) error
+	StoreBlock(block *btcutil.Block) er.R
 
 	// HasBlock returns whether or not a block with the given hash exists
 	// in the database.
@@ -237,7 +238,7 @@ type Tx interface {
 	//   - ErrTxClosed if the transaction has already been closed
 	//
 	// Other errors are possible depending on the implementation.
-	HasBlock(hash *chainhash.Hash) (bool, error)
+	HasBlock(hash *chainhash.Hash) (bool, er.R)
 
 	// HasBlocks returns whether or not the blocks with the provided hashes
 	// exist in the database.
@@ -247,7 +248,7 @@ type Tx interface {
 	//   - ErrTxClosed if the transaction has already been closed
 	//
 	// Other errors are possible depending on the implementation.
-	HasBlocks(hashes []chainhash.Hash) ([]bool, error)
+	HasBlocks(hashes []chainhash.Hash) ([]bool, er.R)
 
 	// FetchBlockHeader returns the raw serialized bytes for the block
 	// header identified by the given hash.  The raw bytes are in the format
@@ -270,7 +271,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlockHeader(hash *chainhash.Hash) ([]byte, error)
+	FetchBlockHeader(hash *chainhash.Hash) ([]byte, er.R)
 
 	// FetchBlockHeaders returns the raw serialized bytes for the block
 	// headers identified by the given hashes.  The raw bytes are in the
@@ -297,7 +298,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, error)
+	FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, er.R)
 
 	// FetchBlock returns the raw serialized bytes for the block identified
 	// by the given hash.  The raw bytes are in the format returned by
@@ -314,7 +315,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlock(hash *chainhash.Hash) ([]byte, error)
+	FetchBlock(hash *chainhash.Hash) ([]byte, er.R)
 
 	// FetchBlocks returns the raw serialized bytes for the blocks
 	// identified by the given hashes.  The raw bytes are in the format
@@ -332,7 +333,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlocks(hashes []chainhash.Hash) ([][]byte, error)
+	FetchBlocks(hashes []chainhash.Hash) ([][]byte, er.R)
 
 	// FetchBlockRegion returns the raw serialized bytes for the given
 	// block region.
@@ -359,7 +360,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlockRegion(region *BlockRegion) ([]byte, error)
+	FetchBlockRegion(region *BlockRegion) ([]byte, er.R)
 
 	// FetchBlockRegions returns the raw serialized bytes for the given
 	// block regions.
@@ -387,7 +388,7 @@ type Tx interface {
 	// has ended results in undefined behavior.  This constraint prevents
 	// additional data copies and allows support for memory-mapped database
 	// implementations.
-	FetchBlockRegions(regions []BlockRegion) ([][]byte, error)
+	FetchBlockRegions(regions []BlockRegion) ([][]byte, er.R)
 
 	// ******************************************************************
 	// Methods related to both atomic metadata storage and block storage.
@@ -400,12 +401,12 @@ type Tx interface {
 	// are started after the commit finishes will include all changes made
 	// by this transaction.  Calling this function on a managed transaction
 	// will result in a panic.
-	Commit() error
+	Commit() er.R
 
 	// Rollback undoes all changes that have been made to the metadata or
 	// block storage.  Calling this function on a managed transaction will
 	// result in a panic.
-	Rollback() error
+	Rollback() er.R
 }
 
 // DB provides a generic interface that is used to store bitcoin blocks and
@@ -439,7 +440,7 @@ type DB interface {
 	// it when it is no longer needed.  Failure to do so can result in
 	// unclaimed memory and/or inablity to close the database due to locks
 	// depending on the specific database implementation.
-	Begin(writable bool) (Tx, error)
+	Begin(writable bool) (Tx, er.R)
 
 	// View invokes the passed function in the context of a managed
 	// read-only transaction.  Any errors returned from the user-supplied
@@ -447,7 +448,7 @@ type DB interface {
 	//
 	// Calling Rollback or Commit on the transaction passed to the
 	// user-supplied function will result in a panic.
-	View(fn func(tx Tx) error) error
+	View(fn func(tx Tx) er.R) er.R
 
 	// Update invokes the passed function in the context of a managed
 	// read-write transaction.  Any errors returned from the user-supplied
@@ -457,10 +458,10 @@ type DB interface {
 	//
 	// Calling Rollback or Commit on the transaction passed to the
 	// user-supplied function will result in a panic.
-	Update(fn func(tx Tx) error) error
+	Update(fn func(tx Tx) er.R) er.R
 
 	// Close cleanly shuts down the database and syncs all data.  It will
 	// block until all database transactions have been finalized (rolled
 	// back or committed).
-	Close() error
+	Close() er.R
 }

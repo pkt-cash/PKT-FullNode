@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"strings"
@@ -38,12 +39,12 @@ var mainNetGenesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make 
 // errors in the RandomUint64 function.
 type fakeRandReader struct {
 	n   int
-	err error
+	err er.R
 }
 
 // Read returns the fake reader error and the lesser of the fake reader value
 // and the length of p.
-func (r *fakeRandReader) Read(p []byte) (int, error) {
+func (r *fakeRandReader) Read(p []byte) (int, er.R) {
 	n := r.n
 	if n > len(p) {
 		n = len(p)
@@ -180,8 +181,8 @@ func TestElementWireErrors(t *testing.T) {
 	tests := []struct {
 		in       interface{} // Value to encode
 		max      int         // Max size of fixed buffer to induce errors
-		writeErr error       // Expected write error
-		readErr  error       // Expected read error
+		writeErr er.R        // Expected write error
+		readErr  er.R        // Expected read error
 	}{
 		{int32(1), 0, io.ErrShortWrite, io.EOF},
 		{uint32(256), 0, io.ErrShortWrite, io.EOF},
@@ -319,8 +320,8 @@ func TestVarIntWireErrors(t *testing.T) {
 		buf      []byte // Wire encoding
 		pver     uint32 // Protocol version for wire encoding
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Force errors on discriminant.
 		{0, []byte{0x00}, pver, 0, io.ErrShortWrite, io.EOF},
@@ -510,8 +511,8 @@ func TestVarStringWireErrors(t *testing.T) {
 		buf      []byte // Wire encoding
 		pver     uint32 // Protocol version for wire encoding
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force errors on empty string.
@@ -554,7 +555,7 @@ func TestVarStringOverflowErrors(t *testing.T) {
 	tests := []struct {
 		buf  []byte // Wire encoding
 		pver uint32 // Protocol version for wire encoding
-		err  error  // Expected error
+		err  er.R   // Expected error
 	}{
 		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 			pver, &MessageError{}},
@@ -641,8 +642,8 @@ func TestVarBytesWireErrors(t *testing.T) {
 		buf      []byte // Wire encoding
 		pver     uint32 // Protocol version for wire encoding
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force errors on empty byte array.
@@ -686,7 +687,7 @@ func TestVarBytesOverflowErrors(t *testing.T) {
 	tests := []struct {
 		buf  []byte // Wire encoding
 		pver uint32 // Protocol version for wire encoding
-		err  error  // Expected error
+		err  er.R   // Expected error
 	}{
 		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 			pver, &MessageError{}},

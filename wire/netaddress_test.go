@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"reflect"
@@ -220,8 +221,8 @@ func TestNetAddressWireErrors(t *testing.T) {
 		pver     uint32      // Protocol version for wire encoding
 		ts       bool        // Include timestamp flag
 		max      int         // Max size of fixed buffer to induce errors
-		writeErr error       // Expected write error
-		readErr  error       // Expected read error
+		writeErr er.R        // Expected write error
+		readErr  er.R        // Expected read error
 	}{
 		// Latest protocol version with timestamp and intentional
 		// read/write errors.

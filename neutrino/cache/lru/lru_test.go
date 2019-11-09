@@ -2,6 +2,7 @@ package lru
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"testing"
 
@@ -26,13 +27,13 @@ type sizeable struct {
 }
 
 // Size implements the CacheEntry interface on sizeable struct.
-func (s *sizeable) Size() (uint64, error) {
+func (s *sizeable) Size() (uint64, er.R) {
 	return s.size, nil
 }
 
 // getSizeableValue is a helper method used for converting the cache.Value
 // interface to sizeable struct and extracting the value from it.
-func getSizeableValue(generic cache.Value, _ error) int {
+func getSizeableValue(generic cache.Value, _ er.R) int {
 	return generic.(*sizeable).value
 }
 

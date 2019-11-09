@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -58,7 +59,7 @@ func NewRecoveryManager(recoveryWindow, batchSize uint32,
 // attempt.
 func (rm *RecoveryManager) Resurrect(ns walletdb.ReadBucket,
 	scopedMgrs map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager,
-	credits []wtxmgr.Credit) error {
+	credits []wtxmgr.Credit) er.R {
 
 	// First, for each scope that we are recovering, rederive all of the
 	// addresses up to the last found address known to each branch.

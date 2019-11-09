@@ -7,13 +7,14 @@ package gcs_test
 
 import (
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 )
 
-func genRandFilterElements(numElements uint) ([][]byte, error) {
+func genRandFilterElements(numElements uint) ([][]byte, er.R) {
 	testContents := make([][]byte, numElements)
 	for i := range testContents {
 		randElem := make([]byte, 32)
@@ -28,7 +29,7 @@ func genRandFilterElements(numElements uint) ([][]byte, error) {
 
 var (
 	generatedFilter *gcs.Filter
-	filterErr       error
+	filterErr       er.R
 )
 
 // BenchmarkGCSFilterBuild benchmarks building a filter.
@@ -169,7 +170,7 @@ func BenchmarkGCSFilterZipMatchAny(b *testing.B) {
 
 			var (
 				localMatch bool
-				err        error
+				err        er.R
 			)
 
 			for i := 0; i < b.N; i++ {
@@ -193,7 +194,7 @@ func BenchmarkGCSFilterHashMatchAny(b *testing.B) {
 
 			var (
 				localMatch bool
-				err        error
+				err        er.R
 			)
 
 			for i := 0; i < b.N; i++ {
@@ -217,7 +218,7 @@ func BenchmarkGCSFilterMatchAny(b *testing.B) {
 
 			var (
 				localMatch bool
-				err        error
+				err        er.R
 			)
 
 			for i := 0; i < b.N; i++ {

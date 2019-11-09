@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -209,8 +210,8 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Force error in version.
 		{
@@ -349,7 +350,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 		buf  []byte          // Wire encoding
 		pver uint32          // Protocol version for wire encoding
 		enc  MessageEncoding // Message encoding format
-		err  error           // Expected error
+		err  er.R            // Expected error
 	}{
 		// Block that claims to have more than max allowed hashes.
 		{exceedMaxHashes, pver, BaseEncoding, &MessageError{}},

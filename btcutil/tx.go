@@ -6,6 +6,7 @@ package btcutil
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -101,14 +102,14 @@ func NewTx(msgTx *wire.MsgTx) *Tx {
 
 // NewTxFromBytes returns a new instance of a bitcoin transaction given the
 // serialized bytes.  See Tx.
-func NewTxFromBytes(serializedTx []byte) (*Tx, error) {
+func NewTxFromBytes(serializedTx []byte) (*Tx, er.R) {
 	br := bytes.NewReader(serializedTx)
 	return NewTxFromReader(br)
 }
 
 // NewTxFromReader returns a new instance of a bitcoin transaction given a
 // Reader to deserialize the transaction.  See Tx.
-func NewTxFromReader(r io.Reader) (*Tx, error) {
+func NewTxFromReader(r io.Reader) (*Tx, er.R) {
 	// Deserialize the bytes into a MsgTx.
 	var msgTx wire.MsgTx
 	err := msgTx.Deserialize(r)

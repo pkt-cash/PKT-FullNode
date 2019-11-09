@@ -5,6 +5,7 @@
 package btcutil_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"testing"
 

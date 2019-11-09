@@ -7,6 +7,7 @@ package base58
 import (
 	"crypto/sha256"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ErrChecksum indicates that the checksum of a check-encoded string does not verify against
@@ -35,7 +36,7 @@ func CheckEncode(input []byte, version byte) string {
 }
 
 // CheckDecode decodes a string that was encoded with CheckEncode and verifies the checksum.
-func CheckDecode(input string) (result []byte, version byte, err error) {
+func CheckDecode(input string) (result []byte, version byte, err er.R) {
 	decoded := Decode(input)
 	if len(decoded) < 5 {
 		return nil, 0, ErrInvalidFormat

@@ -6,6 +6,7 @@ package btcjson_test
 
 import (
 	"encoding/json"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcjson"

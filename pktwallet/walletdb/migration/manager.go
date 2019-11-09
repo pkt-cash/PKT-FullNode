@@ -2,6 +2,7 @@ package migration
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -24,7 +25,7 @@ type Version struct {
 	// Migration represents a migration function that modifies the database
 	// state. Care must be taken so that consequent migrations build off of
 	// the previous one in order to ensure the consistency of the database.
-	Migration func(walletdb.ReadWriteBucket) error
+	Migration func(walletdb.ReadWriteBucket) er.R
 }
 
 // Manager is an interface that exposes the necessary methods needed in order to
@@ -39,10 +40,10 @@ type Manager interface {
 	Namespace() walletdb.ReadWriteBucket
 
 	// CurrentVersion returns the current version of the service's database.
-	CurrentVersion(walletdb.ReadBucket) (uint32, error)
+	CurrentVersion(walletdb.ReadBucket) (uint32, er.R)
 
 	// SetVersion sets the version of the service's database.
-	SetVersion(walletdb.ReadWriteBucket, uint32) error
+	SetVersion(walletdb.ReadWriteBucket, uint32) er.R
 
 	// Versions returns all of the available database versions of the
 	// service.
@@ -91,7 +92,7 @@ func VersionsToApply(currentVersion uint32, versions []Version) []Version {
 //
 // NOTE: In order to guarantee fault-tolerance, each service upgrade should
 // happen within the same database transaction.
-func Upgrade(mgrs ...Manager) error {
+func Upgrade(mgrs ...Manager) er.R {
 	for _, mgr := range mgrs {
 		if err := upgrade(mgr); err != nil {
 			return err
@@ -105,7 +106,7 @@ func Upgrade(mgrs ...Manager) error {
 // the Manager interface. This function will determine whether any new versions
 // need to be applied based on the service's current version and latest
 // available one.
-func upgrade(mgr Manager) error {
+func upgrade(mgr Manager) er.R {
 	// We'll start by fetching the service's current and latest version.
 	ns := mgr.Namespace()
 	currentVersion, err := mgr.CurrentVersion(ns)

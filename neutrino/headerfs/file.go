@@ -3,6 +3,7 @@ package headerfs
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -12,11 +13,11 @@ import (
 // ErrHeaderNotFound is returned when a target header on disk (flat file) can't
 // be found.
 type ErrHeaderNotFound struct {
-	error
+	er.R
 }
 
 // appendRaw appends a new raw header to the end of the flat file.
-func (h *headerStore) appendRaw(header []byte) error {
+func (h *headerStore) appendRaw(header []byte) er.R {
 	if _, err := h.file.Write(header); err != nil {
 		return err
 	}
@@ -27,7 +28,7 @@ func (h *headerStore) appendRaw(header []byte) error {
 // readRaw reads a raw header from disk from a particular seek distance. The
 // amount of bytes read past the seek distance is determined by the specified
 // header type.
-func (h *headerStore) readRaw(seekDist uint64) ([]byte, error) {
+func (h *headerStore) readRaw(seekDist uint64) ([]byte, er.R) {
 	var headerSize uint32
 
 	// Based on the defined header type, we'll determine the number of
@@ -64,7 +65,7 @@ func (h *headerStore) readRaw(seekDist uint64) ([]byte, error) {
 // NOTE: The end height is _inclusive_ so we'll fetch all headers from the
 // startHeight up to the end height, including the final header.
 func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
-	endHeight uint32) ([]wire.BlockHeader, error) {
+	endHeight uint32) ([]wire.BlockHeader, er.R) {
 
 	// Based on the defined header type, we'll determine the number of
 	// bytes that we need to read from the file.
@@ -93,7 +94,7 @@ func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
 
 // readHeader reads a full block header from the flat-file. The header read is
 // determined by the hight value.
-func (h *blockHeaderStore) readHeader(height uint32) (wire.BlockHeader, error) {
+func (h *blockHeaderStore) readHeader(height uint32) (wire.BlockHeader, er.R) {
 	var header wire.BlockHeader
 
 	// Each header is 80 bytes, so using this information, we'll seek a
@@ -118,7 +119,7 @@ func (h *blockHeaderStore) readHeader(height uint32) (wire.BlockHeader, error) {
 
 // readHeader reads a single filter header at the specified height from the
 // flat files on disk.
-func (f *FilterHeaderStore) readHeader(height uint32) (*chainhash.Hash, error) {
+func (f *FilterHeaderStore) readHeader(height uint32) (*chainhash.Hash, er.R) {
 	seekDistance := uint64(height) * 32
 
 	rawHeader, err := f.readRaw(seekDistance)
@@ -137,7 +138,7 @@ func (f *FilterHeaderStore) readHeader(height uint32) (*chainhash.Hash, error) {
 // NOTE: The end height is _inclusive_ so we'll fetch all headers from the
 // startHeight up to the end height, including the final header.
 func (f *FilterHeaderStore) readHeaderRange(startHeight uint32,
-	endHeight uint32) ([]chainhash.Hash, error) {
+	endHeight uint32) ([]chainhash.Hash, er.R) {
 
 	// Based on the defined header type, we'll determine the number of
 	// bytes that we need to read from the file.
@@ -167,7 +168,7 @@ func (f *FilterHeaderStore) readHeaderRange(startHeight uint32,
 // readHeadersFromFile reads a chunk of headers, each of size headerSize, from
 // the given file, from startHeight to endHeight.
 func readHeadersFromFile(f *os.File, headerSize, startHeight,
-	endHeight uint32) (*bytes.Reader, error) {
+	endHeight uint32) (*bytes.Reader, er.R) {
 
 	// Each header is headerSize bytes, so using this information, we'll
 	// seek a distance to cover that height based on the size the headers.

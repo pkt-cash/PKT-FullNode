@@ -16,6 +16,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -206,7 +207,7 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 // index does not derive to a usable child.  The ErrInvalidChild error will be
 // returned if this should occur, and the caller is expected to ignore the
 // invalid child and simply increment to the next index.
-func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
+func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, er.R) {
 	// Prevent derivation of children beyond the max allowed depth.
 	if k.depth == maxUint8 {
 		return nil, ErrDeriveBeyondMaxDepth
@@ -337,7 +338,7 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 // private key, so it is not capable of signing transactions or deriving
 // child extended private keys.  However, it is capable of deriving further
 // child extended public keys.
-func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
+func (k *ExtendedKey) Neuter() (*ExtendedKey, er.R) {
 	// Already an extended public key.
 	if !k.isPrivate {
 		return k, nil
@@ -358,7 +359,7 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 }
 
 // ECPubKey converts the extended key to a btcec public key and returns it.
-func (k *ExtendedKey) ECPubKey() (*btcec.PublicKey, error) {
+func (k *ExtendedKey) ECPubKey() (*btcec.PublicKey, er.R) {
 	return btcec.ParsePubKey(k.pubKeyBytes(), btcec.S256())
 }
 
@@ -366,7 +367,7 @@ func (k *ExtendedKey) ECPubKey() (*btcec.PublicKey, error) {
 // As you might imagine this is only possible if the extended key is a private
 // extended key (as determined by the IsPrivate function).  The ErrNotPrivExtKey
 // error will be returned if this function is called on a public extended key.
-func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, error) {
+func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, er.R) {
 	if !k.isPrivate {
 		return nil, ErrNotPrivExtKey
 	}
@@ -377,7 +378,7 @@ func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, error) {
 
 // Address converts the extended key to a standard bitcoin pay-to-pubkey-hash
 // address for the passed network.
-func (k *ExtendedKey) Address(net *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
+func (k *ExtendedKey) Address(net *chaincfg.Params) (*btcutil.AddressPubKeyHash, er.R) {
 	pkHash := btcutil.Hash160(k.pubKeyBytes())
 	return btcutil.NewAddressPubKeyHash(pkHash, net)
 }
@@ -472,7 +473,7 @@ func (k *ExtendedKey) Zero() {
 // will derive to an unusable secret key.  The ErrUnusable error will be
 // returned if this should occur, so the caller must check for it and generate a
 // new seed accordingly.
-func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
+func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, er.R) {
 	// Per [BIP32], the seed must be in range [MinSeedBytes, MaxSeedBytes].
 	if len(seed) < MinSeedBytes || len(seed) > MaxSeedBytes {
 		return nil, ErrInvalidSeedLen
@@ -503,7 +504,7 @@ func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
 
 // NewKeyFromString returns a new extended key instance from a base58-encoded
 // extended key.
-func NewKeyFromString(key string) (*ExtendedKey, error) {
+func NewKeyFromString(key string) (*ExtendedKey, er.R) {
 	// The base58-decoded extended key must consist of a serialized payload
 	// plus an additional 4 bytes for the checksum.
 	decoded := base58.Decode(key)
@@ -561,7 +562,7 @@ func NewKeyFromString(key string) (*ExtendedKey, error) {
 // The length is in bytes and it must be between 16 and 64 (128 to 512 bits).
 // The recommended length is 32 (256 bits) as defined by the RecommendedSeedLen
 // constant.
-func GenerateSeed(length uint8) ([]byte, error) {
+func GenerateSeed(length uint8) ([]byte, er.R) {
 	// Per [BIP32], the seed must be in range [MinSeedBytes, MaxSeedBytes].
 	if length < MinSeedBytes || length > MaxSeedBytes {
 		return nil, ErrInvalidSeedLen

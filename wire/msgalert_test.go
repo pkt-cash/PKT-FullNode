@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -199,8 +200,8 @@ func TestMsgAlertWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Force error in payload length.
 		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -393,8 +394,8 @@ func TestAlertErrors(t *testing.T) {
 		buf      []byte // Wire encoding
 		pver     uint32 // Protocol version for wire encoding
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Force error in Version
 		{baseAlert, baseAlertEncoded, pver, 0, io.ErrShortWrite, io.EOF},

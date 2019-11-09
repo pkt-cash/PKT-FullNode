@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -28,7 +29,7 @@ func div16Ceil(x int) int {
 	return l
 }
 
-func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, error) {
+func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, er.R) {
 	if decrypt {
 		msg = msg[:len(msg)-16]
 	}
@@ -58,7 +59,7 @@ func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []
 	return s.Bytes[16:32], s.Bytes[48+a16*16:][:len(msg)], nil
 }
 
-func doGoCrypt(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, error) {
+func doGoCrypt(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, er.R) {
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
 		return nil, nil, errors.New("chacha.New()")

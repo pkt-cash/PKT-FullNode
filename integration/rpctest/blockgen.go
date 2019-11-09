@@ -6,6 +6,7 @@ package rpctest
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"runtime"
@@ -88,7 +89,7 @@ func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
 // standardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block. In particular,
 // it starts with the block height that is required by version 2 blocks.
-func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, error) {
+func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, er.R) {
 	return txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
 		AddInt64(int64(extraNonce)).Script()
 }
@@ -97,7 +98,7 @@ func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 // subsidy based on the passed block height to the provided address.
 func createCoinbaseTx(coinbaseScript []byte, nextBlockHeight int32,
 	addr btcutil.Address, mineTo []wire.TxOut,
-	net *chaincfg.Params) (*btcutil.Tx, error) {
+	net *chaincfg.Params) (*btcutil.Tx, er.R) {
 
 	// Create the script to pay to the provided payment address.
 	pkScript, err := txscript.PayToAddrScript(addr)
@@ -134,7 +135,7 @@ func createCoinbaseTx(coinbaseScript []byte, nextBlockHeight int32,
 // builds off of the genesis block for the specified chain.
 func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	blockVersion int32, blockTime time.Time, miningAddr btcutil.Address,
-	mineTo []wire.TxOut, net *chaincfg.Params) (*btcutil.Block, error) {
+	mineTo []wire.TxOut, net *chaincfg.Params) (*btcutil.Block, er.R) {
 
 	var (
 		prevHash      *chainhash.Hash

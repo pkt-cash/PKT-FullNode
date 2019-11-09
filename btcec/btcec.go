@@ -21,6 +21,7 @@ package btcec
 
 import (
 	"crypto/elliptic"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"sync"
 )

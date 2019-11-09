@@ -7,6 +7,7 @@ package waddrmgr
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -101,11 +102,11 @@ type ManagedPubKeyAddress interface {
 	// PrivKey returns the private key for the address.  It can fail if the
 	// address manager is watching-only or locked, or the address does not
 	// have any keys.
-	PrivKey() (*btcec.PrivateKey, error)
+	PrivKey() (*btcec.PrivateKey, er.R)
 
 	// ExportPrivKey returns the private key associated with the address
 	// serialized as Wallet Import Format (WIF).
-	ExportPrivKey() (*btcutil.WIF, error)
+	ExportPrivKey() (*btcutil.WIF, er.R)
 
 	// DerivationInfo contains the information required to derive the key
 	// that backs the address via traditional methods from the HD root. For
@@ -121,7 +122,7 @@ type ManagedScriptAddress interface {
 	ManagedAddress
 
 	// Script returns the script associated with the address.
-	Script() ([]byte, error)
+	Script() ([]byte, er.R)
 }
 
 // managedAddress represents a public key address.  It also may or may not have
@@ -149,7 +150,7 @@ var _ ManagedPubKeyAddress = (*managedAddress)(nil)
 // The returned clear text private key will always be a copy that may be safely
 // used by the caller without worrying about it being zeroed during an address
 // lock.
-func (a *managedAddress) unlock(key EncryptorDecryptor) ([]byte, error) {
+func (a *managedAddress) unlock(key EncryptorDecryptor) ([]byte, er.R) {
 	// Protect concurrent access to clear text private key.
 	a.privKeyMutex.Lock()
 	defer a.privKeyMutex.Unlock()
@@ -281,7 +282,7 @@ func (a *managedAddress) ExportPubKey() string {
 // manager is watching-only or locked, or the address does not have any keys.
 //
 // This is part of the ManagedPubKeyAddress interface implementation.
-func (a *managedAddress) PrivKey() (*btcec.PrivateKey, error) {
+func (a *managedAddress) PrivKey() (*btcec.PrivateKey, er.R) {
 	// No private keys are available for a watching-only address manager.
 	if a.manager.rootManager.WatchOnly() {
 		return nil, managerError(ErrWatchingOnly, errWatchingOnly, nil)
@@ -312,7 +313,7 @@ func (a *managedAddress) PrivKey() (*btcec.PrivateKey, error) {
 // Import Format (WIF).
 //
 // This is part of the ManagedPubKeyAddress interface implementation.
-func (a *managedAddress) ExportPrivKey() (*btcutil.WIF, error) {
+func (a *managedAddress) ExportPrivKey() (*btcutil.WIF, er.R) {
 	pk, err := a.PrivKey()
 	if err != nil {
 		return nil, err
@@ -347,7 +348,7 @@ func (a *managedAddress) DerivationInfo() (KeyScope, DerivationPath, bool) {
 // compressed.
 func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 	derivationPath DerivationPath, pubKey *btcec.PublicKey, compressed bool,
-	addrType AddressType) (*managedAddress, error) {
+	addrType AddressType) (*managedAddress, er.R) {
 
 	// Create a pay-to-pubkey-hash address from the public key.
 	var pubKeyHash []byte
@@ -358,7 +359,7 @@ func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 	}
 
 	var address btcutil.Address
-	var err error
+	var err er.R
 
 	switch addrType {
 
@@ -438,7 +439,7 @@ func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 // address will have access to the private and public keys.
 func newManagedAddress(s *ScopedKeyManager, derivationPath DerivationPath,
 	privKey *btcec.PrivateKey, compressed bool,
-	addrType AddressType) (*managedAddress, error) {
+	addrType AddressType) (*managedAddress, er.R) {
 
 	// Encrypt the private key.
 	//
@@ -472,7 +473,7 @@ func newManagedAddress(s *ScopedKeyManager, derivationPath DerivationPath,
 // will only have access to the public key.
 func newManagedAddressFromExtKey(s *ScopedKeyManager,
 	derivationPath DerivationPath, key *hdkeychain.ExtendedKey,
-	addrType AddressType) (*managedAddress, error) {
+	addrType AddressType) (*managedAddress, er.R) {
 
 	// Create a new managed address based on the public or private key
 	// depending on whether the generated key is private.
@@ -529,7 +530,7 @@ var _ ManagedScriptAddress = (*scriptAddress)(nil)
 // invalid or the encrypted script is not available.  The returned clear text
 // script will always be a copy that may be safely used by the caller without
 // worrying about it being zeroed during an address lock.
-func (a *scriptAddress) unlock(key EncryptorDecryptor) ([]byte, error) {
+func (a *scriptAddress) unlock(key EncryptorDecryptor) ([]byte, er.R) {
 	// Protect concurrent access to clear text script.
 	a.scriptMutex.Lock()
 	defer a.scriptMutex.Unlock()
@@ -629,7 +630,7 @@ func (a *scriptAddress) Used(ns walletdb.ReadBucket) bool {
 // Script returns the script associated with the address.
 //
 // This implements the ScriptAddress interface.
-func (a *scriptAddress) Script() ([]byte, error) {
+func (a *scriptAddress) Script() ([]byte, er.R) {
 	// No script is available for a watching-only address manager.
 	if a.manager.rootManager.WatchOnly() {
 		return nil, managerError(ErrWatchingOnly, errWatchingOnly, nil)
@@ -651,7 +652,7 @@ func (a *scriptAddress) Script() ([]byte, error) {
 
 // newScriptAddress initializes and returns a new pay-to-script-hash address.
 func newScriptAddress(m *ScopedKeyManager, account uint32, scriptHash,
-	scriptEncrypted []byte) (*scriptAddress, error) {
+	scriptEncrypted []byte) (*scriptAddress, er.R) {
 
 	address, err := btcutil.NewAddressScriptHashFromHash(
 		scriptHash, m.rootManager.chainParams,
@@ -670,7 +671,7 @@ func newScriptAddress(m *ScopedKeyManager, account uint32, scriptHash,
 }
 
 func newWitnessScriptAddress(m *ScopedKeyManager, account uint32,
-	scriptHash256, scriptEncrypted []byte) (*scriptAddress, error) {
+	scriptHash256, scriptEncrypted []byte) (*scriptAddress, er.R) {
 
 	address, err := btcutil.NewAddressWitnessScriptHash(scriptHash256, m.rootManager.chainParams)
 	if err != nil {

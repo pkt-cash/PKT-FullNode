@@ -7,6 +7,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // RPCErrorCode represents an error code to be used as a part of an RPCError
@@ -23,7 +24,7 @@ type RPCError struct {
 }
 
 // Guarantee RPCError satisifies the builtin error interface.
-var _, _ error = RPCError{}, (*RPCError)(nil)
+var _, _ er.R = RPCError{}, (*RPCError)(nil)
 
 // Error returns a string describing the RPC error.  This satisifies the
 // builtin error interface.
@@ -81,7 +82,7 @@ type Request struct {
 // Typically callers will instead want to create a registered concrete command
 // type with the NewCmd or New<Foo>Cmd functions and call the MarshalCmd
 // function with that command to generate the marshalled JSON-RPC request.
-func NewRequest(id interface{}, method string, params []interface{}) (*Request, error) {
+func NewRequest(id interface{}, method string, params []interface{}) (*Request, er.R) {
 	if !IsValidIDType(id) {
 		str := fmt.Sprintf("the id of type '%T' is invalid", id)
 		return nil, makeError(ErrInvalidType, str)
@@ -121,7 +122,7 @@ type Response struct {
 //
 // Typically callers will instead want to create the fully marshalled JSON-RPC
 // response to send over the wire with the MarshalResponse function.
-func NewResponse(id interface{}, marshalledResult []byte, rpcErr *RPCError) (*Response, error) {
+func NewResponse(id interface{}, marshalledResult []byte, rpcErr *RPCError) (*Response, er.R) {
 	if !IsValidIDType(id) {
 		str := fmt.Sprintf("the id of type '%T' is invalid", id)
 		return nil, makeError(ErrInvalidType, str)
@@ -137,7 +138,7 @@ func NewResponse(id interface{}, marshalledResult []byte, rpcErr *RPCError) (*Re
 
 // MarshalResponse marshals the passed id, result, and RPCError to a JSON-RPC
 // response byte slice that is suitable for transmission to a JSON-RPC client.
-func MarshalResponse(id interface{}, result interface{}, rpcErr *RPCError) ([]byte, error) {
+func MarshalResponse(id interface{}, result interface{}, rpcErr *RPCError) ([]byte, er.R) {
 	marshalledResult, err := json.Marshal(result)
 	if err != nil {
 		return nil, err

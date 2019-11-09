@@ -6,6 +6,7 @@ package neutrino
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"strconv"
 	"sync"
@@ -180,7 +181,7 @@ func newServerPeer(s *ChainService, isPersistent bool) *ServerPeer {
 
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
-func (sp *ServerPeer) newestBlock() (*chainhash.Hash, int32, error) {
+func (sp *ServerPeer) newestBlock() (*chainhash.Hash, int32, er.R) {
 	bestHeader, bestHeight, err := sp.server.BlockHeaders.ChainTip()
 	if err != nil {
 		return nil, 0, err
@@ -245,7 +246,7 @@ func (sp *ServerPeer) addBanScore(persistent, transient uint32, reason string) {
 }
 
 // pushSendHeadersMsg sends a sendheaders message to the connected peer.
-func (sp *ServerPeer) pushSendHeadersMsg() error {
+func (sp *ServerPeer) pushSendHeadersMsg() er.R {
 	if sp.VersionKnown() {
 		if sp.ProtocolVersion() > wire.SendHeadersVersion {
 			sp.QueueMessage(wire.NewMsgSendHeaders(), nil)
@@ -462,7 +463,7 @@ func (sp *ServerPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 // OnRead is invoked when a peer receives a message and it is used to update
 // the bytes received by the server.
 func (sp *ServerPeer) OnRead(_ *peer.Peer, bytesRead int, msg wire.Message,
-	err error) {
+	err er.R) {
 
 	sp.server.AddBytesReceived(uint64(bytesRead))
 
@@ -501,7 +502,7 @@ func (sp *ServerPeer) unsubscribeRecvMsgs(subscription spMsgSubscription) {
 
 // OnWrite is invoked when a peer sends a message and it is used to update
 // the bytes sent by the server.
-func (sp *ServerPeer) OnWrite(_ *peer.Peer, bytesWritten int, msg wire.Message, err error) {
+func (sp *ServerPeer) OnWrite(_ *peer.Peer, bytesWritten int, msg wire.Message, err er.R) {
 	sp.server.AddBytesSent(uint64(bytesWritten))
 }
 
@@ -533,13 +534,13 @@ type Config struct {
 	// establish outbound TCP connections. If specified, then the
 	// connection manager will use this in place of net.Dial for all
 	// outbound connection attempts.
-	Dialer func(addr net.Addr) (net.Conn, error)
+	Dialer func(addr net.Addr) (net.Conn, er.R)
 
 	// NameResolver is an optional function closure that will be used to
 	// lookup the IP of any host. If specified, then the address manager,
 	// along with regular outbound connection attempts will use this
 	// instead.
-	NameResolver func(host string) ([]net.IP, error)
+	NameResolver func(host string) ([]net.IP, er.R)
 
 	// FilterCacheSize indicates the size (in bytes) of filters the cache will
 	// hold in memory at most.
@@ -607,27 +608,27 @@ type ChainService struct {
 	userAgentName    string
 	userAgentVersion string
 
-	nameResolver func(string) ([]net.IP, error)
-	dialer       func(net.Addr) (net.Conn, error)
+	nameResolver func(string) ([]net.IP, er.R)
+	dialer       func(net.Addr) (net.Conn, er.R)
 }
 
 // NewChainService returns a new chain service configured to connect to the
 // bitcoin network type specified by chainParams.  Use start to begin syncing
 // with peers.
-func NewChainService(cfg Config) (*ChainService, error) {
+func NewChainService(cfg Config) (*ChainService, er.R) {
 	// First, we'll sort out the methods that we'll use to established
 	// outbound TCP connections, as well as perform any DNS queries.
 	//
 	// If the dialler was specified, then we'll use that in place of the
 	// default net.Dial function.
 	var (
-		nameResolver func(string) ([]net.IP, error)
-		dialer       func(net.Addr) (net.Conn, error)
+		nameResolver func(string) ([]net.IP, er.R)
+		dialer       func(net.Addr) (net.Conn, er.R)
 	)
 	if cfg.Dialer != nil {
 		dialer = cfg.Dialer
 	} else {
-		dialer = func(addr net.Addr) (net.Conn, error) {
+		dialer = func(addr net.Addr) (net.Conn, er.R) {
 			return net.Dial(addr.Network(), addr.String())
 		}
 	}
@@ -677,7 +678,7 @@ func NewChainService(cfg Config) (*ChainService, error) {
 		queryChainServiceBatch(&s, msgs, f, q, qo...)
 	}
 
-	var err error
+	var err er.R
 
 	s.FilterDB, err = filterdb.New(cfg.Database, cfg.ChainParams)
 	if err != nil {
@@ -722,9 +723,9 @@ func NewChainService(cfg Config) (*ChainService, error) {
 	// connect-only mode since it is only intended to connect to specified
 	// peers and actively avoid advertising and connecting to discovered
 	// peers in order to prevent it from becoming a public test network.
-	var newAddressFunc func() (net.Addr, error)
+	var newAddressFunc func() (net.Addr, er.R)
 	if s.chainParams.Net != chaincfg.SimNetParams.Net {
-		newAddressFunc = func() (net.Addr, error) {
+		newAddressFunc = func() (net.Addr, er.R) {
 
 			// Gather our set of currently connected peers to avoid
 			// connecting to them again.
@@ -831,7 +832,7 @@ func NewChainService(cfg Config) (*ChainService, error) {
 		GetBlockHash: s.GetBlockHash,
 		GetBlock:     s.GetBlock,
 		BlockFilterMatches: func(ro *rescanOptions,
-			blockHash *chainhash.Hash) (bool, error) {
+			blockHash *chainhash.Hash) (bool, er.R) {
 
 			return blockFilterMatches(
 				&RescanChainSource{&s}, ro, blockHash,
@@ -840,10 +841,10 @@ func NewChainService(cfg Config) (*ChainService, error) {
 	})
 
 	s.broadcaster = pushtx.NewBroadcaster(&pushtx.Config{
-		Broadcast: func(tx *wire.MsgTx) error {
+		Broadcast: func(tx *wire.MsgTx) er.R {
 			return s.sendTransaction(tx)
 		},
-		SubscribeBlocks: func() (*blockntfns.Subscription, error) {
+		SubscribeBlocks: func() (*blockntfns.Subscription, er.R) {
 			return s.blockSubscriptionMgr.NewSubscription(0)
 		},
 		RebroadcastInterval: pushtx.DefaultRebroadcastInterval,
@@ -859,7 +860,7 @@ func NewChainService(cfg Config) (*ChainService, error) {
 
 // BestBlock retrieves the most recent block's height and hash where we
 // have both the header and filter header ready.
-func (s *ChainService) BestBlock() (*waddrmgr.BlockStamp, error) {
+func (s *ChainService) BestBlock() (*waddrmgr.BlockStamp, er.R) {
 	bestHeader, bestHeight, err := s.BlockHeaders.ChainTip()
 	if err != nil {
 		return nil, err
@@ -889,7 +890,7 @@ func (s *ChainService) BestBlock() (*waddrmgr.BlockStamp, error) {
 }
 
 // GetBlockHash returns the block hash at the given height.
-func (s *ChainService) GetBlockHash(height int64) (*chainhash.Hash, error) {
+func (s *ChainService) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 	header, err := s.BlockHeaders.FetchHeaderByHeight(uint32(height))
 	if err != nil {
 		return nil, err
@@ -901,14 +902,14 @@ func (s *ChainService) GetBlockHash(height int64) (*chainhash.Hash, error) {
 // GetBlockHeader returns the block header for the given block hash, or an
 // error if the hash doesn't exist or is unknown.
 func (s *ChainService) GetBlockHeader(
-	blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+	blockHash *chainhash.Hash) (*wire.BlockHeader, er.R) {
 	header, _, err := s.BlockHeaders.FetchHeader(blockHash)
 	return header, err
 }
 
 // GetBlockHeight gets the height of a block by its hash. An error is returned
 // if the given block hash is unknown.
-func (s *ChainService) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
+func (s *ChainService) GetBlockHeight(hash *chainhash.Hash) (int32, er.R) {
 	_, height, err := s.BlockHeaders.FetchHeader(hash)
 	if err != nil {
 		return 0, err
@@ -917,7 +918,7 @@ func (s *ChainService) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 }
 
 // BanPeer bans a peer due to a specific reason for a duration of BanDuration.
-func (s *ChainService) BanPeer(addr string, reason banman.Reason) error {
+func (s *ChainService) BanPeer(addr string, reason banman.Reason) er.R {
 	log.Warnf("Banning peer %v: duration=%v, reason=%v", addr, BanDuration,
 		reason)
 
@@ -983,7 +984,7 @@ func (s *ChainService) NetTotals() (uint64, uint64) {
 
 // rollBackToHeight rolls back all blocks until it hits the specified height.
 // It sends notifications along the way.
-func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, error) {
+func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, er.R) {
 	header, headerHeight, err := s.BlockHeaders.ChainTip()
 	if err != nil {
 		return nil, err
@@ -1126,7 +1127,7 @@ cleanup:
 // and returns a net.Addr which maps to the original address with any host
 // names resolved to IP addresses and a default port added, if not specified,
 // from the ChainService's network parameters.
-func (s *ChainService) addrStringToNetAddr(addr string) (net.Addr, error) {
+func (s *ChainService) addrStringToNetAddr(addr string) (net.Addr, er.R) {
 	host, strPort, err := net.SplitHostPort(addr)
 	if err != nil {
 		switch err.(type) {
@@ -1310,7 +1311,7 @@ func disconnectPeer(peerList map[int32]*ServerPeer,
 // returned if the transaction already exists within the mempool. Any
 // transaction broadcast through this method will be rebroadcast upon every
 // change of the tip of the chain.
-func (s *ChainService) SendTransaction(tx *wire.MsgTx) error {
+func (s *ChainService) SendTransaction(tx *wire.MsgTx) er.R {
 	// TODO(roasbeef): pipe through querying interface
 	return s.broadcaster.Broadcast(tx)
 }
@@ -1422,7 +1423,7 @@ func (s *ChainService) ChainParams() chaincfg.Params {
 }
 
 // Start begins connecting to peers and syncing the blockchain.
-func (s *ChainService) Start() error {
+func (s *ChainService) Start() er.R {
 	// Already started?
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return nil
@@ -1453,7 +1454,7 @@ func (s *ChainService) Start() error {
 
 // Stop gracefully shuts down the server by stopping and disconnecting all
 // peers and the main listener.
-func (s *ChainService) Stop() error {
+func (s *ChainService) Stop() er.R {
 	// Make sure this only happens once.
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		return nil
@@ -1501,20 +1502,20 @@ var _ ChainSource = (*RescanChainSource)(nil)
 
 // GetBlockHeaderByHeight returns the header of the block with the given height.
 func (s *RescanChainSource) GetBlockHeaderByHeight(
-	height uint32) (*wire.BlockHeader, error) {
+	height uint32) (*wire.BlockHeader, er.R) {
 	return s.BlockHeaders.FetchHeaderByHeight(height)
 }
 
 // GetBlockHeader returns the header of the block with the given hash.
 func (s *RescanChainSource) GetBlockHeader(
-	hash *chainhash.Hash) (*wire.BlockHeader, uint32, error) {
+	hash *chainhash.Hash) (*wire.BlockHeader, uint32, er.R) {
 	return s.BlockHeaders.FetchHeader(hash)
 }
 
 // GetFilterHeaderByHeight returns the filter header of the block with the given
 // height.
 func (s *RescanChainSource) GetFilterHeaderByHeight(
-	height uint32) (*chainhash.Hash, error) {
+	height uint32) (*chainhash.Hash, er.R) {
 	return s.RegFilterHeaders.FetchHeaderByHeight(height)
 }
 
@@ -1523,6 +1524,6 @@ func (s *RescanChainSource) GetFilterHeaderByHeight(
 // notifications should be delivered from this height. When providing a height
 // of 0, a backlog will not be delivered.
 func (s *RescanChainSource) Subscribe(
-	bestHeight uint32) (*blockntfns.Subscription, error) {
+	bestHeight uint32) (*blockntfns.Subscription, er.R) {
 	return s.blockSubscriptionMgr.NewSubscription(bestHeight)
 }

@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
@@ -34,7 +35,7 @@ import (
 // the write-end pipe of an initialized log rotator.
 type logWriter struct{}
 
-func (logWriter) Write(p []byte) (n int, err error) {
+func (logWriter) Write(p []byte) (n int, err er.R) {
 	os.Stdout.Write(p)
 	logRotator.Write(p)
 	return len(p), nil

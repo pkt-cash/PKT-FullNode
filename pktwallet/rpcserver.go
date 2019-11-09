@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
@@ -26,7 +27,7 @@ import (
 
 // openRPCKeyPair creates or loads the RPC TLS keypair specified by the
 // application config.  This function respects the cfg.OneTimeTLSKey setting.
-func openRPCKeyPair() (tls.Certificate, error) {
+func openRPCKeyPair() (tls.Certificate, er.R) {
 	// Check for existence of the TLS key file.  If one time TLS keys are
 	// enabled but a key already exists, this function should error since
 	// it's possible that a persistent certificate was copied to a remote
@@ -54,7 +55,7 @@ func openRPCKeyPair() (tls.Certificate, error) {
 // generateRPCKeyPair generates a new RPC TLS keypair and writes the cert and
 // possibly also the key in PEM format to the paths specified by the config.  If
 // successful, the new keypair is returned.
-func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
+func generateRPCKeyPair(writeKey bool) (tls.Certificate, er.R) {
 	log.Infof("Generating TLS certificates...")
 
 	// Create directories for cert and key files if they do not yet exist.
@@ -102,13 +103,13 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
 	return keyPair, nil
 }
 
-func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Server, error) {
+func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Server, er.R) {
 	var (
 		server       *grpc.Server
 		legacyServer *legacyrpc.Server
 		legacyListen = net.Listen
 		keyPair      tls.Certificate
-		err          error
+		err          er.R
 	)
 	if cfg.DisableServerTLS {
 		log.Info("Server TLS is disabled.  Only legacy RPC may be used")
@@ -124,7 +125,7 @@ func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Serv
 			MinVersion:   tls.VersionTLS12,
 			NextProtos:   []string{"h2"}, // HTTP/2 over TLS
 		}
-		legacyListen = func(net string, laddr string) (net.Listener, error) {
+		legacyListen = func(net string, laddr string) (net.Listener, er.R) {
 			return tls.Listen(net, laddr, tlsConfig)
 		}
 
@@ -176,7 +177,7 @@ func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Serv
 	return server, legacyServer, nil
 }
 
-type listenFunc func(net string, laddr string) (net.Listener, error)
+type listenFunc func(net string, laddr string) (net.Listener, er.R)
 
 // makeListeners splits the normalized listen addresses into IPv4 and IPv6
 // addresses and creates new net.Listeners for each with the passed listen func.

@@ -6,6 +6,7 @@ package snacl
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ var (
 )
 
 func TestNewSecretKey(t *testing.T) {
-	var err error
+	var err er.R
 	key, err = NewSecretKey(&password, DefaultN, DefaultR, DefaultP)
 	if err != nil {
 		t.Error(err)
@@ -62,7 +63,7 @@ func TestUnmarshalSecretKeyInvalid(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	var err error
+	var err er.R
 
 	blob, err = key.Encrypt(message)
 	if err != nil {

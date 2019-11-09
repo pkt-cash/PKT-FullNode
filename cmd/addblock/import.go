@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ var zeroHash = chainhash.Hash{}
 type importResults struct {
 	blocksProcessed int64
 	blocksImported  int64
-	err             error
+	err             er.R
 }
 
 // blockImporter houses information about an ongoing import from a block data
@@ -36,7 +37,7 @@ type blockImporter struct {
 	r                 io.ReadSeeker
 	processQueue      chan []byte
 	doneChan          chan bool
-	errChan           chan error
+	errChan           chan er.R
 	quit              chan struct{}
 	wg                sync.WaitGroup
 	blocksProcessed   int64
@@ -49,7 +50,7 @@ type blockImporter struct {
 }
 
 // readBlock reads the next block from the input file.
-func (bi *blockImporter) readBlock() ([]byte, error) {
+func (bi *blockImporter) readBlock() ([]byte, er.R) {
 	// The block file format is:
 	//  <network> <block length> <serialized block>
 	var net uint32
@@ -92,7 +93,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // block through the chain rules to ensure it follows all rules and matches
 // up to the known checkpoint.  Returns whether the block was imported along
 // with any potential errors.
-func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
+func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, er.R) {
 	// Deserialize the block which includes checks for malformed blocks.
 	block, err := btcutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
@@ -299,7 +300,7 @@ func (bi *blockImporter) Import() chan *importResults {
 
 // newBlockImporter returns a new importer for the provided file reader seeker
 // and database.
-func newBlockImporter(db database.DB, r io.ReadSeeker) (*blockImporter, error) {
+func newBlockImporter(db database.DB, r io.ReadSeeker) (*blockImporter, er.R) {
 	// Create the transaction and address indexes if needed.
 	//
 	// CAUTION: the txindex needs to be first in the indexes array because
@@ -345,7 +346,7 @@ func newBlockImporter(db database.DB, r io.ReadSeeker) (*blockImporter, error) {
 		r:            r,
 		processQueue: make(chan []byte, 2),
 		doneChan:     make(chan bool),
-		errChan:      make(chan error),
+		errChan:      make(chan er.R),
 		quit:         make(chan struct{}),
 		chain:        chain,
 		lastLogTime:  time.Now(),

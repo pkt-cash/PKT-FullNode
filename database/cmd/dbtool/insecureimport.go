@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"sync"
@@ -40,7 +41,7 @@ var (
 type importResults struct {
 	blocksProcessed int64
 	blocksImported  int64
-	err             error
+	err             er.R
 }
 
 // blockImporter houses information about an ongoing import from a block data
@@ -50,7 +51,7 @@ type blockImporter struct {
 	r                 io.ReadSeeker
 	processQueue      chan []byte
 	doneChan          chan bool
-	errChan           chan error
+	errChan           chan er.R
 	quit              chan struct{}
 	wg                sync.WaitGroup
 	blocksProcessed   int64
@@ -63,7 +64,7 @@ type blockImporter struct {
 }
 
 // readBlock reads the next block from the input file.
-func (bi *blockImporter) readBlock() ([]byte, error) {
+func (bi *blockImporter) readBlock() ([]byte, er.R) {
 	// The block file format is:
 	//  <network> <block length> <serialized block>
 	var net uint32
@@ -106,7 +107,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // block was imported along with any potential errors.
 //
 // NOTE: This is not a safe import as it does not verify chain rules.
-func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
+func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, er.R) {
 	// Deserialize the block which includes checks for malformed blocks.
 	block, err := btcutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
@@ -119,7 +120,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 
 	// Skip blocks that already exist.
 	var exists bool
-	err = bi.db.View(func(tx database.Tx) error {
+	err = bi.db.View(func(tx database.Tx) er.R {
 		exists, err = tx.HasBlock(block.Hash())
 		return err
 	})
@@ -134,7 +135,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	prevHash := &block.MsgBlock().Header.PrevBlock
 	if !prevHash.IsEqual(&zeroHash) {
 		var exists bool
-		err := bi.db.View(func(tx database.Tx) error {
+		err := bi.db.View(func(tx database.Tx) er.R {
 			exists, err = tx.HasBlock(prevHash)
 			return err
 		})
@@ -149,7 +150,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	}
 
 	// Put the blocks into the database with no checking of chain rules.
-	err = bi.db.Update(func(tx database.Tx) error {
+	err = bi.db.Update(func(tx database.Tx) er.R {
 		return tx.StoreBlock(block)
 	})
 	if err != nil {
@@ -318,14 +319,14 @@ func newBlockImporter(db database.DB, r io.ReadSeeker) *blockImporter {
 		r:            r,
 		processQueue: make(chan []byte, 2),
 		doneChan:     make(chan bool),
-		errChan:      make(chan error),
+		errChan:      make(chan er.R),
 		quit:         make(chan struct{}),
 		lastLogTime:  time.Now(),
 	}
 }
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
-func (cmd *importCmd) Execute(args []string) error {
+func (cmd *importCmd) Execute(args []string) er.R {
 	// Setup the global config options and ensure they are valid.
 	if err := setupGlobalConfig(); err != nil {
 		return err

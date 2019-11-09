@@ -5,6 +5,7 @@
 package txauthor_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -29,7 +30,7 @@ func makeInputSource(unspents []*wire.TxOut) InputSource {
 	currentTotal := btcutil.Amount(0)
 	currentInputs := make([]*wire.TxIn, 0, len(unspents))
 	currentInputValues := make([]btcutil.Amount, 0, len(unspents))
-	f := func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, error) {
+	f := func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, er.R) {
 		for currentTotal < target && len(unspents) != 0 {
 			u := unspents[0]
 			unspents = unspents[1:]
@@ -174,7 +175,7 @@ func TestNewUnsignedTransaction(t *testing.T) {
 		},
 	}
 
-	changeSource := func() ([]byte, error) {
+	changeSource := func() ([]byte, er.R) {
 		// Only length matters for these tests.
 		return make([]byte, txsizes.P2WPKHPkScriptSize), nil
 	}

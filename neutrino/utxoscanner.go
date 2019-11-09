@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"container/heap"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,7 +15,7 @@ import (
 // getUtxoResult is a simple pair type holding a spend report and error.
 type getUtxoResult struct {
 	report *SpendReport
-	err    error
+	err    er.R
 }
 
 // GetUtxoRequest is a request to scan for InputWithScript from the height
@@ -44,7 +45,7 @@ type GetUtxoRequest struct {
 
 // deliver tries to deliver the report or error to any subscribers. If
 // resultChan cannot accept a new update, this method will not block.
-func (r *GetUtxoRequest) deliver(report *SpendReport, err error) {
+func (r *GetUtxoRequest) deliver(report *SpendReport, err er.R) {
 	select {
 	case r.resultChan <- &getUtxoResult{report, err}:
 	default:
@@ -55,7 +56,7 @@ func (r *GetUtxoRequest) deliver(report *SpendReport, err error) {
 }
 
 // Result is callback returning either a spend report or an error.
-func (r *GetUtxoRequest) Result(cancel <-chan struct{}) (*SpendReport, error) {
+func (r *GetUtxoRequest) Result(cancel <-chan struct{}) (*SpendReport, er.R) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -80,17 +81,17 @@ func (r *GetUtxoRequest) Result(cancel <-chan struct{}) (*SpendReport, error) {
 // UtxoScannerConfig exposes configurable methods for interacting with the blockchain.
 type UtxoScannerConfig struct {
 	// BestSnapshot returns the block stamp of the current chain tip.
-	BestSnapshot func() (*waddrmgr.BlockStamp, error)
+	BestSnapshot func() (*waddrmgr.BlockStamp, er.R)
 
 	// GetBlockHash returns the block hash at given height in main chain.
-	GetBlockHash func(height int64) (*chainhash.Hash, error)
+	GetBlockHash func(height int64) (*chainhash.Hash, er.R)
 
 	// BlockFilterMatches checks the cfilter for the block hash for matches
 	// against the rescan options.
-	BlockFilterMatches func(ro *rescanOptions, blockHash *chainhash.Hash) (bool, error)
+	BlockFilterMatches func(ro *rescanOptions, blockHash *chainhash.Hash) (bool, er.R)
 
 	// GetBlock fetches a block from the p2p network.
-	GetBlock func(chainhash.Hash, ...QueryOption) (*btcutil.Block, error)
+	GetBlock func(chainhash.Hash, ...QueryOption) (*btcutil.Block, er.R)
 }
 
 // UtxoScanner batches calls to GetUtxo so that a single scan can search for
@@ -128,7 +129,7 @@ func NewUtxoScanner(cfg *UtxoScannerConfig) *UtxoScanner {
 }
 
 // Start begins running scan batches.
-func (s *UtxoScanner) Start() error {
+func (s *UtxoScanner) Start() er.R {
 	if !atomic.CompareAndSwapUint32(&s.started, 0, 1) {
 		return nil
 	}
@@ -140,7 +141,7 @@ func (s *UtxoScanner) Start() error {
 }
 
 // Stop any in-progress scan.
-func (s *UtxoScanner) Stop() error {
+func (s *UtxoScanner) Stop() er.R {
 	if !atomic.CompareAndSwapUint32(&s.stopped, 0, 1) {
 		return nil
 	}
@@ -169,7 +170,7 @@ batchShutdown:
 
 // Enqueue takes a GetUtxoRequest and adds it to the next applicable batch.
 func (s *UtxoScanner) Enqueue(input *InputWithScript,
-	birthHeight uint32) (*GetUtxoRequest, error) {
+	birthHeight uint32) (*GetUtxoRequest, er.R) {
 
 	log.Debugf("Enqueuing request for %s with birth height %d",
 		input.OutPoint.String(), birthHeight)
@@ -272,7 +273,7 @@ func (s *UtxoScanner) dequeueAtHeight(height uint32) []*GetUtxoRequest {
 // scanFromHeight runs a single batch, pulling in any requests that get added
 // above the batch's last processed height. If there was an error, then return
 // the outstanding requests.
-func (s *UtxoScanner) scanFromHeight(initHeight uint32) error {
+func (s *UtxoScanner) scanFromHeight(initHeight uint32) er.R {
 	// Before beginning the scan, grab the best block stamp we know of,
 	// which will serve as an initial estimate for the end height of the
 	// scan.

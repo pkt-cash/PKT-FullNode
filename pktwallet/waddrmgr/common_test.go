@@ -6,6 +6,7 @@ package waddrmgr
 
 import (
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -208,7 +209,7 @@ var (
 
 // checkManagerError ensures the passed error is a ManagerError with an error
 // code that matches the passed  error code.
-func checkManagerError(t *testing.T, testName string, gotErr error,
+func checkManagerError(t *testing.T, testName string, gotErr er.R,
 	wantErrCode ErrorCode) bool {
 
 	merr, ok := gotErr.(ManagerError)
@@ -268,7 +269,7 @@ func setupManager(t *testing.T) (tearDownFunc func(), db walletdb.DB, mgr *Manag
 		_ = os.RemoveAll(dirName)
 		t.Fatalf("createDbNamespace: unexpected error: %v", err)
 	}
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns, err := tx.CreateTopLevelBucket(waddrmgrNamespaceKey)
 		if err != nil {
 			return err

@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/bits"
 	"strings"
 
@@ -342,7 +343,7 @@ func mkEntries(
 	iDepth uint,
 	parentNum int,
 	annCount uint64,
-) error {
+) er.R {
 	tree.entries = tree.entries[:len(tree.entries)+1]
 	eNum := len(tree.entries) - 1
 	e := &tree.entries[eNum]
@@ -419,7 +420,7 @@ func mkEntries(
 	return nil
 }
 
-func NewTree(annCount uint64, annIdxs *[4]uint64) (*Tree, error) {
+func NewTree(annCount uint64, annIdxs *[4]uint64) (*Tree, er.R) {
 	// sanity check
 	for i := 0; i < 4; i++ {
 		if annIdxs[i] >= annCount {

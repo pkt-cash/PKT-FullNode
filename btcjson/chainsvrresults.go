@@ -348,7 +348,7 @@ func (v *Vin) HasWitness() bool {
 }
 
 // MarshalJSON provides a custom Marshal method for Vin.
-func (v *Vin) MarshalJSON() ([]byte, error) {
+func (v *Vin) MarshalJSON() ([]byte, er.R) {
 	if v.IsCoinBase() {
 		coinbaseStruct := struct {
 			Coinbase string   `json:"coinbase"`
@@ -422,7 +422,7 @@ func (v *VinPrevOut) HasWitness() bool {
 }
 
 // MarshalJSON provides a custom Marshal method for VinPrevOut.
-func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
+func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 	if v.IsCoinBase() {
 		coinbaseStruct := struct {
 			Coinbase string `json:"coinbase"`

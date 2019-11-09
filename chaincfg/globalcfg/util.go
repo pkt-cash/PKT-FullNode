@@ -6,6 +6,7 @@ package globalcfg
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 )
 
@@ -33,7 +34,7 @@ func round(f float64) int64 {
 // For creating a new Amount with an int64 value which denotes a quantity of Satoshi,
 // do a simple type conversion from type int64 to Amount.
 // See GoDoc for example: http://godoc.org/github.com/pkt-cash/btcutil#example-Amount
-func NewAmount(f float64) (int64, error) {
+func NewAmount(f float64) (int64, er.R) {
 	// The amount is only considered invalid if it cannot be represented
 	// as an integer type.  This may happen if f is NaN or +-Infinity.
 	switch {

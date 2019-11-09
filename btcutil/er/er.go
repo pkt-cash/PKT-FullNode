@@ -13,12 +13,12 @@ type err struct {
 }
 
 type R interface {
-	Error() string
+	String() string
 	Wrapped() error
 	Is(error) bool
 }
 
-func (e err) Error() string {
+func (e err) String() string {
 	if e.stack != nil {
 		fmt.Sprintf("%s\n%s", e.e.Error(), string(e.stack))
 	}
@@ -55,9 +55,6 @@ func Errorf(format string, a ...interface{}) R {
 func E(e error) R {
 	if e == nil {
 		return nil
-	}
-	if e, ok := e.(err); ok {
-		return e
 	}
 	return err{
 		e:     e,

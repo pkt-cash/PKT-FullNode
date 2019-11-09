@@ -9,6 +9,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"path/filepath"
@@ -62,14 +63,14 @@ func isSupportedDbType(dbType string) bool {
 // loadBlocks reads files containing bitcoin block data (gzipped but otherwise
 // in the format bitcoind writes) from disk and returns them as an array of
 // btcutil.Block.  This is largely borrowed from the test code in pktdb.
-func loadBlocks(filename string) (blocks []*btcutil.Block, err error) {
+func loadBlocks(filename string) (blocks []*btcutil.Block, err er.R) {
 	return testdata.LoadBlocks(filepath.Join("testdata/", filename))
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis
 // block already inserted.  In addition to the new chain instance, it returns
 // a teardown function the caller should invoke when done testing to clean up.
-func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), error) {
+func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er.R) {
 	if !isSupportedDbType(testDbType) {
 		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
 	}
@@ -139,7 +140,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 }
 
 // loadUtxoView returns a utxo view loaded from a file.
-func loadUtxoView(filename string) (*UtxoViewpoint, error) {
+func loadUtxoView(filename string) (*UtxoViewpoint, er.R) {
 	// The utxostore file format is:
 	// <tx hash><output index><serialized utxo len><serialized utxo>
 	//
@@ -210,7 +211,7 @@ func loadUtxoView(filename string) (*UtxoViewpoint, error) {
 // out using the latest format.  It is only useful for converting utxostore data
 // used in the tests, which has already been done.  However, the code is left
 // available for future reference.
-func convertUtxoStore(r io.Reader, w io.Writer) error {
+func convertUtxoStore(r io.Reader, w io.Writer) er.R {
 	// The old utxostore file format was:
 	// <tx hash><serialized utxo len><serialized utxo>
 	//

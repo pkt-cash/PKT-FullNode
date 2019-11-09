@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 	"strings"
 	"sync"
@@ -791,7 +792,7 @@ type helpCacher struct {
 // rpcMethodHelp returns an RPC help string for the provided method.
 //
 // This function is safe for concurrent access.
-func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
+func (c *helpCacher) rpcMethodHelp(method string) (string, er.R) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -819,7 +820,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
 // rpcUsage returns one-line usage for all support RPC commands.
 //
 // This function is safe for concurrent access.
-func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
+func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, er.R) {
 	c.Lock()
 	defer c.Unlock()
 

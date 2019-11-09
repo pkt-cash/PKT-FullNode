@@ -1,6 +1,7 @@
 package neutrino
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -65,7 +66,7 @@ func (b *batchSpendReporter) NotifyUnspentAndUnfound() {
 // experience a critical rescan error. The error is threaded through to allow
 // the syntax:
 //     return reporter.FailRemaining(err)
-func (b *batchSpendReporter) FailRemaining(err error) error {
+func (b *batchSpendReporter) FailRemaining(err er.R) er.R {
 	for outpoint, requests := range b.requests {
 		b.notifyRequests(&outpoint, requests, nil, err)
 	}
@@ -80,7 +81,7 @@ func (b *batchSpendReporter) notifyRequests(
 	outpoint *wire.OutPoint,
 	requests []*GetUtxoRequest,
 	report *SpendReport,
-	err error) {
+	err er.R) {
 
 	delete(b.requests, *outpoint)
 	delete(b.initialTxns, *outpoint)

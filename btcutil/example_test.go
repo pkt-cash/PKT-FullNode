@@ -2,6 +2,7 @@ package btcutil_test
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 
 	"github.com/pkt-cash/pktd/btcutil"

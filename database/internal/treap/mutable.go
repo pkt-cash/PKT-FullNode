@@ -6,6 +6,7 @@ package treap
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 )
 

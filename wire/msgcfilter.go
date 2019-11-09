@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -36,7 +37,7 @@ type MsgCFilter struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) er.R {
 	// Read filter type
 	err := readElement(r, &msg.FilterType)
 	if err != nil {
@@ -57,7 +58,7 @@ func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) er
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) er.R {
 	size := len(msg.Data)
 	if size > MaxCFilterDataSize {
 		str := fmt.Sprintf("cfilter size too large for message "+
@@ -87,7 +88,7 @@ func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) er
 // the encoded filter is the same in both instances, but there is a distinct
 // difference and separating the two allows the API to be flexible enough to
 // deal with changes.
-func (msg *MsgCFilter) Deserialize(r io.Reader) error {
+func (msg *MsgCFilter) Deserialize(r io.Reader) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// and the stable long-term storage format.  As a result, make use of
 	// BtcDecode.

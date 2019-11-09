@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -214,8 +215,8 @@ func TestBlockWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Force error in version.
 		{&blockOne, blockOneBytes, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -332,8 +333,8 @@ func TestBlockSerializeErrors(t *testing.T) {
 		in       *MsgBlock // Value to encode
 		buf      []byte    // Serialized data
 		max      int       // Max size of fixed buffer to induce errors
-		writeErr error     // Expected write error
-		readErr  error     // Expected read error
+		writeErr er.R      // Expected write error
+		readErr  er.R      // Expected read error
 	}{
 		// Force error in version.
 		{&blockOne, blockOneBytes, 0, io.ErrShortWrite, io.EOF},
@@ -399,7 +400,7 @@ func TestBlockOverflowErrors(t *testing.T) {
 		buf  []byte          // Wire encoding
 		pver uint32          // Protocol version for wire encoding
 		enc  MessageEncoding // Message encoding format
-		err  error           // Expected error
+		err  er.R            // Expected error
 	}{
 		// Block that claims to have ~uint64(0) transactions.
 		{

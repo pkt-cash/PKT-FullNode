@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"reflect"
 	"testing"
@@ -335,7 +336,7 @@ var signatureTests = []signatureTest{
 
 func TestSignatures(t *testing.T) {
 	for _, test := range signatureTests {
-		var err error
+		var err er.R
 		if test.der {
 			_, err = ParseDERSignature(test.sig, S256())
 		} else {
@@ -536,7 +537,7 @@ var recoveryTests = []struct {
 	msg string
 	sig string
 	pub string
-	err error
+	err er.R
 }{
 	{
 		// Valid curve point recovered.

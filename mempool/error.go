@@ -6,6 +6,7 @@ package mempool
 
 import (
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -16,7 +17,7 @@ import (
 // underlying error, which will be either a TxRuleError or a
 // blockchain.RuleError.
 type RuleError struct {
-	Err error
+	Err er.R
 }
 
 // Error satisfies the error interface and prints human-readable errors.
@@ -61,7 +62,7 @@ func chainRuleError(chainErr blockchain.RuleError) RuleError {
 // extractRejectCode attempts to return a relevant reject code for a given error
 // by examining the error for known types.  It will return true if a code
 // was successfully extracted.
-func extractRejectCode(err error) (wire.RejectCode, bool) {
+func extractRejectCode(err er.R) (wire.RejectCode, bool) {
 	// Pull the underlying error out of a RuleError.
 	if rerr, ok := err.(RuleError); ok {
 		err = rerr.Err
@@ -109,7 +110,7 @@ func extractRejectCode(err error) (wire.RejectCode, bool) {
 
 // ErrToRejectErr examines the underlying type of the error and returns a reject
 // code and string appropriate to be sent in a wire.MsgReject message.
-func ErrToRejectErr(err error) (wire.RejectCode, string) {
+func ErrToRejectErr(err er.R) (wire.RejectCode, string) {
 	// Return the reject code along with the error text if it can be
 	// extracted from the error.
 	rejectCode, found := extractRejectCode(err)

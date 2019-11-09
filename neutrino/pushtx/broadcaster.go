@@ -3,6 +3,7 @@ package pushtx
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
@@ -29,7 +30,7 @@ const (
 // transaction broadcast requests.
 type broadcastReq struct {
 	tx      *wire.MsgTx
-	errChan chan error
+	errChan chan er.R
 }
 
 // Config contains all of the external dependencies required for the Broadcaster
@@ -38,12 +39,12 @@ type Config struct {
 	// Broadcast broadcasts a transaction to the network. We expect certain
 	// BroadcastError's to be returned to handle special cases, namely
 	// errors with the codes Mempool and Confirmed.
-	Broadcast func(*wire.MsgTx) error
+	Broadcast func(*wire.MsgTx) er.R
 
 	// SubscribeBlocks returns a block subscription that delivers block
 	// notifications in order. This will be used to rebroadcast all
 	// transactions once a new block arrives.
-	SubscribeBlocks func() (*blockntfns.Subscription, error)
+	SubscribeBlocks func() (*blockntfns.Subscription, er.R)
 
 	// RebroadcastInterval is the interval that we'll continually try to
 	// re-broadcast transactions in-between new block arrival.
@@ -80,8 +81,8 @@ func NewBroadcaster(cfg *Config) *Broadcaster {
 
 // Start starts all of the necessary steps for the Broadcaster to begin properly
 // carrying out its duties.
-func (b *Broadcaster) Start() error {
-	var err error
+func (b *Broadcaster) Start() er.R {
+	var err er.R
 	b.start.Do(func() {
 		sub, err := b.cfg.SubscribeBlocks()
 		if err != nil {
@@ -269,8 +270,8 @@ func (b *Broadcaster) rebroadcast(txs map[chainhash.Hash]*wire.MsgTx,
 // given transaction. An error won't be returned if the transaction already
 // exists within the mempool. Any transaction broadcast through this method will
 // be rebroadcast upon every change of the tip of the chain.
-func (b *Broadcaster) Broadcast(tx *wire.MsgTx) error {
-	errChan := make(chan error, 1)
+func (b *Broadcaster) Broadcast(tx *wire.MsgTx) er.R {
+	errChan := make(chan er.R, 1)
 
 	select {
 	case b.broadcastReqs <- &broadcastReq{

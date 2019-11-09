@@ -7,6 +7,7 @@ package txscript
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // asBool gets the boolean value of the byte array.
@@ -71,7 +72,7 @@ func (s *stack) PushBool(val bool) {
 // PopByteArray pops the value off the top of the stack and returns it.
 //
 // Stack transformation: [... x1 x2 x3] -> [... x1 x2]
-func (s *stack) PopByteArray() ([]byte, error) {
+func (s *stack) PopByteArray() ([]byte, er.R) {
 	return s.nipN(0)
 }
 
@@ -80,7 +81,7 @@ func (s *stack) PopByteArray() ([]byte, error) {
 // consensus rules imposed on data interpreted as numbers.
 //
 // Stack transformation: [... x1 x2 x3] -> [... x1 x2]
-func (s *stack) PopInt() (scriptNum, error) {
+func (s *stack) PopInt() (scriptNum, er.R) {
 	so, err := s.PopByteArray()
 	if err != nil {
 		return 0, err
@@ -93,7 +94,7 @@ func (s *stack) PopInt() (scriptNum, error) {
 // returns it.
 //
 // Stack transformation: [... x1 x2 x3] -> [... x1 x2]
-func (s *stack) PopBool() (bool, error) {
+func (s *stack) PopBool() (bool, er.R) {
 	so, err := s.PopByteArray()
 	if err != nil {
 		return false, err
@@ -103,7 +104,7 @@ func (s *stack) PopBool() (bool, error) {
 }
 
 // PeekByteArray returns the Nth item on the stack without removing it.
-func (s *stack) PeekByteArray(idx int32) ([]byte, error) {
+func (s *stack) PeekByteArray(idx int32) ([]byte, er.R) {
 	sz := int32(len(s.stk))
 	if idx < 0 || idx >= sz {
 		str := fmt.Sprintf("index %d is invalid for stack size %d", idx,
@@ -117,7 +118,7 @@ func (s *stack) PeekByteArray(idx int32) ([]byte, error) {
 // PeekInt returns the Nth item on the stack as a script num without removing
 // it.  The act of converting to a script num enforces the consensus rules
 // imposed on data interpreted as numbers.
-func (s *stack) PeekInt(idx int32) (scriptNum, error) {
+func (s *stack) PeekInt(idx int32) (scriptNum, er.R) {
 	so, err := s.PeekByteArray(idx)
 	if err != nil {
 		return 0, err
@@ -127,7 +128,7 @@ func (s *stack) PeekInt(idx int32) (scriptNum, error) {
 }
 
 // PeekBool returns the Nth item on the stack as a bool without removing it.
-func (s *stack) PeekBool(idx int32) (bool, error) {
+func (s *stack) PeekBool(idx int32) (bool, er.R) {
 	so, err := s.PeekByteArray(idx)
 	if err != nil {
 		return false, err
@@ -143,7 +144,7 @@ func (s *stack) PeekBool(idx int32) (bool, error) {
 // nipN(0): [... x1 x2 x3] -> [... x1 x2]
 // nipN(1): [... x1 x2 x3] -> [... x1 x3]
 // nipN(2): [... x1 x2 x3] -> [... x2 x3]
-func (s *stack) nipN(idx int32) ([]byte, error) {
+func (s *stack) nipN(idx int32) ([]byte, er.R) {
 	sz := int32(len(s.stk))
 	if idx < 0 || idx > sz-1 {
 		str := fmt.Sprintf("index %d is invalid for stack size %d", idx,
@@ -172,7 +173,7 @@ func (s *stack) nipN(idx int32) ([]byte, error) {
 // NipN(0): [... x1 x2 x3] -> [... x1 x2]
 // NipN(1): [... x1 x2 x3] -> [... x1 x3]
 // NipN(2): [... x1 x2 x3] -> [... x2 x3]
-func (s *stack) NipN(idx int32) error {
+func (s *stack) NipN(idx int32) er.R {
 	_, err := s.nipN(idx)
 	return err
 }
@@ -181,7 +182,7 @@ func (s *stack) NipN(idx int32) error {
 // to top item.
 //
 // Stack transformation: [... x1 x2] -> [... x2 x1 x2]
-func (s *stack) Tuck() error {
+func (s *stack) Tuck() er.R {
 	so2, err := s.PopByteArray()
 	if err != nil {
 		return err
@@ -202,7 +203,7 @@ func (s *stack) Tuck() error {
 // Stack transformation:
 // DropN(1): [... x1 x2] -> [... x1]
 // DropN(2): [... x1 x2] -> [...]
-func (s *stack) DropN(n int32) error {
+func (s *stack) DropN(n int32) er.R {
 	if n < 1 {
 		str := fmt.Sprintf("attempt to drop %d items from stack", n)
 		return scriptError(ErrInvalidStackOperation, str)
@@ -222,7 +223,7 @@ func (s *stack) DropN(n int32) error {
 // Stack transformation:
 // DupN(1): [... x1 x2] -> [... x1 x2 x2]
 // DupN(2): [... x1 x2] -> [... x1 x2 x1 x2]
-func (s *stack) DupN(n int32) error {
+func (s *stack) DupN(n int32) er.R {
 	if n < 1 {
 		str := fmt.Sprintf("attempt to dup %d stack items", n)
 		return scriptError(ErrInvalidStackOperation, str)
@@ -245,7 +246,7 @@ func (s *stack) DupN(n int32) error {
 // Stack transformation:
 // RotN(1): [... x1 x2 x3] -> [... x2 x3 x1]
 // RotN(2): [... x1 x2 x3 x4 x5 x6] -> [... x3 x4 x5 x6 x1 x2]
-func (s *stack) RotN(n int32) error {
+func (s *stack) RotN(n int32) er.R {
 	if n < 1 {
 		str := fmt.Sprintf("attempt to rotate %d stack items", n)
 		return scriptError(ErrInvalidStackOperation, str)
@@ -270,7 +271,7 @@ func (s *stack) RotN(n int32) error {
 // Stack transformation:
 // SwapN(1): [... x1 x2] -> [... x2 x1]
 // SwapN(2): [... x1 x2 x3 x4] -> [... x3 x4 x1 x2]
-func (s *stack) SwapN(n int32) error {
+func (s *stack) SwapN(n int32) er.R {
 	if n < 1 {
 		str := fmt.Sprintf("attempt to swap %d stack items", n)
 		return scriptError(ErrInvalidStackOperation, str)
@@ -294,7 +295,7 @@ func (s *stack) SwapN(n int32) error {
 // Stack transformation:
 // OverN(1): [... x1 x2 x3] -> [... x1 x2 x3 x2]
 // OverN(2): [... x1 x2 x3 x4] -> [... x1 x2 x3 x4 x1 x2]
-func (s *stack) OverN(n int32) error {
+func (s *stack) OverN(n int32) er.R {
 	if n < 1 {
 		str := fmt.Sprintf("attempt to perform over on %d stack items",
 			n)
@@ -320,7 +321,7 @@ func (s *stack) OverN(n int32) error {
 // PickN(0): [x1 x2 x3] -> [x1 x2 x3 x3]
 // PickN(1): [x1 x2 x3] -> [x1 x2 x3 x2]
 // PickN(2): [x1 x2 x3] -> [x1 x2 x3 x1]
-func (s *stack) PickN(n int32) error {
+func (s *stack) PickN(n int32) er.R {
 	so, err := s.PeekByteArray(n)
 	if err != nil {
 		return err
@@ -336,7 +337,7 @@ func (s *stack) PickN(n int32) error {
 // RollN(0): [x1 x2 x3] -> [x1 x2 x3]
 // RollN(1): [x1 x2 x3] -> [x1 x3 x2]
 // RollN(2): [x1 x2 x3] -> [x2 x3 x1]
-func (s *stack) RollN(n int32) error {
+func (s *stack) RollN(n int32) er.R {
 	so, err := s.nipN(n)
 	if err != nil {
 		return err

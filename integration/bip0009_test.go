@@ -9,6 +9,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"runtime"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func assertChainHeight(r *rpctest.Harness, t *testing.T, expectedHeight uint32) 
 
 // thresholdStateToStatus converts the passed threshold state to the equivalent
 // status string returned in the getblockchaininfo RPC.
-func thresholdStateToStatus(state blockchain.ThresholdState) (string, error) {
+func thresholdStateToStatus(state blockchain.ThresholdState) (string, er.R) {
 	switch state {
 	case blockchain.ThresholdDefined:
 		return "defined", nil

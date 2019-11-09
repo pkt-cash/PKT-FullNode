@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 	"time"
 
@@ -24,7 +25,7 @@ var (
 )
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
-func (cmd *blockRegionCmd) Execute(args []string) error {
+func (cmd *blockRegionCmd) Execute(args []string) er.R {
 	// Setup the global config options and ensure they are valid.
 	if err := setupGlobalConfig(); err != nil {
 		return err
@@ -64,7 +65,7 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 	}
 	defer db.Close()
 
-	return db.View(func(tx database.Tx) error {
+	return db.View(func(tx database.Tx) er.R {
 		log.Infof("Fetching block region %s<%d:%d>", blockHash,
 			startOffset, startOffset+regionLen-1)
 		region := database.BlockRegion{

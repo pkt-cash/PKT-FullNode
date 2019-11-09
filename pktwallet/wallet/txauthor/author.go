@@ -8,6 +8,7 @@ package txauthor
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -26,7 +27,7 @@ import (
 // than the target or by returning a more detailed error implementing
 // InputSourceError.
 type InputSource func(target btcutil.Amount) (total btcutil.Amount, inputs []*wire.TxIn,
-	inputValues []btcutil.Amount, scripts [][]byte, err error)
+	inputValues []btcutil.Amount, scripts [][]byte, err er.R)
 
 // InputSourceError describes the failure to provide enough input value from
 // unspent transaction outputs to meet a target amount.  A typed error is used
@@ -34,7 +35,7 @@ type InputSource func(target btcutil.Amount) (total btcutil.Amount, inputs []*wi
 // for the error, for example, due to spendable policies or locked coins rather
 // than the wallet not having enough available input value.
 type InputSourceError interface {
-	error
+	er.R
 	InputSourceError()
 }
 
@@ -57,23 +58,23 @@ type AuthoredTx struct {
 }
 
 // ChangeSource provides P2PKH change output scripts for transaction creation.
-type ChangeSource func() ([]byte, error)
+type ChangeSource func() ([]byte, er.R)
 
-func write32(w io.Writer, x uint32) error {
+func write32(w io.Writer, x uint32) er.R {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], x)
 	_, err := w.Write(b[:])
 	return err
 }
 
-func write64(w io.Writer, x uint64) error {
+func write64(w io.Writer, x uint64) er.R {
 	var b [8]byte
 	binary.LittleEndian.PutUint64(b[:], x)
 	_, err := w.Write(b[:])
 	return err
 }
 
-func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) error {
+func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 	// magic
 	if _, err := w.Write([]byte("\x00EPTF\xff\x00")); err != nil {
 		return err
@@ -175,7 +176,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) error {
 //
 // BUGS: Fee estimation may be off when redeeming non-compressed P2PKH outputs.
 func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
-	fetchInputs InputSource, fetchChange ChangeSource) (*AuthoredTx, error) {
+	fetchInputs InputSource, fetchChange ChangeSource) (*AuthoredTx, er.R) {
 
 	targetAmount := h.SumOutputValues(outputs)
 	estimatedSize := txsizes.EstimateVirtualSize(0, 1, 0, outputs, true)
@@ -287,7 +288,7 @@ type SecretsSource interface {
 // inputs.  Private keys and redeem scripts are looked up using a SecretsSource
 // based on the previous output script.
 func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []btcutil.Amount,
-	secrets SecretsSource) error {
+	secrets SecretsSource) er.R {
 
 	inputs := tx.TxIn
 	hashCache := txscript.NewTxSigHashes(tx)
@@ -342,7 +343,7 @@ func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []bt
 // the input value in the sighash.
 func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
 	inputValue int64, chainParams *chaincfg.Params, secrets SecretsSource,
-	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) error {
+	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) er.R {
 
 	// First obtain the key pair associated with this p2wkh address.
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript,
@@ -396,7 +397,7 @@ func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
 // digest algorithm defined in BIP0143 includes the input value in the sighash.
 func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 	inputValue int64, chainParams *chaincfg.Params, secrets SecretsSource,
-	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) error {
+	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) er.R {
 
 	// First we need to obtain the key pair related to this p2sh output.
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript,
@@ -453,6 +454,6 @@ func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 // AddAllInputScripts modifies an authored transaction by adding inputs scripts
 // for each input of an authored transaction.  Private keys and redeem scripts
 // are looked up using a SecretsSource based on the previous output script.
-func (tx *AuthoredTx) AddAllInputScripts(secrets SecretsSource) error {
+func (tx *AuthoredTx) AddAllInputScripts(secrets SecretsSource) er.R {
 	return AddAllInputScripts(tx.Tx, tx.PrevScripts, tx.PrevInputValues, secrets)
 }

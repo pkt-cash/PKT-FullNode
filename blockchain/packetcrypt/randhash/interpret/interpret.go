@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
@@ -249,7 +250,7 @@ func interpret(ctx *Context, pc int) int {
 	}
 }
 
-func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
+func Interpret(prog []uint32, ccState, memory []byte, cycles int) er.R {
 	if len(memory) < RandHash_MEMORY_SZ*4 {
 		panic("memory size too small")
 	}

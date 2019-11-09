@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func fatalf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func errContext(err error, context string) error {
+func errContext(err er.R, context string) er.R {
 	return fmt.Errorf("%s: %v", context, err)
 }
 
@@ -153,7 +154,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 		totalInputValue btcutil.Amount
 		inputs          = make([]*wire.TxIn, 0, len(outputs))
 		inputValues     = make([]btcutil.Amount, 0, len(outputs))
-		sourceErr       error
+		sourceErr       er.R
 	)
 	for _, output := range outputs {
 		outputAmount, err := btcutil.NewAmount(output.Amount)
@@ -190,7 +191,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 		sourceErr = noInputValue{}
 	}
 
-	return func(btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, error) {
+	return func(btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, er.R) {
 		return totalInputValue, inputs, inputValues, nil, sourceErr
 	}
 }
@@ -199,7 +200,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 // all correlated previous input value.  A non-change address is created by this
 // function.
 func makeDestinationScriptSource(rpcClient *rpcclient.Client, accountName string) txauthor.ChangeSource {
-	return func() ([]byte, error) {
+	return func() ([]byte, er.R) {
 		destinationAddress, err := rpcClient.GetNewAddress(accountName)
 		if err != nil {
 			return nil, err
@@ -215,7 +216,7 @@ func main() {
 	}
 }
 
-func sweep() error {
+func sweep() er.R {
 	rpcPassword, err := promptSecret("Wallet RPC password")
 	if err != nil {
 		return errContext(err, "failed to read RPC password")
@@ -331,7 +332,7 @@ func sweep() error {
 	return nil
 }
 
-func promptSecret(what string) (string, error) {
+func promptSecret(what string) (string, er.R) {
 	fmt.Printf("%s: ", what)
 	fd := int(os.Stdin.Fd())
 	input, err := terminal.ReadPassword(fd)
@@ -346,7 +347,7 @@ func saneOutputValue(amount btcutil.Amount) bool {
 	return amount >= 0 && amount <= btcutil.MaxSatoshi
 }
 
-func parseOutPoint(input *btcjson.ListUnspentResult) (wire.OutPoint, error) {
+func parseOutPoint(input *btcjson.ListUnspentResult) (wire.OutPoint, er.R) {
 	txHash, err := chainhash.NewHashFromStr(input.TxID)
 	if err != nil {
 		return wire.OutPoint{}, err

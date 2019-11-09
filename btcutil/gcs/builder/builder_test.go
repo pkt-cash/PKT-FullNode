@@ -7,6 +7,7 @@ package builder_test
 
 import (
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -20,7 +21,7 @@ import (
 
 var (
 	// No need to allocate an err variable in every test
-	err error
+	err er.R
 
 	// List of values for building a filter
 	contents = [][]byte{

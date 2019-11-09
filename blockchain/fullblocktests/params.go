@@ -6,6 +6,7 @@ package fullblocktests
 
 import (
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"time"
 

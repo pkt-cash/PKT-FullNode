@@ -7,6 +7,7 @@ package txscript
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -35,7 +36,7 @@ func TestUnparsingInvalidOpcodes(t *testing.T) {
 	tests := []struct {
 		name        string
 		pop         *parsedOpcode
-		expectedErr error
+		expectedErr er.R
 	}{
 		{
 			name: "OP_FALSE",
@@ -3944,7 +3945,7 @@ func TestRemoveOpcodes(t *testing.T) {
 		name   string
 		before string
 		remove byte
-		err    error
+		err    er.R
 		after  string
 	}{
 		{
@@ -3992,7 +3993,7 @@ func TestRemoveOpcodes(t *testing.T) {
 	// tstRemoveOpcode is a convenience function to parse the provided
 	// raw script, remove the passed opcode, then unparse the result back
 	// into a raw script.
-	tstRemoveOpcode := func(script []byte, opcode byte) ([]byte, error) {
+	tstRemoveOpcode := func(script []byte, opcode byte) ([]byte, er.R) {
 		pops, err := parseScript(script)
 		if err != nil {
 			return nil, err
@@ -4026,7 +4027,7 @@ func TestRemoveOpcodeByData(t *testing.T) {
 		name   string
 		before []byte
 		remove []byte
-		err    error
+		err    er.R
 		after  []byte
 	}{
 		{
@@ -4143,7 +4144,7 @@ func TestRemoveOpcodeByData(t *testing.T) {
 	// tstRemoveOpcodeByData is a convenience function to parse the provided
 	// raw script, remove the passed data, then unparse the result back
 	// into a raw script.
-	tstRemoveOpcodeByData := func(script []byte, data []byte) ([]byte, error) {
+	tstRemoveOpcodeByData := func(script []byte, data []byte) ([]byte, er.R) {
 		pops, err := parseScript(script)
 		if err != nil {
 			return nil, err

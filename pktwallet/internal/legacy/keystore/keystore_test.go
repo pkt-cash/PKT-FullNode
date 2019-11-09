@@ -7,6 +7,7 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"reflect"
 	"testing"

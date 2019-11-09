@@ -7,6 +7,7 @@ package chainhash
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 
@@ -114,7 +115,7 @@ func TestNewHashFromStr(t *testing.T) {
 	tests := []struct {
 		in   string
 		want Hash
-		err  error
+		err  er.R
 	}{
 		// Genesis hash.
 		{

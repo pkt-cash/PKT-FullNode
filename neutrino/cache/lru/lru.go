@@ -3,6 +3,7 @@ package lru
 import (
 	"container/list"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 
 	"github.com/pkt-cash/pktd/neutrino/cache"
@@ -52,7 +53,7 @@ func NewCache(capacity uint64) *Cache {
 
 // evict will evict as many elements as necessary to make enough space for a new
 // element with size needed to be inserted.
-func (c *Cache) evict(needed uint64) (bool, error) {
+func (c *Cache) evict(needed uint64) (bool, er.R) {
 	if needed > c.capacity {
 		return false, fmt.Errorf("can't evict %v elements in size, "+
 			"since capacity is %v", needed, c.capacity)
@@ -97,7 +98,7 @@ func (c *Cache) evict(needed uint64) (bool, error) {
 // exists, it will replace value and update it to be most recent item in cache.
 // The return value indicates whether items had to be evicted to make room for
 // the new element.
-func (c *Cache) Put(key interface{}, value cache.Value) (bool, error) {
+func (c *Cache) Put(key interface{}, value cache.Value) (bool, er.R) {
 	vs, err := value.Size()
 	if err != nil {
 		return false, fmt.Errorf("couldn't determine size of cache "+
@@ -141,7 +142,7 @@ func (c *Cache) Put(key interface{}, value cache.Value) (bool, error) {
 
 // Get will return value for a given key, making the element the most recently
 // accessed item in the process. Will return nil if the key isn't found.
-func (c *Cache) Get(key interface{}) (cache.Value, error) {
+func (c *Cache) Get(key interface{}) (cache.Value, er.R) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 

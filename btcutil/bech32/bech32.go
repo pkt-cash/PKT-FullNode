@@ -6,6 +6,7 @@ package bech32
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
 )
 
@@ -15,7 +16,7 @@ var gen = []int{0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3}
 
 // Decode decodes a bech32 encoded string, returning the human-readable
 // part and the data part excluding the checksum.
-func Decode(bech string) (string, []byte, error) {
+func Decode(bech string) (string, []byte, er.R) {
 	// The maximum allowed length for a bech32 string is 90. It must also
 	// be at least 8 characters, since it needs a non-empty HRP, a
 	// separator, and a 6 character checksum.
@@ -82,7 +83,7 @@ func Decode(bech string) (string, []byte, error) {
 // Encode encodes a byte slice into a bech32 string with the
 // human-readable part hrb. Note that the bytes must each encode 5 bits
 // (base32).
-func Encode(hrp string, data []byte) (string, error) {
+func Encode(hrp string, data []byte) (string, er.R) {
 	// Calculate the checksum of the data and append it at the end.
 	checksum := bech32Checksum(hrp, data)
 	combined := append(data, checksum...)
@@ -100,7 +101,7 @@ func Encode(hrp string, data []byte) (string, error) {
 
 // toBytes converts each character in the string 'chars' to the value of the
 // index of the correspoding character in 'charset'.
-func toBytes(chars string) ([]byte, error) {
+func toBytes(chars string) ([]byte, er.R) {
 	decoded := make([]byte, 0, len(chars))
 	for i := 0; i < len(chars); i++ {
 		index := strings.IndexByte(charset, chars[i])
@@ -115,7 +116,7 @@ func toBytes(chars string) ([]byte, error) {
 
 // toChars converts the byte slice 'data' to a string where each byte in 'data'
 // encodes the index of a character in 'charset'.
-func toChars(data []byte) (string, error) {
+func toChars(data []byte) (string, er.R) {
 	result := make([]byte, 0, len(data))
 	for _, b := range data {
 		if int(b) >= len(charset) {
@@ -128,7 +129,7 @@ func toChars(data []byte) (string, error) {
 
 // ConvertBits converts a byte slice where each byte is encoding fromBits bits,
 // to a byte slice where each byte is encoding toBits bits.
-func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, error) {
+func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, er.R) {
 	if fromBits < 1 || fromBits > 8 || toBits < 1 || toBits > 8 {
 		return nil, fmt.Errorf("only bit groups between 1 and 8 allowed")
 	}

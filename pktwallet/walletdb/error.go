@@ -6,6 +6,7 @@ package walletdb
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Errors that can occur during driver registration.

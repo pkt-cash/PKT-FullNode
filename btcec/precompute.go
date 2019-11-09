@@ -8,6 +8,7 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"strings"
 )
@@ -20,7 +21,7 @@ import (
 // and be performed much faster than it is with hard-coding the final in-memory
 // data structure.  At the same time, it is quite fast to generate the in-memory
 // data structure at init time with this approach versus computing the table.
-func loadS256BytePoints() error {
+func loadS256BytePoints() er.R {
 	// There will be no byte points to load when generating them.
 	bp := secp256k1BytePoints
 	if len(bp) == 0 {

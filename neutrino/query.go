@@ -4,6 +4,7 @@ package neutrino
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -866,7 +867,7 @@ checkResponses:
 // getFilterFromCache returns a filter from ChainService's FilterCache if it
 // exists, returning nil and error if it doesn't.
 func (s *ChainService) getFilterFromCache(blockHash *chainhash.Hash,
-	filterType filterdb.FilterType) (*gcs.Filter, error) {
+	filterType filterdb.FilterType) (*gcs.Filter, er.R) {
 
 	cacheKey := cache.FilterCacheKey{*blockHash, filterType}
 
@@ -880,7 +881,7 @@ func (s *ChainService) getFilterFromCache(blockHash *chainhash.Hash,
 
 // putFilterToCache inserts a given filter in ChainService's FilterCache.
 func (s *ChainService) putFilterToCache(blockHash *chainhash.Hash,
-	filterType filterdb.FilterType, filter *gcs.Filter) (bool, error) {
+	filterType filterdb.FilterType, filter *gcs.Filter) (bool, er.R) {
 
 	cacheKey := cache.FilterCacheKey{*blockHash, filterType}
 	return s.FilterCache.Put(cacheKey, &cache.CacheableFilter{Filter: filter})
@@ -911,7 +912,7 @@ func (q *cfiltersQuery) queryMsg() wire.Message {
 // CFilter fo the given block hash.
 func (s *ChainService) prepareCFiltersQuery(blockHash chainhash.Hash,
 	filterType wire.FilterType, options ...QueryOption) (
-	*cfiltersQuery, error) {
+	*cfiltersQuery, er.R) {
 
 	_, height, err := s.BlockHeaders.FetchHeader(&blockHash)
 	if err != nil {
@@ -1144,7 +1145,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 // an extended filter will be queried for. Otherwise, we'll fetch the regular
 // filter.
 func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
-	filterType wire.FilterType, options ...QueryOption) (*gcs.Filter, error) {
+	filterType wire.FilterType, options ...QueryOption) (*gcs.Filter, er.R) {
 
 	// The only supported filter atm is the regular filter, so we'll reject
 	// all other filters.
@@ -1259,7 +1260,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 // time, until one answers. If the block is found in the cache, it will be
 // returned immediately.
 func (s *ChainService) GetBlock(blockHash chainhash.Hash,
-	options ...QueryOption) (*btcutil.Block, error) {
+	options ...QueryOption) (*btcutil.Block, er.R) {
 
 	// Fetch the corresponding block header from the database. If this
 	// isn't found, then we don't have the header for this block so we
@@ -1387,7 +1388,7 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 //
 // TODO(wilmer): Move to pushtx package after introducing a query package. This
 // cannot be done at the moment due to circular dependencies.
-func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) error {
+func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) er.R {
 	// Starting with the set of default options, we'll apply any specified
 	// functional options to the query so that we can check what inv type
 	// to use. Broadcast the inv to all peers, responding to any getdata

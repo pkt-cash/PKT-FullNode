@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"io/ioutil"
 	"math"
@@ -176,7 +177,7 @@ func (c *Client) NextID() uint64 {
 // and the request is not added.
 //
 // This function is safe for concurrent access.
-func (c *Client) addRequest(jReq *jsonRequest) error {
+func (c *Client) addRequest(jReq *jsonRequest) er.R {
 	c.requestLock.Lock()
 	defer c.requestLock.Unlock()
 
@@ -291,14 +292,14 @@ type (
 // error object was non-null.
 type response struct {
 	result []byte
-	err    error
+	err    er.R
 }
 
 // result checks whether the unmarshaled response contains a non-nil error,
 // returning an unmarshaled btcjson.RPCError (or an unmarshaling error) if so.
 // If the response is not an error, the raw bytes of the request are
 // returned for further unmashaling into specific result types.
-func (r rawResponse) result() (result []byte, err error) {
+func (r rawResponse) result() (result []byte, err er.R) {
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -376,7 +377,7 @@ func (c *Client) handleMessage(msg []byte) {
 // shouldLogReadError returns whether or not the passed error, which is expected
 // to have come from reading from the websocket connection in wsInHandler,
 // should be logged.
-func (c *Client) shouldLogReadError(err error) bool {
+func (c *Client) shouldLogReadError(err er.R) bool {
 	// No logging when the connetion is being forcibly disconnected.
 	select {
 	case <-c.shutdown:
@@ -487,7 +488,7 @@ func (c *Client) sendMessage(marshalledJSON []byte) {
 // reregisterNtfns creates and sends commands needed to re-establish the current
 // notification state associated with the client.  It should only be called on
 // on reconnect by the resendRequests function.
-func (c *Client) reregisterNtfns() error {
+func (c *Client) reregisterNtfns() er.R {
 	// Nothing to do if the caller is not interested in notifications.
 	if c.ntfnHandlers == nil {
 		return nil
@@ -782,7 +783,7 @@ func (c *Client) sendPostRequest(httpReq *http.Request, jReq *jsonRequest) {
 // newFutureError returns a new future result channel that already has the
 // passed error waitin on the channel with the reply set to nil.  This is useful
 // to easily return errors from the various Async functions.
-func newFutureError(err error) chan *response {
+func newFutureError(err er.R) chan *response {
 	responseChan := make(chan *response, 1)
 	responseChan <- &response{err: err}
 	return responseChan
@@ -792,7 +793,7 @@ func newFutureError(err error) chan *response {
 // reply or any errors.  The examined errors include an error in the
 // futureResult and the error in the reply from the server.  This will block
 // until the result is available on the passed channel.
-func receiveFuture(f chan *response) ([]byte, error) {
+func receiveFuture(f chan *response) ([]byte, er.R) {
 	// Wait for a response on the returned channel.
 	r := <-f
 	return r.result, r.err
@@ -895,7 +896,7 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 // sendCmdAndWait sends the passed command to the associated server, waits
 // for the reply, and returns the result from it.  It will return the error
 // field in the reply if there is one.
-func (c *Client) sendCmdAndWait(cmd interface{}) (interface{}, error) {
+func (c *Client) sendCmdAndWait(cmd interface{}) (interface{}, er.R) {
 	// Marshal the command to JSON-RPC, send it to the connected server, and
 	// wait for a response on the returned channel.
 	return receiveFuture(c.sendCmd(cmd))
@@ -1115,9 +1116,9 @@ type ConnConfig struct {
 
 // newHTTPClient returns a new http client that is configured according to the
 // proxy and TLS settings in the associated connection configuration.
-func newHTTPClient(config *ConnConfig) (*http.Client, error) {
+func newHTTPClient(config *ConnConfig) (*http.Client, er.R) {
 	// Set proxy function if there is a proxy configured.
-	var proxyFunc func(*http.Request) (*url.URL, error)
+	var proxyFunc func(*http.Request) (*url.URL, er.R)
 	if config.Proxy != "" {
 		proxyURL, err := url.Parse(config.Proxy)
 		if err != nil {
@@ -1150,7 +1151,7 @@ func newHTTPClient(config *ConnConfig) (*http.Client, error) {
 
 // dial opens a websocket connection using the passed connection configuration
 // details.
-func dial(config *ConnConfig) (*websocket.Conn, error) {
+func dial(config *ConnConfig) (*websocket.Conn, er.R) {
 	// Setup TLS if not disabled.
 	var tlsConfig *tls.Config
 	var scheme = "ws"
@@ -1219,7 +1220,7 @@ func dial(config *ConnConfig) (*websocket.Conn, error) {
 // details.  The notification handlers parameter may be nil if you are not
 // interested in receiving notifications and will be ignored if the
 // configuration is set to run in HTTP POST mode.
-func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error) {
+func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, er.R) {
 	// Either open a websocket connection or create an HTTP client depending
 	// on the HTTP POST mode.  Also, set the notification handlers to nil
 	// when running in HTTP POST mode.
@@ -1231,14 +1232,14 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 		ntfnHandlers = nil
 		start = true
 
-		var err error
+		var err er.R
 		httpClient, err = newHTTPClient(config)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		if !config.DisableConnectOnNew {
-			var err error
+			var err er.R
 			wsConn, err = dial(config)
 			if err != nil {
 				return nil, err
@@ -1287,7 +1288,7 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 // This method will error if the client is not configured for websockets, if the
 // connection has already been established, or if none of the connection
 // attempts were successful.
-func (c *Client) Connect(tries int) error {
+func (c *Client) Connect(tries int) er.R {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -1300,7 +1301,7 @@ func (c *Client) Connect(tries int) error {
 
 	// Begin connection attempts.  Increase the backoff after each failed
 	// attempt, up to a maximum of one minute.
-	var err error
+	var err er.R
 	var backoff time.Duration
 	for i := 0; tries == 0 || i < tries; i++ {
 		var wsConn *websocket.Conn

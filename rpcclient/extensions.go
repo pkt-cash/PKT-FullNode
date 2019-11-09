@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -25,7 +26,7 @@ type FutureDebugLevelResult chan *response
 // Receive waits for the response promised by the future and returns the result
 // of setting the debug logging level to the passed level specification or the
 // list of of the available subsystems for the special keyword 'show'.
-func (r FutureDebugLevelResult) Receive() (string, error) {
+func (r FutureDebugLevelResult) Receive() (string, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return "", err
@@ -62,7 +63,7 @@ func (c *Client) DebugLevelAsync(levelSpec string) FutureDebugLevelResult {
 // available subsystems.
 //
 // NOTE: This is a pktd extension.
-func (c *Client) DebugLevel(levelSpec string) (string, error) {
+func (c *Client) DebugLevel(levelSpec string) (string, er.R) {
 	return c.DebugLevelAsync(levelSpec).Receive()
 }
 
@@ -71,7 +72,7 @@ func (c *Client) DebugLevel(levelSpec string) (string, error) {
 type FutureCreateEncryptedWalletResult chan *response
 
 // Receive waits for and returns the error response promised by the future.
-func (r FutureCreateEncryptedWalletResult) Receive() error {
+func (r FutureCreateEncryptedWalletResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -96,7 +97,7 @@ func (c *Client) CreateEncryptedWalletAsync(passphrase string) FutureCreateEncry
 // new wallet cannot be written to disk.
 //
 // NOTE: This is a pktwallet extension.
-func (c *Client) CreateEncryptedWallet(passphrase string) error {
+func (c *Client) CreateEncryptedWallet(passphrase string) er.R {
 	return c.CreateEncryptedWalletAsync(passphrase).Receive()
 }
 
@@ -106,7 +107,7 @@ type FutureListAddressTransactionsResult chan *response
 
 // Receive waits for the response promised by the future and returns information
 // about all transactions associated with the provided addresses.
-func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactionsResult, error) {
+func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactionsResult, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -142,7 +143,7 @@ func (c *Client) ListAddressTransactionsAsync(addresses []btcutil.Address, accou
 // with the provided addresses.
 //
 // NOTE: This is a pktwallet extension.
-func (c *Client) ListAddressTransactions(addresses []btcutil.Address, account string) ([]btcjson.ListTransactionsResult, error) {
+func (c *Client) ListAddressTransactions(addresses []btcutil.Address, account string) ([]btcjson.ListTransactionsResult, er.R) {
 	return c.ListAddressTransactionsAsync(addresses, account).Receive()
 }
 
@@ -152,7 +153,7 @@ type FutureGetBestBlockResult chan *response
 
 // Receive waits for the response promised by the future and returns the hash
 // and height of the block in the longest (best) chain.
-func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, error) {
+func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, 0, err
@@ -190,7 +191,7 @@ func (c *Client) GetBestBlockAsync() FutureGetBestBlockResult {
 // chain.
 //
 // NOTE: This is a pktd extension.
-func (c *Client) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (c *Client) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	return c.GetBestBlockAsync().Receive()
 }
 
@@ -200,7 +201,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, error) {
+func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -231,7 +232,7 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // GetCurrentNet returns the network the server is running on.
 //
 // NOTE: This is a pktd extension.
-func (c *Client) GetCurrentNet() (wire.BitcoinNet, error) {
+func (c *Client) GetCurrentNet() (wire.BitcoinNet, er.R) {
 	return c.GetCurrentNetAsync().Receive()
 }
 
@@ -247,7 +248,7 @@ type FutureGetHeadersResult chan *response
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, error) {
+func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -301,7 +302,7 @@ func (c *Client) GetHeadersAsync(blockLocators []chainhash.Hash, hashStop *chain
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BlockHeader, error) {
+func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BlockHeader, er.R) {
 	return c.GetHeadersAsync(blockLocators, hashStop).Receive()
 }
 
@@ -311,7 +312,7 @@ type FutureExportWatchingWalletResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // exported wallet.
-func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
+func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, nil, err
@@ -370,7 +371,7 @@ func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingW
 // necessary to spend funds.
 //
 // NOTE: This is a pktwallet extension.
-func (c *Client) ExportWatchingWallet(account string) ([]byte, []byte, error) {
+func (c *Client) ExportWatchingWallet(account string) ([]byte, []byte, er.R) {
 	return c.ExportWatchingWalletAsync(account).Receive()
 }
 
@@ -380,7 +381,7 @@ type FutureSessionResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // session result.
-func (r FutureSessionResult) Receive() (*btcjson.SessionResult, error) {
+func (r FutureSessionResult) Receive() (*btcjson.SessionResult, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -418,7 +419,7 @@ func (c *Client) SessionAsync() FutureSessionResult {
 // This RPC requires the client to be running in websocket mode.
 //
 // NOTE: This is a btcsuite extension.
-func (c *Client) Session() (*btcjson.SessionResult, error) {
+func (c *Client) Session() (*btcjson.SessionResult, er.R) {
 	return c.SessionAsync().Receive()
 }
 
@@ -435,7 +436,7 @@ type FutureVersionResult chan *response
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
 func (r FutureVersionResult) Receive() (map[string]btcjson.VersionResult,
-	error) {
+	er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -468,6 +469,6 @@ func (c *Client) VersionAsync() FutureVersionResult {
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) Version() (map[string]btcjson.VersionResult, error) {
+func (c *Client) Version() (map[string]btcjson.VersionResult, er.R) {
 	return c.VersionAsync().Receive()
 }

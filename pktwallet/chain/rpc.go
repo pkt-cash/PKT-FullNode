@@ -7,6 +7,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ type RPCClient struct {
 // operate on the same bitcoin network as described by the passed chain
 // parameters, the connection will be disconnected.
 func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, certs []byte,
-	disableTLS bool, reconnectAttempts int) (*RPCClient, error) {
+	disableTLS bool, reconnectAttempts int) (*RPCClient, er.R) {
 
 	if reconnectAttempts < 0 {
 		return nil, errors.New("reconnectAttempts must be positive")
@@ -98,7 +99,7 @@ func (c *RPCClient) BackEnd() string {
 // sent by the server.  After a limited number of connection attempts, this
 // function gives up, and therefore will not block forever waiting for the
 // connection to be established to a server that may not exist.
-func (c *RPCClient) Start() error {
+func (c *RPCClient) Start() er.R {
 	err := c.Connect(c.reconnectAttempts)
 	if err != nil {
 		return err
@@ -160,7 +161,7 @@ func (c *RPCClient) IsCurrent() bool {
 // This is useful when using BIP 158 filters as they include the prev pkScript
 // rather than the full outpoint.
 func (c *RPCClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Address,
-	outPoints map[wire.OutPoint]btcutil.Address) error {
+	outPoints map[wire.OutPoint]btcutil.Address) er.R {
 
 	flatOutpoints := make([]*wire.OutPoint, 0, len(outPoints))
 	for ops := range outPoints {
@@ -187,7 +188,7 @@ func (c *RPCClient) Notifications() <-chan interface{} {
 
 // BlockStamp returns the latest block notified by the client, or an error
 // if the client has been shut down.
-func (c *RPCClient) BlockStamp() (*waddrmgr.BlockStamp, error) {
+func (c *RPCClient) BlockStamp() (*waddrmgr.BlockStamp, er.R) {
 	select {
 	case bs := <-c.currentBlock:
 		return bs, nil
@@ -204,7 +205,7 @@ func (c *RPCClient) BlockStamp() (*waddrmgr.BlockStamp, error) {
 // block containing a matching address. If no matches are found in the range of
 // blocks requested, the returned response will be nil.
 func (c *RPCClient) FilterBlocks(
-	req *FilterBlocksRequest) (*FilterBlocksResponse, error) {
+	req *FilterBlocksRequest) (*FilterBlocksResponse, er.R) {
 
 	blockFilterer := NewBlockFilterer(c.chainParams, req)
 
@@ -286,7 +287,7 @@ func (c *RPCClient) FilterBlocks(
 // parseBlock parses a btcws definition of the block a tx is mined it to the
 // Block structure of the wtxmgr package, and the block index.  This is done
 // here since rpcclient doesn't parse this nicely for us.
-func parseBlock(block *btcjson.BlockDetails) (*wtxmgr.BlockMeta, error) {
+func parseBlock(block *btcjson.BlockDetails) (*wtxmgr.BlockMeta, er.R) {
 	if block == nil {
 		return nil, nil
 	}
@@ -455,7 +456,7 @@ out:
 }
 
 // POSTClient creates the equivalent HTTP POST rpcclient.Client.
-func (c *RPCClient) POSTClient() (*rpcclient.Client, error) {
+func (c *RPCClient) POSTClient() (*rpcclient.Client, er.R) {
 	configCopy := *c.connConfig
 	configCopy.HTTPPostMode = true
 	return rpcclient.New(&configCopy, nil)

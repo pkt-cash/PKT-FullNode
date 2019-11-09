@@ -9,6 +9,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -56,13 +57,13 @@ type blockChainContext struct {
 // to the v2 bucket. The v1 bucket stores all block entries keyed by block hash,
 // whereas the v2 bucket stores the exact same values, but keyed instead by
 // block height + hash.
-func migrateBlockIndex(db database.DB) error {
+func migrateBlockIndex(db database.DB) er.R {
 	// Hardcoded bucket names so updates to the global values do not affect
 	// old upgrades.
 	v1BucketName := []byte("ffldb-blockidx")
 	v2BucketName := []byte("blockheaderidx")
 
-	err := db.Update(func(dbTx database.Tx) error {
+	err := db.Update(func(dbTx database.Tx) er.R {
 		v1BlockIdxBucket := dbTx.Metadata().Bucket(v1BucketName)
 		if v1BlockIdxBucket == nil {
 			return fmt.Errorf("Bucket %s does not exist", v1BucketName)
@@ -102,7 +103,7 @@ func migrateBlockIndex(db database.DB) error {
 
 		// Now that we have heights for all blocks, scan the old block index
 		// bucket and insert all rows into the new one.
-		return v1BlockIdxBucket.ForEach(func(hashBytes, blockRow []byte) error {
+		return v1BlockIdxBucket.ForEach(func(hashBytes, blockRow []byte) er.R {
 			endOffset := blockHdrOffset + blockHdrSize
 			headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]
 
@@ -149,9 +150,9 @@ func migrateBlockIndex(db database.DB) error {
 // each block to its parent block and all child blocks. This mapping represents
 // the full tree of blocks. This function does not populate the height or
 // mainChain fields of the returned blockChainContext values.
-func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
+func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, er.R) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
-	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
+	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) er.R {
 		var header wire.BlockHeader
 		endOffset := blockHdrOffset + blockHdrSize
 		headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]
@@ -184,7 +185,7 @@ func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockC
 // breadth-first, assigning a height to every block with a path back to the
 // genesis block. This function modifies the height field on the blocksMap
 // entries.
-func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) error {
+func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) er.R {
 	queue := list.New()
 
 	// The genesis block is included in blocksMap as a child of the zero hash
@@ -328,7 +329,7 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //    - 0x8ba5b9e763: VLQ-encoded compressed amount for 366875659 (3.66875659 BTC)
 //    - 0x01: special script type pay-to-script-hash
 //    - 0x1d...e6: script hash
-func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, error) {
+func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, er.R) {
 	// Deserialize the version.
 	//
 	// NOTE: Ignore version since it is no longer used in the new format.
@@ -435,7 +436,7 @@ func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, error) {
 
 // upgradeUtxoSetToV2 migrates the utxo set entries from version 1 to 2 in
 // batches.  It is guaranteed to updated if this returns without failure.
-func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
+func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) er.R {
 	// Hardcoded bucket names so updates to the global values do not affect
 	// old upgrades.
 	var (
@@ -447,7 +448,7 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 	start := time.Now()
 
 	// Create the new utxo set bucket as needed.
-	err := db.Update(func(dbTx database.Tx) error {
+	err := db.Update(func(dbTx database.Tx) er.R {
 		_, err := dbTx.Metadata().CreateBucketIfNotExists(v2BucketName)
 		return err
 	})
@@ -463,7 +464,7 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 	//
 	// It returns the number of utxos processed.
 	const maxUtxos = 200000
-	doBatch := func(dbTx database.Tx) (uint32, error) {
+	doBatch := func(dbTx database.Tx) (uint32, er.R) {
 		v1Bucket := dbTx.Metadata().Bucket(v1BucketName)
 		v2Bucket := dbTx.Metadata().Bucket(v2BucketName)
 		v1Cursor := v1Bucket.Cursor()
@@ -532,8 +533,8 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 	var totalUtxos uint64
 	for {
 		var numUtxos uint32
-		err := db.Update(func(dbTx database.Tx) error {
-			var err error
+		err := db.Update(func(dbTx database.Tx) er.R {
+			var err er.R
 			numUtxos, err = doBatch(dbTx)
 			return err
 		})
@@ -555,7 +556,7 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 
 	// Remove the old bucket and update the utxo set version once it has
 	// been fully migrated.
-	err = db.Update(func(dbTx database.Tx) error {
+	err = db.Update(func(dbTx database.Tx) er.R {
 		err := dbTx.Metadata().DeleteBucket(v1BucketName)
 		if err != nil {
 			return err
@@ -578,13 +579,13 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 //
 // All buckets used by this package are guaranteed to be the latest version if
 // this function returns without error.
-func (b *BlockChain) maybeUpgradeDbBuckets(interrupt <-chan struct{}) error {
+func (b *BlockChain) maybeUpgradeDbBuckets(interrupt <-chan struct{}) er.R {
 	// Load or create bucket versions as needed.
 	var utxoSetVersion uint32
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) er.R {
 		// Load the utxo set version from the database or create it and
 		// initialize it to version 1 if it doesn't exist.
-		var err error
+		var err er.R
 		utxoSetVersion, err = dbFetchOrCreateVersion(dbTx,
 			utxoSetVersionKeyName, 1)
 		return err

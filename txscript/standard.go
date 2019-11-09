@@ -7,6 +7,7 @@ package txscript
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -255,7 +256,7 @@ type ScriptInfo struct {
 // be analysed, i.e. if they do not parse or the pkScript is not a push-only
 // script
 func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
-	bip16, segwit bool) (*ScriptInfo, error) {
+	bip16, segwit bool) (*ScriptInfo, er.R) {
 
 	sigPops, err := parseScript(sigScript)
 	if err != nil {
@@ -361,7 +362,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 // CalcMultiSigStats returns the number of public keys and signatures from
 // a multi-signature transaction script.  The passed script MUST already be
 // known to be a multi-signature script.
-func CalcMultiSigStats(script []byte) (int, int, error) {
+func CalcMultiSigStats(script []byte) (int, int, er.R) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return 0, 0, err
@@ -391,7 +392,7 @@ func payToPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).
 		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG)
 }
-func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 	return payToPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
@@ -400,7 +401,7 @@ func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 func payToWitnessPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_0).AddData(pubKeyHash)
 }
-func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 	return payToWitnessPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
@@ -410,7 +411,7 @@ func payToScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_HASH160).AddData(scriptHash).
 		AddOp(OP_EQUAL)
 }
-func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
+func payToScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 	return payToScriptHashScriptBuilder(scriptHash).Script()
 }
 
@@ -419,7 +420,7 @@ func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
 func payToWitnessScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_0).AddData(scriptHash)
 }
-func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
+func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 	return payToWitnessScriptHashScriptBuilder(scriptHash).Script()
 }
 
@@ -429,7 +430,7 @@ func payToPubKeyScriptBuilder(serializedPubKey []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddData(serializedPubKey).
 		AddOp(OP_CHECKSIG)
 }
-func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
+func payToPubKeyScript(serializedPubKey []byte) ([]byte, er.R) {
 	return payToPubKeyScriptBuilder(serializedPubKey).Script()
 }
 
@@ -456,7 +457,7 @@ func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
 // PayToAddrScriptWithVote creates a new script to pay a transaction output to a the
 // specified address and adds a vote for the specified network steward, if voteFor
 // and/or voteAgainst are non-null and if the address type is non-segwit.
-func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, error) {
+func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, er.R) {
 	if addr == nil {
 		return nil, scriptError(ErrUnsupportedAddress,
 			"unable to generate payment script for nil address")
@@ -489,7 +490,7 @@ func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) 
 
 // PayToAddrScript creates a new script to pay a transaction output to the
 // specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func PayToAddrScript(addr btcutil.Address) ([]byte, er.R) {
 	return PayToAddrScriptWithVote(addr, nil, nil)
 }
 
@@ -522,7 +523,7 @@ func stripVote(pops []parsedOpcode) []parsedOpcode {
 // NullDataScript creates a provably-prunable script containing OP_RETURN
 // followed by the passed data.  An Error with the error code ErrTooMuchNullData
 // will be returned if the length of the passed data exceeds MaxDataCarrierSize.
-func NullDataScript(data []byte) ([]byte, error) {
+func NullDataScript(data []byte) ([]byte, er.R) {
 	if len(data) > MaxDataCarrierSize {
 		str := fmt.Sprintf("data size %d is larger than max "+
 			"allowed size %d", len(data), MaxDataCarrierSize)
@@ -536,7 +537,7 @@ func NullDataScript(data []byte) ([]byte, error) {
 // nrequired of the keys in pubkeys are required to have signed the transaction
 // for success.  An Error with the error code ErrTooManyRequiredSigs will be
 // returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
+func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er.R) {
 	if len(pubkeys) < nrequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -556,7 +557,7 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 
 // PushedData returns an array of byte slices containing any pushed data found
 // in the passed script.  This includes OP_0, but not OP_1 - OP_16.
-func PushedData(script []byte) ([][]byte, error) {
+func PushedData(script []byte) ([][]byte, er.R) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return nil, err
@@ -577,7 +578,7 @@ func PushedData(script []byte) ([][]byte, error) {
 // signatures associated with the passed PkScript.  Note that it only works for
 // 'standard' transaction script types.  Any data such as public keys which are
 // invalid are omitted from the results.
-func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, error) {
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, er.R) {
 	var addrs []btcutil.Address
 	var requiredSigs int
 
@@ -702,7 +703,7 @@ type AtomicSwapDataPushes struct {
 //
 // This function is only defined in the txscript package due to API limitations
 // which prevent callers using txscript to parse nonstandard scripts.
-func ExtractAtomicSwapDataPushes(version uint16, pkScript []byte) (*AtomicSwapDataPushes, error) {
+func ExtractAtomicSwapDataPushes(version uint16, pkScript []byte) (*AtomicSwapDataPushes, er.R) {
 	pops, err := parseScript(pkScript)
 	if err != nil {
 		return nil, err

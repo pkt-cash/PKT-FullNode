@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
@@ -38,7 +39,7 @@ type NeutrinoClient struct {
 
 	quit       chan struct{}
 	rescanQuit chan struct{}
-	rescanErr  <-chan error
+	rescanErr  <-chan er.R
 	wg         sync.WaitGroup
 	started    bool
 	scanning   bool
@@ -65,7 +66,7 @@ func (s *NeutrinoClient) BackEnd() string {
 }
 
 // Start replicates the RPC client's Start method.
-func (s *NeutrinoClient) Start() error {
+func (s *NeutrinoClient) Start() er.R {
 	s.CS.Start()
 	s.clientMtx.Lock()
 	defer s.clientMtx.Unlock()
@@ -104,7 +105,7 @@ func (s *NeutrinoClient) WaitForShutdown() {
 }
 
 // GetBlock replicates the RPC client's GetBlock command.
-func (s *NeutrinoClient) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (s *NeutrinoClient) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	// TODO(roasbeef): add a block cache?
 	//  * which evication strategy? depends on use case
 	//  Should the block cache be INSIDE neutrino instead of in pktwallet?
@@ -119,12 +120,12 @@ func (s *NeutrinoClient) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, error) 
 // replacement for the use of GetBlockVerboseTxAsync for the wallet package
 // since we can't actually return a FutureGetBlockVerboseResult because the
 // underlying type is private to rpcclient.
-func (s *NeutrinoClient) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
+func (s *NeutrinoClient) GetBlockHeight(hash *chainhash.Hash) (int32, er.R) {
 	return s.CS.GetBlockHeight(hash)
 }
 
 // GetBestBlock replicates the RPC client's GetBestBlock command.
-func (s *NeutrinoClient) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (s *NeutrinoClient) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	chainTip, err := s.CS.BestBlock()
 	if err != nil {
 		return nil, 0, err
@@ -135,7 +136,7 @@ func (s *NeutrinoClient) GetBestBlock() (*chainhash.Hash, int32, error) {
 
 // BlockStamp returns the latest block notified by the client, or an error
 // if the client has been shut down.
-func (s *NeutrinoClient) BlockStamp() (*waddrmgr.BlockStamp, error) {
+func (s *NeutrinoClient) BlockStamp() (*waddrmgr.BlockStamp, er.R) {
 	select {
 	case bs := <-s.currentBlock:
 		return bs, nil
@@ -147,14 +148,14 @@ func (s *NeutrinoClient) BlockStamp() (*waddrmgr.BlockStamp, error) {
 // GetBlockHash returns the block hash for the given height, or an error if the
 // client has been shut down or the hash at the block height doesn't exist or
 // is unknown.
-func (s *NeutrinoClient) GetBlockHash(height int64) (*chainhash.Hash, error) {
+func (s *NeutrinoClient) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 	return s.CS.GetBlockHash(height)
 }
 
 // GetBlockHeader returns the block header for the given block hash, or an error
 // if the client has been shut down or the hash doesn't exist or is unknown.
 func (s *NeutrinoClient) GetBlockHeader(
-	blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+	blockHash *chainhash.Hash) (*wire.BlockHeader, er.R) {
 	return s.CS.GetBlockHeader(blockHash)
 }
 
@@ -166,7 +167,7 @@ func (s *NeutrinoClient) IsCurrent() bool {
 
 // SendRawTransaction replicates the RPC client's SendRawTransaction command.
 func (s *NeutrinoClient) SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) (
-	*chainhash.Hash, error) {
+	*chainhash.Hash, er.R) {
 	err := s.CS.SendTransaction(tx)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (s *NeutrinoClient) SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) 
 // block containing a matching address. If no matches are found in the range of
 // blocks requested, the returned response will be nil.
 func (s *NeutrinoClient) FilterBlocks(
-	req *FilterBlocksRequest) (*FilterBlocksResponse, error) {
+	req *FilterBlocksRequest) (*FilterBlocksResponse, er.R) {
 
 	blockFilterer := NewBlockFilterer(s.chainParams, req)
 
@@ -256,7 +257,7 @@ func (s *NeutrinoClient) FilterBlocks(
 // cfilter from a FilterBlocksRequest. The watchlist will be populated with all
 // external addresses, internal addresses, and outpoints contained in the
 // request.
-func buildFilterBlocksWatchList(req *FilterBlocksRequest) ([][]byte, error) {
+func buildFilterBlocksWatchList(req *FilterBlocksRequest) ([][]byte, er.R) {
 	// Construct a watch list containing the script addresses of all
 	// internal and external addresses that were requested, in addition to
 	// the set of outpoints currently being watched.
@@ -299,10 +300,10 @@ func buildFilterBlocksWatchList(req *FilterBlocksRequest) ([][]byte, error) {
 // pollCFilter attempts to fetch a CFilter from the neutrino client. This is
 // used to get around the fact that the filter headers may lag behind the
 // highest known block header.
-func (s *NeutrinoClient) pollCFilter(hash *chainhash.Hash) (*gcs.Filter, error) {
+func (s *NeutrinoClient) pollCFilter(hash *chainhash.Hash) (*gcs.Filter, er.R) {
 	var (
 		filter *gcs.Filter
-		err    error
+		err    er.R
 		count  int
 	)
 
@@ -326,7 +327,7 @@ func (s *NeutrinoClient) pollCFilter(hash *chainhash.Hash) (*gcs.Filter, error) 
 
 // Rescan replicates the RPC client's Rescan command.
 func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Address,
-	outPoints map[wire.OutPoint]btcutil.Address) error {
+	outPoints map[wire.OutPoint]btcutil.Address) er.R {
 
 	s.clientMtx.Lock()
 	if !s.started {
@@ -424,7 +425,7 @@ func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Addre
 }
 
 // NotifyBlocks replicates the RPC client's NotifyBlocks command.
-func (s *NeutrinoClient) NotifyBlocks() error {
+func (s *NeutrinoClient) NotifyBlocks() er.R {
 	s.clientMtx.Lock()
 	// If we're scanning, we're already notifying on blocks. Otherwise,
 	// start a rescan without watching any addresses.
@@ -437,7 +438,7 @@ func (s *NeutrinoClient) NotifyBlocks() error {
 }
 
 // NotifyReceived replicates the RPC client's NotifyReceived command.
-func (s *NeutrinoClient) NotifyReceived(addrs []btcutil.Address) error {
+func (s *NeutrinoClient) NotifyReceived(addrs []btcutil.Address) er.R {
 	s.clientMtx.Lock()
 
 	// If we have a rescan running, we just need to add the appropriate

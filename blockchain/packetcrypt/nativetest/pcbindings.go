@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"runtime"
@@ -188,7 +189,7 @@ func annReader(bm *PcAnn, ch chan wire.PacketCryptAnn, f *os.File) {
 	}
 }
 
-func validatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, error) {
+func validatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*chainhash.Hash, er.R) {
 	annPtr := C.CBytes(p.Header[:])
 	hashPtr := C.CBytes(parentBlockHash[:])
 	vctx := C.malloc(C.sizeof_PacketCrypt_ValidateCtx_t)
@@ -221,7 +222,7 @@ func validatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*ch
 	return nil, errors.New("unknown error")
 }
 
-func PcAnnNew(ch chan wire.PacketCryptAnn, numWorkers uint32) (*PcAnn, error) {
+func PcAnnNew(ch chan wire.PacketCryptAnn, numWorkers uint32) (*PcAnn, er.R) {
 	pipeR, pipeW, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -270,7 +271,7 @@ func validatePcProof(
 	blockHeader *wire.BlockHeader,
 	cb *wire.PcCoinbaseCommit,
 	blockHashes []*chainhash.Hash,
-) error {
+) er.R {
 	if len(blockHashes) != 4 {
 		return errors.New("blockHashes invalid length")
 	}
@@ -365,7 +366,7 @@ func (bm *PcBlk) AddAnns(anns []*wire.PacketCryptAnn) {
 		1)
 }
 
-func (bm *PcBlk) Start(header *wire.BlockHeader) error {
+func (bm *PcBlk) Start(header *wire.BlockHeader) er.R {
 	headerBuf := bytes.NewBuffer(make([]byte, 0, wire.MaxBlockHeaderPayload))
 	_ = header.BtcEncode(headerBuf, 0, 0)
 	headerBytes := headerBuf.Bytes()
@@ -384,7 +385,7 @@ func (bm *PcBlk) Start(header *wire.BlockHeader) error {
 	return errors.New("unknown error")
 }
 
-func (bm *PcBlk) LockForMining(nextBlockHeight int32, nextBlockTarget uint32) (*wire.PcCoinbaseCommit, error) {
+func (bm *PcBlk) LockForMining(nextBlockHeight int32, nextBlockTarget uint32) (*wire.PcCoinbaseCommit, er.R) {
 	ptr := C.calloc(C.sizeof_PacketCrypt_Coinbase_t+C.sizeof_uintptr_t, 1)
 	ret := C.BlockMiner_lockForMining(
 		bm.blkMiner,
@@ -414,7 +415,7 @@ func PcTestSizes(t *testing.T) {
 	}
 }
 
-func (bm *PcBlk) Stop() error {
+func (bm *PcBlk) Stop() er.R {
 	ret := C.BlockMiner_stop(bm.blkMiner)
 	if ret == 0 {
 		return nil
@@ -431,7 +432,7 @@ func freePcBlk(pc *PcBlk) {
 	pc.pipeW.Close()
 }
 
-func PcBlkNew(maxAnns uint64, ch chan PcBlockMineResult, numWorkers uint32) (*PcBlk, error) {
+func PcBlkNew(maxAnns uint64, ch chan PcBlockMineResult, numWorkers uint32) (*PcBlk, er.R) {
 	pipeR, pipeW, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -495,7 +496,7 @@ func CryptoCycleFinal(state []byte) {
 	C.free(stateP)
 }
 
-func Generate(seed []byte) ([]uint32, error) {
+func Generate(seed []byte) ([]uint32, er.R) {
 	out2C := C.malloc(4 * util.Conf_RandGen_MAX_INSNS)
 	seedC := C.CBytes(seed)
 	ret := C.RandGen_generate((*C.uint)(out2C), (*C.Buf32_t)(seedC))
@@ -515,7 +516,7 @@ func Generate(seed []byte) ([]uint32, error) {
 	return pcutil.U32FromB(nil, out2), nil
 }
 
-func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
+func Interpret(prog []uint32, ccState, memory []byte, cycles int) er.R {
 
 	ccStateP := C.CBytes(ccState)
 	progP := C.CBytes(pcutil.BFromU32(nil, prog))

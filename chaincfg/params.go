@@ -7,6 +7,7 @@ package chaincfg
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"strings"
@@ -832,7 +833,7 @@ func (d DNSSeed) String() string {
 // as early as possible.  Then, library packages may lookup networks or network
 // parameters based on inputs and work regardless of the network being standard
 // or not.
-func Register(params *Params) error {
+func Register(params *Params) er.R {
 	if _, ok := registeredNets[params.Net]; ok {
 		return ErrDuplicateNet
 	}
@@ -889,7 +890,7 @@ func IsBech32SegwitPrefix(prefix string) bool {
 // HDPrivateKeyToPublicKeyID accepts a private hierarchical deterministic
 // extended key id and returns the associated public key id.  When the provided
 // id is not registered, the ErrUnknownHDKeyID error will be returned.
-func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, error) {
+func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, er.R) {
 	if len(id) != 4 {
 		return nil, ErrUnknownHDKeyID
 	}

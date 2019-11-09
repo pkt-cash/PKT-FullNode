@@ -7,6 +7,7 @@ package database_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
@@ -22,6 +23,7 @@ func ExampleCreate() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )
@@ -48,6 +50,7 @@ func Example_basicUsage() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )
@@ -68,7 +71,7 @@ func Example_basicUsage() {
 	// Use the Update function of the database to perform a managed
 	// read-write transaction.  The transaction will automatically be rolled
 	// back if the supplied inner function returns a non-nil error.
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		// Store a key/value pair directly in the metadata bucket.
 		// Typically a nested bucket would be used for a given feature,
 		// but this example is using the metadata bucket directly for
@@ -114,6 +117,7 @@ func Example_blockStorageAndRetrieval() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )
@@ -134,7 +138,7 @@ func Example_blockStorageAndRetrieval() {
 	// Use the Update function of the database to perform a managed
 	// read-write transaction and store a genesis block in the database as
 	// and example.
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		genesisBlock := chaincfg.MainNetParams.GenesisBlock
 		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
 	})
@@ -146,7 +150,7 @@ func Example_blockStorageAndRetrieval() {
 	// Use the View function of the database to perform a managed read-only
 	// transaction and fetch the block stored above.
 	var loadedBlockBytes []byte
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		genesisHash := chaincfg.MainNetParams.GenesisHash
 		blockBytes, err := tx.FetchBlock(genesisHash)
 		if err != nil {

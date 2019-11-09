@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // NotificationType represents the type of a notification message.

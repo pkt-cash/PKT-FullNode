@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"log"
 	"os"
 	"strings"
@@ -61,7 +62,7 @@ func writeLocales() {
 
 func writeUsage() {
 	usageStrs := make([]string, len(rpchelp.Methods))
-	var err error
+	var err er.R
 	for i := range rpchelp.Methods {
 		usageStrs[i], err = btcjson.MethodUsageText(rpchelp.Methods[i].Method)
 		if err != nil {

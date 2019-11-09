@@ -7,6 +7,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"sort"
 	"strconv"
@@ -154,7 +155,7 @@ func isAcceptableKind(kind reflect.Kind) bool {
 // passed struct, so it does not need to be an actual instance.  Therefore, it
 // is recommended to simply pass a nil pointer cast to the appropriate type.
 // For example, (*FooCmd)(nil).
-func RegisterCmd(method string, cmd interface{}, flags UsageFlag) error {
+func RegisterCmd(method string, cmd interface{}, flags UsageFlag) er.R {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 

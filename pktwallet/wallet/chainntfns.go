@@ -7,6 +7,7 @@ package wallet
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -35,7 +36,7 @@ func (w *Wallet) handleChainNotifications() {
 	}
 
 	catchUpHashes := func(w *Wallet, client chain.Interface,
-		height int32) error {
+		height int32) er.R {
 		// TODO(aakselrod): There's a race conditon here, which
 		// happens when a reorg occurs between the
 		// rescanProgress notification and the last GetBlockHash
@@ -48,7 +49,7 @@ func (w *Wallet) handleChainNotifications() {
 		// rescan.
 		log.Infof("Catching up block hashes to height %d, this"+
 			" might take a while", height)
-		err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 			startBlock := w.Manager.SyncedTo()
@@ -92,7 +93,7 @@ func (w *Wallet) handleChainNotifications() {
 			}
 
 			var notificationName string
-			var err error
+			var err er.R
 			switch n := n.(type) {
 			case chain.ClientConnected:
 				// Before attempting to sync with our backend,
@@ -118,17 +119,17 @@ func (w *Wallet) handleChainNotifications() {
 						"wallet to chain: %v", err))
 				}
 			case chain.BlockConnected:
-				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 					return w.connectBlock(tx, wtxmgr.BlockMeta(n))
 				})
 				notificationName = "block connected"
 			case chain.BlockDisconnected:
-				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 					return w.disconnectBlock(tx, wtxmgr.BlockMeta(n))
 				})
 				notificationName = "block disconnected"
 			case chain.RelevantTx:
-				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 					return w.addRelevantTx(tx, n.TxRecord, n.Block)
 				})
 				notificationName = "relevant transaction"
@@ -136,8 +137,8 @@ func (w *Wallet) handleChainNotifications() {
 				// Atomically update for the whole block.
 				if len(n.RelevantTxs) > 0 {
 					err = walletdb.Update(w.db, func(
-						tx walletdb.ReadWriteTx) error {
-						var err error
+						tx walletdb.ReadWriteTx) er.R {
+						var err er.R
 						for _, rec := range n.RelevantTxs {
 							err = w.addRelevantTx(tx, rec,
 								n.Block)
@@ -199,7 +200,7 @@ func (w *Wallet) handleChainNotifications() {
 // connectBlock handles a chain server notification by marking a wallet
 // that's currently in-sync with the chain server as being synced up to
 // the passed block.
-func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) error {
+func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) er.R {
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 	bs := waddrmgr.BlockStamp{
@@ -222,7 +223,7 @@ func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) err
 // disconnectBlock handles a chain server reorganize by rolling back all
 // block history from the reorged block for a wallet in-sync with the chain
 // server.
-func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) error {
+func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) er.R {
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 
@@ -272,7 +273,7 @@ func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) 
 	return nil
 }
 
-func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, block *wtxmgr.BlockMeta) error {
+func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, block *wtxmgr.BlockMeta) er.R {
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 
@@ -362,13 +363,13 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 type chainConn interface {
 	// GetBestBlock returns the hash and height of the best block known to
 	// the backend.
-	GetBestBlock() (*chainhash.Hash, int32, error)
+	GetBestBlock() (*chainhash.Hash, int32, er.R)
 
 	// GetBlockHash returns the hash of the block with the given height.
-	GetBlockHash(int64) (*chainhash.Hash, error)
+	GetBlockHash(int64) (*chainhash.Hash, er.R)
 
 	// GetBlockHeader returns the header for the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, error)
+	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, er.R)
 }
 
 // birthdayStore is an interface that abstracts the wallet's sync-related
@@ -380,7 +381,7 @@ type birthdayStore interface {
 	// BirthdayBlock returns the birthday block of the wallet. The boolean
 	// returned should signal whether the wallet has already verified the
 	// correctness of its birthday block.
-	BirthdayBlock() (waddrmgr.BlockStamp, bool, error)
+	BirthdayBlock() (waddrmgr.BlockStamp, bool, er.R)
 
 	// SetBirthdayBlock updates the birthday block of the wallet to the
 	// given block. The boolean can be used to signal whether this block
@@ -389,7 +390,7 @@ type birthdayStore interface {
 	// NOTE: This should also set the wallet's synced tip to reflect the new
 	// birthday block. This will allow the wallet to rescan from this point
 	// to detect any potentially missed events.
-	SetBirthdayBlock(waddrmgr.BlockStamp) error
+	SetBirthdayBlock(waddrmgr.BlockStamp) er.R
 }
 
 // walletBirthdayStore is a wrapper around the wallet's database and address
@@ -407,14 +408,14 @@ func (s *walletBirthdayStore) Birthday() time.Time {
 }
 
 // BirthdayBlock returns the birthday block of the wallet.
-func (s *walletBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, error) {
+func (s *walletBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, er.R) {
 	var (
 		birthdayBlock         waddrmgr.BlockStamp
 		birthdayBlockVerified bool
 	)
 
-	err := walletdb.View(s.db, func(tx walletdb.ReadTx) error {
-		var err error
+	err := walletdb.View(s.db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
 		ns := tx.ReadBucket(waddrmgrNamespaceKey)
 		birthdayBlock, birthdayBlockVerified, err = s.manager.BirthdayBlock(ns)
 		return err
@@ -430,8 +431,8 @@ func (s *walletBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, error)
 // NOTE: This should also set the wallet's synced tip to reflect the new
 // birthday block. This will allow the wallet to rescan from this point
 // to detect any potentially missed events.
-func (s *walletBirthdayStore) SetBirthdayBlock(block waddrmgr.BlockStamp) error {
-	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) error {
+func (s *walletBirthdayStore) SetBirthdayBlock(block waddrmgr.BlockStamp) er.R {
+	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		err := s.manager.SetBirthdayBlock(ns, block, true)
 		if err != nil {
@@ -450,7 +451,7 @@ func (s *walletBirthdayStore) SetBirthdayBlock(block waddrmgr.BlockStamp) error 
 // waddrmgr.ErrBirthdayBlockNotSet is returned if the birthday block has not
 // been set yet.
 func birthdaySanityCheck(chainConn chainConn,
-	birthdayStore birthdayStore) (*waddrmgr.BlockStamp, error) {
+	birthdayStore birthdayStore) (*waddrmgr.BlockStamp, er.R) {
 
 	// We'll start by fetching our wallet's birthday timestamp and block.
 	birthdayTimestamp := birthdayStore.Birthday()

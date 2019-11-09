@@ -74,7 +74,7 @@ func (e ErrorCode) String() string {
 type Error struct {
 	Code ErrorCode // Describes the kind of error
 	Desc string    // Human readable description of the issue
-	Err  error     // Underlying error, optional
+	Err  er.R      // Underlying error, optional
 }
 
 // Error satisfies the error interface and prints human-readable errors.
@@ -85,13 +85,13 @@ func (e Error) Error() string {
 	return e.Desc
 }
 
-func storeError(c ErrorCode, desc string, err error) Error {
+func storeError(c ErrorCode, desc string, err er.R) Error {
 	return Error{Code: c, Desc: desc, Err: err}
 }
 
 // IsNoExists returns whether an error is a Error with the ErrNoExists error
 // code.
-func IsNoExists(err error) bool {
+func IsNoExists(err er.R) bool {
 	serr, ok := err.(Error)
 	return ok && serr.Code == ErrNoExists
 }

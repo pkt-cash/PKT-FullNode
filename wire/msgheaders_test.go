@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -47,7 +48,7 @@ func TestHeaders(t *testing.T) {
 
 	// Ensure adding more than the max allowed headers per message returns
 	// error.
-	var err error
+	var err er.R
 	for i := 0; i < MaxBlockHeadersPerMsg+1; i++ {
 		err = msg.AddBlockHeader(bh)
 	}
@@ -298,8 +299,8 @@ func TestHeadersWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in header count.

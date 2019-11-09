@@ -18,7 +18,7 @@ type ReadTx interface {
 
 	// Rollback closes the transaction, discarding changes (if any) if the
 	// database was modified by a write transaction.
-	Rollback() error
+	Rollback() er.R
 }
 
 // ReadWriteTx represents a database transaction that can be used for both reads
@@ -32,16 +32,16 @@ type ReadWriteTx interface {
 
 	// CreateTopLevelBucket creates the top level bucket for a key if it
 	// does not exist.  The newly-created bucket it returned.
-	CreateTopLevelBucket(key []byte) (ReadWriteBucket, error)
+	CreateTopLevelBucket(key []byte) (ReadWriteBucket, er.R)
 
 	// DeleteTopLevelBucket deletes the top level bucket for a key.  This
 	// errors if the bucket can not be found or the key keys a single value
 	// instead of a bucket.
-	DeleteTopLevelBucket(key []byte) error
+	DeleteTopLevelBucket(key []byte) er.R
 
 	// Commit commits all changes that have been on the transaction's root
 	// buckets and all of their sub-buckets to persistent storage.
-	Commit() error
+	Commit() er.R
 
 	// OnCommit takes a function closure that will be executed when the
 	// transaction successfully gets committed.
@@ -65,7 +65,7 @@ type ReadBucket interface {
 	// results in undefined behavior.  This constraint prevents additional
 	// data copies and allows support for memory-mapped database
 	// implementations.
-	ForEach(func(k, v []byte) error) error
+	ForEach(func(k, v []byte) er.R) er.R
 
 	// Get returns the value for the given key.  Returns nil if the key does
 	// not exist in this bucket (or nested buckets).
@@ -95,30 +95,30 @@ type ReadWriteBucket interface {
 	// if the key value is otherwise invalid for the particular database
 	// implementation.  Other errors are possible depending on the
 	// implementation.
-	CreateBucket(key []byte) (ReadWriteBucket, error)
+	CreateBucket(key []byte) (ReadWriteBucket, er.R)
 
 	// CreateBucketIfNotExists creates and returns a new nested bucket with
 	// the given key if it does not already exist.  Returns
 	// ErrBucketNameRequired if the key is empty or ErrIncompatibleValue
 	// if the key value is otherwise invalid for the particular database
 	// backend.  Other errors are possible depending on the implementation.
-	CreateBucketIfNotExists(key []byte) (ReadWriteBucket, error)
+	CreateBucketIfNotExists(key []byte) (ReadWriteBucket, er.R)
 
 	// DeleteNestedBucket removes a nested bucket with the given key.
 	// Returns ErrTxNotWritable if attempted against a read-only transaction
 	// and ErrBucketNotFound if the specified bucket does not exist.
-	DeleteNestedBucket(key []byte) error
+	DeleteNestedBucket(key []byte) er.R
 
 	// Put saves the specified key/value pair to the bucket.  Keys that do
 	// not already exist are added and keys that already exist are
 	// overwritten.  Returns ErrTxNotWritable if attempted against a
 	// read-only transaction.
-	Put(key, value []byte) error
+	Put(key, value []byte) er.R
 
 	// Delete removes the specified key from the bucket.  Deleting a key
 	// that does not exist does not return an error.  Returns
 	// ErrTxNotWritable if attempted against a read-only transaction.
-	Delete(key []byte) error
+	Delete(key []byte) er.R
 
 	// Cursor returns a new cursor, allowing for iteration over the bucket's
 	// key/value pairs and nested buckets in forward or backward order.
@@ -164,7 +164,7 @@ type ReadWriteCursor interface {
 	// Delete removes the current key/value pair the cursor is at without
 	// invalidating the cursor.  Returns ErrIncompatibleValue if attempted
 	// when the cursor points to a nested bucket.
-	Delete() error
+	Delete() er.R
 }
 
 // BucketIsEmpty returns whether the bucket is empty, that is, whether there are
@@ -178,24 +178,24 @@ func BucketIsEmpty(bucket ReadBucket) bool {
 // read or read+write transactions.
 type DB interface {
 	// BeginReadTx opens a database read transaction.
-	BeginReadTx() (ReadTx, error)
+	BeginReadTx() (ReadTx, er.R)
 
 	// BeginReadWriteTx opens a database read+write transaction.
-	BeginReadWriteTx() (ReadWriteTx, error)
+	BeginReadWriteTx() (ReadWriteTx, er.R)
 
 	// Copy writes a copy of the database to the provided writer.  This
 	// call will start a read-only transaction to perform all operations.
-	Copy(w io.Writer) error
+	Copy(w io.Writer) er.R
 
 	// Close cleanly shuts down the database and syncs all data.
-	Close() error
+	Close() er.R
 }
 
 // View opens a database read transaction and executes the function f with the
 // transaction passed as a parameter.  After f exits, the transaction is rolled
 // back.  If f errors, its error is returned, not a rollback error (if any
 // occur).
-func View(db DB, f func(tx ReadTx) error) error {
+func View(db DB, f func(tx ReadTx) er.R) er.R {
 	tx, err := db.BeginReadTx()
 	if err != nil {
 		return err
@@ -217,7 +217,7 @@ func View(db DB, f func(tx ReadTx) error) error {
 // transaction is rolled back.  If the rollback fails, the original error
 // returned by f is still returned.  If the commit fails, the commit error is
 // returned.
-func Update(db DB, f func(tx ReadWriteTx) error) error {
+func Update(db DB, f func(tx ReadWriteTx) er.R) er.R {
 	tx, err := db.BeginReadWriteTx()
 	if err != nil {
 		return err
@@ -242,12 +242,12 @@ type Driver struct {
 	// Create is the function that will be invoked with all user-specified
 	// arguments to create the database.  This function must return
 	// ErrDbExists if the database already exists.
-	Create func(args ...interface{}) (DB, error)
+	Create func(args ...interface{}) (DB, er.R)
 
 	// Open is the function that will be invoked with all user-specified
 	// arguments to open the database.  This function must return
 	// ErrDbDoesNotExist if the database has not already been created.
-	Open func(args ...interface{}) (DB, error)
+	Open func(args ...interface{}) (DB, er.R)
 }
 
 // driverList holds all of the registered database backends.
@@ -256,7 +256,7 @@ var drivers = make(map[string]*Driver)
 // RegisterDriver adds a backend database driver to available interfaces.
 // ErrDbTypeRegistered will be retruned if the database type for the driver has
 // already been registered.
-func RegisterDriver(driver Driver) error {
+func RegisterDriver(driver Driver) er.R {
 	if _, exists := drivers[driver.DbType]; exists {
 		return ErrDbTypeRegistered
 	}
@@ -280,7 +280,7 @@ func SupportedDrivers() []string {
 // database driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Create(dbType string, args ...interface{}) (DB, error) {
+func Create(dbType string, args ...interface{}) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType
@@ -294,7 +294,7 @@ func Create(dbType string, args ...interface{}) (DB, error) {
 // driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Open(dbType string, args ...interface{}) (DB, error) {
+func Open(dbType string, args ...interface{}) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType

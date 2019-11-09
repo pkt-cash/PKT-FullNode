@@ -7,6 +7,7 @@ package connmgr
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 )
 
@@ -35,7 +36,7 @@ var (
 	// provided is not recognized.
 	ErrTorUnrecognizedAuthMethod = errors.New("invalid proxy authentication method")
 
-	torStatusErrors = map[byte]error{
+	torStatusErrors = map[byte]er.R{
 		torSucceeded:         errors.New("tor succeeded"),
 		torGeneralError:      errors.New("tor general error"),
 		torNotAllowed:        errors.New("tor not allowed"),
@@ -51,7 +52,7 @@ var (
 // TorLookupIP uses Tor to resolve DNS via the SOCKS extension they provide for
 // resolution over the Tor network. Tor itself doesn't support ipv6 so this
 // doesn't either.
-func TorLookupIP(host, proxy string) ([]net.IP, error) {
+func TorLookupIP(host, proxy string) ([]net.IP, er.R) {
 	conn, err := net.Dial("tcp", proxy)
 	if err != nil {
 		return nil, err

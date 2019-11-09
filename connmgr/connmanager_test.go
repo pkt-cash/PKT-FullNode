@@ -7,6 +7,7 @@ package connmgr
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"sync/atomic"
@@ -51,17 +52,17 @@ func (c mockConn) RemoteAddr() net.Addr {
 }
 
 // Close handles closing the connection.
-func (c mockConn) Close() error {
+func (c mockConn) Close() er.R {
 	return nil
 }
 
-func (c mockConn) SetDeadline(t time.Time) error      { return nil }
-func (c mockConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c mockConn) SetWriteDeadline(t time.Time) error { return nil }
+func (c mockConn) SetDeadline(t time.Time) er.R      { return nil }
+func (c mockConn) SetReadDeadline(t time.Time) er.R  { return nil }
+func (c mockConn) SetWriteDeadline(t time.Time) er.R { return nil }
 
 // mockDialer mocks the net.Dial interface by returning a mock connection to
 // the given address.
-func mockDialer(addr net.Addr) (net.Conn, error) {
+func mockDialer(addr net.Addr) (net.Conn, er.R) {
 	r, w := io.Pipe()
 	c := &mockConn{rAddr: addr}
 	c.Reader = r
@@ -90,7 +91,7 @@ func TestStartStop(t *testing.T) {
 	disconnected := make(chan *ConnReq)
 	cmgr, err := New(&Config{
 		TargetOutbound: 1,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -189,7 +190,7 @@ func TestTargetOutbound(t *testing.T) {
 	cmgr, err := New(&Config{
 		TargetOutbound: targetOutbound,
 		Dial:           mockDialer,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -308,7 +309,7 @@ func TestMaxRetryDuration(t *testing.T) {
 	time.AfterFunc(5*time.Millisecond, func() {
 		close(networkUp)
 	})
-	timedDialer := func(addr net.Addr) (net.Conn, error) {
+	timedDialer := func(addr net.Addr) (net.Conn, er.R) {
 		select {
 		case <-networkUp:
 			return mockDialer(addr)
@@ -353,7 +354,7 @@ func TestMaxRetryDuration(t *testing.T) {
 // failure gracefully.
 func TestNetworkFailure(t *testing.T) {
 	var dials uint32
-	errDialer := func(net net.Addr) (net.Conn, error) {
+	errDialer := func(net net.Addr) (net.Conn, er.R) {
 		atomic.AddUint32(&dials, 1)
 		return nil, errors.New("network down")
 	}
@@ -361,7 +362,7 @@ func TestNetworkFailure(t *testing.T) {
 		TargetOutbound: 5,
 		RetryDuration:  5 * time.Millisecond,
 		Dial:           errDialer,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -392,7 +393,7 @@ func TestNetworkFailure(t *testing.T) {
 // the failure.
 func TestStopFailed(t *testing.T) {
 	done := make(chan struct{}, 1)
-	waitDialer := func(addr net.Addr) (net.Conn, error) {
+	waitDialer := func(addr net.Addr) (net.Conn, er.R) {
 		done <- struct{}{}
 		time.Sleep(time.Millisecond)
 		return nil, errors.New("network down")
@@ -428,7 +429,7 @@ func TestRemovePendingConnection(t *testing.T) {
 	// Create a ConnMgr instance with an instance of a dialer that'll never
 	// succeed.
 	wait := make(chan struct{})
-	indefiniteDialer := func(addr net.Addr) (net.Conn, error) {
+	indefiniteDialer := func(addr net.Addr) (net.Conn, er.R) {
 		<-wait
 		return nil, fmt.Errorf("error")
 	}
@@ -483,7 +484,7 @@ func TestCancelIgnoreDelayedConnection(t *testing.T) {
 	// connect chan is signaled, the dial attempt immediately after will
 	// succeed in returning a connection.
 	connect := make(chan struct{})
-	failingDialer := func(addr net.Addr) (net.Conn, error) {
+	failingDialer := func(addr net.Addr) (net.Conn, er.R) {
 		select {
 		case <-connect:
 			return mockDialer(addr)
@@ -564,7 +565,7 @@ type mockListener struct {
 // function.
 //
 // This is part of the net.Listener interface.
-func (m *mockListener) Accept() (net.Conn, error) {
+func (m *mockListener) Accept() (net.Conn, er.R) {
 	for conn := range m.provideConn {
 		return conn, nil
 	}
@@ -575,7 +576,7 @@ func (m *mockListener) Accept() (net.Conn, error) {
 // operations to be unblocked and return errors.
 //
 // This is part of the net.Listener interface.
-func (m *mockListener) Close() error {
+func (m *mockListener) Close() er.R {
 	close(m.provideConn)
 	return nil
 }

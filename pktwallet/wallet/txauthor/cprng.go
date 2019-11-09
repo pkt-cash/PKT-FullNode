@@ -7,6 +7,7 @@ package txauthor
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	mrand "math/rand"
 	"sync"
 )

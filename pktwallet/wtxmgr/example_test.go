@@ -6,6 +6,7 @@ package wtxmgr
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -81,7 +82,7 @@ func ExampleStore_Balance() {
 
 	// Insert a transaction which outputs 10 BTC unmined and mark the output
 	// as a credit.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		err := s.InsertTx(ns, exampleTxRecordA, nil)
 		if err != nil {
@@ -97,7 +98,7 @@ func ExampleStore_Balance() {
 
 	// Mine the transaction in block 100 and print balances again with a
 	// sync height of 100 and 105 blocks.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		return s.InsertTx(ns, exampleTxRecordA, &exampleBlock100)
 	})
@@ -122,7 +123,7 @@ func ExampleStore_Rollback() {
 		return
 	}
 
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 
 		// Insert a transaction which outputs 10 BTC in a block at height 100.

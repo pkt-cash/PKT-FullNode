@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/dchest/blake2b"
@@ -21,11 +22,11 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func ValidatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, error) {
+func ValidatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, er.R) {
 	return announce.CheckAnn(p, parentBlockHash, packetCryptVersion)
 }
 
-func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader) error {
+func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader) er.R {
 	contentLength := ann.GetContentLength()
 	totalBlocks := contentLength / 32
 	if totalBlocks*32 < contentLength {
@@ -71,7 +72,7 @@ func contentProofIdx2(mb *wire.MsgBlock) uint32 {
 	return binary.LittleEndian.Uint32(buf) ^ mb.Pcp.Nonce
 }
 
-func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annParentHashes []*chainhash.Hash) (bool, error) {
+func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annParentHashes []*chainhash.Hash) (bool, er.R) {
 	if len(annParentHashes) != 4 {
 		return false, errors.New("wrong number of annParentHashes")
 	}
@@ -94,7 +95,7 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	proofIdx := contentProofIdx2(mb)
 	var contentProofs [][]byte
 	if mb.Pcp.Version <= 1 {
-		var err error
+		var err er.R
 		contentProofs, err = mb.Pcp.SplitContentProof(proofIdx)
 		if err != nil {
 			return false, err

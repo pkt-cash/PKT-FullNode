@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,26 +43,26 @@ type ChainSource interface {
 
 	// BestBlock retrieves the most recent block's height and hash where we
 	// have both the header and filter header ready.
-	BestBlock() (*waddrmgr.BlockStamp, error)
+	BestBlock() (*waddrmgr.BlockStamp, er.R)
 
 	// GetBlockHeaderByHeight returns the header of the block with the given
 	// height.
-	GetBlockHeaderByHeight(uint32) (*wire.BlockHeader, error)
+	GetBlockHeaderByHeight(uint32) (*wire.BlockHeader, er.R)
 
 	// GetBlockHeader returns the header of the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, uint32, error)
+	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, uint32, er.R)
 
 	// GetBlock returns the block with the given hash.
-	GetBlock(chainhash.Hash, ...QueryOption) (*btcutil.Block, error)
+	GetBlock(chainhash.Hash, ...QueryOption) (*btcutil.Block, er.R)
 
 	// GetFilterHeaderByHeight returns the filter header of the block with
 	// the given height.
-	GetFilterHeaderByHeight(uint32) (*chainhash.Hash, error)
+	GetFilterHeaderByHeight(uint32) (*chainhash.Hash, er.R)
 
 	// GetCFilter returns the filter of the given type for the block with
 	// the given hash.
 	GetCFilter(chainhash.Hash, wire.FilterType,
-		...QueryOption) (*gcs.Filter, error)
+		...QueryOption) (*gcs.Filter, er.R)
 
 	// Subscribe returns a block subscription that delivers block
 	// notifications in order. The bestHeight parameter can be used to
@@ -70,7 +71,7 @@ type ChainSource interface {
 	// delivered.
 	//
 	// TODO(wilmer): extend with best hash as well.
-	Subscribe(bestHeight uint32) (*blockntfns.Subscription, error)
+	Subscribe(bestHeight uint32) (*blockntfns.Subscription, er.R)
 }
 
 // rescanOptions holds the set of functional parameters for Rescan.
@@ -211,7 +212,7 @@ func updateChan(update <-chan *updateOptions) RescanOption {
 
 // rescan is a single-threaded function that uses headers from the database and
 // functional options as arguments.
-func rescan(chain ChainSource, options ...RescanOption) error {
+func rescan(chain ChainSource, options ...RescanOption) er.R {
 	// First, we'll apply the set of default options, then serially apply
 	// all the options that've been passed in.
 	ro := defaultRescanOptions()
@@ -482,7 +483,7 @@ func rescan(chain ChainSource, options ...RescanOption) error {
 	//
 	// TODO(wilmer): refactor this and handleBlockDisconnected into their
 	// own methods.
-	handleBlockConnected := func(ntfn *blockntfns.Connected) error {
+	handleBlockConnected := func(ntfn *blockntfns.Connected) er.R {
 		// If we've somehow missed a header in the range, then we'll
 		// mark ourselves as not current so we can walk down the chain
 		// and notify the callers of blocks we may have missed.
@@ -599,7 +600,7 @@ func rescan(chain ChainSource, options ...RescanOption) error {
 
 	// handleBlockDisconnected is a helper closure that handles a new block
 	// disconnected notification.
-	handleBlockDisconnected := func(ntfn *blockntfns.Disconnected) error {
+	handleBlockDisconnected := func(ntfn *blockntfns.Disconnected) er.R {
 		log.Debugf("Rescan disconnect block %d (%s)\n", curStamp.Height,
 			curStamp.Hash)
 
@@ -812,7 +813,7 @@ rescanLoop:
 // notifyBlock calls appropriate listeners based on the block filter.
 func notifyBlock(chain ChainSource, ro *rescanOptions,
 	curHeader wire.BlockHeader, curStamp waddrmgr.BlockStamp,
-	scanning bool) error {
+	scanning bool) er.R {
 
 	// Find relevant transactions based on watch list. If scanning is
 	// false, we can safely assume this block has no relevant transactions.
@@ -852,7 +853,7 @@ func notifyBlock(chain ChainSource, ro *rescanOptions,
 // extractBlockMatches fetches the target block from the network, and filters
 // out any relevant transactions found within the block.
 func extractBlockMatches(chain ChainSource, ro *rescanOptions,
-	curStamp *waddrmgr.BlockStamp) ([]*btcutil.Tx, error) {
+	curStamp *waddrmgr.BlockStamp) ([]*btcutil.Tx, er.R) {
 
 	// We've matched. Now we actually get the block and cycle through the
 	// transactions to see which ones are relevant.
@@ -915,7 +916,7 @@ func extractBlockMatches(chain ChainSource, ro *rescanOptions,
 // obtained the target filter.
 func notifyBlockWithFilter(chain ChainSource, ro *rescanOptions,
 	curHeader *wire.BlockHeader, curStamp *waddrmgr.BlockStamp,
-	filter *gcs.Filter) error {
+	filter *gcs.Filter) er.R {
 
 	// Based on what we find within the block or the filter, we'll be
 	// sending out a set of notifications with transactions that are
@@ -960,7 +961,7 @@ func notifyBlockWithFilter(chain ChainSource, ro *rescanOptions,
 // filter to already be obtained, rather than fetching the filter from the
 // network.
 func matchBlockFilter(ro *rescanOptions, filter *gcs.Filter,
-	blockHash *chainhash.Hash) (bool, error) {
+	blockHash *chainhash.Hash) (bool, er.R) {
 
 	// Now that we have the filter as well as the block hash of the block
 	// used to construct the filter, we'll check to see if the block
@@ -978,7 +979,7 @@ func matchBlockFilter(ro *rescanOptions, filter *gcs.Filter,
 // items. If this returns false, it means the block is certainly not interesting
 // to us.
 func blockFilterMatches(chain ChainSource, ro *rescanOptions,
-	blockHash *chainhash.Hash) (bool, error) {
+	blockHash *chainhash.Hash) (bool, er.R) {
 
 	// TODO(roasbeef): need to ENSURE always get filter
 
@@ -1009,7 +1010,7 @@ func blockFilterMatches(chain ChainSource, ro *rescanOptions,
 // updateFilter atomically updates the filter and rewinds to the specified
 // height if not 0.
 func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
-	curStamp *waddrmgr.BlockStamp, curHeader *wire.BlockHeader) (bool, error) {
+	curStamp *waddrmgr.BlockStamp, curHeader *wire.BlockHeader) (bool, er.R) {
 
 	ro.watchAddrs = append(ro.watchAddrs, update.addrs...)
 	ro.watchInputs = append(ro.watchInputs, update.inputs...)
@@ -1038,7 +1039,7 @@ func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
 		header  *wire.BlockHeader
 		height  uint32
 		rewound bool
-		err     error
+		err     er.R
 	)
 
 	// If we need to rewind, then we'll walk backwards in the chain until
@@ -1106,7 +1107,7 @@ func (ro *rescanOptions) spendsWatchedInput(tx *btcutil.Tx) bool {
 // paysWatchedAddr returns whether the transaction matches the filter by having
 // an output paying to a watched address. If that is the case, this also
 // updates the filter to watch the newly created output going forward.
-func (ro *rescanOptions) paysWatchedAddr(tx *btcutil.Tx) (bool, error) {
+func (ro *rescanOptions) paysWatchedAddr(tx *btcutil.Tx) (bool, er.R) {
 	anyMatchingOutputs := false
 
 txOutLoop:
@@ -1167,7 +1168,7 @@ type Rescan struct {
 	chain ChainSource
 
 	errMtx sync.Mutex
-	err    error
+	err    er.R
 
 	wg sync.WaitGroup
 }
@@ -1193,8 +1194,8 @@ func (r *Rescan) WaitForShutdown() {
 
 // Start kicks off the rescan goroutine, which will begin to scan the chain
 // according to the specified rescan options.
-func (r *Rescan) Start() <-chan error {
-	errChan := make(chan error, 1)
+func (r *Rescan) Start() <-chan er.R {
+	errChan := make(chan er.R, 1)
 
 	if !atomic.CompareAndSwapUint32(&r.started, 0, 1) {
 		errChan <- fmt.Errorf("Rescan already started")
@@ -1269,7 +1270,7 @@ func DisableDisconnectedNtfns(disabled bool) UpdateOption {
 }
 
 // Update sends an update to a long-running rescan/notification goroutine.
-func (r *Rescan) Update(options ...UpdateOption) error {
+func (r *Rescan) Update(options ...UpdateOption) er.R {
 
 	ro := defaultRescanOptions()
 	for _, option := range r.options {
@@ -1339,7 +1340,7 @@ type SpendReport struct {
 // is 0, first normal transaction is 1, etc.).
 //
 // TODO(roasbeef): WTB utxo-commitments
-func (s *ChainService) GetUtxo(options ...RescanOption) (*SpendReport, error) {
+func (s *ChainService) GetUtxo(options ...RescanOption) (*SpendReport, er.R) {
 	// Before we start we'll fetch the set of default options, and apply
 	// any user specified options in a functional manner.
 	ro := defaultRescanOptions()

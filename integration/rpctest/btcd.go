@@ -6,6 +6,7 @@ package rpctest
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -29,7 +30,7 @@ var (
 // generated binary is used for subsequent test harnesses. The executable file
 // is not cleaned up, but since it lives at a static path in a temp directory,
 // it is not a big deal.
-func pktdExecutablePath() (string, error) {
+func pktdExecutablePath() (string, er.R) {
 	compileMtx.Lock()
 	defer compileMtx.Unlock()
 

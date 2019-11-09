@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 	"strings"
 	"sync"
@@ -198,7 +199,7 @@ func (w *Wallet) SynchronizeRPC(chainClient chain.Interface) {
 // consensus RPC server is set.  This function and all functions that call it
 // are unstable and will need to be moved when the syncing code is moved out of
 // the wallet.
-func (w *Wallet) requireChainClient() (chain.Interface, error) {
+func (w *Wallet) requireChainClient() (chain.Interface, er.R) {
 	w.chainClientLock.Lock()
 	chainClient := w.chainClient
 	w.chainClientLock.Unlock()
@@ -270,14 +271,14 @@ func (w *Wallet) WaitForShutdown() {
 
 // NetworkStewardVote gets the network steward which this account is voting for
 func (w *Wallet) NetworkStewardVote(accountNumber uint32,
-	scope waddrmgr.KeyScope) (vote *waddrmgr.NetworkStewardVote, err error) {
+	scope waddrmgr.KeyScope) (vote *waddrmgr.NetworkStewardVote, err er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return
 	}
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		vote, err = manager.NetworkStewardVote(addrmgrNs, accountNumber)
 		return err
 	})
@@ -286,12 +287,12 @@ func (w *Wallet) NetworkStewardVote(accountNumber uint32,
 
 // PutNetworkStewardVote gets the network steward which this account is voting for
 func (w *Wallet) PutNetworkStewardVote(accountNumber uint32,
-	scope waddrmgr.KeyScope, vote *waddrmgr.NetworkStewardVote) error {
+	scope waddrmgr.KeyScope, vote *waddrmgr.NetworkStewardVote) er.R {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return err
 	}
-	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		return manager.PutNetworkStewardVote(addrmgrNs, accountNumber, vote)
 	})
@@ -335,12 +336,12 @@ func (w *Wallet) SetChainSynced(synced bool) {
 // activeData returns the currently-active receiving addresses and all unspent
 // outputs.  This is primarely intended to provide the parameters for a
 // rescan request.
-func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, error) {
+func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
 	var addrs []btcutil.Address
-	err := w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) error {
+	err := w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) er.R {
 		addrs = append(addrs, addr)
 		return nil
 	})
@@ -355,7 +356,7 @@ func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.C
 // connection. It creates a rescan request and blocks until the rescan has
 // finished. The birthday block can be passed in, if set, to ensure we can
 // properly detect if it gets rolled back.
-func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
+func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return err
@@ -374,7 +375,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 
 	// If we've yet to find our birthday block, we'll do so now.
 	if birthdayStamp == nil {
-		var err error
+		var err er.R
 		birthdayStamp, err = locateBirthdayBlock(
 			chainClient, w.Manager.Birthday(),
 		)
@@ -401,7 +402,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 			return err
 		}
 
-		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 			err := w.Manager.SetSyncedTo(ns, &waddrmgr.BlockStamp{
 				Hash:      *startHash,
@@ -433,7 +434,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 	// before catching up with the rescan.
 	rollback := false
 	rollbackStamp := w.Manager.SyncedTo()
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 
@@ -515,7 +516,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 		addrs   []btcutil.Address
 		unspent []wtxmgr.Credit
 	)
-	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
 		addrs, unspent, err = w.activeData(dbtx)
 		return err
 	})
@@ -540,7 +541,7 @@ func (w *Wallet) isDevEnv() bool {
 
 // waitUntilBackendSynced blocks until the chain backend considers itself
 // "current".
-func (w *Wallet) waitUntilBackendSynced(chainClient chain.Interface) error {
+func (w *Wallet) waitUntilBackendSynced(chainClient chain.Interface) er.R {
 	// We'll poll every second to determine if our chain considers itself
 	// "current".
 	t := time.NewTicker(time.Second)
@@ -562,7 +563,7 @@ func (w *Wallet) waitUntilBackendSynced(chainClient chain.Interface) error {
 // by a margin of +/-2 hours. This is safe to do as the timestamp is already 2
 // days in the past of the actual timestamp.
 func locateBirthdayBlock(chainClient chainConn,
-	birthday time.Time) (*waddrmgr.BlockStamp, error) {
+	birthday time.Time) (*waddrmgr.BlockStamp, er.R) {
 
 	// Retrieve the lookup range for our block.
 	startHeight := int32(0)
@@ -641,7 +642,7 @@ func locateBirthdayBlock(chainClient chainConn,
 // addresses starting from our birthday, or the wallet's tip (if higher), which
 // would indicate resuming a recovery after a restart.
 func (w *Wallet) recovery(chainClient chain.Interface,
-	birthdayBlock *waddrmgr.BlockStamp) error {
+	birthdayBlock *waddrmgr.BlockStamp) er.R {
 
 	log.Infof("RECOVERY MODE ENABLED -- rescanning for used addresses "+
 		"with recovery_window=%d", w.recoveryWindow)
@@ -659,7 +660,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 	if err != nil {
 		return err
 	}
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txMgrNS := tx.ReadBucket(wtxmgrNamespaceKey)
 		credits, err := w.TxStore.UnspentOutputs(txMgrNS)
 		if err != nil {
@@ -720,7 +721,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 		// state to disk.
 		recoveryBatch := recoveryMgr.BlockBatch()
 		if len(recoveryBatch) == recoveryBatchSize || height == bestHeight {
-			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 				ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				for _, block := range blocks {
 					err := w.Manager.SetSyncedTo(ns, block)
@@ -756,7 +757,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 // defaultScopeManagers fetches the ScopedKeyManagers from the wallet using the
 // default set of key scopes.
 func (w *Wallet) defaultScopeManagers() (
-	map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager, error) {
+	map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager, er.R) {
 
 	scopedMgrs := make(map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager)
 	for _, scope := range waddrmgr.DefaultKeyScopes {
@@ -780,7 +781,7 @@ func (w *Wallet) recoverDefaultScopes(
 	tx walletdb.ReadWriteTx,
 	ns walletdb.ReadWriteBucket,
 	batch []wtxmgr.BlockMeta,
-	recoveryState *RecoveryState) error {
+	recoveryState *RecoveryState) er.R {
 
 	scopedMgrs, err := w.defaultScopeManagers()
 	if err != nil {
@@ -808,7 +809,7 @@ func (w *Wallet) recoverScopedAddresses(
 	ns walletdb.ReadWriteBucket,
 	batch []wtxmgr.BlockMeta,
 	recoveryState *RecoveryState,
-	scopedMgrs map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager) error {
+	scopedMgrs map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager) er.R {
 
 	// If there are no blocks in the batch, we are done.
 	if len(batch) == 0 {
@@ -833,7 +834,7 @@ expandHorizons:
 	filterReq := newFilterBlocksRequest(batch, scopedMgrs, recoveryState)
 
 	w.Manager.ForEachAccountAddress(ns, waddrmgr.ImportedAddrAccount,
-		func(maddr waddrmgr.ManagedAddress) error {
+		func(maddr waddrmgr.ManagedAddress) er.R {
 			filterReq.ImportedAddrs = append(filterReq.ImportedAddrs, maddr.Address())
 			return nil
 		})
@@ -914,7 +915,7 @@ expandHorizons:
 // proper number of valid child keys.
 func expandScopeHorizons(ns walletdb.ReadWriteBucket,
 	scopedMgr *waddrmgr.ScopedKeyManager,
-	scopeState *ScopeRecoveryState) error {
+	scopeState *ScopeRecoveryState) er.R {
 
 	// Compute the current external horizon and the number of addresses we
 	// must derive to ensure we maintain a sufficient recovery window for
@@ -1040,7 +1041,7 @@ func newFilterBlocksRequest(batch []wtxmgr.BlockMeta,
 func extendFoundAddresses(ns walletdb.ReadWriteBucket,
 	filterResp *chain.FilterBlocksResponse,
 	scopedMgrs map[waddrmgr.KeyScope]*waddrmgr.ScopedKeyManager,
-	recoveryState *RecoveryState) error {
+	recoveryState *RecoveryState) er.R {
 
 	// Mark all recovered external addresses as used. This will be done only
 	// for scopes that reported a non-zero number of external addresses in
@@ -1176,7 +1177,7 @@ type (
 	}
 	createTxResponse struct {
 		tx  *txauthor.AuthoredTx
-		err error
+		err er.R
 	}
 )
 
@@ -1223,7 +1224,7 @@ out:
 // the database. A tx created with this set to true SHOULD NOT be broadcasted.
 func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
 	minconf int32, satPerKb btcutil.Amount, dryRun bool, changeAddress *string) (
-	*txauthor.AuthoredTx, error) {
+	*txauthor.AuthoredTx, er.R) {
 
 	req := createTxRequest{
 		account:       account,
@@ -1243,19 +1244,19 @@ type (
 	unlockRequest struct {
 		passphrase []byte
 		lockAfter  <-chan time.Time // nil prevents the timeout.
-		err        chan error
+		err        chan er.R
 	}
 
 	changePassphraseRequest struct {
 		old, new []byte
 		private  bool
-		err      chan error
+		err      chan er.R
 	}
 
 	changePassphrasesRequest struct {
 		publicOld, publicNew   []byte
 		privateOld, privateNew []byte
-		err                    chan error
+		err                    chan er.R
 	}
 
 	// heldUnlock is a tool to prevent the wallet from automatically
@@ -1275,7 +1276,7 @@ out:
 	for {
 		select {
 		case req := <-w.unlockRequests:
-			err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+			err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 				addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 				return w.Manager.Unlock(addrmgrNs, req.passphrase)
 			})
@@ -1293,7 +1294,7 @@ out:
 			continue
 
 		case req := <-w.changePassphrase:
-			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 				addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				return w.Manager.ChangePassphrase(
 					addrmgrNs, req.old, req.new, req.private,
@@ -1304,7 +1305,7 @@ out:
 			continue
 
 		case req := <-w.changePassphrases:
-			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 				addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				err := w.Manager.ChangePassphrase(
 					addrmgrNs, req.publicOld, req.publicNew,
@@ -1371,8 +1372,8 @@ out:
 // correct, the current timeout is replaced with the new one.  The wallet will
 // be locked if the passphrase is incorrect or any other error occurs during the
 // unlock.
-func (w *Wallet) Unlock(passphrase []byte, lock <-chan time.Time) error {
-	err := make(chan error, 1)
+func (w *Wallet) Unlock(passphrase []byte, lock <-chan time.Time) er.R {
+	err := make(chan er.R, 1)
 	w.unlockRequests <- unlockRequest{
 		passphrase: passphrase,
 		lockAfter:  lock,
@@ -1397,7 +1398,7 @@ func (w *Wallet) Locked() bool {
 // TODO: To prevent the above scenario, perhaps closures should be passed
 // to the walletLocker goroutine and disallow callers from explicitly
 // handling the locking mechanism.
-func (w *Wallet) holdUnlock() (heldUnlock, error) {
+func (w *Wallet) holdUnlock() (heldUnlock, er.R) {
 	req := make(chan heldUnlock)
 	w.holdUnlockRequests <- req
 	hl, ok := <-req
@@ -1423,8 +1424,8 @@ func (c heldUnlock) release() {
 // old to new.  Changing the passphrase is synchronized with all other address
 // manager locking and unlocking.  The lock state will be the same as it was
 // before the password change.
-func (w *Wallet) ChangePrivatePassphrase(old, new []byte) error {
-	err := make(chan error, 1)
+func (w *Wallet) ChangePrivatePassphrase(old, new []byte) er.R {
+	err := make(chan er.R, 1)
 	w.changePassphrase <- changePassphraseRequest{
 		old:     old,
 		new:     new,
@@ -1435,8 +1436,8 @@ func (w *Wallet) ChangePrivatePassphrase(old, new []byte) error {
 }
 
 // ChangePublicPassphrase modifies the public passphrase of the wallet.
-func (w *Wallet) ChangePublicPassphrase(old, new []byte) error {
-	err := make(chan error, 1)
+func (w *Wallet) ChangePublicPassphrase(old, new []byte) er.R {
+	err := make(chan er.R, 1)
 	w.changePassphrase <- changePassphraseRequest{
 		old:     old,
 		new:     new,
@@ -1449,9 +1450,9 @@ func (w *Wallet) ChangePublicPassphrase(old, new []byte) error {
 // ChangePassphrases modifies the public and private passphrase of the wallet
 // atomically.
 func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
-	privateNew []byte) error {
+	privateNew []byte) er.R {
 
-	err := make(chan error, 1)
+	err := make(chan er.R, 1)
 	w.changePassphrases <- changePassphrasesRequest{
 		publicOld:  publicOld,
 		publicNew:  publicNew,
@@ -1465,10 +1466,10 @@ func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
 // accountUsed returns whether there are any recorded transactions spending to
 // a given account. It returns true if atleast one address in the account was
 // used and false if no address in the account was used.
-func (w *Wallet) accountUsed(addrmgrNs walletdb.ReadWriteBucket, account uint32) (bool, error) {
+func (w *Wallet) accountUsed(addrmgrNs walletdb.ReadWriteBucket, account uint32) (bool, er.R) {
 	var used bool
 	err := w.Manager.ForEachAccountAddress(addrmgrNs, account,
-		func(maddr waddrmgr.ManagedAddress) error {
+		func(maddr waddrmgr.ManagedAddress) er.R {
 			used = maddr.Used(addrmgrNs)
 			if used {
 				return waddrmgr.Break
@@ -1483,10 +1484,10 @@ func (w *Wallet) accountUsed(addrmgrNs walletdb.ReadWriteBucket, account uint32)
 
 // AccountAddresses returns the addresses for every created address for an
 // account.
-func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err error) {
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err er.R) {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		return w.Manager.ForEachAccountAddress(addrmgrNs, account, func(maddr waddrmgr.ManagedAddress) error {
+		return w.Manager.ForEachAccountAddress(addrmgrNs, account, func(maddr waddrmgr.ManagedAddress) er.R {
 			addrs = append(addrs, maddr.Address())
 			return nil
 		})
@@ -1502,11 +1503,11 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err 
 // a UTXO must be in a block.  If confirmations is 1 or greater,
 // the balance will be calculated based on how many how many blocks
 // include a UTXO.
-func (w *Wallet) CalculateBalance(confirms int32) (btcutil.Amount, error) {
+func (w *Wallet) CalculateBalance(confirms int32) (btcutil.Amount, er.R) {
 	var balance btcutil.Amount
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-		var err error
+		var err er.R
 		blk := w.Manager.SyncedTo()
 		balance, err = w.TxStore.Balance(txmgrNs, confirms, blk.Height)
 		return err
@@ -1528,9 +1529,9 @@ type Balances struct {
 // This function is much slower than it needs to be since transactions outputs
 // are not indexed by the accounts they credit to, and all unspent transaction
 // outputs must be iterated.
-func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balances, error) {
+func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balances, er.R) {
 	var bals Balances
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -1572,7 +1573,7 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 // from a wallet for a particular key-chain scope.  If the address has already
 // been used (there is at least one transaction spending to it in the
 // blockchain or pktd mempool), the next chained address is returned.
-func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcutil.Address, error) {
+func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcutil.Address, er.R) {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return nil, err
@@ -1587,7 +1588,7 @@ func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcuti
 		addr  btcutil.Address
 		props *waddrmgr.AccountProperties
 	)
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		maddr, err := manager.LastExternalAddress(addrmgrNs, account)
 		if err != nil {
@@ -1632,9 +1633,9 @@ func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcuti
 }
 
 // PubKeyForAddress looks up the associated public key for a P2PKH address.
-func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, error) {
+func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, er.R) {
 	var pubKey *btcec.PublicKey
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		managedAddr, err := w.Manager.Address(addrmgrNs, a)
 		if err != nil {
@@ -1652,9 +1653,9 @@ func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, error) {
 
 // PrivKeyForAddress looks up the associated private key for a P2PKH or P2PK
 // address.
-func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, error) {
+func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) {
 	var privKey *btcec.PrivateKey
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		managedAddr, err := w.Manager.Address(addrmgrNs, a)
 		if err != nil {
@@ -1671,8 +1672,8 @@ func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, error)
 }
 
 // HaveAddress returns whether the wallet is the owner of the address a.
-func (w *Wallet) HaveAddress(a btcutil.Address) (bool, error) {
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+func (w *Wallet) HaveAddress(a btcutil.Address) (bool, er.R) {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		_, err := w.Manager.Address(addrmgrNs, a)
 		return err
@@ -1687,11 +1688,11 @@ func (w *Wallet) HaveAddress(a btcutil.Address) (bool, error) {
 }
 
 // AccountOfAddress finds the account that an address is associated with.
-func (w *Wallet) AccountOfAddress(a btcutil.Address) (uint32, error) {
+func (w *Wallet) AccountOfAddress(a btcutil.Address) (uint32, er.R) {
 	var account uint32
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		_, account, err = w.Manager.AddrAccount(addrmgrNs, a)
 		return err
 	})
@@ -1699,11 +1700,11 @@ func (w *Wallet) AccountOfAddress(a btcutil.Address) (uint32, error) {
 }
 
 // AddressInfo returns detailed information regarding a wallet address.
-func (w *Wallet) AddressInfo(a btcutil.Address) (waddrmgr.ManagedAddress, error) {
+func (w *Wallet) AddressInfo(a btcutil.Address) (waddrmgr.ManagedAddress, er.R) {
 	var managedAddress waddrmgr.ManagedAddress
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		managedAddress, err = w.Manager.Address(addrmgrNs, a)
 		return err
 	})
@@ -1712,16 +1713,16 @@ func (w *Wallet) AddressInfo(a btcutil.Address) (waddrmgr.ManagedAddress, error)
 
 // AccountNumber returns the account number for an account name under a
 // particular key scope.
-func (w *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (uint32, error) {
+func (w *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (uint32, er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return 0, err
 	}
 
 	var account uint32
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		account, err = manager.LookupAccount(addrmgrNs, accountName)
 		return err
 	})
@@ -1729,16 +1730,16 @@ func (w *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (uin
 }
 
 // AccountName returns the name of an account.
-func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (string, error) {
+func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (string, er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return "", err
 	}
 
 	var accountName string
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		accountName, err = manager.AccountName(addrmgrNs, accountNumber)
 		return err
 	})
@@ -1748,16 +1749,16 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 // AccountProperties returns the properties of an account, including address
 // indexes and name. It first fetches the desynced information from the address
 // manager, then updates the indexes based on the address pools.
-func (w *Wallet) AccountProperties(scope waddrmgr.KeyScope, acct uint32) (*waddrmgr.AccountProperties, error) {
+func (w *Wallet) AccountProperties(scope waddrmgr.KeyScope, acct uint32) (*waddrmgr.AccountProperties, er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return nil, err
 	}
 
 	var props *waddrmgr.AccountProperties
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		props, err = manager.AccountProperties(waddrmgrNs, acct)
 		return err
 	})
@@ -1765,14 +1766,14 @@ func (w *Wallet) AccountProperties(scope waddrmgr.KeyScope, acct uint32) (*waddr
 }
 
 // RenameAccount sets the name for an account number to newName.
-func (w *Wallet) RenameAccount(scope waddrmgr.KeyScope, account uint32, newName string) error {
+func (w *Wallet) RenameAccount(scope waddrmgr.KeyScope, account uint32, newName string) er.R {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return err
 	}
 
 	var props *waddrmgr.AccountProperties
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		err := manager.RenameAccount(addrmgrNs, account, newName)
 		if err != nil {
@@ -1794,7 +1795,7 @@ const maxEmptyAccounts = 100
 // restoring, new accounts may not be created when all of the previous 100
 // accounts have no transaction history (this is a deviation from the BIP0044
 // spec, which allows no unused account gaps).
-func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, error) {
+func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return 0, err
@@ -1804,9 +1805,9 @@ func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, erro
 		account uint32
 		props   *waddrmgr.AccountProperties
 	)
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		account, err = manager.NewAccount(addrmgrNs, name)
 		if err != nil {
 			return err
@@ -2002,12 +2003,12 @@ outputs:
 // ListSinceBlock returns a slice of objects with details about transactions
 // since the given block. If the block is -1 then all transactions are included.
 // This is intended to be used for listsinceblock RPC replies.
-func (w *Wallet) ListSinceBlock(start, end, syncHeight int32) ([]btcjson.ListTransactionsResult, error) {
+func (w *Wallet) ListSinceBlock(start, end, syncHeight int32) ([]btcjson.ListTransactionsResult, er.R) {
 	txList := []btcjson.ListTransactionsResult{}
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			for _, detail := range details {
 				jsonResults := listTransactions(tx, &detail,
 					w.Manager, syncHeight, w.chainParams)
@@ -2024,10 +2025,10 @@ func (w *Wallet) ListSinceBlock(start, end, syncHeight int32) ([]btcjson.ListTra
 // ListTransactions returns a slice of objects with details about a recorded
 // transaction.  This is intended to be used for listtransactions RPC
 // replies.
-func (w *Wallet) ListTransactions(from, count int) ([]btcjson.ListTransactionsResult, error) {
+func (w *Wallet) ListTransactions(from, count int) ([]btcjson.ListTransactionsResult, er.R) {
 	txList := []btcjson.ListTransactionsResult{}
 
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
 		// Get current block.  The block height used for calculating
@@ -2039,7 +2040,7 @@ func (w *Wallet) ListTransactions(from, count int) ([]btcjson.ListTransactionsRe
 		skipped := 0
 		n := 0
 
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			// Iterate over transactions at this height in reverse order.
 			// This does nothing for unmined transactions, which are
 			// unsorted, but it will process mined transactions in the
@@ -2077,15 +2078,15 @@ func (w *Wallet) ListTransactions(from, count int) ([]btcjson.ListTransactionsRe
 // ListAddressTransactions returns a slice of objects with details about
 // recorded transactions to or from any address belonging to a set.  This is
 // intended to be used for listaddresstransactions RPC replies.
-func (w *Wallet) ListAddressTransactions(pkHashes map[string]struct{}) ([]btcjson.ListTransactionsResult, error) {
+func (w *Wallet) ListAddressTransactions(pkHashes map[string]struct{}) ([]btcjson.ListTransactionsResult, er.R) {
 	txList := []btcjson.ListTransactionsResult{}
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
 		// Get current block.  The block height used for calculating
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 		loopDetails:
 			for i := range details {
 				detail := &details[i]
@@ -2126,16 +2127,16 @@ func (w *Wallet) ListAddressTransactions(pkHashes map[string]struct{}) ([]btcjso
 // ListAllTransactions returns a slice of objects with details about a recorded
 // transaction.  This is intended to be used for listalltransactions RPC
 // replies.
-func (w *Wallet) ListAllTransactions() ([]btcjson.ListTransactionsResult, error) {
+func (w *Wallet) ListAllTransactions() ([]btcjson.ListTransactionsResult, er.R) {
 	txList := []btcjson.ListTransactionsResult{}
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
 		// Get current block.  The block height used for calculating
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
 
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			// Iterate over transactions at this height in reverse order.
 			// This does nothing for unmined transactions, which are
 			// unsorted, but it will process mined transactions in the
@@ -2189,7 +2190,7 @@ type GetTransactionsResult struct {
 // Transaction results are organized by blocks in ascending order and unmined
 // transactions in an unspecified order.  Mined transactions are saved in a
 // Block structure which records properties about the block.
-func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <-chan struct{}) (*GetTransactionsResult, error) {
+func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <-chan struct{}) (*GetTransactionsResult, er.R) {
 	var start, end int32 = 0, -1
 
 	w.chainClientLock.Lock()
@@ -2211,13 +2212,13 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 			case *chain.RPCClient:
 				startResp = client.GetBlockVerboseTxAsync(startBlock.hash)
 			case *chain.BitcoindClient:
-				var err error
+				var err er.R
 				start, err = client.GetBlockHeight(startBlock.hash)
 				if err != nil {
 					return nil, err
 				}
 			case *chain.NeutrinoClient:
-				var err error
+				var err er.R
 				start, err = client.GetBlockHeight(startBlock.hash)
 				if err != nil {
 					return nil, err
@@ -2236,7 +2237,7 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 			case *chain.RPCClient:
 				endResp = client.GetBlockVerboseTxAsync(endBlock.hash)
 			case *chain.NeutrinoClient:
-				var err error
+				var err er.R
 				end, err = client.GetBlockHeight(endBlock.hash)
 				if err != nil {
 					return nil, err
@@ -2260,10 +2261,10 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 	}
 
 	var res GetTransactionsResult
-	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			// TODO: probably should make RangeTransactions not reuse the
 			// details backing array memory.
 			dets := make([]wtxmgr.TxDetails, len(details))
@@ -2320,7 +2321,7 @@ type AccountsResult struct {
 //
 // TODO(jrick): Is the chain tip really needed, since only the total balances
 // are included?
-func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, error) {
+func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, er.R) {
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return nil, err
@@ -2331,7 +2332,7 @@ func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, error) {
 		syncBlockHash   *chainhash.Hash
 		syncBlockHeight int32
 	)
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -2342,7 +2343,7 @@ func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, error) {
 		if err != nil {
 			return err
 		}
-		err = manager.ForEachAccount(addrmgrNs, func(acct uint32) error {
+		err = manager.ForEachAccount(addrmgrNs, func(acct uint32) er.R {
 			props, err := manager.AccountProperties(addrmgrNs, acct)
 			if err != nil {
 				return err
@@ -2395,7 +2396,7 @@ type AccountBalanceResult struct {
 // Balances are determined by excluding transactions that have not met
 // requiredConfs confirmations.
 func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
-	requiredConfs int32) ([]AccountBalanceResult, error) {
+	requiredConfs int32) ([]AccountBalanceResult, er.R) {
 
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
@@ -2403,7 +2404,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 	}
 
 	var results []AccountBalanceResult
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -2509,10 +2510,10 @@ func (s creditSlice) Swap(i, j int) {
 // contained within it will be considered.  If we know nothing about a
 // transaction an empty array will be returned.
 func (w *Wallet) ListUnspent(minconf, maxconf int32,
-	addresses map[string]struct{}) ([]*btcjson.ListUnspentResult, error) {
+	addresses map[string]struct{}) ([]*btcjson.ListUnspentResult, er.R) {
 
 	var results []*btcjson.ListUnspentResult
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -2646,13 +2647,13 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 
 // DumpPrivKeys returns the WIF-encoded private keys for all addresses with
 // private keys in a wallet.
-func (w *Wallet) DumpPrivKeys() ([]string, error) {
+func (w *Wallet) DumpPrivKeys() ([]string, er.R) {
 	var privkeys []string
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		// Iterate over each active address, appending the private key to
 		// privkeys.
-		return w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) error {
+		return w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) er.R {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err != nil {
 				return err
@@ -2680,12 +2681,12 @@ func (w *Wallet) DumpPrivKeys() ([]string, error) {
 
 // DumpWIFPrivateKey returns the WIF encoded private key for a
 // single wallet address.
-func (w *Wallet) DumpWIFPrivateKey(addr btcutil.Address) (string, error) {
+func (w *Wallet) DumpWIFPrivateKey(addr btcutil.Address) (string, er.R) {
 	var maddr waddrmgr.ManagedAddress
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		// Get private key from wallet if it exists.
-		var err error
+		var err er.R
 		maddr, err = w.Manager.Address(waddrmgrNs, addr)
 		return err
 	})
@@ -2711,7 +2712,7 @@ func (w *Wallet) DumpWIFPrivateKey(addr btcutil.Address) (string, error) {
 // NOTE: If a block stamp is not provided, then the wallet's birthday will be
 // set to the genesis block of the corresponding chain.
 func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
-	bs *waddrmgr.BlockStamp, rescan bool) (string, error) {
+	bs *waddrmgr.BlockStamp, rescan bool) (string, er.R) {
 
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
@@ -2738,7 +2739,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 	// Attempt to import private key into wallet.
 	var addr btcutil.Address
 	var props *waddrmgr.AccountProperties
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		maddr, err := manager.ImportPrivateKey(addrmgrNs, wif, bs)
 		if err != nil {
@@ -2855,9 +2856,9 @@ func (w *Wallet) LockedOutpoints() []btcjson.TransactionInput {
 // to send each to the chain server for relay.
 func (w *Wallet) resendUnminedTxs() {
 	var txs []*wire.MsgTx
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-		var err error
+		var err er.R
 		txs, err = w.TxStore.UnminedTxs(txmgrNs)
 		return err
 	})
@@ -2882,11 +2883,11 @@ func (w *Wallet) resendUnminedTxs() {
 
 // SortedActivePaymentAddresses returns a slice of all active payment
 // addresses in a wallet.
-func (w *Wallet) SortedActivePaymentAddresses() ([]string, error) {
+func (w *Wallet) SortedActivePaymentAddresses() ([]string, er.R) {
 	var addrStrs []string
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		return w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) error {
+		return w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) er.R {
 			addrStrs = append(addrStrs, addr.EncodeAddress())
 			return nil
 		})
@@ -2901,7 +2902,7 @@ func (w *Wallet) SortedActivePaymentAddresses() ([]string, error) {
 
 // NewAddress returns the next external chained address for a wallet.
 func (w *Wallet) NewAddress(account uint32,
-	scope waddrmgr.KeyScope) (btcutil.Address, error) {
+	scope waddrmgr.KeyScope) (btcutil.Address, er.R) {
 
 	chainClient, err := w.requireChainClient()
 	if err != nil {
@@ -2912,9 +2913,9 @@ func (w *Wallet) NewAddress(account uint32,
 		addr  btcutil.Address
 		props *waddrmgr.AccountProperties
 	)
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		addr, props, err = w.newAddress(addrmgrNs, account, scope)
 		return err
 	})
@@ -2934,7 +2935,7 @@ func (w *Wallet) NewAddress(account uint32,
 }
 
 func (w *Wallet) newAddress(addrmgrNs walletdb.ReadWriteBucket, account uint32,
-	scope waddrmgr.KeyScope) (btcutil.Address, *waddrmgr.AccountProperties, error) {
+	scope waddrmgr.KeyScope) (btcutil.Address, *waddrmgr.AccountProperties, er.R) {
 
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
@@ -2959,7 +2960,7 @@ func (w *Wallet) newAddress(addrmgrNs walletdb.ReadWriteBucket, account uint32,
 
 // NewChangeAddress returns a new change address for a wallet.
 func (w *Wallet) NewChangeAddress(account uint32,
-	scope waddrmgr.KeyScope) (btcutil.Address, error) {
+	scope waddrmgr.KeyScope) (btcutil.Address, er.R) {
 
 	chainClient, err := w.requireChainClient()
 	if err != nil {
@@ -2967,9 +2968,9 @@ func (w *Wallet) NewChangeAddress(account uint32,
 	}
 
 	var addr btcutil.Address
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		var err error
+		var err er.R
 		addr, err = w.newChangeAddress(addrmgrNs, account)
 		return err
 	})
@@ -2992,7 +2993,7 @@ func (w *Wallet) NewChangeAddress(account uint32,
 // method in order to detect when an on-chain transaction pays to the address
 // being created.
 func (w *Wallet) newChangeAddress(addrmgrNs walletdb.ReadWriteBucket,
-	account uint32) (btcutil.Address, error) {
+	account uint32) (btcutil.Address, er.R) {
 
 	// As we're making a change address, we'll fetch the type of manager
 	// that is able to make p2wkh output as they're the most efficient.
@@ -3043,7 +3044,7 @@ type AccountTotalReceivedResult struct {
 // TotalReceivedForAccounts iterates through a wallet's transaction history,
 // returning the total amount of Bitcoin received for all accounts.
 func (w *Wallet) TotalReceivedForAccounts(scope waddrmgr.KeyScope,
-	minConf int32) ([]AccountTotalReceivedResult, error) {
+	minConf int32) ([]AccountTotalReceivedResult, er.R) {
 
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
@@ -3051,13 +3052,13 @@ func (w *Wallet) TotalReceivedForAccounts(scope waddrmgr.KeyScope,
 	}
 
 	var results []AccountTotalReceivedResult
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
 		syncBlock := w.Manager.SyncedTo()
 
-		err := manager.ForEachAccount(addrmgrNs, func(account uint32) error {
+		err := manager.ForEachAccount(addrmgrNs, func(account uint32) er.R {
 			accountName, err := manager.AccountName(addrmgrNs, account)
 			if err != nil {
 				return err
@@ -3080,7 +3081,7 @@ func (w *Wallet) TotalReceivedForAccounts(scope waddrmgr.KeyScope,
 			stopHeight = -1
 		}
 
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			for i := range details {
 				detail := &details[i]
 				for _, cred := range detail.Credits {
@@ -3112,9 +3113,9 @@ func (w *Wallet) TotalReceivedForAccounts(scope waddrmgr.KeyScope,
 // TotalReceivedForAddr iterates through a wallet's transaction history,
 // returning the total amount of bitcoins received for a single wallet
 // address.
-func (w *Wallet) TotalReceivedForAddr(addr btcutil.Address, minConf int32) (btcutil.Amount, error) {
+func (w *Wallet) TotalReceivedForAddr(addr btcutil.Address, minConf int32) (btcutil.Amount, er.R) {
 	var amount btcutil.Amount
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 
 		syncBlock := w.Manager.SyncedTo()
@@ -3129,7 +3130,7 @@ func (w *Wallet) TotalReceivedForAddr(addr btcutil.Address, minConf int32) (btcu
 		} else {
 			stopHeight = -1
 		}
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
 			for i := range details {
 				detail := &details[i]
 				for _, cred := range detail.Credits {
@@ -3160,7 +3161,7 @@ func (w *Wallet) TotalReceivedForAddr(addr btcutil.Address, minConf int32) (btcu
 // transaction upon success.
 func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, satPerKb btcutil.Amount, dryRun bool,
-	changeAddress *string) (*txauthor.AuthoredTx, error) {
+	changeAddress *string) (*txauthor.AuthoredTx, er.R) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
@@ -3204,7 +3205,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 // input signature.
 type SignatureError struct {
 	InputIndex uint32
-	Error      error
+	Error      er.R
 }
 
 // SignTransaction uses secrets of the wallet, as well as additional secrets
@@ -3219,10 +3220,10 @@ type SignatureError struct {
 func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 	additionalPrevScripts map[wire.OutPoint][]byte,
 	additionalKeysByAddress map[string]*btcutil.WIF,
-	p2shRedeemScriptsByAddress map[string][]byte) ([]SignatureError, error) {
+	p2shRedeemScriptsByAddress map[string][]byte) ([]SignatureError, er.R) {
 
 	var signErrors []SignatureError
-	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
 		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -3245,7 +3246,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 
 			// Set up our callbacks that we pass to txscript so it can
 			// look up the appropriate keys and scripts by address.
-			getKey := txscript.KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey, bool, error) {
+			getKey := txscript.KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey, bool, er.R) {
 				if len(additionalKeysByAddress) != 0 {
 					addrStr := addr.EncodeAddress()
 					wif, ok := additionalKeysByAddress[addrStr]
@@ -3273,7 +3274,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 
 				return key, pka.Compressed(), nil
 			})
-			getScript := txscript.ScriptClosure(func(addr btcutil.Address) ([]byte, error) {
+			getScript := txscript.ScriptClosure(func(addr btcutil.Address) ([]byte, er.R) {
 				// If keys were provided then we can only use the
 				// redeem scripts provided with our inputs, too.
 				if len(additionalKeysByAddress) != 0 {
@@ -3342,7 +3343,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 //
 // This function is unstable and will be removed once syncing code is moved out
 // of the wallet.
-func (w *Wallet) PublishTransaction(tx *wire.MsgTx) error {
+func (w *Wallet) PublishTransaction(tx *wire.MsgTx) er.R {
 	_, err := w.reliablyPublishTransaction(tx)
 	return err
 }
@@ -3352,7 +3353,7 @@ func (w *Wallet) PublishTransaction(tx *wire.MsgTx) error {
 // relevant database state, and finally possible removing the transaction from
 // the database (along with cleaning up all inputs used, and outputs created) if
 // the transaction is rejected by the backend.
-func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
+func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return nil, err
@@ -3366,7 +3367,7 @@ func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er
 	if err != nil {
 		return nil, err
 	}
-	err = walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
 		return w.addRelevantTx(dbTx, txRec, nil)
 	})
 	if err != nil {
@@ -3406,7 +3407,7 @@ func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er
 // wallet's current backend. In the event that sending the transaction fails for
 // whatever reason, it will be removed from the wallet's unconfirmed transaction
 // store.
-func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
+func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return nil, err
@@ -3465,7 +3466,7 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
 	// This error is returned when broadcasting a transaction that has
 	// already confirmed to a bitcoind node over the P2P network.
 	case strings.Contains(strings.ToLower(err.Error()), "txn-already-known"):
-		dbErr := walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) error {
+		dbErr := walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
 			txmgrNs := dbTx.ReadWriteBucket(wtxmgrNamespaceKey)
 			txRec, err := wtxmgr.NewTxRecordFromMsgTx(tx, time.Now())
 			if err != nil {
@@ -3485,7 +3486,7 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
 	// continually re-broadcast it, and the UTXO state of the wallet won't
 	// be accurate.
 	default:
-		dbErr := walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) error {
+		dbErr := walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
 			txmgrNs := dbTx.ReadWriteBucket(wtxmgrNamespaceKey)
 			txRec, err := wtxmgr.NewTxRecordFromMsgTx(tx, time.Now())
 			if err != nil {
@@ -3522,7 +3523,7 @@ func (w *Wallet) Database() walletdb.DB {
 // seed is non-nil, it is used.  Otherwise, a secure random seed of the
 // recommended length is generated.
 func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Params,
-	birthday time.Time) error {
+	birthday time.Time) er.R {
 
 	// If a seed was provided, ensure that it is of valid length. Otherwise,
 	// we generate a random seed for the wallet with the recommended seed
@@ -3540,7 +3541,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 		return hdkeychain.ErrInvalidSeedLen
 	}
 
-	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs, err := tx.CreateTopLevelBucket(waddrmgrNamespaceKey)
 		if err != nil {
 			return err
@@ -3562,7 +3563,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 }
 
 // ResyncChain re-synchronizes the wallet from the very first block
-func (w *Wallet) ResyncChain() error {
+func (w *Wallet) ResyncChain() er.R {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return err
@@ -3571,7 +3572,7 @@ func (w *Wallet) ResyncChain() error {
 		Hash:   *w.ChainParams().GenesisHash,
 		Height: 0,
 	}
-	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		return w.Manager.SetSyncedTo(ns, &genesis)
 	}); err != nil {
@@ -3582,7 +3583,7 @@ func (w *Wallet) ResyncChain() error {
 
 // Open loads an already-created wallet from the passed database and namespaces.
 func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
-	params *chaincfg.Params, recoveryWindow uint32) (*Wallet, error) {
+	params *chaincfg.Params, recoveryWindow uint32) (*Wallet, er.R) {
 
 	var (
 		addrMgr *waddrmgr.Manager
@@ -3593,7 +3594,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	// database upgrades for us to proceed. We'll also create our references
 	// to the address and transaction managers, as they are backed by the
 	// database.
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrMgrBucket := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if addrMgrBucket == nil {
 			return errors.New("missing address manager namespace")

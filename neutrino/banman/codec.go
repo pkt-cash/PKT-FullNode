@@ -1,6 +1,7 @@
 package banman
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 )
@@ -18,7 +19,7 @@ const (
 )
 
 // encodeIPNet serializes the IP network into the given reader.
-func encodeIPNet(w io.Writer, ipNet *net.IPNet) error {
+func encodeIPNet(w io.Writer, ipNet *net.IPNet) er.R {
 	// Determine the appropriate IP type for the IP address contained in the
 	// network.
 	var (
@@ -52,7 +53,7 @@ func encodeIPNet(w io.Writer, ipNet *net.IPNet) error {
 }
 
 // decodeIPNet deserialized an IP network from the given reader.
-func decodeIPNet(r io.Reader) (*net.IPNet, error) {
+func decodeIPNet(r io.Reader) (*net.IPNet, er.R) {
 	// Read the IP address type and determine whether it is supported.
 	var ipType [1]byte
 	if _, err := r.Read(ipType[:]); err != nil {

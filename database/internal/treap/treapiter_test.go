@@ -7,6 +7,7 @@ package treap
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 

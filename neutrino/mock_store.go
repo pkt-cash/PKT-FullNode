@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -33,17 +34,17 @@ func newMockBlockHeaderStore() *mockBlockHeaderStore {
 }
 
 func (m *mockBlockHeaderStore) ChainTip() (*wire.BlockHeader,
-	uint32, error) {
+	uint32, er.R) {
 	return nil, 0, nil
 
 }
 func (m *mockBlockHeaderStore) LatestBlockLocator() (
-	blockchain.BlockLocator, error) {
+	blockchain.BlockLocator, er.R) {
 	return nil, nil
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
-	*wire.BlockHeader, error) {
+	*wire.BlockHeader, er.R) {
 
 	if header, ok := m.heights[height]; ok {
 		return &header, nil
@@ -53,28 +54,28 @@ func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderAncestors(uint32,
-	*chainhash.Hash) ([]wire.BlockHeader, uint32, error) {
+	*chainhash.Hash) ([]wire.BlockHeader, uint32, er.R) {
 
 	return nil, 0, nil
 }
-func (m *mockBlockHeaderStore) HeightFromHash(*chainhash.Hash) (uint32, error) {
+func (m *mockBlockHeaderStore) HeightFromHash(*chainhash.Hash) (uint32, er.R) {
 	return 0, nil
 
 }
 func (m *mockBlockHeaderStore) RollbackLastBlock() (*waddrmgr.BlockStamp,
-	error) {
+	er.R) {
 	return nil, nil
 }
 
 func (m *mockBlockHeaderStore) FetchHeader(h *chainhash.Hash) (
-	*wire.BlockHeader, uint32, error) {
+	*wire.BlockHeader, uint32, er.R) {
 	if header, ok := m.headers[*h]; ok {
 		return &header, 0, nil
 	}
 	return nil, 0, fmt.Errorf("not found")
 }
 
-func (m *mockBlockHeaderStore) WriteHeaders(headers ...headerfs.BlockHeader) error {
+func (m *mockBlockHeaderStore) WriteHeaders(headers ...headerfs.BlockHeader) er.R {
 	for _, h := range headers {
 		m.headers[h.BlockHash()] = *h.BlockHeader
 	}

@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math/rand"
 	"net"
@@ -32,7 +33,7 @@ import (
 type AddrManager struct {
 	mtx            sync.Mutex
 	peersFile      string
-	lookupFunc     func(string) ([]net.IP, error)
+	lookupFunc     func(string) ([]net.IP, er.R)
 	rand           *rand.Rand
 	key            [32]byte
 	addrIndex      map[string]*KnownAddress // address key to ka for all addrs.
@@ -439,7 +440,7 @@ func (a *AddrManager) loadPeers() {
 	log.Infof("Loaded %d addresses from file '%s'", a.numAddresses(), a.peersFile)
 }
 
-func (a *AddrManager) deserializePeers(filePath string) error {
+func (a *AddrManager) deserializePeers(filePath string) er.R {
 
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
@@ -548,7 +549,7 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 
 // DeserializeNetAddress converts a given address string to a *wire.NetAddress.
 func (a *AddrManager) DeserializeNetAddress(addr string,
-	services wire.ServiceFlag) (*wire.NetAddress, error) {
+	services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -581,7 +582,7 @@ func (a *AddrManager) Start() {
 }
 
 // Stop gracefully shuts down the address manager by stopping the main handler.
-func (a *AddrManager) Stop() error {
+func (a *AddrManager) Stop() er.R {
 	if atomic.AddInt32(&a.shutdown, 1) != 1 {
 		log.Warnf("Address manager is already in the process of " +
 			"shutting down")
@@ -618,7 +619,7 @@ func (a *AddrManager) AddAddress(addr, srcAddr *wire.NetAddress) {
 
 // AddAddressByIP adds an address where we are given an ip:port and not a
 // wire.NetAddress.
-func (a *AddrManager) AddAddressByIP(addrIP string) error {
+func (a *AddrManager) AddAddressByIP(addrIP string) er.R {
 	// Split IP and port
 	addr, portStr, err := net.SplitHostPort(addrIP)
 	if err != nil {
@@ -720,7 +721,7 @@ func (a *AddrManager) reset() {
 // HostToNetAddress returns a netaddress given a host address.  If the address
 // is a Tor .onion address this will be taken care of.  Else if the host is
 // not an IP address it will be resolved (via Tor if required).
-func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, error) {
+func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
@@ -994,7 +995,7 @@ func (a *AddrManager) SetServices(addr *wire.NetAddress, services wire.ServiceFl
 
 // AddLocalAddress adds na to the list of known local addresses to advertise
 // with the given priority.
-func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) error {
+func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) er.R {
 	if !IsRoutable(na) {
 		return fmt.Errorf("address %s is not routable", na.IP)
 	}
@@ -1137,7 +1138,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 
 // New returns a new bitcoin address manager.
 // Use Start to begin processing asynchronous address updates.
-func New(dataDir string, lookupFunc func(string) ([]net.IP, error)) *AddrManager {
+func New(dataDir string, lookupFunc func(string) ([]net.IP, er.R)) *AddrManager {
 	am := AddrManager{
 		peersFile:      filepath.Join(dataDir, "peers.json"),
 		lookupFunc:     lookupFunc,

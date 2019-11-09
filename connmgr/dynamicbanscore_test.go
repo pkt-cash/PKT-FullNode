@@ -5,6 +5,7 @@
 package connmgr
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"testing"
 	"time"

@@ -5,6 +5,7 @@
 package treap
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"time"
 )

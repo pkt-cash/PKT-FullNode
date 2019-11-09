@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"sync"
 	"testing"
@@ -35,7 +36,7 @@ func (c *MockChainClient) SetBlock(hash *chainhash.Hash, block *btcutil.Block) {
 }
 
 func (c *MockChainClient) GetBlockFromNetwork(blockHash chainhash.Hash,
-	options ...QueryOption) (*btcutil.Block, error) {
+	options ...QueryOption) (*btcutil.Block, er.R) {
 	return c.getBlockResponse[blockHash], nil
 }
 
@@ -43,7 +44,7 @@ func (c *MockChainClient) SetBlockHash(height int64, hash *chainhash.Hash) {
 	c.getBlockHashResponse[height] = hash
 }
 
-func (c *MockChainClient) GetBlockHash(height int64) (*chainhash.Hash, error) {
+func (c *MockChainClient) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 	return c.getBlockHashResponse[height], nil
 }
 
@@ -52,7 +53,7 @@ func (c *MockChainClient) SetBestSnapshot(hash *chainhash.Hash, height int32) {
 	c.getBestBlockHeight = height
 }
 
-func (c *MockChainClient) BestSnapshot() (*waddrmgr.BlockStamp, error) {
+func (c *MockChainClient) BestSnapshot() (*waddrmgr.BlockStamp, er.R) {
 	return &waddrmgr.BlockStamp{
 		Hash:   *c.getBestBlockHash,
 		Height: c.getBestBlockHeight,
@@ -60,7 +61,7 @@ func (c *MockChainClient) BestSnapshot() (*waddrmgr.BlockStamp, error) {
 }
 
 func (c *MockChainClient) blockFilterMatches(ro *rescanOptions,
-	blockHash *chainhash.Hash) (bool, error) {
+	blockHash *chainhash.Hash) (bool, er.R) {
 	return true, nil
 }
 
@@ -341,7 +342,7 @@ func TestUtxoScannerScanBasic(t *testing.T) {
 
 	var (
 		spendReport *SpendReport
-		scanErr     error
+		scanErr     er.R
 	)
 
 	req, err := scanner.Enqueue(makeTestInputWithScript(), 100000)
@@ -382,7 +383,7 @@ func TestUtxoScannerScanAddBlocks(t *testing.T) {
 	scanner := NewUtxoScanner(&UtxoScannerConfig{
 		GetBlock:     mockChainClient.GetBlockFromNetwork,
 		GetBlockHash: mockChainClient.GetBlockHash,
-		BestSnapshot: func() (*waddrmgr.BlockStamp, error) {
+		BestSnapshot: func() (*waddrmgr.BlockStamp, er.R) {
 			<-waitForSnapshot
 			snapshotLock.Lock()
 			defer snapshotLock.Unlock()
@@ -396,7 +397,7 @@ func TestUtxoScannerScanAddBlocks(t *testing.T) {
 
 	var (
 		spendReport *SpendReport
-		scanErr     error
+		scanErr     er.R
 	)
 
 	req, err := scanner.Enqueue(makeTestInputWithScript(), 99999)
@@ -451,7 +452,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 	block := make(chan struct{})
 	scanner := NewUtxoScanner(&UtxoScannerConfig{
 		GetBlock: func(chainhash.Hash, ...QueryOption,
-		) (*btcutil.Block, error) {
+		) (*btcutil.Block, er.R) {
 			<-block
 			return nil, fetchErr
 		},
@@ -476,7 +477,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 	// Spawn our first task with a cancel chan, which we'll test to make
 	// sure it can break away early.
 	cancel100000 := make(chan struct{})
-	err100000 := make(chan error, 1)
+	err100000 := make(chan er.R, 1)
 	go func() {
 		_, err := req100000.Result(cancel100000)
 		err100000 <- err
@@ -484,7 +485,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 
 	// Spawn our second task without a cancel chan, we'll be testing it's
 	// ability to break if the scanner is stopped.
-	err100001 := make(chan error, 1)
+	err100001 := make(chan er.R, 1)
 	go func() {
 		_, err := req100001.Result(nil)
 		err100001 <- err

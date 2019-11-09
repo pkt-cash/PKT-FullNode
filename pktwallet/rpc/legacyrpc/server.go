@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"io/ioutil"
 	"net"
@@ -46,7 +47,7 @@ func newWebsocketClient(c *websocket.Conn, authenticated bool, remoteAddr string
 	}
 }
 
-func (c *websocketClient) send(b []byte) error {
+func (c *websocketClient) send(b []byte) er.R {
 	select {
 	case c.responses <- b:
 		return nil
@@ -295,7 +296,7 @@ var ErrNoAuth = errors.New("no auth")
 // authentication was provided but incorrect.
 //
 // This check is time-constant.
-func (s *Server) checkAuthHeader(r *http.Request) error {
+func (s *Server) checkAuthHeader(r *http.Request) er.R {
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) == 0 {
 		return ErrNoAuth

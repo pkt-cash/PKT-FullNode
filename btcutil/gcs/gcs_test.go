@@ -8,6 +8,7 @@ package gcs_test
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 
 var (
 	// No need to allocate an err variable in every test
-	err error
+	err er.R
 
 	// Collision probability for the tests (1/2**19)
 	P = uint8(19)

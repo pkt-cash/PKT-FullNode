@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math"
 	"math/rand"
@@ -114,7 +115,7 @@ func (o *observedTransaction) Serialize(w io.Writer) {
 	binary.Write(w, binary.BigEndian, o.mined)
 }
 
-func deserializeObservedTransaction(r io.Reader) (*observedTransaction, error) {
+func deserializeObservedTransaction(r io.Reader) (*observedTransaction, er.R) {
 	ot := observedTransaction{}
 
 	// The first 32 bytes should be a hash.
@@ -220,7 +221,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 }
 
 // RegisterBlock informs the fee estimator of a new block to take into account.
-func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
+func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) er.R {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -343,7 +344,7 @@ func (ef *FeeEstimator) LastKnownHeight() int32 {
 // deleted if they have been observed too long ago. That means the result
 // of Rollback won't always be exactly the same as if the last block had not
 // happened, but it should be close enough.
-func (ef *FeeEstimator) Rollback(hash *chainhash.Hash) error {
+func (ef *FeeEstimator) Rollback(hash *chainhash.Hash) er.R {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -546,7 +547,7 @@ func (ef *FeeEstimator) estimates() []SatoshiPerByte {
 
 // EstimateFee estimates the fee per byte to have a tx confirmed a given
 // number of blocks from now.
-func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
+func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, er.R) {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -580,7 +581,7 @@ func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
 // start fee estimation over.
 const estimateFeeSaveVersion = 1
 
-func deserializeRegisteredBlock(r io.Reader, txs map[uint32]*observedTransaction) (*registeredBlock, error) {
+func deserializeRegisteredBlock(r io.Reader, txs map[uint32]*observedTransaction) (*registeredBlock, er.R) {
 	var lenTransactions uint32
 
 	rb := &registeredBlock{}
@@ -677,7 +678,7 @@ func (ef *FeeEstimator) Save() FeeEstimatorState {
 
 // RestoreFeeEstimator takes a FeeEstimatorState that was previously
 // returned by Save and restores it to a FeeEstimator
-func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, error) {
+func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, er.R) {
 	r := bytes.NewReader([]byte(data))
 
 	// Check version
@@ -738,7 +739,7 @@ func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, error) {
 	binary.Read(r, binary.BigEndian, &numDropped)
 	ef.dropped = make([]*registeredBlock, numDropped)
 	for i := uint32(0); i < numDropped; i++ {
-		var err error
+		var err er.R
 		ef.dropped[int(i)], err = deserializeRegisteredBlock(r, observed)
 		if err != nil {
 			return nil, err

@@ -3,6 +3,7 @@ package wtxmgr
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -12,8 +13,8 @@ import (
 // top-level bucket before and after a migration. This can be used to ensure
 // the correctness of migrations.
 func applyMigration(t *testing.T,
-	beforeMigration, afterMigration func(walletdb.ReadWriteBucket, *Store) error,
-	migration func(walletdb.ReadWriteBucket) error, shouldFail bool) {
+	beforeMigration, afterMigration func(walletdb.ReadWriteBucket, *Store) er.R,
+	migration func(walletdb.ReadWriteBucket) er.R, shouldFail bool) {
 
 	t.Helper()
 
@@ -27,7 +28,7 @@ func applyMigration(t *testing.T,
 	// First, we'll run the beforeMigration closure, which contains the
 	// database modifications/assertions needed before proceeding with the
 	// migration.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -40,7 +41,7 @@ func applyMigration(t *testing.T,
 
 	// Then, we'll run the migration itself and fail if it does not match
 	// its expected result.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -56,7 +57,7 @@ func applyMigration(t *testing.T,
 	// Finally, we'll run the afterMigration closure, which contains the
 	// assertions needed in order to guarantee than the migration was
 	// successful.
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
 			return errors.New("top-level namespace does not exist")
@@ -77,7 +78,7 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 	// state of the transaction store based on whether the migration has
 	// completed or not.
 	checkTransactions := func(ns walletdb.ReadWriteBucket, s *Store,
-		afterMigration bool) error {
+		afterMigration bool) er.R {
 
 		// We should see one confirmed unspent output before the
 		// migration, and none after.
@@ -126,7 +127,7 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 		return nil
 	}
 
-	beforeMigration := func(ns walletdb.ReadWriteBucket, s *Store) error {
+	beforeMigration := func(ns walletdb.ReadWriteBucket, s *Store) er.R {
 		// We'll start by adding two transactions to the store: a
 		// confirmed transaction and an unconfirmed transaction one.
 		// The confirmed transaction will spend from a coinbase output,
@@ -172,7 +173,7 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 		return checkTransactions(ns, s, false)
 	}
 
-	afterMigration := func(ns walletdb.ReadWriteBucket, s *Store) error {
+	afterMigration := func(ns walletdb.ReadWriteBucket, s *Store) er.R {
 		// Assuming the migration was successful, we should see that the
 		// store no longer has the transaction history prior to the
 		// migration.

@@ -5,6 +5,7 @@
 package txscript
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ import (
 )
 
 // genTestTx creates a random transaction for uses within test cases.
-func genTestTx() (*wire.MsgTx, error) {
+func genTestTx() (*wire.MsgTx, er.R) {
 	tx := wire.NewMsgTx(2)
 	tx.Version = rand.Int31()
 
@@ -60,7 +61,7 @@ func TestHashCacheAddContainsHashes(t *testing.T) {
 
 	cache := NewHashCache(10)
 
-	var err error
+	var err er.R
 
 	// First, we'll generate 10 random transactions for use within our
 	// tests.
@@ -148,7 +149,7 @@ func TestHashCachePurge(t *testing.T) {
 
 	cache := NewHashCache(10)
 
-	var err error
+	var err er.R
 
 	// First we'll start by inserting numTxns transactions into the hash cache.
 	const numTxns = 10

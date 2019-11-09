@@ -6,6 +6,7 @@ package waddrmgr
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
@@ -191,7 +192,7 @@ func (e ErrorCode) String() string {
 type ManagerError struct {
 	ErrorCode   ErrorCode // Describes the kind of error
 	Description string    // Human readable description of the issue
-	Err         error     // Underlying error
+	Err         er.R      // Underlying error
 }
 
 // Error satisfies the error interface and prints human-readable errors.
@@ -203,7 +204,7 @@ func (e ManagerError) Error() string {
 }
 
 // managerError creates a ManagerError given a set of arguments.
-func managerError(c ErrorCode, desc string, err error) ManagerError {
+func managerError(c ErrorCode, desc string, err er.R) ManagerError {
 	return ManagerError{ErrorCode: c, Description: desc, Err: err}
 }
 
@@ -213,7 +214,7 @@ var Break = managerError(ErrCallBackBreak, "callback break", nil)
 
 // IsError returns whether the error is a ManagerError with a matching error
 // code.
-func IsError(err error, code ErrorCode) bool {
+func IsError(err er.R, code ErrorCode) bool {
 	e, ok := err.(ManagerError)
 	return ok && e.ErrorCode == code
 }

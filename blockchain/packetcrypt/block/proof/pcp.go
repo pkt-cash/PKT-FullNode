@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 
@@ -22,7 +23,7 @@ func PcpHash(
 	annCount uint64,
 	annIndexes *[4]uint64,
 	pcp *wire.PacketCryptProof,
-) (*[32]byte, error) {
+) (*[32]byte, er.R) {
 
 	// We need to bump the numbers to account for the zero entry
 	var annIdxs [4]uint64

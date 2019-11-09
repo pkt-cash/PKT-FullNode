@@ -6,6 +6,7 @@ package mempool
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
@@ -373,7 +374,7 @@ func (eft *estimateFeeTester) checkSaveAndRestore(
 	save := eft.ef.Save()
 
 	// Save and restore database.
-	var err error
+	var err er.R
 	eft.ef, err = RestoreFeeEstimator(save)
 	if err != nil {
 		eft.t.Fatalf("Could not restore database: %s", err)

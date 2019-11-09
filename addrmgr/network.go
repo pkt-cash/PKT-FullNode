@@ -6,6 +6,7 @@ package addrmgr
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 
 	"github.com/pkt-cash/pktd/wire"

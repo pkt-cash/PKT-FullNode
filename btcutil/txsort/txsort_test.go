@@ -7,6 +7,7 @@ package txsort_test
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"path/filepath"
 	"testing"

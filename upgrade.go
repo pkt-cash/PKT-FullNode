@@ -5,13 +5,14 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"path/filepath"
 )
 
 // dirEmpty returns whether or not the specified directory path is empty.
-func dirEmpty(dirPath string) (bool, error) {
+func dirEmpty(dirPath string) (bool, er.R) {
 	f, err := os.Open(dirPath)
 	if err != nil {
 		return false, err
@@ -51,7 +52,7 @@ func oldBtcdHomeDir() string {
 // upgradeDBPathNet moves the database for a specific network from its
 // location prior to pktd version 0.2.0 and uses heuristics to ascertain the old
 // database type to rename to the new format.
-func upgradeDBPathNet(oldDbPath, netName string) error {
+func upgradeDBPathNet(oldDbPath, netName string) er.R {
 	// Prior to version 0.2.0, the database was named the same thing for
 	// both sqlite and leveldb.  Use heuristics to figure out the type
 	// of the database and move it to the new path and name introduced with
@@ -90,7 +91,7 @@ func upgradeDBPathNet(oldDbPath, netName string) error {
 
 // upgradeDBPaths moves the databases from their locations prior to pktd
 // version 0.2.0 to their new locations.
-func upgradeDBPaths() error {
+func upgradeDBPaths() er.R {
 	// Prior to version 0.2.0, the databases were in the "db" directory and
 	// their names were suffixed by "testnet" and "regtest" for their
 	// respective networks.  Check for the old database and update it to the
@@ -106,7 +107,7 @@ func upgradeDBPaths() error {
 
 // upgradeDataPaths moves the application data from its location prior to pktd
 // version 0.3.3 to its new location.
-func upgradeDataPaths() error {
+func upgradeDataPaths() er.R {
 	// No need to migrate if the old and new home paths are the same.
 	oldHomePath := oldBtcdHomeDir()
 	newHomePath := defaultHomeDir
@@ -166,7 +167,7 @@ func upgradeDataPaths() error {
 }
 
 // doUpgrades performs upgrades to pktd as new versions require it.
-func doUpgrades() error {
+func doUpgrades() er.R {
 	err := upgradeDBPaths()
 	if err != nil {
 		return err

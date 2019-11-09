@@ -1,6 +1,7 @@
 package chain_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 	"time"

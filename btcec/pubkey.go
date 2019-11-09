@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 )
 
@@ -24,7 +25,7 @@ func isOdd(a *big.Int) bool {
 
 // decompressPoint decompresses a point on the given curve given the X point and
 // the solution to use.
-func decompressPoint(curve *KoblitzCurve, x *big.Int, ybit bool) (*big.Int, error) {
+func decompressPoint(curve *KoblitzCurve, x *big.Int, ybit bool) (*big.Int, er.R) {
 	// TODO: This will probably only work for secp256k1 due to
 	// optimizations.
 
@@ -77,7 +78,7 @@ func IsCompressedPubKey(pubKey []byte) bool {
 // ParsePubKey parses a public key for a koblitz curve from a bytestring into a
 // ecdsa.Publickey, verifying that it is valid. It supports compressed,
 // uncompressed and hybrid signature formats.
-func ParsePubKey(pubKeyStr []byte, curve *KoblitzCurve) (key *PublicKey, err error) {
+func ParsePubKey(pubKeyStr []byte, curve *KoblitzCurve) (key *PublicKey, err er.R) {
 	pubkey := PublicKey{}
 	pubkey.Curve = curve
 

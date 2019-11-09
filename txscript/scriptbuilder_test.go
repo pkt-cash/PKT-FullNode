@@ -6,6 +6,7 @@ package txscript
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 

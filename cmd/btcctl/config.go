@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
@@ -187,7 +188,7 @@ func cleanAndExpandPath(path string) string {
 // The above results in functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
-func loadConfig() (*config, []string, error) {
+func loadConfig() (*config, []string, er.R) {
 	// Default config.
 	cfg := config{
 		ConfigFile: defaultConfigFile,
@@ -302,7 +303,7 @@ func loadConfig() (*config, []string, error) {
 // createDefaultConfig creates a basic config file at the given destination path.
 // For this it tries to read the config file for the RPC server (either pktd or
 // pktwallet), and extract the RPC user and password from it.
-func createDefaultConfigFile(destinationPath, serverConfigPath string) error {
+func createDefaultConfigFile(destinationPath, serverConfigPath string) er.R {
 	// Read the RPC server config
 	serverConfigFile, err := os.Open(serverConfigPath)
 	if err != nil {

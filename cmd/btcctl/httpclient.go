@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -16,16 +17,16 @@ import (
 
 // newHTTPClient returns a new HTTP client that is configured according to the
 // proxy and TLS settings in the associated connection configuration.
-func newHTTPClient(cfg *config) (*http.Client, error) {
+func newHTTPClient(cfg *config) (*http.Client, er.R) {
 	// Configure proxy if needed.
-	var dial func(network, addr string) (net.Conn, error)
+	var dial func(network, addr string) (net.Conn, er.R)
 	if cfg.Proxy != "" {
 		proxy := &socks.Proxy{
 			Addr:     cfg.Proxy,
 			Username: cfg.ProxyUser,
 			Password: cfg.ProxyPass,
 		}
-		dial = func(network, addr string) (net.Conn, error) {
+		dial = func(network, addr string) (net.Conn, er.R) {
 			c, err := proxy.Dial(network, addr)
 			if err != nil {
 				return nil, err
@@ -65,7 +66,7 @@ func newHTTPClient(cfg *config) (*http.Client, error) {
 // to the server described in the passed config struct.  It also attempts to
 // unmarshal the response as a JSON-RPC response and returns either the result
 // field or the error field depending on whether or not there is an error.
-func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
+func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 	// Generate a request to the configured RPC server.
 	protocol := "http"
 	if !cfg.NoTLS {

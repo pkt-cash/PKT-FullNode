@@ -5,6 +5,7 @@
 package btcjson_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestCmdMethod(t *testing.T) {
 		name   string
 		cmd    interface{}
 		method string
-		err    error
+		err    er.R
 	}{
 		{
 			name: "unregistered type",
@@ -77,7 +78,7 @@ func TestMethodUsageFlags(t *testing.T) {
 	tests := []struct {
 		name   string
 		method string
-		err    error
+		err    er.R
 		flags  btcjson.UsageFlag
 	}{
 		{
@@ -135,7 +136,7 @@ func TestMethodUsageText(t *testing.T) {
 	tests := []struct {
 		name     string
 		method   string
-		err      error
+		err      er.R
 		expected string
 	}{
 		{

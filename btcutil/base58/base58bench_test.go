@@ -6,6 +6,7 @@ package base58_test
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/base58"

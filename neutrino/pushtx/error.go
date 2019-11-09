@@ -2,6 +2,7 @@ package pushtx
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
 
 	"github.com/pkt-cash/pktd/wire"
@@ -60,7 +61,7 @@ type BroadcastError struct {
 
 // A compile-time constraint to ensure BroadcastError satisfies the error
 // interface.
-var _ error = (*BroadcastError)(nil)
+var _ er.R = (*BroadcastError)(nil)
 
 // Error returns the reason of the broadcast error.
 func (e *BroadcastError) Error() string {
@@ -69,7 +70,7 @@ func (e *BroadcastError) Error() string {
 
 // IsBroadcastError is a helper function that can be used to determine whether
 // an error is a BroadcastError that matches any of the specified codes.
-func IsBroadcastError(err error, codes ...BroadcastErrorCode) bool {
+func IsBroadcastError(err er.R, codes ...BroadcastErrorCode) bool {
 	broadcastErr, ok := err.(*BroadcastError)
 	if !ok {
 		return false

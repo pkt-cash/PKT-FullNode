@@ -7,6 +7,7 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -387,7 +388,7 @@ func TestCalcScriptInfo(t *testing.T) {
 		segwit bool
 
 		scriptInfo    ScriptInfo
-		scriptInfoErr error
+		scriptInfoErr er.R
 	}{
 		{
 			// Invented scripts, the hashes do not match
@@ -643,7 +644,7 @@ func TestPayToAddrScript(t *testing.T) {
 	tests := []struct {
 		in       btcutil.Address
 		expected string
-		err      error
+		err      er.R
 	}{
 		// pay-to-pubkey-hash address on mainnet
 		{
@@ -744,7 +745,7 @@ func TestMultiSigScript(t *testing.T) {
 		keys      []*btcutil.AddressPubKey
 		nrequired int
 		expected  string
-		err       error
+		err       er.R
 	}{
 		{
 			[]*btcutil.AddressPubKey{
@@ -825,7 +826,7 @@ func TestCalcMultiSigStats(t *testing.T) {
 	tests := []struct {
 		name   string
 		script string
-		err    error
+		err    er.R
 	}{
 		{
 			name: "short script",
@@ -1134,7 +1135,7 @@ func TestNullDataScript(t *testing.T) {
 		name     string
 		data     []byte
 		expected []byte
-		err      error
+		err      er.R
 		class    ScriptClass
 	}{
 		{

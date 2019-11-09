@@ -2,6 +2,7 @@ package chainsync
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -44,7 +45,7 @@ var filterHeaderCheckpoints = map[wire.BitcoinNet]map[uint32]*chainhash.Hash{
 // checkpoints. It returns ErrCheckpointMismatch if we have a checkpoint at the
 // given height, and it doesn't match.
 func ControlCFHeader(params chaincfg.Params, fType wire.FilterType,
-	height uint32, filterHeader *chainhash.Hash) error {
+	height uint32, filterHeader *chainhash.Hash) er.R {
 
 	if fType != wire.GCSFilterRegular {
 		return fmt.Errorf("unsupported filter type %v", fType)

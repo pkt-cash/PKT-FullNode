@@ -5,6 +5,7 @@
 package legacyrpc
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net/http"
 	"net/http/httptest"
 	"reflect"

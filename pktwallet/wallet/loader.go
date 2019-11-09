@@ -6,6 +6,7 @@ package wallet
 
 import (
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"sync"
@@ -96,7 +97,7 @@ func (l *Loader) RunAfterLoad(fn func(*Wallet)) {
 // passphrases.  The seed is optional.  If non-nil, addresses are derived from
 // this seed.  If nil, a secure random seed is generated.
 func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
-	bday time.Time) (*Wallet, error) {
+	bday time.Time) (*Wallet, er.R) {
 
 	defer l.mu.Unlock()
 	l.mu.Lock()
@@ -145,7 +146,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 
 var errNoConsole = errors.New("db upgrade requires console access for additional input")
 
-func noConsole() ([]byte, error) {
+func noConsole() ([]byte, er.R) {
 	return nil, errNoConsole
 }
 
@@ -153,7 +154,7 @@ func noConsole() ([]byte, error) {
 // and the public passphrase.  If the loader is being called by a context where
 // standard input prompts may be used during wallet upgrades, setting
 // canConsolePrompt will enables these prompts.
-func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool) (*Wallet, error) {
+func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool) (*Wallet, er.R) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
@@ -205,7 +206,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 // WalletExists returns whether a file exists at the loader's database path.
 // This may return an error for unexpected I/O failures.
-func (l *Loader) WalletExists() (bool, error) {
+func (l *Loader) WalletExists() (bool, er.R) {
 	dbPath := filepath.Join(l.dbDirPath, walletDbName)
 	return fileExists(dbPath)
 }
@@ -224,7 +225,7 @@ func (l *Loader) LoadedWallet() (*Wallet, bool) {
 // This returns ErrNotLoaded if the wallet has not been loaded with
 // CreateNewWallet or LoadExistingWallet.  The Loader may be reused if this
 // function returns without error.
-func (l *Loader) UnloadWallet() error {
+func (l *Loader) UnloadWallet() er.R {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
@@ -244,7 +245,7 @@ func (l *Loader) UnloadWallet() error {
 	return nil
 }
 
-func fileExists(filePath string) (bool, error) {
+func fileExists(filePath string) (bool, er.R) {
 	_, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {

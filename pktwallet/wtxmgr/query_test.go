@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 	"time"
 
@@ -65,7 +66,7 @@ func deepCopyTxDetails(d *TxDetails) *TxDetails {
 }
 
 func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
-	changeDesc string) error {
+	changeDesc string) er.R {
 
 	fwdBlocks := q.blocks
 	revBlocks := make([][]TxDetails, len(q.blocks))
@@ -73,8 +74,8 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 	for i := 0; i < len(revBlocks)/2; i++ {
 		revBlocks[i], revBlocks[len(revBlocks)-1-i] = revBlocks[len(revBlocks)-1-i], revBlocks[i]
 	}
-	checkBlock := func(blocks [][]TxDetails) func([]TxDetails) (bool, error) {
-		return func(got []TxDetails) (bool, error) {
+	checkBlock := func(blocks [][]TxDetails) func([]TxDetails) (bool, er.R) {
+		return func(got []TxDetails) (bool, er.R) {
 			if len(fwdBlocks) == 0 {
 				return false, errors.New("entered range " +
 					"when no more details expected")
@@ -147,7 +148,7 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 	return nil
 }
 
-func equalTxDetails(got, exp *TxDetails) error {
+func equalTxDetails(got, exp *TxDetails) er.R {
 	// Need to avoid using reflect.DeepEqual against slices, since it
 	// returns false for nil vs non-nil zero length slices.
 	if err := equalTxs(&got.MsgTx, &exp.MsgTx); err != nil {
@@ -194,7 +195,7 @@ func equalTxDetails(got, exp *TxDetails) error {
 	return nil
 }
 
-func equalTxs(got, exp *wire.MsgTx) error {
+func equalTxs(got, exp *wire.MsgTx) er.R {
 	var bufGot, bufExp bytes.Buffer
 	err := got.Serialize(&bufGot)
 	if err != nil {
@@ -244,7 +245,7 @@ func TestStoreQueries(t *testing.T) {
 
 	type queryTest struct {
 		desc    string
-		updates func(ns walletdb.ReadWriteBucket) error
+		updates func(ns walletdb.ReadWriteBucket) er.R
 		state   *queryState
 	}
 	var tests []queryTest
@@ -258,7 +259,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState := newQueryState()
 	tests = append(tests, queryTest{
 		desc:    "initial store",
-		updates: func(walletdb.ReadWriteBucket) error { return nil },
+		updates: func(walletdb.ReadWriteBucket) er.R { return nil },
 		state:   lastState,
 	})
 
@@ -283,7 +284,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "insert tx A unmined",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.InsertTx(ns, recA, nil)
 		},
 		state: newState,
@@ -303,7 +304,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "mark unconfirmed txA:0 as credit",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.AddCredit(ns, recA, nil, 0, true)
 		},
 		state: newState,
@@ -333,7 +334,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "insert tx B unmined",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.InsertTx(ns, recB, nil)
 		},
 		state: newState,
@@ -351,7 +352,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "mark txB:0 as non-change credit",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.AddCredit(ns, recB, nil, 0, false)
 		},
 		state: newState,
@@ -367,7 +368,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "mine tx A",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.InsertTx(ns, recA, &b100)
 		},
 		state: newState,
@@ -381,14 +382,14 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "mine tx B",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.InsertTx(ns, recB, &b101)
 		},
 		state: newState,
 	})
 
 	for _, tst := range tests {
-		err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 			ns := tx.ReadWriteBucket(namespaceKey)
 			if err := tst.updates(ns); err != nil {
 				return err
@@ -408,7 +409,7 @@ func TestStoreQueries(t *testing.T) {
 	//   - Verify that breaking early on RangeTransactions stops further
 	//     iteration.
 
-	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 
 		missingTx := spendOutput(&recB.Hash, 0, 40e8)
@@ -447,7 +448,7 @@ func TestStoreQueries(t *testing.T) {
 		}
 
 		iterations := 0
-		err = s.RangeTransactions(ns, 0, -1, func([]TxDetails) (bool, error) {
+		err = s.RangeTransactions(ns, 0, -1, func([]TxDetails) (bool, er.R) {
 			iterations++
 			return true, nil
 		})
@@ -455,7 +456,7 @@ func TestStoreQueries(t *testing.T) {
 			t.Errorf("RangeTransactions (forwards) ran func %d times", iterations)
 		}
 		iterations = 0
-		err = s.RangeTransactions(ns, -1, 0, func([]TxDetails) (bool, error) {
+		err = s.RangeTransactions(ns, -1, 0, func([]TxDetails) (bool, er.R) {
 			iterations++
 			return true, nil
 		})
@@ -467,7 +468,7 @@ func TestStoreQueries(t *testing.T) {
 			return err
 		}
 		iterations = 0
-		err = s.RangeTransactions(ns, -1, 0, func([]TxDetails) (bool, error) {
+		err = s.RangeTransactions(ns, -1, 0, func([]TxDetails) (bool, er.R) {
 			iterations++
 			return true, nil
 		})
@@ -492,7 +493,7 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests[:0:0], queryTest{
 		desc: "move tx B to block 100",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.InsertTx(ns, recB, &b100)
 		},
 		state: newState,
@@ -505,14 +506,14 @@ func TestStoreQueries(t *testing.T) {
 	lastState = newState
 	tests = append(tests, queryTest{
 		desc: "rollback block 100",
-		updates: func(ns walletdb.ReadWriteBucket) error {
+		updates: func(ns walletdb.ReadWriteBucket) er.R {
 			return s.Rollback(ns, b100.Height)
 		},
 		state: newState,
 	})
 
 	for _, tst := range tests {
-		err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 			ns := tx.ReadWriteBucket(namespaceKey)
 			if err := tst.updates(ns); err != nil {
 				return err

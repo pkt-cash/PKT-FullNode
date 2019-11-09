@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"net"
 	"runtime"
@@ -298,7 +299,7 @@ func newServerPeer(s *server, isPersistent bool) *serverPeer {
 
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
-func (sp *serverPeer) newestBlock() (*chainhash.Hash, int32, error) {
+func (sp *serverPeer) newestBlock() (*chainhash.Hash, int32, er.R) {
 	best := sp.server.chain.BestSnapshot()
 	return &best.Hash, best.Height, nil
 }
@@ -679,7 +680,7 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 			// Buffered so as to not make the send goroutine block.
 			c = make(chan struct{}, 1)
 		}
-		var err error
+		var err er.R
 		switch iv.Type {
 		case wire.InvTypeWitnessTx:
 			err = sp.server.pushTxMsg(sp, &iv.Hash, c, waitChan, wire.WitnessEncoding)
@@ -1317,13 +1318,13 @@ func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 
 // OnRead is invoked when a peer receives a message and it is used to update
 // the bytes received by the server.
-func (sp *serverPeer) OnRead(_ *peer.Peer, bytesRead int, msg wire.Message, err error) {
+func (sp *serverPeer) OnRead(_ *peer.Peer, bytesRead int, msg wire.Message, err er.R) {
 	sp.server.AddBytesReceived(uint64(bytesRead))
 }
 
 // OnWrite is invoked when a peer sends a message and it is used to update
 // the bytes sent by the server.
-func (sp *serverPeer) OnWrite(_ *peer.Peer, bytesWritten int, msg wire.Message, err error) {
+func (sp *serverPeer) OnWrite(_ *peer.Peer, bytesWritten int, msg wire.Message, err er.R) {
 	sp.server.AddBytesSent(uint64(bytesWritten))
 }
 
@@ -1407,7 +1408,7 @@ func (s *server) TransactionConfirmed(tx *btcutil.Tx) {
 // pushTxMsg sends a tx message for the provided transaction hash to the
 // connected peer.  An error is returned if the transaction hash is not known.
 func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) er.R {
 
 	// Attempt to fetch the requested transaction from the pool.  A
 	// call could be made to check for existence first, but simply trying
@@ -1436,12 +1437,12 @@ func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<-
 // pushBlockMsg sends a block message for the provided block hash to the
 // connected peer.  An error is returned if the block hash is not known.
 func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) er.R {
 
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
-	err := sp.server.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := sp.server.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		blockBytes, err = dbTx.FetchBlock(hash)
 		return err
 	})
@@ -1504,7 +1505,7 @@ func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 // loaded, this call will simply be ignored if there is no filter loaded.  An
 // error is returned if the block hash is not known.
 func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
-	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding) er.R {
 
 	// Do not send a response if the peer doesn't have a filter loaded.
 	if !sp.filter.IsLoaded() {
@@ -1809,18 +1810,18 @@ type getAddedNodesMsg struct {
 
 type disconnectNodeMsg struct {
 	cmp   func(*serverPeer) bool
-	reply chan error
+	reply chan er.R
 }
 
 type connectNodeMsg struct {
 	addr      string
 	permanent bool
-	reply     chan error
+	reply     chan er.R
 }
 
 type removeNodeMsg struct {
 	cmp   func(*serverPeer) bool
-	reply chan error
+	reply chan er.R
 }
 
 // handleQuery is the central handler for all queries and commands from other
@@ -2328,7 +2329,7 @@ func (s *server) Start() {
 
 // Stop gracefully shuts down the server by stopping and disconnecting all
 // peers and the main listener.
-func (s *server) Stop() error {
+func (s *server) Stop() er.R {
 	// Make sure this only happens once.
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		srvrLog.Infof("Server is already in the process of shutting down")
@@ -2346,7 +2347,7 @@ func (s *server) Stop() error {
 	}
 
 	// Save fee estimator state in the database.
-	s.db.Update(func(tx database.Tx) error {
+	s.db.Update(func(tx database.Tx) er.R {
 		metadata := tx.Metadata()
 		metadata.Put(mempool.EstimateFeeDatabaseKey, s.feeEstimator.Save())
 
@@ -2407,7 +2408,7 @@ func (s *server) ScheduleShutdown(duration time.Duration) {
 // returns a slice of appropriate net.Addrs to listen on with TCP. It also
 // properly detects addresses which apply to "all interfaces" and adds the
 // address as both IPv4 and IPv6.
-func parseListeners(addrs []string) ([]net.Addr, error) {
+func parseListeners(addrs []string) ([]net.Addr, er.R) {
 	netAddrs := make([]net.Addr, 0, len(addrs)*2)
 	for _, addr := range addrs {
 		host, _, err := net.SplitHostPort(addr)
@@ -2504,7 +2505,7 @@ out:
 // setupRPCListeners returns a slice of listeners that are configured for use
 // with the RPC server depending on the configuration settings for listen
 // addresses and TLS.
-func setupRPCListeners() ([]net.Listener, error) {
+func setupRPCListeners() ([]net.Listener, er.R) {
 	// Setup TLS if not disabled.
 	listenFunc := net.Listen
 	if !cfg.DisableTLS {
@@ -2527,7 +2528,7 @@ func setupRPCListeners() ([]net.Listener, error) {
 		}
 
 		// Change the standard net.Listen function to the tls one.
-		listenFunc = func(net string, laddr string) (net.Listener, error) {
+		listenFunc = func(net string, laddr string) (net.Listener, er.R) {
 			return tls.Listen(net, laddr, &tlsConfig)
 		}
 	}
@@ -2555,7 +2556,7 @@ func setupRPCListeners() ([]net.Listener, error) {
 // connections from peers.
 func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	db database.DB, chainParams *chaincfg.Params,
-	interrupt <-chan struct{}) (*server, error) {
+	interrupt <-chan struct{}) (*server, er.R) {
 
 	services := defaultServices
 	if cfg.NoPeerBloomFilters {
@@ -2570,7 +2571,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	var listeners []net.Listener
 	var nat NAT
 	if !cfg.DisableListen {
-		var err error
+		var err er.R
 		listeners, nat, err = initListeners(amgr, listenAddrs, services)
 		if err != nil {
 			return nil, err
@@ -2655,7 +2656,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	}
 
 	// Create a new block chain instance with the appropriate configuration.
-	var err error
+	var err er.R
 	s.chain, err = blockchain.New(&blockchain.Config{
 		DB:           s.db,
 		Interrupt:    interrupt,
@@ -2672,7 +2673,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
-	db.Update(func(tx database.Tx) error {
+	db.Update(func(tx database.Tx) er.R {
 		metadata := tx.Metadata()
 		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
 		if feeEstimationData != nil {
@@ -2681,7 +2682,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 			metadata.Delete(mempool.EstimateFeeDatabaseKey)
 
 			// If there is an error, log it and make a new fee estimator.
-			var err error
+			var err er.R
 			s.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
 			if err != nil {
@@ -2716,7 +2717,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		FetchUtxoView:  s.chain.FetchUtxoView,
 		BestHeight:     func() int32 { return s.chain.BestSnapshot().Height },
 		MedianTimePast: func() time.Time { return s.chain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
+		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, er.R) {
 			return s.chain.CalcSequenceLock(tx, view, true)
 		},
 		IsDeploymentActive: s.chain.IsDeploymentActive,
@@ -2771,9 +2772,9 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	// specified peers and actively avoid advertising and connecting to
 	// discovered peers in order to prevent it from becoming a public test
 	// network.
-	var newAddressFunc func() (net.Addr, error)
+	var newAddressFunc func() (net.Addr, er.R)
 	if !cfg.SimNet && len(cfg.ConnectPeers) == 0 {
-		newAddressFunc = func() (net.Addr, error) {
+		newAddressFunc = func() (net.Addr, er.R) {
 			for tries := 0; tries < 100; tries++ {
 				addr := s.addrManager.GetAddress()
 				if addr == nil {
@@ -2892,7 +2893,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 // initListeners initializes the configured net listeners and adds any bound
 // addresses to the address manager. Returns the listeners and a NAT interface,
 // which is non-nil if UPnP is in use.
-func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wire.ServiceFlag) ([]net.Listener, NAT, error) {
+func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wire.ServiceFlag) ([]net.Listener, NAT, er.R) {
 	// Listen for TCP connections at the configured addresses
 	netAddrs, err := parseListeners(listenAddrs)
 	if err != nil {
@@ -2946,7 +2947,7 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 		}
 	} else {
 		if cfg.Upnp {
-			var err error
+			var err er.R
 			nat, err = Discover()
 			if err != nil {
 				srvrLog.Warnf("Can't discover upnp: %v", err)
@@ -2971,7 +2972,7 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 // a net.Addr which maps to the original address with any host names resolved
 // to IP addresses.  It also handles tor addresses properly by returning a
 // net.Addr that encapsulates the address.
-func addrStringToNetAddr(addr string) (net.Addr, error) {
+func addrStringToNetAddr(addr string) (net.Addr, er.R) {
 	host, strPort, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -3017,7 +3018,7 @@ func addrStringToNetAddr(addr string) (net.Addr, error) {
 
 // addLocalAddress adds an address that this node is listening on to the
 // address manager so that it may be relayed to peers.
-func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) error {
+func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) er.R {
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return err

@@ -36,6 +36,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"net/http"
 	"os"
@@ -49,13 +50,13 @@ import (
 // access to services.
 type NAT interface {
 	// Get the external address from outside the NAT.
-	GetExternalAddress() (addr net.IP, err error)
+	GetExternalAddress() (addr net.IP, err er.R)
 	// Add a port mapping for protocol ("udp" or "tcp") from external port to
 	// internal port with description lasting for timeout.
-	AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error)
+	AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err er.R)
 	// Remove a previously added port mapping from external port to
 	// internal port.
-	DeletePortMapping(protocol string, externalPort, internalPort int) (err error)
+	DeletePortMapping(protocol string, externalPort, internalPort int) (err er.R)
 }
 
 type upnpNAT struct {
@@ -65,7 +66,7 @@ type upnpNAT struct {
 
 // Discover searches the local network for a UPnP router returning a NAT
 // for the network if so, nil if not.
-func Discover() (nat NAT, err error) {
+func Discover() (nat NAT, err er.R) {
 	ssdp, err := net.ResolveUDPAddr("udp4", "239.255.255.250:1900")
 	if err != nil {
 		return
@@ -212,7 +213,7 @@ func getChildService(d *device, serviceType string) *service {
 }
 
 // getOurIP returns a best guess at what the local IP is.
-func getOurIP() (ip string, err error) {
+func getOurIP() (ip string, err er.R) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return
@@ -222,7 +223,7 @@ func getOurIP() (ip string, err error) {
 
 // getServiceURL parses the xml description at the given root url to find the
 // url for the WANIPConnection service to be used for port forwarding.
-func getServiceURL(rootURL string) (url string, err error) {
+func getServiceURL(rootURL string) (url string, err er.R) {
 	r, err := http.Get(rootURL)
 	if err != nil {
 		return
@@ -287,7 +288,7 @@ type soapEnvelope struct {
 // soapRequests performs a soap request with the given parameters and returns
 // the xml replied stripped of the soap headers. in the case that the request is
 // unsuccessful the an error is returned.
-func soapRequest(url, function, message string) (replyXML []byte, err error) {
+func soapRequest(url, function, message string) (replyXML []byte, err er.R) {
 	fullMessage := "<?xml version=\"1.0\" ?>" +
 		"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\r\n" +
 		"<s:Body>" + message + "</s:Body></s:Envelope>"
@@ -335,7 +336,7 @@ type getExternalIPAddressResponse struct {
 
 // GetExternalAddress implements the NAT interface by fetching the external IP
 // from the UPnP router.
-func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) {
+func (n *upnpNAT) GetExternalAddress() (addr net.IP, err er.R) {
 	message := "<u:GetExternalIPAddress xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\"/>\r\n"
 	response, err := soapRequest(n.serviceURL, "GetExternalIPAddress", message)
 	if err != nil {
@@ -357,7 +358,7 @@ func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) {
 
 // AddPortMapping implements the NAT interface by setting up a port forwarding
 // from the UPnP router to the local machine with the given ports and protocol.
-func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error) {
+func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err er.R) {
 	// A single concatenation would break ARM compilation.
 	message := "<u:AddPortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">\r\n" +
 		"<NewRemoteHost></NewRemoteHost><NewExternalPort>" + strconv.Itoa(externalPort)
@@ -385,7 +386,7 @@ func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int
 
 // DeletePortMapping implements the NAT interface by removing up a port forwarding
 // from the UPnP router to the local machine with the given ports and.
-func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort int) (err error) {
+func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort int) (err er.R) {
 
 	message := "<u:DeletePortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">\r\n" +
 		"<NewRemoteHost></NewRemoteHost><NewExternalPort>" + strconv.Itoa(externalPort) +

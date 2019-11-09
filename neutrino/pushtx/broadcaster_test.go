@@ -1,6 +1,7 @@
 package pushtx
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
@@ -42,10 +43,10 @@ func TestBroadcaster(t *testing.T) {
 	t.Parallel()
 
 	cfg := &Config{
-		Broadcast: func(*wire.MsgTx) error {
+		Broadcast: func(*wire.MsgTx) er.R {
 			return nil
 		},
-		SubscribeBlocks: func() (*blockntfns.Subscription, error) {
+		SubscribeBlocks: func() (*blockntfns.Subscription, er.R) {
 			return &blockntfns.Subscription{
 				Notifications: make(chan blockntfns.BlockNtfn),
 				Cancel:        func() {},
@@ -85,11 +86,11 @@ func TestRebroadcast(t *testing.T) {
 	ntfnChan := make(chan blockntfns.BlockNtfn)
 
 	cfg := &Config{
-		Broadcast: func(tx *wire.MsgTx) error {
+		Broadcast: func(tx *wire.MsgTx) er.R {
 			broadcastChan <- tx
 			return nil
 		},
-		SubscribeBlocks: func() (*blockntfns.Subscription, error) {
+		SubscribeBlocks: func() (*blockntfns.Subscription, er.R) {
 			return &blockntfns.Subscription{
 				Notifications: ntfnChan,
 				Cancel:        func() {},
@@ -152,7 +153,7 @@ func TestRebroadcast(t *testing.T) {
 
 	// Now, we'll modify the Broadcast method to mark the first transaction
 	// as confirmed, and the second as it being accepted into the mempool.
-	broadcaster.cfg.Broadcast = func(tx *wire.MsgTx) error {
+	broadcaster.cfg.Broadcast = func(tx *wire.MsgTx) er.R {
 		broadcastChan <- tx
 		if tx.TxHash() == txs[0].TxHash() {
 			return &BroadcastError{Code: Confirmed}

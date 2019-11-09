@@ -7,6 +7,7 @@ package coinset
 import (
 	"container/list"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -165,7 +166,7 @@ func satisfiesTargetValue(targetValue, minChange, totalValue btcutil.Amount) boo
 // It is important to note that the Coins being used as inputs need to have
 // a constant ValueAge() during the execution of CoinSelect.
 type CoinSelector interface {
-	CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, error)
+	CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, er.R)
 }
 
 // MinIndexCoinSelector is a CoinSelector that attempts to construct a
@@ -178,7 +179,7 @@ type MinIndexCoinSelector struct {
 
 // CoinSelect will attempt to select coins using the algorithm described
 // in the MinIndexCoinSelector struct.
-func (s MinIndexCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, error) {
+func (s MinIndexCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, er.R) {
 	cs := NewCoinSet(nil)
 	for n := 0; n < len(coins) && n < s.MaxInputs; n++ {
 		cs.PushCoin(coins[n])
@@ -199,7 +200,7 @@ type MinNumberCoinSelector struct {
 
 // CoinSelect will attempt to select coins using the algorithm described
 // in the MinNumberCoinSelector struct.
-func (s MinNumberCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, error) {
+func (s MinNumberCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, er.R) {
 	sortedCoins := make([]Coin, 0, len(coins))
 	sortedCoins = append(sortedCoins, coins...)
 	sort.Sort(sort.Reverse(byAmount(sortedCoins)))
@@ -221,7 +222,7 @@ type MaxValueAgeCoinSelector struct {
 
 // CoinSelect will attempt to select coins using the algorithm described
 // in the MaxValueAgeCoinSelector struct.
-func (s MaxValueAgeCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, error) {
+func (s MaxValueAgeCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, er.R) {
 	sortedCoins := make([]Coin, 0, len(coins))
 	sortedCoins = append(sortedCoins, coins...)
 	sort.Sort(sort.Reverse(byValueAge(sortedCoins)))
@@ -247,7 +248,7 @@ type MinPriorityCoinSelector struct {
 
 // CoinSelect will attempt to select coins using the algorithm described
 // in the MinPriorityCoinSelector struct.
-func (s MinPriorityCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, error) {
+func (s MinPriorityCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coin) (Coins, er.R) {
 	possibleCoins := make([]Coin, 0, len(coins))
 	possibleCoins = append(possibleCoins, coins...)
 

@@ -2,6 +2,7 @@ package filterdb
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -44,13 +45,13 @@ var (
 type FilterDatabase interface {
 	// PutFilter stores a filter with the given hash and type to persistent
 	// storage.
-	PutFilter(*chainhash.Hash, *gcs.Filter, FilterType) error
+	PutFilter(*chainhash.Hash, *gcs.Filter, FilterType) er.R
 
 	// FetchFilter attempts to fetch a filter with the given hash and type
 	// from persistent storage. In the case that a filter matching the
 	// target block hash cannot be found, then ErrFilterNotFound is to be
 	// returned.
-	FetchFilter(*chainhash.Hash, FilterType) (*gcs.Filter, error)
+	FetchFilter(*chainhash.Hash, FilterType) (*gcs.Filter, er.R)
 }
 
 // FilterStore is an implementation of the FilterDatabase interface which is
@@ -67,8 +68,8 @@ var _ FilterDatabase = (*FilterStore)(nil)
 
 // New creates a new instance of the FilterStore given an already open
 // database, and the target chain parameters.
-func New(db walletdb.DB, params chaincfg.Params) (*FilterStore, error) {
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+func New(db walletdb.DB, params chaincfg.Params) (*FilterStore, er.R) {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		// As part of our initial setup, we'll try to create the top
 		// level filter bucket. If this already exists, then we can
 		// exit early.
@@ -111,7 +112,7 @@ func New(db walletdb.DB, params chaincfg.Params) (*FilterStore, error) {
 // block hash. The passed bucket is expected to be the proper bucket for the
 // passed filter type.
 func putFilter(bucket walletdb.ReadWriteBucket, hash *chainhash.Hash,
-	filter *gcs.Filter) error {
+	filter *gcs.Filter) er.R {
 
 	if filter == nil {
 		return bucket.Put(hash[:], nil)
@@ -130,9 +131,9 @@ func putFilter(bucket walletdb.ReadWriteBucket, hash *chainhash.Hash,
 //
 // NOTE: This method is a part of the FilterDatabase interface.
 func (f *FilterStore) PutFilter(hash *chainhash.Hash,
-	filter *gcs.Filter, fType FilterType) error {
+	filter *gcs.Filter, fType FilterType) er.R {
 
-	return walletdb.Update(f.db, func(tx walletdb.ReadWriteTx) error {
+	return walletdb.Update(f.db, func(tx walletdb.ReadWriteTx) er.R {
 		filters := tx.ReadWriteBucket(filterBucket)
 
 		var targetBucket walletdb.ReadWriteBucket
@@ -161,11 +162,11 @@ func (f *FilterStore) PutFilter(hash *chainhash.Hash,
 //
 // NOTE: This method is a part of the FilterDatabase interface.
 func (f *FilterStore) FetchFilter(blockHash *chainhash.Hash,
-	filterType FilterType) (*gcs.Filter, error) {
+	filterType FilterType) (*gcs.Filter, er.R) {
 
 	var filter *gcs.Filter
 
-	err := walletdb.View(f.db, func(tx walletdb.ReadTx) error {
+	err := walletdb.View(f.db, func(tx walletdb.ReadTx) er.R {
 		filters := tx.ReadBucket(filterBucket)
 
 		var targetBucket walletdb.ReadBucket

@@ -14,6 +14,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"runtime"
@@ -27,7 +28,7 @@ import (
 // LoadBlocks reads files containing bitcoin block data (gzipped but otherwise
 // in the format bitcoind writes) from disk and returns them as an array of
 // btcutil.Block.  This is largely borrowed from the test code in pktdb.
-func LoadBlocks(filename string) (blocks []*btcutil.Block, err error) {
+func LoadBlocks(filename string) (blocks []*btcutil.Block, err er.R) {
 	var network = wire.MainNet
 	var dr io.Reader
 	var fi io.ReadCloser
@@ -99,7 +100,7 @@ func GetBlock(name string, t *testing.T) *btcutil.Block {
 	return blocks[0]
 }
 
-func OutputBlock(mb *wire.MsgBlock, name string) error {
+func OutputBlock(mb *wire.MsgBlock, name string) er.R {
 	buf := bytes.NewBuffer(make([]byte, 0, mb.SerializeSize()))
 	err := mb.Serialize(buf)
 	b := buf.Bytes()
@@ -122,7 +123,7 @@ func OutputBlock(mb *wire.MsgBlock, name string) error {
 
 // LoadAnnouncements reads a file containing a sequence of announcements
 // 1024 byte irreducible header followed by content
-func LoadAnnouncements(filename string) ([]*wire.PacketCryptAnn, error) {
+func LoadAnnouncements(filename string) ([]*wire.PacketCryptAnn, er.R) {
 	var fi io.ReadCloser
 
 	fi, err := os.Open(filename)
@@ -144,7 +145,7 @@ func LoadAnnouncements(filename string) ([]*wire.PacketCryptAnn, error) {
 	}
 }
 
-func OutputAnnouncements(anns [][]byte) error {
+func OutputAnnouncements(anns [][]byte) er.R {
 	fi, err := os.Create("./outputanns.dat")
 	if err != nil {
 		return err

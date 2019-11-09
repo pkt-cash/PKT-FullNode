@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -34,7 +35,7 @@ type MsgCFHeaders struct {
 }
 
 // AddCFHash adds a new filter hash to the message.
-func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) error {
+func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) er.R {
 	if len(msg.FilterHashes)+1 > MaxCFHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
@@ -47,7 +48,7 @@ func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) er.R {
 	// Read filter type
 	err := readElement(r, &msg.FilterType)
 	if err != nil {
@@ -97,7 +98,7 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) er.R {
 	// Write filter type
 	err := writeElement(w, msg.FilterType)
 	if err != nil {
@@ -149,7 +150,7 @@ func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) 
 // this comment was written, the encoded filter header is the same in both
 // instances, but there is a distinct difference and separating the two allows
 // the API to be flexible enough to deal with changes.
-func (msg *MsgCFHeaders) Deserialize(r io.Reader) error {
+func (msg *MsgCFHeaders) Deserialize(r io.Reader) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// and the stable long-term storage format.  As a result, make use of
 	// BtcDecode.

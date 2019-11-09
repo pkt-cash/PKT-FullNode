@@ -6,6 +6,7 @@ package rpcclient
 
 import (
 	"encoding/json"
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
@@ -39,7 +40,7 @@ type FutureAddNodeResult chan *response
 
 // Receive waits for the response promised by the future and returns an error if
 // any occurred when performing the specified command.
-func (r FutureAddNodeResult) Receive() error {
+func (r FutureAddNodeResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -59,7 +60,7 @@ func (c *Client) AddNodeAsync(host string, command AddNodeCommand) FutureAddNode
 // a one time connection to a peer.
 //
 // It may not be used to remove non-persistent peers.
-func (c *Client) AddNode(host string, command AddNodeCommand) error {
+func (c *Client) AddNode(host string, command AddNodeCommand) er.R {
 	return c.AddNodeAsync(host, command).Receive()
 }
 
@@ -69,7 +70,7 @@ type FutureNodeResult chan *response
 
 // Receive waits for the response promised by the future and returns an error if
 // any occurred when performing the specified command.
-func (r FutureNodeResult) Receive() error {
+func (r FutureNodeResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -93,7 +94,7 @@ func (c *Client) NodeAsync(command btcjson.NodeSubCmd, host string,
 // whether we are targetting a persistent or non-persistent peer. Passing nil
 // will cause the default value to be used, which currently is "temp".
 func (c *Client) Node(command btcjson.NodeSubCmd, host string,
-	connectSubCmd *string) error {
+	connectSubCmd *string) er.R {
 	return c.NodeAsync(command, host, connectSubCmd).Receive()
 }
 
@@ -103,7 +104,7 @@ type FutureGetAddedNodeInfoResult chan *response
 
 // Receive waits for the response promised by the future and returns information
 // about manually added (persistent) peers.
-func (r FutureGetAddedNodeInfoResult) Receive() ([]btcjson.GetAddedNodeInfoResult, error) {
+func (r FutureGetAddedNodeInfoResult) Receive() ([]btcjson.GetAddedNodeInfoResult, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -133,7 +134,7 @@ func (c *Client) GetAddedNodeInfoAsync(peer string) FutureGetAddedNodeInfoResult
 //
 // See GetAddedNodeInfoNoDNS to retrieve only a list of the added (persistent)
 // peers.
-func (c *Client) GetAddedNodeInfo(peer string) ([]btcjson.GetAddedNodeInfoResult, error) {
+func (c *Client) GetAddedNodeInfo(peer string) ([]btcjson.GetAddedNodeInfoResult, er.R) {
 	return c.GetAddedNodeInfoAsync(peer).Receive()
 }
 
@@ -143,7 +144,7 @@ type FutureGetAddedNodeInfoNoDNSResult chan *response
 
 // Receive waits for the response promised by the future and returns a list of
 // manually added (persistent) peers.
-func (r FutureGetAddedNodeInfoNoDNSResult) Receive() ([]string, error) {
+func (r FutureGetAddedNodeInfoNoDNSResult) Receive() ([]string, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -174,7 +175,7 @@ func (c *Client) GetAddedNodeInfoNoDNSAsync(peer string) FutureGetAddedNodeInfoN
 //
 // See GetAddedNodeInfo to obtain more information about each added (persistent)
 // peer.
-func (c *Client) GetAddedNodeInfoNoDNS(peer string) ([]string, error) {
+func (c *Client) GetAddedNodeInfoNoDNS(peer string) ([]string, er.R) {
 	return c.GetAddedNodeInfoNoDNSAsync(peer).Receive()
 }
 
@@ -184,7 +185,7 @@ type FutureGetConnectionCountResult chan *response
 
 // Receive waits for the response promised by the future and returns the number
 // of active connections to other peers.
-func (r FutureGetConnectionCountResult) Receive() (int64, error) {
+func (r FutureGetConnectionCountResult) Receive() (int64, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -211,7 +212,7 @@ func (c *Client) GetConnectionCountAsync() FutureGetConnectionCountResult {
 }
 
 // GetConnectionCount returns the number of active connections to other peers.
-func (c *Client) GetConnectionCount() (int64, error) {
+func (c *Client) GetConnectionCount() (int64, er.R) {
 	return c.GetConnectionCountAsync().Receive()
 }
 
@@ -221,7 +222,7 @@ type FuturePingResult chan *response
 
 // Receive waits for the response promised by the future and returns the result
 // of queueing a ping to be sent to each connected peer.
-func (r FuturePingResult) Receive() error {
+func (r FuturePingResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -240,7 +241,7 @@ func (c *Client) PingAsync() FuturePingResult {
 //
 // Use the GetPeerInfo function and examine the PingTime and PingWait fields to
 // access the ping times.
-func (c *Client) Ping() error {
+func (c *Client) Ping() er.R {
 	return c.PingAsync().Receive()
 }
 
@@ -250,7 +251,7 @@ type FutureGetPeerInfoResult chan *response
 
 // Receive waits for the response promised by the future and returns  data about
 // each connected network peer.
-func (r FutureGetPeerInfoResult) Receive() ([]btcjson.GetPeerInfoResult, error) {
+func (r FutureGetPeerInfoResult) Receive() ([]btcjson.GetPeerInfoResult, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -277,7 +278,7 @@ func (c *Client) GetPeerInfoAsync() FutureGetPeerInfoResult {
 }
 
 // GetPeerInfo returns data about each connected network peer.
-func (c *Client) GetPeerInfo() ([]btcjson.GetPeerInfoResult, error) {
+func (c *Client) GetPeerInfo() ([]btcjson.GetPeerInfoResult, er.R) {
 	return c.GetPeerInfoAsync().Receive()
 }
 
@@ -287,7 +288,7 @@ type FutureGetNetTotalsResult chan *response
 
 // Receive waits for the response promised by the future and returns network
 // traffic statistics.
-func (r FutureGetNetTotalsResult) Receive() (*btcjson.GetNetTotalsResult, error) {
+func (r FutureGetNetTotalsResult) Receive() (*btcjson.GetNetTotalsResult, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -314,6 +315,6 @@ func (c *Client) GetNetTotalsAsync() FutureGetNetTotalsResult {
 }
 
 // GetNetTotals returns network traffic statistics.
-func (c *Client) GetNetTotals() (*btcjson.GetNetTotalsResult, error) {
+func (c *Client) GetNetTotals() (*btcjson.GetNetTotalsResult, er.R) {
 	return c.GetNetTotalsAsync().Receive()
 }

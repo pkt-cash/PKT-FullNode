@@ -5,6 +5,7 @@
 package bech32_test
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
 	"testing"
 

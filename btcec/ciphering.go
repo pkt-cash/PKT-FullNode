@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 )
 
@@ -67,7 +68,7 @@ func GenerateSharedSecret(privkey *PrivateKey, pubkey *PublicKey) []byte {
 //
 // The primary aim is to ensure byte compatibility with Pyelliptic.  Also, refer
 // to section 5.8.1 of ANSI X9.63 for rationale on this format.
-func Encrypt(pubkey *PublicKey, in []byte) ([]byte, error) {
+func Encrypt(pubkey *PublicKey, in []byte) ([]byte, er.R) {
 	ephemeral, err := NewPrivateKey(S256())
 	if err != nil {
 		return nil, err
@@ -118,7 +119,7 @@ func Encrypt(pubkey *PublicKey, in []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts data that was encrypted using the Encrypt function.
-func Decrypt(priv *PrivateKey, in []byte) ([]byte, error) {
+func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 	// IV + Curve params/X/Y + 1 block + HMAC-256
 	if len(in) < aes.BlockSize+70+aes.BlockSize+sha256.Size {
 		return nil, errInputTooShort
@@ -205,7 +206,7 @@ func addPKCSPadding(src []byte) []byte {
 }
 
 // removePKCSPadding removes padding from data that was added with addPKCSPadding
-func removePKCSPadding(src []byte) ([]byte, error) {
+func removePKCSPadding(src []byte) ([]byte, er.R) {
 	length := len(src)
 	padLength := int(src[length-1])
 	if padLength > aes.BlockSize || length < aes.BlockSize {

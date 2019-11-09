@@ -3,6 +3,7 @@ package neutrino
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -27,7 +28,7 @@ const maxHeight = 20 * uint32(wire.CFCheckptInterval)
 
 // setupBlockManager initialises a blockManager to be used in tests.
 func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
-	*headerfs.FilterHeaderStore, func(), error) {
+	*headerfs.FilterHeaderStore, func(), er.R) {
 
 	// Set up the block and filter header stores.
 	tempDir, err := ioutil.TempDir("", "neutrino")
@@ -107,7 +108,7 @@ type headers struct {
 // the next interval
 func generateHeaders(genesisBlockHeader *wire.BlockHeader,
 	genesisFilterHeader *chainhash.Hash,
-	onCheckpoint func(*chainhash.Hash)) (*headers, error) {
+	onCheckpoint func(*chainhash.Hash)) (*headers, er.R) {
 
 	var blockHeaders []headerfs.BlockHeader
 	blockHeaders = append(blockHeaders, headerfs.BlockHeader{
@@ -202,7 +203,7 @@ func generateHeaders(genesisBlockHeader *wire.BlockHeader,
 // generateResponses generates the MsgCFHeaders messages from the given queries
 // and headers.
 func generateResponses(msgs []wire.Message,
-	headers *headers) ([]*wire.MsgCFHeaders, error) {
+	headers *headers) ([]*wire.MsgCFHeaders, er.R) {
 
 	// Craft a response for each message.
 	var responses []*wire.MsgCFHeaders
@@ -652,7 +653,7 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 // OP_RETURNS with push-only scripts.
 //
 // NOTE: this is not a valid filter, only for tests.
-func buildNonPushScriptFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
+func buildNonPushScriptFilter(block *wire.MsgBlock) (*gcs.Filter, er.R) {
 	blockHash := block.BlockHash()
 	b := builder.WithKeyHash(&blockHash)
 
@@ -676,7 +677,7 @@ func buildNonPushScriptFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 // OP_RETURNS.
 //
 // NOTE: this is not a valid filter, only for tests.
-func buildAllPkScriptsFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
+func buildAllPkScriptsFilter(block *wire.MsgBlock) (*gcs.Filter, er.R) {
 	blockHash := block.BlockHash()
 	b := builder.WithKeyHash(&blockHash)
 
@@ -691,7 +692,7 @@ func buildAllPkScriptsFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	return b.Build()
 }
 
-func assertBadPeers(expBad map[string]struct{}, badPeers []string) error {
+func assertBadPeers(expBad map[string]struct{}, badPeers []string) er.R {
 	remBad := make(map[string]struct{})
 	for p := range expBad {
 		remBad[p] = struct{}{}

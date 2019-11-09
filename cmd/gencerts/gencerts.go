@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -39,7 +40,7 @@ func main() {
 	}
 
 	if cfg.Directory == "" {
-		var err error
+		var err er.R
 		cfg.Directory, err = os.Getwd()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "no directory specified and cannot get working directory\n")

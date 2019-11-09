@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math"
 	"sync"
@@ -57,7 +58,7 @@ var timeZeroVal time.Time
 
 // wsCommandHandler describes a callback function used to handle a specific
 // command.
-type wsCommandHandler func(*wsClient, interface{}) (interface{}, error)
+type wsCommandHandler func(*wsClient, interface{}) (interface{}, er.R)
 
 // wsHandlers maps RPC command strings to appropriate websocket handler
 // functions.  This is set by init because help references wsHandlers and thus
@@ -978,7 +979,7 @@ func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
 
 // newRedeemingTxNotification returns a new marshalled redeemingtx notification
 // with the passed parameters.
-func newRedeemingTxNotification(txHex string, index int, block *btcutil.Block) ([]byte, error) {
+func newRedeemingTxNotification(txHex string, index int, block *btcutil.Block) ([]byte, er.R) {
 	// Create and marshal the notification.
 	ntfn := btcjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
 	return btcjson.MarshalCmd(nil, ntfn)
@@ -1485,7 +1486,7 @@ out:
 func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	var (
 		result interface{}
-		err    error
+		err    er.R
 	)
 
 	// Lookup the websocket extension for the command and if it doesn't
@@ -1651,7 +1652,7 @@ var ErrClientQuit = errors.New("client quit")
 // If the client is in the process of shutting down, this function returns
 // ErrClientQuit.  This is intended to be checked by long-running notification
 // handlers to stop processing if there is no more work needed to be done.
-func (c *wsClient) QueueNotification(marshalledJSON []byte) error {
+func (c *wsClient) QueueNotification(marshalledJSON []byte) er.R {
 	// Don't queue the message if disconnected.
 	if c.Disconnected() {
 		return ErrClientQuit
@@ -1710,7 +1711,7 @@ func (c *wsClient) WaitForShutdown() {
 // incoming and outgoing messages in separate goroutines complete with queuing
 // and asynchrous handling for long-running operations.
 func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
-	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
+	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, er.R) {
 
 	sessionID, err := wire.RandomUint64()
 	if err != nil {
@@ -1735,7 +1736,7 @@ func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
 }
 
 // handleWebsocketHelp implements the help command for websocket connections.
-func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.HelpCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1785,7 +1786,7 @@ func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, error) {
 // websocket connections.
 //
 // NOTE: This extension is ported from github.com/decred/dcrd
-func handleLoadTxFilter(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleLoadTxFilter(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.LoadTxFilterCmd)
 
 	outPoints := make([]wire.OutPoint, len(cmd.OutPoints))
@@ -1828,27 +1829,27 @@ func handleLoadTxFilter(wsc *wsClient, icmd interface{}) (interface{}, error) {
 
 // handleNotifyBlocks implements the notifyblocks command extension for
 // websocket connections.
-func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	wsc.server.ntfnMgr.RegisterBlockUpdates(wsc)
 	return nil, nil
 }
 
 // handleSession implements the session command extension for websocket
 // connections.
-func handleSession(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleSession(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	return &btcjson.SessionResult{SessionID: wsc.sessionID}, nil
 }
 
 // handleStopNotifyBlocks implements the stopnotifyblocks command extension for
 // websocket connections.
-func handleStopNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleStopNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	wsc.server.ntfnMgr.UnregisterBlockUpdates(wsc)
 	return nil, nil
 }
 
 // handleNotifySpent implements the notifyspent command extension for
 // websocket connections.
-func handleNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.NotifySpentCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1865,7 +1866,7 @@ func handleNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error) {
 
 // handleNotifyNewTransations implements the notifynewtransactions command
 // extension for websocket connections.
-func handleNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.NotifyNewTransactionsCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1878,14 +1879,14 @@ func handleNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, 
 
 // handleStopNotifyNewTransations implements the stopnotifynewtransactions
 // command extension for websocket connections.
-func handleStopNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleStopNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	wsc.server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
 	return nil, nil
 }
 
 // handleNotifyReceived implements the notifyreceived command extension for
 // websocket connections.
-func handleNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.NotifyReceivedCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1904,7 +1905,7 @@ func handleNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, error) 
 
 // handleStopNotifySpent implements the stopnotifyspent command extension for
 // websocket connections.
-func handleStopNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleStopNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.StopNotifySpentCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1924,7 +1925,7 @@ func handleStopNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error)
 
 // handleStopNotifyReceived implements the stopnotifyreceived command extension
 // for websocket connections.
-func handleStopNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleStopNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.StopNotifyReceivedCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -1948,7 +1949,7 @@ func handleStopNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, err
 // string slice. It does this by attempting to decode each address using the
 // current active network parameters. If any single address fails to decode
 // properly, the function returns an error. Otherwise, nil is returned.
-func checkAddressValidity(addrs []string, params *chaincfg.Params) error {
+func checkAddressValidity(addrs []string, params *chaincfg.Params) er.R {
 	for _, addr := range addrs {
 		_, err := btcutil.DecodeAddress(addr, params)
 		if err != nil {
@@ -1963,7 +1964,7 @@ func checkAddressValidity(addrs []string, params *chaincfg.Params) error {
 }
 
 // deserializeOutpoints deserializes each serialized outpoint.
-func deserializeOutpoints(serializedOuts []btcjson.OutPoint) ([]*wire.OutPoint, error) {
+func deserializeOutpoints(serializedOuts []btcjson.OutPoint) ([]*wire.OutPoint, er.R) {
 	outpoints := make([]*wire.OutPoint, 0, len(serializedOuts))
 	for i := range serializedOuts {
 		blockHash, err := chainhash.NewHashFromStr(serializedOuts[i].Hash)
@@ -2018,7 +2019,7 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 
 		// notifySpend is a closure we'll use when we first detect that
 		// a transactions spends an outpoint/script in our filter list.
-		notifySpend := func() error {
+		notifySpend := func() er.R {
 			if txHex == "" {
 				txHex = txHexString(tx.MsgTx())
 			}
@@ -2211,7 +2212,7 @@ func rescanBlockFilter(filter *wsClientFilter, block *btcutil.Block, params *cha
 // websocket connections.
 //
 // NOTE: This extension is ported from github.com/decred/dcrd
-func handleRescanBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleRescanBlocks(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.RescanBlocksCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
@@ -2280,7 +2281,7 @@ func handleRescanBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
 // range of blocks.  If this condition does not hold true, the JSON-RPC error
 // for an unrecoverable reorganize is returned.
 func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock int32,
-	lastBlock *chainhash.Hash) ([]chainhash.Hash, error) {
+	lastBlock *chainhash.Hash) ([]chainhash.Hash, er.R) {
 
 	hashList, err := chain.HeightRange(minBlock, maxBlock)
 	if err != nil {
@@ -2312,7 +2313,7 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock int32,
 
 // descendantBlock returns the appropriate JSON-RPC error if a current block
 // fetched during a reorganize is not a direct child of the parent block hash.
-func descendantBlock(prevHash *chainhash.Hash, curBlock *btcutil.Block) error {
+func descendantBlock(prevHash *chainhash.Hash, curBlock *btcutil.Block) er.R {
 	curHash := &curBlock.MsgBlock().Header.PrevBlock
 	if !prevHash.IsEqual(curHash) {
 		rpcsLog.Errorf("Stopping rescan for reorged block %v "+
@@ -2328,7 +2329,7 @@ func descendantBlock(prevHash *chainhash.Hash, curBlock *btcutil.Block) error {
 // final block and block hash that we've scanned will be returned.
 func scanBlockChunks(wsc *wsClient, cmd *btcjson.RescanCmd, lookups *rescanKeys, minBlock,
 	maxBlock int32, chain *blockchain.BlockChain) (
-	*btcutil.Block, *chainhash.Hash, error) {
+	*btcutil.Block, *chainhash.Hash, er.R) {
 
 	// lastBlock and lastBlockHash track the previously-rescanned block.
 	// They equal nil when no previous blocks have been rescanned.
@@ -2524,7 +2525,7 @@ fetchRange:
 // handler erroring.  Clients must handle this by finding a block still in
 // the chain (perhaps from a rescanprogress notification) to resume their
 // rescan.
-func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
+func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 	cmd, ok := icmd.(*btcjson.RescanCmd)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal

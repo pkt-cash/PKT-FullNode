@@ -1,6 +1,7 @@
 package banman
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 )
 
@@ -21,7 +22,7 @@ var (
 // IP's default is used.
 //
 // NOTE: This assumes that the address has already been resolved.
-func ParseIPNet(addr string, mask net.IPMask) (*net.IPNet, error) {
+func ParseIPNet(addr string, mask net.IPMask) (*net.IPNet, er.R) {
 	// If the address includes a port, we'll remove it.
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {

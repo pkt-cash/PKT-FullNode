@@ -26,10 +26,10 @@ func NewExplicitString(defaultValue string) *ExplicitString {
 func (e *ExplicitString) ExplicitlySet() bool { return e.explicitlySet }
 
 // MarshalFlag implements the flags.Marshaler interface.
-func (e *ExplicitString) MarshalFlag() (string, error) { return e.Value, nil }
+func (e *ExplicitString) MarshalFlag() (string, er.R) { return e.Value, nil }
 
 // UnmarshalFlag implements the flags.Unmarshaler interface.
-func (e *ExplicitString) UnmarshalFlag(value string) error {
+func (e *ExplicitString) UnmarshalFlag(value string) er.R {
 	e.Value = value
 	e.explicitlySet = true
 	return nil

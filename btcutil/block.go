@@ -7,6 +7,7 @@ package btcutil
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -50,7 +51,7 @@ func (b *Block) MsgBlock() *wire.MsgBlock {
 // Bytes returns the serialized bytes for the Block.  This is equivalent to
 // calling Serialize on the underlying wire.MsgBlock, however it caches the
 // result so subsequent calls are more efficient.
-func (b *Block) Bytes() ([]byte, error) {
+func (b *Block) Bytes() ([]byte, er.R) {
 	// Return the cached serialized bytes if it has already been generated.
 	if len(b.serializedBlock) != 0 {
 		return b.serializedBlock, nil
@@ -71,7 +72,7 @@ func (b *Block) Bytes() ([]byte, error) {
 
 // BytesNoWitness returns the serialized bytes for the block with transactions
 // encoded without any witness data.
-func (b *Block) BytesNoWitness() ([]byte, error) {
+func (b *Block) BytesNoWitness() ([]byte, er.R) {
 	// Return the cached serialized bytes if it has already been generated.
 	if len(b.serializedBlockNoWitness) != 0 {
 		return b.serializedBlockNoWitness, nil
@@ -111,7 +112,7 @@ func (b *Block) Hash() *chainhash.Hash {
 // equivalent to accessing the raw transaction (wire.MsgTx) from the
 // underlying wire.MsgBlock, however the wrapped transaction has some helpful
 // properties such as caching the hash so subsequent calls are more efficient.
-func (b *Block) Tx(txNum int) (*Tx, error) {
+func (b *Block) Tx(txNum int) (*Tx, er.R) {
 	// Ensure the requested transaction is in range.
 	numTx := uint64(len(b.msgBlock.Transactions))
 	if txNum < 0 || uint64(txNum) > numTx {
@@ -173,7 +174,7 @@ func (b *Block) Transactions() []*Tx {
 // block is txNum 0.  This is equivalent to calling TxHash on the underlying
 // wire.MsgTx, however it caches the result so subsequent calls are more
 // efficient.
-func (b *Block) TxHash(txNum int) (*chainhash.Hash, error) {
+func (b *Block) TxHash(txNum int) (*chainhash.Hash, er.R) {
 	// Attempt to get a wrapped transaction for the specified index.  It
 	// will be created lazily if needed or simply return the cached version
 	// if it has already been generated.
@@ -190,7 +191,7 @@ func (b *Block) TxHash(txNum int) (*chainhash.Hash, error) {
 // TxLoc returns the offsets and lengths of each transaction in a raw block.
 // It is used to allow fast indexing into transactions within the raw byte
 // stream.
-func (b *Block) TxLoc() ([]wire.TxLoc, error) {
+func (b *Block) TxLoc() ([]wire.TxLoc, er.R) {
 	rawMsg, err := b.Bytes()
 	if err != nil {
 		return nil, err
@@ -227,7 +228,7 @@ func NewBlock(msgBlock *wire.MsgBlock) *Block {
 
 // NewBlockFromBytes returns a new instance of a bitcoin block given the
 // serialized bytes.  See Block.
-func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
+func NewBlockFromBytes(serializedBlock []byte) (*Block, er.R) {
 	br := bytes.NewReader(serializedBlock)
 	b, err := NewBlockFromReader(br)
 	if err != nil {
@@ -239,7 +240,7 @@ func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
 
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
-func NewBlockFromReader(r io.Reader) (*Block, error) {
+func NewBlockFromReader(r io.Reader) (*Block, er.R) {
 	// Deserialize the bytes into a MsgBlock.
 	var msgBlock wire.MsgBlock
 	err := msgBlock.Deserialize(r)

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -40,7 +41,7 @@ func main() {
 // Instead, main runs this function and checks for a non-nil error, at which
 // point any defers have already run, and if the error is non-nil, the program
 // can be exited with an error exit status.
-func walletMain() error {
+func walletMain() er.R {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	tcfg, _, err := loadConfig()
@@ -151,7 +152,7 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 	for {
 		var (
 			chainClient chain.Interface
-			err         error
+			err         er.R
 		)
 
 		if cfg.UseSPV {
@@ -243,7 +244,7 @@ func readCAFile() []byte {
 	// Read certificate file if TLS is not disabled.
 	var certs []byte
 	if !cfg.DisableClientTLS {
-		var err error
+		var err er.R
 		certs, err = ioutil.ReadFile(cfg.CAFile.Value)
 		if err != nil {
 			log.Warnf("Cannot open CA file: %v", err)
@@ -262,7 +263,7 @@ func readCAFile() []byte {
 // services.  This function uses the RPC options from the global config and
 // there is no recovery in case the server is not available or if there is an
 // authentication error.  Instead, all requests to the client will simply error.
-func startChainRPC(certs []byte) (*chain.RPCClient, error) {
+func startChainRPC(certs []byte) (*chain.RPCClient, er.R) {
 	log.Infof("Attempting RPC client connection to %v", cfg.RPCConnect)
 	rpcc, err := chain.NewRPCClient(activeNet.Params, cfg.RPCConnect,
 		cfg.BtcdUsername, cfg.BtcdPassword, certs, cfg.DisableClientTLS, 0)

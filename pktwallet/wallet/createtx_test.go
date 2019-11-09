@@ -6,6 +6,7 @@ package wallet
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -93,7 +94,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 		Time:  time.Unix(1387737310, 0),
 	}
 
-	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		err = w.TxStore.InsertTx(ns, rec, block)
 		if err != nil {

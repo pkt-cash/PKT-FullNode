@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
 )
 

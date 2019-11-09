@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -24,7 +25,7 @@ var (
 )
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
-func (cmd *headersCmd) Execute(args []string) error {
+func (cmd *headersCmd) Execute(args []string) er.R {
 	// Setup the global config options and ensure they are valid.
 	if err := setupGlobalConfig(); err != nil {
 		return err
@@ -41,17 +42,17 @@ func (cmd *headersCmd) Execute(args []string) error {
 	// the database would keep a metadata index of its own.
 	blockIdxName := []byte("ffldb-blockidx")
 	if !headersCfg.Bulk {
-		err = db.View(func(tx database.Tx) error {
+		err = db.View(func(tx database.Tx) er.R {
 			totalHdrs := 0
 			blockIdxBucket := tx.Metadata().Bucket(blockIdxName)
-			blockIdxBucket.ForEach(func(k, v []byte) error {
+			blockIdxBucket.ForEach(func(k, v []byte) er.R {
 				totalHdrs++
 				return nil
 			})
 			log.Infof("Loading headers for %d blocks...", totalHdrs)
 			numLoaded := 0
 			startTime := time.Now()
-			blockIdxBucket.ForEach(func(k, v []byte) error {
+			blockIdxBucket.ForEach(func(k, v []byte) er.R {
 				var hash chainhash.Hash
 				copy(hash[:], k)
 				_, err := tx.FetchBlockHeader(&hash)
@@ -69,10 +70,10 @@ func (cmd *headersCmd) Execute(args []string) error {
 	}
 
 	// Bulk load headers.
-	err = db.View(func(tx database.Tx) error {
+	err = db.View(func(tx database.Tx) er.R {
 		blockIdxBucket := tx.Metadata().Bucket(blockIdxName)
 		hashes := make([]chainhash.Hash, 0, 500000)
-		blockIdxBucket.ForEach(func(k, v []byte) error {
+		blockIdxBucket.ForEach(func(k, v []byte) er.R {
 			var hash chainhash.Hash
 			copy(hash[:], k)
 			hashes = append(hashes, hash)

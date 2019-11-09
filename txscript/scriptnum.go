@@ -6,6 +6,7 @@ package txscript
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -47,7 +48,7 @@ type scriptNum int64
 
 // checkMinimalDataEncoding returns whether or not the passed byte array adheres
 // to the minimal encoding requirements.
-func checkMinimalDataEncoding(v []byte) error {
+func checkMinimalDataEncoding(v []byte) er.R {
 	if len(v) == 0 {
 		return nil
 	}
@@ -182,7 +183,7 @@ func (n scriptNum) Int32() int32 {
 // overflows.
 //
 // See the Bytes function documentation for example encodings.
-func makeScriptNum(v []byte, requireMinimal bool, scriptNumLen int) (scriptNum, error) {
+func makeScriptNum(v []byte, requireMinimal bool, scriptNumLen int) (scriptNum, er.R) {
 	// Interpreting data requires that it is not larger than
 	// the the passed scriptNumLen value.
 	if len(v) > scriptNumLen {

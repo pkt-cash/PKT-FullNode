@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"sync"
@@ -206,7 +207,7 @@ type blockManager struct {
 // newBlockManager returns a new bitcoin block manager.  Use Start to begin
 // processing asynchronous block and inv updates.
 func newBlockManager(s *ChainService,
-	firstPeerSignal <-chan struct{}) (*blockManager, error) {
+	firstPeerSignal <-chan struct{}) (*blockManager, er.R) {
 
 	targetTimespan := int64(s.chainParams.TargetTimespan / time.Second)
 	targetTimePerBlock := int64(s.chainParams.TargetTimePerBlock / time.Second)
@@ -311,7 +312,7 @@ func (b *blockManager) Start() {
 
 // Stop gracefully shuts down the block manager by stopping all asynchronous
 // handlers and waiting for them to finish.
-func (b *blockManager) Stop() error {
+func (b *blockManager) Stop() er.R {
 	if atomic.AddInt32(&b.shutdown, 1) != 1 {
 		log.Warnf("Block manager is already in the process of " +
 			"shutting down")
@@ -702,7 +703,7 @@ waitForHeaders:
 // network, if it can, and resolves any conflicts between them. It then writes
 // any verified headers to the store.
 func (b *blockManager) getUncheckpointedCFHeaders(
-	store *headerfs.FilterHeaderStore, fType wire.FilterType) error {
+	store *headerfs.FilterHeaderStore, fType wire.FilterType) er.R {
 
 	// Get the filter header store's chain tip.
 	filterTip, filtHeight, err := store.ChainTip()
@@ -1087,7 +1088,7 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 // constructed cfheader in this range as this lets callers populate the prev
 // filter header field in the next message range before writing to disk.
 func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
-	store *headerfs.FilterHeaderStore) (*chainhash.Hash, error) {
+	store *headerfs.FilterHeaderStore) (*chainhash.Hash, er.R) {
 
 	// Check that the PrevFilterHeader is the same as the last stored so we
 	// can prevent misalignment.
@@ -1222,7 +1223,7 @@ func verifyCheckpoint(prevCheckpoint, nextCheckpoint *chainhash.Hash,
 func (b *blockManager) resolveConflict(
 	checkpoints map[string][]*chainhash.Hash,
 	store *headerfs.FilterHeaderStore, fType wire.FilterType) (
-	[]*chainhash.Hash, error) {
+	[]*chainhash.Hash, er.R) {
 
 	// First check the served checkpoints against the hardcoded ones.
 	for peer, cp := range checkpoints {
@@ -1410,7 +1411,7 @@ func checkForCFHeaderMismatch(headers map[string]*wire.MsgCFHeaders,
 // to detect which peers are serving bad filters.
 func (b *blockManager) detectBadPeers(headers map[string]*wire.MsgCFHeaders,
 	targetHeight, filterIndex uint32,
-	fType wire.FilterType) ([]string, error) {
+	fType wire.FilterType) ([]string, er.R) {
 
 	log.Warnf("Detected cfheader mismatch at height=%v!!!", targetHeight)
 
@@ -1493,7 +1494,7 @@ func (b *blockManager) detectBadPeers(headers map[string]*wire.MsgCFHeaders,
 //	peers.
 func resolveFilterMismatchFromBlock(block *wire.MsgBlock,
 	fType wire.FilterType, filtersFromPeers map[string]*gcs.Filter,
-	threshold int) ([]string, error) {
+	threshold int) ([]string, er.R) {
 
 	badPeers := make(map[string]struct{})
 
@@ -1844,7 +1845,7 @@ func (b *blockManager) getCheckpts(lastHash *chainhash.Hash,
 // existing store up to the tip of the store. If all of the peers match but
 // the store doesn't, the height at which the mismatch occurs is returned.
 func checkCFCheckptSanity(cp map[string][]*chainhash.Hash,
-	headerStore *headerfs.FilterHeaderStore) (int, error) {
+	headerStore *headerfs.FilterHeaderStore) (int, er.R) {
 
 	// Get the known best header to compare against checkpoints.
 	_, storeTip, err := headerStore.ChainTip()
@@ -2687,7 +2688,7 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 // calcNextRequiredDifficulty calculates the required difficulty for the block
 // after the passed previous block node based on the difficulty retarget rules.
 func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
-	reorgAttempt bool) (uint32, error) {
+	reorgAttempt bool) (uint32, er.R) {
 
 	hList := b.headerList
 	if reorgAttempt {
@@ -2789,7 +2790,7 @@ func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
 
 // findPrevTestNetDifficulty returns the difficulty of the previous block which
 // did not have the special testnet minimum difficulty rule applied.
-func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32, error) {
+func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32, er.R) {
 	startNode := hList.Back()
 
 	// Genesis block.
@@ -2866,7 +2867,7 @@ func (b *blockManager) Notifications() <-chan blockntfns.BlockNtfn {
 // from the given height to the tip of the chain. When providing a height of 0,
 // a backlog will not be delivered.
 func (b *blockManager) NotificationsSinceHeight(
-	height uint32) ([]blockntfns.BlockNtfn, uint32, error) {
+	height uint32) ([]blockntfns.BlockNtfn, uint32, er.R) {
 
 	b.newFilterHeadersMtx.RLock()
 	bestHeight := b.filterHeaderTip

@@ -7,6 +7,7 @@ package addrmgr_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"reflect"
 	"testing"
@@ -98,7 +99,7 @@ func addNaTest(ip string, port uint16, want string) {
 	naTests = append(naTests, test)
 }
 
-func lookupFunc(host string) ([]net.IP, error) {
+func lookupFunc(host string) ([]net.IP, er.R) {
 	return nil, errors.New("not implemented")
 }
 
@@ -116,7 +117,7 @@ func TestAddAddressByIP(t *testing.T) {
 	addrErr := &net.AddrError{}
 	var tests = []struct {
 		addrIP string
-		err    error
+		err    er.R
 	}{
 		{
 			someIP + ":8333",
@@ -259,7 +260,7 @@ func TestNeedMoreAddresses(t *testing.T) {
 	}
 	addrs := make([]*wire.NetAddress, addrsToAdd)
 
-	var err error
+	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.%d.173.147:8333", i/128+60, i%128+60)
 		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
@@ -287,7 +288,7 @@ func TestGood(t *testing.T) {
 	addrsToAdd := 64 * 64
 	addrs := make([]*wire.NetAddress, addrsToAdd)
 
-	var err error
+	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.173.147.%d:8333", i/64+60, i%64+60)
 		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
