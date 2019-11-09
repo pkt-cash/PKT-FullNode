@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // RawTxInWitnessSignature returns the serialized ECDA signature for the input

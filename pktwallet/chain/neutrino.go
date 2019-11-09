@@ -9,15 +9,15 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
-	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	libwaddrmgr "github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
-	libwaddrmgr "github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 )
 
 // NeutrinoClient is an implementation of the btcwalet chain.Interface interface.

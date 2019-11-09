@@ -1,13 +1,13 @@
 package neutrino
 
 import (
+	"github.com/btcsuite/btclog"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/btcsuite/btclog"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 // log is a logger that is initialized with no output filters.  This

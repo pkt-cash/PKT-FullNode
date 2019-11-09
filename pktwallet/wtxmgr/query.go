@@ -8,8 +8,8 @@ package wtxmgr
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 

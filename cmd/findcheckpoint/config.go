@@ -9,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
+	flags "github.com/jessevdk/go-flags"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	flags "github.com/jessevdk/go-flags"
 )
 
 const (

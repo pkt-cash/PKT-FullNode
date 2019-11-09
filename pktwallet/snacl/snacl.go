@@ -13,9 +13,9 @@ import (
 	"io"
 	"runtime/debug"
 
-	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/btcsuite/golangcrypto/nacl/secretbox"
 	"github.com/btcsuite/golangcrypto/scrypt"
+	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 )
 
 var (

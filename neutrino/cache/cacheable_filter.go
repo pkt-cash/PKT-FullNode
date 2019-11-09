@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
 )
 

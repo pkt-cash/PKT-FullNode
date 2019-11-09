@@ -9,12 +9,12 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Block contains the minimum amount of data to uniquely identify any block on

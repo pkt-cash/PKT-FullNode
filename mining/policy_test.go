@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
@@ -21,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/randgen"
 	"github.com/pkt-cash/pktd/blockchain/testdata"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"

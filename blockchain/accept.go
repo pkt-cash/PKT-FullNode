@@ -7,8 +7,8 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/database"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if

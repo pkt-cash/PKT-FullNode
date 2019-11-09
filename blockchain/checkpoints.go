@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // CheckpointConfirmations is the number of blocks before the end of the current

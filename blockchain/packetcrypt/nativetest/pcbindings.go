@@ -50,7 +50,7 @@ type PcAnn struct {
 	ch           chan wire.PacketCryptAnn
 	pipeR, pipeW *os.File
 	annMiner     *C.struct_AnnMiner_s
-	content unsafe.Pointer
+	content      unsafe.Pointer
 }
 
 func freePcAnn(pc *PcAnn) {
@@ -275,7 +275,7 @@ func validatePcProof(
 		return errors.New("blockHashes invalid length")
 	}
 
-	hapLen := wire.MaxBlockHeaderPayload+4+4+(1024*4)+len(pcp.AnnProof)
+	hapLen := wire.MaxBlockHeaderPayload + 4 + 4 + (1024 * 4) + len(pcp.AnnProof)
 
 	buf := bytes.NewBuffer(
 		make([]byte, 0, hapLen+32*4))
@@ -285,15 +285,15 @@ func validatePcProof(
 	hn := make([]byte, 8)
 	binary.LittleEndian.PutUint32(hn[4:], pcp.Nonce)
 	if _, err := buf.Write(hn); err != nil {
-		return err;
+		return err
 	}
 	for _, ann := range pcp.Announcements {
 		if _, err := buf.Write(ann.Header[:]); err != nil {
-			return err;
+			return err
 		}
 	}
 	if _, err := buf.Write(pcp.AnnProof); err != nil {
-		return err;
+		return err
 	}
 
 	for i := 0; i < len(blockHashes); i++ {
@@ -441,10 +441,10 @@ func PcBlkNew(maxAnns uint64, ch chan PcBlockMineResult, numWorkers uint32) (*Pc
 	pfd := C.int(pipeW.Fd())
 	sendPtr := C._Bool(true)
 	out := PcBlk{
-		ch:         ch,
-		pipeR:      pipeR,
-		pipeW:      pipeW,
-		blkMiner:   C.BlockMiner_create(ma, C.uint32_t(0), thr, pfd, sendPtr),
+		ch:       ch,
+		pipeR:    pipeR,
+		pipeW:    pipeW,
+		blkMiner: C.BlockMiner_create(ma, C.uint32_t(0), thr, pfd, sendPtr),
 	}
 	go blockReader(&out, ch, pipeR)
 	runtime.SetFinalizer(&out, freePcBlk)

@@ -14,20 +14,20 @@ import (
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/cache/lru"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // These are exported variables so they can be changed by users.

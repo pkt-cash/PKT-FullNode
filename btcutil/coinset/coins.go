@@ -9,9 +9,9 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 )
 
 // Coin represents a spendable transaction outpoint

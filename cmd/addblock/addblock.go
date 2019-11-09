@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/btcsuite/btclog"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
-	"github.com/btcsuite/btclog"
 )
 
 const (

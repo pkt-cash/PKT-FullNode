@@ -12,9 +12,9 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 
 	h "github.com/pkt-cash/pktd/pktwallet/internal/helpers"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/internal/txsizes"

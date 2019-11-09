@@ -10,8 +10,8 @@ import (
 	"errors"
 
 	"github.com/pkt-cash/pktd/btcjson"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // FutureGenerateResult is a future promise to deliver the result of a

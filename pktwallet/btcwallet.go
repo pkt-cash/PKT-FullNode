@@ -14,11 +14,11 @@ import (
 	"runtime"
 	"sync"
 
-	libwalletdb "github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
+	libwalletdb "github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 var (

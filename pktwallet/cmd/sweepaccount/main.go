@@ -13,16 +13,16 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/netparams"
-	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
+	"github.com/pkt-cash/pktd/pktwallet/netparams"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 )
 
 var (

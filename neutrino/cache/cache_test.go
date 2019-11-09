@@ -4,13 +4,13 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/cache"
 	"github.com/pkt-cash/pktd/neutrino/cache/lru"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestBlockFilterCaches tests that we can put and retrieve elements from all

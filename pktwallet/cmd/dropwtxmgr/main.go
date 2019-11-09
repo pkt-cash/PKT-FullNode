@@ -10,12 +10,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
-	"github.com/jessevdk/go-flags"
 )
 
 const defaultNet = "mainnet"

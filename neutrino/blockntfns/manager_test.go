@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var emptyHeader wire.BlockHeader

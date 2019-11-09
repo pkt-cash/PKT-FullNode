@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var Block100000 = wire.MsgBlock{

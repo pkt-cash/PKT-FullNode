@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/pkt-cash/pktd/pktwallet/snacl"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"

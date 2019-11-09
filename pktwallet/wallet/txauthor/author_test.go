@@ -7,10 +7,10 @@ package txauthor_test
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	. "github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
+	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/pktwallet/wallet/internal/txsizes"
 )

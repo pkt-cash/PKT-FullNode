@@ -11,12 +11,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/davecgh/go-spew/spew"
 )
 
 const dummyDir = ""

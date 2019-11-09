@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 // AddressType represents the various address types waddrmgr is currently able

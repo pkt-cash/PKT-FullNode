@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/coreos/bbolt"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // convertErr converts some bolt errors to the equivalent walletdb error.
