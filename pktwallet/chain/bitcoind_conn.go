@@ -83,7 +83,7 @@ func NewBitcoindConn(chainParams *chaincfg.Params,
 		zmqBlockHost, []string{"rawblock"}, zmqPollInterval,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to subscribe for zmq block "+
+		return nil, er.Errorf("unable to subscribe for zmq block "+
 			"events: %v", err)
 	}
 
@@ -92,7 +92,7 @@ func NewBitcoindConn(chainParams *chaincfg.Params,
 	)
 	if err != nil {
 		zmqBlockConn.Close()
-		return nil, fmt.Errorf("unable to subscribe for zmq tx "+
+		return nil, er.Errorf("unable to subscribe for zmq tx "+
 			"events: %v", err)
 	}
 
@@ -124,7 +124,7 @@ func (c *BitcoindConn) Start() er.R {
 		return err
 	}
 	if net != c.chainParams.Net {
-		return fmt.Errorf("expected network %v, got %v",
+		return er.Errorf("expected network %v, got %v",
 			c.chainParams.Net, net)
 	}
 
@@ -336,7 +336,7 @@ func (c *BitcoindConn) getCurrentNet() (wire.BitcoinNet, er.R) {
 	case *chaincfg.PktMainNetParams.GenesisHash:
 		return chaincfg.PktMainNetParams.Net, nil
 	default:
-		return 0, fmt.Errorf("unknown network with genesis hash %v", hash)
+		return 0, er.Errorf("unknown network with genesis hash %v", hash)
 	}
 }
 

@@ -55,7 +55,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// detected if the interface allows a duplicate driver to overwrite an
 	// existing one.
 	bogusCreateDB := func(args ...interface{}) (database.DB, er.R) {
-		return nil, fmt.Errorf("duplicate driver allowed for database "+
+		return nil, er.Errorf("duplicate driver allowed for database "+
 			"type [%v]", dbType)
 	}
 

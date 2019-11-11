@@ -6,12 +6,13 @@ package netsync
 
 import (
 	"container/list"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -587,7 +588,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		// simply rejected as opposed to something actually going wrong,
 		// so log it as such.  Otherwise, something really did go wrong,
 		// so log it as an actual error.
-		if _, ok := err.(mempool.RuleError); ok {
+		if _, ok := er.Wrapped(err).(mempool.RuleError); ok {
 			log.Debugf("Rejected transaction %v from %s: %v",
 				txHash, peer, err)
 		} else {
@@ -685,7 +686,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// handling, etc.
 	_, isOrphan, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
 	if err != nil {
-		if re, ok := err.(blockchain.RuleError); ok {
+		if re, ok := er.Wrapped(err).(blockchain.RuleError); ok {
 			if re.ErrorCode == blockchain.ErrPowCannotVerify {
 				err = nil
 			}
@@ -696,14 +697,14 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// rejected as opposed to something actually going wrong, so log
 		// it as such.  Otherwise, something really did go wrong, so log
 		// it as an actual error.
-		if _, ok := err.(blockchain.RuleError); ok {
+		if _, ok := er.Wrapped(err).(blockchain.RuleError); ok {
 			log.Infof("Rejected block %v from %s: %v", blockHash,
 				peer, err)
 		} else {
 			log.Errorf("Failed to process block %v: %v",
 				blockHash, err)
 		}
-		if dbErr, ok := err.(database.Error); ok && dbErr.ErrorCode ==
+		if dbErr, ok := er.Wrapped(err).(database.Error); ok && dbErr.ErrorCode ==
 			database.ErrCorruption {
 			panic(dbErr)
 		}

@@ -26,14 +26,14 @@ func mkGetKey(keys map[string]addressToKey) KeyDB {
 	if keys == nil {
 		return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
 			bool, er.R) {
-			return nil, false, errors.New("nope")
+			return nil, false, er.New("nope")
 		})
 	}
 	return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
 		bool, er.R) {
 		a2k, ok := keys[addr.EncodeAddress()]
 		if !ok {
-			return nil, false, errors.New("nope")
+			return nil, false, er.New("nope")
 		}
 		return a2k.key, a2k.compressed, nil
 	})
@@ -42,13 +42,13 @@ func mkGetKey(keys map[string]addressToKey) KeyDB {
 func mkGetScript(scripts map[string][]byte) ScriptDB {
 	if scripts == nil {
 		return ScriptClosure(func(addr btcutil.Address) ([]byte, er.R) {
-			return nil, errors.New("nope")
+			return nil, er.New("nope")
 		})
 	}
 	return ScriptClosure(func(addr btcutil.Address) ([]byte, er.R) {
 		script, ok := scripts[addr.EncodeAddress()]
 		if !ok {
-			return nil, errors.New("nope")
+			return nil, er.New("nope")
 		}
 		return script, nil
 	})
@@ -59,13 +59,13 @@ func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript
 	vm, err := NewEngine(pkScript, tx, idx,
 		ScriptBip16|ScriptVerifyDERSignatures, nil, nil, inputAmt)
 	if err != nil {
-		return fmt.Errorf("failed to make script engine for %s: %v",
+		return er.Errorf("failed to make script engine for %s: %v",
 			msg, err)
 	}
 
 	err = vm.Execute()
 	if err != nil {
-		return fmt.Errorf("invalid script signature for %s: %v", msg,
+		return er.Errorf("invalid script signature for %s: %v", msg,
 			err)
 	}
 
@@ -79,7 +79,7 @@ func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript 
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
 	if err != nil {
-		return fmt.Errorf("failed to sign output %s: %v", msg, err)
+		return er.Errorf("failed to sign output %s: %v", msg, err)
 	}
 
 	return checkScripts(msg, tx, idx, inputAmt, sigScript, pkScript)

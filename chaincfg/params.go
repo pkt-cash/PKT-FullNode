@@ -7,11 +7,12 @@ package chaincfg
 
 import (
 	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -835,7 +836,7 @@ func (d DNSSeed) String() string {
 // or not.
 func Register(params *Params) er.R {
 	if _, ok := registeredNets[params.Net]; ok {
-		return ErrDuplicateNet
+		return er.E(ErrDuplicateNet)
 	}
 	registeredNets[params.Net] = struct{}{}
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
@@ -852,7 +853,7 @@ func Register(params *Params) er.R {
 // is an error.  This should only be called from package init functions.
 func mustRegister(params *Params) {
 	if err := Register(params); err != nil {
-		panic("failed to register network: " + err.Error())
+		panic("failed to register network: " + err.String())
 	}
 }
 
@@ -892,14 +893,14 @@ func IsBech32SegwitPrefix(prefix string) bool {
 // id is not registered, the ErrUnknownHDKeyID error will be returned.
 func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, er.R) {
 	if len(id) != 4 {
-		return nil, ErrUnknownHDKeyID
+		return nil, er.E(ErrUnknownHDKeyID)
 	}
 
 	var key [4]byte
 	copy(key[:], id)
 	pubBytes, ok := hdPrivToPubKeyIDs[key]
 	if !ok {
-		return nil, ErrUnknownHDKeyID
+		return nil, er.E(ErrUnknownHDKeyID)
 	}
 
 	return pubBytes, nil

@@ -11,6 +11,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/wire"
@@ -248,7 +249,7 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) er.R {
 
 	request := (*templateRequest)(t)
 	if err := json.Unmarshal(data, &request); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// The SigOpLimit field can only be nil, bool, or int64.

@@ -141,7 +141,7 @@ func (f *FilterStore) PutFilter(hash *chainhash.Hash,
 		case RegularFilter:
 			targetBucket = filters.NestedReadWriteBucket(regBucket)
 		default:
-			return fmt.Errorf("unknown filter type: %v", fType)
+			return er.Errorf("unknown filter type: %v", fType)
 		}
 
 		if filter == nil {
@@ -174,7 +174,7 @@ func (f *FilterStore) FetchFilter(blockHash *chainhash.Hash,
 		case RegularFilter:
 			targetBucket = filters.NestedReadBucket(regBucket)
 		default:
-			return fmt.Errorf("unknown filter type")
+			return er.Errorf("unknown filter type")
 		}
 
 		filterBytes := targetBucket.Get(blockHash[:])

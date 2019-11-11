@@ -7,8 +7,8 @@ package block
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
@@ -99,14 +99,14 @@ func ValidatePcProof(
 	// Check cb magic
 	if cb.Magic() != wire.PcCoinbaseCommitMagic ||
 		!difficulty.IsAnnMinDiffOk(cb.AnnMinDifficulty(), packetCryptVersion) {
-		return false, errors.New("Validate_checkBlock_BAD_COINBASE")
+		return false, er.New("Validate_checkBlock_BAD_COINBASE")
 	}
 
 	// Check that the block has the declared amount of work
 	var annIndexes [4]uint64
 	shareOk, blockOk := isPcHashOk(&annIndexes, blockHeader, pcp, cb, shareTarget, contentProofs, packetCryptVersion)
 	if !shareOk {
-		return false, errors.New("Validate_checkBlock_INSUF_POW")
+		return false, er.New("Validate_checkBlock_INSUF_POW")
 	}
 
 	// Validate announcements (and get header hashes for them)
@@ -124,7 +124,7 @@ func ValidatePcProof(
 			effectiveAnnTarget = difficulty.GetAgedAnnTarget(ann.GetWorkTarget(), age, packetCryptVersion)
 		}
 		if effectiveAnnTarget > cb.AnnMinDifficulty() {
-			return false, errors.New("Validate_checkBlock_ANN_INSUF_POW")
+			return false, er.New("Validate_checkBlock_ANN_INSUF_POW")
 		}
 		pcutil.HashCompress(annHashes[i][:], ann.Header[:])
 	}
@@ -132,12 +132,12 @@ func ValidatePcProof(
 	// Hash the merkle proof
 	pcpHash, err := proof.PcpHash(&annHashes, cb.AnnCount(), &annIndexes, pcp)
 	if err != nil {
-		return false, fmt.Errorf("Validate_checkBlock_PCP_INVAL %v", err)
+		return false, er.Errorf("Validate_checkBlock_PCP_INVAL %v", err)
 	}
 
 	// Compare to merkle root commitment
 	if bytes.Compare(pcpHash[:], cb.MerkleRoot()) != 0 {
-		return false, errors.New("Validate_checkBlock_PCP_MISMATCH")
+		return false, er.New("Validate_checkBlock_PCP_MISMATCH")
 	}
 
 	return blockOk, nil

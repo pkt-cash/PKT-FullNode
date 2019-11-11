@@ -6,7 +6,6 @@ package btcec
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 

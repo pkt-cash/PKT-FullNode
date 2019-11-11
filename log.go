@@ -8,10 +8,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
+	"github.com/btcsuite/btclog"
+	"github.com/jrick/logrotate/rotator"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
@@ -26,16 +27,13 @@ import (
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/txscript"
-
-	"github.com/btcsuite/btclog"
-	"github.com/jrick/logrotate/rotator"
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and
 // the write-end pipe of an initialized log rotator.
 type logWriter struct{}
 
-func (logWriter) Write(p []byte) (n int, err er.R) {
+func (logWriter) Write(p []byte) (n int, err error) {
 	os.Stdout.Write(p)
 	logRotator.Write(p)
 	return len(p), nil

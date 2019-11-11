@@ -9,7 +9,6 @@ package btcec
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"testing"
 )

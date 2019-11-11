@@ -31,7 +31,7 @@ func applyMigration(t *testing.T,
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return beforeMigration(ns, store)
 	})
@@ -44,7 +44,7 @@ func applyMigration(t *testing.T,
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return migration(ns)
 	})
@@ -60,7 +60,7 @@ func applyMigration(t *testing.T,
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(namespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return afterMigration(ns, store)
 	})
@@ -87,10 +87,10 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 			return err
 		}
 		if len(utxos) == 0 && !afterMigration {
-			return errors.New("expected to find 1 utxo, found none")
+			return er.New("expected to find 1 utxo, found none")
 		}
 		if len(utxos) > 0 && afterMigration {
-			return fmt.Errorf("expected to find 0 utxos, found %d",
+			return er.Errorf("expected to find 0 utxos, found %d",
 				len(utxos))
 		}
 
@@ -101,11 +101,11 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 			return err
 		}
 		if len(unconfirmedTxs) == 0 && !afterMigration {
-			return errors.New("expected to find 1 unconfirmed " +
+			return er.New("expected to find 1 unconfirmed " +
 				"transaction, found none")
 		}
 		if len(unconfirmedTxs) > 0 && afterMigration {
-			return fmt.Errorf("expected to find 0 unconfirmed "+
+			return er.Errorf("expected to find 0 unconfirmed "+
 				"transactions, found %d", len(unconfirmedTxs))
 		}
 
@@ -116,11 +116,11 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 			return err
 		}
 		if minedBalance == 0 && !afterMigration {
-			return errors.New("expected non-zero balance before " +
+			return er.New("expected non-zero balance before " +
 				"migration")
 		}
 		if minedBalance > 0 && afterMigration {
-			return fmt.Errorf("expected zero balance after "+
+			return er.Errorf("expected zero balance after "+
 				"migration, got %d", minedBalance)
 		}
 

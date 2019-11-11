@@ -7,6 +7,7 @@ package base58
 import (
 	"crypto/sha256"
 	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -39,13 +40,13 @@ func CheckEncode(input []byte, version byte) string {
 func CheckDecode(input string) (result []byte, version byte, err er.R) {
 	decoded := Decode(input)
 	if len(decoded) < 5 {
-		return nil, 0, ErrInvalidFormat
+		return nil, 0, er.E(ErrInvalidFormat)
 	}
 	version = decoded[0]
 	var cksum [4]byte
 	copy(cksum[:], decoded[len(decoded)-4:])
 	if checksum(decoded[:len(decoded)-4]) != cksum {
-		return nil, 0, ErrChecksum
+		return nil, 0, er.E(ErrChecksum)
 	}
 	payload := decoded[1 : len(decoded)-4]
 	result = append(result, payload...)

@@ -8,6 +8,7 @@ package chainhash
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -51,7 +52,7 @@ func (hash *Hash) CloneBytes() []byte {
 func (hash *Hash) SetBytes(newHash []byte) er.R {
 	nhlen := len(newHash)
 	if nhlen != HashSize {
-		return fmt.Errorf("invalid hash length of %v, want %v", nhlen,
+		return er.Errorf("invalid hash length of %v, want %v", nhlen,
 			HashSize)
 	}
 	copy(hash[:], newHash)
@@ -98,7 +99,7 @@ func NewHashFromStr(hash string) (*Hash, er.R) {
 func Decode(dst *Hash, src string) er.R {
 	// Return error if hash string is too long.
 	if len(src) > MaxHashStringSize {
-		return ErrHashStrSize
+		return er.E(ErrHashStrSize)
 	}
 
 	// Hex decoder expects the hash to be a multiple of two.  When not, pad
@@ -114,9 +115,9 @@ func Decode(dst *Hash, src string) er.R {
 
 	// Hex decode the source bytes to a temporary destination.
 	var reversedHash Hash
-	_, err := hex.Decode(reversedHash[HashSize-hex.DecodedLen(len(srcBytes)):], srcBytes)
-	if err != nil {
-		return err
+	_, errr := hex.Decode(reversedHash[HashSize-hex.DecodedLen(len(srcBytes)):], srcBytes)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Reverse copy from the temporary hash to destination.  Because the

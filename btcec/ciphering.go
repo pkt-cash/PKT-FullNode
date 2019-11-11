@@ -13,8 +13,9 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -82,8 +83,8 @@ func Encrypt(pubkey *PublicKey, in []byte) ([]byte, er.R) {
 	// IV + Curve params/X/Y + padded plaintext/ciphertext + HMAC-256
 	out := make([]byte, aes.BlockSize+70+len(paddedIn)+sha256.Size)
 	iv := out[:aes.BlockSize]
-	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+	if _, errr := io.ReadFull(rand.Reader, iv); errr != nil {
+		return nil, er.E(errr)
 	}
 	// start writing public key
 	pb := ephemeral.PubKey().SerializeUncompressed()
@@ -103,9 +104,9 @@ func Encrypt(pubkey *PublicKey, in []byte) ([]byte, er.R) {
 	offset += 32
 
 	// start encryption
-	block, err := aes.NewCipher(keyE)
-	if err != nil {
-		return nil, err
+	block, errr := aes.NewCipher(keyE)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(out[offset:len(out)-sha256.Size], paddedIn)
@@ -122,7 +123,7 @@ func Encrypt(pubkey *PublicKey, in []byte) ([]byte, er.R) {
 func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 	// IV + Curve params/X/Y + 1 block + HMAC-256
 	if len(in) < aes.BlockSize+70+aes.BlockSize+sha256.Size {
-		return nil, errInputTooShort
+		return nil, er.E(errInputTooShort)
 	}
 
 	// read iv
@@ -131,12 +132,12 @@ func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 
 	// start reading pubkey
 	if !bytes.Equal(in[offset:offset+2], ciphCurveBytes[:]) {
-		return nil, errUnsupportedCurve
+		return nil, er.E(errUnsupportedCurve)
 	}
 	offset += 2
 
 	if !bytes.Equal(in[offset:offset+2], ciphCoordLength[:]) {
-		return nil, errInvalidXLength
+		return nil, er.E(errInvalidXLength)
 	}
 	offset += 2
 
@@ -144,7 +145,7 @@ func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 	offset += 32
 
 	if !bytes.Equal(in[offset:offset+2], ciphCoordLength[:]) {
-		return nil, errInvalidYLength
+		return nil, er.E(errInvalidYLength)
 	}
 	offset += 2
 
@@ -163,7 +164,7 @@ func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 
 	// check for cipher text length
 	if (len(in)-aes.BlockSize-offset-sha256.Size)%aes.BlockSize != 0 {
-		return nil, errInvalidPadding // not padded to 16 bytes
+		return nil, er.E(errInvalidPadding) // not padded to 16 bytes
 	}
 
 	// read hmac
@@ -180,13 +181,13 @@ func Decrypt(priv *PrivateKey, in []byte) ([]byte, er.R) {
 	hm.Write(in[:len(in)-sha256.Size]) // everything is hashed
 	expectedMAC := hm.Sum(nil)
 	if !hmac.Equal(messageMAC, expectedMAC) {
-		return nil, ErrInvalidMAC
+		return nil, er.E(ErrInvalidMAC)
 	}
 
 	// start decryption
-	block, err := aes.NewCipher(keyE)
-	if err != nil {
-		return nil, err
+	block, errr := aes.NewCipher(keyE)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	mode := cipher.NewCBCDecrypter(block, iv)
 	// same length as ciphertext
@@ -210,7 +211,7 @@ func removePKCSPadding(src []byte) ([]byte, er.R) {
 	length := len(src)
 	padLength := int(src[length-1])
 	if padLength > aes.BlockSize || length < aes.BlockSize {
-		return nil, errInvalidPadding
+		return nil, er.E(errInvalidPadding)
 	}
 
 	return src[:length-padLength], nil

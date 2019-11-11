@@ -444,12 +444,12 @@ func testBucketInterface(tc *testContext, bucket database.Bucket) bool {
 		err = bucket.ForEach(func(k, v []byte) er.R {
 			wantV, found := lookupKey(k, expectedKeyValues)
 			if !found {
-				return fmt.Errorf("ForEach: key '%s' should "+
+				return er.Errorf("ForEach: key '%s' should "+
 					"exist", k)
 			}
 
 			if !reflect.DeepEqual(v, wantV) {
-				return fmt.Errorf("ForEach: value for key '%s' "+
+				return er.Errorf("ForEach: value for key '%s' "+
 					"does not match - got %s, want %s", k,
 					v, wantV)
 			}
@@ -936,12 +936,12 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.View(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Name)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		tc.isWritable = false
@@ -977,12 +977,12 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Name)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		tc.isWritable = true
@@ -1012,7 +1012,7 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.View(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		if !testGetValues(tc, metadataBucket, rollbackValues(keyValues)) {
@@ -1032,12 +1032,12 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Name)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		if !testPutValues(tc, bucket1, keyValues) {
@@ -1057,12 +1057,12 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.View(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Name)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		if !testGetValues(tc, bucket1, toGetValues(keyValues)) {
@@ -1082,12 +1082,12 @@ func testMetadataTxInterface(tc *testContext) bool {
 	err = tc.db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Name)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		if !testDeleteValues(tc, bucket1, keyValues) {
@@ -2102,7 +2102,7 @@ func testConcurrecy(tc *testContext) bool {
 			// place, the data it added should not be visible.
 			val := tx.Metadata().Get(concurrentKey)
 			if val != nil {
-				return fmt.Errorf("%s should not be visible",
+				return er.Errorf("%s should not be visible",
 					concurrentKey)
 			}
 			return nil

@@ -75,7 +75,7 @@ func createMockChainConn(genesis *wire.MsgBlock, n uint32,
 func (c *mockChainConn) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	bestHash, ok := c.blockHashes[c.chainTip]
 	if !ok {
-		return nil, 0, fmt.Errorf("block with height %d not found",
+		return nil, 0, er.Errorf("block with height %d not found",
 			c.chainTip)
 	}
 
@@ -86,7 +86,7 @@ func (c *mockChainConn) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 	hash, ok := c.blockHashes[uint32(height)]
 	if !ok {
-		return nil, fmt.Errorf("block with height %d not found", height)
+		return nil, er.Errorf("block with height %d not found", height)
 	}
 
 	return &hash, nil
@@ -96,7 +96,7 @@ func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, er.R) {
 func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (*wire.BlockHeader, er.R) {
 	block, ok := c.blocks[*hash]
 	if !ok {
-		return nil, fmt.Errorf("header for block %v not found", hash)
+		return nil, er.Errorf("header for block %v not found", hash)
 	}
 
 	return &block.Header, nil

@@ -7,8 +7,9 @@ package wire
 import (
 	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -73,7 +74,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 
 	// Refuse to decode an insane number of cfheaders.
 	if count > maxCFHeadersLen {
-		return ErrInsaneCFHeaderCount
+		return er.E(ErrInsaneCFHeaderCount)
 	}
 
 	// Create a contiguous slice of hashes to deserialize into in order to

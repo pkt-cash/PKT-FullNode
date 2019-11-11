@@ -118,7 +118,7 @@ func TestPersistence(t *testing.T) {
 
 		for k, v := range storeValues {
 			if err := ns1.Put([]byte(k), []byte(v)); err != nil {
-				return fmt.Errorf("Put: unexpected error: %v", err)
+				return er.Errorf("Put: unexpected error: %v", err)
 			}
 		}
 
@@ -143,13 +143,13 @@ func TestPersistence(t *testing.T) {
 	err = walletdb.View(db, func(tx walletdb.ReadTx) er.R {
 		ns1 := tx.ReadBucket(ns1Key)
 		if ns1 == nil {
-			return fmt.Errorf("ReadTx.ReadBucket: unexpected nil root bucket")
+			return er.Errorf("ReadTx.ReadBucket: unexpected nil root bucket")
 		}
 
 		for k, v := range storeValues {
 			gotVal := ns1.Get([]byte(k))
 			if !reflect.DeepEqual(gotVal, []byte(v)) {
-				return fmt.Errorf("Get: key '%s' does not "+
+				return er.Errorf("Get: key '%s' does not "+
 					"match expected value - got %s, want %s",
 					k, gotVal, v)
 			}

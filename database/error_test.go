@@ -80,7 +80,7 @@ func TestError(t *testing.T) {
 			database.Error{
 				ErrorCode:   database.ErrDriverSpecific,
 				Description: "some error",
-				Err:         errors.New("driver-specific error"),
+				Err:         er.New("driver-specific error"),
 			},
 			"some error: driver-specific error",
 		},

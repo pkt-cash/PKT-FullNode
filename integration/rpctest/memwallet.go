@@ -444,7 +444,7 @@ func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
 
 	// If we've reached this point, then coin selection failed due to an
 	// insufficient amount of coins.
-	return fmt.Errorf("not enough funds for coin selection")
+	return er.Errorf("not enough funds for coin selection")
 }
 
 // SendOutputs creates, then sends a transaction paying to the specified output

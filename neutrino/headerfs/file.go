@@ -41,7 +41,7 @@ func (h *headerStore) readRaw(seekDist uint64) ([]byte, er.R) {
 		headerSize = 32
 
 	default:
-		return nil, fmt.Errorf("unknown index type: %v", h.indexType)
+		return nil, er.Errorf("unknown index type: %v", h.indexType)
 	}
 
 	// TODO(roasbeef): add buffer pool

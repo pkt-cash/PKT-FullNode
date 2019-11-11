@@ -239,7 +239,7 @@ func TestUpgradeSameVersion(t *testing.T) {
 			{
 				Number: 1,
 				Migration: func(walletdb.ReadWriteBucket) er.R {
-					return errors.New("migration should " +
+					return er.New("migration should " +
 						"not happen due to already " +
 						"being on the latest version")
 				},
@@ -302,7 +302,7 @@ func TestUpgradeMultipleVersions(t *testing.T) {
 			Number: 1,
 			Migration: func(walletdb.ReadWriteBucket) er.R {
 				if previousVersion != 0 {
-					return fmt.Errorf("expected previous "+
+					return er.Errorf("expected previous "+
 						"version to be %d, got %d", 0,
 						previousVersion)
 				}
@@ -315,7 +315,7 @@ func TestUpgradeMultipleVersions(t *testing.T) {
 			Number: 2,
 			Migration: func(walletdb.ReadWriteBucket) er.R {
 				if previousVersion != 1 {
-					return fmt.Errorf("expected previous "+
+					return er.Errorf("expected previous "+
 						"version to be %d, got %d", 1,
 						previousVersion)
 				}

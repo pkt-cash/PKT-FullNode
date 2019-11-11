@@ -5,9 +5,6 @@
 package indexers
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -154,7 +151,7 @@ func (idx *CfIndex) Create(dbTx database.Tx) er.R {
 func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 	filterType wire.FilterType) er.R {
 	if uint8(filterType) > maxFilterType {
-		return errors.New("unsupported filter type")
+		return er.New("unsupported filter type")
 	}
 
 	// Figure out which buckets to use.
@@ -168,9 +165,9 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 	if err != nil {
 		return err
 	}
-	errr := dbStoreFilterIdxEntry(dbTx, fkey, h, filterBytes)
-	if errr != nil {
-		return er.E(errr)
+	err = dbStoreFilterIdxEntry(dbTx, fkey, h, filterBytes)
+	if err != nil {
+		return err
 	}
 
 	// Next store the filter hash.
@@ -178,9 +175,9 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 	if err != nil {
 		return err
 	}
-	errr = dbStoreFilterIdxEntry(dbTx, hashkey, h, filterHash[:])
-	if errr != nil {
-		return er.E(errr)
+	err = dbStoreFilterIdxEntry(dbTx, hashkey, h, filterHash[:])
+	if err != nil {
+		return err
 	}
 
 	// Then fetch the previous block's filter header.
@@ -263,7 +260,7 @@ func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
 	filterType wire.FilterType, h *chainhash.Hash) ([]byte, er.R) {
 
 	if uint8(filterType) > maxFilterType {
-		return nil, errors.New("unsupported filter type")
+		return nil, er.New("unsupported filter type")
 	}
 	key := filterTypeKeys[filterType]
 
@@ -282,7 +279,7 @@ func (idx *CfIndex) entriesByBlockHashes(filterTypeKeys [][]byte,
 	filterType wire.FilterType, blockHashes []*chainhash.Hash) ([][]byte, er.R) {
 
 	if uint8(filterType) > maxFilterType {
-		return nil, errors.New("unsupported filter type")
+		return nil, er.New("unsupported filter type")
 	}
 	key := filterTypeKeys[filterType]
 

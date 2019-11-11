@@ -7,7 +7,6 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 	"strings"
 )

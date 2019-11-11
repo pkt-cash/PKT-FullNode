@@ -5,7 +5,6 @@
 package txscript
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

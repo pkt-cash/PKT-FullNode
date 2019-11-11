@@ -8,9 +8,9 @@ package mining
 import (
 	"bytes"
 	"container/heap"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -976,7 +976,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 		return err
 	}
 	if len(coinbaseScript) > blockchain.MaxCoinbaseScriptLen {
-		return fmt.Errorf("coinbase transaction script length "+
+		return er.Errorf("coinbase transaction script length "+
 			"of %d is out of range (min: %d, max: %d)",
 			len(coinbaseScript), blockchain.MinCoinbaseScriptLen,
 			blockchain.MaxCoinbaseScriptLen)

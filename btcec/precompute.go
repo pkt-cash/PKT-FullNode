@@ -8,9 +8,10 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 //go:generate go run -tags gensecp256k1 genprecomps.go
@@ -31,13 +32,13 @@ func loadS256BytePoints() er.R {
 	// Decompress the pre-computed table used to accelerate scalar base
 	// multiplication.
 	decoder := base64.NewDecoder(base64.StdEncoding, strings.NewReader(bp))
-	r, err := zlib.NewReader(decoder)
-	if err != nil {
-		return err
+	r, errr := zlib.NewReader(decoder)
+	if errr != nil {
+		return er.E(errr)
 	}
-	serialized, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	serialized, errr := ioutil.ReadAll(r)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Deserialize the precomputed byte points and set the curve to them.

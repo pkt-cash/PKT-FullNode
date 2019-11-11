@@ -6,6 +6,7 @@ package database
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/btclog"

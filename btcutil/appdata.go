@@ -5,7 +5,6 @@
 package btcutil
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"os/user"
 	"path/filepath"

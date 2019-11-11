@@ -314,7 +314,7 @@ func TestMaxRetryDuration(t *testing.T) {
 		case <-networkUp:
 			return mockDialer(addr)
 		default:
-			return nil, errors.New("network down")
+			return nil, er.New("network down")
 		}
 	}
 
@@ -356,7 +356,7 @@ func TestNetworkFailure(t *testing.T) {
 	var dials uint32
 	errDialer := func(net net.Addr) (net.Conn, er.R) {
 		atomic.AddUint32(&dials, 1)
-		return nil, errors.New("network down")
+		return nil, er.New("network down")
 	}
 	cmgr, err := New(&Config{
 		TargetOutbound: 5,
@@ -396,7 +396,7 @@ func TestStopFailed(t *testing.T) {
 	waitDialer := func(addr net.Addr) (net.Conn, er.R) {
 		done <- struct{}{}
 		time.Sleep(time.Millisecond)
-		return nil, errors.New("network down")
+		return nil, er.New("network down")
 	}
 	cmgr, err := New(&Config{
 		Dial: waitDialer,
@@ -431,7 +431,7 @@ func TestRemovePendingConnection(t *testing.T) {
 	wait := make(chan struct{})
 	indefiniteDialer := func(addr net.Addr) (net.Conn, er.R) {
 		<-wait
-		return nil, fmt.Errorf("error")
+		return nil, er.Errorf("error")
 	}
 	cmgr, err := New(&Config{
 		Dial: indefiniteDialer,
@@ -491,7 +491,7 @@ func TestCancelIgnoreDelayedConnection(t *testing.T) {
 		default:
 		}
 
-		return nil, fmt.Errorf("error")
+		return nil, er.Errorf("error")
 	}
 
 	connected := make(chan *ConnReq)
@@ -569,7 +569,7 @@ func (m *mockListener) Accept() (net.Conn, er.R) {
 	for conn := range m.provideConn {
 		return conn, nil
 	}
-	return nil, errors.New("network connection closed")
+	return nil, er.New("network connection closed")
 }
 
 // Close closes the mock listener which will cause any blocked Accept

@@ -59,11 +59,11 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 		}
 		lastBlock := blocks[len(blocks)-1]
 		if syncedTo.Height != lastBlock.Height {
-			return fmt.Errorf("expected synced to block height "+
+			return er.Errorf("expected synced to block height "+
 				"%v, got %v", lastBlock.Height, syncedTo.Height)
 		}
 		if syncedTo.Hash != lastBlock.Hash {
-			return fmt.Errorf("expected synced to block hash %v, "+
+			return er.Errorf("expected synced to block hash %v, "+
 				"got %v", lastBlock.Hash, syncedTo.Hash)
 		}
 
@@ -73,7 +73,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 			return err
 		}
 		if *hash != firstBlock.Hash {
-			return fmt.Errorf("expected hash %v for height %v, "+
+			return er.Errorf("expected hash %v for height %v, "+
 				"got %v", firstBlock.Hash, firstBlock.Height,
 				hash)
 		}
@@ -109,18 +109,18 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 			return err
 		}
 		if syncedTo.Height != newBlock.Height {
-			return fmt.Errorf("expected synced to block height "+
+			return er.Errorf("expected synced to block height "+
 				"%v, got %v", newBlock.Height, syncedTo.Height)
 		}
 		if syncedTo.Hash != newBlock.Hash {
-			return fmt.Errorf("expected synced to block hash %v, "+
+			return er.Errorf("expected synced to block hash %v, "+
 				"got %v", newBlock.Hash, syncedTo.Hash)
 		}
 
 		firstBlock := blocks[0]
 		_, err = fetchBlockHash(ns, firstBlock.Height)
 		if !IsError(err, ErrBlockNotFound) {
-			return fmt.Errorf("expected ErrBlockNotFound, got %v",
+			return er.Errorf("expected ErrBlockNotFound, got %v",
 				err)
 		}
 

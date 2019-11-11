@@ -9,8 +9,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/wire"

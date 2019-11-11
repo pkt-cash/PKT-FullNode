@@ -21,13 +21,13 @@ func Decode(bech string) (string, []byte, er.R) {
 	// be at least 8 characters, since it needs a non-empty HRP, a
 	// separator, and a 6 character checksum.
 	if len(bech) < 8 || len(bech) > 90 {
-		return "", nil, fmt.Errorf("invalid bech32 string length %d",
+		return "", nil, er.Errorf("invalid bech32 string length %d",
 			len(bech))
 	}
 	// Only	ASCII characters between 33 and 126 are allowed.
 	for i := 0; i < len(bech); i++ {
 		if bech[i] < 33 || bech[i] > 126 {
-			return "", nil, fmt.Errorf("invalid character in "+
+			return "", nil, er.Errorf("invalid character in "+
 				"string: '%c'", bech[i])
 		}
 	}
@@ -36,7 +36,7 @@ func Decode(bech string) (string, []byte, er.R) {
 	lower := strings.ToLower(bech)
 	upper := strings.ToUpper(bech)
 	if bech != lower && bech != upper {
-		return "", nil, fmt.Errorf("string not all lowercase or all " +
+		return "", nil, er.Errorf("string not all lowercase or all " +
 			"uppercase")
 	}
 
@@ -49,7 +49,7 @@ func Decode(bech string) (string, []byte, er.R) {
 	// or if the string is more than 90 characters in total.
 	one := strings.LastIndexByte(bech, '1')
 	if one < 1 || one+7 > len(bech) {
-		return "", nil, fmt.Errorf("invalid index of 1")
+		return "", nil, er.Errorf("invalid index of 1")
 	}
 
 	// The human-readable part is everything before the last '1'.
@@ -60,7 +60,7 @@ func Decode(bech string) (string, []byte, er.R) {
 	// 'charset'.
 	decoded, err := toBytes(data)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed converting data to bytes: "+
+		return "", nil, er.Errorf("failed converting data to bytes: "+
 			"%v", err)
 	}
 
@@ -73,7 +73,7 @@ func Decode(bech string) (string, []byte, er.R) {
 			moreInfo = fmt.Sprintf("Expected %v, got %v.",
 				expected, checksum)
 		}
-		return "", nil, fmt.Errorf("checksum failed. " + moreInfo)
+		return "", nil, er.Errorf("checksum failed. " + moreInfo)
 	}
 
 	// We exclude the last 6 bytes, which is the checksum.
@@ -93,7 +93,7 @@ func Encode(hrp string, data []byte) (string, er.R) {
 	// represented using the specified charset.
 	dataChars, err := toChars(combined)
 	if err != nil {
-		return "", fmt.Errorf("unable to convert data bytes to chars: "+
+		return "", er.Errorf("unable to convert data bytes to chars: "+
 			"%v", err)
 	}
 	return hrp + "1" + dataChars, nil
@@ -106,7 +106,7 @@ func toBytes(chars string) ([]byte, er.R) {
 	for i := 0; i < len(chars); i++ {
 		index := strings.IndexByte(charset, chars[i])
 		if index < 0 {
-			return nil, fmt.Errorf("invalid character not part of "+
+			return nil, er.Errorf("invalid character not part of "+
 				"charset: %v", chars[i])
 		}
 		decoded = append(decoded, byte(index))
@@ -120,7 +120,7 @@ func toChars(data []byte) (string, er.R) {
 	result := make([]byte, 0, len(data))
 	for _, b := range data {
 		if int(b) >= len(charset) {
-			return "", fmt.Errorf("invalid data byte: %v", b)
+			return "", er.Errorf("invalid data byte: %v", b)
 		}
 		result = append(result, charset[b])
 	}
@@ -131,7 +131,7 @@ func toChars(data []byte) (string, er.R) {
 // to a byte slice where each byte is encoding toBits bits.
 func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, er.R) {
 	if fromBits < 1 || fromBits > 8 || toBits < 1 || toBits > 8 {
-		return nil, fmt.Errorf("only bit groups between 1 and 8 allowed")
+		return nil, er.Errorf("only bit groups between 1 and 8 allowed")
 	}
 
 	// The final bytes, each byte encoding toBits bits.
@@ -190,7 +190,7 @@ func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, er.R) {
 
 	// Any incomplete group must be <= 4 bits, and all zeroes.
 	if filledBits > 0 && (filledBits > 4 || nextByte != 0) {
-		return nil, fmt.Errorf("invalid incomplete group")
+		return nil, er.Errorf("invalid incomplete group")
 	}
 
 	return regrouped, nil

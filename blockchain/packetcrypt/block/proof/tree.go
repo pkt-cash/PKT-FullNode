@@ -8,11 +8,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/bits"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 )
@@ -390,7 +389,7 @@ func mkEntries(
 
 		if tree.entries[e.childRight].flags.has(FPadEntry) {
 			if !tree.entries[e.childLeft].flags.has(FComputable) {
-				return errors.New("pad sibling which is not computable")
+				return er.New("pad sibling which is not computable")
 			}
 			tree.entries[e.childLeft].flags |= FPadSibling
 		}
@@ -406,7 +405,7 @@ func mkEntries(
 	if bits >= annCount {
 		// it's a pad entry
 		if e.flags.has(FRight) {
-			return errors.New("right-side pad entry, nonsense")
+			return er.New("right-side pad entry, nonsense")
 		}
 		e.flags = flags | FPadEntry | FHasHash | FHasRange | FHasStart | FHasEnd
 		pcutil.Memset(e.Hash(), 0xff)
@@ -424,7 +423,7 @@ func NewTree(annCount uint64, annIdxs *[4]uint64) (*Tree, er.R) {
 	// sanity check
 	for i := 0; i < 4; i++ {
 		if annIdxs[i] >= annCount {
-			return nil, errors.New("invalid index ids or annCount")
+			return nil, er.New("invalid index ids or annCount")
 		}
 	}
 
@@ -434,7 +433,7 @@ func NewTree(annCount uint64, annIdxs *[4]uint64) (*Tree, er.R) {
 	out.entries = make([]TreeNode, 0, capacity)
 	out.branchHeight = branchHeight
 	if err := mkEntries(out, annIdxs, 0, uint(branchHeight), -1, annCount); err != nil {
-		return nil, fmt.Errorf("mkEntries returned an error, this is a bug %v", err)
+		return nil, er.Errorf("mkEntries returned an error, this is a bug %v", err)
 	}
 	return out, nil
 }

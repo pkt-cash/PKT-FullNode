@@ -32,7 +32,7 @@ func (h *headerStore) singleTruncate() er.R {
 	case RegularFilter:
 		truncateLength = 32
 	default:
-		return fmt.Errorf("unknown index type: %v", h.indexType)
+		return er.Errorf("unknown index type: %v", h.indexType)
 	}
 
 	// Finally, we'll use both of these values to calculate the new size of

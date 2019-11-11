@@ -786,7 +786,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 				return s.addrStringToNetAddr(addrString)
 			}
 
-			return nil, errors.New("no valid connect address")
+			return nil, er.New("no valid connect address")
 		}
 	}
 
@@ -852,7 +852,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 	s.banStore, err = banman.NewStore(cfg.Database)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize ban store: %v", err)
+		return nil, er.Errorf("unable to initialize ban store: %v", err)
 	}
 
 	return &s, nil
@@ -924,7 +924,7 @@ func (s *ChainService) BanPeer(addr string, reason banman.Reason) er.R {
 
 	ipNet, err := banman.ParseIPNet(addr, nil)
 	if err != nil {
-		return fmt.Errorf("unable to parse IP network for peer %v: %v",
+		return er.Errorf("unable to parse IP network for peer %v: %v",
 			addr, err)
 	}
 	return s.banStore.BanIPNet(ipNet, reason, BanDuration)
@@ -1146,7 +1146,7 @@ func (s *ChainService) addrStringToNetAddr(addr string) (net.Addr, er.R) {
 	}
 
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("no addresses found for %s", host)
+		return nil, er.Errorf("no addresses found for %s", host)
 	}
 
 	port, err := strconv.Atoi(strPort)
@@ -1438,7 +1438,7 @@ func (s *ChainService) Start() er.R {
 	s.utxoScanner.Start()
 
 	if err := s.broadcaster.Start(); err != nil {
-		return fmt.Errorf("unable to start transaction broadcaster: %v",
+		return er.Errorf("unable to start transaction broadcaster: %v",
 			err)
 	}
 

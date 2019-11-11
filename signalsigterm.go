@@ -7,7 +7,6 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"syscall"
 )

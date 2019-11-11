@@ -10,6 +10,7 @@ package indexers
 import (
 	"encoding/binary"
 	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -64,29 +65,23 @@ type Indexer interface {
 	DisconnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) er.R
 }
 
-// AssertError identifies an error that indicates an internal code consistency
-// issue and should be treated as a critical and unrecoverable error.
-type AssertError string
-
-// Error returns the assertion error as a huma-readable string and satisfies
-// the error interface.
-func (e AssertError) Error() string {
-	return "assertion failed: " + string(e)
-}
-
 // errDeserialize signifies that a problem was encountered when deserializing
 // data.
-type errDeserialize string
+type errDeserialize0 string
+
+func errDeserialize(s string) er.R {
+	return er.E(errDeserialize0(s))
+}
 
 // Error implements the error interface.
-func (e errDeserialize) Error() string {
+func (e errDeserialize0) Error() string {
 	return string(e)
 }
 
 // isDeserializeErr returns whether or not the passed error is an errDeserialize
 // error.
 func isDeserializeErr(err er.R) bool {
-	_, ok := err.(errDeserialize)
+	_, ok := er.Wrapped(err).(errDeserialize0)
 	return ok
 }
 

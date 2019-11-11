@@ -72,7 +72,7 @@ func loadBlocks(filename string) (blocks []*btcutil.Block, err er.R) {
 // a teardown function the caller should invoke when done testing to clean up.
 func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er.R) {
 	if !isSupportedDbType(testDbType) {
-		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
+		return nil, nil, er.Errorf("unsupported db type %v", testDbType)
 	}
 
 	// Handle memory database specially since it doesn't need the disk
@@ -82,7 +82,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 	if testDbType == "memdb" {
 		ndb, err := database.Create(testDbType)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating db: %v", err)
+			return nil, nil, er.Errorf("error creating db: %v", err)
 		}
 		db = ndb
 
@@ -106,7 +106,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		_ = os.RemoveAll(dbPath)
 		ndb, err := database.Create(testDbType, dbPath, blockDataNet)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating db: %v", err)
+			return nil, nil, er.Errorf("error creating db: %v", err)
 		}
 		db = ndb
 

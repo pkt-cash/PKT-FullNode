@@ -30,7 +30,7 @@ func (r FutureRawResult) Receive() (json.RawMessage, er.R) {
 func (c *Client) RawRequestAsync(method string, params []json.RawMessage) FutureRawResult {
 	// Method may not be empty.
 	if method == "" {
-		return newFutureError(errors.New("no method"))
+		return newFutureError(er.New("no method"))
 	}
 
 	// Marshal parameters as "[]" instead of "null" when no parameters

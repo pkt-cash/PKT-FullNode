@@ -4,29 +4,20 @@
 
 package btcjson
 
+import "github.com/pkt-cash/pktd/btcutil/er"
+
 // Standard JSON-RPC 2.0 errors.
-var (
-	ErrRPCInvalidRequest = &RPCError{
-		Code:    -32600,
-		Message: "Invalid request",
-	}
-	ErrRPCMethodNotFound = &RPCError{
-		Code:    -32601,
-		Message: "Method not found",
-	}
-	ErrRPCInvalidParams = &RPCError{
-		Code:    -32602,
-		Message: "Invalid parameters",
-	}
-	ErrRPCInternal = &RPCError{
-		Code:    -32603,
-		Message: "Internal error",
-	}
-	ErrRPCParse = &RPCError{
-		Code:    -32700,
-		Message: "Parse error",
-	}
+const (
+	ErrRPCInvalidRequest RPCErrorCode = -32600
+	ErrRPCMethodNotFound RPCErrorCode = -32601
+	ErrRPCInvalidParams  RPCErrorCode = -32602
+	ErrRPCInternal       RPCErrorCode = -32603
+	ErrRPCParse          RPCErrorCode = -32700
 )
+
+func NewErrRPCInternal() er.R {
+	return NewRPCError(ErrRPCInternal, "Internal error", nil)
+}
 
 // General application defined JSON errors.
 const (

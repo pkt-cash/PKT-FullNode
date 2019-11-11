@@ -11,8 +11,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"golang.org/x/crypto/ripemd160"
 

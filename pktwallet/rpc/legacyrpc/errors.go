@@ -41,11 +41,11 @@ type (
 // Errors variables that are defined once here to avoid duplication below.
 var (
 	ErrNeedPositiveAmount = InvalidParameterError{
-		errors.New("amount must be positive"),
+		er.New("amount must be positive"),
 	}
 
 	ErrNeedPositiveMinconf = InvalidParameterError{
-		errors.New("minconf must be positive"),
+		er.New("minconf must be positive"),
 	}
 
 	ErrAddressNotInWallet = btcjson.RPCError{

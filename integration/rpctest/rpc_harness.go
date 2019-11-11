@@ -116,7 +116,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	case wire.SimNet:
 		extraArgs = append(extraArgs, "--simnet")
 	default:
-		return nil, fmt.Errorf("rpctest.New must be called with one " +
+		return nil, er.Errorf("rpctest.New must be called with one " +
 			"of the supported chain networks")
 	}
 
@@ -322,7 +322,7 @@ func (h *Harness) connectRPCClient() er.R {
 	}
 
 	if client == nil {
-		return fmt.Errorf("connection timeout")
+		return er.Errorf("connection timeout")
 	}
 
 	h.Node = client

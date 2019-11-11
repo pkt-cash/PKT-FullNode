@@ -33,14 +33,14 @@ func (cmd *blockRegionCmd) Execute(args []string) er.R {
 
 	// Ensure expected arguments.
 	if len(args) < 1 {
-		return errors.New("required block hash parameter not specified")
+		return er.New("required block hash parameter not specified")
 	}
 	if len(args) < 2 {
-		return errors.New("required start offset parameter not " +
+		return er.New("required start offset parameter not " +
 			"specified")
 	}
 	if len(args) < 3 {
-		return errors.New("required region length parameter not " +
+		return er.New("required region length parameter not " +
 			"specified")
 	}
 

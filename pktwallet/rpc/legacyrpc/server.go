@@ -52,7 +52,7 @@ func (c *websocketClient) send(b []byte) er.R {
 	case c.responses <- b:
 		return nil
 	case <-c.quit:
-		return errors.New("websocket client disconnected")
+		return er.New("websocket client disconnected")
 	}
 }
 
@@ -305,7 +305,7 @@ func (s *Server) checkAuthHeader(r *http.Request) er.R {
 	authsha := sha256.Sum256([]byte(authhdr[0]))
 	cmp := subtle.ConstantTimeCompare(authsha[:], s.authsha[:])
 	if cmp != 1 {
-		return errors.New("bad auth")
+		return er.New("bad auth")
 	}
 	return nil
 }

@@ -7,8 +7,9 @@ package btcutil
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -118,7 +119,7 @@ func (b *Block) Tx(txNum int) (*Tx, er.R) {
 	if txNum < 0 || uint64(txNum) > numTx {
 		str := fmt.Sprintf("transaction index %d is out of range - max %d",
 			txNum, numTx-1)
-		return nil, OutOfRangeError(str)
+		return nil, er.E(OutOfRangeError(str))
 	}
 
 	// Generate slice to hold all of the wrapped transactions if needed.

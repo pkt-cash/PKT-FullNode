@@ -25,7 +25,7 @@ func makeOneBytes(n int) []byte {
 func checkZeroBytes(b []byte) er.R {
 	for i, v := range b {
 		if v != 0 {
-			return fmt.Errorf("b[%d] = %d", i, v)
+			return er.Errorf("b[%d] = %d", i, v)
 		}
 	}
 	return nil
@@ -66,7 +66,7 @@ func TestBytes(t *testing.T) {
 func checkZeroWords(b []big.Word) er.R {
 	for i, v := range b {
 		if v != 0 {
-			return fmt.Errorf("b[%d] = %d", i, v)
+			return er.Errorf("b[%d] = %d", i, v)
 		}
 	}
 	return nil

@@ -7,9 +7,9 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 )
@@ -106,12 +106,12 @@ func (h *PacketCryptProof) SplitContentProof(proofIdx uint32) ([][]byte, er.R) {
 		}
 		b := make([]byte, length)
 		if _, err := io.ReadFull(cpb, b[:]); err != nil {
-			return nil, fmt.Errorf("SplitContentProof: unable to read ann content proof [%s]", err)
+			return nil, er.Errorf("SplitContentProof: unable to read ann content proof [%s]", err)
 		}
 		out[i] = b
 	}
 	if cpb.Len() != 0 {
-		return nil, fmt.Errorf("SplitContentProof: [%d] dangling bytes after the content proof",
+		return nil, er.Errorf("SplitContentProof: [%d] dangling bytes after the content proof",
 			cpb.Len())
 	}
 	return out, nil
@@ -210,10 +210,10 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 		case pcpType:
 			{
 				if length <= (1024*4)+4 {
-					return fmt.Errorf("readPacketCryptProof runt pcp, len [%d]", length)
+					return er.Errorf("readPacketCryptProof runt pcp, len [%d]", length)
 				}
 				if length > 131072 {
-					return fmt.Errorf("readPacketCryptProof oversize pcp, len [%d]", length)
+					return er.Errorf("readPacketCryptProof oversize pcp, len [%d]", length)
 				}
 				readElement(r, &pcp.Nonce)
 				for i := 0; i < 4; i++ {
@@ -223,7 +223,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 				}
 				pcp.AnnProof = make([]byte, length-(1024*4)-4)
 				if _, err := io.ReadFull(r, pcp.AnnProof); err != nil {
-					return err
+					return er.E(err)
 				}
 				hasPcp = true
 			}
@@ -239,7 +239,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 					}
 					pcp.Signatures[i] = make([]byte, 64)
 					if _, err := io.ReadFull(r, pcp.Signatures[i]); err != nil {
-						return err
+						return er.E(err)
 					}
 					remainingBytes -= 64
 					if remainingBytes < 0 {
@@ -259,7 +259,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 				}
 				pcp.ContentProof = make([]byte, length)
 				if _, err := io.ReadFull(r, pcp.ContentProof); err != nil {
-					return err
+					return er.E(err)
 				}
 			}
 		case versionType:
@@ -277,7 +277,7 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 			{
 				x := make([]byte, length)
 				if _, err := io.ReadFull(r, x); err != nil {
-					return err
+					return er.E(err)
 				}
 			}
 		}
@@ -301,7 +301,7 @@ func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *P
 		}
 	}
 	if _, err := w.Write(pcp.AnnProof); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	{
@@ -319,7 +319,7 @@ func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *P
 			for _, sig := range pcp.Signatures {
 				if sig == nil {
 				} else if _, err := w.Write(sig); err != nil {
-					return err
+					return er.E(err)
 				}
 			}
 		}
@@ -334,7 +334,7 @@ func writePacketCryptProof(w io.Writer, pver uint32, enc MessageEncoding, pcp *P
 				return err
 			}
 			if _, err := w.Write(pcp.ContentProof); err != nil {
-				return err
+				return er.E(err)
 			}
 		}
 	}

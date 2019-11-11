@@ -139,7 +139,7 @@ func installService() er.R {
 	service, err := serviceManager.OpenService(svcName)
 	if err == nil {
 		service.Close()
-		return fmt.Errorf("service %s already exists", svcName)
+		return er.Errorf("service %s already exists", svcName)
 	}
 
 	// Install the service.
@@ -175,7 +175,7 @@ func removeService() er.R {
 	// Ensure the service exists.
 	service, err := serviceManager.OpenService(svcName)
 	if err != nil {
-		return fmt.Errorf("service %s is not installed", svcName)
+		return er.Errorf("service %s is not installed", svcName)
 	}
 	defer service.Close()
 
@@ -194,13 +194,13 @@ func startService() er.R {
 
 	service, err := serviceManager.OpenService(svcName)
 	if err != nil {
-		return fmt.Errorf("could not access service: %v", err)
+		return er.Errorf("could not access service: %v", err)
 	}
 	defer service.Close()
 
 	err = service.Start(os.Args)
 	if err != nil {
-		return fmt.Errorf("could not start service: %v", err)
+		return er.Errorf("could not start service: %v", err)
 	}
 
 	return nil
@@ -219,26 +219,26 @@ func controlService(c svc.Cmd, to svc.State) er.R {
 
 	service, err := serviceManager.OpenService(svcName)
 	if err != nil {
-		return fmt.Errorf("could not access service: %v", err)
+		return er.Errorf("could not access service: %v", err)
 	}
 	defer service.Close()
 
 	status, err := service.Control(c)
 	if err != nil {
-		return fmt.Errorf("could not send control=%d: %v", c, err)
+		return er.Errorf("could not send control=%d: %v", c, err)
 	}
 
 	// Send the control message.
 	timeout := time.Now().Add(10 * time.Second)
 	for status.State != to {
 		if timeout.Before(time.Now()) {
-			return fmt.Errorf("timeout waiting for service to go "+
+			return er.Errorf("timeout waiting for service to go "+
 				"to state=%d", to)
 		}
 		time.Sleep(300 * time.Millisecond)
 		status, err = service.Query()
 		if err != nil {
-			return fmt.Errorf("could not retrieve service "+
+			return er.Errorf("could not retrieve service "+
 				"status: %v", err)
 		}
 	}

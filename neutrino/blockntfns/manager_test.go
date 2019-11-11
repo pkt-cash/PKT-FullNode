@@ -216,7 +216,7 @@ func TestManagerHistoricalBacklog(t *testing.T) {
 	blockSource.blocksSinceHeight = func(uint32) ([]blockntfns.BlockNtfn,
 		uint32, er.R) {
 
-		return nil, 0, errors.New("")
+		return nil, 0, er.New("")
 	}
 	sub, err := subMgr.NewSubscription(0)
 	if err == nil {

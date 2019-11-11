@@ -328,13 +328,13 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, er.R) {
 	// Check for the wallet and tx string fields in the object.
 	base64Wallet, ok := obj["wallet"].(string)
 	if !ok {
-		return nil, nil, fmt.Errorf("unexpected response type for "+
+		return nil, nil, er.Errorf("unexpected response type for "+
 			"exportwatchingwallet 'wallet' field: %T\n",
 			obj["wallet"])
 	}
 	base64TxStore, ok := obj["tx"].(string)
 	if !ok {
-		return nil, nil, fmt.Errorf("unexpected response type for "+
+		return nil, nil, er.Errorf("unexpected response type for "+
 			"exportwatchingwallet 'tx' field: %T\n",
 			obj["tx"])
 	}

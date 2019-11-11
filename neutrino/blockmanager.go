@@ -708,18 +708,18 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 	// Get the filter header store's chain tip.
 	filterTip, filtHeight, err := store.ChainTip()
 	if err != nil {
-		return fmt.Errorf("error getting filter chain tip: %v", err)
+		return er.Errorf("error getting filter chain tip: %v", err)
 	}
 	blockHeader, blockHeight, err := b.server.BlockHeaders.ChainTip()
 	if err != nil {
-		return fmt.Errorf("error getting block chain tip: %v", err)
+		return er.Errorf("error getting block chain tip: %v", err)
 	}
 
 	// If the block height is somehow before the filter height, then this
 	// means that we may still be handling a re-org, so we'll bail our so
 	// we can retry after a timeout.
 	if blockHeight < filtHeight {
-		return fmt.Errorf("reorg in progress, waiting to get "+
+		return er.Errorf("reorg in progress, waiting to get "+
 			"uncheckpointed cfheaders (block height %d, filter "+
 			"height %d", blockHeight, filtHeight)
 	}
@@ -754,7 +754,7 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 	}
 
 	if len(headers) == 0 {
-		return fmt.Errorf("couldn't get cfheaders from peers")
+		return er.Errorf("couldn't get cfheaders from peers")
 	}
 
 	// For each header, go through and check whether all headers messages
@@ -805,7 +805,7 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 	// set of peers.
 	pristineHeaders, ok := headers[key]
 	if !ok {
-		return fmt.Errorf("All peers served bogus headers! Retrying " +
+		return er.Errorf("All peers served bogus headers! Retrying " +
 			"with new set")
 	}
 
@@ -1097,7 +1097,7 @@ func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
 		return nil, err
 	}
 	if *tip != msg.PrevFilterHeader {
-		return nil, fmt.Errorf("attempt to write cfheaders out of "+
+		return nil, er.Errorf("attempt to write cfheaders out of "+
 			"order! Tip=%v (height=%v), prev_hash=%v.", *tip,
 			tipHeight, msg.PrevFilterHeader)
 	}
@@ -1253,7 +1253,7 @@ func (b *blockManager) resolveConflict(
 	}
 
 	if len(checkpoints) == 0 {
-		return nil, fmt.Errorf("no peer is serving good cfheader " +
+		return nil, er.Errorf("no peer is serving good cfheader " +
 			"checkpoints")
 	}
 
@@ -1282,7 +1282,7 @@ func (b *blockManager) resolveConflict(
 	}
 
 	if len(checkpoints) == 0 {
-		return nil, fmt.Errorf("no peer is serving good cfheaders")
+		return nil, er.Errorf("no peer is serving good cfheaders")
 	}
 
 	// Now we get all of the mismatched CFHeaders from peers, and check
@@ -1298,7 +1298,7 @@ func (b *blockManager) resolveConflict(
 		if hash == zeroHash {
 			hash = msg.PrevFilterHeader
 		} else if hash != msg.PrevFilterHeader {
-			return nil, fmt.Errorf("mismatch between filter " +
+			return nil, er.Errorf("mismatch between filter " +
 				"headers expected to be the same")
 		}
 	}
@@ -1378,7 +1378,7 @@ func (b *blockManager) resolveConflict(
 
 	// Otherwise, return an error and allow the loop which calls this
 	// function to call it again with the new set of peers.
-	return nil, fmt.Errorf("got mismatched checkpoints")
+	return nil, er.Errorf("got mismatched checkpoints")
 }
 
 // checkForCFHeaderMismatch checks all peers' responses at a specific position
@@ -1507,7 +1507,7 @@ func resolveFilterMismatchFromBlock(block *wire.MsgBlock,
 	// Based on the type of filter, our verification algorithm will differ.
 	// Only regular filters are currently defined.
 	if fType != wire.GCSFilterRegular {
-		return nil, fmt.Errorf("unknown filter: %v", fType)
+		return nil, er.Errorf("unknown filter: %v", fType)
 	}
 
 	// With the current set of items that we can fetch from the p2p
@@ -1676,7 +1676,7 @@ peerVerification:
 	// If the number of peers serving the most common filter didn't match
 	// our threshold, there's not more we can do.
 	if best < threshold {
-		return nil, fmt.Errorf("only %d peers serving consistent "+
+		return nil, er.Errorf("only %d peers serving consistent "+
 			"filters, need %d", best, threshold)
 	}
 
@@ -2678,7 +2678,7 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 	}
 	// Ensure the block time is not too far in the future.
 	if blockHeader.Timestamp.After(maxTimestamp) {
-		return fmt.Errorf("block timestamp of %v is too far in the "+
+		return er.Errorf("block timestamp of %v is too far in the "+
 			"future", blockHeader.Timestamp)
 	}
 	return nil
@@ -2889,7 +2889,7 @@ func (b *blockManager) NotificationsSinceHeight(
 	// across in the chain, we'll return an error to indicate so to the
 	// caller.
 	if height > bestHeight {
-		return nil, 0, fmt.Errorf("request with height %d is greater "+
+		return nil, 0, er.Errorf("request with height %d is greater "+
 			"than best height known %d", height, bestHeight)
 	}
 

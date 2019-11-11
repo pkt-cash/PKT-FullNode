@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"

@@ -7,8 +7,7 @@ package announce
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
@@ -122,9 +121,9 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 
 func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, er.R) {
 	if pcAnn.GetVersion() > 0 && pcAnn.GetParentBlockHeight() < 103869 {
-		return nil, errors.New("Validate_checkAnn_ANN_VERSION_NOT_ALLOWED")
+		return nil, er.New("Validate_checkAnn_ANN_VERSION_NOT_ALLOWED")
 	} else if packetCryptVersion > 1 && pcAnn.GetVersion() == 0 {
-		return nil, errors.New("Validate_checkAnn_ANN_VERSION_MISMATCH")
+		return nil, er.New("Validate_checkAnn_ANN_VERSION_MISMATCH")
 	}
 	ctx := new(context)
 	copy(ctx.ann.GetAnnounceHeader(), pcAnn.GetAnnounceHeader())
@@ -144,7 +143,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 	if version > 0 {
 		randHashCycles = 0
 		if softNonce > difficulty.Pc2AnnSoftNonceMax(pcAnn.GetWorkTarget()) {
-			return nil, errors.New("Validate_checkAnn_SOFT_NONCE_HIGH")
+			return nil, er.New("Validate_checkAnn_SOFT_NONCE_HIGH")
 		}
 		buf := make([]byte, 64*2)
 		copy(buf[:64], pcAnn.GetMerkleProof()[13*64:])
@@ -152,7 +151,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 		pcutil.HashCompress64(buf[:64], buf[:])
 		mkItemSeed = buf[:64]
 		if mkItem2Prog(&prog, mkItemSeed[:32]) != 0 {
-			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM")
+			return nil, er.New("Validate_checkAnn_BAD_PROGRAM")
 		}
 	}
 	cryptocycle.Init(&ctx.ccState, ctx.annHash1[:32], uint64(softNonce))
@@ -161,7 +160,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 		itemNo = int(cryptocycle.GetItemNo(&ctx.ccState) % announceTableSz)
 		if version > 0 {
 			if mkItem2(itemNo, ctx.itemBytes[:], mkItemSeed[32:], &prog) != 0 {
-				return nil, errors.New("Validate_checkAnn_BAD_PROGRAM_EXEC")
+				return nil, er.New("Validate_checkAnn_BAD_PROGRAM_EXEC")
 			}
 		} else {
 			// only 32 bytes of the seed are used
@@ -169,7 +168,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 		}
 		if !cryptocycle.Update(
 			&ctx.ccState, ctx.itemBytes[:], nil, randHashCycles, &ctx.progBuf) {
-			return nil, errors.New("Validate_checkAnn_INVAL")
+			return nil, er.New("Validate_checkAnn_INVAL")
 		}
 	}
 
@@ -182,20 +181,20 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 
 	if version > 0 {
 		if !pcutil.IsZero(pcAnn.GetItem4Prefix()) {
-			return nil, errors.New("Validate_checkAnn_INVAL_ITEM4")
+			return nil, er.New("Validate_checkAnn_INVAL_ITEM4")
 		}
 		if mkItem2Prog(&prog, ctx.annHash0[:32]) != 0 {
-			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM0")
+			return nil, er.New("Validate_checkAnn_BAD_PROGRAM0")
 		}
 		if mkItem2(itemNo, ctx.itemBytes[:], ctx.annHash0[32:], &prog) != 0 {
-			return nil, errors.New("Validate_checkAnn_BAD_PROGRAM0_EXEC")
+			return nil, er.New("Validate_checkAnn_BAD_PROGRAM0_EXEC")
 		}
 	} else if bytes.Compare(ctx.itemBytes[:wire.PcItem4PrefixLen], pcAnn.GetItem4Prefix()) != 0 {
-		return nil, errors.New("Validate_checkAnn_INVAL_ITEM4")
+		return nil, er.New("Validate_checkAnn_INVAL_ITEM4")
 	}
 	pcutil.HashCompress64(ctx.item4Hash[:], ctx.itemBytes[:])
 	if !merkleIsValid(pcAnn.GetMerkleProof(), &ctx.item4Hash, itemNo) {
-		return nil, errors.New("Validate_checkAnn_INVAL_MERKLE")
+		return nil, er.New("Validate_checkAnn_INVAL_MERKLE")
 	}
 
 	target := pcAnn.GetWorkTarget()
@@ -203,7 +202,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 	h := chainhash.Hash{}
 	copy(h[:], ctx.ccState.Bytes[:32])
 	if !difficulty.IsOk(ctx.ccState.Bytes[:32], target) {
-		return &h, fmt.Errorf("Validate_checkAnn_INSUF_POW need target [%x] "+
+		return &h, er.Errorf("Validate_checkAnn_INSUF_POW need target [%x] "+
 			"but ann work hash is [%s]", target, h.String())
 	}
 

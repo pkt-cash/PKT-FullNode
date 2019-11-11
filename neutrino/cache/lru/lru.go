@@ -55,7 +55,7 @@ func NewCache(capacity uint64) *Cache {
 // element with size needed to be inserted.
 func (c *Cache) evict(needed uint64) (bool, er.R) {
 	if needed > c.capacity {
-		return false, fmt.Errorf("can't evict %v elements in size, "+
+		return false, er.Errorf("can't evict %v elements in size, "+
 			"since capacity is %v", needed, c.capacity)
 	}
 
@@ -64,7 +64,7 @@ func (c *Cache) evict(needed uint64) (bool, er.R) {
 		// We still need to evict some more elements.
 		if c.ll.Len() == 0 {
 			// We should never reach here.
-			return false, fmt.Errorf("all elements got evicted, "+
+			return false, er.Errorf("all elements got evicted, "+
 				"yet still need to evict %v, likelihood of "+
 				"error during size calculation",
 				needed-(c.capacity-c.size))
@@ -76,7 +76,7 @@ func (c *Cache) evict(needed uint64) (bool, er.R) {
 			ce := elr.Value.(*entry)
 			es, err := ce.value.Size()
 			if err != nil {
-				return false, fmt.Errorf("couldn't determine "+
+				return false, er.Errorf("couldn't determine "+
 					"size of existing cache value %v", err)
 			}
 
@@ -101,12 +101,12 @@ func (c *Cache) evict(needed uint64) (bool, er.R) {
 func (c *Cache) Put(key interface{}, value cache.Value) (bool, er.R) {
 	vs, err := value.Size()
 	if err != nil {
-		return false, fmt.Errorf("couldn't determine size of cache "+
+		return false, er.Errorf("couldn't determine size of cache "+
 			"value: %v", err)
 	}
 
 	if vs > c.capacity {
-		return false, fmt.Errorf("can't insert entry of size %v into "+
+		return false, er.Errorf("can't insert entry of size %v into "+
 			"cache with capacity %v", vs, c.capacity)
 	}
 
@@ -118,7 +118,7 @@ func (c *Cache) Put(key interface{}, value cache.Value) (bool, er.R) {
 	if ok {
 		es, err := el.Value.(*entry).value.Size()
 		if err != nil {
-			return false, fmt.Errorf("couldn't determine size of "+
+			return false, er.Errorf("couldn't determine size of "+
 				"existing cache value %v", err)
 		}
 		c.ll.Remove(el)

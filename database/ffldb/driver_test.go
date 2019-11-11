@@ -177,25 +177,25 @@ func TestPersistence(t *testing.T) {
 	err = db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1, err := metadataBucket.CreateBucket(bucket1Key)
 		if err != nil {
-			return fmt.Errorf("CreateBucket: unexpected error: %v",
+			return er.Errorf("CreateBucket: unexpected error: %v",
 				err)
 		}
 
 		for k, v := range storeValues {
 			err := bucket1.Put([]byte(k), []byte(v))
 			if err != nil {
-				return fmt.Errorf("Put: unexpected error: %v",
+				return er.Errorf("Put: unexpected error: %v",
 					err)
 			}
 		}
 
 		if err := tx.StoreBlock(genesisBlock); err != nil {
-			return fmt.Errorf("StoreBlock: unexpected error: %v",
+			return er.Errorf("StoreBlock: unexpected error: %v",
 				err)
 		}
 
@@ -220,18 +220,18 @@ func TestPersistence(t *testing.T) {
 	err = db.View(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {
-			return fmt.Errorf("Metadata: unexpected nil bucket")
+			return er.Errorf("Metadata: unexpected nil bucket")
 		}
 
 		bucket1 := metadataBucket.Bucket(bucket1Key)
 		if bucket1 == nil {
-			return fmt.Errorf("Bucket1: unexpected nil bucket")
+			return er.Errorf("Bucket1: unexpected nil bucket")
 		}
 
 		for k, v := range storeValues {
 			gotVal := bucket1.Get([]byte(k))
 			if !reflect.DeepEqual(gotVal, []byte(v)) {
-				return fmt.Errorf("Get: key '%s' does not "+
+				return er.Errorf("Get: key '%s' does not "+
 					"match expected value - got %s, want %s",
 					k, gotVal, v)
 			}
@@ -240,11 +240,11 @@ func TestPersistence(t *testing.T) {
 		genesisBlockBytes, _ := genesisBlock.Bytes()
 		gotBytes, err := tx.FetchBlock(genesisHash)
 		if err != nil {
-			return fmt.Errorf("FetchBlock: unexpected error: %v",
+			return er.Errorf("FetchBlock: unexpected error: %v",
 				err)
 		}
 		if !reflect.DeepEqual(gotBytes, genesisBlockBytes) {
-			return fmt.Errorf("FetchBlock: stored block mismatch")
+			return er.Errorf("FetchBlock: stored block mismatch")
 		}
 
 		return nil

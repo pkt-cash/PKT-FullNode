@@ -7,6 +7,7 @@ package txscript
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -66,7 +67,7 @@ func (b *ScriptBuilder) AddOp(opcode byte) *ScriptBuilder {
 	if len(b.script)+1 > MaxScriptSize {
 		str := fmt.Sprintf("adding an opcode would exceed the maximum "+
 			"allowed canonical script length of %d", MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = er.E(ErrScriptNotCanonical(str))
 		return b
 	}
 
@@ -87,7 +88,7 @@ func (b *ScriptBuilder) AddOps(opcodes []byte) *ScriptBuilder {
 	if len(b.script)+len(opcodes) > MaxScriptSize {
 		str := fmt.Sprintf("adding opcodes would exceed the maximum "+
 			"allowed canonical script length of %d", MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = er.E(ErrScriptNotCanonical(str))
 		return b
 	}
 
@@ -203,7 +204,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 		str := fmt.Sprintf("adding %d bytes of data would exceed the "+
 			"maximum allowed canonical script length of %d",
 			dataSize, MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = er.E(ErrScriptNotCanonical(str))
 		return b
 	}
 
@@ -214,7 +215,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 		str := fmt.Sprintf("adding a data element of %d bytes would "+
 			"exceed the maximum allowed script element size of %d",
 			dataLen, MaxScriptElementSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = er.E(ErrScriptNotCanonical(str))
 		return b
 	}
 
@@ -235,7 +236,7 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 		str := fmt.Sprintf("adding an integer would exceed the "+
 			"maximum allow canonical script length of %d",
 			MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = er.E(ErrScriptNotCanonical(str))
 		return b
 	}
 

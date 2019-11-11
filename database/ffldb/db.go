@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/comparer"
@@ -128,14 +129,14 @@ func (s bulkFetchDataSorter) Less(i, j int) bool {
 }
 
 // makeDbErr creates a database.Error given a set of arguments.
-func makeDbErr(c database.ErrorCode, desc string, err er.R) database.Error {
-	return database.Error{ErrorCode: c, Description: desc, Err: err}
+func makeDbErr(c database.ErrorCode, desc string, err error) er.R {
+	return er.E(database.Error{ErrorCode: c, Description: desc, Err: err})
 }
 
 // convertErr converts the passed leveldb error into a database error with an
 // equivalent error code  and the passed description.  It also sets the passed
 // error as the underlying error.
-func convertErr(desc string, ldbErr er.R) database.Error {
+func convertErr(desc string, ldbErr error) er.R {
 	// Use the driver-specific error code by default.  The code below will
 	// update this with the converted error if it's recognized.
 	var code = database.ErrDriverSpecific
@@ -156,7 +157,7 @@ func convertErr(desc string, ldbErr er.R) database.Error {
 		code = database.ErrTxClosed
 	}
 
-	return database.Error{ErrorCode: code, Description: desc, Err: ldbErr}
+	return er.E(database.Error{ErrorCode: code, Description: desc, Err: ldbErr})
 }
 
 // copySlice returns a copy of the passed slice.  This is mostly used to copy
@@ -659,7 +660,7 @@ func (b *bucket) CreateBucket(key []byte) (database.Bucket, er.R) {
 	// Add the new bucket to the bucket index.
 	if err := b.tx.putKey(bidxKey, childID[:]); err != nil {
 		str := fmt.Sprintf("failed to create bucket with key %q", key)
-		return nil, convertErr(str, err)
+		return nil, convertErr(str, err.Native())
 	}
 	return &bucket{tx: b.tx, id: childID}, nil
 }
@@ -1170,7 +1171,7 @@ func (tx *transaction) StoreBlock(block *btcutil.Block) er.R {
 	if err != nil {
 		str := fmt.Sprintf("failed to get serialized bytes for block %s",
 			blockHash)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDbErr(database.ErrDriverSpecific, str, err.Native())
 	}
 
 	// Add the block to be stored to the list of pending blocks to store
@@ -1662,7 +1663,7 @@ func (tx *transaction) writePendingAndCommit() er.R {
 	writeRow := serializeWriteRow(wc.curFileNum, wc.curOffset)
 	if err := tx.metaBucket.Put(writeLocKeyName, writeRow); err != nil {
 		rollback()
-		return convertErr("failed to store write cursor", err)
+		return convertErr("failed to store write cursor", err.Native())
 	}
 
 	// Atomically update the database cache.  The cache automatically

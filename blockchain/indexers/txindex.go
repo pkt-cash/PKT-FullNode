@@ -7,6 +7,7 @@ package indexers
 import (
 	"errors"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -137,7 +138,7 @@ func dbFetchBlockIDByHash(dbTx database.Tx, hash *chainhash.Hash) (uint32, er.R)
 	hashIndex := dbTx.Metadata().Bucket(idByHashIndexBucketName)
 	serializedID := hashIndex.Get(hash[:])
 	if serializedID == nil {
-		return 0, errNoBlockIDEntry
+		return 0, er.E(errNoBlockIDEntry)
 	}
 
 	return byteOrder.Uint32(serializedID), nil
@@ -149,7 +150,7 @@ func dbFetchBlockHashBySerializedID(dbTx database.Tx, serializedID []byte) (*cha
 	idIndex := dbTx.Metadata().Bucket(hashByIDIndexBucketName)
 	hashBytes := idIndex.Get(serializedID)
 	if hashBytes == nil {
-		return nil, errNoBlockIDEntry
+		return nil, er.E(errNoBlockIDEntry)
 	}
 
 	var hash chainhash.Hash
@@ -197,21 +198,21 @@ func dbFetchTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) (*database.Bl
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
 	if len(serializedData) < 12 {
-		return nil, database.Error{
+		return nil, er.E(database.Error{
 			ErrorCode: database.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
 				"entry for %s", txHash),
-		}
+		})
 	}
 
 	// Load the block hash associated with the block ID.
 	hash, err := dbFetchBlockHashBySerializedID(dbTx, serializedData[0:4])
 	if err != nil {
-		return nil, database.Error{
+		return nil, er.E(database.Error{
 			ErrorCode: database.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
 				"entry for %s: %v", txHash, err),
-		}
+		})
 	}
 
 	// Deserialize the final entry.
@@ -260,7 +261,7 @@ func dbRemoveTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) er.R {
 	txIndex := dbTx.Metadata().Bucket(txIndexKey)
 	serializedData := txIndex.Get(txHash[:])
 	if len(serializedData) == 0 {
-		return fmt.Errorf("can't remove non-existent transaction %s "+
+		return er.Errorf("can't remove non-existent transaction %s "+
 			"from the transaction index", txHash)
 	}
 

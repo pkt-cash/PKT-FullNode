@@ -56,7 +56,6 @@ package btcec
 
 import (
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Constants used to make the code more readable.

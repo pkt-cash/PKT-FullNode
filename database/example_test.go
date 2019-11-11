@@ -84,7 +84,7 @@ func Example_basicUsage() {
 
 		// Read the key back and ensure it matches.
 		if !bytes.Equal(tx.Metadata().Get(key), value) {
-			return fmt.Errorf("unexpected value for key '%s'", key)
+			return er.Errorf("unexpected value for key '%s'", key)
 		}
 
 		// Create a new nested bucket under the metadata bucket.
@@ -97,7 +97,7 @@ func Example_basicUsage() {
 		// The key from above that was set in the metadata bucket does
 		// not exist in this new nested bucket.
 		if nestedBucket.Get(key) != nil {
-			return fmt.Errorf("key '%s' is not expected nil", key)
+			return er.Errorf("key '%s' is not expected nil", key)
 		}
 
 		return nil

@@ -7,10 +7,11 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // makeParams creates a slice of interface values for the given struct.
@@ -64,7 +65,8 @@ func MarshalCmd(id interface{}, cmd interface{}) ([]byte, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(rawCmd)
+	out, errr := json.Marshal(rawCmd)
+	return out, er.E(errr)
 }
 
 // checkNumParams ensures the supplied number of params is at least the minimum

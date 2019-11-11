@@ -11,12 +11,13 @@ import (
 	"container/list"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
@@ -71,8 +72,8 @@ type filer interface {
 	io.Closer
 	io.WriterAt
 	io.ReaderAt
-	Truncate(size int64) er.R
-	Sync() er.R
+	Truncate(size int64) error
+	Sync() error
 }
 
 // lockableFile represents a block file on disk that has been opened for either
@@ -516,13 +517,13 @@ func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte,
 	}
 
 	serializedData := make([]byte, loc.blockLen)
-	n, err := blockFile.file.ReadAt(serializedData, int64(loc.fileOffset))
+	n, errr := blockFile.file.ReadAt(serializedData, int64(loc.fileOffset))
 	blockFile.RUnlock()
-	if err != nil {
+	if errr != nil {
 		str := fmt.Sprintf("failed to read block %s from file %d, "+
 			"offset %d: %v", hash, loc.blockFileNum, loc.fileOffset,
 			err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, errr)
 	}
 
 	// Calculate the checksum of the read data and ensure it matches the
@@ -576,13 +577,13 @@ func (s *blockStore) readBlockRegion(loc blockLocation, offset, numBytes uint32)
 	// for block length.  Thus, add 8 bytes to adjust.
 	readOffset := loc.fileOffset + 8 + offset
 	serializedData := make([]byte, numBytes)
-	_, err = blockFile.file.ReadAt(serializedData, int64(readOffset))
+	_, errr := blockFile.file.ReadAt(serializedData, int64(readOffset))
 	blockFile.RUnlock()
-	if err != nil {
+	if errr != nil {
 		str := fmt.Sprintf("failed to read region from block file %d, "+
 			"offset %d, len %d: %v", loc.blockFileNum, readOffset,
 			numBytes, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, errr)
 	}
 
 	return serializedData, nil

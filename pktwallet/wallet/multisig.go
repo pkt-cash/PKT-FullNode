@@ -38,7 +38,7 @@ func (w *Wallet) MakeMultiSigScript(addrs []btcutil.Address, nRequired int) ([]b
 	for i, addr := range addrs {
 		switch addr := addr.(type) {
 		default:
-			return nil, errors.New("cannot make multisig script for " +
+			return nil, er.New("cannot make multisig script for " +
 				"a non-secp256k1 public key or P2PKH address")
 
 		case *btcutil.AddressPubKey:

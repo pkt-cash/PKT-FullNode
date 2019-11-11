@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/base58"
@@ -88,11 +88,11 @@ func encodeSegWitAddress(hrp string, witnessVersion byte, witnessProgram []byte)
 	// Check validity by decoding the created address.
 	version, program, err := decodeSegWitAddress(bech)
 	if err != nil {
-		return "", fmt.Errorf("invalid segwit address: %v", err)
+		return "", er.Errorf("invalid segwit address: %v", err)
 	}
 
 	if version != witnessVersion || !bytes.Equal(program, witnessProgram) {
-		return "", fmt.Errorf("invalid segwit address")
+		return "", er.Errorf("invalid segwit address")
 	}
 
 	return bech, nil
@@ -152,7 +152,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 			// We currently only support P2WPKH and P2WSH, which is
 			// witness version 0.
 			if witnessVer != 0 {
-				return nil, UnsupportedWitnessVerError(witnessVer)
+				return nil, er.E(UnsupportedWitnessVerError(witnessVer))
 			}
 
 			// The HRP is everything before the found '1'.
@@ -164,7 +164,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 			case 32:
 				return newAddressWitnessScriptHash(hrp, witnessProg)
 			default:
-				return nil, UnsupportedWitnessProgLenError(len(witnessProg))
+				return nil, er.E(UnsupportedWitnessProgLenError(len(witnessProg)))
 			}
 		}
 	}
@@ -172,9 +172,9 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 	// Serialized public keys are either 65 bytes (130 hex chars) if
 	// uncompressed/hybrid or 33 bytes (66 hex chars) if compressed.
 	if len(addr) == 130 || len(addr) == 66 {
-		serializedPubKey, err := hex.DecodeString(addr)
-		if err != nil {
-			return nil, err
+		serializedPubKey, errr := hex.DecodeString(addr)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		return NewAddressPubKey(serializedPubKey, defaultNet)
 	}
@@ -182,10 +182,10 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 	// Switch on decoded length to determine the type.
 	decoded, netID, err := base58.CheckDecode(addr)
 	if err != nil {
-		if err == base58.ErrChecksum {
-			return nil, ErrChecksumMismatch
+		if er.Wrapped(err) == base58.ErrChecksum {
+			return nil, er.E(ErrChecksumMismatch)
 		}
-		return nil, errors.New("decoded address is of unknown format")
+		return nil, er.New("decoded address is of unknown format")
 	}
 	switch len(decoded) {
 	case ripemd160.Size: // P2PKH or P2SH
@@ -193,17 +193,17 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 		isP2SH := netID == defaultNet.ScriptHashAddrID
 		switch hash160 := decoded; {
 		case isP2PKH && isP2SH:
-			return nil, ErrAddressCollision
+			return nil, er.E(ErrAddressCollision)
 		case isP2PKH:
 			return newAddressPubKeyHash(hash160, netID)
 		case isP2SH:
 			return newAddressScriptHashFromHash(hash160, netID)
 		default:
-			return nil, ErrUnknownAddressType
+			return nil, er.E(ErrUnknownAddressType)
 		}
 
 	default:
-		return nil, errors.New("decoded address is of unknown size")
+		return nil, er.New("decoded address is of unknown size")
 	}
 }
 
@@ -219,13 +219,13 @@ func decodeSegWitAddress(address string) (byte, []byte, er.R) {
 	// The first byte of the decoded address is the witness version, it must
 	// exist.
 	if len(data) < 1 {
-		return 0, nil, fmt.Errorf("no witness version")
+		return 0, nil, er.Errorf("no witness version")
 	}
 
 	// ...and be <= 16.
 	version := data[0]
 	if version > 16 {
-		return 0, nil, fmt.Errorf("invalid witness version: %v", version)
+		return 0, nil, er.Errorf("invalid witness version: %v", version)
 	}
 
 	// The remaining characters of the address returned are grouped into
@@ -238,12 +238,12 @@ func decodeSegWitAddress(address string) (byte, []byte, er.R) {
 
 	// The regrouped data must be between 2 and 40 bytes.
 	if len(regrouped) < 2 || len(regrouped) > 40 {
-		return 0, nil, fmt.Errorf("invalid data length")
+		return 0, nil, er.Errorf("invalid data length")
 	}
 
 	// For witness version 0, address MUST be exactly 20 or 32 bytes.
 	if version == 0 && len(regrouped) != 20 && len(regrouped) != 32 {
-		return 0, nil, fmt.Errorf("invalid data length for witness "+
+		return 0, nil, er.Errorf("invalid data length for witness "+
 			"version 0: %v", len(regrouped))
 	}
 
@@ -271,7 +271,7 @@ func NewAddressPubKeyHash(pkHash []byte, net *chaincfg.Params) (*AddressPubKeyHa
 func newAddressPubKeyHash(pkHash []byte, netID byte) (*AddressPubKeyHash, er.R) {
 	// Check for a valid pubkey hash length.
 	if len(pkHash) != ripemd160.Size {
-		return nil, errors.New("pkHash must be 20 bytes")
+		return nil, er.New("pkHash must be 20 bytes")
 	}
 
 	addr := &AddressPubKeyHash{netID: netID}
@@ -338,7 +338,7 @@ func NewAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*Add
 func newAddressScriptHashFromHash(scriptHash []byte, netID byte) (*AddressScriptHash, er.R) {
 	// Check for a valid script hash length.
 	if len(scriptHash) != ripemd160.Size {
-		return nil, errors.New("scriptHash must be 20 bytes")
+		return nil, er.New("scriptHash must be 20 bytes")
 	}
 
 	addr := &AddressScriptHash{netID: netID}
@@ -529,7 +529,7 @@ func newAddressWitnessPubKeyHash(hrp string, witnessProg []byte) (*AddressWitnes
 	// Check for valid program length for witness version 0, which is 20
 	// for P2WPKH.
 	if len(witnessProg) != 20 {
-		return nil, errors.New("witness program must be 20 " +
+		return nil, er.New("witness program must be 20 " +
 			"bytes for p2wpkh")
 	}
 
@@ -620,7 +620,7 @@ func newAddressWitnessScriptHash(hrp string, witnessProg []byte) (*AddressWitnes
 	// Check for valid program length for witness version 0, which is 32
 	// for P2WSH.
 	if len(witnessProg) != 32 {
-		return nil, errors.New("witness program must be 32 " +
+		return nil, er.New("witness program must be 32 " +
 			"bytes for p2wsh")
 	}
 

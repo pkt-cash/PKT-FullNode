@@ -48,7 +48,7 @@ func ControlCFHeader(params chaincfg.Params, fType wire.FilterType,
 	height uint32, filterHeader *chainhash.Hash) er.R {
 
 	if fType != wire.GCSFilterRegular {
-		return fmt.Errorf("unsupported filter type %v", fType)
+		return er.Errorf("unsupported filter type %v", fType)
 	}
 
 	control, ok := filterHeaderCheckpoints[params.Net]

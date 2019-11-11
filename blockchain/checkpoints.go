@@ -212,7 +212,7 @@ func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, er.R) {
 	// the main chain match.  This should always be the case unless the
 	// caller provided an invalid block.
 	if node.height != block.Height() {
-		return false, fmt.Errorf("passed block height of %d does not "+
+		return false, er.Errorf("passed block height of %d does not "+
 			"match the main chain height of %d", block.Height(),
 			node.height)
 	}

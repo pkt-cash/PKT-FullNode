@@ -5,9 +5,9 @@
 package globalcfg
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Copyright (c) 2013, 2014 The btcsuite developers
@@ -43,7 +43,7 @@ func NewAmount(f float64) (int64, er.R) {
 	case math.IsInf(f, 1):
 		fallthrough
 	case math.IsInf(f, -1):
-		return 0, errors.New("invalid bitcoin amount")
+		return 0, er.New("invalid bitcoin amount")
 	}
 
 	return round(f * float64(SatoshiPerBitcoin())), nil

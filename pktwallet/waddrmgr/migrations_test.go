@@ -32,7 +32,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return beforeMigration(ns)
 	})
@@ -45,7 +45,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return migration(ns)
 	})
@@ -61,7 +61,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration,
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return afterMigration(ns)
 	})
@@ -105,7 +105,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 		// not be able to find the birthday block within the database.
 		_, err := FetchBirthdayBlock(ns)
 		if !IsError(err, ErrBirthdayBlockNotSet) {
-			return fmt.Errorf("expected ErrBirthdayBlockNotSet, "+
+			return er.Errorf("expected ErrBirthdayBlockNotSet, "+
 				"got %v", err)
 		}
 
@@ -121,7 +121,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 		}
 
 		if birthdayBlock.Height != expectedHeight {
-			return fmt.Errorf("expected birthday block with "+
+			return er.Errorf("expected birthday block with "+
 				"height %d, got %d", expectedHeight,
 				birthdayBlock.Height)
 		}
@@ -189,7 +189,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 		// not be able to find the birthday block within the database.
 		_, err := FetchBirthdayBlock(ns)
 		if !IsError(err, ErrBirthdayBlockNotSet) {
-			return fmt.Errorf("expected ErrBirthdayBlockNotSet, "+
+			return er.Errorf("expected ErrBirthdayBlockNotSet, "+
 				"got %v", err)
 		}
 
@@ -205,7 +205,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 		}
 
 		if birthdayBlock.Height != expectedHeight {
-			return fmt.Errorf("expected birthday block height %d, "+
+			return er.Errorf("expected birthday block height %d, "+
 				"got %d", expectedHeight, birthdayBlock.Height)
 		}
 
@@ -260,12 +260,12 @@ func TestMigrationResetSyncedBlockToBirthday(t *testing.T) {
 		}
 
 		if syncedBlock.Height != birthdayBlock.Height {
-			return fmt.Errorf("expected synced block height %d, "+
+			return er.Errorf("expected synced block height %d, "+
 				"got %d", birthdayBlock.Height,
 				syncedBlock.Height)
 		}
 		if !syncedBlock.Hash.IsEqual(&birthdayBlock.Hash) {
-			return fmt.Errorf("expected synced block height %v, "+
+			return er.Errorf("expected synced block height %v, "+
 				"got %v", birthdayBlock.Hash, syncedBlock.Hash)
 		}
 
@@ -376,7 +376,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 						return err
 					}
 					if *hash != block.Hash {
-						return fmt.Errorf("expected "+
+						return er.Errorf("expected "+
 							"hash %v for height "+
 							"%v, got %v",
 							block.Hash,
@@ -389,13 +389,13 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 				}
 				expectedBlock := blocks[len(blocks)-1]
 				if block.Height != block.Height {
-					return fmt.Errorf("expected synced to "+
+					return er.Errorf("expected synced to "+
 						"block height %v, got %v",
 						expectedBlock.Height,
 						block.Height)
 				}
 				if block.Hash != block.Hash {
-					return fmt.Errorf("expected synced to "+
+					return er.Errorf("expected synced to "+
 						"block hash %v, got %v",
 						expectedBlock.Hash,
 						block.Hash)
@@ -417,7 +417,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 						if IsError(err, ErrBlockNotFound) {
 							continue
 						}
-						return fmt.Errorf("expected "+
+						return er.Errorf("expected "+
 							"ErrBlockNotFound for "+
 							"height %v, got %v",
 							block.Height, err)
@@ -430,7 +430,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 						return err
 					}
 					if *hash != block.Hash {
-						return fmt.Errorf("expected "+
+						return er.Errorf("expected "+
 							"hash %v for height "+
 							"%v, got %v",
 							block.Hash,

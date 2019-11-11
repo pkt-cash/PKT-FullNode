@@ -11,10 +11,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash"
 	"math/big"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Errors returned by canonicalPadding.
@@ -105,12 +105,12 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	signature := &Signature{}
 
 	if len(sigStr) < MinSigLen {
-		return nil, errors.New("malformed signature: too short")
+		return nil, er.New("malformed signature: too short")
 	}
 	// 0x30
 	index := 0
 	if sigStr[index] != 0x30 {
-		return nil, errors.New("malformed signature: no header magic")
+		return nil, er.New("malformed signature: no header magic")
 	}
 	index++
 	// length of remaining message
@@ -120,7 +120,7 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	// siglen should be less than the entire message and greater than
 	// the minimal message size.
 	if int(siglen+2) > len(sigStr) || int(siglen+2) < MinSigLen {
-		return nil, errors.New("malformed signature: bad length")
+		return nil, er.New("malformed signature: bad length")
 	}
 	// trim the slice we're working on so we only look at what matters.
 	sigStr = sigStr[:siglen+2]
@@ -128,7 +128,7 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	// 0x02
 	if sigStr[index] != 0x02 {
 		return nil,
-			errors.New("malformed signature: no 1st int marker")
+			er.New("malformed signature: no 1st int marker")
 	}
 	index++
 
@@ -138,24 +138,25 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	// hence the -3. We assume that the length must be at least one byte.
 	index++
 	if rLen <= 0 || rLen > len(sigStr)-index-3 {
-		return nil, errors.New("malformed signature: bogus R length")
+		return nil, er.New("malformed signature: bogus R length")
 	}
 
 	// Then R itself.
 	rBytes := sigStr[index : index+rLen]
 	if der {
-		switch err := canonicalPadding(rBytes); err {
+		err := canonicalPadding(rBytes)
+		switch er.Wrapped(err) {
 		case errNegativeValue:
-			return nil, errors.New("signature R is negative")
+			return nil, er.New("signature R is negative")
 		case errExcessivelyPaddedValue:
-			return nil, errors.New("signature R is excessively padded")
+			return nil, er.New("signature R is excessively padded")
 		}
 	}
 	signature.R = new(big.Int).SetBytes(rBytes)
 	index += rLen
 	// 0x02. length already checked in previous if.
 	if sigStr[index] != 0x02 {
-		return nil, errors.New("malformed signature: no 2nd int marker")
+		return nil, er.New("malformed signature: no 2nd int marker")
 	}
 	index++
 
@@ -164,17 +165,18 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	index++
 	// S should be the rest of the string.
 	if sLen <= 0 || sLen > len(sigStr)-index {
-		return nil, errors.New("malformed signature: bogus S length")
+		return nil, er.New("malformed signature: bogus S length")
 	}
 
 	// Then S itself.
 	sBytes := sigStr[index : index+sLen]
 	if der {
-		switch err := canonicalPadding(sBytes); err {
+		err := canonicalPadding(sBytes)
+		switch er.Wrapped(err) {
 		case errNegativeValue:
-			return nil, errors.New("signature S is negative")
+			return nil, er.New("signature S is negative")
 		case errExcessivelyPaddedValue:
-			return nil, errors.New("signature S is excessively padded")
+			return nil, er.New("signature S is excessively padded")
 		}
 	}
 	signature.S = new(big.Int).SetBytes(sBytes)
@@ -182,7 +184,7 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 
 	// sanity check length parsing
 	if index != len(sigStr) {
-		return nil, fmt.Errorf("malformed signature: bad final length %v != %v",
+		return nil, er.Errorf("malformed signature: bad final length %v != %v",
 			index, len(sigStr))
 	}
 
@@ -191,16 +193,16 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	// FWIW the ecdsa spec states that R and S must be | 1, N - 1 |
 	// but crypto/ecdsa only checks for Sign != 0. Mirror that.
 	if signature.R.Sign() != 1 {
-		return nil, errors.New("signature R isn't 1 or more")
+		return nil, er.New("signature R isn't 1 or more")
 	}
 	if signature.S.Sign() != 1 {
-		return nil, errors.New("signature S isn't 1 or more")
+		return nil, er.New("signature S isn't 1 or more")
 	}
 	if signature.R.Cmp(curve.Params().N) >= 0 {
-		return nil, errors.New("signature R is >= curve.N")
+		return nil, er.New("signature R is >= curve.N")
 	}
 	if signature.S.Cmp(curve.Params().N) >= 0 {
-		return nil, errors.New("signature S is >= curve.N")
+		return nil, er.New("signature S is >= curve.N")
 	}
 
 	return signature, nil
@@ -246,9 +248,9 @@ func canonicalizeInt(val *big.Int) []byte {
 func canonicalPadding(b []byte) er.R {
 	switch {
 	case b[0]&0x80 == 0x80:
-		return errNegativeValue
+		return er.E(errNegativeValue)
 	case len(b) > 1 && b[0] == 0x00 && b[1]&0x80 != 0x80:
-		return errExcessivelyPaddedValue
+		return er.E(errExcessivelyPaddedValue)
 	default:
 		return nil
 	}
@@ -290,7 +292,7 @@ func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 		new(big.Int).SetInt64(int64(iter/2)))
 	Rx.Add(Rx, sig.R)
 	if Rx.Cmp(curve.Params().P) != -1 {
-		return nil, errors.New("calculated Rx is larger than curve P")
+		return nil, er.New("calculated Rx is larger than curve P")
 	}
 
 	// convert 02<Rx> to point R. (step 1.2 and 1.3). If we are on an odd
@@ -305,7 +307,7 @@ func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 	if doChecks {
 		nRx, nRy := curve.ScalarMult(Rx, Ry, curve.Params().N.Bytes())
 		if nRx.Sign() != 0 || nRy.Sign() != 0 {
-			return nil, errors.New("n*R does not equal the point at infinity")
+			return nil, er.New("n*R does not equal the point at infinity")
 		}
 	}
 
@@ -389,7 +391,7 @@ func SignCompact(curve *KoblitzCurve, key *PrivateKey,
 		}
 	}
 
-	return nil, errors.New("no valid solution for pubkey found")
+	return nil, er.New("no valid solution for pubkey found")
 }
 
 // RecoverCompact verifies the compact signature "signature" of "hash" for the
@@ -400,7 +402,7 @@ func RecoverCompact(curve *KoblitzCurve, signature,
 	hash []byte) (*PublicKey, bool, er.R) {
 	bitlen := (curve.BitSize + 7) / 8
 	if len(signature) != 1+bitlen*2 {
-		return nil, false, errors.New("invalid compact signature size")
+		return nil, false, er.New("invalid compact signature size")
 	}
 
 	iteration := int((signature[0] - 27) & ^byte(4))
@@ -431,7 +433,7 @@ func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, er.R) {
 	r.Mod(r, N)
 
 	if r.Sign() == 0 {
-		return nil, errors.New("calculated R is zero")
+		return nil, er.New("calculated R is zero")
 	}
 
 	e := hashToInt(hash, privkey.Curve)
@@ -444,7 +446,7 @@ func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, er.R) {
 		s.Sub(N, s)
 	}
 	if s.Sign() == 0 {
-		return nil, errors.New("calculated S is zero")
+		return nil, er.New("calculated S is zero")
 	}
 	return &Signature{R: r, S: s}, nil
 }

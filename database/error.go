@@ -4,7 +4,11 @@
 
 package database
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // ErrorCode identifies a kind of error.
 type ErrorCode int
@@ -179,7 +183,7 @@ func (e ErrorCode) String() string {
 type Error struct {
 	ErrorCode   ErrorCode // Describes the kind of error
 	Description string    // Human readable description of the issue
-	Err         er.R      // Underlying error
+	Err         error     // Underlying error
 }
 
 // Error satisfies the error interface and prints human-readable errors.
@@ -192,6 +196,6 @@ func (e Error) Error() string {
 
 // makeError creates an Error given a set of arguments.  The error code must
 // be one of the error codes provided by this package.
-func makeError(c ErrorCode, desc string, err er.R) Error {
-	return Error{ErrorCode: c, Description: desc, Err: err}
+func makeError(c ErrorCode, desc string, err error) er.R {
+	return er.E(Error{ErrorCode: c, Description: desc, Err: err})
 }

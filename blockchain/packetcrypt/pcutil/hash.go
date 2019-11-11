@@ -6,7 +6,6 @@ package pcutil
 
 import (
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/aead/chacha20"
 	"github.com/dchest/blake2b"

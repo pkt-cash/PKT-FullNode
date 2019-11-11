@@ -1443,12 +1443,12 @@ func makeOutputs(pairs map[string]btcutil.Amount, vote *waddrmgr.NetworkStewardV
 	for addrStr, amt := range pairs {
 		addr, err := btcutil.DecodeAddress(addrStr, chainParams)
 		if err != nil {
-			return nil, fmt.Errorf("cannot decode address: %s", err)
+			return nil, er.Errorf("cannot decode address: %s", err)
 		}
 
 		pkScript, err := txscript.PayToAddrScriptWithVote(addr, vote.VoteFor, vote.VoteAgainst)
 		if err != nil {
-			return nil, fmt.Errorf("cannot create txout script: %s", err)
+			return nil, er.Errorf("cannot create txout script: %s", err)
 		}
 
 		outputs = append(outputs, wire.NewTxOut(int64(amt), pkScript))
@@ -1848,7 +1848,7 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.R
 
 			if !wif.IsForNet(w.ChainParams()) {
 				s := "key network doesn't match wallet's"
-				return nil, DeserializationError{errors.New(s)}
+				return nil, DeserializationError{er.New(s)}
 			}
 
 			addr, err := btcutil.NewAddressPubKey(wif.SerializePubKey(),
@@ -2033,7 +2033,7 @@ func verifyMessage(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	case *btcutil.AddressPubKey: // ok
 		return string(serializedPubKey) == checkAddr.String(), nil
 	default:
-		return nil, errors.New("address type not supported")
+		return nil, er.New("address type not supported")
 	}
 }
 

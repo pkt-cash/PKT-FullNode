@@ -77,19 +77,19 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 	checkBlock := func(blocks [][]TxDetails) func([]TxDetails) (bool, er.R) {
 		return func(got []TxDetails) (bool, er.R) {
 			if len(fwdBlocks) == 0 {
-				return false, errors.New("entered range " +
+				return false, er.New("entered range " +
 					"when no more details expected")
 			}
 			exp := blocks[0]
 			if len(got) != len(exp) {
-				return false, fmt.Errorf("got len(details)=%d "+
+				return false, er.Errorf("got len(details)=%d "+
 					"in transaction range, expected %d",
 					len(got), len(exp))
 			}
 			for i := range got {
 				err := equalTxDetails(&got[i], &exp[i])
 				if err != nil {
-					return false, fmt.Errorf("failed "+
+					return false, er.Errorf("failed "+
 						"comparing range of "+
 						"transaction details: %v", err)
 				}
@@ -100,12 +100,12 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 	}
 	err := s.RangeTransactions(ns, 0, -1, checkBlock(fwdBlocks))
 	if err != nil {
-		return fmt.Errorf("%s: failed in RangeTransactions (forwards "+
+		return er.Errorf("%s: failed in RangeTransactions (forwards "+
 			"iteration): %v", changeDesc, err)
 	}
 	err = s.RangeTransactions(ns, -1, 0, checkBlock(revBlocks))
 	if err != nil {
-		return fmt.Errorf("%s: failed in RangeTransactions (reverse "+
+		return er.Errorf("%s: failed in RangeTransactions (reverse "+
 			"iteration): %v", changeDesc, err)
 	}
 
@@ -120,12 +120,12 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 				return err
 			}
 			if d == nil {
-				return fmt.Errorf("found no matching "+
+				return er.Errorf("found no matching "+
 					"transaction at height %d",
 					detail.Block.Height)
 			}
 			if err := equalTxDetails(d, &detail); err != nil {
-				return fmt.Errorf("%s: failed querying latest "+
+				return er.Errorf("%s: failed querying latest "+
 					"details regarding transaction %v",
 					changeDesc, txHash)
 			}
@@ -140,7 +140,7 @@ func (q *queryState) compare(s *Store, ns walletdb.ReadBucket,
 			return err
 		}
 		if err := equalTxDetails(d, detail); err != nil {
-			return fmt.Errorf("%s: failed querying latest details "+
+			return er.Errorf("%s: failed querying latest details "+
 				"regarding transaction %v", changeDesc, txHash)
 		}
 	}
@@ -156,38 +156,38 @@ func equalTxDetails(got, exp *TxDetails) er.R {
 	}
 
 	if got.Hash != exp.Hash {
-		return fmt.Errorf("found mismatched hashes: got %v, expected %v",
+		return er.Errorf("found mismatched hashes: got %v, expected %v",
 			got.Hash, exp.Hash)
 	}
 	if got.Received != exp.Received {
-		return fmt.Errorf("found mismatched receive time: got %v, "+
+		return er.Errorf("found mismatched receive time: got %v, "+
 			"expected %v", got.Received, exp.Received)
 	}
 	if !bytes.Equal(got.SerializedTx, exp.SerializedTx) {
-		return fmt.Errorf("found mismatched serialized txs: got %v, "+
+		return er.Errorf("found mismatched serialized txs: got %v, "+
 			"expected %v", got.SerializedTx, exp.SerializedTx)
 	}
 	if got.Block != exp.Block {
-		return fmt.Errorf("found mismatched block meta: got %v, "+
+		return er.Errorf("found mismatched block meta: got %v, "+
 			"expected %v", got.Block, exp.Block)
 	}
 	if len(got.Credits) != len(exp.Credits) {
-		return fmt.Errorf("credit slice lengths differ: got %d, "+
+		return er.Errorf("credit slice lengths differ: got %d, "+
 			"expected %d", len(got.Credits), len(exp.Credits))
 	}
 	for i := range got.Credits {
 		if got.Credits[i] != exp.Credits[i] {
-			return fmt.Errorf("found mismatched credit[%d]: got %v, "+
+			return er.Errorf("found mismatched credit[%d]: got %v, "+
 				"expected %v", i, got.Credits[i], exp.Credits[i])
 		}
 	}
 	if len(got.Debits) != len(exp.Debits) {
-		return fmt.Errorf("debit slice lengths differ: got %d, "+
+		return er.Errorf("debit slice lengths differ: got %d, "+
 			"expected %d", len(got.Debits), len(exp.Debits))
 	}
 	for i := range got.Debits {
 		if got.Debits[i] != exp.Debits[i] {
-			return fmt.Errorf("found mismatched debit[%d]: got %v, "+
+			return er.Errorf("found mismatched debit[%d]: got %v, "+
 				"expected %v", i, got.Debits[i], exp.Debits[i])
 		}
 	}
@@ -206,7 +206,7 @@ func equalTxs(got, exp *wire.MsgTx) er.R {
 		return err
 	}
 	if !bytes.Equal(bufGot.Bytes(), bufExp.Bytes()) {
-		return fmt.Errorf("found unexpected wire.MsgTx: got: %v, "+
+		return er.Errorf("found unexpected wire.MsgTx: got: %v, "+
 			"expected %v", got, exp)
 	}
 
@@ -423,7 +423,7 @@ func TestStoreQueries(t *testing.T) {
 			return err
 		}
 		if missingDetails != nil {
-			return fmt.Errorf("Expected no details, found details "+
+			return er.Errorf("Expected no details, found details "+
 				"for tx %v", missingDetails.Hash)
 		}
 		missingUniqueTests := []struct {

@@ -7,6 +7,7 @@ package indexers
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -52,11 +53,11 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 	indexesBucket := dbTx.Metadata().Bucket(indexTipsBucketName)
 	serialized := indexesBucket.Get(idxKey)
 	if len(serialized) < chainhash.HashSize+4 {
-		return nil, 0, database.Error{
+		return nil, 0, er.E(database.Error{
 			ErrorCode: database.ErrCorruption,
 			Description: fmt.Sprintf("unexpected end of data for "+
 				"index %q tip", string(idxKey)),
-		}
+		})
 	}
 
 	var hash chainhash.Hash
@@ -80,7 +81,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block
 		return err
 	}
 	if !curTipHash.IsEqual(&block.MsgBlock().Header.PrevBlock) {
-		return AssertError(fmt.Sprintf("dbIndexConnectBlock must be "+
+		return er.New(fmt.Sprintf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
 			"tip (%s, tip %s, block %s)", indexer.Name(),
 			curTipHash, block.Hash()))
@@ -110,7 +111,7 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Bl
 		return err
 	}
 	if !curTipHash.IsEqual(block.Hash()) {
-		return AssertError(fmt.Sprintf("dbIndexDisconnectBlock must "+
+		return er.New(fmt.Sprintf("dbIndexDisconnectBlock must "+
 			"be called with the block at the current index tip "+
 			"(%s, tip %s, block %s)", indexer.Name(),
 			curTipHash, block.Hash()))
@@ -177,7 +178,7 @@ func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) er.R {
 	}
 
 	if interruptRequested(interrupt) {
-		return errInterruptRequested
+		return er.E(errInterruptRequested)
 	}
 
 	// Finish dropping any of the enabled indexes that are already in the
@@ -241,7 +242,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	}
 
 	if interruptRequested(interrupt) {
-		return errInterruptRequested
+		return er.E(errInterruptRequested)
 	}
 
 	// Finish and drops that were previously interrupted.
@@ -351,7 +352,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			}
 
 			if interruptRequested(interrupt) {
-				return errInterruptRequested
+				return er.E(errInterruptRequested)
 			}
 		}
 
@@ -412,7 +413,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		if interruptRequested(interrupt) {
-			return errInterruptRequested
+			return er.E(errInterruptRequested)
 		}
 
 		// Connect the block for all indexes that need it.
@@ -449,7 +450,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		progressLogger.LogBlockHeight(block)
 
 		if interruptRequested(interrupt) {
-			return errInterruptRequested
+			return er.E(errInterruptRequested)
 		}
 	}
 
@@ -476,7 +477,7 @@ func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, er.R) {
 		return nil, err
 	}
 	if blockRegion == nil {
-		return nil, fmt.Errorf("transaction %v not found", hash)
+		return nil, er.Errorf("transaction %v not found", hash)
 	}
 
 	// Load the raw transaction bytes from the database.
@@ -658,7 +659,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		}
 
 		if interruptRequested(interrupt) {
-			return errInterruptRequested
+			return er.E(errInterruptRequested)
 		}
 
 		// Drop the bucket itself.

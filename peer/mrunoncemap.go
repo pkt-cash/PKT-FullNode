@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 )
 

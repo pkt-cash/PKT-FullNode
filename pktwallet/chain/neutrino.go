@@ -141,7 +141,7 @@ func (s *NeutrinoClient) BlockStamp() (*waddrmgr.BlockStamp, er.R) {
 	case bs := <-s.currentBlock:
 		return bs, nil
 	case <-s.quit:
-		return nil, errors.New("disconnected")
+		return nil, er.New("disconnected")
 	}
 }
 
@@ -332,7 +332,7 @@ func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Addre
 	s.clientMtx.Lock()
 	if !s.started {
 		s.clientMtx.Unlock()
-		return fmt.Errorf("can't do a rescan when the chain client " +
+		return er.Errorf("can't do a rescan when the chain client " +
 			"is not started")
 	}
 	if s.scanning {
@@ -355,11 +355,11 @@ func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Addre
 
 	bestBlock, err := s.CS.BestBlock()
 	if err != nil {
-		return fmt.Errorf("Can't get chain service's best block: %s", err)
+		return er.Errorf("Can't get chain service's best block: %s", err)
 	}
 	header, err := s.CS.GetBlockHeader(&bestBlock.Hash)
 	if err != nil {
-		return fmt.Errorf("Can't get block header for hash %v: %s",
+		return er.Errorf("Can't get block header for hash %v: %s",
 			bestBlock.Hash, err)
 	}
 

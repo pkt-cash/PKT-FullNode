@@ -17,18 +17,18 @@ import (
 
 func validatePcBlock(mb *wire.MsgBlock, height int32, annParentHashes []*chainhash.Hash) er.R {
 	if len(annParentHashes) != 4 {
-		return errors.New("wrong number of annParentHashes")
+		return er.New("wrong number of annParentHashes")
 	}
 	if mb.Pcp == nil {
-		return errors.New("missing packetcrypt proof")
+		return er.New("missing packetcrypt proof")
 	}
 	coinbase := mb.Transactions[0]
 	if coinbase == nil {
-		return errors.New("missing coinbase")
+		return er.New("missing coinbase")
 	}
 	cbc := packetcrypt.ExtractCoinbaseCommit(coinbase)
 	if cbc == nil {
-		return errors.New("missing packetcrypt commitment")
+		return er.New("missing packetcrypt commitment")
 	}
 	return validatePcProof(mb.Pcp, height, &mb.Header, cbc, annParentHashes)
 }

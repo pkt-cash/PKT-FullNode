@@ -33,14 +33,14 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	// Set up the block and filter header stores.
 	tempDir, err := ioutil.TempDir("", "neutrino")
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("Failed to create "+
+		return nil, nil, nil, nil, er.Errorf("Failed to create "+
 			"temporary directory: %s", err)
 	}
 
 	db, err := walletdb.Create("bdb", tempDir+"/weks.db")
 	if err != nil {
 		os.RemoveAll(tempDir)
-		return nil, nil, nil, nil, fmt.Errorf("Error opening DB: %s",
+		return nil, nil, nil, nil, er.Errorf("Error opening DB: %s",
 			err)
 	}
 
@@ -54,7 +54,7 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	)
 	if err != nil {
 		cleanUp()
-		return nil, nil, nil, nil, fmt.Errorf("Error creating block "+
+		return nil, nil, nil, nil, er.Errorf("Error creating block "+
 			"header store: %s", err)
 	}
 
@@ -64,14 +64,14 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	)
 	if err != nil {
 		cleanUp()
-		return nil, nil, nil, nil, fmt.Errorf("Error creating filter "+
+		return nil, nil, nil, nil, er.Errorf("Error creating filter "+
 			"header store: %s", err)
 	}
 
 	banStore, err := banman.NewStore(db)
 	if err != nil {
 		cleanUp()
-		return nil, nil, nil, nil, fmt.Errorf("unable to initialize "+
+		return nil, nil, nil, nil, er.Errorf("unable to initialize "+
 			"ban store: %v", err)
 	}
 
@@ -87,7 +87,7 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	// Set up a blockManager with the chain service we defined.
 	bm, err := newBlockManager(cs, nil)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("unable to create "+
+		return nil, nil, nil, nil, er.Errorf("unable to create "+
 			"blockmanager: %v", err)
 	}
 
@@ -130,13 +130,13 @@ func generateHeaders(genesisBlockHeader *wire.BlockHeader,
 		chaincfg.SimNetParams.GenesisBlock, nil,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to build genesis filter: %v",
+		return nil, er.Errorf("unable to build genesis filter: %v",
 			err)
 	}
 
 	genesisFilterHash, err := builder.GetFilterHash(genesisFilter)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get genesis filter hash: %v",
+		return nil, er.Errorf("unable to get genesis filter hash: %v",
 			err)
 	}
 
@@ -211,13 +211,13 @@ func generateResponses(msgs []wire.Message,
 		// Only GetCFHeaders expected.
 		q, ok := msg.(*wire.MsgGetCFHeaders)
 		if !ok {
-			return nil, fmt.Errorf("got unexpected message %T",
+			return nil, er.Errorf("got unexpected message %T",
 				msg)
 		}
 
 		// The start height must be set to a checkpoint height+1.
 		if q.StartHeight%wire.CFCheckptInterval != 1 {
-			return nil, fmt.Errorf("unexpexted start height %v",
+			return nil, er.Errorf("unexpexted start height %v",
 				q.StartHeight)
 		}
 
@@ -700,13 +700,13 @@ func assertBadPeers(expBad map[string]struct{}, badPeers []string) er.R {
 	for _, peer := range badPeers {
 		_, ok := remBad[peer]
 		if !ok {
-			return fmt.Errorf("did not expect %v to be bad", peer)
+			return er.Errorf("did not expect %v to be bad", peer)
 		}
 		delete(remBad, peer)
 	}
 
 	if len(remBad) != 0 {
-		return fmt.Errorf("did expect more bad peers")
+		return er.Errorf("did expect more bad peers")
 	}
 
 	return nil

@@ -129,7 +129,7 @@ func (s *banStore) BanIPNet(ipNet *net.IPNet, reason Reason, duration time.Durat
 
 		var ipNetBuf bytes.Buffer
 		if err := encodeIPNet(&ipNetBuf, ipNet); err != nil {
-			return fmt.Errorf("unable to encode %v: %v", ipNet, err)
+			return er.Errorf("unable to encode %v: %v", ipNet, err)
 		}
 		k := ipNetBuf.Bytes()
 
@@ -170,7 +170,7 @@ func (s *banStore) Status(ipNet *net.IPNet) (Status, er.R) {
 
 		var ipNetBuf bytes.Buffer
 		if err := encodeIPNet(&ipNetBuf, ipNet); err != nil {
-			return fmt.Errorf("unable to encode %v: %v", ipNet, err)
+			return er.Errorf("unable to encode %v: %v", ipNet, err)
 		}
 		k := ipNetBuf.Bytes()
 

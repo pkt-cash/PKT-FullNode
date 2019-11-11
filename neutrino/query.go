@@ -916,13 +916,13 @@ func (s *ChainService) prepareCFiltersQuery(blockHash chainhash.Hash,
 
 	_, height, err := s.BlockHeaders.FetchHeader(&blockHash)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get header for start "+
+		return nil, er.Errorf("unable to get header for start "+
 			"block=%v: %v", blockHash, err)
 	}
 
 	bestBlock, err := s.BestBlock()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get best block: %v", err)
+		return nil, er.Errorf("unable to get best block: %v", err)
 	}
 	bestHeight := int64(bestBlock.Height)
 
@@ -973,7 +973,7 @@ func (s *ChainService) prepareCFiltersQuery(blockHash chainhash.Hash,
 
 	stopHash, err := s.GetBlockHash(stopHeight)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get hash for "+
+		return nil, er.Errorf("unable to get hash for "+
 			"stopHeight=%d: %v", stopHeight, err)
 	}
 
@@ -986,13 +986,13 @@ func (s *ChainService) prepareCFiltersQuery(blockHash chainhash.Hash,
 		numFilters, stopHash,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get %d block header "+
+		return nil, er.Errorf("unable to get %d block header "+
 			"ancestors for stopHash=%v: %v", numFilters,
 			stopHash, err)
 	}
 
 	if len(blockHeaders) != int(numFilters)+1 {
-		return nil, fmt.Errorf("expected %d block headers, got %d",
+		return nil, er.Errorf("expected %d block headers, got %d",
 			numFilters+1, len(blockHeaders))
 	}
 
@@ -1000,13 +1000,13 @@ func (s *ChainService) prepareCFiltersQuery(blockHash chainhash.Hash,
 		numFilters, stopHash,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get %d filter header "+
+		return nil, er.Errorf("unable to get %d filter header "+
 			"ancestors for stopHash=%v: %v", numFilters, stopHash,
 			err)
 	}
 
 	if len(filterHeaders) != int(numFilters)+1 {
-		return nil, fmt.Errorf("expected %d filter headers, got %d",
+		return nil, er.Errorf("expected %d filter headers, got %d",
 			numFilters+1, len(filterHeaders))
 	}
 
@@ -1150,7 +1150,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	// The only supported filter atm is the regular filter, so we'll reject
 	// all other filters.
 	if filterType != wire.GCSFilterRegular {
-		return nil, fmt.Errorf("unknown filter type: %v", filterType)
+		return nil, er.Errorf("unknown filter type: %v", filterType)
 	}
 
 	// Based on if extended is true or not, we'll set up our set of
@@ -1267,7 +1267,7 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 	// can't request it.
 	blockHeader, height, err := s.BlockHeaders.FetchHeader(&blockHash)
 	if err != nil || blockHeader.BlockHash() != blockHash {
-		return nil, fmt.Errorf("Couldn't get header for block %s "+
+		return nil, er.Errorf("Couldn't get header for block %s "+
 			"from database", blockHash)
 	}
 
@@ -1367,7 +1367,7 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 		options...,
 	)
 	if foundBlock == nil {
-		return nil, fmt.Errorf("Couldn't retrieve block %s from "+
+		return nil, er.Errorf("Couldn't retrieve block %s from "+
 			"network", blockHash)
 	}
 

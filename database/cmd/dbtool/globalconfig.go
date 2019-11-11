@@ -99,7 +99,7 @@ func setupGlobalConfig() er.R {
 		activeNetParams = &chaincfg.SimNetParams
 	}
 	if numNets > 1 {
-		return errors.New("The testnet, regtest, and simnet params " +
+		return er.New("The testnet, regtest, and simnet params " +
 			"can't be used together -- choose one of the three")
 	}
 
@@ -107,7 +107,7 @@ func setupGlobalConfig() er.R {
 	if !validDbType(cfg.DbType) {
 		str := "The specified database type [%v] is invalid -- " +
 			"supported types %v"
-		return fmt.Errorf(str, cfg.DbType, knownDbTypes)
+		return er.Errorf(str, cfg.DbType, knownDbTypes)
 	}
 
 	// Append the network type to the data directory so it is "namespaced"

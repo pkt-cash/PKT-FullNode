@@ -275,7 +275,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 	// If we don't have a quit channel, and the end height is still
 	// unspecified, then we'll exit out here.
 	if ro.quit == nil && ro.endBlock.Height == 0 {
-		return fmt.Errorf("Rescan request must specify a quit channel" +
+		return er.Errorf("Rescan request must specify a quit channel" +
 			" or valid end block")
 	}
 
@@ -365,7 +365,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 			// connected notification for the same height.
 			case ntfn, ok := <-blockSubscription.Notifications:
 				if !ok {
-					return errors.New("rescan block " +
+					return er.New("rescan block " +
 						"subscription was canceled " +
 						"while waiting to catch up")
 				}
@@ -497,7 +497,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 			header.BlockHash() != curStamp.Hash {
 
 			current = false
-			return fmt.Errorf("out of order block %v: "+
+			return er.Errorf("out of order block %v: "+
 				"expected PrevBlock %v, got %v",
 				header.BlockHash(), curStamp.Hash,
 				header.PrevBlock)
@@ -567,7 +567,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 		case err == headerfs.ErrHashNotFound:
 
 		case err != nil:
-			return fmt.Errorf("unable to get filter for hash=%v: %v",
+			return er.Errorf("unable to get filter for hash=%v: %v",
 				curStamp.Hash, err)
 		}
 
@@ -695,7 +695,7 @@ rescanLoop:
 
 			case ntfn, ok := <-blockSubscription.Notifications:
 				if !ok {
-					return errors.New("rescan block " +
+					return er.New("rescan block " +
 						"subscription was canceled")
 				}
 
@@ -771,7 +771,7 @@ rescanLoop:
 					uint32(curStamp.Height),
 				)
 				if err != nil {
-					return fmt.Errorf("unable to register "+
+					return er.Errorf("unable to register "+
 						"block subscription: %v", err)
 				}
 				defer func() {
@@ -862,7 +862,7 @@ func extractBlockMatches(chain ChainSource, ro *rescanOptions,
 		return nil, err
 	}
 	if block == nil {
-		return nil, fmt.Errorf("Couldn't get block %d (%s) from "+
+		return nil, er.Errorf("Couldn't get block %d (%s) from "+
 			"network", curStamp.Height, curStamp.Hash)
 	}
 
@@ -1198,7 +1198,7 @@ func (r *Rescan) Start() <-chan er.R {
 	errChan := make(chan er.R, 1)
 
 	if !atomic.CompareAndSwapUint32(&r.started, 0, 1) {
-		errChan <- fmt.Errorf("Rescan already started")
+		errChan <- er.Errorf("Rescan already started")
 		return errChan
 	}
 
@@ -1294,7 +1294,7 @@ func (r *Rescan) Update(options ...UpdateOption) er.R {
 			errStr += fmt.Sprintf(" It returned error: %s", r.err)
 		}
 		r.errMtx.Unlock()
-		return fmt.Errorf(errStr)
+		return er.Errorf(errStr)
 	}
 
 	return nil
@@ -1355,7 +1355,7 @@ func (s *ChainService) GetUtxo(options ...RescanOption) (*SpendReport, er.R) {
 	// As this is meant to fetch UTXO's, the options MUST specify exactly
 	// one outpoint.
 	if len(ro.watchInputs) != 1 {
-		return nil, fmt.Errorf("must pass exactly one OutPoint")
+		return nil, er.Errorf("must pass exactly one OutPoint")
 	}
 
 	req, err := s.utxoScanner.Enqueue(

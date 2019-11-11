@@ -9,9 +9,7 @@ package peer
 import (
 	"bytes"
 	"container/list"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math/rand"
 	"net"
@@ -19,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
@@ -316,12 +316,12 @@ func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, 
 	// address string as a last resort.
 	host, portStr, err := net.SplitHostPort(addr.String())
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	ip := net.ParseIP(host)
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	na := wire.NewNetAddressIPPort(ip, uint16(port), services)
 	return na, nil
@@ -1065,7 +1065,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 		_, err := wire.WriteMessageWithEncodingN(&buf, msg, p.ProtocolVersion(),
 			p.cfg.ChainParams.Net, enc)
 		if err != nil {
-			return err.Error()
+			return err.String()
 		}
 		return spew.Sdump(buf.Bytes())
 	}))
@@ -1090,14 +1090,14 @@ func (p *Peer) isAllowedReadError(err er.R) bool {
 	}
 
 	// Don't allow the error if it's not specifically a malformed message error.
-	if _, ok := err.(*wire.MessageError); !ok {
+	if _, ok := er.Wrapped(err).(*wire.MessageError); !ok {
 		return false
 	}
 
 	// Don't allow the error if it's not coming from localhost or the
 	// hostname can't be determined for some reason.
-	host, _, err := net.SplitHostPort(p.addr)
-	if err != nil {
+	host, _, errr := net.SplitHostPort(p.addr)
+	if errr != nil {
 		return false
 	}
 
@@ -1121,10 +1121,10 @@ func (p *Peer) shouldHandleReadError(err er.R) bool {
 
 	// No logging or reject message when the remote peer has been
 	// disconnected.
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return false
 	}
-	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+	if opErr, ok := er.Wrapped(err).(*net.OpError); ok && !opErr.Temporary() {
 		return false
 	}
 
@@ -1356,7 +1356,7 @@ out:
 			// remote peer has not disconnected.
 			if p.shouldHandleReadError(err) {
 				errMsg := fmt.Sprintf("Can't read message from %s: %v", p, err)
-				if err != io.ErrUnexpectedEOF {
+				if er.Wrapped(err) != io.ErrUnexpectedEOF {
 					log.Errorf(errMsg)
 				}
 
@@ -1705,10 +1705,10 @@ func (p *Peer) shouldLogWriteError(err er.R) bool {
 	}
 
 	// No logging when the remote peer has been disconnected.
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return false
 	}
-	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+	if opErr, ok := er.Wrapped(err).(*net.OpError); ok && !opErr.Temporary() {
 		return false
 	}
 
@@ -1903,12 +1903,12 @@ func (p *Peer) readRemoteVersionMsg() er.R {
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
 			reason)
 		_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return er.New(reason)
 	}
 
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
-		return errors.New("disconnecting peer connected to self")
+		return er.New("disconnecting peer connected to self")
 	}
 
 	// Negotiate the protocol version and set the services to what the remote
@@ -1957,7 +1957,7 @@ func (p *Peer) readRemoteVersionMsg() er.R {
 		rejectMsg := p.cfg.Listeners.OnVersion(p, msg)
 		if rejectMsg != nil {
 			_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-			return errors.New(rejectMsg.Reason)
+			return er.New(rejectMsg.Reason)
 		}
 	}
 
@@ -1976,7 +1976,7 @@ func (p *Peer) readRemoteVersionMsg() er.R {
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectObsolete,
 			reason)
 		_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return er.New(reason)
 	}
 
 	return nil
@@ -2098,7 +2098,7 @@ func (p *Peer) start() er.R {
 		}
 	case <-time.After(negotiateTimeout):
 		p.Disconnect()
-		return errors.New("protocol negotiation timeout")
+		return er.New("protocol negotiation timeout")
 	}
 	log.Debugf("Connected to %s", p.Addr())
 
@@ -2211,12 +2211,12 @@ func NewOutboundPeer(cfg *Config, addr string) (*Peer, er.R) {
 
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if cfg.HostToNetAddress != nil {

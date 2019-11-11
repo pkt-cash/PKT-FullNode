@@ -144,7 +144,7 @@ func ExampleStore_Rollback() {
 			return err
 		}
 		if details == nil {
-			return fmt.Errorf("no details found")
+			return er.Errorf("no details found")
 		}
 		fmt.Println(details.Block.Height)
 		return nil

@@ -212,7 +212,7 @@ func (s *secSource) add(privKey *btcec.PrivateKey) (btcutil.Address, er.R) {
 		return nil, err
 	}
 	if addrs[0].String() != addr.String() {
-		return nil, fmt.Errorf("Encoded and decoded addresses don't "+
+		return nil, er.Errorf("Encoded and decoded addresses don't "+
 			"match. Encoded: %s, decoded: %s", addr, addrs[0])
 	}
 	return addr, nil
@@ -223,7 +223,7 @@ func (s *secSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool,
 	er.R) {
 	privKey, ok := s.keys[addr.String()]
 	if !ok {
-		return nil, true, fmt.Errorf("No key for address %s", addr)
+		return nil, true, er.Errorf("No key for address %s", addr)
 	}
 	return privKey, true, nil
 }
@@ -232,7 +232,7 @@ func (s *secSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool,
 func (s *secSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 	script, ok := s.scripts[addr.String()]
 	if !ok {
-		return nil, fmt.Errorf("No script for address %s", addr)
+		return nil, er.Errorf("No script for address %s", addr)
 	}
 	return *script, nil
 }
@@ -831,7 +831,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			blockHeader, err := harness.svc.BlockHeaders.
 				FetchHeaderByHeight(height)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get block "+
+				errChan <- er.Errorf("Couldn't get block "+
 					"header by height %d: %s", height, err)
 				return
 			}
@@ -839,7 +839,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			// Get block via RPC.
 			wantBlock, err := harness.h1.Node.GetBlock(&blockHash)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get block %d "+
+				errChan <- er.Errorf("Couldn't get block %d "+
 					"(%s) by RPC", height, blockHash)
 				return
 			}
@@ -852,14 +852,14 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 				return
 			}
 			if haveBlock == nil {
-				errChan <- fmt.Errorf("Couldn't get block %d "+
+				errChan <- er.Errorf("Couldn't get block %d "+
 					"(%s) from network", height, blockHash)
 				return
 			}
 			// Check that network and RPC blocks match.
 			if !reflect.DeepEqual(*haveBlock.MsgBlock(),
 				*wantBlock) {
-				errChan <- fmt.Errorf("Block from network "+
+				errChan <- er.Errorf("Block from network "+
 					"doesn't match block from RPC. Want: "+
 					"%s, RPC: %s, network: %s", blockHash,
 					wantBlock.BlockHash(),
@@ -868,7 +868,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			}
 			// Check that block height matches what we have.
 			if height != uint32(haveBlock.Height()) {
-				errChan <- fmt.Errorf("Block height from "+
+				errChan <- er.Errorf("Block height from "+
 					"network doesn't match expected "+
 					"height. Want: %v, network: %v",
 					height, haveBlock.Height())
@@ -885,7 +885,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			wantFilter, err := harness.h1.Node.GetCFilter(
 				&blockHash, wire.GCSFilterRegular)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get basic "+
+				errChan <- er.Errorf("Couldn't get basic "+
 					"filter for block %d (%s) via RPC: %s",
 					height, blockHash, err)
 				return
@@ -895,7 +895,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			if haveFilter != nil {
 				haveBytes, err = haveFilter.NBytes()
 				if err != nil {
-					errChan <- fmt.Errorf("Couldn't get "+
+					errChan <- er.Errorf("Couldn't get "+
 						"basic filter for block %d "+
 						"(%s) via P2P: %s", height,
 						blockHash, err)
@@ -903,7 +903,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 				}
 			}
 			if !bytes.Equal(haveBytes, wantFilter.Data) {
-				errChan <- fmt.Errorf("Basic filter from P2P "+
+				errChan <- er.Errorf("Basic filter from P2P "+
 					"network/DB doesn't match RPC value "+
 					"for block %d (%s):\nRPC: %s\nNet: %s",
 					height, blockHash,
@@ -917,7 +917,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 				harness.h1,
 			)
 			if err != nil {
-				errChan <- fmt.Errorf("unable to create prev "+
+				errChan <- er.Errorf("unable to create prev "+
 					"input scripts: %v", err)
 				return
 			}
@@ -927,21 +927,21 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 				haveBlock.MsgBlock(), inputScripts,
 			)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't build basic "+
+				errChan <- er.Errorf("Couldn't build basic "+
 					"filter for block %d (%s): %s", height,
 					blockHash, err)
 				return
 			}
 			calcBytes, err := calcFilter.NBytes()
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get bytes from"+
+				errChan <- er.Errorf("Couldn't get bytes from"+
 					" calculated basic filter for block "+
 					"%d (%s): %s", height, blockHash, err)
 			}
 			// Check that the network value matches the calculated
 			// value from the block.
 			if !bytes.Equal(haveBytes, calcBytes) {
-				errChan <- fmt.Errorf("Basic filter from P2P "+
+				errChan <- er.Errorf("Basic filter from P2P "+
 					"network/DB doesn't match calculated "+
 					"value for block %d (%s)", height,
 					blockHash)
@@ -951,7 +951,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			prevHeader, err := harness.svc.RegFilterHeaders.
 				FetchHeader(&blockHeader.PrevBlock)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get basic "+
+				errChan <- er.Errorf("Couldn't get basic "+
 					"filter header for block %d (%s) from "+
 					"DB: %s", height-1,
 					blockHeader.PrevBlock, err)
@@ -961,7 +961,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			curHeader, err := harness.svc.RegFilterHeaders.
 				FetchHeader(&blockHash)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't get basic "+
+				errChan <- er.Errorf("Couldn't get basic "+
 					"filter header for block %d (%s) from "+
 					"DB: %s", height, blockHash, err)
 				return
@@ -970,13 +970,13 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 			calcHeader, err := builder.MakeHeaderForFilter(
 				calcFilter, *prevHeader)
 			if err != nil {
-				errChan <- fmt.Errorf("Couldn't calculate "+
+				errChan <- er.Errorf("Couldn't calculate "+
 					"header for basic filter for block "+
 					"%d (%s): %s", height, blockHash, err)
 				return
 			}
 			if !bytes.Equal(curHeader[:], calcHeader[:]) {
-				errChan <- fmt.Errorf("Filter header doesn't "+
+				errChan <- er.Errorf("Filter header doesn't "+
 					"match. Want: %s, got: %s", curHeader,
 					calcHeader)
 				return
@@ -1196,31 +1196,31 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 	var haveBest *waddrmgr.BlockStamp
 	haveBest, err = svc.BestBlock()
 	if err != nil {
-		return fmt.Errorf("Couldn't get best snapshot from "+
+		return er.Errorf("Couldn't get best snapshot from "+
 			"ChainService: %s", err)
 	}
 	var total time.Duration
 	for haveBest.Hash != *knownBestHash {
 		if total > syncTimeout {
-			return fmt.Errorf("Timed out after %v waiting for "+
+			return er.Errorf("Timed out after %v waiting for "+
 				"header synchronization.\n%s", syncTimeout,
 				goroutineDump())
 		}
 		if haveBest.Height > knownBestHeight {
-			return fmt.Errorf("synchronized to the wrong chain")
+			return er.Errorf("synchronized to the wrong chain")
 		}
 		time.Sleep(syncUpdate)
 		total += syncUpdate
 		haveBest, err = svc.BestBlock()
 		if err != nil {
-			return fmt.Errorf("Couldn't get best snapshot from "+
+			return er.Errorf("Couldn't get best snapshot from "+
 				"ChainService: %s", err)
 		}
 	}
 
 	// Check if we're current.
 	if !svc.IsCurrent() {
-		return fmt.Errorf("the ChainService doesn't see itself as " +
+		return er.Errorf("the ChainService doesn't see itself as " +
 			"current")
 	}
 
@@ -1228,14 +1228,14 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 	knownBasicHeader, err := correctSyncNode.Node.GetCFilterHeader(
 		knownBestHash, wire.GCSFilterRegular)
 	if err != nil {
-		return fmt.Errorf("Couldn't get latest basic header from "+
+		return er.Errorf("Couldn't get latest basic header from "+
 			"%s: %s", correctSyncNode.P2PAddress(), err)
 	}
 	haveBasicHeader := &chainhash.Hash{}
 
 	for knownBasicHeader.PrevFilterHeader != *haveBasicHeader {
 		if total > syncTimeout {
-			return fmt.Errorf("Timed out after %v waiting for "+
+			return er.Errorf("Timed out after %v waiting for "+
 				"cfheaders synchronization.\n%s", syncTimeout,
 				goroutineDump())
 		}
@@ -1247,7 +1247,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 				total += syncUpdate
 				continue
 			}
-			return fmt.Errorf("Couldn't get regular filter header"+
+			return er.Errorf("Couldn't get regular filter header"+
 				" for %s: %s", knownBestHash, err)
 		}
 		time.Sleep(syncUpdate)
@@ -1263,7 +1263,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 	// rescan, if one is going, to catch up.
 	for {
 		if total > syncTimeout {
-			return fmt.Errorf("Timed out after %v waiting for "+
+			return er.Errorf("Timed out after %v waiting for "+
 				"rescan to catch up.\n%s", syncTimeout,
 				goroutineDump())
 		}
@@ -1301,13 +1301,13 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 	// up.
 	for i := int32(0); i <= haveBest.Height; i++ {
 		if total > syncTimeout {
-			return fmt.Errorf("Timed out after %v waiting for "+
+			return er.Errorf("Timed out after %v waiting for "+
 				"cfheaders DB to catch up.\n%s", syncTimeout,
 				goroutineDump())
 		}
 		head, err := svc.BlockHeaders.FetchHeaderByHeight(uint32(i))
 		if err != nil {
-			return fmt.Errorf("Couldn't read block by "+
+			return er.Errorf("Couldn't read block by "+
 				"height: %s", err)
 		}
 
@@ -1323,7 +1323,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("Couldn't get basic header "+
+			return er.Errorf("Couldn't get basic header "+
 				"for %d (%s) from DB: %v\n%s", i, hash,
 				err, goroutineDump())
 		}
@@ -1331,13 +1331,13 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 			&hash, wire.GCSFilterRegular,
 		)
 		if err != nil {
-			return fmt.Errorf("Couldn't get basic header "+
+			return er.Errorf("Couldn't get basic header "+
 				"for %d (%s) from node %s", i, hash,
 				correctSyncNode.P2PAddress())
 		}
 
 		if *haveBasicHeader != knownBasicHeader.PrevFilterHeader {
-			return fmt.Errorf("Basic header for %d (%s) "+
+			return er.Errorf("Basic header for %d (%s) "+
 				"doesn't match node %s. DB: %s, node: %s", i,
 				hash, correctSyncNode.P2PAddress(),
 				haveBasicHeader,
@@ -1471,11 +1471,11 @@ func checkRescanStatus() (int, int32, er.R) {
 		}
 	}
 	if txCount[0] != txCount[1] {
-		return 0, 0, fmt.Errorf("Conflicting transaction count " +
+		return 0, 0, er.Errorf("Conflicting transaction count " +
 			"between notifications.")
 	}
 	if curBlockHeight != curFilteredBlockHeight {
-		return 0, 0, fmt.Errorf("Conflicting block height between "+
+		return 0, 0, er.Errorf("Conflicting block height between "+
 			"notifications: onBlockConnected=%d, "+
 			"onFilteredBlockConnected=%d.", curBlockHeight,
 			curFilteredBlockHeight)

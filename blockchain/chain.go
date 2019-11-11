@@ -9,9 +9,10 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -992,7 +993,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) er.R {
 		// descendants as having an invalid ancestor.
 		_, err = b.checkConnectBlock(n, block, view, nil)
 		if err != nil {
-			if _, ok := err.(RuleError); ok {
+			if _, ok := er.Wrapped(err).(RuleError); ok {
 				b.index.SetStatusFlags(n, statusValidateFailed)
 				for de := e.Next(); de != nil; de = de.Next() {
 					dn := de.Value.(*blockNode)
@@ -1139,7 +1140,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			nextEs, err = b.checkConnectBlock(node, block, view, &stxos)
 			if err == nil {
 				b.index.SetStatusFlags(node, statusValid)
-			} else if _, ok := err.(RuleError); ok {
+			} else if _, ok := er.Wrapped(err).(RuleError); ok {
 				b.index.SetStatusFlags(node, statusValidateFailed)
 			} else {
 				return false, err
@@ -1177,7 +1178,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the
 			// index state to disk before returning with the error.
-			if _, ok := err.(RuleError); ok {
+			if _, ok := er.Wrapped(err).(RuleError); ok {
 				b.index.SetStatusFlags(
 					node, statusValidateFailed,
 				)
@@ -1301,8 +1302,7 @@ func (b *BlockChain) BestSnapshot() *BestState {
 func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (wire.BlockHeader, er.R) {
 	node := b.index.LookupNode(hash)
 	if node == nil {
-		err := fmt.Errorf("block %s is not known", hash)
-		return wire.BlockHeader{}, err
+		return wire.BlockHeader{}, er.Errorf("block %s is not known", hash)
 	}
 
 	return node.Header(), nil
@@ -1381,11 +1381,11 @@ func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, er.R
 func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash, er.R) {
 	// Ensure requested heights are sane.
 	if startHeight < 0 {
-		return nil, fmt.Errorf("start height of fetch range must not "+
+		return nil, er.Errorf("start height of fetch range must not "+
 			"be less than zero - got %d", startHeight)
 	}
 	if endHeight < startHeight {
-		return nil, fmt.Errorf("end height of fetch range must not "+
+		return nil, er.Errorf("end height of fetch range must not "+
 			"be less than the start height - got start %d, end %d",
 			startHeight, endHeight)
 	}
@@ -1432,24 +1432,24 @@ func (b *BlockChain) HeightToHashRange(startHeight int32,
 
 	endNode := b.index.LookupNode(endHash)
 	if endNode == nil {
-		return nil, fmt.Errorf("no known block header with hash %v", endHash)
+		return nil, er.Errorf("no known block header with hash %v", endHash)
 	}
 	if !b.index.NodeStatus(endNode).KnownValid() {
-		return nil, fmt.Errorf("block %v is not yet validated", endHash)
+		return nil, er.Errorf("block %v is not yet validated", endHash)
 	}
 	endHeight := endNode.height
 
 	if startHeight < 0 {
-		return nil, fmt.Errorf("start height (%d) is below 0", startHeight)
+		return nil, er.Errorf("start height (%d) is below 0", startHeight)
 	}
 	if startHeight > endHeight {
-		return nil, fmt.Errorf("start height (%d) is past end height (%d)",
+		return nil, er.Errorf("start height (%d) is past end height (%d)",
 			startHeight, endHeight)
 	}
 
 	resultsLength := int(endHeight - startHeight + 1)
 	if resultsLength > maxResults {
-		return nil, fmt.Errorf("number of results (%d) would exceed max (%d)",
+		return nil, er.Errorf("number of results (%d) would exceed max (%d)",
 			resultsLength, maxResults)
 	}
 
@@ -1472,10 +1472,10 @@ func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int,
 
 	endNode := b.index.LookupNode(endHash)
 	if endNode == nil {
-		return nil, fmt.Errorf("no known block header with hash %v", endHash)
+		return nil, er.Errorf("no known block header with hash %v", endHash)
 	}
 	if !b.index.NodeStatus(endNode).KnownValid() {
-		return nil, fmt.Errorf("block %v is not yet validated", endHash)
+		return nil, er.Errorf("block %v is not yet validated", endHash)
 	}
 	endHeight := endNode.height
 

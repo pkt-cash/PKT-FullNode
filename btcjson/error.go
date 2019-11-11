@@ -6,6 +6,7 @@ package btcjson
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -107,6 +108,6 @@ func (e Error) Error() string {
 }
 
 // makeError creates an Error given a set of arguments.
-func makeError(c ErrorCode, desc string) Error {
-	return Error{ErrorCode: c, Description: desc}
+func makeError(c ErrorCode, desc string) er.R {
+	return er.E(Error{ErrorCode: c, Description: desc})
 }

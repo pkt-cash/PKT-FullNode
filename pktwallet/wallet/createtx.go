@@ -276,11 +276,11 @@ func validateMsgTx(tx *wire.MsgTx, prevScripts [][]byte, inputValues []btcutil.A
 		vm, err := txscript.NewEngine(prevScript, tx, i,
 			txscript.StandardVerifyFlags, nil, hashCache, int64(inputValues[i]))
 		if err != nil {
-			return fmt.Errorf("cannot create script engine: %s", err)
+			return er.Errorf("cannot create script engine: %s", err)
 		}
 		err = vm.Execute()
 		if err != nil {
-			return fmt.Errorf("cannot validate transaction: %s", err)
+			return er.Errorf("cannot validate transaction: %s", err)
 		}
 	}
 	return nil

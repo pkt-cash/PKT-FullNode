@@ -7,11 +7,12 @@ package connmgr
 import (
 	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // maxFailedAttempts is the maximum number of successive failed connection
@@ -560,7 +561,7 @@ func (cm *ConnManager) Stop() {
 // Use Start to start connecting to the network.
 func New(cfg *Config) (*ConnManager, er.R) {
 	if cfg.Dial == nil {
-		return nil, ErrDialNil
+		return nil, er.E(ErrDialNil)
 	}
 	// Default to sane values
 	if cfg.RetryDuration <= 0 {

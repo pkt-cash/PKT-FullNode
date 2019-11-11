@@ -6,10 +6,11 @@ package wire
 
 import (
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
@@ -146,5 +147,5 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) er.R {
 	}
 
 	// Sigh.  Bitcoin protocol mixes little and big endian.
-	return binary.Write(w, bigEndian, na.Port)
+	return er.E(binary.Write(w, bigEndian, na.Port))
 }

@@ -7,9 +7,10 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"strconv"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -426,8 +427,8 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R 
 	var flag [1]byte
 	if count == 0 && enc == WitnessEncoding {
 		// Next, we need to read the flag, which is a single byte.
-		if _, err = io.ReadFull(r, flag[:]); err != nil {
-			return err
+		if _, errr := io.ReadFull(r, flag[:]); errr != nil {
+			return er.E(errr)
 		}
 
 		// At the moment, the flag MUST be 0x01. In the future other
@@ -698,8 +699,8 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R 
 		// regular (legacy) one. The second byte is the Flag field,
 		// which at the moment is always 0x01, but may be extended in
 		// the future to accommodate auxiliary non-committed fields.
-		if _, err := w.Write(witessMarkerBytes); err != nil {
-			return err
+		if _, errr := w.Write(witessMarkerBytes); errr != nil {
+			return er.E(errr)
 		}
 	}
 
@@ -899,22 +900,22 @@ func NewMsgTx(version int32) *MsgTx {
 }
 
 // readOutPoint reads the next sequence of bytes from r as an OutPoint.
-func readOutPoint(r io.Reader, pver uint32, version int32, op *OutPoint) er.R {
-	_, err := io.ReadFull(r, op.Hash[:])
-	if err != nil {
-		return err
+func readOutPoint(r io.Reader, pver uint32, version int32, op *OutPoint) (err er.R) {
+	_, errr := io.ReadFull(r, op.Hash[:])
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	op.Index, err = binarySerializer.Uint32(r, littleEndian)
-	return err
+	return
 }
 
 // writeOutPoint encodes op to the bitcoin protocol encoding for an OutPoint
 // to w.
 func writeOutPoint(w io.Writer, pver uint32, version int32, op *OutPoint) er.R {
-	_, err := w.Write(op.Hash[:])
-	if err != nil {
-		return err
+	_, errr := w.Write(op.Hash[:])
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	return binarySerializer.PutUint32(w, littleEndian, op.Index)
@@ -943,10 +944,10 @@ func readScript(r io.Reader, pver uint32, maxAllowed uint32, fieldName string) (
 	}
 
 	b := scriptPool.Borrow(count)
-	_, err = io.ReadFull(r, b)
-	if err != nil {
+	_, errr := io.ReadFull(r, b)
+	if errr != nil {
 		scriptPool.Return(b)
-		return nil, err
+		return nil, er.E(errr)
 	}
 	return b, nil
 }

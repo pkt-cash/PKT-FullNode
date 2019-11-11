@@ -102,7 +102,7 @@ func newHeaderStore(db walletdb.DB, filePath string,
 	case RegularFilter:
 		flatFileName = "reg_filter_headers.bin"
 	default:
-		return nil, fmt.Errorf("unrecognized filter type: %v", hType)
+		return nil, er.Errorf("unrecognized filter type: %v", hType)
 	}
 
 	flatFileName = filepath.Join(filePath, flatFileName)
@@ -518,7 +518,7 @@ func (h *blockHeaderStore) CheckConnectivity() er.R {
 			// and also compute the block hash for it.
 			newHeader, err = h.readHeader(height)
 			if err != nil {
-				return fmt.Errorf("Couldn't retrieve header %s:"+
+				return er.Errorf("Couldn't retrieve header %s:"+
 					" %s", header.PrevBlock, err)
 			}
 			newHeaderHash := newHeader.BlockHash()
@@ -528,7 +528,7 @@ func (h *blockHeaderStore) CheckConnectivity() er.R {
 			// on-disk state and the index matches up properly.
 			indexHeightBytes := rootBucket.Get(newHeaderHash[:])
 			if indexHeightBytes == nil {
-				return fmt.Errorf("index and on-disk file out of sync "+
+				return er.Errorf("index and on-disk file out of sync "+
 					"at height: %v", height)
 			}
 			indexHeight := binary.BigEndian.Uint32(indexHeightBytes)
@@ -537,7 +537,7 @@ func (h *blockHeaderStore) CheckConnectivity() er.R {
 			// that the height matches up with our current height
 			// in this backwards walk.
 			if indexHeight != height {
-				return fmt.Errorf("index height isn't monotonically " +
+				return er.Errorf("index height isn't monotonically " +
 					"increasing")
 			}
 
@@ -545,7 +545,7 @@ func (h *blockHeaderStore) CheckConnectivity() er.R {
 			// actually the prev header of the target header from
 			// the last loop. This ensures connectivity.
 			if newHeader.BlockHash() != header.PrevBlock {
-				return fmt.Errorf("Block %s doesn't match "+
+				return er.Errorf("Block %s doesn't match "+
 					"block %s's PrevBlock (%s)",
 					newHeader.BlockHash(),
 					header.BlockHash(), header.PrevBlock)
@@ -642,7 +642,7 @@ func NewFilterHeaderStore(filePath string, db walletdb.DB,
 			}
 
 		default:
-			return nil, fmt.Errorf("unknown filter type: %v", filterType)
+			return nil, er.Errorf("unknown filter type: %v", filterType)
 		}
 
 		genesisHeader := FilterHeader{
@@ -874,12 +874,12 @@ func (f *FilterHeaderStore) ChainTip() (*chainhash.Hash, uint32, er.R) {
 
 	_, tipHeight, err := f.chainTip()
 	if err != nil {
-		return nil, 0, fmt.Errorf("unable to fetch chain tip: %v", err)
+		return nil, 0, er.Errorf("unable to fetch chain tip: %v", err)
 	}
 
 	latestHeader, err := f.readHeader(tipHeight)
 	if err != nil {
-		return nil, 0, fmt.Errorf("unable to read header: %v", err)
+		return nil, 0, er.Errorf("unable to read header: %v", err)
 	}
 
 	return latestHeader, tipHeight, nil

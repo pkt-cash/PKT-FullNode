@@ -8,8 +8,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // PrivateKey wraps an ecdsa.PrivateKey as a convenience mainly for signing
@@ -38,9 +39,9 @@ func PrivKeyFromBytes(curve elliptic.Curve, pk []byte) (*PrivateKey,
 // NewPrivateKey is a wrapper for ecdsa.GenerateKey that returns a PrivateKey
 // instead of the normal ecdsa.PrivateKey.
 func NewPrivateKey(curve elliptic.Curve) (*PrivateKey, er.R) {
-	key, err := ecdsa.GenerateKey(curve, rand.Reader)
-	if err != nil {
-		return nil, err
+	key, errr := ecdsa.GenerateKey(curve, rand.Reader)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	return (*PrivateKey)(key), nil
 }

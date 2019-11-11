@@ -15,7 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/base58"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"golang.org/x/crypto/ripemd160"
 )
 

@@ -7,9 +7,10 @@ package ffldb
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
@@ -53,7 +54,7 @@ var _ iterator.Iterator = (*ldbCacheIter)(nil)
 // errors for this memory-only structure.
 //
 // This is part of the leveldb iterator.Iterator interface implementation.
-func (iter *ldbCacheIter) Error() er.R {
+func (iter *ldbCacheIter) Error() error {
 	return nil
 }
 
@@ -279,7 +280,7 @@ func (iter *dbCacheIterator) Release() {
 // errors for this memory-only structure.
 //
 // This is part of the leveldb iterator.Iterator interface implementation.
-func (iter *dbCacheIterator) Error() er.R {
+func (iter *dbCacheIterator) Error() error {
 	return nil
 }
 

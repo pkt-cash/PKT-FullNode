@@ -177,18 +177,18 @@ func pad(size int, b []byte) []byte {
 // bytes long, and pubkey may either be 33 or 65 bytes.
 func chainedPrivKey(privkey, pubkey, chaincode []byte) ([]byte, er.R) {
 	if len(privkey) != 32 {
-		return nil, fmt.Errorf("invalid privkey length %d (must be 32)",
+		return nil, er.Errorf("invalid privkey length %d (must be 32)",
 			len(privkey))
 	}
 	if len(chaincode) != 32 {
-		return nil, fmt.Errorf("invalid chaincode length %d (must be 32)",
+		return nil, er.Errorf("invalid chaincode length %d (must be 32)",
 			len(chaincode))
 	}
 	switch n := len(pubkey); n {
 	case btcec.PubKeyBytesLenUncompressed, btcec.PubKeyBytesLenCompressed:
 		// Correct length
 	default:
-		return nil, fmt.Errorf("invalid pubkey length %d", n)
+		return nil, er.Errorf("invalid pubkey length %d", n)
 	}
 
 	xorbytes := make([]byte, 32)
@@ -216,10 +216,10 @@ func chainedPubKey(pubkey, chaincode []byte) ([]byte, er.R) {
 		compressed = true
 	default:
 		// Incorrect serialized pubkey length
-		return nil, fmt.Errorf("invalid pubkey length %d", n)
+		return nil, er.Errorf("invalid pubkey length %d", n)
 	}
 	if len(chaincode) != 32 {
-		return nil, fmt.Errorf("invalid chaincode length %d (must be 32)",
+		return nil, er.Errorf("invalid chaincode length %d (must be 32)",
 			len(chaincode))
 	}
 
@@ -450,7 +450,7 @@ func (v *varEntries) ReadFrom(r io.Reader) (n int64, err er.R) {
 			n += read
 			wt = &entry
 		default:
-			return n, fmt.Errorf("unknown entry header: %d", uint8(header))
+			return n, er.Errorf("unknown entry header: %d", uint8(header))
 		}
 		if wt != nil {
 			wts = append(wts, wt)
@@ -485,7 +485,7 @@ func (net *netParams) ReadFrom(r io.Reader) (int64, er.R) {
 	case wire.SimNet:
 		*net = (netParams)(chaincfg.SimNetParams)
 	default:
-		return n64, errors.New("unknown network")
+		return n64, er.New("unknown network")
 	}
 	return n64, nil
 }
@@ -555,7 +555,7 @@ func New(dir string, desc string, passphrase []byte, net *chaincfg.Params,
 
 	// Check sizes of inputs.
 	if len(desc) > 256 {
-		return nil, errors.New("desc exceeds 256 byte maximum size")
+		return nil, er.New("desc exceeds 256 byte maximum size")
 	}
 
 	// Randomly-generate rootkey and chaincode.
@@ -688,7 +688,7 @@ func (s *Store) ReadFrom(r io.Reader) (n int64, err er.R) {
 	}
 
 	if id != fileID {
-		return n, errors.New("unknown file ID")
+		return n, er.New("unknown file ID")
 	}
 
 	// Add root address to address map.
@@ -731,7 +731,7 @@ func (s *Store) ReadFrom(r io.Reader) (n int64, err er.R) {
 			s.importedAddrs = append(s.importedAddrs, &e.script)
 
 		default:
-			return n, errors.New("unknown appended entry")
+			return n, er.New("unknown appended entry")
 		}
 	}
 
@@ -1058,19 +1058,19 @@ func (s *Store) nextChainedBtcAddress(bs *BlockStamp) (*btcAddress, er.R) {
 		// Should be added to the internal maps, try lookup again.
 		nextAPKH, ok = s.chainIdxMap[s.highestUsed+1]
 		if !ok {
-			return nil, errors.New("chain index map inproperly updated")
+			return nil, er.New("chain index map inproperly updated")
 		}
 	}
 
 	// Look up address.
 	addr, ok := s.addrMap[getAddressKey(nextAPKH)]
 	if !ok {
-		return nil, errors.New("cannot find generated address")
+		return nil, er.New("cannot find generated address")
 	}
 
 	btcAddr, ok := addr.(*btcAddress)
 	if !ok {
-		return nil, errors.New("found non-pubkey chained address")
+		return nil, er.New("found non-pubkey chained address")
 	}
 
 	s.highestUsed++
@@ -1095,7 +1095,7 @@ func (s *Store) extendUnlocked(bs *BlockStamp) er.R {
 	a := s.chainIdxMap[s.lastChainIdx]
 	waddr, ok := s.addrMap[getAddressKey(a)]
 	if !ok {
-		return errors.New("expected last chained address not found")
+		return er.New("expected last chained address not found")
 	}
 
 	if s.isLocked() {
@@ -1104,7 +1104,7 @@ func (s *Store) extendUnlocked(bs *BlockStamp) er.R {
 
 	lastAddr, ok := waddr.(*btcAddress)
 	if !ok {
-		return errors.New("found non-pubkey chained address")
+		return er.New("found non-pubkey chained address")
 	}
 
 	privkey, err := lastAddr.unlock(s.secret)
@@ -1145,12 +1145,12 @@ func (s *Store) extendLocked(bs *BlockStamp) er.R {
 	a := s.chainIdxMap[s.lastChainIdx]
 	waddr, ok := s.addrMap[getAddressKey(a)]
 	if !ok {
-		return errors.New("expected last chained address not found")
+		return er.New("expected last chained address not found")
 	}
 
 	addr, ok := waddr.(*btcAddress)
 	if !ok {
-		return errors.New("found non-pubkey chained address")
+		return er.New("found non-pubkey chained address")
 	}
 
 	cc := addr.chaincode[:]
@@ -1186,7 +1186,7 @@ func (s *Store) createMissingPrivateKeys() er.R {
 	// Lookup previous address.
 	apkh, ok := s.chainIdxMap[idx-1]
 	if !ok {
-		return errors.New("missing previous chained address")
+		return er.New("missing previous chained address")
 	}
 	prevWAddr := s.addrMap[getAddressKey(apkh)]
 	if s.isLocked() {
@@ -1195,7 +1195,7 @@ func (s *Store) createMissingPrivateKeys() er.R {
 
 	prevAddr, ok := prevWAddr.(*btcAddress)
 	if !ok {
-		return errors.New("found non-pubkey chained address")
+		return er.New("found non-pubkey chained address")
 	}
 
 	prevPrivKey, err := prevAddr.unlock(s.secret)
@@ -1221,7 +1221,7 @@ func (s *Store) createMissingPrivateKeys() er.R {
 		waddr := s.addrMap[getAddressKey(apkh)]
 		addr, ok := waddr.(*btcAddress)
 		if !ok {
-			return errors.New("found non-pubkey chained address")
+			return er.New("found non-pubkey chained address")
 		}
 		addr.privKeyCT = ithPrivKey
 		if err := addr.encrypt(s.secret); err != nil {
@@ -1742,7 +1742,7 @@ func (af *addrFlags) ReadFrom(r io.Reader) (int64, er.R) {
 	// there may not be if the keypool was extended from just the last
 	// public key and no private keys were written.
 	if af.hasPrivKey && !af.encrypted {
-		return int64(n), errors.New("private key is unencrypted")
+		return int64(n), er.New("private key is unencrypted")
 	}
 
 	return int64(n), nil
@@ -1758,7 +1758,7 @@ func (af *addrFlags) WriteTo(w io.Writer) (int64, er.R) {
 	}
 	if af.hasPrivKey && !af.encrypted {
 		// We only support encrypted privkeys.
-		return 0, errors.New("address must be encrypted")
+		return 0, er.New("address must be encrypted")
 	}
 	if af.encrypted {
 		b[0] |= 1 << 2
@@ -1844,7 +1844,7 @@ func (rb *recentBlocks) ReadFrom(r io.Reader) (int64, er.R) {
 	}
 	nBlocks := binary.LittleEndian.Uint32(nBlockBytes[:])
 	if nBlocks > 20 {
-		return read, errors.New("number of last seen blocks exceeds maximum of 20")
+		return read, er.New("number of last seen blocks exceeds maximum of 20")
 	}
 
 	// Read most recently seen block height.
@@ -1860,7 +1860,7 @@ func (rb *recentBlocks) ReadFrom(r io.Reader) (int64, er.R) {
 	// since at this point we should be reading in at least one
 	// known block.
 	if height < 0 {
-		return read, errors.New("expected a block but specified height is negative")
+		return read, er.New("expected a block but specified height is negative")
 	}
 
 	// Set last seen height.
@@ -1889,10 +1889,10 @@ func (rb *recentBlocks) WriteTo(w io.Writer) (int64, er.R) {
 	// Write number of saved blocks.  This should not exceed 20.
 	nBlocks := uint32(len(rb.hashes))
 	if nBlocks > 20 {
-		return written, errors.New("number of last seen blocks exceeds maximum of 20")
+		return written, er.New("number of last seen blocks exceeds maximum of 20")
 	}
 	if nBlocks != 0 && rb.lastHeight < 0 {
-		return written, errors.New("number of block hashes is positive, but height is negative")
+		return written, er.New("number of block hashes is positive, but height is negative")
 	}
 	var nBlockBytes [4]byte // 4 bytes for a uint32
 	binary.LittleEndian.PutUint32(nBlockBytes[:], nBlocks)
@@ -2001,7 +2001,7 @@ func (u *unusedSpace) readFromVersion(v version, r io.Reader) (int64, er.R) {
 		}
 		read += n
 		if read > int64(u.nBytes) {
-			return read, errors.New("read too much from armory's unused space")
+			return read, er.New("read too much from armory's unused space")
 		}
 	}
 
@@ -2021,7 +2021,7 @@ func (u *unusedSpace) WriteTo(w io.Writer) (int64, er.R) {
 		}
 		written += n
 		if written > int64(u.nBytes) {
-			return written, errors.New("wrote too much to armory's unused space")
+			return written, er.New("wrote too much to armory's unused space")
 		}
 	}
 
@@ -2099,7 +2099,7 @@ func (k *publicKey) ReadFrom(r io.Reader) (n int64, err er.R) {
 		s = make([]byte, 32)
 
 	default:
-		return n, errors.New("unrecognized pubkey format")
+		return n, er.New("unrecognized pubkey format")
 	}
 
 	read, err = binaryRead(r, binary.LittleEndian, &s)
@@ -2138,7 +2138,7 @@ type PubKeyAddress interface {
 // randomly generated).
 func newBtcAddress(wallet *Store, privkey, iv []byte, bs *BlockStamp, compressed bool) (addr *btcAddress, err er.R) {
 	if len(privkey) != 32 {
-		return nil, errors.New("private key is not 32 bytes")
+		return nil, er.New("private key is not 32 bytes")
 	}
 
 	addr, err = newBtcAddressWithoutPrivkey(wallet,
@@ -2166,7 +2166,7 @@ func newBtcAddressWithoutPrivkey(s *Store, pubkey, iv []byte, bs *BlockStamp) (a
 	case btcec.PubKeyBytesLenUncompressed:
 		compressed = false
 	default:
-		return nil, fmt.Errorf("invalid pubkey length %d", n)
+		return nil, er.Errorf("invalid pubkey length %d", n)
 	}
 	if len(iv) == 0 {
 		iv = make([]byte, 16)
@@ -2174,7 +2174,7 @@ func newBtcAddressWithoutPrivkey(s *Store, pubkey, iv []byte, bs *BlockStamp) (a
 			return nil, err
 		}
 	} else if len(iv) != 16 {
-		return nil, errors.New("init vector must be nil or 16 bytes large")
+		return nil, er.New("init vector must be nil or 16 bytes large")
 	}
 
 	pk, err := btcec.ParsePubKey(pubkey, btcec.S256())
@@ -2215,7 +2215,7 @@ func newRootBtcAddress(s *Store, privKey, iv, chaincode []byte,
 	bs *BlockStamp) (addr *btcAddress, err er.R) {
 
 	if len(chaincode) != 32 {
-		return nil, errors.New("chaincode is not 32 bytes")
+		return nil, er.New("chaincode is not 32 bytes")
 	}
 
 	// Create new btcAddress with provided inputs.  This will
@@ -2238,7 +2238,7 @@ func newRootBtcAddress(s *Store, privKey, iv, chaincode []byte,
 // unlocked btcAddress.
 func (a *btcAddress) verifyKeypairs() er.R {
 	if len(a.privKeyCT) != 32 {
-		return errors.New("private key unavailable")
+		return er.New("private key unavailable")
 	}
 
 	privKey := &btcec.PrivateKey{
@@ -2254,7 +2254,7 @@ func (a *btcAddress) verifyKeypairs() er.R {
 
 	ok := sig.Verify([]byte(data), privKey.PubKey())
 	if !ok {
-		return errors.New("pubkey verification failed")
+		return er.New("pubkey verification failed")
 	}
 	return nil
 }
@@ -2323,7 +2323,7 @@ func (a *btcAddress) ReadFrom(r io.Reader) (n int64, err er.R) {
 	}
 
 	if !a.flags.hasPubKey {
-		return n, errors.New("read in an address without a public key")
+		return n, er.New("read in an address without a public key")
 	}
 	pk, err := btcec.ParsePubKey(pubKey, btcec.S256())
 	if err != nil {
@@ -2388,7 +2388,7 @@ func (a *btcAddress) encrypt(key []byte) er.R {
 		return ErrAlreadyEncrypted
 	}
 	if len(a.privKeyCT) != 32 {
-		return errors.New("invalid clear text private key")
+		return er.New("invalid clear text private key")
 	}
 
 	aesBlockEncrypter, err := aes.NewCipher(key)
@@ -2408,7 +2408,7 @@ func (a *btcAddress) encrypt(key []byte) er.R {
 // private key.  This function fails if the address is not encrypted.
 func (a *btcAddress) lock() er.R {
 	if !a.flags.encrypted {
-		return errors.New("unable to lock unencrypted address")
+		return er.New("unable to lock unencrypted address")
 	}
 
 	zero(a.privKeyCT)
@@ -2423,7 +2423,7 @@ func (a *btcAddress) lock() er.R {
 // zeroed during an address lock.
 func (a *btcAddress) unlock(key []byte) (privKeyCT []byte, err er.R) {
 	if !a.flags.encrypted {
-		return nil, errors.New("unable to unlock unencrypted address")
+		return nil, er.New("unable to unlock unencrypted address")
 	}
 
 	// Decrypt private key with AES key.
@@ -2462,10 +2462,10 @@ func (a *btcAddress) unlock(key []byte) (privKeyCT []byte, err er.R) {
 func (a *btcAddress) changeEncryptionKey(oldkey, newkey []byte) er.R {
 	// Address must have a private key and be encrypted to continue.
 	if !a.flags.hasPrivKey {
-		return errors.New("no private key")
+		return er.New("no private key")
 	}
 	if !a.flags.encrypted {
-		return errors.New("address is not encrypted")
+		return er.New("address is not encrypted")
 	}
 
 	privKeyCT, err := a.unlock(oldkey)
@@ -2563,7 +2563,7 @@ func (a *btcAddress) PrivKey() (*btcec.PrivateKey, er.R) {
 	}
 
 	if !a.flags.hasPrivKey {
-		return nil, errors.New("no private key for address")
+		return nil, er.New("no private key for address")
 	}
 
 	// Key store must be unlocked to decrypt the private key.
@@ -2871,7 +2871,7 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (n int64, err er.R) {
 	sa.address = address
 
 	if !sa.flags.hasScript {
-		return n, errors.New("read in an addresss with no script")
+		return n, er.New("read in an addresss with no script")
 	}
 
 	class, addresses, reqSigs, err :=

@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -30,6 +31,6 @@ func (e *MessageError) Error() string {
 }
 
 // messageError creates an error for the given function and description.
-func messageError(f string, desc string) *MessageError {
-	return &MessageError{Func: f, Description: desc}
+func messageError(f string, desc string) er.R {
+	return er.E(&MessageError{Func: f, Description: desc})
 }

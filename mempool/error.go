@@ -17,7 +17,7 @@ import (
 // underlying error, which will be either a TxRuleError or a
 // blockchain.RuleError.
 type RuleError struct {
-	Err er.R
+	Err error
 }
 
 // Error satisfies the error interface and prints human-readable errors.
@@ -45,24 +45,21 @@ func (e TxRuleError) Error() string {
 
 // txRuleError creates an underlying TxRuleError with the given a set of
 // arguments and returns a RuleError that encapsulates it.
-func txRuleError(c wire.RejectCode, desc string) RuleError {
-	return RuleError{
+func txRuleError(c wire.RejectCode, desc string) er.R {
+	return er.E(RuleError{
 		Err: TxRuleError{RejectCode: c, Description: desc},
-	}
+	})
 }
 
 // chainRuleError returns a RuleError that encapsulates the given
 // blockchain.RuleError.
-func chainRuleError(chainErr blockchain.RuleError) RuleError {
-	return RuleError{
+func chainRuleError(chainErr blockchain.RuleError) er.R {
+	return er.E(RuleError{
 		Err: chainErr,
-	}
+	})
 }
 
-// extractRejectCode attempts to return a relevant reject code for a given error
-// by examining the error for known types.  It will return true if a code
-// was successfully extracted.
-func extractRejectCode(err er.R) (wire.RejectCode, bool) {
+func extractRejectCode0(err error) (wire.RejectCode, bool) {
 	// Pull the underlying error out of a RuleError.
 	if rerr, ok := err.(RuleError); ok {
 		err = rerr.Err
@@ -108,6 +105,13 @@ func extractRejectCode(err er.R) (wire.RejectCode, bool) {
 	return wire.RejectInvalid, false
 }
 
+// extractRejectCode attempts to return a relevant reject code for a given error
+// by examining the error for known types.  It will return true if a code
+// was successfully extracted.
+func extractRejectCode(err er.R) (wire.RejectCode, bool) {
+	return extractRejectCode0(er.Wrapped(err))
+}
+
 // ErrToRejectErr examines the underlying type of the error and returns a reject
 // code and string appropriate to be sent in a wire.MsgReject message.
 func ErrToRejectErr(err er.R) (wire.RejectCode, string) {
@@ -115,7 +119,7 @@ func ErrToRejectErr(err er.R) (wire.RejectCode, string) {
 	// extracted from the error.
 	rejectCode, found := extractRejectCode(err)
 	if found {
-		return rejectCode, err.Error()
+		return rejectCode, err.String()
 	}
 
 	// Return a generic rejected string if there is no error.  This really
@@ -130,5 +134,5 @@ func ErrToRejectErr(err er.R) (wire.RejectCode, string) {
 	// When the underlying error is not one of the above cases, just return
 	// wire.RejectInvalid with a generic rejected string plus the error
 	// text.
-	return wire.RejectInvalid, "rejected: " + err.Error()
+	return wire.RejectInvalid, "rejected: " + err.String()
 }

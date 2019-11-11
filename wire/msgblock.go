@@ -204,7 +204,7 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt &&
 		enc&NoPacketCryptEncoding != NoPacketCryptEncoding {
 		if msg.Pcp == nil {
-			return fmt.Errorf("proof of work is not defined")
+			return er.Errorf("proof of work is not defined")
 		}
 		if err = msg.Pcp.BtcEncode(w, pver, enc); err != nil {
 			return err

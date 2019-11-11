@@ -54,7 +54,7 @@ func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []
 	cryptocycle.CryptoCycle(&s)
 
 	if s.IsFailed() {
-		return nil, nil, errors.New("failed")
+		return nil, nil, er.New("failed")
 	}
 	return s.Bytes[16:32], s.Bytes[48+a16*16:][:len(msg)], nil
 }
@@ -62,13 +62,13 @@ func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []
 func doGoCrypt(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, er.R) {
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
-		return nil, nil, errors.New("chacha.New()")
+		return nil, nil, er.New("chacha.New()")
 	}
 	if decrypt {
 		plain := make([]byte, 0, len(msg)-16)
 		plain, err := chacha.Open(plain, nonce, msg, additional)
 		if err != nil {
-			return nil, nil, errors.New("key.Open()")
+			return nil, nil, er.New("key.Open()")
 		}
 		return msg[len(msg)-16:], plain, nil
 	}

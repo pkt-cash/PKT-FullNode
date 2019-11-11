@@ -187,7 +187,7 @@ func ExtractWitnessProgramInfo(script []byte) (int, []byte, er.R) {
 	// then we'll exit early as there isn't a valid version or program to
 	// extract.
 	if !isWitnessProgram(pops) {
-		return 0, nil, fmt.Errorf("script is not a witness program, " +
+		return 0, nil, er.Errorf("script is not a witness program, " +
 			"unable to extract version or witness program")
 	}
 
@@ -476,7 +476,7 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	// As a sanity check, ensure the passed input index for the transaction
 	// is valid.
 	if idx > len(tx.TxIn)-1 {
-		return nil, fmt.Errorf("idx %d but %d txins", idx, len(tx.TxIn))
+		return nil, er.Errorf("idx %d but %d txins", idx, len(tx.TxIn))
 	}
 
 	// We'll utilize this buffer throughout to incrementally calculate
@@ -582,7 +582,7 @@ func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType
 
 	parsedScript, err := parseScript(script)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse output script: %v", err)
+		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
 
 	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx,
@@ -623,7 +623,7 @@ func shallowCopyTx(tx *wire.MsgTx) wire.MsgTx {
 func CalcSignatureHash(script []byte, hashType SigHashType, tx *wire.MsgTx, idx int) ([]byte, er.R) {
 	parsedScript, err := parseScript(script)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse output script: %v", err)
+		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
 	return calcSignatureHash(parsedScript, hashType, tx, idx), nil
 }

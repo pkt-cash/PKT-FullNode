@@ -1211,7 +1211,7 @@ func dial(config *ConnConfig) (*websocket.Conn, er.R) {
 
 		// Return the status text from the server if none of the special
 		// cases above apply.
-		return nil, errors.New(resp.Status)
+		return nil, er.New(resp.Status)
 	}
 	return wsConn, nil
 }

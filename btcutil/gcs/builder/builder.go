@@ -7,7 +7,6 @@ package builder
 
 import (
 	"crypto/rand"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 
 	"github.com/pkt-cash/pktd/btcutil/er"

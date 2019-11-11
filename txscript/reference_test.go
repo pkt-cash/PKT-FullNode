@@ -36,7 +36,7 @@ func scriptTestName(test []interface{}) (string, er.R) {
 	// consist of at least a signature script, public key script, flags,
 	// and expected error.  Finally, it may optionally contain a comment.
 	if len(test) < witnessOffset+4 || len(test) > witnessOffset+5 {
-		return "", fmt.Errorf("invalid test length %d", len(test))
+		return "", er.Errorf("invalid test length %d", len(test))
 	}
 
 	// Use the comment for the test name if one is specified, otherwise,
@@ -55,7 +55,7 @@ func scriptTestName(test []interface{}) (string, er.R) {
 // parse hex string into a []byte.
 func parseHex(tok string) ([]byte, er.R) {
 	if !strings.HasPrefix(tok, "0x") {
-		return nil, errors.New("not a hex number")
+		return nil, er.New("not a hex number")
 	}
 	return hex.DecodeString(tok[2:])
 }
@@ -144,7 +144,7 @@ func parseShortForm(script string) ([]byte, er.R) {
 		} else if opcode, ok := shortFormOps[tok]; ok {
 			builder.AddOp(opcode)
 		} else {
-			return nil, fmt.Errorf("bad token %q", tok)
+			return nil, er.Errorf("bad token %q", tok)
 		}
 
 	}
@@ -196,7 +196,7 @@ func parseScriptFlags(flagStr string) (ScriptFlags, er.R) {
 		case "WITNESS_PUBKEYTYPE":
 			flags |= ScriptVerifyWitnessPubKeyType
 		default:
-			return flags, fmt.Errorf("invalid flag: %s", flag)
+			return flags, er.Errorf("invalid flag: %s", flag)
 		}
 	}
 	return flags, nil
@@ -290,7 +290,7 @@ func parseExpectedResult(expected string) ([]ErrorCode, er.R) {
 		return []ErrorCode{ErrWitnessPubKeyType}, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized expected result in test data: %v",
+	return nil, er.Errorf("unrecognized expected result in test data: %v",
 		expected)
 }
 

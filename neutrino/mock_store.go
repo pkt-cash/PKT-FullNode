@@ -72,7 +72,7 @@ func (m *mockBlockHeaderStore) FetchHeader(h *chainhash.Hash) (
 	if header, ok := m.headers[*h]; ok {
 		return &header, 0, nil
 	}
-	return nil, 0, fmt.Errorf("not found")
+	return nil, 0, er.Errorf("not found")
 }
 
 func (m *mockBlockHeaderStore) WriteHeaders(headers ...headerfs.BlockHeader) er.R {

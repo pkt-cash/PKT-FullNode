@@ -204,7 +204,7 @@ func (w *Wallet) requireChainClient() (chain.Interface, er.R) {
 	chainClient := w.chainClient
 	w.chainClientLock.Unlock()
 	if chainClient == nil {
-		return nil, errors.New("blockchain RPC is inactive")
+		return nil, er.New("blockchain RPC is inactive")
 	}
 	return chainClient, nil
 }
@@ -380,7 +380,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 			chainClient, w.Manager.Birthday(),
 		)
 		if err != nil {
-			return fmt.Errorf("unable to locate birthday block: %v",
+			return er.Errorf("unable to locate birthday block: %v",
 				err)
 		}
 
@@ -415,7 +415,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 			return w.Manager.SetBirthdayBlock(ns, *birthdayStamp, true)
 		})
 		if err != nil {
-			return fmt.Errorf("unable to persist initial sync "+
+			return er.Errorf("unable to persist initial sync "+
 				"data: %v", err)
 		}
 	}
@@ -424,7 +424,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	// so now.
 	if w.recoveryWindow > 0 {
 		if err := w.recovery(chainClient, birthdayStamp); err != nil {
-			return fmt.Errorf("unable to perform wallet recovery: "+
+			return er.Errorf("unable to perform wallet recovery: "+
 				"%v", err)
 		}
 	}
@@ -1643,7 +1643,7 @@ func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, er.R) {
 		}
 		managedPubKeyAddr, ok := managedAddr.(waddrmgr.ManagedPubKeyAddress)
 		if !ok {
-			return errors.New("address does not have an associated public key")
+			return er.New("address does not have an associated public key")
 		}
 		pubKey = managedPubKeyAddr.PubKey()
 		return nil
@@ -1663,7 +1663,7 @@ func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) 
 		}
 		managedPubKeyAddr, ok := managedAddr.(waddrmgr.ManagedPubKeyAddress)
 		if !ok {
-			return errors.New("address does not have an associated private key")
+			return er.New("address does not have an associated private key")
 		}
 		privKey, err = managedPubKeyAddr.PrivKey()
 		return err
@@ -2206,7 +2206,7 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 			start = startBlock.height
 		} else {
 			if chainClient == nil {
-				return nil, errors.New("no chain server client")
+				return nil, er.New("no chain server client")
 			}
 			switch client := chainClient.(type) {
 			case *chain.RPCClient:
@@ -2231,7 +2231,7 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 			end = endBlock.height
 		} else {
 			if chainClient == nil {
-				return nil, errors.New("no chain server client")
+				return nil, er.New("no chain server client")
 			}
 			switch client := chainClient.(type) {
 			case *chain.RPCClient:
@@ -2456,7 +2456,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 			case outputAcct == waddrmgr.ImportedAddrAccount:
 				results[len(results)-1].AccountBalance += output.Amount
 			case outputAcct > lastAcct:
-				return errors.New("waddrmgr.Manager.AddrAccount returned account " +
+				return er.New("waddrmgr.Manager.AddrAccount returned account " +
 					"beyond recorded last account")
 			default:
 				results[outputAcct].AccountBalance += output.Amount
@@ -2696,7 +2696,7 @@ func (w *Wallet) DumpWIFPrivateKey(addr btcutil.Address) (string, er.R) {
 
 	pka, ok := maddr.(waddrmgr.ManagedPubKeyAddress)
 	if !ok {
-		return "", fmt.Errorf("address %s is not a key type", addr)
+		return "", er.Errorf("address %s is not a key type", addr)
 	}
 
 	wif, err := pka.ExportPrivKey()
@@ -2796,7 +2796,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 	} else {
 		err := w.chainClient.NotifyReceived([]btcutil.Address{addr})
 		if err != nil {
-			return "", fmt.Errorf("Failed to subscribe for address ntfns for "+
+			return "", er.Errorf("Failed to subscribe for address ntfns for "+
 				"address %s: %s", addr.EncodeAddress(), err)
 		}
 	}
@@ -3195,7 +3195,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 
 	// Sanity check on the returned tx hash.
 	if *txHash != createdTx.Tx.TxHash() {
-		return nil, errors.New("tx hash mismatch")
+		return nil, er.New("tx hash mismatch")
 	}
 
 	return createdTx, nil
@@ -3234,11 +3234,11 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 				prevIndex := txIn.PreviousOutPoint.Index
 				txDetails, err := w.TxStore.TxDetails(txmgrNs, prevHash)
 				if err != nil {
-					return fmt.Errorf("cannot query previous transaction "+
+					return er.Errorf("cannot query previous transaction "+
 						"details for %v: %v", txIn.PreviousOutPoint, err)
 				}
 				if txDetails == nil {
-					return fmt.Errorf("%v not found",
+					return er.Errorf("%v not found",
 						txIn.PreviousOutPoint)
 				}
 				prevOutScript = txDetails.MsgTx.TxOut[prevIndex].PkScript
@@ -3252,7 +3252,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 					wif, ok := additionalKeysByAddress[addrStr]
 					if !ok {
 						return nil, false,
-							errors.New("no key for address")
+							er.New("no key for address")
 					}
 					return wif.PrivKey, wif.CompressPubKey, nil
 				}
@@ -3263,7 +3263,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 
 				pka, ok := address.(waddrmgr.ManagedPubKeyAddress)
 				if !ok {
-					return nil, false, fmt.Errorf("address %v is not "+
+					return nil, false, er.Errorf("address %v is not "+
 						"a pubkey address", address.Address().EncodeAddress())
 				}
 
@@ -3281,7 +3281,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 					addrStr := addr.EncodeAddress()
 					script, ok := p2shRedeemScriptsByAddress[addrStr]
 					if !ok {
-						return nil, errors.New("no script for address")
+						return nil, er.New("no script for address")
 					}
 					return script, nil
 				}
@@ -3291,7 +3291,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 				}
 				sa, ok := address.(waddrmgr.ManagedScriptAddress)
 				if !ok {
-					return nil, errors.New("address is not a script" +
+					return nil, er.New("address is not a script" +
 						" address")
 				}
 
@@ -3597,11 +3597,11 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrMgrBucket := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if addrMgrBucket == nil {
-			return errors.New("missing address manager namespace")
+			return er.New("missing address manager namespace")
 		}
 		txMgrBucket := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		if txMgrBucket == nil {
-			return errors.New("missing transaction manager namespace")
+			return er.New("missing transaction manager namespace")
 		}
 
 		addrMgrUpgrader := waddrmgr.NewMigrationManager(addrMgrBucket)

@@ -231,7 +231,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 				return nil, err
 			}
 			// if len(changeScript) > txsizes.P2WPKHPkScriptSize {
-			// 	return nil, errors.New("fee estimation requires change " +
+			// 	return nil, er.New("fee estimation requires change " +
 			// 		"scripts no larger than P2WPKH output scripts")
 			// }
 			change := wire.NewTxOut(int64(changeAmount), changeScript)
@@ -295,7 +295,7 @@ func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []bt
 	chainParams := secrets.ChainParams()
 
 	if len(inputs) != len(prevPkScripts) {
-		return errors.New("tx.TxIn and prevPkScripts slices must " +
+		return er.New("tx.TxIn and prevPkScripts slices must " +
 			"have equal length")
 	}
 

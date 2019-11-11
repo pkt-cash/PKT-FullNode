@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

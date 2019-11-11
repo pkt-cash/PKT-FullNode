@@ -7,26 +7,33 @@ package blockchain
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // DeploymentError identifies an error that indicates a deployment ID was
 // specified that does not exist.
-type DeploymentError uint32
+type deploymentError0 uint32
 
 // Error returns the assertion error as a human-readable string and satisfies
 // the error interface.
-func (e DeploymentError) Error() string {
+func (e deploymentError0) Error() string {
 	return fmt.Sprintf("deployment ID %d does not exist", uint32(e))
+}
+
+func DeploymentError(i uint32) er.R {
+	return er.E(deploymentError0(i))
 }
 
 // AssertError identifies an error that indicates an internal code consistency
 // issue and should be treated as a critical and unrecoverable error.
-type AssertError string
+type assertError0 string
 
-// Error returns the assertion error as a human-readable string and satisfies
-// the error interface.
-func (e AssertError) Error() string {
+func AssertError(s string) er.R {
+	return er.E(assertError0(s))
+}
+
+func (e assertError0) Error() string {
 	return "assertion failed: " + string(e)
 }
 
@@ -319,6 +326,6 @@ func (e RuleError) Error() string {
 }
 
 // ruleError creates an RuleError given a set of arguments.
-func ruleError(c ErrorCode, desc string) RuleError {
-	return RuleError{ErrorCode: c, Description: desc}
+func ruleError(c ErrorCode, desc string) er.R {
+	return er.E(RuleError{ErrorCode: c, Description: desc})
 }

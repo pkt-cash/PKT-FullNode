@@ -7,6 +7,7 @@ package btcutil
 import (
 	"bytes"
 	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -52,7 +53,7 @@ type WIF struct {
 // by serializing the public key compressed rather than uncompressed.
 func NewWIF(privKey *btcec.PrivateKey, net *chaincfg.Params, compress bool) (*WIF, er.R) {
 	if net == nil {
-		return nil, errors.New("no network")
+		return nil, er.New("no network")
 	}
 	return &WIF{privKey, compress, net.PrivateKeyID}, nil
 }
@@ -93,13 +94,13 @@ func DecodeWIF(wif string) (*WIF, er.R) {
 	switch decodedLen {
 	case 1 + btcec.PrivKeyBytesLen + 1 + 4:
 		if decoded[33] != compressMagic {
-			return nil, ErrMalformedPrivateKey
+			return nil, er.E(ErrMalformedPrivateKey)
 		}
 		compress = true
 	case 1 + btcec.PrivKeyBytesLen + 4:
 		compress = false
 	default:
-		return nil, ErrMalformedPrivateKey
+		return nil, er.E(ErrMalformedPrivateKey)
 	}
 
 	// Checksum is first four bytes of double SHA256 of the identifier byte
@@ -113,7 +114,7 @@ func DecodeWIF(wif string) (*WIF, er.R) {
 	}
 	cksum := chainhash.DoubleHashB(tosum)[:4]
 	if !bytes.Equal(cksum, decoded[decodedLen-4:]) {
-		return nil, ErrChecksumMismatch
+		return nil, er.E(ErrChecksumMismatch)
 	}
 
 	netID := decoded[0]

@@ -211,15 +211,15 @@ func validatePcAnn(p *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash) (*ch
 		return &chh, nil
 	}
 	if ret == 1 {
-		return nil, errors.New("Validate_checkAnn_INVAL")
+		return nil, er.New("Validate_checkAnn_INVAL")
 	}
 	if ret == 2 {
-		return nil, errors.New("  Validate_checkAnn_INVAL_ITEM4")
+		return nil, er.New("  Validate_checkAnn_INVAL_ITEM4")
 	}
 	if ret == 3 {
-		return &chh, errors.New("Validate_checkAnn_INSUF_POW")
+		return &chh, er.New("Validate_checkAnn_INSUF_POW")
 	}
-	return nil, errors.New("unknown error")
+	return nil, er.New("unknown error")
 }
 
 func PcAnnNew(ch chan wire.PacketCryptAnn, numWorkers uint32) (*PcAnn, er.R) {
@@ -273,7 +273,7 @@ func validatePcProof(
 	blockHashes []*chainhash.Hash,
 ) er.R {
 	if len(blockHashes) != 4 {
-		return errors.New("blockHashes invalid length")
+		return er.New("blockHashes invalid length")
 	}
 
 	hapLen := wire.MaxBlockHeaderPayload + 4 + 4 + (1024 * 4) + len(pcp.AnnProof)
@@ -299,7 +299,7 @@ func validatePcProof(
 
 	for i := 0; i < len(blockHashes); i++ {
 		if len(blockHashes[i][:]) != 32 {
-			return errors.New("one of the blockHashes is not 32 bytes")
+			return er.New("one of the blockHashes is not 32 bytes")
 		}
 		buf.Write(blockHashes[i][:])
 	}
@@ -326,21 +326,21 @@ func validatePcProof(
 	if ret == 0 {
 		return nil
 	} else if ret&checkBlockMask == checkBlock_RUNT {
-		return errors.New("checkBlock_RUNT")
+		return er.New("checkBlock_RUNT")
 	} else if ret&checkBlockMask == checkBlock_ANN_INVALID {
-		return errors.New("checkBlock_ANN_INVALID")
+		return er.New("checkBlock_ANN_INVALID")
 	} else if ret&checkBlockMask == checkBlock_ANN_INSUF_POW {
-		return errors.New("checkBlock_ANN_INSUF_POW")
+		return er.New("checkBlock_ANN_INSUF_POW")
 	} else if ret&checkBlockMask == checkBlock_PCP_INVAL {
-		return errors.New("checkBlock_PCP_INVAL")
+		return er.New("checkBlock_PCP_INVAL")
 	} else if ret&checkBlockMask == checkBlock_PCP_MISMATCH {
-		return errors.New("checkBlock_PCP_MISMATCH")
+		return er.New("checkBlock_PCP_MISMATCH")
 	} else if ret&checkBlockMask == checkBlock_INSUF_POW {
-		return errors.New("checkBlock_INSUF_POW")
+		return er.New("checkBlock_INSUF_POW")
 	} else if ret&checkBlockMask == checkBlock_BAD_COINBASE {
-		return errors.New("checkBlock_BAD_COINBASE")
+		return er.New("checkBlock_BAD_COINBASE")
 	} else {
-		return errors.New("unknown error")
+		return er.New("unknown error")
 	}
 }
 
@@ -377,12 +377,12 @@ func (bm *PcBlk) Start(header *wire.BlockHeader) er.R {
 		return nil
 	}
 	if res == 1 {
-		return errors.New("Not yet locked for mining")
+		return er.New("Not yet locked for mining")
 	}
 	if res == 2 {
-		return errors.New("Already mining")
+		return er.New("Already mining")
 	}
-	return errors.New("unknown error")
+	return er.New("unknown error")
 }
 
 func (bm *PcBlk) LockForMining(nextBlockHeight int32, nextBlockTarget uint32) (*wire.PcCoinbaseCommit, er.R) {
@@ -396,9 +396,9 @@ func (bm *PcBlk) LockForMining(nextBlockHeight int32, nextBlockTarget uint32) (*
 	if ret != 0 {
 		C.free(ptr)
 		if ret == 1 {
-			return nil, errors.New("no anns")
+			return nil, er.New("no anns")
 		}
-		return nil, errors.New("unknown error")
+		return nil, er.New("unknown error")
 	}
 	b := C.GoBytes(ptr, C.sizeof_PacketCrypt_Coinbase_t)
 	out := &wire.PcCoinbaseCommit{}
@@ -421,9 +421,9 @@ func (bm *PcBlk) Stop() er.R {
 		return nil
 	}
 	if ret == 1 {
-		return errors.New("Not mining")
+		return er.New("Not mining")
 	}
-	return errors.New("unknown error")
+	return er.New("unknown error")
 }
 
 func freePcBlk(pc *PcBlk) {
@@ -502,11 +502,11 @@ func Generate(seed []byte) ([]uint32, er.R) {
 	ret := C.RandGen_generate((*C.uint)(out2C), (*C.Buf32_t)(seedC))
 	if ret < 0 {
 		if ret == -2 {
-			return nil, errors.New("insn count < Conf_RandGen_MIN_INSNS")
+			return nil, er.New("insn count < Conf_RandGen_MIN_INSNS")
 		} else if ret == -1 {
-			return nil, errors.New("insn count > Conf_RandGen_MAX_INSNS")
+			return nil, er.New("insn count > Conf_RandGen_MAX_INSNS")
 		} else {
-			return nil, errors.New("unknown error")
+			return nil, er.New("unknown error")
 		}
 	}
 	out2 := C.GoBytes(out2C, 4*ret)
@@ -532,15 +532,15 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) er.R {
 
 	if ret != 0 {
 		if ret == -1 {
-			return errors.New("RandHash_TOO_BIG")
+			return er.New("RandHash_TOO_BIG")
 		} else if ret == -2 {
-			return errors.New("RandHash_TOO_SMALL")
+			return er.New("RandHash_TOO_SMALL")
 		} else if ret == -3 {
-			return errors.New("RandHash_TOO_LONG")
+			return er.New("RandHash_TOO_LONG")
 		} else if ret == -4 {
-			return errors.New("RandHash_TOO_SHORT")
+			return er.New("RandHash_TOO_SHORT")
 		} else {
-			return errors.New("unknown error")
+			return er.New("unknown error")
 		}
 	}
 

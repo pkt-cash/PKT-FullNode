@@ -6,7 +6,6 @@ package bloom
 
 import (
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // The following constants are used by the MurmurHash3 algorithm.

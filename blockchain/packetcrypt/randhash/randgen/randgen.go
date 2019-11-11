@@ -6,7 +6,7 @@ package randgen
 
 import (
 	"encoding/binary"
-	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
@@ -348,9 +348,9 @@ func Generate(seed []byte) ([]uint32, er.R) {
 	loop(&ctx, &budget)
 
 	if len(ctx.insns) < util.Conf_RandGen_MIN_INSNS {
-		return nil, errors.New("insn count < Conf_RandGen_MIN_INSNS")
+		return nil, er.New("insn count < Conf_RandGen_MIN_INSNS")
 	} else if len(ctx.insns) > util.Conf_RandGen_MAX_INSNS {
-		return nil, errors.New("insn count > Conf_RandGen_MAX_INSNS")
+		return nil, er.New("insn count > Conf_RandGen_MAX_INSNS")
 	}
 
 	return ctx.insns, nil

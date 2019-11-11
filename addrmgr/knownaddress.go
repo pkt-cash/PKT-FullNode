@@ -5,7 +5,6 @@
 package addrmgr
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
 	"github.com/pkt-cash/pktd/wire"

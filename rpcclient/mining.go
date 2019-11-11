@@ -383,7 +383,7 @@ func (r FutureSubmitBlockResult) Receive() er.R {
 			return err
 		}
 
-		return errors.New(result)
+		return er.New(result)
 	}
 
 	return nil

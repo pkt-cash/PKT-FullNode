@@ -206,7 +206,7 @@ func parseAndSetDebugLevels(debugLevel string) er.R {
 		// Validate debug log level.
 		if !validLogLevel(debugLevel) {
 			str := "The specified debug level [%v] is invalid"
-			return fmt.Errorf(str, debugLevel)
+			return er.Errorf(str, debugLevel)
 		}
 
 		// Change the logging level for all subsystems.
@@ -221,7 +221,7 @@ func parseAndSetDebugLevels(debugLevel string) er.R {
 		if !strings.Contains(logLevelPair, "=") {
 			str := "The specified debug level contains an invalid " +
 				"subsystem/level pair [%v]"
-			return fmt.Errorf(str, logLevelPair)
+			return er.Errorf(str, logLevelPair)
 		}
 
 		// Extract the specified subsystem and log level.
@@ -232,13 +232,13 @@ func parseAndSetDebugLevels(debugLevel string) er.R {
 		if _, exists := subsystemLoggers[subsysID]; !exists {
 			str := "The specified subsystem [%v] is invalid -- " +
 				"supported subsytems %v"
-			return fmt.Errorf(str, subsysID, supportedSubsystems())
+			return er.Errorf(str, subsysID, supportedSubsystems())
 		}
 
 		// Validate log level.
 		if !validLogLevel(logLevel) {
 			str := "The specified debug level [%v] is invalid"
-			return fmt.Errorf(str, logLevel)
+			return er.Errorf(str, logLevel)
 		}
 
 		setLogLevel(subsysID, logLevel)

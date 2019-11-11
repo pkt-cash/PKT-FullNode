@@ -3,7 +3,7 @@ package txscript
 import (
 	"crypto/sha256"
 	"errors"
-	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -81,12 +81,12 @@ func ParsePkScript(pkScript []byte) (PkScript, er.R) {
 		pkScript, &chaincfg.MainNetParams,
 	)
 	if err != nil {
-		return outputScript, fmt.Errorf("unable to parse script type: "+
+		return outputScript, er.Errorf("unable to parse script type: "+
 			"%v", err)
 	}
 
 	if !isSupportedScriptType(scriptClass) {
-		return outputScript, ErrUnsupportedScriptType
+		return outputScript, er.E(ErrUnsupportedScriptType)
 	}
 
 	outputScript.class = scriptClass
@@ -145,7 +145,7 @@ func (s PkScript) Script() []byte {
 func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, er.R) {
 	_, addrs, _, err := ExtractPkScriptAddrs(s.Script(), chainParams)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse address: %v", err)
+		return nil, er.Errorf("unable to parse address: %v", err)
 	}
 
 	return addrs[0], nil
@@ -168,7 +168,7 @@ func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, er.R) 
 	case len(witness) > 0:
 		return computeWitnessPkScript(witness)
 	default:
-		return PkScript{}, ErrUnsupportedScriptType
+		return PkScript{}, er.E(ErrUnsupportedScriptType)
 	}
 }
 
@@ -179,7 +179,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 	// Since we only support P2PKH and P2SH scripts as the only non-witness
 	// script types, we should expect to see a push only script.
 	case !IsPushOnlyScript(sigScript):
-		return PkScript{}, ErrUnsupportedScriptType
+		return PkScript{}, er.E(ErrUnsupportedScriptType)
 
 	// If a signature script is provided with a length long enough to
 	// represent a P2PKH script, then we'll attempt to parse the compressed

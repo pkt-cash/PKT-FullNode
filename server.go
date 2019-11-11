@@ -10,9 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"net"
 	"runtime"
@@ -28,6 +26,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bloom"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -1851,15 +1850,15 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// TODO: duplicate oneshots?
 		// Limit max number of total peers.
 		if state.Count() >= cfg.MaxPeers {
-			msg.reply <- errors.New("max peers reached")
+			msg.reply <- er.New("max peers reached")
 			return
 		}
 		for _, peer := range state.persistentPeers {
 			if peer.Addr() == msg.addr {
 				if msg.permanent {
-					msg.reply <- errors.New("peer already connected")
+					msg.reply <- er.New("peer already connected")
 				} else {
-					msg.reply <- errors.New("peer exists as a permanent peer")
+					msg.reply <- er.New("peer exists as a permanent peer")
 				}
 				return
 			}
@@ -1887,7 +1886,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		if found {
 			msg.reply <- nil
 		} else {
-			msg.reply <- errors.New("peer not found")
+			msg.reply <- er.New("peer not found")
 		}
 	case getOutboundGroup:
 		count, ok := state.outboundGroups[msg.key]
@@ -1932,7 +1931,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 			return
 		}
 
-		msg.reply <- errors.New("peer not found")
+		msg.reply <- er.New("peer not found")
 	}
 }
 
@@ -2411,10 +2410,10 @@ func (s *server) ScheduleShutdown(duration time.Duration) {
 func parseListeners(addrs []string) ([]net.Addr, er.R) {
 	netAddrs := make([]net.Addr, 0, len(addrs)*2)
 	for _, addr := range addrs {
-		host, _, err := net.SplitHostPort(addr)
-		if err != nil {
+		host, _, errr := net.SplitHostPort(addr)
+		if errr != nil {
 			// Shouldn't happen due to already being normalized.
-			return nil, err
+			return nil, er.E(errr)
 		}
 
 		// Empty host or host of * on plan9 is both IPv4 and IPv6.
@@ -2434,7 +2433,7 @@ func parseListeners(addrs []string) ([]net.Addr, er.R) {
 		// Parse the IP.
 		ip := net.ParseIP(host)
 		if ip == nil {
-			return nil, fmt.Errorf("'%s' is not a valid IP address", host)
+			return nil, er.Errorf("'%s' is not a valid IP address", host)
 		}
 
 		// To4 returns nil when the IP is not an IPv4 address, so use
@@ -2517,9 +2516,9 @@ func setupRPCListeners() ([]net.Listener, er.R) {
 				return nil, err
 			}
 		}
-		keypair, err := tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
-		if err != nil {
-			return nil, err
+		keypair, errr := tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 
 		tlsConfig := tls.Config{
@@ -2528,7 +2527,7 @@ func setupRPCListeners() ([]net.Listener, er.R) {
 		}
 
 		// Change the standard net.Listen function to the tls one.
-		listenFunc = func(net string, laddr string) (net.Listener, er.R) {
+		listenFunc = func(net string, laddr string) (net.Listener, error) {
 			return tls.Listen(net, laddr, &tlsConfig)
 		}
 	}
@@ -2577,7 +2576,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 			return nil, err
 		}
 		if len(listeners) == 0 {
-			return nil, errors.New("no valid listen address")
+			return nil, er.New("no valid listen address")
 		}
 	}
 
@@ -2808,7 +2807,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 				return addrStringToNetAddr(addrString)
 			}
 
-			return nil, errors.New("no valid connect address")
+			return nil, er.New("no valid connect address")
 		}
 	}
 
@@ -2856,7 +2855,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 			return nil, err
 		}
 		if len(rpcListeners) == 0 {
-			return nil, errors.New("RPCS: No valid listen address")
+			return nil, er.New("RPCS: No valid listen address")
 		}
 
 		s.rpcServer, err = newRPCServer(&rpcserverConfig{
@@ -2912,17 +2911,17 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 
 	var nat NAT
 	if len(cfg.ExternalIPs) != 0 {
-		defaultPort, err := strconv.ParseUint(activeNetParams.DefaultPort, 10, 16)
-		if err != nil {
+		defaultPort, errr := strconv.ParseUint(activeNetParams.DefaultPort, 10, 16)
+		if errr != nil {
 			srvrLog.Errorf("Can not parse default port %s for active chain: %v",
-				activeNetParams.DefaultPort, err)
-			return nil, nil, err
+				activeNetParams.DefaultPort, errr)
+			return nil, nil, er.E(errr)
 		}
 
 		for _, sip := range cfg.ExternalIPs {
 			eport := uint16(defaultPort)
-			host, portstr, err := net.SplitHostPort(sip)
-			if err != nil {
+			host, portstr, errr := net.SplitHostPort(sip)
+			if errr != nil {
 				// no port, use default.
 				host = sip
 			} else {
@@ -2973,14 +2972,14 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 // to IP addresses.  It also handles tor addresses properly by returning a
 // net.Addr that encapsulates the address.
 func addrStringToNetAddr(addr string) (net.Addr, er.R) {
-	host, strPort, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
+	host, strPort, errr := net.SplitHostPort(addr)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
-	port, err := strconv.Atoi(strPort)
-	if err != nil {
-		return nil, err
+	port, errr := strconv.Atoi(strPort)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Skip if host is already an IP address.
@@ -2995,7 +2994,7 @@ func addrStringToNetAddr(addr string) (net.Addr, er.R) {
 	// address instead.
 	if strings.HasSuffix(host, ".onion") {
 		if cfg.NoOnion {
-			return nil, errors.New("tor has been disabled")
+			return nil, er.New("tor has been disabled")
 		}
 
 		return &onionAddr{addr: addr}, nil
@@ -3007,7 +3006,7 @@ func addrStringToNetAddr(addr string) (net.Addr, er.R) {
 		return nil, err
 	}
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("no addresses found for %s", host)
+		return nil, er.Errorf("no addresses found for %s", host)
 	}
 
 	return &net.TCPAddr{
@@ -3019,20 +3018,20 @@ func addrStringToNetAddr(addr string) (net.Addr, er.R) {
 // addLocalAddress adds an address that this node is listening on to the
 // address manager so that it may be relayed to peers.
 func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) er.R {
-	host, portStr, err := net.SplitHostPort(addr)
-	if err != nil {
-		return err
+	host, portStr, errr := net.SplitHostPort(addr)
+	if errr != nil {
+		return er.E(errr)
 	}
-	port, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil {
-		return err
+	port, errr := strconv.ParseUint(portStr, 10, 16)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	if ip := net.ParseIP(host); ip != nil && ip.IsUnspecified() {
 		// If bound to unspecified address, advertise all local interfaces
-		addrs, err := net.InterfaceAddrs()
-		if err != nil {
-			return err
+		addrs, errr := net.InterfaceAddrs()
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		for _, addr := range addrs {

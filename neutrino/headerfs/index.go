@@ -163,7 +163,7 @@ func (h *headerIndex) addHeaders(batch headerBatch) er.R {
 		case RegularFilter:
 			tipKey = regFilterTip
 		default:
-			return fmt.Errorf("unknown index type: %v", h.indexType)
+			return er.Errorf("unknown index type: %v", h.indexType)
 		}
 
 		var (
@@ -237,7 +237,7 @@ func (h *headerIndex) chainTip() (*chainhash.Hash, uint32, er.R) {
 		case RegularFilter:
 			tipKey = regFilterTip
 		default:
-			return fmt.Errorf("unknown chain tip index type: %v", h.indexType)
+			return er.Errorf("unknown chain tip index type: %v", h.indexType)
 		}
 
 		// Now that we have the particular tip key for this header
@@ -286,7 +286,7 @@ func (h *headerIndex) truncateIndex(newTip *chainhash.Hash, delete bool) er.R {
 		case RegularFilter:
 			tipKey = regFilterTip
 		default:
-			return fmt.Errorf("unknown index type: %v", h.indexType)
+			return er.Errorf("unknown index type: %v", h.indexType)
 		}
 
 		// If the delete flag is set, then we'll also delete this entry

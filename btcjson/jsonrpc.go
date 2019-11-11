@@ -7,6 +7,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -18,27 +19,49 @@ type RPCErrorCode int
 
 // RPCError represents an error that is used as a part of a JSON-RPC Response
 // object.
-type RPCError struct {
+type rpcError struct {
 	Code    RPCErrorCode `json:"code,omitempty"`
 	Message string       `json:"message,omitempty"`
+	Stack   []string     `json:"stack,omitempty"`
+}
+
+type rpcError1 struct {
+	Code    RPCErrorCode
+	Message string
+	Err     error
 }
 
 // Guarantee RPCError satisifies the builtin error interface.
-var _, _ er.R = RPCError{}, (*RPCError)(nil)
+var _, _ error = rpcError1{}, (*rpcError1)(nil)
 
-// Error returns a string describing the RPC error.  This satisifies the
-// builtin error interface.
-func (e RPCError) Error() string {
+// String returns a string describing the RPC error.  This satisifies the
+// er.R error interface.
+func (e rpcError1) Error() string {
+	if e.Message == "" {
+		return fmt.Sprintf("%d", e.Code)
+	}
 	return fmt.Sprintf("%d: %s", e.Code, e.Message)
 }
 
 // NewRPCError constructs and returns a new JSON-RPC error that is suitable
 // for use in a JSON-RPC Response object.
-func NewRPCError(code RPCErrorCode, message string) *RPCError {
-	return &RPCError{
-		Code:    code,
-		Message: message,
+func NewRPCError(code RPCErrorCode, message string, err er.R) er.R {
+	if err == nil {
+		return er.E(&rpcError1{
+			Code:    code,
+			Message: message,
+		})
 	}
+	w := er.Wrapped(err)
+	msg := w.Error()
+	if message != "" {
+		msg = message + ": Cause: " + msg
+	}
+	err.SetWrapped(&rpcError1{
+		Code:    code,
+		Message: msg,
+	})
+	return err
 }
 
 // IsValidIDType checks that the ID field (which can go in any of the JSON-RPC
@@ -92,7 +115,7 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 	for _, param := range params {
 		marshalledParam, err := json.Marshal(param)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		rawMessage := json.RawMessage(marshalledParam)
 		rawParams = append(rawParams, rawMessage)
@@ -112,7 +135,7 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 // empty.
 type Response struct {
 	Result json.RawMessage `json:"result"`
-	Error  *RPCError       `json:"error"`
+	Error  *rpcError       `json:"error"`
 	ID     *interface{}    `json:"id"`
 }
 
@@ -122,30 +145,43 @@ type Response struct {
 //
 // Typically callers will instead want to create the fully marshalled JSON-RPC
 // response to send over the wire with the MarshalResponse function.
-func NewResponse(id interface{}, marshalledResult []byte, rpcErr *RPCError) (*Response, er.R) {
+func NewResponse(id interface{}, marshalledResult []byte, rpcErr er.R) (*Response, er.R) {
 	if !IsValidIDType(id) {
 		str := fmt.Sprintf("the id of type '%T' is invalid", id)
 		return nil, makeError(ErrInvalidType, str)
 	}
 
+	var rpcErrOut *rpcError
+	if rpcErr != nil {
+		rpcErrOut = &rpcError{
+			Code:    ErrRPCInternal,
+			Message: rpcErr.String(),
+			Stack:   rpcErr.Stack(),
+		}
+		if err1, ok := er.Wrapped(rpcErr).(rpcError1); ok {
+			rpcErrOut.Code = err1.Code
+		}
+	}
+
 	pid := &id
 	return &Response{
 		Result: marshalledResult,
-		Error:  rpcErr,
+		Error:  rpcErrOut,
 		ID:     pid,
 	}, nil
 }
 
 // MarshalResponse marshals the passed id, result, and RPCError to a JSON-RPC
 // response byte slice that is suitable for transmission to a JSON-RPC client.
-func MarshalResponse(id interface{}, result interface{}, rpcErr *RPCError) ([]byte, er.R) {
-	marshalledResult, err := json.Marshal(result)
-	if err != nil {
-		return nil, err
+func MarshalResponse(id interface{}, result interface{}, rpcErr er.R) ([]byte, er.R) {
+	marshalledResult, errr := json.Marshal(result)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	response, err := NewResponse(id, marshalledResult, rpcErr)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&response)
+	out, errr := json.Marshal(&response)
+	return out, er.E(errr)
 }

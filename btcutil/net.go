@@ -7,13 +7,15 @@
 package btcutil
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // interfaceAddrs returns a list of the system's network interface addresses.
 // It is wrapped here so that we can substitute it for other functions when
 // building for systems that do not allow access to net.InterfaceAddrs().
 func interfaceAddrs() ([]net.Addr, er.R) {
-	return net.InterfaceAddrs()
+	out, errr := net.InterfaceAddrs()
+	return out, er.E(errr)
 }

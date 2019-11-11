@@ -81,7 +81,7 @@ func thresholdStateToStatus(state blockchain.ThresholdState) (string, er.R) {
 		return "failed", nil
 	}
 
-	return "", fmt.Errorf("unrecognized threshold state: %v", state)
+	return "", er.Errorf("unrecognized threshold state: %v", state)
 }
 
 // assertSoftForkStatus retrieves the current blockchain info from the given

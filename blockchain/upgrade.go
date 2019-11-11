@@ -9,8 +9,9 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
@@ -66,7 +67,7 @@ func migrateBlockIndex(db database.DB) er.R {
 	err := db.Update(func(dbTx database.Tx) er.R {
 		v1BlockIdxBucket := dbTx.Metadata().Bucket(v1BucketName)
 		if v1BlockIdxBucket == nil {
-			return fmt.Errorf("Bucket %s does not exist", v1BucketName)
+			return er.Errorf("Bucket %s does not exist", v1BucketName)
 		}
 
 		log.Info("Re-indexing block information in the database. This might take a while...")
@@ -112,7 +113,7 @@ func migrateBlockIndex(db database.DB) er.R {
 			chainContext := blocksMap[hash]
 
 			if chainContext.height == -1 {
-				return fmt.Errorf("Unable to calculate chain height for "+
+				return er.Errorf("Unable to calculate chain height for "+
 					"stored block %s", hash)
 			}
 
@@ -192,7 +193,7 @@ func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) er.R
 	// because that is the value of the PrevBlock field in the genesis header.
 	preGenesisContext, exists := blocksMap[zeroHash]
 	if !exists || len(preGenesisContext.children) == 0 {
-		return fmt.Errorf("Unable to find genesis block")
+		return er.Errorf("Unable to find genesis block")
 	}
 
 	for _, genesisHash := range preGenesisContext.children {
@@ -543,7 +544,7 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) er.R {
 		}
 
 		if interruptRequested(interrupt) {
-			return errInterruptRequested
+			return er.E(errInterruptRequested)
 		}
 
 		if numUtxos == 0 {

@@ -51,7 +51,7 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 	disableTLS bool, reconnectAttempts int) (*RPCClient, er.R) {
 
 	if reconnectAttempts < 0 {
-		return nil, errors.New("reconnectAttempts must be positive")
+		return nil, er.New("reconnectAttempts must be positive")
 	}
 
 	client := &RPCClient{
@@ -113,7 +113,7 @@ func (c *RPCClient) Start() er.R {
 	}
 	if net != c.chainParams.Net {
 		c.Disconnect()
-		return fmt.Errorf("mismatched networks want [%v] got [%v]", c.chainParams.Net.String(), net.String())
+		return er.Errorf("mismatched networks want [%v] got [%v]", c.chainParams.Net.String(), net.String())
 	}
 
 	c.quitMtx.Lock()
@@ -193,7 +193,7 @@ func (c *RPCClient) BlockStamp() (*waddrmgr.BlockStamp, er.R) {
 	case bs := <-c.currentBlock:
 		return bs, nil
 	case <-c.quit:
-		return nil, errors.New("disconnected")
+		return nil, er.New("disconnected")
 	}
 }
 

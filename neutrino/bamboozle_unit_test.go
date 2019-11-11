@@ -533,7 +533,7 @@ var (
 			},
 			banThreshold: 3,
 			badPeers:     []string{"c"},
-			expectedErr: fmt.Errorf("only 2 peers serving " +
+			expectedErr: er.Errorf("only 2 peers serving " +
 				"consistent filters, need 3"),
 		},
 	}

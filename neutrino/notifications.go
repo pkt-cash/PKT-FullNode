@@ -82,15 +82,15 @@ func (s *ChainService) handleQuery(state *peerState, querymsg interface{}) {
 		// TODO: duplicate oneshots?
 		// Limit max number of total peers.
 		if state.Count() >= MaxPeers {
-			msg.reply <- errors.New("max peers reached")
+			msg.reply <- er.New("max peers reached")
 			return
 		}
 		for _, peer := range state.persistentPeers {
 			if peer.Addr() == msg.addr {
 				if msg.permanent {
-					msg.reply <- errors.New("peer already connected")
+					msg.reply <- er.New("peer already connected")
 				} else {
-					msg.reply <- errors.New("peer exists as a permanent peer")
+					msg.reply <- er.New("peer exists as a permanent peer")
 				}
 				return
 			}
@@ -119,7 +119,7 @@ func (s *ChainService) handleQuery(state *peerState, querymsg interface{}) {
 		if found {
 			msg.reply <- nil
 		} else {
-			msg.reply <- errors.New("peer not found")
+			msg.reply <- er.New("peer not found")
 		}
 
 	case getOutboundGroup:
@@ -159,7 +159,7 @@ func (s *ChainService) handleQuery(state *peerState, querymsg interface{}) {
 			return
 		}
 
-		msg.reply <- errors.New("peer not found")
+		msg.reply <- er.New("peer not found")
 
 	case forAllPeersMsg:
 		// TODO: Remove this when it's unnecessary due to wider use of

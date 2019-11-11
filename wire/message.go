@@ -7,9 +7,10 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"unicode/utf8"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -190,7 +191,7 @@ func makeEmptyMessage(command string) (Message, er.R) {
 		msg = &MsgCFCheckpt{}
 
 	default:
-		return nil, fmt.Errorf("unhandled command [%s]", command)
+		return nil, er.Errorf("unhandled command [%s]", command)
 	}
 	return msg, nil
 }
@@ -210,9 +211,9 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, er.R) {
 	// short read so the proper amount of read bytes are known.  This works
 	// since the header is a fixed size.
 	var headerBytes [MessageHeaderSize]byte
-	n, err := io.ReadFull(r, headerBytes[:])
-	if err != nil {
-		return n, nil, err
+	n, errr := io.ReadFull(r, headerBytes[:])
+	if errr != nil {
+		return n, nil, er.E(errr)
 	}
 	hr := bytes.NewReader(headerBytes[:])
 
@@ -324,16 +325,16 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 	writeElements(hw, hdr.magic, command, hdr.length, hdr.checksum)
 
 	// Write header.
-	n, err := w.Write(hw.Bytes())
+	n, errr := w.Write(hw.Bytes())
 	totalBytes += n
-	if err != nil {
-		return totalBytes, err
+	if errr != nil {
+		return totalBytes, er.E(errr)
 	}
 
 	// Write payload.
-	n, err = w.Write(payload)
+	n, errr = w.Write(payload)
 	totalBytes += n
-	return totalBytes, err
+	return totalBytes, er.E(errr)
 }
 
 // ReadMessageWithEncodingN reads, validates, and parses the next bitcoin Message
@@ -381,7 +382,7 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet BitcoinNet,
 	if err != nil {
 		discardInput(r, hdr.length)
 		return totalBytes, nil, nil, messageError("ReadMessage",
-			err.Error())
+			err.String())
 	}
 
 	// Check for maximum length based on the message type as a malicious client
@@ -398,10 +399,10 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet BitcoinNet,
 
 	// Read payload.
 	payload := make([]byte, hdr.length)
-	n, err = io.ReadFull(r, payload)
+	n, errr := io.ReadFull(r, payload)
 	totalBytes += n
-	if err != nil {
-		return totalBytes, nil, nil, err
+	if errr != nil {
+		return totalBytes, nil, nil, er.E(errr)
 	}
 
 	// Test checksum.

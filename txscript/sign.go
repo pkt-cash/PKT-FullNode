@@ -5,8 +5,6 @@
 package txscript
 
 import (
-	"errors"
-	"fmt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -25,7 +23,7 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 
 	parsedScript, err := parseScript(subScript)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse output script: %v", err)
+		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
 
 	hash, err := calcWitnessSignatureHash(parsedScript, sigHashes, hashType, tx,
@@ -36,7 +34,7 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 
 	signature, err := key.Sign(hash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+		return nil, er.Errorf("cannot sign tx input: %s", err)
 	}
 
 	return append(signature.Serialize(), byte(hashType)), nil
@@ -81,7 +79,7 @@ func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
 	}
 	signature, err := key.Sign(hash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+		return nil, er.Errorf("cannot sign tx input: %s", err)
 	}
 
 	return append(signature.Serialize(), byte(hashType)), nil
@@ -206,10 +204,10 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		return script, class, addresses, nrequired, nil
 	case NullDataTy:
 		return nil, class, nil, 0,
-			errors.New("can't sign NULLDATA transactions")
+			er.New("can't sign NULLDATA transactions")
 	default:
 		return nil, class, nil, 0,
-			errors.New("can't sign unknown transactions")
+			er.New("can't sign unknown transactions")
 	}
 }
 

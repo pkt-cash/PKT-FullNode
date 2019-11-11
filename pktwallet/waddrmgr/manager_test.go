@@ -33,14 +33,14 @@ type failingCryptoKey struct {
 //
 // This is part of the EncryptorDecryptor interface implementation.
 func (c *failingCryptoKey) Encrypt(in []byte) ([]byte, er.R) {
-	return nil, errors.New("failed to encrypt")
+	return nil, er.New("failed to encrypt")
 }
 
 // Decrypt intenionally returns a failure when invoked to test error paths.
 //
 // This is part of the EncryptorDecryptor interface implementation.
 func (c *failingCryptoKey) Decrypt(in []byte) ([]byte, er.R) {
-	return nil, errors.New("failed to decrypt")
+	return nil, er.New("failed to decrypt")
 }
 
 // newHash converts the passed big-endian hex string into a chainhash.Hash.
@@ -1920,7 +1920,7 @@ func TestManagerHigherVersion(t *testing.T) {
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return putManagerVersion(ns, latestVersion+1)
 	})
@@ -1943,7 +1943,7 @@ func TestManagerHigherVersion(t *testing.T) {
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		if ns == nil {
-			return errors.New("top-level namespace does not exist")
+			return er.New("top-level namespace does not exist")
 		}
 		return putManagerVersion(ns, latestVersion-1)
 	})
@@ -2293,12 +2293,12 @@ func TestScopedKeyManagerManagement(t *testing.T) {
 
 		_, err := mgr.Address(ns, lastAddr.Address())
 		if err != nil {
-			return fmt.Errorf("unable to find addr: %v", err)
+			return er.Errorf("unable to find addr: %v", err)
 		}
 
 		err = mgr.MarkUsed(ns, lastAddr.Address())
 		if err != nil {
-			return fmt.Errorf("unable to mark addr as "+
+			return er.Errorf("unable to mark addr as "+
 				"used: %v", err)
 		}
 

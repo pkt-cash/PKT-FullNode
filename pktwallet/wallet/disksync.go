@@ -17,14 +17,14 @@ func checkCreateDir(path string) er.R {
 		if os.IsNotExist(err) {
 			// Attempt data directory creation
 			if err = os.MkdirAll(path, 0700); err != nil {
-				return fmt.Errorf("cannot create directory: %s", err)
+				return er.Errorf("cannot create directory: %s", err)
 			}
 		} else {
-			return fmt.Errorf("error checking directory: %s", err)
+			return er.Errorf("error checking directory: %s", err)
 		}
 	} else {
 		if !fi.IsDir() {
-			return fmt.Errorf("path '%s' is not a directory", path)
+			return er.Errorf("path '%s' is not a directory", path)
 		}
 	}
 

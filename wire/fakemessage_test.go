@@ -4,7 +4,11 @@
 
 package wire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // fakeMessage implements the Message interface and is used to force encode
 // errors in messages.
@@ -26,15 +30,15 @@ func (msg *fakeMessage) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding)
 // wire.Message interface.
 func (msg *fakeMessage) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	if msg.forceEncodeErr {
-		err := &MessageError{
+		errr := &MessageError{
 			Func:        "fakeMessage.BtcEncode",
 			Description: "intentional error",
 		}
-		return err
+		return er.E(errr)
 	}
 
-	_, err := w.Write(msg.payload)
-	return err
+	_, errr := w.Write(msg.payload)
+	return er.E(errr)
 }
 
 // Command returns the command field of the fake message and satisfies the

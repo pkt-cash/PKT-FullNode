@@ -5,7 +5,11 @@
 
 package btcjson
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // GetBlockHeaderVerboseResult models the data from the getblockheader command when
 // the verbose flag is set.  When the verbose flag is not set, getblockheader
@@ -359,7 +363,8 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 			Sequence: v.Sequence,
 			Witness:  v.Witness,
 		}
-		return json.Marshal(coinbaseStruct)
+		out, err := json.Marshal(coinbaseStruct)
+		return out, er.E(err)
 	}
 
 	if v.HasWitness() {
@@ -376,7 +381,8 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 			Witness:   v.Witness,
 			Sequence:  v.Sequence,
 		}
-		return json.Marshal(txStruct)
+		out, err := json.Marshal(txStruct)
+		return out, er.E(err)
 	}
 
 	txStruct := struct {
@@ -390,7 +396,8 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 		ScriptSig: v.ScriptSig,
 		Sequence:  v.Sequence,
 	}
-	return json.Marshal(txStruct)
+	out, err := json.Marshal(txStruct)
+	return out, er.E(err)
 }
 
 // PrevOut represents previous output for an input Vin.
@@ -431,7 +438,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 			Coinbase: v.Coinbase,
 			Sequence: v.Sequence,
 		}
-		return json.Marshal(coinbaseStruct)
+		out, err := json.Marshal(coinbaseStruct)
+		return out, er.E(err)
 	}
 
 	if v.HasWitness() {
@@ -450,7 +458,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 			PrevOut:   v.PrevOut,
 			Sequence:  v.Sequence,
 		}
-		return json.Marshal(txStruct)
+		out, err := json.Marshal(txStruct)
+		return out, er.E(err)
 	}
 
 	txStruct := struct {
@@ -466,7 +475,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 		PrevOut:   v.PrevOut,
 		Sequence:  v.Sequence,
 	}
-	return json.Marshal(txStruct)
+	out, err := json.Marshal(txStruct)
+	return out, er.E(err)
 }
 
 // Vout models parts of the tx data.  It is defined separately since both

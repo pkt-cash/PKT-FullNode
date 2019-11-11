@@ -5,7 +5,6 @@
 package netsync
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 

@@ -5,25 +5,26 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // dirEmpty returns whether or not the specified directory path is empty.
 func dirEmpty(dirPath string) (bool, er.R) {
-	f, err := os.Open(dirPath)
-	if err != nil {
-		return false, err
+	f, errr := os.Open(dirPath)
+	if errr != nil {
+		return false, er.E(errr)
 	}
 	defer f.Close()
 
 	// Read the names of a max of one entry from the directory.  When the
 	// directory is empty, an io.EOF error will be returned, so allow it.
-	names, err := f.Readdirnames(1)
-	if err != nil && err != io.EOF {
-		return false, err
+	names, errr := f.Readdirnames(1)
+	if errr != nil && errr != io.EOF {
+		return false, er.E(errr)
 	}
 
 	return len(names) == 0, nil
@@ -74,15 +75,15 @@ func upgradeDBPathNet(oldDbPath, netName string) er.R {
 		newDbPath := filepath.Join(newDbRoot, newDbName)
 
 		// Create the new path if needed.
-		err = os.MkdirAll(newDbRoot, 0700)
-		if err != nil {
-			return err
+		errr := os.MkdirAll(newDbRoot, 0700)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Move and rename the old database.
-		err := os.Rename(oldDbPath, newDbPath)
-		if err != nil {
-			return err
+		errr = os.Rename(oldDbPath, newDbPath)
+		if errr != nil {
+			return er.E(errr)
 		}
 	}
 
@@ -102,7 +103,7 @@ func upgradeDBPaths() er.R {
 	upgradeDBPathNet(filepath.Join(oldDbRoot, "pktd_regtest.db"), "regtest")
 
 	// Remove the old db directory.
-	return os.RemoveAll(oldDbRoot)
+	return er.E(os.RemoveAll(oldDbRoot))
 }
 
 // upgradeDataPaths moves the application data from its location prior to pktd
@@ -120,18 +121,18 @@ func upgradeDataPaths() er.R {
 		// Create the new path.
 		pktdLog.Infof("Migrating application home path from '%s' to '%s'",
 			oldHomePath, newHomePath)
-		err := os.MkdirAll(newHomePath, 0700)
-		if err != nil {
-			return err
+		errr := os.MkdirAll(newHomePath, 0700)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Move old pktd.conf into new location if needed.
 		oldConfPath := filepath.Join(oldHomePath, defaultConfigFilename)
 		newConfPath := filepath.Join(newHomePath, defaultConfigFilename)
 		if fileExists(oldConfPath) && !fileExists(newConfPath) {
-			err := os.Rename(oldConfPath, newConfPath)
-			if err != nil {
-				return err
+			errr := os.Rename(oldConfPath, newConfPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 
@@ -139,9 +140,9 @@ func upgradeDataPaths() er.R {
 		oldDataPath := filepath.Join(oldHomePath, defaultDataDirname)
 		newDataPath := filepath.Join(newHomePath, defaultDataDirname)
 		if fileExists(oldDataPath) && !fileExists(newDataPath) {
-			err := os.Rename(oldDataPath, newDataPath)
-			if err != nil {
-				return err
+			errr := os.Rename(oldDataPath, newDataPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 
@@ -151,9 +152,9 @@ func upgradeDataPaths() er.R {
 			return err
 		}
 		if ohpEmpty {
-			err := os.Remove(oldHomePath)
-			if err != nil {
-				return err
+			errr := os.Remove(oldHomePath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		} else {
 			pktdLog.Warnf("Not removing '%s' since it contains files "+

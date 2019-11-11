@@ -20,7 +20,7 @@ func tstCheckScriptError(gotErr, wantErr er.R) er.R {
 	// Ensure the error code is of the expected type and the error
 	// code matches the value specified in the test instance.
 	if reflect.TypeOf(gotErr) != reflect.TypeOf(wantErr) {
-		return fmt.Errorf("wrong error - got %T (%[1]v), want %T",
+		return er.Errorf("wrong error - got %T (%[1]v), want %T",
 			gotErr, wantErr)
 	}
 	if gotErr == nil {
@@ -30,7 +30,7 @@ func tstCheckScriptError(gotErr, wantErr er.R) er.R {
 	// Ensure the want error type is a script error.
 	werr, ok := wantErr.(Error)
 	if !ok {
-		return fmt.Errorf("unexpected test error type %T", wantErr)
+		return er.Errorf("unexpected test error type %T", wantErr)
 	}
 
 	// Ensure the error codes match.  It's safe to use a raw type assert
@@ -38,7 +38,7 @@ func tstCheckScriptError(gotErr, wantErr er.R) er.R {
 	// the want error is a script error.
 	gotErrorCode := gotErr.(Error).ErrorCode
 	if gotErrorCode != werr.ErrorCode {
-		return fmt.Errorf("mismatched error code - got %v (%v), want %v",
+		return er.Errorf("mismatched error code - got %v (%v), want %v",
 			gotErrorCode, gotErr, werr.ErrorCode)
 	}
 
@@ -104,7 +104,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if !bytes.Equal(val, []byte{5}) {
-					return errors.New("not equal")
+					return er.New("not equal")
 				}
 				return err
 			},
@@ -151,7 +151,7 @@ func TestStack(t *testing.T) {
 				}
 
 				if val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 				return nil
 			},
@@ -168,7 +168,7 @@ func TestStack(t *testing.T) {
 				}
 
 				if !val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 				return nil
 			},
@@ -194,7 +194,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if v != 0 {
-					return errors.New("0 != 0 on popInt")
+					return er.New("0 != 0 on popInt")
 				}
 				return nil
 			},
@@ -210,7 +210,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if v != 0 {
-					return errors.New("-0 != 0 on popInt")
+					return er.New("-0 != 0 on popInt")
 				}
 				return nil
 			},
@@ -226,7 +226,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if v != 1 {
-					return errors.New("1 != 1 on popInt")
+					return er.New("1 != 1 on popInt")
 				}
 				return nil
 			},
@@ -243,7 +243,7 @@ func TestStack(t *testing.T) {
 				}
 				if v != 1 {
 					fmt.Printf("%v != %v\n", v, 1)
-					return errors.New("1 != 1 on popInt")
+					return er.New("1 != 1 on popInt")
 				}
 				return nil
 			},
@@ -259,7 +259,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if v != -1 {
-					return errors.New("-1 != -1 on popInt")
+					return er.New("-1 != -1 on popInt")
 				}
 				return nil
 			},
@@ -276,7 +276,7 @@ func TestStack(t *testing.T) {
 				}
 				if v != -1 {
 					fmt.Printf("%v != %v\n", v, -1)
-					return errors.New("-1 != -1 on popInt")
+					return er.New("-1 != -1 on popInt")
 				}
 				return nil
 			},
@@ -294,7 +294,7 @@ func TestStack(t *testing.T) {
 				}
 				if v != -513 {
 					fmt.Printf("%v != %v\n", v, -513)
-					return errors.New("1 != 1 on popInt")
+					return er.New("1 != 1 on popInt")
 				}
 				return nil
 			},
@@ -312,7 +312,7 @@ func TestStack(t *testing.T) {
 				}
 				if v != -1 {
 					fmt.Printf("%v != %v\n", v, -1)
-					return errors.New("-1 != -1 on popInt")
+					return er.New("-1 != -1 on popInt")
 				}
 				return nil
 			},
@@ -457,7 +457,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if !val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 
 				return nil
@@ -475,7 +475,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 
 				return nil
@@ -493,7 +493,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if !val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 
 				return nil
@@ -511,7 +511,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val {
-					return errors.New("unexpected value")
+					return er.New("unexpected value")
 				}
 
 				return nil
@@ -810,7 +810,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if !val {
-					return errors.New("invalid result")
+					return er.New("invalid result")
 				}
 				return nil
 			},
@@ -828,7 +828,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val {
-					return errors.New("invalid result")
+					return er.New("invalid result")
 				}
 				return nil
 			},
@@ -846,7 +846,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val != 1 {
-					return errors.New("invalid result")
+					return er.New("invalid result")
 				}
 				return nil
 			},
@@ -864,7 +864,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val != 0 {
-					return errors.New("invalid result")
+					return er.New("invalid result")
 				}
 				return nil
 			},
@@ -883,7 +883,7 @@ func TestStack(t *testing.T) {
 					return err
 				}
 				if val != 1 {
-					return errors.New("invalid result")
+					return er.New("invalid result")
 				}
 				return nil
 			},

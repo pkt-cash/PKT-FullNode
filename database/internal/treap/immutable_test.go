@@ -7,7 +7,6 @@ package treap
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 

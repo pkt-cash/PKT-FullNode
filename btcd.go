@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -17,6 +16,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/pkt-cash/pktd/blockchain/indexers"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
 )
@@ -78,10 +78,10 @@ func pktdMain(serverChan chan<- *server) er.R {
 
 	// Write cpu profile if requested.
 	if cfg.CPUProfile != "" {
-		f, err := os.Create(cfg.CPUProfile)
-		if err != nil {
+		f, errr := os.Create(cfg.CPUProfile)
+		if errr != nil {
 			pktdLog.Errorf("Unable to create cpu profile: %v", err)
-			return err
+			return er.E(errr)
 		}
 		pprof.StartCPUProfile(f)
 		defer f.Close()
@@ -185,14 +185,14 @@ func removeRegressionDB(dbPath string) er.R {
 	if err == nil {
 		pktdLog.Infof("Removing regression test database from '%s'", dbPath)
 		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
+			errr := os.RemoveAll(dbPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
+			errr := os.Remove(dbPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 	}
@@ -276,16 +276,16 @@ func loadBlockDB() (database.DB, er.R) {
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
-		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
+		if dbErr, ok := er.Wrapped(err).(database.Error); !ok || dbErr.ErrorCode !=
 			database.ErrDbDoesNotExist {
 
 			return nil, err
 		}
 
 		// Create the db if it does not exist.
-		err = os.MkdirAll(cfg.DataDir, 0700)
-		if err != nil {
-			return nil, err
+		errr := os.MkdirAll(cfg.DataDir, 0700)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		db, err = database.Create(cfg.DbType, dbPath, activeNetParams.Net)
 		if err != nil {

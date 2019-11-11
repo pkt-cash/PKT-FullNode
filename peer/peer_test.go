@@ -305,7 +305,7 @@ func TestPeerConnection(t *testing.T) {
 					select {
 					case <-verack:
 					case <-time.After(time.Second):
-						return nil, nil, errors.New("verack timeout")
+						return nil, nil, er.New("verack timeout")
 					}
 				}
 				return inPeer, outPeer, nil
@@ -331,7 +331,7 @@ func TestPeerConnection(t *testing.T) {
 					select {
 					case <-verack:
 					case <-time.After(time.Second):
-						return nil, nil, errors.New("verack timeout")
+						return nil, nil, er.New("verack timeout")
 					}
 				}
 				return inPeer, outPeer, nil
@@ -616,7 +616,7 @@ func TestOutboundPeer(t *testing.T) {
 
 	peerCfg := &peer.Config{
 		NewestBlock: func() (*chainhash.Hash, int32, er.R) {
-			return nil, 0, errors.New("newest block not found")
+			return nil, 0, er.New("newest block not found")
 		},
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",

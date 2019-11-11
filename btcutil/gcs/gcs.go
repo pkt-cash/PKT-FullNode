@@ -8,7 +8,6 @@ package gcs
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"sort"
 
@@ -206,7 +205,7 @@ func FromNBytes(P uint8, M uint64, d []byte) (*Filter, er.R) {
 	buffer := bytes.NewBuffer(d)
 	N, err := wire.ReadVarInt(buffer, varIntProtoVer)
 	if err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	if N >= (1 << 32) {
 		return nil, er.E(ErrNTooBig)
@@ -230,12 +229,12 @@ func (f *Filter) NBytes() ([]byte, er.R) {
 
 	err := wire.WriteVarInt(&buffer, varIntProtoVer, uint64(f.n))
 	if err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 
-	_, err = buffer.Write(f.filterData)
-	if err != nil {
-		return nil, er.E(err)
+	_, errr := buffer.Write(f.filterData)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return buffer.Bytes(), nil
@@ -258,17 +257,17 @@ func (f *Filter) NPBytes() ([]byte, er.R) {
 
 	err := wire.WriteVarInt(&buffer, varIntProtoVer, uint64(f.n))
 	if err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 
-	err = buffer.WriteByte(f.p)
-	if err != nil {
-		return nil, er.E(err)
+	errr := buffer.WriteByte(f.p)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
-	_, err = buffer.Write(f.filterData)
-	if err != nil {
-		return nil, er.E(err)
+	_, errr = buffer.Write(f.filterData)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return buffer.Bytes(), nil
@@ -291,7 +290,7 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, er.R) {
 	// Create a filter bitstream.
 	filterData, err := f.Bytes()
 	if err != nil {
-		return false, er.E(err)
+		return false, err
 	}
 
 	b := bstream.NewBStreamReader(filterData)
@@ -312,7 +311,7 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, er.R) {
 		// bitstream.
 		delta, err := f.readFullUint64(b)
 		if err != nil {
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				return false, nil
 			}
 			return false, err
@@ -370,7 +369,7 @@ func (f *Filter) ZipMatchAny(key [KeySize]byte, data [][]byte) (bool, er.R) {
 	// Create a filter bitstream.
 	filterData, err := f.Bytes()
 	if err != nil {
-		return false, er.E(err)
+		return false, err
 	}
 
 	b := bstream.NewBStreamReader(filterData)
@@ -408,7 +407,7 @@ out:
 		// the end because nothing matched.
 		delta, err := f.readFullUint64(b)
 		if err != nil {
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				return false, nil
 			}
 			return false, err
@@ -459,7 +458,7 @@ func (f *Filter) HashMatchAny(key [KeySize]byte, data [][]byte) (bool, er.R) {
 	// Create a filter bitstream.
 	filterData, err := f.Bytes()
 	if err != nil {
-		return false, er.E(err)
+		return false, err
 	}
 
 	b := bstream.NewBStreamReader(filterData)
@@ -480,7 +479,7 @@ func (f *Filter) HashMatchAny(key [KeySize]byte, data [][]byte) (bool, er.R) {
 			lastValue += value
 			values[uint32(lastValue)] = struct{}{}
 			continue
-		} else if err == io.EOF {
+		} else if er.Wrapped(err) == io.EOF {
 			break
 		}
 

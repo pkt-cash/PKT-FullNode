@@ -71,7 +71,7 @@ func TestManagerError(t *testing.T) {
 				Description: "failed to store master private " +
 					"key parameters",
 				ErrorCode: waddrmgr.ErrDatabase,
-				Err:       fmt.Errorf("underlying db error"),
+				Err:       er.Errorf("underlying db error"),
 			},
 			"failed to store master private key parameters: " +
 				"underlying db error",
@@ -83,7 +83,7 @@ func TestManagerError(t *testing.T) {
 				Description: "failed to derive extended key " +
 					"branch 0",
 				ErrorCode: waddrmgr.ErrKeyChain,
-				Err:       fmt.Errorf("underlying error"),
+				Err:       er.Errorf("underlying error"),
 			},
 			"failed to derive extended key branch 0: underlying " +
 				"error",
@@ -95,7 +95,7 @@ func TestManagerError(t *testing.T) {
 				Description: "failed to decrypt account 0 " +
 					"private key",
 				ErrorCode: waddrmgr.ErrCrypto,
-				Err:       fmt.Errorf("underlying error"),
+				Err:       er.Errorf("underlying error"),
 			},
 			"failed to decrypt account 0 private key: underlying " +
 				"error",
@@ -143,7 +143,7 @@ func TestIsError(t *testing.T) {
 			exp:  false,
 		},
 		{
-			err:  errors.New("not a ManagerError"),
+			err:  er.New("not a ManagerError"),
 			code: waddrmgr.ErrDatabase,
 			exp:  false,
 		},

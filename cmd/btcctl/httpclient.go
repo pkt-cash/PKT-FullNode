@@ -110,10 +110,10 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 		// than showing nothing in case the target server has a poor
 		// implementation.
 		if len(respBytes) == 0 {
-			return nil, fmt.Errorf("%d %s", httpResponse.StatusCode,
+			return nil, er.Errorf("%d %s", httpResponse.StatusCode,
 				http.StatusText(httpResponse.StatusCode))
 		}
-		return nil, fmt.Errorf("%s", respBytes)
+		return nil, er.Errorf("%s", respBytes)
 	}
 
 	// Unmarshal the response.

@@ -5,10 +5,10 @@
 package btcutil
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"strconv"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // AmountUnit describes a method of converting an Amount to something
@@ -83,7 +83,7 @@ func NewAmount(f float64) (Amount, er.R) {
 	case math.IsInf(f, 1):
 		fallthrough
 	case math.IsInf(f, -1):
-		return 0, errors.New("invalid bitcoin amount")
+		return 0, er.New("invalid bitcoin amount")
 	}
 
 	return round(f * SatoshiPerBitcoin), nil

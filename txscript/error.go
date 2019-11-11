@@ -6,6 +6,7 @@ package txscript
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
@@ -442,13 +443,16 @@ func (e Error) Error() string {
 }
 
 // scriptError creates an Error given a set of arguments.
-func scriptError(c ErrorCode, desc string) Error {
-	return Error{ErrorCode: c, Description: desc}
+func scriptError(c ErrorCode, desc string) er.R {
+	return er.E(Error{ErrorCode: c, Description: desc})
 }
 
 // IsErrorCode returns whether or not the provided error is a script error with
 // the provided error code.
 func IsErrorCode(err er.R, c ErrorCode) bool {
-	serr, ok := err.(Error)
+	if err == nil {
+		return false
+	}
+	serr, ok := er.Wrapped(err).(Error)
 	return ok && serr.ErrorCode == c
 }

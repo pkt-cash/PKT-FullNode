@@ -10,10 +10,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -81,40 +82,48 @@ var (
 
 // errNotInMainChain signifies that a block hash or height that is not in the
 // main chain was requested.
-type errNotInMainChain string
+type errNotInMainChain0 string
 
 // Error implements the error interface.
-func (e errNotInMainChain) Error() string {
+func (e errNotInMainChain0) Error() string {
 	return string(e)
+}
+
+func errNotInMainChain(s string) er.R {
+	return er.E(errNotInMainChain0(s))
 }
 
 // isNotInMainChainErr returns whether or not the passed error is an
 // errNotInMainChain error.
 func isNotInMainChainErr(err er.R) bool {
-	_, ok := err.(errNotInMainChain)
+	_, ok := er.Wrapped(err).(errNotInMainChain0)
 	return ok
 }
 
 // errDeserialize signifies that a problem was encountered when deserializing
 // data.
-type errDeserialize string
+type errDeserialize0 string
+
+func errDeserialize(s string) er.R {
+	return er.E(errDeserialize0(s))
+}
 
 // Error implements the error interface.
-func (e errDeserialize) Error() string {
+func (e errDeserialize0) Error() string {
 	return string(e)
 }
 
 // isDeserializeErr returns whether or not the passed error is an errDeserialize
 // error.
 func isDeserializeErr(err er.R) bool {
-	_, ok := err.(errDeserialize)
+	_, ok := er.Wrapped(err).(errDeserialize0)
 	return ok
 }
 
 // isDbBucketNotFoundErr returns whether or not the passed error is a
 // database.Error with an error code of database.ErrBucketNotFound.
 func isDbBucketNotFoundErr(err er.R) bool {
-	dbErr, ok := err.(database.Error)
+	dbErr, ok := er.Wrapped(err).(database.Error)
 	return ok && dbErr.ErrorCode == database.ErrBucketNotFound
 }
 
@@ -171,10 +180,10 @@ func serializeElectionState(state ElectionState) []byte {
 func deserializeElectionState(serialized []byte) (ElectionState, er.R) {
 	if len(serialized) < 8 {
 		d := fmt.Sprintf("corrupt election state [%v]", hex.EncodeToString(serialized))
-		return ElectionState{}, database.Error{
+		return ElectionState{}, er.E(database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: d,
-		}
+		})
 	}
 	state := ElectionState{}
 	state.Disapproval = int64(byteOrder.Uint64(serialized[0:8]))
@@ -511,12 +520,12 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTx
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
 		if isDeserializeErr(err) {
-			return nil, database.Error{
+			return nil, er.E(database.Error{
 				ErrorCode: database.ErrCorruption,
 				Description: fmt.Sprintf("corrupt spend "+
 					"information for %v: %v", block.Hash(),
 					err),
-			}
+			})
 		}
 
 		return nil, err
@@ -802,11 +811,11 @@ func dbFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, er.
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
 		if isDeserializeErr(err) {
-			return nil, database.Error{
+			return nil, er.E(database.Error{
 				ErrorCode: database.ErrCorruption,
 				Description: fmt.Sprintf("corrupt utxo entry "+
 					"for %v: %v", outpoint, err),
-			}
+			})
 		}
 
 		return nil, err
@@ -1003,10 +1012,10 @@ func deserializeBestChainState(serializedData []byte) (bestChainState, er.R) {
 	// Ensure the serialized data has enough bytes to properly deserialize
 	// the hash, height, total transactions, and work sum length.
 	if len(serializedData) < chainhash.HashSize+16 {
-		return bestChainState{}, database.Error{
+		return bestChainState{}, er.E(database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
-		}
+		})
 	}
 
 	state := bestChainState{}
@@ -1022,10 +1031,10 @@ func deserializeBestChainState(serializedData []byte) (bestChainState, er.R) {
 	// Ensure the serialized data has enough bytes to deserialize the work
 	// sum.
 	if uint32(len(serializedData[offset:])) < workSumBytesLen {
-		return bestChainState{}, database.Error{
+		return bestChainState{}, er.E(database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
-		}
+		})
 	}
 	workSumBytes := serializedData[offset : offset+workSumBytesLen]
 	state.workSum = new(big.Int).SetBytes(workSumBytes)
@@ -1340,9 +1349,9 @@ func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, er.R)
 		return nil, statusNone, err
 	}
 
-	statusByte, err := buffer.ReadByte()
-	if err != nil {
-		return nil, statusNone, err
+	statusByte, errr := buffer.ReadByte()
+	if errr != nil {
+		return nil, statusNone, er.E(errr)
 	}
 
 	return &header, blockStatus(statusByte), nil
@@ -1406,9 +1415,9 @@ func dbStoreBlockNode(dbTx database.Tx, node *blockNode) er.R {
 	if err != nil {
 		return err
 	}
-	err = w.WriteByte(byte(node.status))
-	if err != nil {
-		return err
+	errr := w.WriteByte(byte(node.status))
+	if errr != nil {
+		return er.E(errr)
 	}
 	value := w.Bytes()
 

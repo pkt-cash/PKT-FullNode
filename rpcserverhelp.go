@@ -7,11 +7,11 @@
 package main
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
@@ -804,7 +804,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, er.R) {
 	// Look up the result types for the method.
 	resultTypes, ok := rpcResultTypes[method]
 	if !ok {
-		return "", errors.New("no result types specified for method " +
+		return "", er.New("no result types specified for method " +
 			method)
 	}
 

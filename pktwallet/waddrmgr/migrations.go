@@ -135,7 +135,7 @@ func upgradeToVersion5(ns walletdb.ReadWriteBucket) er.R {
 				return err
 			}
 			if row.addrType > adtScript {
-				return fmt.Errorf("segwit address exists in " +
+				return er.Errorf("segwit address exists in " +
 					"wallet, can't upgrade from v4 to " +
 					"v5: well, we tried  ¯\\_(ツ)_/¯")
 			}
@@ -292,7 +292,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 	// We'll start by fetching our birthday timestamp.
 	birthdayTimestamp, err := fetchBirthday(ns)
 	if err != nil {
-		return fmt.Errorf("unable to fetch birthday timestamp: %v", err)
+		return er.Errorf("unable to fetch birthday timestamp: %v", err)
 	}
 
 	log.Infof("Setting the wallet's birthday block from timestamp=%v",
@@ -302,7 +302,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 	// the corresponding chain.
 	genesisHash, err := fetchBlockHash(ns, 0)
 	if err != nil {
-		return fmt.Errorf("unable to fetch genesis block hash: %v", err)
+		return er.Errorf("unable to fetch genesis block hash: %v", err)
 	}
 
 	var genesisTimestamp time.Time
@@ -324,7 +324,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 			chaincfg.SimNetParams.GenesisBlock.Header.Timestamp
 
 	default:
-		return fmt.Errorf("unknown genesis hash %v", genesisHash)
+		return er.Errorf("unknown genesis hash %v", genesisHash)
 	}
 
 	// With the timestamps retrieved, we can estimate a block height by
@@ -367,7 +367,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) er.R {
 	syncBucket := ns.NestedReadWriteBucket(syncBucketName)
 	if syncBucket == nil {
-		return errors.New("sync bucket does not exist")
+		return er.New("sync bucket does not exist")
 	}
 
 	birthdayBlock, err := FetchBirthdayBlock(ns)

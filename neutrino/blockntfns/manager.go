@@ -284,7 +284,7 @@ func (m *SubscriptionManager) handleNewSubscription(sub *newSubscription) er.R {
 		sub.bestHeight,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve blocks since height=%d: "+
+		return er.Errorf("unable to retrieve blocks since height=%d: "+
 			"%v", sub.bestHeight, err)
 	}
 

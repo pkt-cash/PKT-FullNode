@@ -54,7 +54,7 @@ func pktdExecutablePath() (string, er.R) {
 	)
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("Failed to build pktd: %v", err)
+		return "", er.Errorf("Failed to build pktd: %v", err)
 	}
 
 	// Save executable path so future calls do not recompile.

@@ -63,7 +63,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 	checkpointConfirmations := int32(blockchain.CheckpointConfirmations)
 	requiredHeight := latestCheckpoint.Height + checkpointConfirmations
 	if block.Height() < requiredHeight {
-		return nil, fmt.Errorf("the block database is only at height "+
+		return nil, er.Errorf("the block database is only at height "+
 			"%d which is less than the latest checkpoint height "+
 			"of %d plus required confirmations of %d",
 			block.Height(), latestCheckpoint.Height,

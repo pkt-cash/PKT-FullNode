@@ -7,8 +7,9 @@ package indexers
 import (
 	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -317,12 +318,12 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 			// Ensure any deserialization errors are returned as
 			// database corruption errors.
 			if isDeserializeErr(err) {
-				err = database.Error{
+				err = er.E(database.Error{
 					ErrorCode: database.ErrCorruption,
 					Description: fmt.Sprintf("failed to "+
 						"deserialized address index "+
 						"for key %x: %v", addrKey, err),
-				}
+				})
 			}
 
 			return nil, 0, err
@@ -396,7 +397,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, 
 		curLevelKey := keyForLevel(addrKey, level)
 		curLevelData := bucket.Get(curLevelKey[:])
 		if len(curLevelData) == 0 && numRemaining > 0 {
-			return AssertError(fmt.Sprintf("dbRemoveAddrIndexEntries "+
+			return er.New(fmt.Sprintf("dbRemoveAddrIndexEntries "+
 				"not enough entries for address key %x to "+
 				"delete %d entries", addrKey, count))
 		}
@@ -567,7 +568,7 @@ func addrToKey(addr btcutil.Address) ([addrKeySize]byte, er.R) {
 		return result, nil
 	}
 
-	return [addrKeySize]byte{}, errUnsupportedAddressType
+	return [addrKeySize]byte{}, er.E(errUnsupportedAddressType)
 }
 
 // AddrIndex implements a transaction by address index.  That is to say, it
