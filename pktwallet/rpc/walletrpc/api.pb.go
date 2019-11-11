@@ -65,7 +65,6 @@ import fmt "fmt"
 import math "math"
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 )
@@ -1543,7 +1542,7 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for VersionService service
 
 type VersionServiceClient interface {
-	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, er.R)
+	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error)
 }
 
 type versionServiceClient struct {
@@ -1554,7 +1553,7 @@ func NewVersionServiceClient(cc *grpc.ClientConn) VersionServiceClient {
 	return &versionServiceClient{cc}
 }
 
-func (c *versionServiceClient) Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, er.R) {
+func (c *versionServiceClient) Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error) {
 	out := new(VersionResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.VersionService/Version", in, out, c.cc, opts...)
 	if err != nil {
@@ -1566,14 +1565,14 @@ func (c *versionServiceClient) Version(ctx context.Context, in *VersionRequest, 
 // Server API for VersionService service
 
 type VersionServiceServer interface {
-	Version(context.Context, *VersionRequest) (*VersionResponse, er.R)
+	Version(context.Context, *VersionRequest) (*VersionResponse, error)
 }
 
 func RegisterVersionServiceServer(s *grpc.Server, srv VersionServiceServer) {
 	s.RegisterService(&_VersionService_serviceDesc, srv)
 }
 
-func _VersionService_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _VersionService_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(VersionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1585,7 +1584,7 @@ func _VersionService_Version_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/walletrpc.VersionService/Version",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(VersionServiceServer).Version(ctx, req.(*VersionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
@@ -1608,25 +1607,25 @@ var _VersionService_serviceDesc = grpc.ServiceDesc{
 
 type WalletServiceClient interface {
 	// Queries
-	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, er.R)
-	Network(ctx context.Context, in *NetworkRequest, opts ...grpc.CallOption) (*NetworkResponse, er.R)
-	AccountNumber(ctx context.Context, in *AccountNumberRequest, opts ...grpc.CallOption) (*AccountNumberResponse, er.R)
-	Accounts(ctx context.Context, in *AccountsRequest, opts ...grpc.CallOption) (*AccountsResponse, er.R)
-	Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, er.R)
-	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, er.R)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	Network(ctx context.Context, in *NetworkRequest, opts ...grpc.CallOption) (*NetworkResponse, error)
+	AccountNumber(ctx context.Context, in *AccountNumberRequest, opts ...grpc.CallOption) (*AccountNumberResponse, error)
+	Accounts(ctx context.Context, in *AccountsRequest, opts ...grpc.CallOption) (*AccountsResponse, error)
+	Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
+	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error)
 	// Notifications
-	TransactionNotifications(ctx context.Context, in *TransactionNotificationsRequest, opts ...grpc.CallOption) (WalletService_TransactionNotificationsClient, er.R)
-	SpentnessNotifications(ctx context.Context, in *SpentnessNotificationsRequest, opts ...grpc.CallOption) (WalletService_SpentnessNotificationsClient, er.R)
-	AccountNotifications(ctx context.Context, in *AccountNotificationsRequest, opts ...grpc.CallOption) (WalletService_AccountNotificationsClient, er.R)
+	TransactionNotifications(ctx context.Context, in *TransactionNotificationsRequest, opts ...grpc.CallOption) (WalletService_TransactionNotificationsClient, error)
+	SpentnessNotifications(ctx context.Context, in *SpentnessNotificationsRequest, opts ...grpc.CallOption) (WalletService_SpentnessNotificationsClient, error)
+	AccountNotifications(ctx context.Context, in *AccountNotificationsRequest, opts ...grpc.CallOption) (WalletService_AccountNotificationsClient, error)
 	// Control
-	ChangePassphrase(ctx context.Context, in *ChangePassphraseRequest, opts ...grpc.CallOption) (*ChangePassphraseResponse, er.R)
-	RenameAccount(ctx context.Context, in *RenameAccountRequest, opts ...grpc.CallOption) (*RenameAccountResponse, er.R)
-	NextAccount(ctx context.Context, in *NextAccountRequest, opts ...grpc.CallOption) (*NextAccountResponse, er.R)
-	NextAddress(ctx context.Context, in *NextAddressRequest, opts ...grpc.CallOption) (*NextAddressResponse, er.R)
-	ImportPrivateKey(ctx context.Context, in *ImportPrivateKeyRequest, opts ...grpc.CallOption) (*ImportPrivateKeyResponse, er.R)
-	FundTransaction(ctx context.Context, in *FundTransactionRequest, opts ...grpc.CallOption) (*FundTransactionResponse, er.R)
-	SignTransaction(ctx context.Context, in *SignTransactionRequest, opts ...grpc.CallOption) (*SignTransactionResponse, er.R)
-	PublishTransaction(ctx context.Context, in *PublishTransactionRequest, opts ...grpc.CallOption) (*PublishTransactionResponse, er.R)
+	ChangePassphrase(ctx context.Context, in *ChangePassphraseRequest, opts ...grpc.CallOption) (*ChangePassphraseResponse, error)
+	RenameAccount(ctx context.Context, in *RenameAccountRequest, opts ...grpc.CallOption) (*RenameAccountResponse, error)
+	NextAccount(ctx context.Context, in *NextAccountRequest, opts ...grpc.CallOption) (*NextAccountResponse, error)
+	NextAddress(ctx context.Context, in *NextAddressRequest, opts ...grpc.CallOption) (*NextAddressResponse, error)
+	ImportPrivateKey(ctx context.Context, in *ImportPrivateKeyRequest, opts ...grpc.CallOption) (*ImportPrivateKeyResponse, error)
+	FundTransaction(ctx context.Context, in *FundTransactionRequest, opts ...grpc.CallOption) (*FundTransactionResponse, error)
+	SignTransaction(ctx context.Context, in *SignTransactionRequest, opts ...grpc.CallOption) (*SignTransactionResponse, error)
+	PublishTransaction(ctx context.Context, in *PublishTransactionRequest, opts ...grpc.CallOption) (*PublishTransactionResponse, error)
 }
 
 type walletServiceClient struct {
@@ -1637,7 +1636,7 @@ func NewWalletServiceClient(cc *grpc.ClientConn) WalletServiceClient {
 	return &walletServiceClient{cc}
 }
 
-func (c *walletServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, er.R) {
+func (c *walletServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/Ping", in, out, c.cc, opts...)
 	if err != nil {
@@ -1646,7 +1645,7 @@ func (c *walletServiceClient) Ping(ctx context.Context, in *PingRequest, opts ..
 	return out, nil
 }
 
-func (c *walletServiceClient) Network(ctx context.Context, in *NetworkRequest, opts ...grpc.CallOption) (*NetworkResponse, er.R) {
+func (c *walletServiceClient) Network(ctx context.Context, in *NetworkRequest, opts ...grpc.CallOption) (*NetworkResponse, error) {
 	out := new(NetworkResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/Network", in, out, c.cc, opts...)
 	if err != nil {
@@ -1655,7 +1654,7 @@ func (c *walletServiceClient) Network(ctx context.Context, in *NetworkRequest, o
 	return out, nil
 }
 
-func (c *walletServiceClient) AccountNumber(ctx context.Context, in *AccountNumberRequest, opts ...grpc.CallOption) (*AccountNumberResponse, er.R) {
+func (c *walletServiceClient) AccountNumber(ctx context.Context, in *AccountNumberRequest, opts ...grpc.CallOption) (*AccountNumberResponse, error) {
 	out := new(AccountNumberResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/AccountNumber", in, out, c.cc, opts...)
 	if err != nil {
@@ -1664,7 +1663,7 @@ func (c *walletServiceClient) AccountNumber(ctx context.Context, in *AccountNumb
 	return out, nil
 }
 
-func (c *walletServiceClient) Accounts(ctx context.Context, in *AccountsRequest, opts ...grpc.CallOption) (*AccountsResponse, er.R) {
+func (c *walletServiceClient) Accounts(ctx context.Context, in *AccountsRequest, opts ...grpc.CallOption) (*AccountsResponse, error) {
 	out := new(AccountsResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/Accounts", in, out, c.cc, opts...)
 	if err != nil {
@@ -1673,7 +1672,7 @@ func (c *walletServiceClient) Accounts(ctx context.Context, in *AccountsRequest,
 	return out, nil
 }
 
-func (c *walletServiceClient) Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, er.R) {
+func (c *walletServiceClient) Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error) {
 	out := new(BalanceResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/Balance", in, out, c.cc, opts...)
 	if err != nil {
@@ -1682,7 +1681,7 @@ func (c *walletServiceClient) Balance(ctx context.Context, in *BalanceRequest, o
 	return out, nil
 }
 
-func (c *walletServiceClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, er.R) {
+func (c *walletServiceClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error) {
 	out := new(GetTransactionsResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/GetTransactions", in, out, c.cc, opts...)
 	if err != nil {
@@ -1691,7 +1690,7 @@ func (c *walletServiceClient) GetTransactions(ctx context.Context, in *GetTransa
 	return out, nil
 }
 
-func (c *walletServiceClient) TransactionNotifications(ctx context.Context, in *TransactionNotificationsRequest, opts ...grpc.CallOption) (WalletService_TransactionNotificationsClient, er.R) {
+func (c *walletServiceClient) TransactionNotifications(ctx context.Context, in *TransactionNotificationsRequest, opts ...grpc.CallOption) (WalletService_TransactionNotificationsClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_WalletService_serviceDesc.Streams[0], c.cc, "/walletrpc.WalletService/TransactionNotifications", opts...)
 	if err != nil {
 		return nil, err
@@ -1707,7 +1706,7 @@ func (c *walletServiceClient) TransactionNotifications(ctx context.Context, in *
 }
 
 type WalletService_TransactionNotificationsClient interface {
-	Recv() (*TransactionNotificationsResponse, er.R)
+	Recv() (*TransactionNotificationsResponse, error)
 	grpc.ClientStream
 }
 
@@ -1715,7 +1714,7 @@ type walletServiceTransactionNotificationsClient struct {
 	grpc.ClientStream
 }
 
-func (x *walletServiceTransactionNotificationsClient) Recv() (*TransactionNotificationsResponse, er.R) {
+func (x *walletServiceTransactionNotificationsClient) Recv() (*TransactionNotificationsResponse, error) {
 	m := new(TransactionNotificationsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -1723,7 +1722,7 @@ func (x *walletServiceTransactionNotificationsClient) Recv() (*TransactionNotifi
 	return m, nil
 }
 
-func (c *walletServiceClient) SpentnessNotifications(ctx context.Context, in *SpentnessNotificationsRequest, opts ...grpc.CallOption) (WalletService_SpentnessNotificationsClient, er.R) {
+func (c *walletServiceClient) SpentnessNotifications(ctx context.Context, in *SpentnessNotificationsRequest, opts ...grpc.CallOption) (WalletService_SpentnessNotificationsClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_WalletService_serviceDesc.Streams[1], c.cc, "/walletrpc.WalletService/SpentnessNotifications", opts...)
 	if err != nil {
 		return nil, err
@@ -1739,7 +1738,7 @@ func (c *walletServiceClient) SpentnessNotifications(ctx context.Context, in *Sp
 }
 
 type WalletService_SpentnessNotificationsClient interface {
-	Recv() (*SpentnessNotificationsResponse, er.R)
+	Recv() (*SpentnessNotificationsResponse, error)
 	grpc.ClientStream
 }
 
@@ -1747,7 +1746,7 @@ type walletServiceSpentnessNotificationsClient struct {
 	grpc.ClientStream
 }
 
-func (x *walletServiceSpentnessNotificationsClient) Recv() (*SpentnessNotificationsResponse, er.R) {
+func (x *walletServiceSpentnessNotificationsClient) Recv() (*SpentnessNotificationsResponse, error) {
 	m := new(SpentnessNotificationsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -1755,7 +1754,7 @@ func (x *walletServiceSpentnessNotificationsClient) Recv() (*SpentnessNotificati
 	return m, nil
 }
 
-func (c *walletServiceClient) AccountNotifications(ctx context.Context, in *AccountNotificationsRequest, opts ...grpc.CallOption) (WalletService_AccountNotificationsClient, er.R) {
+func (c *walletServiceClient) AccountNotifications(ctx context.Context, in *AccountNotificationsRequest, opts ...grpc.CallOption) (WalletService_AccountNotificationsClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_WalletService_serviceDesc.Streams[2], c.cc, "/walletrpc.WalletService/AccountNotifications", opts...)
 	if err != nil {
 		return nil, err
@@ -1771,7 +1770,7 @@ func (c *walletServiceClient) AccountNotifications(ctx context.Context, in *Acco
 }
 
 type WalletService_AccountNotificationsClient interface {
-	Recv() (*AccountNotificationsResponse, er.R)
+	Recv() (*AccountNotificationsResponse, error)
 	grpc.ClientStream
 }
 
@@ -1779,7 +1778,7 @@ type walletServiceAccountNotificationsClient struct {
 	grpc.ClientStream
 }
 
-func (x *walletServiceAccountNotificationsClient) Recv() (*AccountNotificationsResponse, er.R) {
+func (x *walletServiceAccountNotificationsClient) Recv() (*AccountNotificationsResponse, error) {
 	m := new(AccountNotificationsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -1787,7 +1786,7 @@ func (x *walletServiceAccountNotificationsClient) Recv() (*AccountNotificationsR
 	return m, nil
 }
 
-func (c *walletServiceClient) ChangePassphrase(ctx context.Context, in *ChangePassphraseRequest, opts ...grpc.CallOption) (*ChangePassphraseResponse, er.R) {
+func (c *walletServiceClient) ChangePassphrase(ctx context.Context, in *ChangePassphraseRequest, opts ...grpc.CallOption) (*ChangePassphraseResponse, error) {
 	out := new(ChangePassphraseResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/ChangePassphrase", in, out, c.cc, opts...)
 	if err != nil {
@@ -1796,7 +1795,7 @@ func (c *walletServiceClient) ChangePassphrase(ctx context.Context, in *ChangePa
 	return out, nil
 }
 
-func (c *walletServiceClient) RenameAccount(ctx context.Context, in *RenameAccountRequest, opts ...grpc.CallOption) (*RenameAccountResponse, er.R) {
+func (c *walletServiceClient) RenameAccount(ctx context.Context, in *RenameAccountRequest, opts ...grpc.CallOption) (*RenameAccountResponse, error) {
 	out := new(RenameAccountResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/RenameAccount", in, out, c.cc, opts...)
 	if err != nil {
@@ -1805,7 +1804,7 @@ func (c *walletServiceClient) RenameAccount(ctx context.Context, in *RenameAccou
 	return out, nil
 }
 
-func (c *walletServiceClient) NextAccount(ctx context.Context, in *NextAccountRequest, opts ...grpc.CallOption) (*NextAccountResponse, er.R) {
+func (c *walletServiceClient) NextAccount(ctx context.Context, in *NextAccountRequest, opts ...grpc.CallOption) (*NextAccountResponse, error) {
 	out := new(NextAccountResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/NextAccount", in, out, c.cc, opts...)
 	if err != nil {
@@ -1814,7 +1813,7 @@ func (c *walletServiceClient) NextAccount(ctx context.Context, in *NextAccountRe
 	return out, nil
 }
 
-func (c *walletServiceClient) NextAddress(ctx context.Context, in *NextAddressRequest, opts ...grpc.CallOption) (*NextAddressResponse, er.R) {
+func (c *walletServiceClient) NextAddress(ctx context.Context, in *NextAddressRequest, opts ...grpc.CallOption) (*NextAddressResponse, error) {
 	out := new(NextAddressResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/NextAddress", in, out, c.cc, opts...)
 	if err != nil {
@@ -1823,7 +1822,7 @@ func (c *walletServiceClient) NextAddress(ctx context.Context, in *NextAddressRe
 	return out, nil
 }
 
-func (c *walletServiceClient) ImportPrivateKey(ctx context.Context, in *ImportPrivateKeyRequest, opts ...grpc.CallOption) (*ImportPrivateKeyResponse, er.R) {
+func (c *walletServiceClient) ImportPrivateKey(ctx context.Context, in *ImportPrivateKeyRequest, opts ...grpc.CallOption) (*ImportPrivateKeyResponse, error) {
 	out := new(ImportPrivateKeyResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/ImportPrivateKey", in, out, c.cc, opts...)
 	if err != nil {
@@ -1832,7 +1831,7 @@ func (c *walletServiceClient) ImportPrivateKey(ctx context.Context, in *ImportPr
 	return out, nil
 }
 
-func (c *walletServiceClient) FundTransaction(ctx context.Context, in *FundTransactionRequest, opts ...grpc.CallOption) (*FundTransactionResponse, er.R) {
+func (c *walletServiceClient) FundTransaction(ctx context.Context, in *FundTransactionRequest, opts ...grpc.CallOption) (*FundTransactionResponse, error) {
 	out := new(FundTransactionResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/FundTransaction", in, out, c.cc, opts...)
 	if err != nil {
@@ -1841,7 +1840,7 @@ func (c *walletServiceClient) FundTransaction(ctx context.Context, in *FundTrans
 	return out, nil
 }
 
-func (c *walletServiceClient) SignTransaction(ctx context.Context, in *SignTransactionRequest, opts ...grpc.CallOption) (*SignTransactionResponse, er.R) {
+func (c *walletServiceClient) SignTransaction(ctx context.Context, in *SignTransactionRequest, opts ...grpc.CallOption) (*SignTransactionResponse, error) {
 	out := new(SignTransactionResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/SignTransaction", in, out, c.cc, opts...)
 	if err != nil {
@@ -1850,7 +1849,7 @@ func (c *walletServiceClient) SignTransaction(ctx context.Context, in *SignTrans
 	return out, nil
 }
 
-func (c *walletServiceClient) PublishTransaction(ctx context.Context, in *PublishTransactionRequest, opts ...grpc.CallOption) (*PublishTransactionResponse, er.R) {
+func (c *walletServiceClient) PublishTransaction(ctx context.Context, in *PublishTransactionRequest, opts ...grpc.CallOption) (*PublishTransactionResponse, error) {
 	out := new(PublishTransactionResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/PublishTransaction", in, out, c.cc, opts...)
 	if err != nil {
@@ -1863,32 +1862,32 @@ func (c *walletServiceClient) PublishTransaction(ctx context.Context, in *Publis
 
 type WalletServiceServer interface {
 	// Queries
-	Ping(context.Context, *PingRequest) (*PingResponse, er.R)
-	Network(context.Context, *NetworkRequest) (*NetworkResponse, er.R)
-	AccountNumber(context.Context, *AccountNumberRequest) (*AccountNumberResponse, er.R)
-	Accounts(context.Context, *AccountsRequest) (*AccountsResponse, er.R)
-	Balance(context.Context, *BalanceRequest) (*BalanceResponse, er.R)
-	GetTransactions(context.Context, *GetTransactionsRequest) (*GetTransactionsResponse, er.R)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	Network(context.Context, *NetworkRequest) (*NetworkResponse, error)
+	AccountNumber(context.Context, *AccountNumberRequest) (*AccountNumberResponse, error)
+	Accounts(context.Context, *AccountsRequest) (*AccountsResponse, error)
+	Balance(context.Context, *BalanceRequest) (*BalanceResponse, error)
+	GetTransactions(context.Context, *GetTransactionsRequest) (*GetTransactionsResponse, error)
 	// Notifications
-	TransactionNotifications(*TransactionNotificationsRequest, WalletService_TransactionNotificationsServer) er.R
-	SpentnessNotifications(*SpentnessNotificationsRequest, WalletService_SpentnessNotificationsServer) er.R
-	AccountNotifications(*AccountNotificationsRequest, WalletService_AccountNotificationsServer) er.R
+	TransactionNotifications(*TransactionNotificationsRequest, WalletService_TransactionNotificationsServer) error
+	SpentnessNotifications(*SpentnessNotificationsRequest, WalletService_SpentnessNotificationsServer) error
+	AccountNotifications(*AccountNotificationsRequest, WalletService_AccountNotificationsServer) error
 	// Control
-	ChangePassphrase(context.Context, *ChangePassphraseRequest) (*ChangePassphraseResponse, er.R)
-	RenameAccount(context.Context, *RenameAccountRequest) (*RenameAccountResponse, er.R)
-	NextAccount(context.Context, *NextAccountRequest) (*NextAccountResponse, er.R)
-	NextAddress(context.Context, *NextAddressRequest) (*NextAddressResponse, er.R)
-	ImportPrivateKey(context.Context, *ImportPrivateKeyRequest) (*ImportPrivateKeyResponse, er.R)
-	FundTransaction(context.Context, *FundTransactionRequest) (*FundTransactionResponse, er.R)
-	SignTransaction(context.Context, *SignTransactionRequest) (*SignTransactionResponse, er.R)
-	PublishTransaction(context.Context, *PublishTransactionRequest) (*PublishTransactionResponse, er.R)
+	ChangePassphrase(context.Context, *ChangePassphraseRequest) (*ChangePassphraseResponse, error)
+	RenameAccount(context.Context, *RenameAccountRequest) (*RenameAccountResponse, error)
+	NextAccount(context.Context, *NextAccountRequest) (*NextAccountResponse, error)
+	NextAddress(context.Context, *NextAddressRequest) (*NextAddressResponse, error)
+	ImportPrivateKey(context.Context, *ImportPrivateKeyRequest) (*ImportPrivateKeyResponse, error)
+	FundTransaction(context.Context, *FundTransactionRequest) (*FundTransactionResponse, error)
+	SignTransaction(context.Context, *SignTransactionRequest) (*SignTransactionResponse, error)
+	PublishTransaction(context.Context, *PublishTransactionRequest) (*PublishTransactionResponse, error)
 }
 
 func RegisterWalletServiceServer(s *grpc.Server, srv WalletServiceServer) {
 	s.RegisterService(&_WalletService_serviceDesc, srv)
 }
 
-func _WalletService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1900,13 +1899,13 @@ func _WalletService_Ping_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/Ping",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_Network_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_Network_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NetworkRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1918,13 +1917,13 @@ func _WalletService_Network_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/Network",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).Network(ctx, req.(*NetworkRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_AccountNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_AccountNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AccountNumberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1936,13 +1935,13 @@ func _WalletService_AccountNumber_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/AccountNumber",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).AccountNumber(ctx, req.(*AccountNumberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_Accounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_Accounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AccountsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1954,13 +1953,13 @@ func _WalletService_Accounts_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/Accounts",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).Accounts(ctx, req.(*AccountsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1972,13 +1971,13 @@ func _WalletService_Balance_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/Balance",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).Balance(ctx, req.(*BalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1990,13 +1989,13 @@ func _WalletService_GetTransactions_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/GetTransactions",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).GetTransactions(ctx, req.(*GetTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_TransactionNotifications_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _WalletService_TransactionNotifications_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(TransactionNotificationsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2005,7 +2004,7 @@ func _WalletService_TransactionNotifications_Handler(srv interface{}, stream grp
 }
 
 type WalletService_TransactionNotificationsServer interface {
-	Send(*TransactionNotificationsResponse) er.R
+	Send(*TransactionNotificationsResponse) error
 	grpc.ServerStream
 }
 
@@ -2013,11 +2012,11 @@ type walletServiceTransactionNotificationsServer struct {
 	grpc.ServerStream
 }
 
-func (x *walletServiceTransactionNotificationsServer) Send(m *TransactionNotificationsResponse) er.R {
+func (x *walletServiceTransactionNotificationsServer) Send(m *TransactionNotificationsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _WalletService_SpentnessNotifications_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _WalletService_SpentnessNotifications_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(SpentnessNotificationsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2026,7 +2025,7 @@ func _WalletService_SpentnessNotifications_Handler(srv interface{}, stream grpc.
 }
 
 type WalletService_SpentnessNotificationsServer interface {
-	Send(*SpentnessNotificationsResponse) er.R
+	Send(*SpentnessNotificationsResponse) error
 	grpc.ServerStream
 }
 
@@ -2034,11 +2033,11 @@ type walletServiceSpentnessNotificationsServer struct {
 	grpc.ServerStream
 }
 
-func (x *walletServiceSpentnessNotificationsServer) Send(m *SpentnessNotificationsResponse) er.R {
+func (x *walletServiceSpentnessNotificationsServer) Send(m *SpentnessNotificationsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _WalletService_AccountNotifications_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _WalletService_AccountNotifications_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(AccountNotificationsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2047,7 +2046,7 @@ func _WalletService_AccountNotifications_Handler(srv interface{}, stream grpc.Se
 }
 
 type WalletService_AccountNotificationsServer interface {
-	Send(*AccountNotificationsResponse) er.R
+	Send(*AccountNotificationsResponse) error
 	grpc.ServerStream
 }
 
@@ -2055,11 +2054,11 @@ type walletServiceAccountNotificationsServer struct {
 	grpc.ServerStream
 }
 
-func (x *walletServiceAccountNotificationsServer) Send(m *AccountNotificationsResponse) er.R {
+func (x *walletServiceAccountNotificationsServer) Send(m *AccountNotificationsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _WalletService_ChangePassphrase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_ChangePassphrase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangePassphraseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2071,13 +2070,13 @@ func _WalletService_ChangePassphrase_Handler(srv interface{}, ctx context.Contex
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/ChangePassphrase",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).ChangePassphrase(ctx, req.(*ChangePassphraseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_RenameAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_RenameAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RenameAccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2089,13 +2088,13 @@ func _WalletService_RenameAccount_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/RenameAccount",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).RenameAccount(ctx, req.(*RenameAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_NextAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_NextAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NextAccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2107,13 +2106,13 @@ func _WalletService_NextAccount_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/NextAccount",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).NextAccount(ctx, req.(*NextAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_NextAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_NextAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NextAddressRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2125,13 +2124,13 @@ func _WalletService_NextAddress_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/NextAddress",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).NextAddress(ctx, req.(*NextAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_ImportPrivateKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_ImportPrivateKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ImportPrivateKeyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2143,13 +2142,13 @@ func _WalletService_ImportPrivateKey_Handler(srv interface{}, ctx context.Contex
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/ImportPrivateKey",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).ImportPrivateKey(ctx, req.(*ImportPrivateKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_FundTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_FundTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FundTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2161,13 +2160,13 @@ func _WalletService_FundTransaction_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/FundTransaction",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).FundTransaction(ctx, req.(*FundTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_SignTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_SignTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SignTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2179,13 +2178,13 @@ func _WalletService_SignTransaction_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/SignTransaction",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).SignTransaction(ctx, req.(*SignTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletService_PublishTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletService_PublishTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublishTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2197,7 +2196,7 @@ func _WalletService_PublishTransaction_Handler(srv interface{}, ctx context.Cont
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletService/PublishTransaction",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).PublishTransaction(ctx, req.(*PublishTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
@@ -2287,11 +2286,11 @@ var _WalletService_serviceDesc = grpc.ServiceDesc{
 // Client API for WalletLoaderService service
 
 type WalletLoaderServiceClient interface {
-	WalletExists(ctx context.Context, in *WalletExistsRequest, opts ...grpc.CallOption) (*WalletExistsResponse, er.R)
-	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, er.R)
-	OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, er.R)
-	CloseWallet(ctx context.Context, in *CloseWalletRequest, opts ...grpc.CallOption) (*CloseWalletResponse, er.R)
-	StartConsensusRpc(ctx context.Context, in *StartConsensusRpcRequest, opts ...grpc.CallOption) (*StartConsensusRpcResponse, er.R)
+	WalletExists(ctx context.Context, in *WalletExistsRequest, opts ...grpc.CallOption) (*WalletExistsResponse, error)
+	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error)
+	OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, error)
+	CloseWallet(ctx context.Context, in *CloseWalletRequest, opts ...grpc.CallOption) (*CloseWalletResponse, error)
+	StartConsensusRpc(ctx context.Context, in *StartConsensusRpcRequest, opts ...grpc.CallOption) (*StartConsensusRpcResponse, error)
 }
 
 type walletLoaderServiceClient struct {
@@ -2302,7 +2301,7 @@ func NewWalletLoaderServiceClient(cc *grpc.ClientConn) WalletLoaderServiceClient
 	return &walletLoaderServiceClient{cc}
 }
 
-func (c *walletLoaderServiceClient) WalletExists(ctx context.Context, in *WalletExistsRequest, opts ...grpc.CallOption) (*WalletExistsResponse, er.R) {
+func (c *walletLoaderServiceClient) WalletExists(ctx context.Context, in *WalletExistsRequest, opts ...grpc.CallOption) (*WalletExistsResponse, error) {
 	out := new(WalletExistsResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletLoaderService/WalletExists", in, out, c.cc, opts...)
 	if err != nil {
@@ -2311,7 +2310,7 @@ func (c *walletLoaderServiceClient) WalletExists(ctx context.Context, in *Wallet
 	return out, nil
 }
 
-func (c *walletLoaderServiceClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, er.R) {
+func (c *walletLoaderServiceClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error) {
 	out := new(CreateWalletResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletLoaderService/CreateWallet", in, out, c.cc, opts...)
 	if err != nil {
@@ -2320,7 +2319,7 @@ func (c *walletLoaderServiceClient) CreateWallet(ctx context.Context, in *Create
 	return out, nil
 }
 
-func (c *walletLoaderServiceClient) OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, er.R) {
+func (c *walletLoaderServiceClient) OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, error) {
 	out := new(OpenWalletResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletLoaderService/OpenWallet", in, out, c.cc, opts...)
 	if err != nil {
@@ -2329,7 +2328,7 @@ func (c *walletLoaderServiceClient) OpenWallet(ctx context.Context, in *OpenWall
 	return out, nil
 }
 
-func (c *walletLoaderServiceClient) CloseWallet(ctx context.Context, in *CloseWalletRequest, opts ...grpc.CallOption) (*CloseWalletResponse, er.R) {
+func (c *walletLoaderServiceClient) CloseWallet(ctx context.Context, in *CloseWalletRequest, opts ...grpc.CallOption) (*CloseWalletResponse, error) {
 	out := new(CloseWalletResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletLoaderService/CloseWallet", in, out, c.cc, opts...)
 	if err != nil {
@@ -2338,7 +2337,7 @@ func (c *walletLoaderServiceClient) CloseWallet(ctx context.Context, in *CloseWa
 	return out, nil
 }
 
-func (c *walletLoaderServiceClient) StartConsensusRpc(ctx context.Context, in *StartConsensusRpcRequest, opts ...grpc.CallOption) (*StartConsensusRpcResponse, er.R) {
+func (c *walletLoaderServiceClient) StartConsensusRpc(ctx context.Context, in *StartConsensusRpcRequest, opts ...grpc.CallOption) (*StartConsensusRpcResponse, error) {
 	out := new(StartConsensusRpcResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletLoaderService/StartConsensusRpc", in, out, c.cc, opts...)
 	if err != nil {
@@ -2350,18 +2349,18 @@ func (c *walletLoaderServiceClient) StartConsensusRpc(ctx context.Context, in *S
 // Server API for WalletLoaderService service
 
 type WalletLoaderServiceServer interface {
-	WalletExists(context.Context, *WalletExistsRequest) (*WalletExistsResponse, er.R)
-	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, er.R)
-	OpenWallet(context.Context, *OpenWalletRequest) (*OpenWalletResponse, er.R)
-	CloseWallet(context.Context, *CloseWalletRequest) (*CloseWalletResponse, er.R)
-	StartConsensusRpc(context.Context, *StartConsensusRpcRequest) (*StartConsensusRpcResponse, er.R)
+	WalletExists(context.Context, *WalletExistsRequest) (*WalletExistsResponse, error)
+	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error)
+	OpenWallet(context.Context, *OpenWalletRequest) (*OpenWalletResponse, error)
+	CloseWallet(context.Context, *CloseWalletRequest) (*CloseWalletResponse, error)
+	StartConsensusRpc(context.Context, *StartConsensusRpcRequest) (*StartConsensusRpcResponse, error)
 }
 
 func RegisterWalletLoaderServiceServer(s *grpc.Server, srv WalletLoaderServiceServer) {
 	s.RegisterService(&_WalletLoaderService_serviceDesc, srv)
 }
 
-func _WalletLoaderService_WalletExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletLoaderService_WalletExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WalletExistsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2373,13 +2372,13 @@ func _WalletLoaderService_WalletExists_Handler(srv interface{}, ctx context.Cont
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletLoaderService/WalletExists",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletLoaderServiceServer).WalletExists(ctx, req.(*WalletExistsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletLoaderService_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletLoaderService_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateWalletRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2391,13 +2390,13 @@ func _WalletLoaderService_CreateWallet_Handler(srv interface{}, ctx context.Cont
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletLoaderService/CreateWallet",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletLoaderServiceServer).CreateWallet(ctx, req.(*CreateWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletLoaderService_OpenWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletLoaderService_OpenWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OpenWalletRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2409,13 +2408,13 @@ func _WalletLoaderService_OpenWallet_Handler(srv interface{}, ctx context.Contex
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletLoaderService/OpenWallet",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletLoaderServiceServer).OpenWallet(ctx, req.(*OpenWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletLoaderService_CloseWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletLoaderService_CloseWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CloseWalletRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2427,13 +2426,13 @@ func _WalletLoaderService_CloseWallet_Handler(srv interface{}, ctx context.Conte
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletLoaderService/CloseWallet",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletLoaderServiceServer).CloseWallet(ctx, req.(*CloseWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletLoaderService_StartConsensusRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) er.R, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletLoaderService_StartConsensusRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartConsensusRpcRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2445,7 +2444,7 @@ func _WalletLoaderService_StartConsensusRpc_Handler(srv interface{}, ctx context
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletLoaderService/StartConsensusRpc",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletLoaderServiceServer).StartConsensusRpc(ctx, req.(*StartConsensusRpcRequest))
 	}
 	return interceptor(ctx, in, info, handler)
