@@ -5,16 +5,17 @@
 package bdb
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/coreos/bbolt"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // convertErr converts some bolt errors to the equivalent walletdb error.
-func convertErr(err er.R) er.R {
+func convertErr0(err error) *er.ErrorCode {
 	switch err {
 	// Database open/create errors.
 	case bbolt.ErrDatabaseNotOpen:
@@ -45,8 +46,16 @@ func convertErr(err er.R) er.R {
 		return walletdb.ErrIncompatibleValue
 	}
 
-	// Return the original error if none of the above applies.
-	return err
+	return nil
+}
+
+// convertErr converts some bolt errors to the equivalent walletdb error.
+func convertErr(errr error) er.R {
+	x := convertErr0(errr)
+	if x != nil {
+		return x.New(errr.Error(), nil)
+	}
+	return er.E(errr)
 }
 
 // transaction represents a database transaction.  It can either by read-only or
@@ -178,7 +187,9 @@ func (b *bucket) DeleteNestedBucket(key []byte) er.R {
 //
 // This function is part of the walletdb.ReadBucket interface implementation.
 func (b *bucket) ForEach(fn func(k, v []byte) er.R) er.R {
-	return convertErr((*bbolt.Bucket)(b).ForEach(fn))
+	return convertErr((*bbolt.Bucket)(b).ForEach(func(k, v []byte) error {
+		return er.Native(fn(k, v))
+	}))
 }
 
 // Put saves the specified key/value pair to the bucket.  Keys that do not
@@ -316,7 +327,7 @@ func (db *db) BeginReadWriteTx() (walletdb.ReadWriteTx, er.R) {
 //
 // This function is part of the walletdb.Db interface implementation.
 func (db *db) Copy(w io.Writer) er.R {
-	return convertErr((*bbolt.DB)(db).View(func(tx *bbolt.Tx) er.R {
+	return convertErr((*bbolt.DB)(db).View(func(tx *bbolt.Tx) error {
 		return tx.Copy(w)
 	}))
 }
@@ -342,7 +353,7 @@ func fileExists(name string) bool {
 // is returned if the database doesn't exist and the create flag is not set.
 func openDB(dbPath string, create bool) (walletdb.DB, er.R) {
 	if !create && !fileExists(dbPath) {
-		return nil, walletdb.ErrDbDoesNotExist
+		return nil, walletdb.ErrDbDoesNotExist.Default()
 	}
 
 	boltDB, err := bbolt.Open(dbPath, 0600, nil)

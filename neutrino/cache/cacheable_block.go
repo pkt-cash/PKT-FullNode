@@ -1,6 +1,9 @@
 package cache
 
-import "github.com/pkt-cash/pktd/btcutil"
+import (
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // CacheableBlock is a wrapper around the btcutil.Block type which provides a
 // Size method used by the cache to target certain memory usage.

@@ -2,7 +2,6 @@ package chain
 
 import (
 	"container/list"
-	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ConcurrentQueue is a concurrent-safe FIFO queue with unbounded capacity.

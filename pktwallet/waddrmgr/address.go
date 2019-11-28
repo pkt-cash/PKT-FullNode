@@ -7,11 +7,11 @@ package waddrmgr
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -160,7 +160,7 @@ func (a *managedAddress) unlock(key EncryptorDecryptor) ([]byte, er.R) {
 		if err != nil {
 			str := fmt.Sprintf("failed to decrypt private key for "+
 				"%s", a.address)
-			return nil, managerError(ErrCrypto, str, err)
+			return nil, ErrCrypto.New(str, err)
 		}
 
 		a.privKeyCT = privKey
@@ -285,7 +285,7 @@ func (a *managedAddress) ExportPubKey() string {
 func (a *managedAddress) PrivKey() (*btcec.PrivateKey, er.R) {
 	// No private keys are available for a watching-only address manager.
 	if a.manager.rootManager.WatchOnly() {
-		return nil, managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return nil, ErrWatchingOnly.Default()
 	}
 
 	a.manager.mtx.Lock()
@@ -293,7 +293,7 @@ func (a *managedAddress) PrivKey() (*btcec.PrivateKey, er.R) {
 
 	// Account manager must be unlocked to decrypt the private key.
 	if a.manager.rootManager.IsLocked() {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Decrypt the key as needed.  Also, make sure it's a copy since the
@@ -448,8 +448,7 @@ func newManagedAddress(s *ScopedKeyManager, derivationPath DerivationPath,
 	privKeyBytes := privKey.Serialize()
 	privKeyEncrypted, err := s.rootManager.cryptoKeyPriv.Encrypt(privKeyBytes)
 	if err != nil {
-		str := "failed to encrypt private key"
-		return nil, managerError(ErrCrypto, str, err)
+		return nil, ErrCrypto.New("failed to encrypt private key", err)
 	}
 
 	// Leverage the code to create a managed address without a private key
@@ -540,7 +539,7 @@ func (a *scriptAddress) unlock(key EncryptorDecryptor) ([]byte, er.R) {
 		if err != nil {
 			str := fmt.Sprintf("failed to decrypt script for %s",
 				a.Address())
-			return nil, managerError(ErrCrypto, str, err)
+			return nil, ErrCrypto.New(str, err)
 		}
 
 		a.scriptCT = script
@@ -633,7 +632,7 @@ func (a *scriptAddress) Used(ns walletdb.ReadBucket) bool {
 func (a *scriptAddress) Script() ([]byte, er.R) {
 	// No script is available for a watching-only address manager.
 	if a.manager.rootManager.WatchOnly() {
-		return nil, managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return nil, ErrWatchingOnly.Default()
 	}
 
 	a.manager.mtx.Lock()
@@ -641,7 +640,7 @@ func (a *scriptAddress) Script() ([]byte, er.R) {
 
 	// Account manager must be unlocked to decrypt the script.
 	if a.manager.rootManager.IsLocked() {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Decrypt the script as needed.  Also, make sure it's a copy since the

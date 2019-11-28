@@ -5,81 +5,51 @@
 package legacyrpc
 
 import (
-	"errors"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
-// TODO(jrick): There are several error paths which 'replace' various errors
-// with a more appropiate error from the btcjson package.  Create a map of
-// these replacements so they can be handled once after an RPC handler has
-// returned and before the error is marshaled.
+func errNeedPositiveMinconf() er.R {
+	return btcjson.ErrRPCInvalidParameter.New("minconf must be positive", nil)
+}
 
-// Error types to simplify the reporting of specific categories of
-// errors, and their *btcjson.RPCError creation.
-type (
-	// DeserializationError describes a failed deserializaion due to bad
-	// user input.  It corresponds to btcjson.ErrRPCDeserialization.
-	DeserializationError struct {
-		er.R
-	}
+func errNeedPositiveAmount() er.R {
+	return btcjson.ErrRPCInvalidParameter.New("amount must be positive", nil)
+}
 
-	// InvalidParameterError describes an invalid parameter passed by
-	// the user.  It corresponds to btcjson.ErrRPCInvalidParameter.
-	InvalidParameterError struct {
-		er.R
-	}
+// DeserializationError describes a failed deserializaion due to bad
+// user input.  It corresponds to btcjson.ErrRPCDeserialization.
+func errDeserialization(msg string, err er.R) er.R {
+	return btcjson.ErrRPCDeserialization.New(msg, err)
+}
 
-	// ParseError describes a failed parse due to bad user input.  It
-	// corresponds to btcjson.ErrRPCParse.
-	ParseError struct {
-		er.R
-	}
-)
+// ParseError describes a failed parse due to bad user input.  It
+// corresponds to btcjson.ErrRPCParse.
+func errParse(msg string, err er.R) er.R {
+	return btcjson.ErrRPCParse.New(msg, err)
+}
 
-// Errors variables that are defined once here to avoid duplication below.
-var (
-	ErrNeedPositiveAmount = InvalidParameterError{
-		er.New("amount must be positive"),
-	}
+// These are a few thin wrappers around RPC errors, they're defined here so that the
+// message text will be reliable because we *know* that people are going to start depending
+// on them.
 
-	ErrNeedPositiveMinconf = InvalidParameterError{
-		er.New("minconf must be positive"),
-	}
+func errAddressNotInWallet() er.R {
+	return btcjson.ErrRPCWallet.New("address not found in wallet", nil)
+}
 
-	ErrAddressNotInWallet = btcjson.RPCError{
-		Code:    btcjson.ErrRPCWallet,
-		Message: "address not found in wallet",
-	}
+func errAccountNameNotFound() er.R {
+	return btcjson.ErrRPCWalletInvalidAccountName.New("account name not found", nil)
+}
 
-	ErrAccountNameNotFound = btcjson.RPCError{
-		Code:    btcjson.ErrRPCWalletInvalidAccountName,
-		Message: "account name not found",
-	}
+func errNotImportedAccount() er.R {
+	return btcjson.ErrRPCWallet.New("imported addresses must belong to the imported account", nil)
+}
 
-	ErrUnloadedWallet = btcjson.RPCError{
-		Code:    btcjson.ErrRPCWallet,
-		Message: "Request requires a wallet but wallet has not loaded yet",
-	}
+func errReservedAccountName() er.R {
+	return btcjson.ErrRPCInvalidParameter.New("Account name is reserved by RPC server", nil)
+}
 
-	ErrWalletUnlockNeeded = btcjson.RPCError{
-		Code:    btcjson.ErrRPCWalletUnlockNeeded,
-		Message: "Enter the wallet passphrase with walletpassphrase first",
-	}
-
-	ErrNotImportedAccount = btcjson.RPCError{
-		Code:    btcjson.ErrRPCWallet,
-		Message: "imported addresses must belong to the imported account",
-	}
-
-	ErrNoTransactionInfo = btcjson.RPCError{
-		Code:    btcjson.ErrRPCNoTxInfo,
-		Message: "No information for transaction",
-	}
-
-	ErrReservedAccountName = btcjson.RPCError{
-		Code:    btcjson.ErrRPCInvalidParameter,
-		Message: "Account name is reserved by RPC server",
-	}
-)
+func errCommentsUnsupported() er.R {
+	return btcjson.ErrRPCUnimplemented.New("Transaction comments are not yet supported", nil)
+}

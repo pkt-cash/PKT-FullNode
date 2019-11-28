@@ -2,106 +2,63 @@ package pushtx
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/wire"
 )
 
 // BroadcastErrorCode uniquely identifies the broadcast error.
-type BroadcastErrorCode uint8
+// type BroadcastErrorCode uint8
 
-const (
-	// Unknown is the code used when a transaction has been rejected by some
+var Err er.ErrorType = er.NewErrorType("pushtx.Err")
+
+var (
+	// RejUnknown is the code used when a transaction has been rejected by some
 	// unknown reason by a peer.
-	Unknown BroadcastErrorCode = iota
+	RejUnknown = Err.Code("RejUnknown")
 
-	// Invalid is the code used when a transaction has been deemed invalid
+	// RejInvalid is the code used when a transaction has been deemed invalid
 	// by a peer.
-	Invalid
+	RejInvalid = Err.Code("RejInvalid")
 
-	// InsufficientFee is the code used when a transaction has been deemed
+	// RejInsufficientFee is the code used when a transaction has been deemed
 	// as having an insufficient fee by a peer.
-	InsufficientFee
+	RejInsufficientFee = Err.Code("RejInsufficientFee")
 
-	// Mempool is the code used when a transaction already exists in a
+	// RejMempool is the code used when a transaction already exists in a
 	// peer's mempool.
-	Mempool
+	RejMempool = Err.Code("RejMempool")
 
-	// Confirmed is the code used when a transaction has been deemed as
-	// confirmed in the chain by a peer.
-	Confirmed
+	// RejConfirmed is the code used when a transaction has been deemed as
+	// already existing in the chain by a peer.
+	RejConfirmed = Err.Code("RejConfirmed")
 )
-
-func (c BroadcastErrorCode) String() string {
-	switch c {
-	case Invalid:
-		return "Invalid"
-	case InsufficientFee:
-		return "InsufficientFee"
-	case Mempool:
-		return "Mempool"
-	case Confirmed:
-		return "Confirmed"
-	default:
-		return "Unknown"
-	}
-}
-
-// BroadcastError is an error type that encompasses the different possible
-// broadcast errors returned by the network.
-type BroadcastError struct {
-	// Code is the uniquely identifying code of the broadcast error.
-	Code BroadcastErrorCode
-
-	// Reason is the string detailing the reason as to why the transaction
-	// was rejected.
-	Reason string
-}
-
-// A compile-time constraint to ensure BroadcastError satisfies the error
-// interface.
-var _ er.R = (*BroadcastError)(nil)
-
-// Error returns the reason of the broadcast error.
-func (e *BroadcastError) Error() string {
-	return e.Reason
-}
-
-// IsBroadcastError is a helper function that can be used to determine whether
-// an error is a BroadcastError that matches any of the specified codes.
-func IsBroadcastError(err er.R, codes ...BroadcastErrorCode) bool {
-	broadcastErr, ok := err.(*BroadcastError)
-	if !ok {
-		return false
-	}
-
-	for _, code := range codes {
-		if broadcastErr.Code == code {
-			return true
-		}
-	}
-
-	return false
-}
 
 // ParseBroadcastError maps a peer's reject message for a transaction to a
 // BroadcastError.
-func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) *BroadcastError {
+// TODO(cjd): We're parsing reject messages here which is a bad idea.
+//            The text is not guaranteed to be relevant and bitcoind has
+//            already gotten rid of the reject message because nodes cannot
+//            be trusted to send a reject honestly. Furthermore we are parsing
+//            text of the messages because the error codes are not clear enough
+//            alone.
+func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) er.R {
 	// We'll determine the appropriate broadcast error code by looking at
 	// the reject's message code and reason. The only reject codes returned
 	// from peers (bitcoind and btcd) when attempting to accept a
 	// transaction into their mempool are:
 	//   RejectInvalid, RejectNonstandard, RejectInsufficientFee,
 	//   RejectDuplicate
-	var code BroadcastErrorCode
+	var code *er.ErrorCode
 	switch {
 	// The cases below apply for reject messages sent from any kind of peer.
 	case msg.Code == wire.RejectInvalid || msg.Code == wire.RejectNonstandard:
-		code = Invalid
+		code = RejInvalid
 
 	case msg.Code == wire.RejectInsufficientFee:
-		code = InsufficientFee
+		code = RejInsufficientFee
 
 	// The cases below apply for reject messages sent from bitcoind peers.
 	//
@@ -109,19 +66,19 @@ func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) *BroadcastError {
 	// peer's mempool, then we'll deem it as invalid.
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "txn-mempool-conflict"):
-		code = Invalid
+		code = RejInvalid
 
 	// If the transaction was rejected due to it already existing in the
 	// peer's mempool, then return an error signaling so.
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "txn-already-in-mempool"):
-		code = Mempool
+		code = RejMempool
 
 	// If the transaction was rejected due to it already existing in the
 	// chain according to our peer, then we'll return an error signaling so.
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "txn-already-known"):
-		code = Confirmed
+		code = RejConfirmed
 
 	// The cases below apply for reject messages sent from btcd peers.
 	//
@@ -129,25 +86,19 @@ func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) *BroadcastError {
 	// peer's mempool, then we'll deem it as invalid.
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "already spent"):
-		code = Invalid
-
-	// If the transaction was rejected due to it already existing in the
-	// peer's mempool, then return an error signaling so.
-	case msg.Code == wire.RejectDuplicate &&
-		strings.Contains(msg.Reason, "already have transaction"):
-		code = Mempool
+		code = RejInvalid
 
 	// If the transaction was rejected due to it already existing in the
 	// chain according to our peer, then we'll return an error signaling so.
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "transaction already exists"):
-		code = Confirmed
+		code = RejConfirmed
 
 	// Any other reject messages will use the unknown code.
 	default:
-		code = Unknown
+		code = RejUnknown
 	}
 
 	reason := fmt.Sprintf("rejected by %v: %v", peerAddr, msg.Reason)
-	return &BroadcastError{Code: code, Reason: reason}
+	return code.New(reason, nil)
 }

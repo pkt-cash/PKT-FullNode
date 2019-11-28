@@ -2,10 +2,11 @@ package neutrino
 
 import (
 	"container/heap"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -71,10 +72,10 @@ func (r *GetUtxoRequest) Result(cancel <-chan struct{}) (*SpendReport, er.R) {
 		return r.result.report, r.result.err
 
 	case <-cancel:
-		return nil, ErrGetUtxoCancelled
+		return nil, ErrGetUtxoCancelled.Default()
 
 	case <-r.quit:
-		return nil, ErrShuttingDown
+		return nil, ErrShuttingDown.Default()
 	}
 }
 
@@ -162,7 +163,7 @@ batchShutdown:
 	// batchManager's main goroutine.
 	for !s.pq.IsEmpty() {
 		pendingReq := heap.Pop(&s.pq).(*GetUtxoRequest)
-		pendingReq.deliver(nil, ErrShuttingDown)
+		pendingReq.deliver(nil, ErrShuttingDown.Default())
 	}
 
 	return nil
@@ -186,7 +187,7 @@ func (s *UtxoScanner) Enqueue(input *InputWithScript,
 	select {
 	case <-s.quit:
 		s.cv.L.Unlock()
-		return nil, ErrShuttingDown
+		return nil, ErrShuttingDown.Default()
 	default:
 	}
 
@@ -301,7 +302,7 @@ scanToEnd:
 		// utxoscanner has been signaled to exit.
 		select {
 		case <-s.quit:
-			return reporter.FailRemaining(ErrShuttingDown)
+			return reporter.FailRemaining(ErrShuttingDown.Default())
 		default:
 		}
 
@@ -343,7 +344,7 @@ scanToEnd:
 		// the rescan before performing an expensive operation.
 		select {
 		case <-s.quit:
-			return reporter.FailRemaining(ErrShuttingDown)
+			return reporter.FailRemaining(ErrShuttingDown.Default())
 		default:
 		}
 
@@ -357,7 +358,7 @@ scanToEnd:
 		// Check again to see if the utxoscanner has been signaled to exit.
 		select {
 		case <-s.quit:
-			return reporter.FailRemaining(ErrShuttingDown)
+			return reporter.FailRemaining(ErrShuttingDown.Default())
 		default:
 		}
 

@@ -1,17 +1,13 @@
 package chainsync
 
 import (
-	"fmt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
-
-// ErrCheckpointMismatch is returned if given filter headers don't pass our
-// control check.
-var ErrCheckpointMismatch = fmt.Errorf("checkpoint doesn't match")
 
 // filterHeaderCheckpoints holds a mapping from heights to filter headers for
 // various heights. We use them to check whether peers are serving us the
@@ -42,7 +38,7 @@ var filterHeaderCheckpoints = map[wire.BitcoinNet]map[uint32]*chainhash.Hash{
 }
 
 // ControlCFHeader controls the given filter header against our list of
-// checkpoints. It returns ErrCheckpointMismatch if we have a checkpoint at the
+// checkpoints. It returns ruleerror.ErrBadCheckpoint if we have a checkpoint at the
 // given height, and it doesn't match.
 func ControlCFHeader(params chaincfg.Params, fType wire.FilterType,
 	height uint32, filterHeader *chainhash.Hash) er.R {
@@ -62,7 +58,7 @@ func ControlCFHeader(params chaincfg.Params, fType wire.FilterType,
 	}
 
 	if *filterHeader != *hash {
-		return ErrCheckpointMismatch
+		return ruleerror.ErrBadCheckpoint.Default()
 	}
 
 	return nil

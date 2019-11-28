@@ -4,6 +4,8 @@
 
 package cfgutil
 
+import "github.com/pkt-cash/pktd/btcutil/er"
+
 // ExplicitString is a string value implementing the flags.Marshaler and
 // flags.Unmarshaler interfaces so it may be used as a config struct field.  It
 // records whether the value was explicitly set by the flags package.  This is

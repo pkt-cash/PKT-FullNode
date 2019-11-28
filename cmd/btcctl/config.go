@@ -6,13 +6,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -211,7 +212,7 @@ func loadConfig() (*config, []string, er.R) {
 				"indicates that a parameter should be read "+
 				"from the\nnext unread line from standard "+
 				"input.")
-			return nil, nil, err
+			return nil, nil, er.E(err)
 		}
 	}
 
@@ -254,7 +255,7 @@ func loadConfig() (*config, []string, er.R) {
 			fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n",
 				err)
 			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
+			return nil, nil, er.E(err)
 		}
 	}
 
@@ -264,7 +265,7 @@ func loadConfig() (*config, []string, er.R) {
 		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			fmt.Fprintln(os.Stderr, usageMessage)
 		}
-		return nil, nil, err
+		return nil, nil, er.E(err)
 	}
 
 	// Multiple networks can't be selected simultaneously.
@@ -280,7 +281,7 @@ func loadConfig() (*config, []string, er.R) {
 			"together -- choose one of the two"
 		err := fmt.Errorf(str, "loadConfig")
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
+		return nil, nil, er.E(err)
 	}
 
 	// Override the RPC certificate if the --wallet flag was specified and
@@ -307,18 +308,18 @@ func createDefaultConfigFile(destinationPath, serverConfigPath string) er.R {
 	// Read the RPC server config
 	serverConfigFile, err := os.Open(serverConfigPath)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	defer serverConfigFile.Close()
 	content, err := ioutil.ReadAll(serverConfigFile)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Extract the rpcuser
 	rpcUserRegexp, err := regexp.Compile(`(?m)^\s*rpcuser=([^\s]+)`)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	userSubmatches := rpcUserRegexp.FindSubmatch(content)
 	if userSubmatches == nil {
@@ -329,7 +330,7 @@ func createDefaultConfigFile(destinationPath, serverConfigPath string) er.R {
 	// Extract the rpcpass
 	rpcPassRegexp, err := regexp.Compile(`(?m)^\s*rpcpass=([^\s]+)`)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	passSubmatches := rpcPassRegexp.FindSubmatch(content)
 	if passSubmatches == nil {
@@ -340,21 +341,21 @@ func createDefaultConfigFile(destinationPath, serverConfigPath string) er.R {
 	// Extract the notls
 	noTLSRegexp, err := regexp.Compile(`(?m)^\s*notls=(0|1)(?:\s|$)`)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	noTLSSubmatches := noTLSRegexp.FindSubmatch(content)
 
 	// Create the destination directory if it does not exists
 	err = os.MkdirAll(filepath.Dir(destinationPath), 0700)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Create the destination file and write the rpcuser and rpcpass to it
 	dest, err := os.OpenFile(destinationPath,
 		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	defer dest.Close()
 

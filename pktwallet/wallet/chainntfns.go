@@ -6,9 +6,9 @@ package wallet
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -107,7 +107,7 @@ func (w *Wallet) handleChainNotifications() {
 				birthdayBlock, err := birthdaySanityCheck(
 					chainClient, birthdayStore,
 				)
-				if err != nil && !waddrmgr.IsError(err, waddrmgr.ErrBirthdayBlockNotSet) {
+				if err != nil && !waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
 					panic(er.Errorf("Unable to sanity "+
 						"check wallet birthday block: %v",
 						err))
@@ -177,7 +177,7 @@ func (w *Wallet) handleChainNotifications() {
 				// the error as we'll properly catch up once we
 				// process the RescanFinished notification.
 				if notificationName == "block connected" &&
-					waddrmgr.IsError(err, waddrmgr.ErrBlockNotFound) &&
+					waddrmgr.ErrBlockNotFound.Is(err) &&
 					!w.ChainSynced() {
 
 					log.Debugf("Received block connected "+
@@ -316,7 +316,7 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 
 			// Missing addresses are skipped.  Other errors should
 			// be propagated.
-			if !waddrmgr.IsError(err, waddrmgr.ErrAddressNotFound) {
+			if !waddrmgr.ErrAddressNotFound.Is(err) {
 				return err
 			}
 		}

@@ -7,7 +7,7 @@ package rpcclient
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -29,7 +29,7 @@ func (r FutureGenerateResult) Receive() ([]*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a list of strings.
 	var result []string
-	err = json.Unmarshal(res, &result)
+	err = er.E(json.Unmarshal(res, &result))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (r FutureGetGenerateResult) Receive() (bool, er.R) {
 
 	// Unmarshal result as a boolean.
 	var result bool
-	err = json.Unmarshal(res, &result)
+	err = er.E(json.Unmarshal(res, &result))
 	if err != nil {
 		return false, err
 	}
@@ -140,7 +140,7 @@ func (r FutureGetHashesPerSecResult) Receive() (int64, er.R) {
 
 	// Unmarshal result as an int64.
 	var result int64
-	err = json.Unmarshal(res, &result)
+	err = er.E(json.Unmarshal(res, &result))
 	if err != nil {
 		return 0, err
 	}
@@ -179,7 +179,7 @@ func (r FutureGetMiningInfoResult) Receive() (*btcjson.GetMiningInfoResult, er.R
 
 	// Unmarshal result as a getmininginfo result object.
 	var infoResult btcjson.GetMiningInfoResult
-	err = json.Unmarshal(res, &infoResult)
+	err = er.E(json.Unmarshal(res, &infoResult))
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (r FutureGetNetworkHashPS) Receive() (int64, er.R) {
 
 	// Unmarshal result as an int64.
 	var result int64
-	err = json.Unmarshal(res, &result)
+	err = er.E(json.Unmarshal(res, &result))
 	if err != nil {
 		return 0, err
 	}
@@ -299,7 +299,7 @@ func (r FutureGetWork) Receive() (*btcjson.GetWorkResult, er.R) {
 
 	// Unmarshal result as a getwork result object.
 	var result btcjson.GetWorkResult
-	err = json.Unmarshal(res, &result)
+	err = er.E(json.Unmarshal(res, &result))
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ func (r FutureGetWorkSubmit) Receive() (bool, er.R) {
 
 	// Unmarshal result as a boolean.
 	var accepted bool
-	err = json.Unmarshal(res, &accepted)
+	err = er.E(json.Unmarshal(res, &accepted))
 	if err != nil {
 		return false, err
 	}
@@ -378,7 +378,7 @@ func (r FutureSubmitBlockResult) Receive() er.R {
 
 	if string(res) != "null" {
 		var result string
-		err = json.Unmarshal(res, &result)
+		err = er.E(json.Unmarshal(res, &result))
 		if err != nil {
 			return err
 		}

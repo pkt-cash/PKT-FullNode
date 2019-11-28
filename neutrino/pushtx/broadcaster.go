@@ -1,11 +1,10 @@
 package pushtx
 
 import (
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
@@ -14,10 +13,11 @@ import (
 )
 
 var (
-	// ErrBroadcastStopped is an error returned when we attempt to process a
+	// ErrBroadcasterStopped is an error returned when we attempt to process a
 	// request to broadcast a transaction but the Broadcaster has already
 	// been stopped.
-	ErrBroadcasterStopped = errors.New("broadcaster has been stopped")
+	ErrBroadcasterStopped = er.GenericErrorType.CodeWithDetail("pushtx.ErrBroadcasterStopped",
+		"broadcaster has been stopped")
 )
 
 const (
@@ -84,10 +84,10 @@ func NewBroadcaster(cfg *Config) *Broadcaster {
 func (b *Broadcaster) Start() er.R {
 	var err er.R
 	b.start.Do(func() {
-		sub, err := b.cfg.SubscribeBlocks()
-		if err != nil {
-			err = fmt.Errorf("unable to subscribe for block "+
-				"notifications: %v", err)
+		sub, err1 := b.cfg.SubscribeBlocks()
+		if err1 != nil {
+			err1.AddMessage("unable to subscribe for block notifications")
+			err = err1
 			return
 		}
 
@@ -168,7 +168,7 @@ func (b *Broadcaster) broadcastHandler(sub *blockntfns.Subscription) {
 		// A new broadcast request was submitted by an external caller.
 		case req := <-b.broadcastReqs:
 			err := b.cfg.Broadcast(req.tx)
-			if err != nil && !IsBroadcastError(err, Mempool) {
+			if err != nil && !RejMempool.Is(err) {
 				log.Errorf("Broadcast attempt failed: %v", err)
 				req.errChan <- err
 				continue
@@ -234,7 +234,7 @@ func (b *Broadcaster) rebroadcast(txs map[chainhash.Hash]*wire.MsgTx,
 		//
 		// TODO(wilmer); This should ideally be implemented by checking
 		// the chain ourselves rather than trusting our peers.
-		case IsBroadcastError(err, Confirmed):
+		case RejConfirmed.Is(err):
 			log.Debugf("Re-broadcast of txid=%v, now confirmed!",
 				tx.TxHash())
 
@@ -252,7 +252,7 @@ func (b *Broadcaster) rebroadcast(txs map[chainhash.Hash]*wire.MsgTx,
 		// TODO(wilmer): Rate limit peers that have already accepted our
 		// transaction into their mempool to prevent resending to them
 		// every time.
-		case IsBroadcastError(err, Mempool):
+		case RejMempool.Is(err):
 			log.Debugf("Re-broadcast of txid=%v, still "+
 				"pending...", tx.TxHash())
 
@@ -279,13 +279,13 @@ func (b *Broadcaster) Broadcast(tx *wire.MsgTx) er.R {
 		errChan: errChan,
 	}:
 	case <-b.quit:
-		return ErrBroadcasterStopped
+		return ErrBroadcasterStopped.Default()
 	}
 
 	select {
 	case err := <-errChan:
 		return err
 	case <-b.quit:
-		return ErrBroadcasterStopped
+		return ErrBroadcasterStopped.Default()
 	}
 }

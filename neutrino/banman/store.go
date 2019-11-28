@@ -3,14 +3,14 @@ package banman
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
+
+var Err er.ErrorType = er.NewErrorType("banman.Err")
 
 var (
 	// byteOrder is the preferred byte order in which we should write things
@@ -36,11 +36,13 @@ var (
 
 	// ErrCorruptedStore is an error returned when we attempt to locate any
 	// of the ban-related buckets in the database but are unable to.
-	ErrCorruptedStore = errors.New("corrupted ban store")
+	ErrCorruptedStore = Err.CodeWithDetail("ErrCorruptedStore",
+		"corrupted ban store")
 
 	// ErrUnsupportedIP is an error returned when we attempt to parse an
 	// unsupported IP address type.
-	ErrUnsupportedIP = errors.New("unsupported IP type")
+	ErrUnsupportedIP = Err.CodeWithDetail("ErrUnsupportedIP",
+		"unsupported IP type")
 )
 
 // Status gathers all of the details regarding an IP network's ban status.
@@ -101,7 +103,7 @@ func newBanStore(db walletdb.DB) (*banStore, er.R) {
 		_, err = banStore.CreateBucketIfNotExists(reasonBucket)
 		return err
 	})
-	if err != nil && err != walletdb.ErrBucketExists {
+	if err != nil && walletdb.ErrBucketExists.Is(err) {
 		return nil, err
 	}
 
@@ -116,15 +118,15 @@ func (s *banStore) BanIPNet(ipNet *net.IPNet, reason Reason, duration time.Durat
 	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
 		banStore := tx.ReadWriteBucket(banStoreBucket)
 		if banStore == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("banStore is nil", nil)
 		}
 		banIndex := banStore.NestedReadWriteBucket(banBucket)
 		if banIndex == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("banIndex is nil", nil)
 		}
 		reasonIndex := banStore.NestedReadWriteBucket(reasonBucket)
 		if reasonIndex == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("reasonIndex is nil", nil)
 		}
 
 		var ipNetBuf bytes.Buffer
@@ -157,15 +159,15 @@ func (s *banStore) Status(ipNet *net.IPNet) (Status, er.R) {
 	err := walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
 		banStore := tx.ReadWriteBucket(banStoreBucket)
 		if banStore == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("banStore is nil", nil)
 		}
 		banIndex := banStore.NestedReadWriteBucket(banBucket)
 		if banIndex == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("banIndex is nil", nil)
 		}
 		reasonIndex := banStore.NestedReadWriteBucket(reasonBucket)
 		if reasonIndex == nil {
-			return ErrCorruptedStore
+			return ErrCorruptedStore.New("reasonIndex is nil", nil)
 		}
 
 		var ipNetBuf bytes.Buffer

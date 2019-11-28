@@ -7,8 +7,8 @@
 package txrules
 
 import (
-	"errors"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
@@ -60,24 +60,17 @@ func IsDustOutput(output *wire.TxOut, relayFeePerKb btcutil.Amount) bool {
 		relayFeePerKb)
 }
 
-// Transaction rule violations
-var (
-	ErrAmountNegative   = errors.New("transaction output amount is negative")
-	ErrAmountExceedsMax = errors.New("transaction output amount exceeds maximum value")
-	ErrOutputIsDust     = errors.New("transaction output is dust")
-)
-
 // CheckOutput performs simple consensus and policy tests on a transaction
 // output.
 func CheckOutput(output *wire.TxOut, relayFeePerKb btcutil.Amount) er.R {
 	if output.Value < 0 {
-		return ErrAmountNegative
+		return ruleerror.ErrNegativeTxOutValue.Default()
 	}
 	if output.Value > btcutil.MaxSatoshi {
-		return ErrAmountExceedsMax
+		return ruleerror.ErrOversizeTxOutValue.Default()
 	}
 	if IsDustOutput(output, relayFeePerKb) {
-		return ErrOutputIsDust
+		return ruleerror.ErrRejectDust.Default()
 	}
 	return nil
 }

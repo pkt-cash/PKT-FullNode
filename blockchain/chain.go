@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -993,7 +994,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) er.R {
 		// descendants as having an invalid ancestor.
 		_, err = b.checkConnectBlock(n, block, view, nil)
 		if err != nil {
-			if _, ok := er.Wrapped(err).(RuleError); ok {
+			if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(n, statusValidateFailed)
 				for de := e.Next(); de != nil; de = de.Next() {
 					dn := de.Value.(*blockNode)
@@ -1140,7 +1141,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			nextEs, err = b.checkConnectBlock(node, block, view, &stxos)
 			if err == nil {
 				b.index.SetStatusFlags(node, statusValid)
-			} else if _, ok := er.Wrapped(err).(RuleError); ok {
+			} else if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(node, statusValidateFailed)
 			} else {
 				return false, err
@@ -1178,7 +1179,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the
 			// index state to disk before returning with the error.
-			if _, ok := er.Wrapped(err).(RuleError); ok {
+			if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(
 					node, statusValidateFailed,
 				)

@@ -8,10 +8,10 @@ package waddrmgr
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -44,11 +44,11 @@ type ObtainUserInputFunc func() ([]byte, er.R)
 // of the walletdb database.
 func maybeConvertDbError(err er.R) er.R {
 	// When the error is already a ManagerError, just return it.
-	if _, ok := err.(ManagerError); ok {
+	if ManagerErr.Is(err) {
 		return err
 	}
 
-	return managerError(ErrDatabase, err.Error(), err)
+	return managerError(ErrDatabase, "", err)
 }
 
 // syncStatus represents a address synchronization status stored in the
@@ -1718,11 +1718,8 @@ func forEachAccountAddress(ns walletdb.ReadBucket, scope *KeyScope,
 
 		addrRow, err := fetchAddressByHash(ns, scope, k)
 		if err != nil {
-			if merr, ok := err.(*ManagerError); ok {
-				desc := fmt.Sprintf("failed to fetch address hash '%s': %v",
-					k, merr.Description)
-				merr.Description = desc
-				return merr
+			if ManagerErr.Is(err) {
+				err.AddMessage(fmt.Sprintf("failed to fetch address hash '%s'", k))
 			}
 			return err
 		}
@@ -1756,11 +1753,8 @@ func forEachActiveAddress(ns walletdb.ReadBucket, scope *KeyScope,
 		// Deserialize the address row first to determine the field
 		// values.
 		addrRow, err := fetchAddressByHash(ns, scope, k)
-		if merr, ok := err.(*ManagerError); ok {
-			desc := fmt.Sprintf("failed to fetch address hash '%s': %v",
-				k, merr.Description)
-			merr.Description = desc
-			return merr
+		if ManagerErr.Is(err) {
+			err.AddMessage(fmt.Sprintf("failed to fetch address hash '%s'", k))
 		}
 		if err != nil {
 			return err
@@ -2005,11 +1999,11 @@ func fetchBlockHash(ns walletdb.ReadBucket, height int32) (*chainhash.Hash, er.R
 	binary.BigEndian.PutUint32(heightBytes, uint32(height))
 	hashBytes := bucket.Get(heightBytes)
 	if hashBytes == nil {
-		err := errors.New("block not found")
+		err := er.New("block not found")
 		return nil, managerError(ErrBlockNotFound, errStr, err)
 	}
 	if len(hashBytes) != 32 {
-		err := fmt.Errorf("couldn't get hash from database")
+		err := er.Errorf("couldn't get hash from database")
 		return nil, managerError(ErrDatabase, errStr, err)
 	}
 	var hash chainhash.Hash

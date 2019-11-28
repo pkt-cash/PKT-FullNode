@@ -6,9 +6,9 @@
 package wallet
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -71,7 +71,7 @@ func (s secretSource) GetKey(addr btcutil.Address) (*btcec.PrivateKey, bool, er.
 
 	mpka, ok := ma.(waddrmgr.ManagedPubKeyAddress)
 	if !ok {
-		e := fmt.Errorf("managed address type for %v is `%T` but "+
+		e := er.Errorf("managed address type for %v is `%T` but "+
 			"want waddrmgr.ManagedPubKeyAddress", addr, ma)
 		return nil, false, e
 	}
@@ -90,7 +90,7 @@ func (s secretSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 
 	msa, ok := ma.(waddrmgr.ManagedScriptAddress)
 	if !ok {
-		e := fmt.Errorf("managed address type for %v is `%T` but "+
+		e := er.Errorf("managed address type for %v is `%T` but "+
 			"want waddrmgr.ManagedScriptAddress", addr, ma)
 		return nil, e
 	}

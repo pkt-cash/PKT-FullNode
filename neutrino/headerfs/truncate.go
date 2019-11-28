@@ -2,7 +2,7 @@
 
 package headerfs
 
-import "fmt"
+import "github.com/pkt-cash/pktd/btcutil/er"
 
 // singleTruncate truncates a single header from the end of the header file.
 // This can be used in the case of a re-org to remove the last header from the
@@ -15,7 +15,7 @@ func (h *headerStore) singleTruncate() er.R {
 	// of the file as it stands currently.
 	fileInfo, err := h.file.Stat()
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	fileSize := fileInfo.Size()
 
@@ -34,5 +34,5 @@ func (h *headerStore) singleTruncate() er.R {
 	// Finally, we'll use both of these values to calculate the new size of
 	// the file and truncate it accordingly.
 	newSize := fileSize - truncateLength
-	return h.file.Truncate(newSize)
+	return er.E(h.file.Truncate(newSize))
 }

@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,18 +30,18 @@ func main() {
 		Organization: "gencerts",
 	}
 	parser := flags.NewParser(&cfg, flags.Default)
-	_, err := parser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+	_, errr := parser.Parse()
+	if errr != nil {
+		if e, ok := errr.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			parser.WriteHelp(os.Stderr)
 		}
 		return
 	}
 
 	if cfg.Directory == "" {
-		var err er.R
-		cfg.Directory, err = os.Getwd()
-		if err != nil {
+		var errr error
+		cfg.Directory, errr = os.Getwd()
+		if errr != nil {
 			fmt.Fprintf(os.Stderr, "no directory specified and cannot get working directory\n")
 			os.Exit(1)
 		}
@@ -66,13 +65,13 @@ func main() {
 	}
 
 	// Write cert and key files.
-	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
-		fmt.Fprintf(os.Stderr, "cannot write cert: %v\n", err)
+	if errr = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot write cert: %v\n", errr)
 		os.Exit(1)
 	}
-	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+	if errr = ioutil.WriteFile(keyFile, key, 0600); err != nil {
 		os.Remove(certFile)
-		fmt.Fprintf(os.Stderr, "cannot write key: %v\n", err)
+		fmt.Fprintf(os.Stderr, "cannot write key: %v\n", errr)
 		os.Exit(1)
 	}
 }

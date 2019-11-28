@@ -10,11 +10,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -34,9 +33,9 @@ func (r FutureDebugLevelResult) Receive() (string, er.R) {
 
 	// Unmashal the result as a string.
 	var result string
-	err = json.Unmarshal(res, &result)
-	if err != nil {
-		return "", err
+	errr := json.Unmarshal(res, &result)
+	if errr != nil {
+		return "", er.E(errr)
 	}
 	return result, nil
 }
@@ -115,9 +114,9 @@ func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactio
 
 	// Unmarshal the result as an array of listtransactions objects.
 	var transactions []btcjson.ListTransactionsResult
-	err = json.Unmarshal(res, &transactions)
-	if err != nil {
-		return nil, err
+	errr := json.Unmarshal(res, &transactions)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	return transactions, nil
 }
@@ -161,9 +160,9 @@ func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, er.R) {
 
 	// Unmarshal result as a getbestblock result object.
 	var bestBlock btcjson.GetBestBlockResult
-	err = json.Unmarshal(res, &bestBlock)
-	if err != nil {
-		return nil, 0, err
+	errr := json.Unmarshal(res, &bestBlock)
+	if errr != nil {
+		return nil, 0, er.E(errr)
 	}
 
 	// Convert to hash from string.
@@ -209,9 +208,9 @@ func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, er.R) {
 
 	// Unmarshal result as an int64.
 	var net int64
-	err = json.Unmarshal(res, &net)
-	if err != nil {
-		return 0, err
+	errr := json.Unmarshal(res, &net)
+	if errr != nil {
+		return 0, er.E(errr)
 	}
 
 	return wire.BitcoinNet(net), nil
@@ -256,17 +255,17 @@ func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, er.R) {
 
 	// Unmarshal result as a slice of strings.
 	var result []string
-	err = json.Unmarshal(res, &result)
-	if err != nil {
-		return nil, err
+	errr := json.Unmarshal(res, &result)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Deserialize the []string into []wire.BlockHeader.
 	headers := make([]wire.BlockHeader, len(result))
 	for i, headerHex := range result {
-		serialized, err := hex.DecodeString(headerHex)
-		if err != nil {
-			return nil, err
+		serialized, errr := hex.DecodeString(headerHex)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		err = headers[i].Deserialize(bytes.NewReader(serialized))
 		if err != nil {
@@ -320,9 +319,9 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, er.R) {
 
 	// Unmarshal result as a JSON object.
 	var obj map[string]interface{}
-	err = json.Unmarshal(res, &obj)
-	if err != nil {
-		return nil, nil, err
+	errr := json.Unmarshal(res, &obj)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Check for the wallet and tx string fields in the object.
@@ -339,14 +338,14 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, er.R) {
 			obj["tx"])
 	}
 
-	walletBytes, err := base64.StdEncoding.DecodeString(base64Wallet)
-	if err != nil {
-		return nil, nil, err
+	walletBytes, errr := base64.StdEncoding.DecodeString(base64Wallet)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
-	txStoreBytes, err := base64.StdEncoding.DecodeString(base64TxStore)
-	if err != nil {
-		return nil, nil, err
+	txStoreBytes, errr := base64.StdEncoding.DecodeString(base64TxStore)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	return walletBytes, txStoreBytes, nil
@@ -389,9 +388,9 @@ func (r FutureSessionResult) Receive() (*btcjson.SessionResult, er.R) {
 
 	// Unmarshal result as a session result object.
 	var session btcjson.SessionResult
-	err = json.Unmarshal(res, &session)
-	if err != nil {
-		return nil, err
+	errr := json.Unmarshal(res, &session)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return &session, nil
@@ -407,7 +406,7 @@ func (r FutureSessionResult) Receive() (*btcjson.SessionResult, er.R) {
 func (c *Client) SessionAsync() FutureSessionResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	cmd := btcjson.NewSessionCmd()
@@ -444,9 +443,9 @@ func (r FutureVersionResult) Receive() (map[string]btcjson.VersionResult,
 
 	// Unmarshal result as a version result object.
 	var vr map[string]btcjson.VersionResult
-	err = json.Unmarshal(res, &vr)
-	if err != nil {
-		return nil, err
+	errr := json.Unmarshal(res, &vr)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return vr, nil

@@ -7,8 +7,9 @@ package wtxmgr
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -744,7 +745,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
 		return nil
 	})
 	if err != nil {
-		if _, ok := err.(Error); ok {
+		if Err.Is(err) {
 			return nil, err
 		}
 		str := "failed iterating unspent bucket"
@@ -787,7 +788,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
 		return nil
 	})
 	if err != nil {
-		if _, ok := err.(Error); ok {
+		if Err.Is(err) {
 			return nil, err
 		}
 		str := "failed iterating unmined credits bucket"
@@ -834,7 +835,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 		return nil
 	})
 	if err != nil {
-		if _, ok := err.(Error); ok {
+		if Err.Is(err) {
 			return 0, err
 		}
 		str := "failed iterating unspent outputs"
@@ -914,7 +915,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			return nil
 		})
 		if err != nil {
-			if _, ok := err.(Error); ok {
+			if Err.Is(err) {
 				return 0, err
 			}
 			str := "failed to iterate over unmined credits bucket"

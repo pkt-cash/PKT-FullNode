@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
@@ -368,7 +369,7 @@ func (mp *TxPool) maybeAddOrphan(tx *btcutil.Tx, tag Tag) er.R {
 		str := fmt.Sprintf("orphan transaction size of %d bytes is "+
 			"larger than max allowed size of %d bytes",
 			serializedLen, mp.cfg.Policy.MaxOrphanTxSize)
-		return txRuleError(wire.RejectNonstandard, str)
+		return ruleerror.ErrOrphanTransactionTooBig.New(str, nil)
 	}
 
 	// Add the orphan if the none of the above disqualified it.
@@ -952,8 +953,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	if mp.isTransactionInPool(txHash) || (rejectDupOrphans &&
 		mp.isOrphanInPool(txHash)) {
 
-		str := fmt.Sprintf("already have transaction %v", txHash)
-		return nil, nil, txRuleError(wire.RejectDuplicate, str)
+		str := fmt.Sprintf("%v", txHash)
+		return nil, nil, ruleerror.ErrTxExistsInMempool.New(str, nil)
 	}
 
 	// Perform preliminary sanity checks on the transaction.  This makes
@@ -961,9 +962,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// transactions are allowed into blocks.
 	err := blockchain.CheckTransactionSanity(tx)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 
@@ -989,16 +987,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 			medianTimePast, mp.cfg.Policy.MinRelayTxFee,
 			mp.cfg.Policy.MaxTxVersion)
 		if err != nil {
-			// Attempt to extract a reject code from the error so
-			// it can be retained.  When not possible, fall back to
-			// a non standard error.
-			rejectCode, found := extractRejectCode(err)
-			if !found {
-				rejectCode = wire.RejectNonstandard
-			}
-			str := fmt.Sprintf("transaction %v is not standard: %v",
-				txHash, err)
-			return nil, nil, txRuleError(rejectCode, str)
+			return nil, nil, err
 		}
 	}
 
@@ -1022,9 +1011,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// without needing to do a separate lookup.
 	utxoView, err := mp.fetchInputUtxos(tx)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 
@@ -1035,8 +1021,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		prevOut.Index = uint32(txOutIdx)
 		entry := utxoView.LookupEntry(prevOut)
 		if entry != nil && !entry.IsSpent() {
-			return nil, nil, txRuleError(wire.RejectDuplicate,
-				"transaction already exists")
+			return nil, nil, ruleerror.ErrTxExistsInChain.New(
+				"transaction already exists", nil)
 		}
 		utxoView.RemoveEntry(prevOut)
 	}
@@ -1065,9 +1051,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// with respect to its defined relative lock times.
 	sequenceLock, err := mp.cfg.CalcSequenceLock(tx, utxoView)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 	if !blockchain.SequenceLockActive(sequenceLock, nextBlockHeight,
@@ -1083,9 +1066,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	txFee, err := blockchain.CheckTransactionInputs(tx, nextBlockHeight,
 		utxoView, mp.cfg.ChainParams)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 
@@ -1094,16 +1074,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	if !mp.cfg.Policy.AcceptNonStd {
 		err := checkInputsStandard(tx, utxoView)
 		if err != nil {
-			// Attempt to extract a reject code from the error so
-			// it can be retained.  When not possible, fall back to
-			// a non standard error.
-			rejectCode, found := extractRejectCode(err)
-			if !found {
-				rejectCode = wire.RejectNonstandard
-			}
-			str := fmt.Sprintf("transaction %v has a non-standard "+
-				"input: %v", txHash, err)
-			return nil, nil, txRuleError(rejectCode, str)
+			return nil, nil, err
 		}
 	}
 
@@ -1119,9 +1090,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// TODO(roasbeef): last bool should be conditional on segwit activation
 	sigOpCost, err := blockchain.GetSigOpCost(tx, false, utxoView, true, true)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 	if sigOpCost > mp.cfg.Policy.MaxSigOpCostPerTx {
@@ -1206,9 +1174,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		txscript.StandardVerifyFlags, mp.cfg.SigCache,
 		mp.cfg.HashCache)
 	if err != nil {
-		if cerr, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			return nil, nil, chainRuleError(cerr)
-		}
 		return nil, nil, err
 	}
 
@@ -1411,7 +1376,7 @@ func (mp *TxPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit bool
 		str := fmt.Sprintf("orphan transaction %v references "+
 			"outputs of unknown or fully-spent "+
 			"transaction %v", tx.Hash(), missingParents[0])
-		return nil, txRuleError(wire.RejectDuplicate, str)
+		return nil, ruleerror.ErrOrphanTransactionDisallowed.New(str, nil)
 	}
 
 	// Potentially add the orphan transaction to the orphan pool.

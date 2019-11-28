@@ -6,6 +6,7 @@ package rpcclient
 
 import (
 	"encoding/json"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -112,7 +113,7 @@ func (r FutureGetAddedNodeInfoResult) Receive() ([]btcjson.GetAddedNodeInfoResul
 
 	// Unmarshal as an array of getaddednodeinfo result objects.
 	var nodeInfo []btcjson.GetAddedNodeInfoResult
-	err = json.Unmarshal(res, &nodeInfo)
+	err = er.E(json.Unmarshal(res, &nodeInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +153,7 @@ func (r FutureGetAddedNodeInfoNoDNSResult) Receive() ([]string, er.R) {
 
 	// Unmarshal result as an array of strings.
 	var nodes []string
-	err = json.Unmarshal(res, &nodes)
+	err = er.E(json.Unmarshal(res, &nodes))
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +194,7 @@ func (r FutureGetConnectionCountResult) Receive() (int64, er.R) {
 
 	// Unmarshal result as an int64.
 	var count int64
-	err = json.Unmarshal(res, &count)
+	err = er.E(json.Unmarshal(res, &count))
 	if err != nil {
 		return 0, err
 	}
@@ -259,7 +260,7 @@ func (r FutureGetPeerInfoResult) Receive() ([]btcjson.GetPeerInfoResult, er.R) {
 
 	// Unmarshal result as an array of getpeerinfo result objects.
 	var peerInfo []btcjson.GetPeerInfoResult
-	err = json.Unmarshal(res, &peerInfo)
+	err = er.E(json.Unmarshal(res, &peerInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +297,7 @@ func (r FutureGetNetTotalsResult) Receive() (*btcjson.GetNetTotalsResult, er.R) 
 
 	// Unmarshal result as a getnettotals result object.
 	var totals btcjson.GetNetTotalsResult
-	err = json.Unmarshal(res, &totals)
+	err = er.E(json.Unmarshal(res, &totals))
 	if err != nil {
 		return nil, err
 	}

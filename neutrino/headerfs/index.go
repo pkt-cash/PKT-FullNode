@@ -3,9 +3,9 @@ package headerfs
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -35,14 +35,18 @@ var (
 	extFilterTip = []byte("ext")
 )
 
+var Err er.ErrorType = er.NewErrorType("headerfs.Err")
+
 var (
 	// ErrHeightNotFound is returned when a specified height isn't found in
 	// a target index.
-	ErrHeightNotFound = fmt.Errorf("target height not found in index")
+	ErrHeightNotFound = Err.CodeWithDetail("ErrHeightNotFound",
+		"target height not found in index")
 
 	// ErrHashNotFound is returned when a specified block hash isn't found
 	// in a target index.
-	ErrHashNotFound = fmt.Errorf("target hash not found in index")
+	ErrHashNotFound = Err.CodeWithDetail("ErrHashNotFound",
+		"target hash not found in index")
 )
 
 // HeaderType is an enum-like type which defines the various header types that
@@ -90,7 +94,7 @@ func newHeaderIndex(db walletdb.DB, indexType HeaderType) (*headerIndex, er.R) {
 		return err
 
 	})
-	if err != nil && err != walletdb.ErrBucketExists {
+	if err != nil && !walletdb.ErrBucketExists.Is(err) {
 		return nil, err
 	}
 
@@ -203,7 +207,7 @@ func (h *headerIndex) heightFromHash(hash *chainhash.Hash) (uint32, er.R) {
 		if heightBytes == nil {
 			// If the hash wasn't found, then we don't know of this
 			// hash within the index.
-			return ErrHashNotFound
+			return ErrHashNotFound.Default()
 		}
 
 		height = binary.BigEndian.Uint32(heightBytes)
@@ -246,7 +250,7 @@ func (h *headerIndex) chainTip() (*chainhash.Hash, uint32, er.R) {
 		tipHashBytes := rootBucket.Get(tipKey)
 		tipHeightBytes := rootBucket.Get(tipHashBytes)
 		if len(tipHeightBytes) != 4 {
-			return ErrHeightNotFound
+			return ErrHeightNotFound.Default()
 		}
 
 		// With the height fetched, we can now populate our return

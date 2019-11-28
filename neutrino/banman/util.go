@@ -1,8 +1,9 @@
 package banman
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -42,7 +43,7 @@ func ParseIPNet(addr string, mask net.IPMask) (*net.IPNet, er.R) {
 			mask = defaultIPv6Mask
 		}
 	default:
-		return nil, ErrUnsupportedIP
+		return nil, ErrUnsupportedIP.Default()
 	}
 
 	return &net.IPNet{IP: ip.Mask(mask), Mask: mask}, nil

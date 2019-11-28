@@ -4,12 +4,16 @@
 
 package cfgutil
 
-import "net"
+import (
+	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // NormalizeAddress returns the normalized form of the address, adding a default
 // port if necessary.  An error is returned if the address, even without a port,
 // is not valid.
-func NormalizeAddress(addr string, defaultPort string) (hostport string, err er.R) {
+func NormalizeAddress(addr string, defaultPort string) (string, er.R) {
 	// If the first SplitHostPort errors because of a missing port and not
 	// for an invalid host, add the port.  If the second SplitHostPort
 	// fails, then a port is not missing and the original error should be
@@ -19,9 +23,9 @@ func NormalizeAddress(addr string, defaultPort string) (hostport string, err er.
 		return net.JoinHostPort(host, port), nil
 	}
 	addr = net.JoinHostPort(addr, defaultPort)
-	_, _, err = net.SplitHostPort(addr)
-	if err != nil {
-		return "", origErr
+	_, _, errr := net.SplitHostPort(addr)
+	if errr != nil {
+		return "", er.E(origErr)
 	}
 	return addr, nil
 }

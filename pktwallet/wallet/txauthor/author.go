@@ -7,9 +7,9 @@ package txauthor
 
 import (
 	"encoding/binary"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -64,20 +64,20 @@ func write32(w io.Writer, x uint32) er.R {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], x)
 	_, err := w.Write(b[:])
-	return err
+	return er.E(err)
 }
 
 func write64(w io.Writer, x uint64) er.R {
 	var b [8]byte
 	binary.LittleEndian.PutUint64(b[:], x)
 	_, err := w.Write(b[:])
-	return err
+	return er.E(err)
 }
 
 func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 	// magic
 	if _, err := w.Write([]byte("\x00EPTF\xff\x00")); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// tx version
@@ -87,7 +87,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 
 	// segwit (always yes)
 	if _, err := w.Write([]byte("\x00\x01")); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// input count
@@ -97,7 +97,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 
 	for i, ti := range tx.Tx.TxIn {
 		if _, err := w.Write(ti.PreviousOutPoint.Hash[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		if err := write32(w, uint32(ti.PreviousOutPoint.Index)); err != nil {
 			return err
@@ -144,7 +144,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 		}
 		// 2 byte version, 1 byte actual segwit length (zero)
 		if _, err := w.Write([]byte("\x00\x00\x00")); err != nil {
-			return err
+			return er.E(err)
 		}
 	}
 
@@ -188,7 +188,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 			return nil, err
 		}
 		if inputAmount < targetAmount+targetFee {
-			return nil, insufficientFundsError{}
+			return nil, er.E(insufficientFundsError{})
 		}
 
 		// We count the types of inputs, which we'll use to estimate

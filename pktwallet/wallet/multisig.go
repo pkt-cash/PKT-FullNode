@@ -6,7 +6,6 @@
 package wallet
 
 import (
-	"errors"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -98,7 +97,7 @@ func (w *Wallet) ImportP2SHRedeemScript(script []byte) (*btcutil.AddressScriptHa
 			// Don't care if it's already there, but still have to
 			// set the p2shAddr since the address manager didn't
 			// return anything useful.
-			if waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress) {
+			if waddrmgr.ErrDuplicateAddress.Is(err) {
 				// This function will never error as it always
 				// hashes the script to the correct length.
 				p2shAddr, _ = btcutil.NewAddressScriptHash(script,
@@ -140,7 +139,7 @@ func (w *Wallet) ImportP2WSHRedeemScript(script []byte) (*btcutil.AddressWitness
 			// Don't care if it's already there, but still have to
 			// set the p2shAddr since the address manager didn't
 			// return anything useful.
-			if waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress) {
+			if waddrmgr.ErrDuplicateAddress.Is(err) {
 				// This function will never error as it always
 				// hashes the script to the correct length.
 				p2shAddr, _ = btcutil.NewAddressWitnessScriptHash(script,

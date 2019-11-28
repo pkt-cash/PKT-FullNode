@@ -5,23 +5,21 @@
 package database
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
-// ErrorCode identifies a kind of error.
-type ErrorCode int
+// Err identifies a kind of error for the database
+var Err er.ErrorType = er.NewErrorType("database.Err")
 
 // These constants are used to identify a specific database Error.
-const (
+var (
 	// **************************************
 	// Errors related to driver registration.
 	// **************************************
 
 	// ErrDbTypeRegistered indicates two different database drivers
 	// attempt to register with the name database type.
-	ErrDbTypeRegistered ErrorCode = iota
+	ErrDbTypeRegistered = Err.Code("ErrDbTypeRegistered")
 
 	// *************************************
 	// Errors related to database functions.
@@ -29,30 +27,30 @@ const (
 
 	// ErrDbUnknownType indicates there is no driver registered for
 	// the specified database type.
-	ErrDbUnknownType
+	ErrDbUnknownType = Err.Code("ErrDbUnknownType")
 
 	// ErrDbDoesNotExist indicates open is called for a database that
 	// does not exist.
-	ErrDbDoesNotExist
+	ErrDbDoesNotExist = Err.Code("ErrDbDoesNotExist")
 
 	// ErrDbExists indicates create is called for a database that
 	// already exists.
-	ErrDbExists
+	ErrDbExists = Err.Code("ErrDbExists")
 
 	// ErrDbNotOpen indicates a database instance is accessed before
 	// it is opened or after it is closed.
-	ErrDbNotOpen
+	ErrDbNotOpen = Err.Code("ErrDbNotOpen")
 
 	// ErrDbAlreadyOpen indicates open was called on a database that
 	// is already open.
-	ErrDbAlreadyOpen
+	ErrDbAlreadyOpen = Err.Code("ErrDbAlreadyOpen")
 
 	// ErrInvalid indicates the specified database is not valid.
-	ErrInvalid
+	ErrInvalid = Err.Code("ErrInvalid")
 
 	// ErrCorruption indicates a checksum failure occurred which invariably
 	// means the database is corrupt.
-	ErrCorruption
+	ErrCorruption = Err.Code("ErrCorruption")
 
 	// ****************************************
 	// Errors related to database transactions.
@@ -60,11 +58,11 @@ const (
 
 	// ErrTxClosed indicates an attempt was made to commit or rollback a
 	// transaction that has already had one of those operations performed.
-	ErrTxClosed
+	ErrTxClosed = Err.Code("ErrTxClosed")
 
 	// ErrTxNotWritable indicates an operation that requires write access to
 	// the database was attempted against a read-only transaction.
-	ErrTxNotWritable
+	ErrTxNotWritable = Err.Code("ErrTxNotWritable")
 
 	// **************************************
 	// Errors related to metadata operations.
@@ -72,36 +70,36 @@ const (
 
 	// ErrBucketNotFound indicates an attempt to access a bucket that has
 	// not been created yet.
-	ErrBucketNotFound
+	ErrBucketNotFound = Err.Code("ErrBucketNotFound")
 
 	// ErrBucketExists indicates an attempt to create a bucket that already
 	// exists.
-	ErrBucketExists
+	ErrBucketExists = Err.Code("ErrBucketExists")
 
 	// ErrBucketNameRequired indicates an attempt to create a bucket with a
 	// blank name.
-	ErrBucketNameRequired
+	ErrBucketNameRequired = Err.Code("ErrBucketNameRequired")
 
 	// ErrKeyRequired indicates at attempt to insert a zero-length key.
-	ErrKeyRequired
+	ErrKeyRequired = Err.Code("ErrKeyRequired")
 
 	// ErrKeyTooLarge indicates an attmempt to insert a key that is larger
 	// than the max allowed key size.  The max key size depends on the
 	// specific backend driver being used.  As a general rule, key sizes
 	// should be relatively, so this should rarely be an issue.
-	ErrKeyTooLarge
+	ErrKeyTooLarge = Err.Code("ErrKeyTooLarge")
 
 	// ErrValueTooLarge indicates an attmpt to insert a value that is larger
 	// than max allowed value size.  The max key size depends on the
 	// specific backend driver being used.
-	ErrValueTooLarge
+	ErrValueTooLarge = Err.Code("ErrValueTooLarge")
 
 	// ErrIncompatibleValue indicates the value in question is invalid for
 	// the specific requested operation.  For example, trying create or
 	// delete a bucket with an existing non-bucket key, attempting to create
 	// or delete a non-bucket key with an existing bucket key, or trying to
 	// delete a value via a cursor when it points to a nested bucket.
-	ErrIncompatibleValue
+	ErrIncompatibleValue = Err.Code("ErrIncompatibleValue")
 
 	// ***************************************
 	// Errors related to block I/O operations.
@@ -109,17 +107,17 @@ const (
 
 	// ErrBlockNotFound indicates a block with the provided hash does not
 	// exist in the database.
-	ErrBlockNotFound
+	ErrBlockNotFound = Err.Code("ErrBlockNotFound")
 
 	// ErrBlockExists indicates a block with the provided hash already
 	// exists in the database.
-	ErrBlockExists
+	ErrBlockExists = Err.Code("ErrBlockExists")
 
 	// ErrBlockRegionInvalid indicates a region that exceeds the bounds of
 	// the specified block was requested.  When the hash provided by the
 	// region does not correspond to an existing block, the error will be
 	// ErrBlockNotFound instead.
-	ErrBlockRegionInvalid
+	ErrBlockRegionInvalid = Err.Code("ErrBlockRegionInvalid")
 
 	// ***********************************
 	// Support for driver-specific errors.
@@ -129,73 +127,11 @@ const (
 	// This provides a mechanism for drivers to plug-in their own custom
 	// errors for any situations which aren't already covered by the error
 	// codes provided by this package.
-	ErrDriverSpecific
-
-	// numErrorCodes is the maximum error code number used in tests.
-	numErrorCodes
+	ErrDriverSpecific = Err.Code("ErrDriverSpecific")
 )
-
-// Map of ErrorCode values back to their constant names for pretty printing.
-var errorCodeStrings = map[ErrorCode]string{
-	ErrDbTypeRegistered:   "ErrDbTypeRegistered",
-	ErrDbUnknownType:      "ErrDbUnknownType",
-	ErrDbDoesNotExist:     "ErrDbDoesNotExist",
-	ErrDbExists:           "ErrDbExists",
-	ErrDbNotOpen:          "ErrDbNotOpen",
-	ErrDbAlreadyOpen:      "ErrDbAlreadyOpen",
-	ErrInvalid:            "ErrInvalid",
-	ErrCorruption:         "ErrCorruption",
-	ErrTxClosed:           "ErrTxClosed",
-	ErrTxNotWritable:      "ErrTxNotWritable",
-	ErrBucketNotFound:     "ErrBucketNotFound",
-	ErrBucketExists:       "ErrBucketExists",
-	ErrBucketNameRequired: "ErrBucketNameRequired",
-	ErrKeyRequired:        "ErrKeyRequired",
-	ErrKeyTooLarge:        "ErrKeyTooLarge",
-	ErrValueTooLarge:      "ErrValueTooLarge",
-	ErrIncompatibleValue:  "ErrIncompatibleValue",
-	ErrBlockNotFound:      "ErrBlockNotFound",
-	ErrBlockExists:        "ErrBlockExists",
-	ErrBlockRegionInvalid: "ErrBlockRegionInvalid",
-	ErrDriverSpecific:     "ErrDriverSpecific",
-}
-
-// String returns the ErrorCode as a human-readable name.
-func (e ErrorCode) String() string {
-	if s := errorCodeStrings[e]; s != "" {
-		return s
-	}
-	return fmt.Sprintf("Unknown ErrorCode (%d)", int(e))
-}
-
-// Error provides a single type for errors that can happen during database
-// operation.  It is used to indicate several types of failures including errors
-// with caller requests such as specifying invalid block regions or attempting
-// to access data against closed database transactions, driver errors, errors
-// retrieving data, and errors communicating with database servers.
-//
-// The caller can use type assertions to determine if an error is an Error and
-// access the ErrorCode field to ascertain the specific reason for the failure.
-//
-// The ErrDriverSpecific error code will also have the Err field set with the
-// underlying error.  Depending on the backend driver, the Err field might be
-// set to the underlying error for other error codes as well.
-type Error struct {
-	ErrorCode   ErrorCode // Describes the kind of error
-	Description string    // Human readable description of the issue
-	Err         error     // Underlying error
-}
-
-// Error satisfies the error interface and prints human-readable errors.
-func (e Error) Error() string {
-	if e.Err != nil {
-		return e.Description + ": " + e.Err.Error()
-	}
-	return e.Description
-}
 
 // makeError creates an Error given a set of arguments.  The error code must
 // be one of the error codes provided by this package.
-func makeError(c ErrorCode, desc string, err error) er.R {
-	return er.E(Error{ErrorCode: c, Description: desc, Err: err})
+func makeError(c *er.ErrorCode, desc string, err er.R) er.R {
+	return c.New(desc, err)
 }

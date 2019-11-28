@@ -1,9 +1,9 @@
 package migration
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
@@ -12,8 +12,8 @@ var (
 	// ErrReversion is an error returned when an attempt to revert to a
 	// previous version is detected. This is done to provide safety to users
 	// as some upgrades may not be backwards-compatible.
-	ErrReversion = errors.New("reverting to a previous version is not " +
-		"supported")
+	ErrReversion = er.GenericErrorType.CodeWithDetail("migration.ErrReversion",
+		"reverting to a previous version is not supported")
 )
 
 // Version denotes the version number of the database. A migration can be used
@@ -122,7 +122,7 @@ func upgrade(mgr Manager) er.R {
 	// backwards-incompatible. To prevent this, we'll return an error
 	// indicating so.
 	case currentVersion > latestVersion:
-		return ErrReversion
+		return ErrReversion.Default()
 
 	// If the current version is behind the latest version, we'll need to
 	// apply all of the newer versions in order to catch up to the latest.

@@ -5,12 +5,12 @@
 package wallet
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/prompt"
@@ -22,18 +22,23 @@ const (
 	walletDbName = "wallet.db"
 )
 
+var Err er.ErrorType = er.NewErrorType("wallet.Err")
+
 var (
 	// ErrLoaded describes the error condition of attempting to load or
 	// create a wallet when the loader has already done so.
-	ErrLoaded = errors.New("wallet already loaded")
+	ErrLoaded = Err.CodeWithDetail("ErrLoaded",
+		"wallet already loaded")
 
 	// ErrNotLoaded describes the error condition of attempting to close a
 	// loaded wallet when a wallet has not been loaded.
-	ErrNotLoaded = errors.New("wallet is not loaded")
+	ErrNotLoaded = Err.CodeWithDetail("ErrNotLoaded",
+		"wallet is not loaded")
 
 	// ErrExists describes the error condition of attempting to create a new
 	// wallet when one exists already.
-	ErrExists = errors.New("wallet already exists")
+	ErrExists = Err.CodeWithDetail("ErrExists",
+		"wallet already exists")
 )
 
 // Loader implements the creating of new and opening of existing wallets, while
@@ -103,7 +108,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 	l.mu.Lock()
 
 	if l.wallet != nil {
-		return nil, ErrLoaded
+		return nil, ErrLoaded.Default()
 	}
 
 	dbPath := filepath.Join(l.dbDirPath, walletDbName)
@@ -112,11 +117,11 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 		return nil, err
 	}
 	if exists {
-		return nil, ErrExists
+		return nil, ErrExists.Default()
 	}
 
 	// Create the wallet database backed by bolt db.
-	err = os.MkdirAll(l.dbDirPath, 0700)
+	err = er.E(os.MkdirAll(l.dbDirPath, 0700))
 	if err != nil {
 		return nil, err
 	}
@@ -144,10 +149,8 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 	return w, nil
 }
 
-var errNoConsole = errors.New("db upgrade requires console access for additional input")
-
 func noConsole() ([]byte, er.R) {
-	return nil, errNoConsole
+	return nil, er.New("db upgrade requires console access for additional input")
 }
 
 // OpenExistingWallet opens the wallet from the loader's wallet database path
@@ -159,7 +162,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 	l.mu.Lock()
 
 	if l.wallet != nil {
-		return nil, ErrLoaded
+		return nil, ErrLoaded.Default()
 	}
 
 	// Ensure that the network directory exists.
@@ -230,7 +233,7 @@ func (l *Loader) UnloadWallet() er.R {
 	l.mu.Lock()
 
 	if l.wallet == nil {
-		return ErrNotLoaded
+		return ErrNotLoaded.Default()
 	}
 
 	l.wallet.Stop()
@@ -251,7 +254,7 @@ func fileExists(filePath string) (bool, er.R) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, err
+		return false, er.E(err)
 	}
 	return true, nil
 }

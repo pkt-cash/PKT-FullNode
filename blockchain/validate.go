@@ -10,10 +10,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -279,13 +281,13 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 		if satoshi < 0 {
 			str := fmt.Sprintf("transaction output has negative "+
 				"value of %v", satoshi)
-			return ruleError(ErrBadTxOutValue, str)
+			return ruleerror.ErrNegativeTxOutValue.New(str, nil)
 		}
 		if satoshi > globalcfg.MaxSatoshi() {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", satoshi,
 				globalcfg.MaxSatoshi())
-			return ruleError(ErrBadTxOutValue, str)
+			return ruleerror.ErrOversizeTxOutValue.New(str, nil)
 		}
 
 		// Two's complement int64 overflow guarantees that any overflow
@@ -296,14 +298,14 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
 				globalcfg.MaxSatoshi())
-			return ruleError(ErrBadTxOutValue, str)
+			return ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
 		if totalSatoshi > globalcfg.MaxSatoshi() {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshi,
 				globalcfg.MaxSatoshi())
-			return ruleError(ErrBadTxOutValue, str)
+			return ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
 	}
 
@@ -331,9 +333,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 		// transaction must not be null.
 		for _, txIn := range msgTx.TxIn {
 			if isNullOutpoint(&txIn.PreviousOutPoint) {
-				return ruleError(ErrBadTxInput, "transaction "+
-					"input refers to previous output that "+
-					"is null")
+				return ruleerror.ErrNullPrevOut.Default()
 			}
 		}
 	}
@@ -529,9 +529,10 @@ func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSou
 	// seconds and it's much nicer to deal with standard Go time values
 	// instead of converting to seconds everywhere.
 	if !header.Timestamp.Equal(time.Unix(header.Timestamp.Unix(), 0)) {
-		str := fmt.Sprintf("block timestamp of %v has a higher "+
-			"precision than one second", header.Timestamp)
-		return ruleError(ErrInvalidTime, str)
+		// This is an assertion because the on-wire format does not allow times
+		// more granular than the second.
+		return AssertError(fmt.Sprintf("block timestamp of %v has a higher "+
+			"precision than one second", header.Timestamp))
 	}
 
 	// Ensure the block time is not too far in the future.
@@ -1016,14 +1017,14 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		if originTxSatoshi < 0 {
 			str := fmt.Sprintf("transaction output has negative "+
 				"value of %v", btcutil.Amount(originTxSatoshi))
-			return 0, ruleError(ErrBadTxOutValue, str)
+			return 0, ruleerror.ErrNegativeTxOutValue.New(str, nil)
 		}
 		if originTxSatoshi > globalcfg.MaxSatoshi() {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
 				btcutil.Amount(originTxSatoshi),
 				globalcfg.MaxSatoshi())
-			return 0, ruleError(ErrBadTxOutValue, str)
+			return 0, ruleerror.ErrOversizeTxOutValue.New(str, nil)
 		}
 
 		// The total of all outputs must not be more than the max
@@ -1037,7 +1038,7 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 				"inputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshiIn,
 				globalcfg.MaxSatoshi())
-			return 0, ruleError(ErrBadTxOutValue, str)
+			return 0, ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
 	}
 

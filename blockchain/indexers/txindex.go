@@ -198,21 +198,15 @@ func dbFetchTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) (*database.Bl
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
 	if len(serializedData) < 12 {
-		return nil, er.E(database.Error{
-			ErrorCode: database.ErrCorruption,
-			Description: fmt.Sprintf("corrupt transaction index "+
-				"entry for %s", txHash),
-		})
+		return nil, database.ErrCorruption.New(
+			fmt.Sprintf("corrupt transaction index entry for %s", txHash), nil)
 	}
 
 	// Load the block hash associated with the block ID.
 	hash, err := dbFetchBlockHashBySerializedID(dbTx, serializedData[0:4])
 	if err != nil {
-		return nil, er.E(database.Error{
-			ErrorCode: database.ErrCorruption,
-			Description: fmt.Sprintf("corrupt transaction index "+
-				"entry for %s: %v", txHash, err),
-		})
+		return nil, database.ErrCorruption.New(
+			fmt.Sprintf("corrupt transaction index entry for %s", txHash), err)
 	}
 
 	// Deserialize the final entry.

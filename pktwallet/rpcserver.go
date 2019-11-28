@@ -6,9 +6,6 @@ package main
 
 import (
 	"crypto/tls"
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
@@ -16,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
@@ -40,7 +39,7 @@ func openRPCKeyPair() (tls.Certificate, er.R) {
 	keyExists := !os.IsNotExist(e)
 	switch {
 	case cfg.OneTimeTLSKey && keyExists:
-		err := fmt.Errorf("one time TLS keys are enabled, but TLS key "+
+		err := er.Errorf("one time TLS keys are enabled, but TLS key "+
 			"`%s` already exists", cfg.RPCKey.Value)
 		return tls.Certificate{}, err
 	case cfg.OneTimeTLSKey:
@@ -48,7 +47,8 @@ func openRPCKeyPair() (tls.Certificate, er.R) {
 	case !keyExists:
 		return generateRPCKeyPair(true)
 	default:
-		return tls.LoadX509KeyPair(cfg.RPCCert.Value, cfg.RPCKey.Value)
+		cert, errr := tls.LoadX509KeyPair(cfg.RPCCert.Value, cfg.RPCKey.Value)
+		return cert, er.E(errr)
 	}
 }
 
@@ -61,13 +61,13 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, er.R) {
 	// Create directories for cert and key files if they do not yet exist.
 	certDir, _ := filepath.Split(cfg.RPCCert.Value)
 	keyDir, _ := filepath.Split(cfg.RPCKey.Value)
-	err := os.MkdirAll(certDir, 0700)
-	if err != nil {
-		return tls.Certificate{}, err
+	errr := os.MkdirAll(certDir, 0700)
+	if errr != nil {
+		return tls.Certificate{}, er.E(errr)
 	}
-	err = os.MkdirAll(keyDir, 0700)
-	if err != nil {
-		return tls.Certificate{}, err
+	errr = os.MkdirAll(keyDir, 0700)
+	if errr != nil {
+		return tls.Certificate{}, er.E(errr)
 	}
 
 	// Generate cert pair.
@@ -77,25 +77,25 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, er.R) {
 	if err != nil {
 		return tls.Certificate{}, err
 	}
-	keyPair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return tls.Certificate{}, err
+	keyPair, errr := tls.X509KeyPair(cert, key)
+	if errr != nil {
+		return tls.Certificate{}, er.E(errr)
 	}
 
 	// Write cert and (potentially) the key files.
-	err = ioutil.WriteFile(cfg.RPCCert.Value, cert, 0600)
-	if err != nil {
-		return tls.Certificate{}, err
+	errr = ioutil.WriteFile(cfg.RPCCert.Value, cert, 0600)
+	if errr != nil {
+		return tls.Certificate{}, er.E(errr)
 	}
 	if writeKey {
-		err = ioutil.WriteFile(cfg.RPCKey.Value, key, 0600)
-		if err != nil {
+		errr = ioutil.WriteFile(cfg.RPCKey.Value, key, 0600)
+		if errr != nil {
 			rmErr := os.Remove(cfg.RPCCert.Value)
 			if rmErr != nil {
 				log.Warnf("Cannot remove written certificates: %v",
 					rmErr)
 			}
-			return tls.Certificate{}, err
+			return tls.Certificate{}, er.E(errr)
 		}
 	}
 
@@ -103,11 +103,16 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, er.R) {
 	return keyPair, nil
 }
 
+var netListen = func(n, laddr string) (net.Listener, er.R) {
+	ret, errr := net.Listen(n, laddr)
+	return ret, er.E(errr)
+}
+
 func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Server, er.R) {
 	var (
 		server       *grpc.Server
 		legacyServer *legacyrpc.Server
-		legacyListen = net.Listen
+		legacyListen = netListen
 		keyPair      tls.Certificate
 		err          er.R
 	)
@@ -126,13 +131,14 @@ func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Serv
 			NextProtos:   []string{"h2"}, // HTTP/2 over TLS
 		}
 		legacyListen = func(net string, laddr string) (net.Listener, er.R) {
-			return tls.Listen(net, laddr, tlsConfig)
+			out, errr := tls.Listen(net, laddr, tlsConfig)
+			return out, er.E(errr)
 		}
 
 		if len(cfg.ExperimentalRPCListeners) != 0 {
-			listeners := makeListeners(cfg.ExperimentalRPCListeners, net.Listen)
+			listeners := makeListeners(cfg.ExperimentalRPCListeners, netListen)
 			if len(listeners) == 0 {
-				err := errors.New("failed to create listeners for RPC server")
+				err := er.New("failed to create listeners for RPC server")
 				return nil, nil, err
 			}
 			creds := credentials.NewServerTLSFromCert(&keyPair)
@@ -157,7 +163,7 @@ func startRPCServers(walletLoader *wallet.Loader) (*grpc.Server, *legacyrpc.Serv
 	} else if len(cfg.LegacyRPCListeners) != 0 {
 		listeners := makeListeners(cfg.LegacyRPCListeners, legacyListen)
 		if len(listeners) == 0 {
-			err := errors.New("failed to create listeners for legacy RPC server")
+			err := er.New("failed to create listeners for legacy RPC server")
 			return nil, nil, err
 		}
 		opts := legacyrpc.Options{

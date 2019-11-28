@@ -53,11 +53,8 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 	indexesBucket := dbTx.Metadata().Bucket(indexTipsBucketName)
 	serialized := indexesBucket.Get(idxKey)
 	if len(serialized) < chainhash.HashSize+4 {
-		return nil, 0, er.E(database.Error{
-			ErrorCode: database.ErrCorruption,
-			Description: fmt.Sprintf("unexpected end of data for "+
-				"index %q tip", string(idxKey)),
-		})
+		return nil, 0, database.ErrCorruption.New(
+			fmt.Sprintf("unexpected end of data for index %q tip", string(idxKey)), nil)
 	}
 
 	var hash chainhash.Hash
@@ -178,7 +175,7 @@ func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) er.R {
 	}
 
 	if interruptRequested(interrupt) {
-		return er.E(errInterruptRequested)
+		return errInterruptRequested.Default()
 	}
 
 	// Finish dropping any of the enabled indexes that are already in the
@@ -242,7 +239,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	}
 
 	if interruptRequested(interrupt) {
-		return er.E(errInterruptRequested)
+		return errInterruptRequested.Default()
 	}
 
 	// Finish and drops that were previously interrupted.
@@ -352,7 +349,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			}
 
 			if interruptRequested(interrupt) {
-				return er.E(errInterruptRequested)
+				return errInterruptRequested.Default()
 			}
 		}
 
@@ -413,7 +410,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		if interruptRequested(interrupt) {
-			return er.E(errInterruptRequested)
+			return errInterruptRequested.Default()
 		}
 
 		// Connect the block for all indexes that need it.
@@ -450,7 +447,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		progressLogger.LogBlockHeight(block)
 
 		if interruptRequested(interrupt) {
-			return er.E(errInterruptRequested)
+			return errInterruptRequested.Default()
 		}
 	}
 
@@ -659,7 +656,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		}
 
 		if interruptRequested(interrupt) {
-			return er.E(errInterruptRequested)
+			return errInterruptRequested.Default()
 		}
 
 		// Drop the bucket itself.

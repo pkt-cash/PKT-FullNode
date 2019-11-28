@@ -6,7 +6,6 @@ package wallet
 
 import (
 	"github.com/btcsuite/btclog"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb/migration"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"

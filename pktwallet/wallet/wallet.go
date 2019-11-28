@@ -8,13 +8,13 @@ package wallet
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/neutrino/pushtx"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -59,12 +59,14 @@ var (
 	// ErrNotSynced describes an error where an operation cannot complete
 	// due wallet being out of sync (and perhaps currently syncing with)
 	// the remote chain server.
-	ErrNotSynced = errors.New("wallet is not synchronized with the chain server")
+	ErrNotSynced = Err.CodeWithDetail("ErrNotSynced",
+		"wallet is not synchronized with the chain server")
 
 	// ErrWalletShuttingDown is an error returned when we attempt to make a
 	// request to the wallet but it is in the process of or has already shut
 	// down.
-	ErrWalletShuttingDown = errors.New("wallet shutting down")
+	ErrWalletShuttingDown = Err.CodeWithDetail("ErrWalletShuttingDown",
+		"wallet shutting down")
 
 	// Namespace bucket keys.
 	waddrmgrNamespaceKey = []byte("waddrmgr")
@@ -179,8 +181,6 @@ func (w *Wallet) SynchronizeRPC(chainClient chain.Interface) {
 	switch cc := chainClient.(type) {
 	case *chain.NeutrinoClient:
 		cc.SetStartTime(w.Manager.Birthday())
-	case *chain.BitcoindClient:
-		cc.SetBirthday(w.Manager.Birthday())
 	}
 	w.chainClientLock.Unlock()
 
@@ -554,7 +554,7 @@ func (w *Wallet) waitUntilBackendSynced(chainClient chain.Interface) er.R {
 				return nil
 			}
 		case <-w.quitChan():
-			return ErrWalletShuttingDown
+			return ErrWalletShuttingDown.Default()
 		}
 	}
 }
@@ -926,7 +926,7 @@ func expandScopeHorizons(ns walletdb.ReadWriteBucket,
 		keyPath := externalKeyPath(childIndex)
 		addr, err := scopedMgr.DeriveFromKeyPath(ns, keyPath)
 		switch {
-		case err == hdkeychain.ErrInvalidChild:
+		case hdkeychain.ErrInvalidChild.Is(err):
 			// Record the existence of an invalid child with the
 			// external branch's recovery state. This also
 			// increments the branch's horizon so that it accounts
@@ -956,7 +956,7 @@ func expandScopeHorizons(ns walletdb.ReadWriteBucket,
 		keyPath := internalKeyPath(childIndex)
 		addr, err := scopedMgr.DeriveFromKeyPath(ns, keyPath)
 		switch {
-		case err == hdkeychain.ErrInvalidChild:
+		case hdkeychain.ErrInvalidChild.Is(err):
 			// Record the existence of an invalid child with the
 			// internal branch's recovery state. This also
 			// increments the branch's horizon so that it accounts
@@ -1358,7 +1358,7 @@ out:
 		// timer expiring.  Lock the manager here.
 		timeout = nil
 		err := w.Manager.Lock()
-		if err != nil && !waddrmgr.IsError(err, waddrmgr.ErrLocked) {
+		if err != nil && !waddrmgr.ErrLocked.Is(err) {
 			log.Errorf("Could not lock wallet: %v", err)
 		} else {
 			log.Info("The wallet has been locked")
@@ -1405,10 +1405,7 @@ func (w *Wallet) holdUnlock() (heldUnlock, er.R) {
 	if !ok {
 		// TODO(davec): This should be defined and exported from
 		// waddrmgr.
-		return nil, waddrmgr.ManagerError{
-			ErrorCode:   waddrmgr.ErrLocked,
-			Description: "address manager is locked",
-		}
+		return nil, waddrmgr.ErrLocked.New("address manager is locked", nil)
 	}
 	return hl, nil
 }
@@ -1468,15 +1465,16 @@ func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
 // used and false if no address in the account was used.
 func (w *Wallet) accountUsed(addrmgrNs walletdb.ReadWriteBucket, account uint32) (bool, er.R) {
 	var used bool
+	breakOut := er.New("not a real error")
 	err := w.Manager.ForEachAccountAddress(addrmgrNs, account,
 		func(maddr waddrmgr.ManagedAddress) er.R {
 			used = maddr.Used(addrmgrNs)
 			if used {
-				return waddrmgr.Break
+				return breakOut
 			}
 			return nil
 		})
-	if err == waddrmgr.Break {
+	if err == breakOut {
 		err = nil
 	}
 	return used, err
@@ -1594,7 +1592,7 @@ func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcuti
 		if err != nil {
 			// If no address exists yet, create the first external
 			// address.
-			if waddrmgr.IsError(err, waddrmgr.ErrAddressNotFound) {
+			if waddrmgr.ErrAddressNotFound.Is(err) {
 				addr, props, err = w.newAddress(
 					addrmgrNs, account, scope,
 				)
@@ -1681,7 +1679,7 @@ func (w *Wallet) HaveAddress(a btcutil.Address) (bool, er.R) {
 	if err == nil {
 		return true, nil
 	}
-	if waddrmgr.IsError(err, waddrmgr.ErrAddressNotFound) {
+	if waddrmgr.ErrAddressNotFound.Is(err) {
 		return false, nil
 	}
 	return false, err
@@ -2211,12 +2209,6 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 			switch client := chainClient.(type) {
 			case *chain.RPCClient:
 				startResp = client.GetBlockVerboseTxAsync(startBlock.hash)
-			case *chain.BitcoindClient:
-				var err er.R
-				start, err = client.GetBlockHeight(startBlock.hash)
-				if err != nil {
-					return nil, err
-				}
 			case *chain.NeutrinoClient:
 				var err er.R
 				start, err = client.GetBlockHeight(startBlock.hash)
@@ -2613,7 +2605,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 					if err == nil {
 						continue
 					}
-					if waddrmgr.IsError(err, waddrmgr.ErrAddressNotFound) {
+					if waddrmgr.ErrAddressNotFound.Is(err) {
 						break scSwitch
 					}
 					return err
@@ -3415,34 +3407,25 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 
 	_, err = chainClient.SendRawTransaction(tx, false)
 
+	// If we're in neutrino land here then we're going to get a pushtx.Err
+	// but if we're using the RPC then we're going to get a
+
 	// Determine if this was an RPC error thrown due to the transaction
 	// already confirming.
-	var rpcTxConfirmed bool
-	if rpcErr, ok := err.(*btcjson.RPCError); ok {
-		rpcTxConfirmed = rpcErr.Code == btcjson.ErrRPCTxAlreadyInChain
-	}
-
 	txid := tx.TxHash()
 	switch {
 	case err == nil:
 		return &txid, nil
 
-	// Since we have different backends that can be used with the wallet,
-	// we'll need to check specific errors for each one.
-	//
-	// If the transaction is already in the mempool, we can just return now.
-	//
-	// This error is returned when broadcasting/sending a transaction to a
-	// pktd node that already has it in their mempool.
-	case strings.Contains(
-		strings.ToLower(err.Error()), "already have transaction",
-	):
-		fallthrough
-
 	// This error is returned when broadcasting a transaction to a bitcoind
 	// node that already has it in their mempool.
+	// TODO(cjd): We should not be parsing errors here looking for "txn-already-in-mempool"
+	// 						but if we're using the JSON RPC then we don't have a specific error
+	//            code for "already in mempool".
+	case pushtx.RejMempool.Is(err):
+		fallthrough
 	case strings.Contains(
-		strings.ToLower(err.Error()), "txn-already-in-mempool",
+		strings.ToLower(err.Message()), "txn-already-in-mempool",
 	):
 		return &txid, nil
 
@@ -3453,19 +3436,9 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 	//
 	// This error is returned when sending a transaction that has already
 	// confirmed to a pktd/bitcoind node over RPC.
-	case rpcTxConfirmed:
+	case pushtx.RejConfirmed.Is(err):
 		fallthrough
-
-	// This error is returned when broadcasting a transaction that has
-	// already confirmed to a pktd node over the P2P network.
-	case strings.Contains(
-		strings.ToLower(err.Error()), "transaction already exists",
-	):
-		fallthrough
-
-	// This error is returned when broadcasting a transaction that has
-	// already confirmed to a bitcoind node over the P2P network.
-	case strings.Contains(strings.ToLower(err.Error()), "txn-already-known"):
+	case btcjson.ErrRPCTxAlreadyInChain.Is(err):
 		dbErr := walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
 			txmgrNs := dbTx.ReadWriteBucket(wtxmgrNamespaceKey)
 			txRec, err := wtxmgr.NewTxRecordFromMsgTx(tx, time.Now())
@@ -3538,7 +3511,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 	}
 	if len(seed) < hdkeychain.MinSeedBytes ||
 		len(seed) > hdkeychain.MaxSeedBytes {
-		return hdkeychain.ErrInvalidSeedLen
+		return hdkeychain.ErrInvalidSeedLen.Default()
 	}
 
 	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {

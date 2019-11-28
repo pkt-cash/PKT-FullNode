@@ -237,8 +237,8 @@ func (s *blockStore) openWriteFile(fileNum uint32) (filer, er.R) {
 	filePath := blockFilePath(s.basePath, fileNum)
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		str := fmt.Sprintf("failed to open file %q: %v", filePath, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		str := fmt.Sprintf("failed to open file %q for writing", filePath)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, er.E(err))
 	}
 
 	return file, nil
@@ -256,8 +256,8 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, er.R) {
 	filePath := blockFilePath(s.basePath, fileNum)
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, makeDbErr(database.ErrDriverSpecific, err.Error(),
-			err)
+		str := fmt.Sprintf("failed to open file %s for reading", filePath)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, er.E(err))
 	}
 	blockFile := &lockableFile{file: file}
 
@@ -303,7 +303,8 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, er.R) {
 func (s *blockStore) deleteFile(fileNum uint32) er.R {
 	filePath := blockFilePath(s.basePath, fileNum)
 	if err := os.Remove(filePath); err != nil {
-		return makeDbErr(database.ErrDriverSpecific, err.Error(), err)
+		str := fmt.Sprintf("failed to delete file %s", filePath)
+		return makeDbErr(database.ErrDriverSpecific, str, er.E(err))
 	}
 
 	return nil
@@ -382,10 +383,9 @@ func (s *blockStore) writeData(data []byte, fieldName string) er.R {
 	n, err := wc.curFile.file.WriteAt(data, int64(wc.curOffset))
 	wc.curOffset += uint32(n)
 	if err != nil {
-		str := fmt.Sprintf("failed to write %s to file %d at "+
-			"offset %d: %v", fieldName, wc.curFileNum,
-			wc.curOffset-uint32(n), err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		str := fmt.Sprintf("failed to write %s to file %d at offset %d",
+			fieldName, wc.curFileNum, wc.curOffset-uint32(n))
+		return makeDbErr(database.ErrDriverSpecific, str, er.E(err))
 	}
 
 	return nil
@@ -520,10 +520,9 @@ func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte,
 	n, errr := blockFile.file.ReadAt(serializedData, int64(loc.fileOffset))
 	blockFile.RUnlock()
 	if errr != nil {
-		str := fmt.Sprintf("failed to read block %s from file %d, "+
-			"offset %d: %v", hash, loc.blockFileNum, loc.fileOffset,
-			err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, errr)
+		str := fmt.Sprintf("failed to read block %s from file %d, offset %d",
+			hash, loc.blockFileNum, loc.fileOffset)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, er.E(errr))
 	}
 
 	// Calculate the checksum of the read data and ensure it matches the
@@ -581,9 +580,8 @@ func (s *blockStore) readBlockRegion(loc blockLocation, offset, numBytes uint32)
 	blockFile.RUnlock()
 	if errr != nil {
 		str := fmt.Sprintf("failed to read region from block file %d, "+
-			"offset %d, len %d: %v", loc.blockFileNum, readOffset,
-			numBytes, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, errr)
+			"offset %d, len %d", loc.blockFileNum, readOffset, numBytes)
+		return nil, makeDbErr(database.ErrDriverSpecific, str, er.E(errr))
 	}
 
 	return serializedData, nil
@@ -611,9 +609,8 @@ func (s *blockStore) syncBlocks() er.R {
 
 	// Sync the file to disk.
 	if err := wc.curFile.file.Sync(); err != nil {
-		str := fmt.Sprintf("failed to sync file %d: %v", wc.curFileNum,
-			err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		str := fmt.Sprintf("failed to sync file %d", wc.curFileNum)
+		return makeDbErr(database.ErrDriverSpecific, str, er.E(err))
 	}
 
 	return nil

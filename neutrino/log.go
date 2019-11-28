@@ -4,7 +4,6 @@ import (
 	"github.com/btcsuite/btclog"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 	"github.com/pkt-cash/pktd/peer"

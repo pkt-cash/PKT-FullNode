@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"os"
 

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -34,9 +33,9 @@ func main() {
 
 	// Connect to local pktd RPC server using websockets.
 	pktdHomeDir := btcutil.AppDataDir("pktd", false)
-	certs, err := ioutil.ReadFile(filepath.Join(pktdHomeDir, "rpc.cert"))
-	if err != nil {
-		log.Fatal(err)
+	certs, errr := ioutil.ReadFile(filepath.Join(pktdHomeDir, "rpc.cert"))
+	if errr != nil {
+		log.Fatal(errr)
 	}
 	connCfg := &rpcclient.ConnConfig{
 		Host:         "localhost:8334",

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -106,7 +107,7 @@ func walletMain() er.R {
 	// (which should be closed last) is added first.
 	addInterruptHandler(func() {
 		err := loader.UnloadWallet()
-		if err != nil && err != wallet.ErrNotLoaded {
+		if err != nil && !wallet.ErrNotLoaded.Is(err) {
 			log.Errorf("Failed to close wallet: %v", err)
 		}
 	})
@@ -244,10 +245,10 @@ func readCAFile() []byte {
 	// Read certificate file if TLS is not disabled.
 	var certs []byte
 	if !cfg.DisableClientTLS {
-		var err er.R
-		certs, err = ioutil.ReadFile(cfg.CAFile.Value)
-		if err != nil {
-			log.Warnf("Cannot open CA file: %v", err)
+		var errr error
+		certs, errr = ioutil.ReadFile(cfg.CAFile.Value)
+		if errr != nil {
+			log.Warnf("Cannot open CA file: %v", errr)
 			// If there's an error reading the CA file, continue
 			// with nil certs and without the client connection.
 			certs = nil

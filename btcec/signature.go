@@ -145,7 +145,7 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	rBytes := sigStr[index : index+rLen]
 	if der {
 		err := canonicalPadding(rBytes)
-		switch er.Wrapped(err) {
+		switch err {
 		case errNegativeValue:
 			return nil, er.New("signature R is negative")
 		case errExcessivelyPaddedValue:
@@ -172,7 +172,7 @@ func parseSig(sigStr []byte, curve elliptic.Curve, der bool) (*Signature, er.R) 
 	sBytes := sigStr[index : index+sLen]
 	if der {
 		err := canonicalPadding(sBytes)
-		switch er.Wrapped(err) {
+		switch err {
 		case errNegativeValue:
 			return nil, er.New("signature S is negative")
 		case errExcessivelyPaddedValue:
@@ -245,12 +245,12 @@ func canonicalizeInt(val *big.Int) []byte {
 // possibly be misinterpreted as a negative number (even though OpenSSL
 // treats all numbers as unsigned), or if there is any unnecessary
 // leading zero padding.
-func canonicalPadding(b []byte) er.R {
+func canonicalPadding(b []byte) error {
 	switch {
 	case b[0]&0x80 == 0x80:
-		return er.E(errNegativeValue)
+		return errNegativeValue
 	case len(b) > 1 && b[0] == 0x00 && b[1]&0x80 != 0x80:
-		return er.E(errExcessivelyPaddedValue)
+		return errExcessivelyPaddedValue
 	default:
 		return nil
 	}

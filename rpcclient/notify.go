@@ -9,25 +9,16 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/wire"
-)
-
-var (
-	// ErrWebsocketsRequired is an error to describe the condition where the
-	// caller is trying to use a websocket-only feature, such as requesting
-	// notifications or other websocket requests when the client is
-	// configured to run in HTTP POST mode.
-	ErrWebsocketsRequired = errors.New("a websocket connection is required " +
-		"to use this feature")
 )
 
 // notificationState is used to track the current state of successfully
@@ -491,26 +482,26 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 	int32, time.Time, er.R) {
 
 	if len(params) != 3 {
-		return nil, 0, time.Time{}, wrongNumParams(len(params))
+		return nil, 0, time.Time{}, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a string.
 	var blockHashStr string
-	err := json.Unmarshal(params[0], &blockHashStr)
+	err := er.E(json.Unmarshal(params[0], &blockHashStr))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal second parameter as an integer.
 	var blockHeight int32
-	err = json.Unmarshal(params[1], &blockHeight)
+	err = er.E(json.Unmarshal(params[1], &blockHeight))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal third parameter as unix time.
 	var blockTimeUnix int64
-	err = json.Unmarshal(params[2], &blockTimeUnix)
+	err = er.E(json.Unmarshal(params[2], &blockTimeUnix))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
@@ -536,12 +527,12 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, []*btcutil.Tx, er.R) {
 
 	if len(params) < 3 {
-		return 0, nil, nil, wrongNumParams(len(params))
+		return 0, nil, nil, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
-	err := json.Unmarshal(params[0], &blockHeight)
+	err := er.E(json.Unmarshal(params[0], &blockHeight))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -561,7 +552,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 
 	// Unmarshal third parameter as a slice of hex-encoded strings.
 	var hexTransactions []string
-	err = json.Unmarshal(params[2], &hexTransactions)
+	err = er.E(json.Unmarshal(params[2], &hexTransactions))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -569,9 +560,9 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	// Create slice of transactions from slice of strings by hex-decoding.
 	transactions := make([]*btcutil.Tx, len(hexTransactions))
 	for i, hexTx := range hexTransactions {
-		transaction, err := hex.DecodeString(hexTx)
-		if err != nil {
-			return 0, nil, nil, err
+		transaction, errr := hex.DecodeString(hexTx)
+		if errr != nil {
+			return 0, nil, nil, er.E(errr)
 		}
 
 		transactions[i], err = btcutil.NewTxFromBytes(transaction)
@@ -591,12 +582,12 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, er.R) {
 	if len(params) < 2 {
-		return 0, nil, wrongNumParams(len(params))
+		return 0, nil, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
-	err := json.Unmarshal(params[0], &blockHeight)
+	err := er.E(json.Unmarshal(params[0], &blockHeight))
 	if err != nil {
 		return 0, nil, err
 	}
@@ -619,18 +610,19 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 
 func parseHexParam(param json.RawMessage) ([]byte, er.R) {
 	var s string
-	err := json.Unmarshal(param, &s)
+	err := er.E(json.Unmarshal(param, &s))
 	if err != nil {
 		return nil, err
 	}
-	return hex.DecodeString(s)
+	out, errr := hex.DecodeString(s)
+	return out, er.E(errr)
 }
 
 // parseRelevantTxAcceptedParams parses out the parameter included in a
 // relevanttxaccepted notification.
 func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte, err er.R) {
 	if len(params) < 1 {
-		return nil, wrongNumParams(len(params))
+		return nil, er.E(wrongNumParams(len(params)))
 	}
 
 	return parseHexParam(params[0])
@@ -643,12 +635,12 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 	*btcjson.BlockDetails, er.R) {
 
 	if len(params) == 0 || len(params) > 2 {
-		return nil, nil, wrongNumParams(len(params))
+		return nil, nil, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a string.
 	var txHex string
-	err := json.Unmarshal(params[0], &txHex)
+	err := er.E(json.Unmarshal(params[0], &txHex))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -657,16 +649,16 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 	// JSON object.
 	var block *btcjson.BlockDetails
 	if len(params) > 1 {
-		err = json.Unmarshal(params[1], &block)
+		err = er.E(json.Unmarshal(params[1], &block))
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// Hex decode and deserialize the transaction.
-	serializedTx, err := hex.DecodeString(txHex)
-	if err != nil {
-		return nil, nil, err
+	serializedTx, errr := hex.DecodeString(txHex)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	var msgTx wire.MsgTx
 	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
@@ -684,26 +676,26 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 // from the parameters of rescanfinished and rescanprogress notifications.
 func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32, time.Time, er.R) {
 	if len(params) != 3 {
-		return nil, 0, time.Time{}, wrongNumParams(len(params))
+		return nil, 0, time.Time{}, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as an string.
 	var hashStr string
-	err := json.Unmarshal(params[0], &hashStr)
+	err := er.E(json.Unmarshal(params[0], &hashStr))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal second parameter as an integer.
 	var height int32
-	err = json.Unmarshal(params[1], &height)
+	err = er.E(json.Unmarshal(params[1], &height))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal third parameter as an integer.
 	var blkTime int64
-	err = json.Unmarshal(params[2], &blkTime)
+	err = er.E(json.Unmarshal(params[2], &blkTime))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
@@ -723,19 +715,19 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 	btcutil.Amount, er.R) {
 
 	if len(params) != 2 {
-		return nil, 0, wrongNumParams(len(params))
+		return nil, 0, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a string.
 	var txHashStr string
-	err := json.Unmarshal(params[0], &txHashStr)
+	err := er.E(json.Unmarshal(params[0], &txHashStr))
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Unmarshal second parameter as a floating point number.
 	var famt float64
-	err = json.Unmarshal(params[1], &famt)
+	err = er.E(json.Unmarshal(params[1], &famt))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -761,12 +753,12 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 	er.R) {
 
 	if len(params) != 1 {
-		return nil, wrongNumParams(len(params))
+		return nil, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a raw transaction result object.
 	var rawTx btcjson.TxRawResult
-	err := json.Unmarshal(params[0], &rawTx)
+	err := er.E(json.Unmarshal(params[0], &rawTx))
 	if err != nil {
 		return nil, err
 	}
@@ -781,12 +773,12 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 // and pktwallet from the parameters of a pktdconnected notification.
 func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, er.R) {
 	if len(params) != 1 {
-		return false, wrongNumParams(len(params))
+		return false, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a boolean.
 	var connected bool
-	err := json.Unmarshal(params[0], &connected)
+	err := er.E(json.Unmarshal(params[0], &connected))
 	if err != nil {
 		return false, err
 	}
@@ -801,24 +793,24 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 	balance btcutil.Amount, confirmed bool, err er.R) {
 
 	if len(params) != 3 {
-		return "", 0, false, wrongNumParams(len(params))
+		return "", 0, false, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a string.
-	err = json.Unmarshal(params[0], &account)
+	err = er.E(json.Unmarshal(params[0], &account))
 	if err != nil {
 		return "", 0, false, err
 	}
 
 	// Unmarshal second parameter as a floating point number.
 	var fbal float64
-	err = json.Unmarshal(params[1], &fbal)
+	err = er.E(json.Unmarshal(params[1], &fbal))
 	if err != nil {
 		return "", 0, false, err
 	}
 
 	// Unmarshal third parameter as a boolean.
-	err = json.Unmarshal(params[2], &confirmed)
+	err = er.E(json.Unmarshal(params[2], &confirmed))
 	if err != nil {
 		return "", 0, false, err
 	}
@@ -838,17 +830,17 @@ func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
 	locked bool, err er.R) {
 
 	if len(params) != 2 {
-		return "", false, wrongNumParams(len(params))
+		return "", false, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a string.
-	err = json.Unmarshal(params[0], &account)
+	err = er.E(json.Unmarshal(params[0], &account))
 	if err != nil {
 		return "", false, err
 	}
 
 	// Unmarshal second parameter as a boolean.
-	err = json.Unmarshal(params[1], &locked)
+	err = er.E(json.Unmarshal(params[1], &locked))
 	if err != nil {
 		return "", false, err
 	}
@@ -877,7 +869,7 @@ func (r FutureNotifyBlocksResult) Receive() er.R {
 func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -923,7 +915,7 @@ func (r FutureNotifySpentResult) Receive() er.R {
 func (c *Client) notifySpentInternal(outpoints []btcjson.OutPoint) FutureNotifySpentResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -957,7 +949,7 @@ func newOutPointFromWire(op *wire.OutPoint) btcjson.OutPoint {
 func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -1011,7 +1003,7 @@ func (r FutureNotifyNewTransactionsResult) Receive() er.R {
 func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransactionsResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -1058,7 +1050,7 @@ func (r FutureNotifyReceivedResult) Receive() er.R {
 func (c *Client) notifyReceivedInternal(addresses []string) FutureNotifyReceivedResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -1084,7 +1076,7 @@ func (c *Client) notifyReceivedInternal(addresses []string) FutureNotifyReceived
 func (c *Client) NotifyReceivedAsync(addresses []btcutil.Address) FutureNotifyReceivedResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -1159,7 +1151,7 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in
@@ -1240,7 +1232,7 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired)
+		return newFutureError(ErrWebsocketsRequired.Default())
 	}
 
 	// Ignore the notification if the client is not interested in

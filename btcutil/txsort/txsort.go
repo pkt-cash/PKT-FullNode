@@ -9,7 +9,6 @@ package txsort
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

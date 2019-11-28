@@ -276,9 +276,7 @@ func loadBlockDB() (database.DB, er.R) {
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
-		if dbErr, ok := er.Wrapped(err).(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
-
+		if database.ErrDbDoesNotExist.Is(err) {
 			return nil, err
 		}
 

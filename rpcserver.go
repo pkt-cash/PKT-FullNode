@@ -45,6 +45,7 @@ import (
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 // API version constants
@@ -1869,7 +1870,7 @@ func handleGetBlockTemplateLongPoll(s *rpcServer, longPollID string, useCoinbase
 	// When the client closes before it's time to send a reply, just return
 	// now so the goroutine doesn't hang around.
 	case <-closeChan:
-		return nil, er.E(ErrClientQuit)
+		return nil, ErrClientQuit.Default()
 
 	// Wait until signal received to send the reply.
 	case <-longPollChan:
@@ -2188,109 +2189,6 @@ func handleCheckPcAnn(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	return &btcjson.CheckPcAnnResult{WorkHash: workHash.String()}, nil
 }
 
-// chainErrToGBTErrString converts an error returned from btcchain to a string
-// which matches the reasons and format described in BIP0022 for rejection
-// reasons.
-func chainErrToGBTErrString(err er.R) string {
-	// When the passed error is not a RuleError, just return a generic
-	// rejected string with the error text.
-	ruleErr, ok := er.Wrapped(err).(blockchain.RuleError)
-	if !ok {
-		return "rejected: " + err.String()
-	}
-
-	switch ruleErr.ErrorCode {
-	case blockchain.ErrDuplicateBlock:
-		return "duplicate"
-	case blockchain.ErrBlockTooBig:
-		return "bad-blk-length"
-	case blockchain.ErrBlockWeightTooHigh:
-		return "bad-blk-weight"
-	case blockchain.ErrBlockVersionTooOld:
-		return "bad-version"
-	case blockchain.ErrInvalidTime:
-		return "bad-time"
-	case blockchain.ErrTimeTooOld:
-		return "time-too-old"
-	case blockchain.ErrTimeTooNew:
-		return "time-too-new"
-	case blockchain.ErrDifficultyTooLow:
-		return "bad-diffbits"
-	case blockchain.ErrUnexpectedDifficulty:
-		return "bad-diffbits"
-	case blockchain.ErrHighHash:
-		return "high-hash"
-	case blockchain.ErrBadMerkleRoot:
-		return "bad-txnmrklroot"
-	case blockchain.ErrBadCheckpoint:
-		return "bad-checkpoint"
-	case blockchain.ErrForkTooOld:
-		return "fork-too-old"
-	case blockchain.ErrCheckpointTimeTooOld:
-		return "checkpoint-time-too-old"
-	case blockchain.ErrNoTransactions:
-		return "bad-txns-none"
-	case blockchain.ErrNoTxInputs:
-		return "bad-txns-noinputs"
-	case blockchain.ErrNoTxOutputs:
-		return "bad-txns-nooutputs"
-	case blockchain.ErrTxTooBig:
-		return "bad-txns-size"
-	case blockchain.ErrBadTxOutValue:
-		return "bad-txns-outputvalue"
-	case blockchain.ErrDuplicateTxInputs:
-		return "bad-txns-dupinputs"
-	case blockchain.ErrBadTxInput:
-		return "bad-txns-badinput"
-	case blockchain.ErrMissingTxOut:
-		return "bad-txns-missinginput"
-	case blockchain.ErrUnfinalizedTx:
-		return "bad-txns-unfinalizedtx"
-	case blockchain.ErrDuplicateTx:
-		return "bad-txns-duplicate"
-	case blockchain.ErrOverwriteTx:
-		return "bad-txns-overwrite"
-	case blockchain.ErrImmatureSpend:
-		return "bad-txns-maturity"
-	case blockchain.ErrSpendTooHigh:
-		return "bad-txns-highspend"
-	case blockchain.ErrBadFees:
-		return "bad-txns-fees"
-	case blockchain.ErrTooManySigOps:
-		return "high-sigops"
-	case blockchain.ErrFirstTxNotCoinbase:
-		return "bad-txns-nocoinbase"
-	case blockchain.ErrMultipleCoinbases:
-		return "bad-txns-multicoinbase"
-	case blockchain.ErrBadCoinbaseScriptLen:
-		return "bad-cb-length"
-	case blockchain.ErrBadCoinbaseValue:
-		return "bad-cb-value"
-	case blockchain.ErrMissingCoinbaseHeight:
-		return "bad-cb-height"
-	case blockchain.ErrBadCoinbaseHeight:
-		return "bad-cb-height"
-	case blockchain.ErrScriptMalformed:
-		return "bad-script-malformed"
-	case blockchain.ErrScriptValidation:
-		return "bad-script-validate"
-	case blockchain.ErrUnexpectedWitness:
-		return "unexpected-witness"
-	case blockchain.ErrInvalidWitnessCommitment:
-		return "bad-witness-nonce-size"
-	case blockchain.ErrWitnessCommitmentMismatch:
-		return "bad-witness-merkle-match"
-	case blockchain.ErrPreviousBlockUnknown:
-		return "prev-blk-not-found"
-	case blockchain.ErrInvalidAncestorBlock:
-		return "bad-prevblk"
-	case blockchain.ErrPrevBlockNotBest:
-		return "inconclusive-not-best-prvblk"
-	}
-
-	return "rejected: " + err.String()
-}
-
 // handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
 // deals with block proposals.
 //
@@ -2338,14 +2236,15 @@ func handleGetBlockTemplateProposal(s *rpcServer, request *btcjson.TemplateReque
 	}
 
 	if err := s.cfg.Chain.CheckConnectBlockTemplate(block); err != nil {
-		if _, ok := er.Wrapped(err).(blockchain.RuleError); !ok {
+		if !ruleerror.Err.Is(err) {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			rpcsLog.Error(errStr)
 			return nil, btcjson.NewRPCError(btcjson.ErrRPCVerify, errStr, nil)
 		}
 
 		rpcsLog.Infof("Rejected block proposal: %v", err)
-		return chainErrToGBTErrString(err), nil
+		_, str := ruleerror.ErrToRejectErr(err)
+		return str, nil
 	}
 
 	return nil, nil
@@ -3614,13 +3513,13 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 		// simply rejected as opposed to something actually going wrong,
 		// so log it as such. Otherwise, something really did go wrong,
 		// so log it as an actual error and return.
-		ruleErr, ok := er.Wrapped(err).(mempool.RuleError)
-		if !ok {
+		ruleErrCode := ruleerror.Err.Decode(err)
+		if ruleErrCode == nil {
 			rpcsLog.Errorf("Failed to process transaction %v: %v",
 				tx.Hash(), err)
 
 			return nil, btcjson.NewRPCError(
-				btcjson.ErrRPCTxError, "TX rejected", err)
+				btcjson.ErrRPCTxError, "TX processing failed", err)
 		}
 
 		rpcsLog.Debugf("Rejected transaction %v: %v", tx.Hash(), err)
@@ -3628,25 +3527,22 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 		// We'll then map the rule error to the appropriate RPC error,
 		// matching bitcoind's behavior.
 		code := btcjson.ErrRPCTxError
-		if txRuleErr, ok := ruleErr.Err.(mempool.TxRuleError); ok {
-			errDesc := txRuleErr.Description
-			switch {
-			case strings.Contains(
-				strings.ToLower(errDesc), "orphan transaction",
-			):
-				code = btcjson.ErrRPCTxError
 
-			case strings.Contains(
-				strings.ToLower(errDesc), "transaction already exists",
-			):
-				code = btcjson.ErrRPCTxAlreadyInChain
+		switch ruleErrCode {
+		case ruleerror.ErrOrphanTransactionDisallowed:
+			fallthrough
+		case ruleerror.ErrOrphanTransactionTooBig:
+			code = btcjson.ErrRPCTxError
 
-			default:
-				code = btcjson.ErrRPCTxRejected
-			}
+		case ruleerror.ErrTxExistsInChain:
+			code = btcjson.ErrRPCTxAlreadyInChain
+
+		default:
+			code = btcjson.ErrRPCTxRejected
 		}
 
-		return nil, btcjson.NewRPCError(code, "TX rejected", err)
+		_, str := ruleerror.ErrToRejectErr(err)
+		return nil, btcjson.NewRPCError(code, str, err)
 	}
 
 	// When the transaction was accepted it should be the first item in the
@@ -4155,9 +4051,7 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 	if err != nil {
 		// When the error is because the method is not registered,
 		// produce a method not found RPC error.
-		if jerr, ok := er.Wrapped(err).(btcjson.Error); ok &&
-			jerr.ErrorCode == btcjson.ErrUnregisteredMethod {
-
+		if btcjson.ErrUnregisteredMethod.Is(err) {
 			parsedCmd.err = btcjson.NewRPCError(
 				btcjson.ErrRPCMethodNotFound, "Method not found", nil)
 			return &parsedCmd

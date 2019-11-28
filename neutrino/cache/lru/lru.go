@@ -2,9 +2,9 @@ package lru
 
 import (
 	"container/list"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino/cache"
 )
@@ -149,7 +149,7 @@ func (c *Cache) Get(key interface{}) (cache.Value, er.R) {
 	el, ok := c.cache[key]
 	if !ok {
 		// Element not found in the cache.
-		return nil, cache.ErrElementNotFound
+		return nil, cache.ErrElementNotFound.Default()
 	}
 
 	// When the cache needs to evict a element to make space for another

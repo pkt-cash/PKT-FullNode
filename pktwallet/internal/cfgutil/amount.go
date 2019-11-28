@@ -5,9 +5,10 @@
 package cfgutil
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 )
@@ -30,10 +31,11 @@ func (a *AmountFlag) MarshalFlag() (string, er.R) {
 
 // UnmarshalFlag satisifes the flags.Unmarshaler interface.
 func (a *AmountFlag) UnmarshalFlag(value string) er.R {
+	// TODO(cjd) generalize this
 	value = strings.TrimSuffix(value, " BTC")
-	valueF64, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return err
+	valueF64, errr := strconv.ParseFloat(value, 64)
+	if errr != nil {
+		return er.E(errr)
 	}
 	amount, err := btcutil.NewAmount(valueF64)
 	if err != nil {

@@ -60,7 +60,7 @@ func (w *Wallet) SubmitRescan(job *RescanJob) <-chan er.R {
 	select {
 	case w.rescanAddJob <- job:
 	case <-w.quitChan():
-		errChan <- ErrWalletShuttingDown
+		errChan <- ErrWalletShuttingDown.Default()
 	}
 	return errChan
 }
@@ -123,7 +123,7 @@ func (w *Wallet) rescanBatchHandler() {
 				select {
 				case w.rescanBatch <- curBatch:
 				case <-quit:
-					job.err <- ErrWalletShuttingDown
+					job.err <- ErrWalletShuttingDown.Default()
 					return
 				}
 			} else {
@@ -152,7 +152,7 @@ func (w *Wallet) rescanBatchHandler() {
 				}:
 				case <-quit:
 					for _, errChan := range curBatch.errChans {
-						errChan <- ErrWalletShuttingDown
+						errChan <- ErrWalletShuttingDown.Default()
 					}
 					return
 				}
@@ -171,7 +171,7 @@ func (w *Wallet) rescanBatchHandler() {
 				}:
 				case <-quit:
 					for _, errChan := range curBatch.errChans {
-						errChan <- ErrWalletShuttingDown
+						errChan <- ErrWalletShuttingDown.Default()
 					}
 					return
 				}
@@ -183,7 +183,7 @@ func (w *Wallet) rescanBatchHandler() {
 					case w.rescanBatch <- curBatch:
 					case <-quit:
 						for _, errChan := range curBatch.errChans {
-							errChan <- ErrWalletShuttingDown
+							errChan <- ErrWalletShuttingDown.Default()
 						}
 						return
 					}
@@ -314,6 +314,6 @@ func (w *Wallet) rescanWithTarget(addrs []btcutil.Address,
 	case err := <-w.SubmitRescan(job):
 		return err
 	case <-w.quitChan():
-		return ErrWalletShuttingDown
+		return ErrWalletShuttingDown.Default()
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"math/big"
 	"math/rand"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -47,8 +48,9 @@ var (
 func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
 	[]*btcutil.Block, er.R) {
 	// Open the file that contains the blocks for reading.
-	fi, err := os.Open(dataFile)
-	if err != nil {
+	fi, errr := os.Open(dataFile)
+	if errr != nil {
+		err := er.E(errr)
 		t.Errorf("failed to open file %v, err %v", dataFile, err)
 		return nil, err
 	}
@@ -68,8 +70,8 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
 	// Load the remaining blocks.
 	for height := 1; ; height++ {
 		var net uint32
-		err := binary.Read(dr, binary.LittleEndian, &net)
-		if err == io.EOF {
+		err := er.E(binary.Read(dr, binary.LittleEndian, &net))
+		if er.Wrapped(err) == io.EOF {
 			// Hit end of file at the expected offset.  No error.
 			break
 		}
@@ -85,7 +87,7 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
 		}
 
 		var blockLen uint32
-		err = binary.Read(dr, binary.LittleEndian, &blockLen)
+		err = er.E(binary.Read(dr, binary.LittleEndian, &blockLen))
 		if err != nil {
 			t.Errorf("Failed to load block size for block %d: %v",
 				height, err)
@@ -94,8 +96,9 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
 
 		// Read the block.
 		blockBytes := make([]byte, blockLen)
-		_, err = io.ReadFull(dr, blockBytes)
-		if err != nil {
+		_, errr = io.ReadFull(dr, blockBytes)
+		if errr != nil {
+			err := er.E(errr)
 			t.Errorf("Failed to load block %d: %v", height, err)
 			return nil, err
 		}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -588,7 +589,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		// simply rejected as opposed to something actually going wrong,
 		// so log it as such.  Otherwise, something really did go wrong,
 		// so log it as an actual error.
-		if _, ok := er.Wrapped(err).(mempool.RuleError); ok {
+		if ruleerror.Err.Is(err) {
 			log.Debugf("Rejected transaction %v from %s: %v",
 				txHash, peer, err)
 		} else {
@@ -598,7 +599,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 
 		// Convert the error into an appropriate reject message and
 		// send it.
-		code, reason := mempool.ErrToRejectErr(err)
+		code, reason := ruleerror.ErrToRejectErr(err)
 		peer.PushRejectMsg(wire.CmdTx, code, reason, txHash, false)
 		return
 	}
@@ -685,33 +686,28 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// Process the block to include validation, best chain selection, orphan
 	// handling, etc.
 	_, isOrphan, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
-	if err != nil {
-		if re, ok := er.Wrapped(err).(blockchain.RuleError); ok {
-			if re.ErrorCode == blockchain.ErrPowCannotVerify {
-				err = nil
-			}
-		}
+	if ruleerror.ErrPowCannotVerify.Is(err) {
+		err = nil
 	}
 	if err != nil {
 		// When the error is a rule error, it means the block was simply
 		// rejected as opposed to something actually going wrong, so log
 		// it as such.  Otherwise, something really did go wrong, so log
 		// it as an actual error.
-		if _, ok := er.Wrapped(err).(blockchain.RuleError); ok {
+		if ruleerror.Err.Is(err) {
 			log.Infof("Rejected block %v from %s: %v", blockHash,
 				peer, err)
 		} else {
 			log.Errorf("Failed to process block %v: %v",
 				blockHash, err)
 		}
-		if dbErr, ok := er.Wrapped(err).(database.Error); ok && dbErr.ErrorCode ==
-			database.ErrCorruption {
-			panic(dbErr)
+		if database.ErrCorruption.Is(err) {
+			panic(err)
 		}
 
 		// Convert the error into an appropriate reject message and
 		// send it.
-		code, reason := mempool.ErrToRejectErr(err)
+		code, reason := ruleerror.ErrToRejectErr(err)
 		peer.PushRejectMsg(wire.CmdBlock, code, reason, blockHash, false)
 		return
 	}

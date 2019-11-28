@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 const (
@@ -175,7 +176,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
-		if _, ok := er.Wrapped(err).(blockchain.RuleError); !ok {
+		if !ruleerror.Err.Is(err) {
 			log.Errorf("Unexpected error while processing "+
 				"block submitted via CPU miner: %v", err)
 			return false

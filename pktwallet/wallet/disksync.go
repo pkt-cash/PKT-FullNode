@@ -5,9 +5,9 @@
 package wallet
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // checkCreateDir checks that the path exists and is a directory.

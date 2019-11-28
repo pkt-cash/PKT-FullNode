@@ -4,12 +4,12 @@ package neutrino
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -32,7 +32,8 @@ var (
 
 	// ErrRescanExit is an error returned to the caller in case the ongoing
 	// rescan exits.
-	ErrRescanExit = errors.New("rescan exited")
+	ErrRescanExit = Err.CodeWithDetail("ErrRescanExit",
+		"rescan exited")
 )
 
 // ChainSource is an interface that's in charge of retrieving information about
@@ -381,7 +382,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 
 			case <-ro.quit:
 				blockSubscription.Cancel()
-				return ErrRescanExit
+				return ErrRescanExit.Default()
 			}
 		}
 
@@ -564,7 +565,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 		// If the block index doesn't know about this block, then it's
 		// likely we're mid re-org so we'll accept this as we account
 		// for it below.
-		case err == headerfs.ErrHashNotFound:
+		case headerfs.ErrHashNotFound.Is(err):
 
 		case err != nil:
 			return er.Errorf("unable to get filter for hash=%v: %v",
@@ -664,7 +665,7 @@ rescanLoop:
 			select {
 
 			case <-ro.quit:
-				return ErrRescanExit
+				return ErrRescanExit.Default()
 
 			// An update mesage has just come across, if it points
 			// to a prior point in the chain, then we may need to
@@ -991,7 +992,7 @@ func blockFilterMatches(chain ChainSource, ro *rescanOptions,
 		*blockHash, wire.GCSFilterRegular, OptimisticBatch(),
 	)
 	if err != nil {
-		if err == headerfs.ErrHashNotFound {
+		if headerfs.ErrHashNotFound.Is(err) {
 			// Block has been reorged out from under us.
 			return false, nil
 		}
@@ -1285,7 +1286,7 @@ func (r *Rescan) Update(options ...UpdateOption) er.R {
 	select {
 	case r.updateChan <- uo:
 	case <-ro.quit:
-		return ErrRescanExit
+		return ErrRescanExit.Default()
 
 	case <-r.running:
 		errStr := "Rescan is already done and cannot be updated."

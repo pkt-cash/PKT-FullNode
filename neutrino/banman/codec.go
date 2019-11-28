@@ -1,9 +1,10 @@
 package banman
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ipType represents the different types of IP addresses supported by the
@@ -34,19 +35,19 @@ func encodeIPNet(w io.Writer, ipNet *net.IPNet) er.R {
 		ip = ipNet.IP.To16()
 		ipType = ipv6
 	default:
-		return ErrUnsupportedIP
+		return ErrUnsupportedIP.Default()
 	}
 
 	// Write the IP type first in order to properly identify it when
 	// deserializing it, followed by the IP itself and its mask.
 	if _, err := w.Write([]byte{ipType}); err != nil {
-		return err
+		return er.E(err)
 	}
 	if _, err := w.Write(ip); err != nil {
-		return err
+		return er.E(err)
 	}
 	if _, err := w.Write([]byte(ipNet.Mask)); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -57,7 +58,7 @@ func decodeIPNet(r io.Reader) (*net.IPNet, er.R) {
 	// Read the IP address type and determine whether it is supported.
 	var ipType [1]byte
 	if _, err := r.Read(ipType[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var ipLen int
@@ -67,18 +68,18 @@ func decodeIPNet(r io.Reader) (*net.IPNet, er.R) {
 	case ipv6:
 		ipLen = net.IPv6len
 	default:
-		return nil, ErrUnsupportedIP
+		return nil, ErrUnsupportedIP.Default()
 	}
 
 	// Once we have the type and its corresponding length, attempt to read
 	// it and its mask.
 	ip := make([]byte, ipLen)
 	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	mask := make([]byte, ipLen)
 	if _, err := r.Read(mask[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	return &net.IPNet{IP: ip, Mask: mask}, nil
 }

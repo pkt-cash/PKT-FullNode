@@ -1074,7 +1074,7 @@ func opcodeEndif(op *parsedOpcode, vm *Engine) er.R {
 // item on the stack or when that item evaluates to false.  In the latter case
 // where the verification fails specifically due to the top item evaluating
 // to false, the returned error will use the passed error code.
-func abstractVerify(op *parsedOpcode, vm *Engine, c ErrorCode) er.R {
+func abstractVerify(op *parsedOpcode, vm *Engine, c *er.ErrorCode) er.R {
 	verified, err := vm.dstack.PopBool()
 	if err != nil {
 		return err

@@ -9,10 +9,10 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"runtime/debug"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/golangcrypto/nacl/secretbox"
 	"github.com/btcsuite/golangcrypto/scrypt"
@@ -23,11 +23,13 @@ var (
 	prng = rand.Reader
 )
 
+var Err er.ErrorType = er.NewErrorType("snacl.Err")
+
 // Error types and messages.
 var (
-	ErrInvalidPassword = errors.New("invalid password")
-	ErrMalformed       = errors.New("malformed data")
-	ErrDecryptFailed   = errors.New("unable to decrypt")
+	ErrInvalidPassword = Err.Code("ErrInvalidPassword")
+	ErrMalformed       = Err.Code("ErrMalformed")
+	ErrDecryptFailed   = Err.Code("ErrDecryptFailed")
 )
 
 // Various constants needed for encryption scheme.
@@ -50,7 +52,7 @@ func (ck *CryptoKey) Encrypt(in []byte) ([]byte, er.R) {
 	var nonce [NonceSize]byte
 	_, err := io.ReadFull(prng, nonce[:])
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	blob := secretbox.Seal(nil, in, &nonce, (*[KeySize]byte)(ck))
 	return append(nonce[:], blob...), nil
@@ -60,7 +62,7 @@ func (ck *CryptoKey) Encrypt(in []byte) ([]byte, er.R) {
 // function.
 func (ck *CryptoKey) Decrypt(in []byte) ([]byte, er.R) {
 	if len(in) < NonceSize {
-		return nil, ErrMalformed
+		return nil, ErrMalformed.New("nonce too short", nil)
 	}
 
 	var nonce [NonceSize]byte
@@ -69,7 +71,7 @@ func (ck *CryptoKey) Decrypt(in []byte) ([]byte, er.R) {
 
 	opened, ok := secretbox.Open(nil, blob, &nonce, (*[KeySize]byte)(ck))
 	if !ok {
-		return nil, ErrDecryptFailed
+		return nil, ErrDecryptFailed.Default()
 	}
 
 	return opened, nil
@@ -88,7 +90,7 @@ func GenerateCryptoKey() (*CryptoKey, er.R) {
 	var key CryptoKey
 	_, err := io.ReadFull(prng, key[:])
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return &key, nil
@@ -118,7 +120,7 @@ func (sk *SecretKey) deriveKey(password *[]byte) er.R {
 		sk.Parameters.P,
 		len(sk.Key))
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	copy(sk.Key[:], key)
 	zero.Bytes(key)
@@ -171,7 +173,7 @@ func (sk *SecretKey) Unmarshal(marshalled []byte) er.R {
 	//
 	// KeySize + sha256.Size + N (8 bytes) + R (8 bytes) + P (8 bytes)
 	if len(marshalled) != KeySize+sha256.Size+24 {
-		return ErrMalformed
+		return ErrMalformed.New("wrong size secret key", nil)
 	}
 
 	params := &sk.Parameters
@@ -206,7 +208,7 @@ func (sk *SecretKey) DeriveKey(password *[]byte) er.R {
 	// verify password
 	digest := sha256.Sum256(sk.Key[:])
 	if subtle.ConstantTimeCompare(digest[:], sk.Parameters.Digest[:]) != 1 {
-		return ErrInvalidPassword
+		return ErrInvalidPassword.Default()
 	}
 
 	return nil
@@ -231,13 +233,13 @@ func NewSecretKey(password *[]byte, N, r, p int) (*SecretKey, er.R) {
 	sk.Parameters.N = N
 	sk.Parameters.R = r
 	sk.Parameters.P = p
-	_, err := io.ReadFull(prng, sk.Parameters.Salt[:])
-	if err != nil {
-		return nil, err
+	_, errr := io.ReadFull(prng, sk.Parameters.Salt[:])
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// derive key
-	err = sk.deriveKey(password)
+	err := sk.deriveKey(password)
 	if err != nil {
 		return nil, err
 	}

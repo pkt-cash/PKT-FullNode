@@ -9,8 +9,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -1127,7 +1128,7 @@ type readCursor struct {
 
 func (r readCursor) Delete() er.R {
 	str := "failed to delete current cursor item from read-only cursor"
-	return storeError(ErrDatabase, str, walletdb.ErrTxNotWritable)
+	return storeError(ErrDatabase, str, walletdb.ErrTxNotWritable.Default())
 }
 
 func makeUnminedCreditIterator(ns walletdb.ReadWriteBucket, txHash *chainhash.Hash) unminedCreditIterator {
@@ -1460,13 +1461,12 @@ func scopedUpdate(db walletdb.DB, namespaceKey []byte, f func(walletdb.ReadWrite
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
 			const desc = "rollback failed"
-			serr, ok := err.(Error)
-			if !ok {
+			if !Err.Is(err) {
 				// This really shouldn't happen.
 				return storeError(ErrDatabase, desc, rollbackErr)
 			}
-			serr.Desc = desc + ": " + serr.Desc
-			return serr
+			err.AddMessage(desc)
+			return err
 		}
 		return err
 	}

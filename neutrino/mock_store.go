@@ -1,7 +1,6 @@
 package neutrino
 
 import (
-	"fmt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -50,7 +49,7 @@ func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
 		return &header, nil
 	}
 
-	return nil, headerfs.ErrHeightNotFound
+	return nil, headerfs.ErrHeightNotFound.Default()
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderAncestors(uint32,

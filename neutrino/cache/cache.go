@@ -1,10 +1,15 @@
 package cache
 
-import "fmt"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
+
+var Err er.ErrorType = er.NewErrorType("cache.Err")
 
 var (
 	// ErrElementNotFound is returned when element isn't found in the cache.
-	ErrElementNotFound = fmt.Errorf("unable to find element")
+	ErrElementNotFound = Err.CodeWithDetail("ErrElementNotFound",
+		"unable to find element")
 )
 
 // Cache represents a generic cache.

@@ -7,7 +7,11 @@
 
 package walletdb
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // ReadTx represents a database transaction that can only be used for reads.  If
 // a database update must occur, use a ReadWriteTx.
@@ -258,7 +262,7 @@ var drivers = make(map[string]*Driver)
 // already been registered.
 func RegisterDriver(driver Driver) er.R {
 	if _, exists := drivers[driver.DbType]; exists {
-		return ErrDbTypeRegistered
+		return ErrDbTypeRegistered.Default()
 	}
 
 	drivers[driver.DbType] = &driver
@@ -283,7 +287,7 @@ func SupportedDrivers() []string {
 func Create(dbType string, args ...interface{}) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
-		return nil, ErrDbUnknownType
+		return nil, ErrDbUnknownType.Default()
 	}
 
 	return drv.Create(args...)
@@ -297,7 +301,7 @@ func Create(dbType string, args ...interface{}) (DB, er.R) {
 func Open(dbType string, args ...interface{}) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
-		return nil, ErrDbUnknownType
+		return nil, ErrDbUnknownType.Default()
 	}
 
 	return drv.Open(args...)

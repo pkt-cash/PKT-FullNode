@@ -4,14 +4,14 @@
 package neutrino
 
 import (
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -629,7 +629,8 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 		dialer = cfg.Dialer
 	} else {
 		dialer = func(addr net.Addr) (net.Conn, er.R) {
-			return net.Dial(addr.Network(), addr.String())
+			conn, errr := net.Dial(addr.Network(), addr.String())
+			return conn, er.E(errr)
 		}
 	}
 
@@ -638,7 +639,10 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	if cfg.NameResolver != nil {
 		nameResolver = cfg.NameResolver
 	} else {
-		nameResolver = net.LookupIP
+		nameResolver = func(host string) ([]net.IP, er.R) {
+			out, errr := net.LookupIP(host)
+			return out, er.E(errr)
+		}
 	}
 
 	// When creating the addr manager, we'll check to see if the user has
@@ -1128,14 +1132,14 @@ cleanup:
 // names resolved to IP addresses and a default port added, if not specified,
 // from the ChainService's network parameters.
 func (s *ChainService) addrStringToNetAddr(addr string) (net.Addr, er.R) {
-	host, strPort, err := net.SplitHostPort(addr)
-	if err != nil {
-		switch err.(type) {
+	host, strPort, errr := net.SplitHostPort(addr)
+	if errr != nil {
+		switch errr.(type) {
 		case *net.AddrError:
 			host = addr
 			strPort = s.ChainParams().DefaultPort
 		default:
-			return nil, err
+			return nil, er.E(errr)
 		}
 	}
 
@@ -1149,9 +1153,9 @@ func (s *ChainService) addrStringToNetAddr(addr string) (net.Addr, er.R) {
 		return nil, er.Errorf("no addresses found for %s", host)
 	}
 
-	port, err := strconv.Atoi(strPort)
-	if err != nil {
-		return nil, err
+	port, errr := strconv.Atoi(strPort)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return &net.TCPAddr{

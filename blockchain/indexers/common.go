@@ -9,7 +9,6 @@ package indexers
 
 import (
 	"encoding/binary"
-	"errors"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -18,6 +17,8 @@ import (
 	"github.com/pkt-cash/pktd/database"
 )
 
+var Err er.ErrorType = er.NewErrorType("indexers.Err")
+
 var (
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
@@ -25,7 +26,11 @@ var (
 
 	// errInterruptRequested indicates that an operation was cancelled due
 	// to a user-requested interrupt.
-	errInterruptRequested = errors.New("interrupt requested")
+	errInterruptRequested = Err.Code("errInterruptRequested")
+
+	// errDeserialize signifies that a problem was encountered when deserializing
+	// data.
+	errDeserialize0 = Err.Code("errDeserialize")
 )
 
 // NeedsInputser provides a generic interface for an indexer to specify the it
@@ -65,24 +70,14 @@ type Indexer interface {
 	DisconnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) er.R
 }
 
-// errDeserialize signifies that a problem was encountered when deserializing
-// data.
-type errDeserialize0 string
-
 func errDeserialize(s string) er.R {
-	return er.E(errDeserialize0(s))
-}
-
-// Error implements the error interface.
-func (e errDeserialize0) Error() string {
-	return string(e)
+	return errDeserialize0.New(s, nil)
 }
 
 // isDeserializeErr returns whether or not the passed error is an errDeserialize
 // error.
 func isDeserializeErr(err er.R) bool {
-	_, ok := er.Wrapped(err).(errDeserialize0)
-	return ok
+	return errDeserialize0.Is(err)
 }
 
 // internalBucket is an abstraction over a database bucket.  It is used to make

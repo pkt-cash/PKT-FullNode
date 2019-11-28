@@ -318,12 +318,8 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 			// Ensure any deserialization errors are returned as
 			// database corruption errors.
 			if isDeserializeErr(err) {
-				err = er.E(database.Error{
-					ErrorCode: database.ErrCorruption,
-					Description: fmt.Sprintf("failed to "+
-						"deserialized address index "+
-						"for key %x: %v", addrKey, err),
-				})
+				err = database.ErrCorruption.New(fmt.Sprintf(
+					"failed to deserialized address index for key %x", addrKey), err)
 			}
 
 			return nil, 0, err

@@ -9,9 +9,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/golangcrypto/ssh/terminal"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
@@ -26,7 +27,7 @@ func ProvideSeed() ([]byte, er.R) {
 		fmt.Print("Enter existing wallet seed: ")
 		seedStr, err := reader.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		seedStr = strings.TrimSpace(strings.ToLower(seedStr))
 
@@ -53,7 +54,7 @@ func ProvidePrivPassphrase() ([]byte, er.R) {
 		fmt.Print(prompt)
 		pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		fmt.Print("\n")
 		pass = bytes.TrimSpace(pass)
@@ -84,7 +85,7 @@ func promptList(reader *bufio.Reader, prefix string, validResponses []string, de
 		fmt.Print(prompt)
 		reply, err := reader.ReadString('\n')
 		if err != nil {
-			return "", err
+			return "", er.E(err)
 		}
 		reply = strings.TrimSpace(strings.ToLower(reply))
 		if reply == "" {
@@ -122,7 +123,7 @@ func promptPass(reader *bufio.Reader, prefix string, confirm bool) ([]byte, er.R
 		fmt.Print(prompt)
 		pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		fmt.Print("\n")
 		pass = bytes.TrimSpace(pass)
@@ -137,7 +138,7 @@ func promptPass(reader *bufio.Reader, prefix string, confirm bool) ([]byte, er.R
 		fmt.Print("Confirm passphrase: ")
 		confirm, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		fmt.Print("\n")
 		confirm = bytes.TrimSpace(confirm)
@@ -179,7 +180,7 @@ func PrivatePass(reader *bufio.Reader, legacyKeyStore *keystore.Store) ([]byte, 
 
 		// Keep prompting the user until the passphrase is correct.
 		if err := legacyKeyStore.Unlock([]byte(privPass)); err != nil {
-			if err == keystore.ErrWrongPassphrase {
+			if keystore.ErrWrongPassphrase.Is(err) {
 				fmt.Println(err)
 				continue
 			}
@@ -288,7 +289,7 @@ func Seed(reader *bufio.Reader) ([]byte, er.R) {
 				`and secure location, enter "OK" to continue: `)
 			confirmSeed, err := reader.ReadString('\n')
 			if err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 			confirmSeed = strings.TrimSpace(confirmSeed)
 			confirmSeed = strings.Trim(confirmSeed, `"`)
@@ -304,7 +305,7 @@ func Seed(reader *bufio.Reader) ([]byte, er.R) {
 		fmt.Print("Enter existing wallet seed: ")
 		seedStr, err := reader.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		seedStr = strings.TrimSpace(strings.ToLower(seedStr))
 

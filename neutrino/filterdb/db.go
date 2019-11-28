@@ -1,7 +1,6 @@
 package filterdb
 
 import (
-	"fmt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
@@ -34,7 +33,8 @@ const (
 var (
 	// ErrFilterNotFound is returned when a filter for a target block hash is
 	// unable to be located.
-	ErrFilterNotFound = fmt.Errorf("unable to find filter")
+	ErrFilterNotFound = er.GenericErrorType.CodeWithDetail("filterdb.ErrFilterNotFound",
+		"unable to find filter")
 )
 
 // FilterDatabase is an interface which represents an object that is capable of
@@ -99,7 +99,7 @@ func New(db walletdb.DB, params chaincfg.Params) (*FilterStore, er.R) {
 
 		return putFilter(regFilters, genesisHash, basicFilter)
 	})
-	if err != nil && err != walletdb.ErrBucketExists {
+	if err != nil && !walletdb.ErrBucketExists.Is(err) {
 		return nil, err
 	}
 
@@ -179,7 +179,7 @@ func (f *FilterStore) FetchFilter(blockHash *chainhash.Hash,
 
 		filterBytes := targetBucket.Get(blockHash[:])
 		if filterBytes == nil {
-			return ErrFilterNotFound
+			return ErrFilterNotFound.Default()
 		}
 		if len(filterBytes) == 0 {
 			return nil

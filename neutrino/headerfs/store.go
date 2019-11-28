@@ -3,11 +3,11 @@ package headerfs
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -110,9 +110,9 @@ func newHeaderStore(db walletdb.DB, filePath string,
 	// We'll open the file, creating it if necessary and ensuring that all
 	// writes are actually appends to the end of the file.
 	fileFlags := os.O_RDWR | os.O_APPEND | os.O_CREATE
-	headerFile, err := os.OpenFile(flatFileName, fileFlags, 0644)
-	if err != nil {
-		return nil, err
+	headerFile, errr := os.OpenFile(flatFileName, fileFlags, 0644)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// With the file open, we'll then create the header index so we can
@@ -156,9 +156,9 @@ func NewBlockHeaderStore(filePath string, db walletdb.DB,
 
 	// With the header store created, we'll fetch the file size to see if
 	// we need to initialize it with the first header or not.
-	fileInfo, err := hStore.file.Stat()
-	if err != nil {
-		return nil, err
+	fileInfo, errr := hStore.file.Stat()
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	bhs := &blockHeaderStore{
@@ -607,9 +607,9 @@ func NewFilterHeaderStore(filePath string, db walletdb.DB,
 
 	// With the header store created, we'll fetch the fiie size to see if
 	// we need to initialize it with the first header or not.
-	fileInfo, err := fStore.file.Stat()
-	if err != nil {
-		return nil, err
+	fileInfo, errr := fStore.file.Stat()
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	fhs := &FilterHeaderStore{
@@ -725,10 +725,10 @@ func (f *FilterHeaderStore) maybeResetHeaderState(
 	assertedHeader, err := f.FetchHeaderByHeight(
 		headerStateAssertion.Height,
 	)
-	if _, ok := err.(*ErrHeaderNotFound); ok {
-		return false, nil
-	}
 	if err != nil {
+		if ErrHeaderNotFound.Is(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
@@ -739,10 +739,10 @@ func (f *FilterHeaderStore) maybeResetHeaderState(
 		// Close the file before removing it. This is required by some
 		// OS, e.g., Windows.
 		if err := f.file.Close(); err != nil {
-			return true, err
+			return true, er.E(err)
 		}
 		if err := os.Remove(f.fileName); err != nil {
-			return true, err
+			return true, er.E(err)
 		}
 		return true, nil
 	}
@@ -849,7 +849,7 @@ func (f *FilterHeaderStore) WriteHeaders(hdrs ...FilterHeader) er.R {
 	// buffer we just extracted from the pool.
 	for _, header := range hdrs {
 		if _, err := headerBuf.Write(header.FilterHash[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 	}
 

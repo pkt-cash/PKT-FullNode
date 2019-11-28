@@ -1,8 +1,9 @@
 package wallet
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
@@ -86,9 +87,9 @@ func (rm *RecoveryManager) Resurrect(ns walletdb.ReadBucket,
 		for i := uint32(0); i < externalCount; i++ {
 			keyPath := externalKeyPath(i)
 			addr, err := scopedMgr.DeriveFromKeyPath(ns, keyPath)
-			if err != nil && err != hdkeychain.ErrInvalidChild {
+			if err != nil && !hdkeychain.ErrInvalidChild.Is(err) {
 				return err
-			} else if err == hdkeychain.ErrInvalidChild {
+			} else if hdkeychain.ErrInvalidChild.Is(err) {
 				scopeState.ExternalBranch.MarkInvalidChild(i)
 				continue
 			}
@@ -106,9 +107,9 @@ func (rm *RecoveryManager) Resurrect(ns walletdb.ReadBucket,
 		for i := uint32(0); i < internalCount; i++ {
 			keyPath := internalKeyPath(i)
 			addr, err := scopedMgr.DeriveFromKeyPath(ns, keyPath)
-			if err != nil && err != hdkeychain.ErrInvalidChild {
+			if err != nil && !hdkeychain.ErrInvalidChild.Is(err) {
 				return err
-			} else if err == hdkeychain.ErrInvalidChild {
+			} else if hdkeychain.ErrInvalidChild.Is(err) {
 				scopeState.InternalBranch.MarkInvalidChild(i)
 				continue
 			}

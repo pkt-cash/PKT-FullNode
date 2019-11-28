@@ -1,10 +1,9 @@
 package waddrmgr
 
 import (
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -339,7 +338,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 	// To ensure we record a height that is known to us from the chain,
 	// we'll make sure this height estimate can be found. Otherwise, we'll
 	// continue subtracting a day worth of blocks until we can find one.
-	for IsError(err, ErrBlockNotFound) {
+	for ErrBlockNotFound.Is(err) {
 		birthdayHeight -= 144
 		if birthdayHeight < 0 {
 			birthdayHeight = 0

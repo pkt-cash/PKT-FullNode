@@ -3,8 +3,9 @@ package waddrmgr
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -706,11 +707,9 @@ func (s *ScopedKeyManager) loadAndCacheAddress(ns walletdb.ReadBucket,
 	// Attempt to load the raw address information from the database.
 	rowInterface, err := fetchAddress(ns, &s.scope, address.ScriptAddress())
 	if err != nil {
-		if merr, ok := err.(*ManagerError); ok {
-			desc := fmt.Sprintf("failed to fetch address '%s': %v",
-				address.ScriptAddress(), merr.Description)
-			merr.Description = desc
-			return nil, merr
+		if ManagerErr.Is(err) {
+			err.AddMessage(fmt.Sprintf("failed to fetch address '%s'",
+				address.ScriptAddress()))
 		}
 		return nil, maybeConvertDbError(err)
 	}
@@ -855,7 +854,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 			if err != nil {
 				// When this particular child is invalid, skip to the
 				// next index.
-				if err == hdkeychain.ErrInvalidChild {
+				if hdkeychain.ErrInvalidChild.Is(err) {
 					nextIndex++
 					continue
 				}
@@ -1057,7 +1056,7 @@ func (s *ScopedKeyManager) extendAddresses(ns walletdb.ReadWriteBucket,
 			if err != nil {
 				// When this particular child is invalid, skip to the
 				// next index.
-				if err == hdkeychain.ErrInvalidChild {
+				if hdkeychain.ErrInvalidChild.Is(err) {
 					nextIndex++
 					continue
 				}
@@ -1174,8 +1173,7 @@ func (s *ScopedKeyManager) NextExternalAddresses(ns walletdb.ReadWriteBucket,
 
 	// Enforce maximum account number.
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return nil, err
+		return nil, ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1191,8 +1189,7 @@ func (s *ScopedKeyManager) NextInternalAddresses(ns walletdb.ReadWriteBucket,
 
 	// Enforce maximum account number.
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return nil, err
+		return nil, ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1209,8 +1206,7 @@ func (s *ScopedKeyManager) ExtendExternalAddresses(ns walletdb.ReadWriteBucket,
 	account uint32, lastIndex uint32) er.R {
 
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return err
+		return ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1227,8 +1223,7 @@ func (s *ScopedKeyManager) ExtendInternalAddresses(ns walletdb.ReadWriteBucket,
 	account uint32, lastIndex uint32) er.R {
 
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return err
+		return ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1250,8 +1245,7 @@ func (s *ScopedKeyManager) LastExternalAddress(ns walletdb.ReadBucket,
 
 	// Enforce maximum account number.
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return nil, err
+		return nil, ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1284,8 +1278,7 @@ func (s *ScopedKeyManager) LastInternalAddress(ns walletdb.ReadBucket,
 
 	// Enforce maximum account number.
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return nil, err
+		return nil, ErrAccountNumTooHigh.Default()
 	}
 
 	s.mtx.Lock()
@@ -1311,14 +1304,14 @@ func (s *ScopedKeyManager) LastInternalAddress(ns walletdb.ReadBucket,
 // mapping that to the next highest account number.
 func (s *ScopedKeyManager) NewRawAccount(ns walletdb.ReadWriteBucket, number uint32) er.R {
 	if s.rootManager.WatchOnly() {
-		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return ErrWatchingOnly.Default()
 	}
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	if s.rootManager.IsLocked() {
-		return managerError(ErrLocked, errLocked, nil)
+		return ErrLocked.Default()
 	}
 
 	// As this is an ad hoc account that may not follow our normal linear
@@ -1335,14 +1328,14 @@ func (s *ScopedKeyManager) NewRawAccount(ns walletdb.ReadWriteBucket, number uin
 // it requires the manager to be unlocked.
 func (s *ScopedKeyManager) NewAccount(ns walletdb.ReadWriteBucket, name string) (uint32, er.R) {
 	if s.rootManager.WatchOnly() {
-		return 0, managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return 0, ErrWatchingOnly.Default()
 	}
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	if s.rootManager.IsLocked() {
-		return 0, managerError(ErrLocked, errLocked, nil)
+		return 0, ErrLocked.Default()
 	}
 
 	// Fetch latest account, and create a new account in the same
@@ -1547,7 +1540,7 @@ func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
 
 	// The manager must be unlocked to encrypt the imported private key.
 	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Prevent duplicates.
@@ -1653,7 +1646,7 @@ func (s *ScopedKeyManager) ImportWitnessScript(ns walletdb.ReadWriteBucket,
 
 	// The manager must be unlocked to encrypt the imported script.
 	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Prevent duplicates.
@@ -1764,7 +1757,7 @@ func (s *ScopedKeyManager) ImportScript(ns walletdb.ReadWriteBucket,
 
 	// The manager must be unlocked to encrypt the imported script.
 	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Prevent duplicates.

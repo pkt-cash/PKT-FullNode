@@ -9,9 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/websocket"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -134,12 +134,11 @@ func NewServer(opts *Options, walletLoader *wallet.Loader, listeners []net.Liste
 	serveMux.Handle("/ws", throttledFn(opts.MaxWebsocketClients,
 		func(w http.ResponseWriter, r *http.Request) {
 			authenticated := false
-			switch server.checkAuthHeader(r) {
-			case nil:
+			err := server.checkAuthHeader(r)
+			if ErrNoAuth.Is(err) {
+			} else if err == nil {
 				authenticated = true
-			case ErrNoAuth:
-				// nothing
-			default:
+			} else {
 				// If auth was supplied but incorrect, rather than simply
 				// being missing, immediately terminate the connection.
 				log.Warnf("Disconnecting improperly authorized " +
@@ -148,10 +147,10 @@ func NewServer(opts *Options, walletLoader *wallet.Loader, listeners []net.Liste
 				return
 			}
 
-			conn, err := server.upgrader.Upgrade(w, r, nil)
-			if err != nil {
+			conn, errr := server.upgrader.Upgrade(w, r, nil)
+			if errr != nil {
 				log.Warnf("Cannot websocket upgrade client %s: %v",
-					r.RemoteAddr, err)
+					r.RemoteAddr, er.E(errr))
 				return
 			}
 			wsc := newWebsocketClient(conn, authenticated, r.RemoteAddr)
@@ -288,7 +287,8 @@ func (s *Server) handlerClosure(request *btcjson.Request) lazyHandler {
 
 // ErrNoAuth represents an error where authentication could not succeed
 // due to a missing Authorization HTTP header.
-var ErrNoAuth = errors.New("no auth")
+var ErrNoAuth = er.GenericErrorType.CodeWithDetail("legacyrpc.ErrNoAuth",
+	"no auth")
 
 // checkAuthHeader checks the HTTP Basic authentication supplied by a client
 // in the HTTP request r.  It errors with ErrNoAuth if the request does not
@@ -299,7 +299,7 @@ var ErrNoAuth = errors.New("no auth")
 func (s *Server) checkAuthHeader(r *http.Request) er.R {
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) == 0 {
-		return ErrNoAuth
+		return ErrNoAuth.Default()
 	}
 
 	authsha := sha256.Sum256([]byte(authhdr[0]))
@@ -421,15 +421,15 @@ out:
 					break out
 				}
 				resp := makeResponse(req.ID, nil,
-					btcjson.ErrRPCInvalidRequest)
-				mresp, err := json.Marshal(resp)
+					btcjson.ErrRPCInvalidRequest.Default())
+				mresp, errr := json.Marshal(resp)
 				// We expect the marshal to succeed.  If it
 				// doesn't, it indicates some non-marshalable
 				// type in the response.
-				if err != nil {
-					panic(err)
+				if errr != nil {
+					panic(errr)
 				}
-				err = wsc.send(mresp)
+				err := wsc.send(mresp)
 				if err != nil {
 					break out
 				}
@@ -444,11 +444,11 @@ out:
 				wsc.authenticated = true
 				resp := makeResponse(req.ID, nil, nil)
 				// Expected to never fail.
-				mresp, err := json.Marshal(resp)
-				if err != nil {
-					panic(err)
+				mresp, errr := json.Marshal(resp)
+				if errr != nil {
+					panic(errr)
 				}
-				err = wsc.send(mresp)
+				err := wsc.send(mresp)
 				if err != nil {
 					break out
 				}
@@ -464,12 +464,12 @@ out:
 			case "stop":
 				resp := makeResponse(req.ID,
 					"pktwallet stopping.", nil)
-				mresp, err := json.Marshal(resp)
+				mresp, errr := json.Marshal(resp)
 				// Expected to never fail.
-				if err != nil {
+				if errr != nil {
 					panic(err)
 				}
-				err = wsc.send(mresp)
+				err := wsc.send(mresp)
 				if err != nil {
 					break out
 				}
@@ -566,8 +566,8 @@ const maxRequestSize = 1024 * 1024 * 4
 // postClientRPC processes and replies to a JSON-RPC client request.
 func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 	body := http.MaxBytesReader(w, r.Body, maxRequestSize)
-	rpcRequest, err := ioutil.ReadAll(body)
-	if err != nil {
+	rpcRequest, errr := ioutil.ReadAll(body)
+	if errr != nil {
 		// TODO: what if the underlying reader errored?
 		http.Error(w, "413 Request Too Large.",
 			http.StatusRequestEntityTooLarge)
@@ -579,19 +579,20 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 	// processing.  While checking the methods, disallow authenticate
 	// requests, as they are invalid for HTTP POST clients.
 	var req btcjson.Request
-	err = json.Unmarshal(rpcRequest, &req)
-	if err != nil {
-		resp, err := btcjson.MarshalResponse(req.ID, nil, btcjson.ErrRPCInvalidRequest)
+	errr = json.Unmarshal(rpcRequest, &req)
+	if errr != nil {
+		resp, err := btcjson.MarshalResponse(req.ID, nil,
+			btcjson.ErrRPCInvalidRequest.Default())
 		if err != nil {
 			log.Errorf("Unable to marshal response: %v", err)
 			http.Error(w, "500 Internal Server Error",
 				http.StatusInternalServerError)
 			return
 		}
-		_, err = w.Write(resp)
-		if err != nil {
+		_, errr := w.Write(resp)
+		if errr != nil {
 			log.Warnf("Cannot write invalid request request to "+
-				"client: %v", err)
+				"client: %v", errr)
 		}
 		return
 	}
@@ -599,7 +600,7 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 	// Create the response and error from the request.  Two special cases
 	// are handled for the authenticate and stop request methods.
 	var res interface{}
-	var jsonErr *btcjson.RPCError
+	var jsonErr er.R
 	var stop bool
 	switch req.Method {
 	case "authenticate":
@@ -619,9 +620,9 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	_, err = w.Write(mresp)
-	if err != nil {
-		log.Warnf("Unable to respond to client: %v", err)
+	_, errr = w.Write(mresp)
+	if errr != nil {
+		log.Warnf("Unable to respond to client: %v", errr)
 	}
 
 	if stop {

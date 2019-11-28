@@ -7,8 +7,9 @@ package rpcclient
 
 import (
 	"encoding/json"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -36,7 +37,7 @@ func (r FutureGetTransactionResult) Receive() (*btcjson.GetTransactionResult, er
 
 	// Unmarshal result as a gettransaction result object
 	var getTx btcjson.GetTransactionResult
-	err = json.Unmarshal(res, &getTx)
+	err = er.E(json.Unmarshal(res, &getTx))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func (r FutureListTransactionsResult) Receive() ([]btcjson.ListTransactionsResul
 
 	// Unmarshal result as an array of listtransaction result objects.
 	var transactions []btcjson.ListTransactionsResult
-	err = json.Unmarshal(res, &transactions)
+	err = er.E(json.Unmarshal(res, &transactions))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (r FutureListUnspentResult) Receive() ([]btcjson.ListUnspentResult, er.R) {
 
 	// Unmarshal result as an array of listunspent results.
 	var unspent []btcjson.ListUnspentResult
-	err = json.Unmarshal(res, &unspent)
+	err = er.E(json.Unmarshal(res, &unspent))
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +260,7 @@ func (r FutureListSinceBlockResult) Receive() (*btcjson.ListSinceBlockResult, er
 
 	// Unmarshal result as a listsinceblock result object.
 	var listResult btcjson.ListSinceBlockResult
-	err = json.Unmarshal(res, &listResult)
+	err = er.E(json.Unmarshal(res, &listResult))
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +383,7 @@ func (r FutureListLockUnspentResult) Receive() ([]*wire.OutPoint, er.R) {
 
 	// Unmarshal as an array of transaction inputs.
 	var inputs []btcjson.TransactionInput
-	err = json.Unmarshal(res, &inputs)
+	err = er.E(json.Unmarshal(res, &inputs))
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +460,7 @@ func (r FutureSendToAddressResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a string.
 	var txHash string
-	err = json.Unmarshal(res, &txHash)
+	err = er.E(json.Unmarshal(res, &txHash))
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +539,7 @@ func (r FutureSendFromResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a string.
 	var txHash string
-	err = json.Unmarshal(res, &txHash)
+	err = er.E(json.Unmarshal(res, &txHash))
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +647,7 @@ func (r FutureSendManyResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmashal result as a string.
 	var txHash string
-	err = json.Unmarshal(res, &txHash)
+	err = er.E(json.Unmarshal(res, &txHash))
 	if err != nil {
 		return nil, err
 	}
@@ -769,7 +770,7 @@ func (r FutureAddMultisigAddressResult) Receive() (btcutil.Address, er.R) {
 
 	// Unmarshal result as a string.
 	var addr string
-	err = json.Unmarshal(res, &addr)
+	err = er.E(json.Unmarshal(res, &addr))
 	if err != nil {
 		return nil, err
 	}
@@ -813,7 +814,7 @@ func (r FutureCreateMultisigResult) Receive() (*btcjson.CreateMultiSigResult, er
 
 	// Unmarshal result as a createmultisig result object.
 	var multisigRes btcjson.CreateMultiSigResult
-	err = json.Unmarshal(res, &multisigRes)
+	err = er.E(json.Unmarshal(res, &multisigRes))
 	if err != nil {
 		return nil, err
 	}
@@ -883,7 +884,7 @@ func (r FutureGetNewAddressResult) Receive() (btcutil.Address, er.R) {
 
 	// Unmarshal result as a string.
 	var addr string
-	err = json.Unmarshal(res, &addr)
+	err = er.E(json.Unmarshal(res, &addr))
 	if err != nil {
 		return nil, err
 	}
@@ -921,7 +922,7 @@ func (r FutureGetRawChangeAddressResult) Receive() (btcutil.Address, er.R) {
 
 	// Unmarshal result as a string.
 	var addr string
-	err = json.Unmarshal(res, &addr)
+	err = er.E(json.Unmarshal(res, &addr))
 	if err != nil {
 		return nil, err
 	}
@@ -960,7 +961,7 @@ func (r FutureAddWitnessAddressResult) Receive() (btcutil.Address, er.R) {
 
 	// Unmarshal result as a string.
 	var addr string
-	err = json.Unmarshal(res, &addr)
+	err = er.E(json.Unmarshal(res, &addr))
 	if err != nil {
 		return nil, err
 	}
@@ -998,7 +999,7 @@ func (r FutureGetAccountAddressResult) Receive() (btcutil.Address, er.R) {
 
 	// Unmarshal result as a string.
 	var addr string
-	err = json.Unmarshal(res, &addr)
+	err = er.E(json.Unmarshal(res, &addr))
 	if err != nil {
 		return nil, err
 	}
@@ -1036,7 +1037,7 @@ func (r FutureGetAccountResult) Receive() (string, er.R) {
 
 	// Unmarshal result as a string.
 	var account string
-	err = json.Unmarshal(res, &account)
+	err = er.E(json.Unmarshal(res, &account))
 	if err != nil {
 		return "", err
 	}
@@ -1101,7 +1102,7 @@ func (r FutureGetAddressesByAccountResult) Receive() ([]btcutil.Address, er.R) {
 
 	// Unmashal result as an array of string.
 	var addrStrings []string
-	err = json.Unmarshal(res, &addrStrings)
+	err = er.E(json.Unmarshal(res, &addrStrings))
 	if err != nil {
 		return nil, err
 	}
@@ -1150,7 +1151,7 @@ func (r FutureMoveResult) Receive() (bool, er.R) {
 
 	// Unmarshal result as a boolean.
 	var moveResult bool
-	err = json.Unmarshal(res, &moveResult)
+	err = er.E(json.Unmarshal(res, &moveResult))
 	if err != nil {
 		return false, err
 	}
@@ -1266,7 +1267,7 @@ func (r FutureValidateAddressResult) Receive() (*btcjson.ValidateAddressWalletRe
 
 	// Unmarshal result as a validateaddress result object.
 	var addrResult btcjson.ValidateAddressWalletResult
-	err = json.Unmarshal(res, &addrResult)
+	err = er.E(json.Unmarshal(res, &addrResult))
 	if err != nil {
 		return nil, err
 	}
@@ -1353,7 +1354,7 @@ func (r FutureListAccountsResult) Receive() (map[string]btcutil.Amount, er.R) {
 
 	// Unmarshal result as a json object.
 	var accounts map[string]float64
-	err = json.Unmarshal(res, &accounts)
+	err = er.E(json.Unmarshal(res, &accounts))
 	if err != nil {
 		return nil, err
 	}
@@ -1422,7 +1423,7 @@ func (r FutureGetBalanceResult) Receive() (btcutil.Amount, er.R) {
 
 	// Unmarshal result as a floating point number.
 	var balance float64
-	err = json.Unmarshal(res, &balance)
+	err = er.E(json.Unmarshal(res, &balance))
 	if err != nil {
 		return 0, err
 	}
@@ -1451,14 +1452,14 @@ func (r FutureGetBalanceParseResult) Receive() (btcutil.Amount, er.R) {
 
 	// Unmarshal result as a string
 	var balanceString string
-	err = json.Unmarshal(res, &balanceString)
+	err = er.E(json.Unmarshal(res, &balanceString))
 	if err != nil {
 		return 0, err
 	}
 
-	balance, err := strconv.ParseFloat(balanceString, 64)
-	if err != nil {
-		return 0, err
+	balance, errr := strconv.ParseFloat(balanceString, 64)
+	if errr != nil {
+		return 0, er.E(errr)
 	}
 	amount, err := globalcfg.NewAmount(balance)
 	if err != nil {
@@ -1525,7 +1526,7 @@ func (r FutureGetReceivedByAccountResult) Receive() (btcutil.Amount, er.R) {
 
 	// Unmarshal result as a floating point number.
 	var balance float64
-	err = json.Unmarshal(res, &balance)
+	err = er.E(json.Unmarshal(res, &balance))
 	if err != nil {
 		return 0, err
 	}
@@ -1590,7 +1591,7 @@ func (r FutureGetUnconfirmedBalanceResult) Receive() (btcutil.Amount, er.R) {
 
 	// Unmarshal result as a floating point number.
 	var balance float64
-	err = json.Unmarshal(res, &balance)
+	err = er.E(json.Unmarshal(res, &balance))
 	if err != nil {
 		return 0, err
 	}
@@ -1634,7 +1635,7 @@ func (r FutureGetReceivedByAddressResult) Receive() (btcutil.Amount, er.R) {
 
 	// Unmarshal result as a floating point number.
 	var balance float64
-	err = json.Unmarshal(res, &balance)
+	err = er.E(json.Unmarshal(res, &balance))
 	if err != nil {
 		return 0, err
 	}
@@ -1703,7 +1704,7 @@ func (r FutureListReceivedByAccountResult) Receive() ([]btcjson.ListReceivedByAc
 
 	// Unmarshal as an array of listreceivedbyaccount result objects.
 	var received []btcjson.ListReceivedByAccountResult
-	err = json.Unmarshal(res, &received)
+	err = er.E(json.Unmarshal(res, &received))
 	if err != nil {
 		return nil, err
 	}
@@ -1790,7 +1791,7 @@ func (r FutureListReceivedByAddressResult) Receive() ([]btcjson.ListReceivedByAd
 
 	// Unmarshal as an array of listreceivedbyaddress result objects.
 	var received []btcjson.ListReceivedByAddressResult
-	err = json.Unmarshal(res, &received)
+	err = er.E(json.Unmarshal(res, &received))
 	if err != nil {
 		return nil, err
 	}
@@ -1949,7 +1950,7 @@ func (r FutureSignMessageResult) Receive() (string, er.R) {
 
 	// Unmarshal result as a string.
 	var b64 string
-	err = json.Unmarshal(res, &b64)
+	err = er.E(json.Unmarshal(res, &b64))
 	if err != nil {
 		return "", err
 	}
@@ -1990,7 +1991,7 @@ func (r FutureVerifyMessageResult) Receive() (bool, er.R) {
 
 	// Unmarshal result as a boolean.
 	var verified bool
-	err = json.Unmarshal(res, &verified)
+	err = er.E(json.Unmarshal(res, &verified))
 	if err != nil {
 		return false, err
 	}
@@ -2036,7 +2037,7 @@ func (r FutureDumpPrivKeyResult) Receive() (*btcutil.WIF, er.R) {
 
 	// Unmarshal result as a string.
 	var privKeyWIF string
-	err = json.Unmarshal(res, &privKeyWIF)
+	err = er.E(json.Unmarshal(res, &privKeyWIF))
 	if err != nil {
 		return nil, err
 	}
@@ -2245,7 +2246,7 @@ func (r FutureGetInfoResult) Receive() (*btcjson.InfoWalletResult, er.R) {
 
 	// Unmarshal result as a getinfo result object.
 	var infoRes btcjson.InfoWalletResult
-	err = json.Unmarshal(res, &infoRes)
+	err = er.E(json.Unmarshal(res, &infoRes))
 	if err != nil {
 		return nil, err
 	}

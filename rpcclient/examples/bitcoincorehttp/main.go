@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"log"
 
 	"github.com/pkt-cash/pktd/rpcclient"

@@ -1,7 +1,6 @@
 package neutrino
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 

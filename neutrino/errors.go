@@ -1,11 +1,17 @@
 package neutrino
 
-import "errors"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
+
+var Err er.ErrorType = er.NewErrorType("neutrino.Err")
 
 var (
 	// ErrGetUtxoCancelled signals that a GetUtxo request was cancelled.
-	ErrGetUtxoCancelled = errors.New("get utxo request cancelled")
+	ErrGetUtxoCancelled = Err.CodeWithDetail("ErrGetUtxoCancelled",
+		"get utxo request cancelled")
 
 	// ErrShuttingDown signals that neutrino received a shutdown request.
-	ErrShuttingDown = errors.New("neutrino shutting down")
+	ErrShuttingDown = Err.CodeWithDetail("ErrShuttingDown",
+		"neutrino shutting down")
 )

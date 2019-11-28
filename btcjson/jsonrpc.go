@@ -15,53 +15,20 @@ import (
 // which is in turn used in a JSON-RPC Response object.
 //
 // A specific type is used to help ensure the wrong errors aren't used.
-type RPCErrorCode int
+//type RPCErrorCode int
 
-// RPCError represents an error that is used as a part of a JSON-RPC Response
-// object.
-type rpcError struct {
-	Code    RPCErrorCode `json:"code,omitempty"`
-	Message string       `json:"message,omitempty"`
-	Stack   []string     `json:"stack,omitempty"`
-}
-
-type rpcError1 struct {
-	Code    RPCErrorCode
-	Message string
-	Err     error
-}
-
-// Guarantee RPCError satisifies the builtin error interface.
-var _, _ error = rpcError1{}, (*rpcError1)(nil)
-
-// String returns a string describing the RPC error.  This satisifies the
-// er.R error interface.
-func (e rpcError1) Error() string {
-	if e.Message == "" {
-		return fmt.Sprintf("%d", e.Code)
-	}
-	return fmt.Sprintf("%d: %s", e.Code, e.Message)
+// RPCErr represents an error that is used as a part of a JSON-RPC Response
+// object. Unlike an er.R, this object is able to be serialized.
+type RPCErr struct {
+	Code    int      `json:"code,omitempty"`
+	Message string   `json:"message,omitempty"`
+	Stack   []string `json:"stack,omitempty"`
 }
 
 // NewRPCError constructs and returns a new JSON-RPC error that is suitable
 // for use in a JSON-RPC Response object.
-func NewRPCError(code RPCErrorCode, message string, err er.R) er.R {
-	if err == nil {
-		return er.E(&rpcError1{
-			Code:    code,
-			Message: message,
-		})
-	}
-	w := er.Wrapped(err)
-	msg := w.Error()
-	if message != "" {
-		msg = message + ": Cause: " + msg
-	}
-	err.SetWrapped(&rpcError1{
-		Code:    code,
-		Message: msg,
-	})
-	return err
+func NewRPCError(code *er.ErrorCode, message string, err er.R) er.R {
+	return code.New(message, err)
 }
 
 // IsValidIDType checks that the ID field (which can go in any of the JSON-RPC
@@ -135,8 +102,24 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 // empty.
 type Response struct {
 	Result json.RawMessage `json:"result"`
-	Error  *rpcError       `json:"error"`
+	Error  *RPCErr         `json:"error"`
 	ID     *interface{}    `json:"id"`
+}
+
+func SerializeError(err er.R) *RPCErr {
+	if err == nil {
+		return nil
+	}
+	codeNum := ErrRPCInternal.Number
+	if code := Err.Decode(err); code != nil {
+		codeNum = code.Number
+	}
+	return &RPCErr{
+		Code:    codeNum,
+		Message: err.String(),
+		Stack:   err.Stack(),
+	}
+
 }
 
 // NewResponse returns a new JSON-RPC response object given the provided id,
@@ -151,22 +134,10 @@ func NewResponse(id interface{}, marshalledResult []byte, rpcErr er.R) (*Respons
 		return nil, makeError(ErrInvalidType, str)
 	}
 
-	var rpcErrOut *rpcError
-	if rpcErr != nil {
-		rpcErrOut = &rpcError{
-			Code:    ErrRPCInternal,
-			Message: rpcErr.String(),
-			Stack:   rpcErr.Stack(),
-		}
-		if err1, ok := er.Wrapped(rpcErr).(rpcError1); ok {
-			rpcErrOut.Code = err1.Code
-		}
-	}
-
 	pid := &id
 	return &Response{
 		Result: marshalledResult,
-		Error:  rpcErrOut,
+		Error:  SerializeError(rpcErr),
 		ID:     pid,
 	}, nil
 }

@@ -6,7 +6,7 @@ package rpcclient
 
 import (
 	"encoding/json"
-	"errors"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -50,9 +50,9 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 		Method:  method,
 		Params:  params,
 	}
-	marshalledJSON, err := json.Marshal(rawRequest)
-	if err != nil {
-		return newFutureError(err)
+	marshalledJSON, errr := json.Marshal(rawRequest)
+	if errr != nil {
+		return newFutureError(er.E(errr))
 	}
 
 	// Generate the request and send it along with a channel to respond on.

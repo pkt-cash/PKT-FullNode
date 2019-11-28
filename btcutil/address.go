@@ -182,7 +182,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 	// Switch on decoded length to determine the type.
 	decoded, netID, err := base58.CheckDecode(addr)
 	if err != nil {
-		if er.Wrapped(err) == base58.ErrChecksum {
+		if base58.ErrChecksum.Is(err) {
 			return nil, er.E(ErrChecksumMismatch)
 		}
 		return nil, er.New("decoded address is of unknown format")

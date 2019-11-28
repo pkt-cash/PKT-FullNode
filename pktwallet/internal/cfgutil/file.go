@@ -4,16 +4,20 @@
 
 package cfgutil
 
-import "os"
+import (
+	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // FileExists reports whether the named file or directory exists.
 func FileExists(filePath string) (bool, er.R) {
-	_, err := os.Stat(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
+	_, errr := os.Stat(filePath)
+	if errr != nil {
+		if os.IsNotExist(errr) {
 			return false, nil
 		}
-		return false, err
+		return false, er.E(errr)
 	}
 	return true, nil
 }

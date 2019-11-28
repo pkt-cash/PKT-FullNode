@@ -5,17 +5,19 @@
 
 package wtxmgr
 
-import "fmt"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
-// ErrorCode identifies a category of error.
-type ErrorCode uint8
+// Err identifies a category of error.
+var Err er.ErrorType = er.NewErrorType("wtxmgr.Error")
 
 // These constants are used to identify a specific Error.
-const (
+var (
 	// ErrDatabase indicates an error with the underlying database.  When
 	// this error code is set, the Err field of the Error will be
 	// set to the underlying error returned from the database.
-	ErrDatabase ErrorCode = iota
+	ErrDatabase = Err.Code("ErrDatabase")
 
 	// ErrData describes an error where data stored in the transaction
 	// database is incorrect.  This may be due to missing values, values of
@@ -24,74 +26,35 @@ const (
 	// transaction history or manual database surgery.  If the failure was
 	// not due to data corruption, this error category indicates a
 	// programming error in this package.
-	ErrData
+	ErrData = Err.Code("ErrData")
 
 	// ErrInput describes an error where the variables passed into this
 	// function by the caller are obviously incorrect.  Examples include
 	// passing transactions which do not serialize, or attempting to insert
 	// a credit at an index for which no transaction output exists.
-	ErrInput
+	ErrInput = Err.Code("ErrInput")
 
 	// ErrAlreadyExists describes an error where creating the store cannot
 	// continue because a store already exists in the namespace.
-	ErrAlreadyExists
+	ErrAlreadyExists = Err.Code("ErrAlreadyExists")
 
 	// ErrNoExists describes an error where the store cannot be opened due to
 	// it not already existing in the namespace.  This error should be
 	// handled by creating a new store.
-	ErrNoExists
+	ErrNoExists = Err.Code("ErrNoExists")
 
 	// ErrNeedsUpgrade describes an error during store opening where the
 	// database contains an older version of the store.
-	ErrNeedsUpgrade
+	ErrNeedsUpgrade = Err.Code("ErrNeedsUpgrade")
 
 	// ErrUnknownVersion describes an error where the store already exists
 	// but the database version is newer than latest version known to this
 	// software.  This likely indicates an outdated binary.
-	ErrUnknownVersion
+	ErrUnknownVersion = Err.Code("ErrUnknownVersion")
 )
 
-var errStrs = [...]string{
-	ErrDatabase:       "ErrDatabase",
-	ErrData:           "ErrData",
-	ErrInput:          "ErrInput",
-	ErrAlreadyExists:  "ErrAlreadyExists",
-	ErrNoExists:       "ErrNoExists",
-	ErrNeedsUpgrade:   "ErrNeedsUpgrade",
-	ErrUnknownVersion: "ErrUnknownVersion",
-}
-
-// String returns the ErrorCode as a human-readable name.
-func (e ErrorCode) String() string {
-	if e < ErrorCode(len(errStrs)) {
-		return errStrs[e]
-	}
-	return fmt.Sprintf("ErrorCode(%d)", e)
-}
-
-// Error provides a single type for errors that can happen during Store
-// operation.
-type Error struct {
-	Code ErrorCode // Describes the kind of error
-	Desc string    // Human readable description of the issue
-	Err  er.R      // Underlying error, optional
-}
-
-// Error satisfies the error interface and prints human-readable errors.
-func (e Error) Error() string {
-	if e.Err != nil {
-		return e.Desc + ": " + e.Err.Error()
-	}
-	return e.Desc
-}
-
-func storeError(c ErrorCode, desc string, err er.R) Error {
-	return Error{Code: c, Desc: desc, Err: err}
-}
-
-// IsNoExists returns whether an error is a Error with the ErrNoExists error
-// code.
-func IsNoExists(err er.R) bool {
-	serr, ok := err.(Error)
-	return ok && serr.Code == ErrNoExists
+// This exists for compatibility to reduce how much code should be refactored.
+// It's better to just use <errorcode>.New()
+func storeError(c *er.ErrorCode, desc string, err er.R) er.R {
+	return c.New(desc, err)
 }

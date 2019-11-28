@@ -7,8 +7,9 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -65,7 +66,7 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, er.R) {
 		// instead of only the current main chain so it can be consulted
 		// directly.
 		_, err = dbFetchHeightByHash(dbTx, hash)
-		if isNotInMainChainErr(err) {
+		if errNotInMainChain0.Is(err) {
 			exists = false
 			return nil
 		}

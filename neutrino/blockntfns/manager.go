@@ -1,11 +1,10 @@
 package blockntfns
 
 import (
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/lightningnetwork/lnd/queue"
 )
@@ -13,8 +12,8 @@ import (
 var (
 	// ErrSubscriptionManagerStopped is an error returned when we attempt to
 	// register a new block subscription but the manager has been stopped.
-	ErrSubscriptionManagerStopped = errors.New("subscription manager was " +
-		"stopped")
+	ErrSubscriptionManagerStopped = er.GenericErrorType.CodeWithDetail("ErrSubscriptionManagerStopped",
+		"subscription manager was stopped")
 )
 
 // newSubscription is an internal message used within the SubscriptionManager to
@@ -247,7 +246,7 @@ func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
 	case m.newSubscriptions <- sub:
 	case <-m.quit:
 		sub.ntfnQueue.Stop()
-		return nil, ErrSubscriptionManagerStopped
+		return nil, ErrSubscriptionManagerStopped.Default()
 	}
 
 	// It's possible that the registration failed if we were unable to
@@ -261,7 +260,7 @@ func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
 		}
 	case <-m.quit:
 		sub.ntfnQueue.Stop()
-		return nil, ErrSubscriptionManagerStopped
+		return nil, ErrSubscriptionManagerStopped.Default()
 	}
 
 	// Finally, we can return to the client with its new subscription

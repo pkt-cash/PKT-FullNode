@@ -13,7 +13,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -1639,7 +1638,7 @@ func (c *wsClient) SendMessage(marshalledJSON []byte, doneChan chan bool) {
 
 // ErrClientQuit describes the error where a client send is not processed due
 // to the client having already been disconnected or dropped.
-var ErrClientQuit = errors.New("client quit")
+var ErrClientQuit = er.GenericErrorType.Code("main.ErrClientQuit")
 
 // QueueNotification queues the passed notification to be sent to the websocket
 // client.  This function, as the name implies, is only intended for
@@ -1653,7 +1652,7 @@ var ErrClientQuit = errors.New("client quit")
 func (c *wsClient) QueueNotification(marshalledJSON []byte) er.R {
 	// Don't queue the message if disconnected.
 	if c.Disconnected() {
-		return er.E(ErrClientQuit)
+		return ErrClientQuit.Default()
 	}
 
 	c.ntfnChan <- marshalledJSON
@@ -2040,7 +2039,7 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 
 				// Stop the rescan early if the websocket client
 				// disconnected.
-				if er.Wrapped(err) == ErrClientQuit {
+				if ErrClientQuit.Is(err) {
 					return
 				}
 				if err != nil {
@@ -2078,7 +2077,7 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 
 				// Stop the rescan early if the websocket client
 				// disconnected.
-				if er.Wrapped(err) == ErrClientQuit {
+				if ErrClientQuit.Is(err) {
 					return
 				}
 				if err != nil {
@@ -2126,7 +2125,7 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 				err = wsc.QueueNotification(marshalledJSON)
 				// Stop the rescan early if the websocket client
 				// disconnected.
-				if er.Wrapped(err) == ErrClientQuit {
+				if ErrClientQuit.Is(err) {
 					return
 				}
 				recvNotified = true
@@ -2411,9 +2410,7 @@ fetchRange:
 			if err != nil {
 				// Only handle reorgs if a block could not be
 				// found for the hash.
-				if dbErr, ok := er.Wrapped(err).(database.Error); !ok ||
-					dbErr.ErrorCode != database.ErrBlockNotFound {
-
+				if !database.ErrBlockNotFound.Is(err) {
 					rpcsLog.Errorf("Error looking up block: %v", err)
 					return nil, nil, btcjson.NewRPCError(
 						btcjson.ErrRPCDatabase,
@@ -2499,7 +2496,7 @@ fetchRange:
 				continue
 			}
 
-			if err = wsc.QueueNotification(mn); er.Wrapped(err) == ErrClientQuit {
+			if err = wsc.QueueNotification(mn); ErrClientQuit.Is(err) {
 				// Finished if the client disconnected.
 				rpcsLog.Debugf("Stopped rescan at height %v "+
 					"for disconnected client", blk.Height())

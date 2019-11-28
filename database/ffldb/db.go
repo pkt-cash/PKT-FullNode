@@ -129,8 +129,8 @@ func (s bulkFetchDataSorter) Less(i, j int) bool {
 }
 
 // makeDbErr creates a database.Error given a set of arguments.
-func makeDbErr(c database.ErrorCode, desc string, err error) er.R {
-	return er.E(database.Error{ErrorCode: c, Description: desc, Err: err})
+func makeDbErr(c *er.ErrorCode, desc string, err er.R) er.R {
+	return c.New(desc, err)
 }
 
 // convertErr converts the passed leveldb error into a database error with an
@@ -157,7 +157,7 @@ func convertErr(desc string, ldbErr error) er.R {
 		code = database.ErrTxClosed
 	}
 
-	return er.E(database.Error{ErrorCode: code, Description: desc, Err: ldbErr})
+	return code.New(desc, er.E(ldbErr))
 }
 
 // copySlice returns a copy of the passed slice.  This is mostly used to copy
@@ -659,8 +659,7 @@ func (b *bucket) CreateBucket(key []byte) (database.Bucket, er.R) {
 
 	// Add the new bucket to the bucket index.
 	if err := b.tx.putKey(bidxKey, childID[:]); err != nil {
-		str := fmt.Sprintf("failed to create bucket with key %q", key)
-		return nil, convertErr(str, err.Native())
+		return nil, err
 	}
 	return &bucket{tx: b.tx, id: childID}, nil
 }
@@ -1169,9 +1168,9 @@ func (tx *transaction) StoreBlock(block *btcutil.Block) er.R {
 
 	blockBytes, err := block.Bytes()
 	if err != nil {
-		str := fmt.Sprintf("failed to get serialized bytes for block %s",
-			blockHash)
-		return makeDbErr(database.ErrDriverSpecific, str, err.Native())
+		database.ErrDriverSpecific.New(
+			fmt.Sprintf("failed to get serialized bytes for block %s", blockHash),
+			err)
 	}
 
 	// Add the block to be stored to the list of pending blocks to store
@@ -1663,7 +1662,8 @@ func (tx *transaction) writePendingAndCommit() er.R {
 	writeRow := serializeWriteRow(wc.curFileNum, wc.curOffset)
 	if err := tx.metaBucket.Put(writeLocKeyName, writeRow); err != nil {
 		rollback()
-		return convertErr("failed to store write cursor", err.Native())
+		err.AddMessage("failed to store write cursor")
+		return err
 	}
 
 	// Atomically update the database cache.  The cache automatically

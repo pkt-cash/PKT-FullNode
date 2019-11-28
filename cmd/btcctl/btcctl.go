@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"path/filepath"
@@ -111,9 +110,9 @@ func main() {
 		// btcjson.Error as it reallistcally will always be since the
 		// NewCmd function is only supposed to return errors of that
 		// type.
-		if jerr, ok := err.(btcjson.Error); ok {
-			fmt.Fprintf(os.Stderr, "%s command: %v (code: %s)\n",
-				method, err, jerr.ErrorCode)
+		if btcjson.Err.Is(err) {
+			fmt.Fprintf(os.Stderr, "%s command: %v\n",
+				method, err)
 			commandUsage(method)
 			os.Exit(1)
 		}

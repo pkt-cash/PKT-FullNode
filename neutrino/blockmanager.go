@@ -6,12 +6,14 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -19,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/chainsync"
@@ -1232,7 +1235,7 @@ func (b *blockManager) resolveConflict(
 			err := chainsync.ControlCFHeader(
 				b.server.chainParams, fType, height, header,
 			)
-			if err == chainsync.ErrCheckpointMismatch {
+			if ruleerror.ErrBadCheckpoint.Is(err) {
 				log.Warnf("Banning peer=%v since served "+
 					"checkpoints didn't match our "+
 					"checkpoint at height %d", peer, height)
@@ -2637,7 +2640,7 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 	diff, err := b.calcNextRequiredDifficulty(
 		blockHeader.Timestamp, reorgAttempt)
 	if err != nil {
-		return er.E(err)
+		return err
 	}
 	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowSha256 {
 		stubBlock := btcutil.NewBlock(&wire.MsgBlock{
@@ -2646,7 +2649,7 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 		err = blockchain.ShaCheckProofOfWork(stubBlock,
 			blockchain.CompactToBig(diff))
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 	} else {
 		//log.Warn("We need to be checking packetcrypt proofs here, this is currently insecure")

@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"os"
 	"os/user"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -146,13 +147,13 @@ func cleanAndExpandPath(path string) string {
 
 	homeDir := ""
 	var u *user.User
-	var err er.R
+	var errr error
 	if userName == "" {
-		u, err = user.Current()
+		u, errr = user.Current()
 	} else {
-		u, err = user.Lookup(userName)
+		u, errr = user.Lookup(userName)
 	}
-	if err == nil {
+	if errr == nil {
 		homeDir = u.HomeDir
 	}
 	// Fallback to CWD if user lookup fails or user has no home directory.
@@ -285,12 +286,12 @@ func loadConfig() (*config, []string, er.R) {
 	// file or the version flag was specified.
 	preCfg := cfg
 	preParser := flags.NewParser(&preCfg, flags.Default)
-	_, err := preParser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+	_, errr := preParser.Parse()
+	if errr != nil {
+		if e, ok := errr.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			preParser.WriteHelp(os.Stderr)
 		}
-		return nil, nil, err
+		return nil, nil, er.E(errr)
 	}
 
 	// Show the version and exit if the version flag was specified.
@@ -318,23 +319,23 @@ func loadConfig() (*config, []string, er.R) {
 			configFilePath = filepath.Join(appDataDir, defaultConfigFilename)
 		}
 	}
-	err = flags.NewIniParser(parser).ParseFile(configFilePath)
-	if err != nil {
-		if _, ok := err.(*os.PathError); !ok {
-			fmt.Fprintln(os.Stderr, err)
+	errr = flags.NewIniParser(parser).ParseFile(configFilePath)
+	if errr != nil {
+		if _, ok := errr.(*os.PathError); !ok {
+			fmt.Fprintln(os.Stderr, errr)
 			parser.WriteHelp(os.Stderr)
-			return nil, nil, err
+			return nil, nil, er.E(errr)
 		}
-		configFileError = err
+		configFileError = er.E(errr)
 	}
 
 	// Parse command line options again to ensure they take precedence.
-	remainingArgs, err := parser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+	remainingArgs, errr := parser.Parse()
+	if errr != nil {
+		if e, ok := errr.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			parser.WriteHelp(os.Stderr)
 		}
-		return nil, nil, err
+		return nil, nil, er.E(errr)
 	}
 
 	// Check deprecated aliases.  The new options receive priority when both
@@ -386,7 +387,7 @@ func loadConfig() (*config, []string, er.R) {
 	if numNets > 1 {
 		str := "%s: The testnet and simnet params can't be used " +
 			"together -- choose one"
-		err := fmt.Errorf(str, "loadConfig")
+		err := er.Errorf(str, "loadConfig")
 		fmt.Fprintln(os.Stderr, err)
 		parser.WriteHelp(os.Stderr)
 		return nil, nil, err
@@ -398,7 +399,7 @@ func loadConfig() (*config, []string, er.R) {
 	activeNet.PowLimit = blockchain.CompactToBig(activeNet.PowLimitBits)
 
 	if ok := globalcfg.SelectConfig(activeNet.GlobalConf); !ok {
-		err = fmt.Errorf("globalcfg.SelectConfig() called twice")
+		err := er.Errorf("globalcfg.SelectConfig() called twice")
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
@@ -420,7 +421,6 @@ func loadConfig() (*config, []string, er.R) {
 
 	// Parse, validate, and set debug log level(s).
 	if err := parseAndSetDebugLevels(cfg.DebugLevel); err != nil {
-		err := fmt.Errorf("%s: %v", "loadConfig", err.Error())
 		fmt.Fprintln(os.Stderr, err)
 		parser.WriteHelp(os.Stderr)
 		return nil, nil, err
@@ -447,7 +447,7 @@ func loadConfig() (*config, []string, er.R) {
 	dbPath := filepath.Join(netDir, walletDbName)
 
 	if cfg.CreateTemp && cfg.Create {
-		err := fmt.Errorf("The flags --create and --createtemp can not " +
+		err := er.Errorf("The flags --create and --createtemp can not " +
 			"be specified together. Use --help for more information.")
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
@@ -486,7 +486,7 @@ func loadConfig() (*config, []string, er.R) {
 		// Error if the create flag is set and the wallet already
 		// exists.
 		if dbFileExists {
-			err := fmt.Errorf("The wallet database file `%v` "+
+			err := er.Errorf("The wallet database file `%v` "+
 				"already exists.", dbPath)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
@@ -514,10 +514,10 @@ func loadConfig() (*config, []string, er.R) {
 			return nil, nil, err
 		}
 		if !keystoreExists {
-			err = fmt.Errorf("The wallet does not exist.  Run with the " +
+			err = er.Errorf("The wallet does not exist.  Run with the " +
 				"--create option to initialize and create it.")
 		} else {
-			err = fmt.Errorf("The wallet is in legacy format.  Run with the " +
+			err = er.Errorf("The wallet is in legacy format.  Run with the " +
 				"--create option to import it.")
 		}
 		fmt.Fprintln(os.Stderr, err)
@@ -548,16 +548,16 @@ func loadConfig() (*config, []string, er.R) {
 			return nil, nil, err
 		}
 
-		RPCHost, _, err := net.SplitHostPort(cfg.RPCConnect)
-		if err != nil {
-			return nil, nil, err
+		RPCHost, _, errr := net.SplitHostPort(cfg.RPCConnect)
+		if errr != nil {
+			return nil, nil, er.E(errr)
 		}
 		if cfg.DisableClientTLS {
 			if _, ok := localhostListeners[RPCHost]; !ok {
 				str := "%s: the --noclienttls option may not be used " +
 					"when connecting RPC to non localhost " +
 					"addresses: %s"
-				err := fmt.Errorf(str, funcName, cfg.RPCConnect)
+				err := er.Errorf(str, funcName, cfg.RPCConnect)
 				fmt.Fprintln(os.Stderr, err)
 				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, err
@@ -597,9 +597,9 @@ func loadConfig() (*config, []string, er.R) {
 	// remove defaults from go-flags slice options without assigning
 	// specific behavior to a particular string.
 	if len(cfg.ExperimentalRPCListeners) == 0 && len(cfg.LegacyRPCListeners) == 0 {
-		addrs, err := net.LookupHost("localhost")
-		if err != nil {
-			return nil, nil, err
+		addrs, errr := net.LookupHost("localhost")
+		if errr != nil {
+			return nil, nil, er.E(errr)
 		}
 		cfg.LegacyRPCListeners = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
@@ -634,7 +634,7 @@ func loadConfig() (*config, []string, er.R) {
 		for _, addr := range cfg.ExperimentalRPCListeners {
 			_, seen := seenAddresses[addr]
 			if seen {
-				err := fmt.Errorf("Address `%s` may not be "+
+				err := er.Errorf("Address `%s` may not be "+
 					"used as a listener address for both "+
 					"RPC servers", addr)
 				fmt.Fprintln(os.Stderr, err)
@@ -653,7 +653,7 @@ func loadConfig() (*config, []string, er.R) {
 			if err != nil {
 				str := "%s: RPC listen interface '%s' is " +
 					"invalid: %v"
-				err := fmt.Errorf(str, funcName, addr, err)
+				err := er.Errorf(str, funcName, addr, err)
 				fmt.Fprintln(os.Stderr, err)
 				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, err
@@ -662,7 +662,7 @@ func loadConfig() (*config, []string, er.R) {
 				str := "%s: the --noservertls option may not be used " +
 					"when binding RPC to non localhost " +
 					"addresses: %s"
-				err := fmt.Errorf(str, funcName, addr)
+				err := er.Errorf(str, funcName, addr)
 				fmt.Fprintln(os.Stderr, err)
 				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, err

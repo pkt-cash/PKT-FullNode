@@ -1,12 +1,12 @@
 package chainsync
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 func TestControlCFHeader(t *testing.T) {
@@ -38,8 +38,8 @@ func TestControlCFHeader(t *testing.T) {
 	err = ControlCFHeader(
 		chaincfg.MainNetParams, wire.GCSFilterRegular, height, header,
 	)
-	if err != ErrCheckpointMismatch {
-		t.Fatalf("expected ErrCheckpointMismatch, got %v", err)
+	if !ruleerror.ErrBadCheckpoint.Is(err) {
+		t.Fatalf("expected ruleerror.ErrBadCheckpoint, got %v", err)
 	}
 
 	// Finally, control an unknown height. This should also pass since we

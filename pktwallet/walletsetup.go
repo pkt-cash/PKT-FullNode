@@ -7,10 +7,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -111,13 +112,14 @@ func createWallet(cfg *config) er.R {
 	netDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
 	keystorePath := filepath.Join(netDir, keystore.Filename)
 	var legacyKeyStore *keystore.Store
-	_, err := os.Stat(keystorePath)
-	if err != nil && !os.IsNotExist(err) {
+	_, errr := os.Stat(keystorePath)
+	if errr != nil && !os.IsNotExist(errr) {
 		// A stat error not due to a non-existant file should be
 		// returned to the caller.
-		return err
-	} else if err == nil {
+		return er.E(errr)
+	} else if errr == nil {
 		// Keystore file exists.
+		var err er.R
 		legacyKeyStore, err = keystore.OpenDir(netDir)
 		if err != nil {
 			return err
@@ -168,8 +170,8 @@ func createWallet(cfg *config) er.R {
 			}
 
 			// Remove the legacy key store.
-			err = os.Remove(keystorePath)
-			if err != nil {
+			errr = os.Remove(keystorePath)
+			if errr != nil {
 				fmt.Printf("WARN: Failed to remove legacy wallet "+
 					"from'%s'\n", keystorePath)
 			}

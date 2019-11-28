@@ -6,8 +6,9 @@ package mempool
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -337,15 +338,7 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 		scriptClass := txscript.GetScriptClass(txOut.PkScript)
 		err := checkPkScriptStandard(txOut.PkScript, scriptClass)
 		if err != nil {
-			// Attempt to extract a reject code from the error so
-			// it can be retained.  When not possible, fall back to
-			// a non standard error.
-			rejectCode := wire.RejectNonstandard
-			if rejCode, found := extractRejectCode(err); found {
-				rejectCode = rejCode
-			}
-			str := fmt.Sprintf("transaction output %d: %v", i, err)
-			return txRuleError(rejectCode, str)
+			return err
 		}
 
 		// Accumulate the number of outputs which only carry data.  For

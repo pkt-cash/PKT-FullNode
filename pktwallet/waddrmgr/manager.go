@@ -8,11 +8,11 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
@@ -439,7 +439,7 @@ func (m *Manager) NewScopedKeyManager(ns walletdb.ReadWriteBucket, scope KeyScop
 
 	// If the manager is locked, then we can't create a new scoped manager.
 	if m.locked {
-		return nil, managerError(ErrLocked, errLocked, nil)
+		return nil, ErrLocked.Default()
 	}
 
 	// Now that we know the manager is unlocked, we'll need to fetch the
@@ -768,7 +768,7 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 
 	// No private passphrase to change for a watching-only address manager.
 	if private && m.watchingOnly {
-		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return ErrWatchingOnly.Default()
 	}
 
 	m.mtx.Lock()
@@ -788,7 +788,7 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 		secretKey.Parameters = m.masterKeyPub.Parameters
 	}
 	if err := secretKey.DeriveKey(&oldPassphrase); err != nil {
-		if err == snacl.ErrInvalidPassword {
+		if snacl.ErrInvalidPassword.Is(err) {
 			str := fmt.Sprintf("invalid passphrase for %s master "+
 				"key", keyName)
 			return managerError(ErrWrongPassphrase, str, nil)
@@ -819,10 +819,10 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 		// Create a new salt that will be used for hashing the new
 		// passphrase each unlock.
 		var passphraseSalt [saltSize]byte
-		_, err := rand.Read(passphraseSalt[:])
-		if err != nil {
+		_, errr := rand.Read(passphraseSalt[:])
+		if errr != nil {
 			str := "failed to read random source for passhprase salt"
-			return managerError(ErrCrypto, str, err)
+			return managerError(ErrCrypto, str, er.E(errr))
 		}
 
 		// Re-encrypt the crypto private key using the new master
@@ -1029,7 +1029,7 @@ func (m *Manager) isLocked() bool {
 func (m *Manager) Lock() er.R {
 	// A watching-only address manager can't be locked.
 	if m.watchingOnly {
-		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return ErrWatchingOnly.Default()
 	}
 
 	m.mtx.Lock()
@@ -1037,7 +1037,7 @@ func (m *Manager) Lock() er.R {
 
 	// Error on attempt to lock an already locked manager.
 	if m.locked {
-		return managerError(ErrLocked, errLocked, nil)
+		return ErrLocked.Default()
 	}
 
 	m.lock()
@@ -1055,7 +1055,7 @@ func (m *Manager) Lock() er.R {
 func (m *Manager) Unlock(ns walletdb.ReadBucket, passphrase []byte) er.R {
 	// A watching-only address manager can't be unlocked.
 	if m.watchingOnly {
-		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+		return ErrWatchingOnly.Default()
 	}
 
 	m.mtx.Lock()
@@ -1079,7 +1079,7 @@ func (m *Manager) Unlock(ns walletdb.ReadBucket, passphrase []byte) er.R {
 	// Derive the master private key using the provided passphrase.
 	if err := m.masterKeyPriv.DeriveKey(&passphrase); err != nil {
 		m.lock()
-		if err == snacl.ErrInvalidPassword {
+		if snacl.ErrInvalidPassword.Is(err) {
 			str := "invalid passphrase for master private key"
 			return managerError(ErrWrongPassphrase, str, nil)
 		}
@@ -1191,7 +1191,7 @@ func (m *Manager) selectCryptoKey(keyType CryptoKeyType) (EncryptorDecryptor, er
 	if keyType == CKTPrivate || keyType == CKTScript {
 		// The manager must be unlocked to work with the private keys.
 		if m.locked || m.watchingOnly {
-			return nil, managerError(ErrLocked, errLocked, nil)
+			return nil, ErrLocked.Default()
 		}
 	}
 
@@ -1301,8 +1301,7 @@ func deriveCoinTypeKey(masterNode *hdkeychain.ExtendedKey,
 
 	// Enforce maximum coin type.
 	if scope.Coin > maxCoinType {
-		err := managerError(ErrCoinTypeTooHigh, errCoinTypeTooHigh, nil)
-		return nil, err
+		return nil, ErrCoinTypeTooHigh.Default()
 	}
 
 	// The hierarchy described by BIP0043 is:
@@ -1341,8 +1340,7 @@ func deriveAccountKey(coinTypeKey *hdkeychain.ExtendedKey,
 
 	// Enforce maximum account number.
 	if account > MaxAccountNum {
-		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-		return nil, err
+		return nil, ErrAccountNumTooHigh.Default()
 	}
 
 	// Derive the account key as a child of the coin type key.
@@ -1461,10 +1459,10 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 
 	// Generate private passphrase salt.
 	var privPassphraseSalt [saltSize]byte
-	_, err = rand.Read(privPassphraseSalt[:])
-	if err != nil {
+	_, errr := rand.Read(privPassphraseSalt[:])
+	if errr != nil {
 		str := "failed to read random source for passphrase salt"
-		return nil, managerError(ErrCrypto, str, err)
+		return nil, managerError(ErrCrypto, str, er.E(errr))
 	}
 
 	// Next, we'll need to load all known manager scopes from disk. Each
@@ -1552,10 +1550,9 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 	if err != nil {
 		// The seed is unusable if the any of the children in the
 		// required hierarchy can't be derived due to invalid child.
-		if err == hdkeychain.ErrInvalidChild {
+		if hdkeychain.ErrInvalidChild.Is(err) {
 			str := "the provided seed is unusable"
-			return managerError(ErrKeyChain, str,
-				hdkeychain.ErrUnusableSeed)
+			return managerError(ErrKeyChain, str, err)
 		}
 
 		return err
@@ -1566,10 +1563,9 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 	if err := checkBranchKeys(acctKeyPriv); err != nil {
 		// The seed is unusable if the any of the children in the
 		// required hierarchy can't be derived due to invalid child.
-		if err == hdkeychain.ErrInvalidChild {
+		if hdkeychain.ErrInvalidChild.Is(err) {
 			str := "the provided seed is unusable"
-			return managerError(ErrKeyChain, str,
-				hdkeychain.ErrUnusableSeed)
+			return managerError(ErrKeyChain, str, err)
 		}
 
 		return err
@@ -1657,7 +1653,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	// the given database namespace.
 	exists := managerExists(ns)
 	if exists {
-		return managerError(ErrAlreadyExists, errAlreadyExists, nil)
+		return ErrAlreadyExists.Default()
 	}
 
 	// Ensure the private passphrase is not empty.
@@ -1693,10 +1689,10 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	// passwords to detect whether an unlock can be avoided when the manager
 	// is already unlocked.
 	var privPassphraseSalt [saltSize]byte
-	_, err = rand.Read(privPassphraseSalt[:])
-	if err != nil {
+	_, errr := rand.Read(privPassphraseSalt[:])
+	if errr != nil {
 		str := "failed to read random source for passphrase salt"
-		return managerError(ErrCrypto, str, err)
+		return managerError(ErrCrypto, str, er.E(errr))
 	}
 
 	// Generate new crypto public, private, and script keys.  These keys are

@@ -5,9 +5,9 @@
 package waddrmgr
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )

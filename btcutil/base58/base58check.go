@@ -6,17 +6,19 @@ package base58
 
 import (
 	"crypto/sha256"
-	"errors"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
+var Err er.ErrorType = er.NewErrorType("base58.Err")
+
 // ErrChecksum indicates that the checksum of a check-encoded string does not verify against
 // the checksum.
-var ErrChecksum = errors.New("checksum error")
+var ErrChecksum = Err.CodeWithDetail("ErrChecksum", "checksum error")
 
 // ErrInvalidFormat indicates that the check-encoded string has an invalid format.
-var ErrInvalidFormat = errors.New("invalid format: version and/or checksum bytes missing")
+var ErrInvalidFormat = Err.CodeWithDetail("ErrInvalidFormat",
+	"invalid format: version and/or checksum bytes missing")
 
 // checksum: first four bytes of sha256^2
 func checksum(input []byte) (cksum [4]byte) {
@@ -40,13 +42,13 @@ func CheckEncode(input []byte, version byte) string {
 func CheckDecode(input string) (result []byte, version byte, err er.R) {
 	decoded := Decode(input)
 	if len(decoded) < 5 {
-		return nil, 0, er.E(ErrInvalidFormat)
+		return nil, 0, ErrInvalidFormat.Default()
 	}
 	version = decoded[0]
 	var cksum [4]byte
 	copy(cksum[:], decoded[len(decoded)-4:])
 	if checksum(decoded[:len(decoded)-4]) != cksum {
-		return nil, 0, er.E(ErrChecksum)
+		return nil, 0, ErrChecksum.Default()
 	}
 	payload := decoded[1 : len(decoded)-4]
 	result = append(result, payload...)

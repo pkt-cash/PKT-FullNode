@@ -3,11 +3,11 @@
 package neutrino
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -1163,7 +1163,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	if err == nil && filter != nil {
 		return filter, nil
 	}
-	if err != nil && err != cache.ErrElementNotFound {
+	if err != nil && cache.ErrElementNotFound.Is(err) {
 		return nil, err
 	}
 
@@ -1172,7 +1172,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	if err == nil && filter != nil {
 		return filter, nil
 	}
-	if err != nil && err != filterdb.ErrFilterNotFound {
+	if err != nil && filterdb.ErrFilterNotFound.Is(err) {
 		return nil, err
 	}
 
@@ -1188,7 +1188,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 		s.mtxCFilter.Unlock()
 		return filter, nil
 	}
-	if err != nil && err != cache.ErrElementNotFound {
+	if err != nil && !cache.ErrElementNotFound.Is(err) {
 		s.mtxCFilter.Unlock()
 		return nil, err
 	}
@@ -1289,7 +1289,7 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 	if err == nil && blockValue != nil {
 		return blockValue.(*cache.CacheableBlock).Block, err
 	}
-	if err != nil && err != cache.ErrElementNotFound {
+	if err != nil && !cache.ErrElementNotFound.Is(err) {
 		return nil, err
 	}
 
@@ -1388,6 +1388,12 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 //
 // TODO(wilmer): Move to pushtx package after introducing a query package. This
 // cannot be done at the moment due to circular dependencies.
+//
+// TODO(cjd): We should find a way not to depend on rejection messages to know
+// if a transaction is invalid. Bitcoind does not send them nor even have the
+// infrastructure for doing so anymore and the lack of rejections cannot really
+// be considered as proof that the transaction was accepted by anyone.
+//
 func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) er.R {
 	// Starting with the set of default options, we'll apply any specified
 	// functional options to the query so that we can check what inv type
@@ -1409,7 +1415,8 @@ func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) e
 	// the ones who rejected it and their reason for rejecting it. We'll use
 	// this to determine whether our transaction was actually rejected.
 	numReplied := 0
-	rejections := make(map[pushtx.BroadcastError]int)
+	rejections := make([]er.R, 0)
+	rejectionTypes := make(map[*er.ErrorCode]int)
 
 	// Send the peer query and listen for getdata.
 	s.queryAllPeers(
@@ -1445,7 +1452,8 @@ func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) e
 				broadcastErr := pushtx.ParseBroadcastError(
 					response, sp.Addr(),
 				)
-				rejections[*broadcastErr]++
+				rejections = append(rejections, broadcastErr)
+				rejectionTypes[pushtx.Err.Decode(broadcastErr)]++
 			}
 		},
 		// Default to 500ms timeout. Default for queryAllPeers is a
@@ -1486,16 +1494,20 @@ func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) e
 			tx.TxHash())
 
 		mostRejectedCount := 0
-		var mostRejectedErr pushtx.BroadcastError
+		var mostRejectedCode *er.ErrorCode
 
-		for broadcastErr, count := range rejections {
+		for broadcastErr, count := range rejectionTypes {
 			if count > mostRejectedCount {
 				mostRejectedCount = count
-				mostRejectedErr = broadcastErr
+				mostRejectedCode = broadcastErr
 			}
 		}
-
-		return &mostRejectedErr
+		for _, rejection := range rejections {
+			if mostRejectedCode.Is(rejection) {
+				return rejection
+			}
+		}
+		panic("Should have found a rejection reason")
 	}
 
 	return nil

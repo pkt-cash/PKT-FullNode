@@ -5,11 +5,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"net/http"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -19,14 +19,14 @@ import (
 // proxy and TLS settings in the associated connection configuration.
 func newHTTPClient(cfg *config) (*http.Client, er.R) {
 	// Configure proxy if needed.
-	var dial func(network, addr string) (net.Conn, er.R)
+	var dial func(network, addr string) (net.Conn, error)
 	if cfg.Proxy != "" {
 		proxy := &socks.Proxy{
 			Addr:     cfg.Proxy,
 			Username: cfg.ProxyUser,
 			Password: cfg.ProxyPass,
 		}
-		dial = func(network, addr string) (net.Conn, er.R) {
+		dial = func(network, addr string) (net.Conn, error) {
 			c, err := proxy.Dial(network, addr)
 			if err != nil {
 				return nil, err
@@ -40,7 +40,7 @@ func newHTTPClient(cfg *config) (*http.Client, er.R) {
 	if !cfg.NoTLS && cfg.RPCCert != "" {
 		pem, err := ioutil.ReadFile(cfg.RPCCert)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		pool := x509.NewCertPool()
@@ -74,9 +74,9 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 	}
 	url := protocol + "://" + cfg.RPCServer
 	bodyReader := bytes.NewReader(marshalledJSON)
-	httpRequest, err := http.NewRequest("POST", url, bodyReader)
-	if err != nil {
-		return nil, err
+	httpRequest, errr := http.NewRequest("POST", url, bodyReader)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	httpRequest.Close = true
 	httpRequest.Header.Set("Content-Type", "application/json")
@@ -90,16 +90,16 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	httpResponse, err := httpClient.Do(httpRequest)
+	httpResponse, errr := httpClient.Do(httpRequest)
 	if err != nil {
-		return nil, err
+		return nil, er.E(errr)
 	}
 
 	// Read the raw bytes and close the response.
-	respBytes, err := ioutil.ReadAll(httpResponse.Body)
+	respBytes, errr := ioutil.ReadAll(httpResponse.Body)
 	httpResponse.Body.Close()
 	if err != nil {
-		err = fmt.Errorf("error reading json reply: %v", err)
+		err = er.Errorf("error reading json reply: %v", err)
 		return nil, err
 	}
 
@@ -118,12 +118,12 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 
 	// Unmarshal the response.
 	var resp btcjson.Response
-	if err := json.Unmarshal(respBytes, &resp); err != nil {
+	if err := er.E(json.Unmarshal(respBytes, &resp)); err != nil {
 		return nil, err
 	}
 
 	if resp.Error != nil {
-		return nil, resp.Error
+		return nil, er.New(resp.Error.Message)
 	}
 	return resp.Result, nil
 }

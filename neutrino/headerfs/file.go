@@ -2,9 +2,9 @@ package headerfs
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -12,14 +12,12 @@ import (
 
 // ErrHeaderNotFound is returned when a target header on disk (flat file) can't
 // be found.
-type ErrHeaderNotFound struct {
-	er.R
-}
+var ErrHeaderNotFound = er.GenericErrorType.Code("headerfs.ErrHeaderNotFound")
 
 // appendRaw appends a new raw header to the end of the flat file.
 func (h *headerStore) appendRaw(header []byte) er.R {
 	if _, err := h.file.Write(header); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -51,7 +49,7 @@ func (h *headerStore) readRaw(seekDist uint64) ([]byte, er.R) {
 	// buffer.
 	rawHeader := make([]byte, headerSize)
 	if _, err := h.file.ReadAt(rawHeader[:], int64(seekDist)); err != nil {
-		return nil, &ErrHeaderNotFound{err}
+		return nil, ErrHeaderNotFound.New("", er.E(err))
 	}
 
 	return rawHeader[:], nil
@@ -156,7 +154,7 @@ func (f *FilterHeaderStore) readHeaderRange(startHeight uint32,
 	for headerReader.Len() != 0 {
 		var nextHeader chainhash.Hash
 		if _, err := headerReader.Read(nextHeader[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		headers = append(headers, nextHeader)
@@ -183,7 +181,7 @@ func readHeadersFromFile(f *os.File, headerSize, startHeight,
 	// range of headers with a single system call.
 	_, err := f.ReadAt(rawHeaderBytes, int64(seekDistance))
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return bytes.NewReader(rawHeaderBytes), nil

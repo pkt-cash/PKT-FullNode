@@ -15,7 +15,6 @@
 package legacyrpc
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
 	"testing"
 

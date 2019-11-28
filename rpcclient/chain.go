@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -30,7 +31,7 @@ func (r FutureGetBestBlockHashResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a string.
 	var txHashStr string
-	err = json.Unmarshal(res, &txHashStr)
+	err = er.E(json.Unmarshal(res, &txHashStr))
 	if err != nil {
 		return nil, err
 	}
@@ -67,15 +68,15 @@ func (r FutureGetBlockResult) Receive() (*wire.MsgBlock, er.R) {
 
 	// Unmarshal result as a string.
 	var blockHex string
-	err = json.Unmarshal(res, &blockHex)
+	err = er.E(json.Unmarshal(res, &blockHex))
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode the serialized block hex to raw bytes.
-	serializedBlock, err := hex.DecodeString(blockHex)
-	if err != nil {
-		return nil, err
+	serializedBlock, errr := hex.DecodeString(blockHex)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Deserialize the block and return it.
@@ -124,7 +125,7 @@ func (r FutureGetBlockVerboseResult) Receive() (*btcjson.GetBlockVerboseResult, 
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult btcjson.GetBlockVerboseResult
-	err = json.Unmarshal(res, &blockResult)
+	err = er.E(json.Unmarshal(res, &blockResult))
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +194,7 @@ func (r FutureGetBlockCountResult) Receive() (int64, er.R) {
 
 	// Unmarshal the result as an int64.
 	var count int64
-	err = json.Unmarshal(res, &count)
+	err = er.E(json.Unmarshal(res, &count))
 	if err != nil {
 		return 0, err
 	}
@@ -229,7 +230,7 @@ func (r FutureGetDifficultyResult) Receive() (float64, er.R) {
 
 	// Unmarshal the result as a float64.
 	var difficulty float64
-	err = json.Unmarshal(res, &difficulty)
+	err = er.E(json.Unmarshal(res, &difficulty))
 	if err != nil {
 		return 0, err
 	}
@@ -265,7 +266,7 @@ func (r FutureGetBlockChainInfoResult) Receive() (*btcjson.GetBlockChainInfoResu
 	}
 
 	var chainInfo btcjson.GetBlockChainInfoResult
-	if err := json.Unmarshal(res, &chainInfo); err != nil {
+	if err := er.E(json.Unmarshal(res, &chainInfo)); err != nil {
 		return nil, err
 	}
 	return &chainInfo, nil
@@ -302,7 +303,7 @@ func (r FutureGetBlockHashResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal the result as a string-encoded sha.
 	var txHashStr string
-	err = json.Unmarshal(res, &txHashStr)
+	err = er.E(json.Unmarshal(res, &txHashStr))
 	if err != nil {
 		return nil, err
 	}
@@ -339,14 +340,14 @@ func (r FutureGetBlockHeaderResult) Receive() (*wire.BlockHeader, er.R) {
 
 	// Unmarshal result as a string.
 	var bhHex string
-	err = json.Unmarshal(res, &bhHex)
+	err = er.E(json.Unmarshal(res, &bhHex))
 	if err != nil {
 		return nil, err
 	}
 
-	serializedBH, err := hex.DecodeString(bhHex)
-	if err != nil {
-		return nil, err
+	serializedBH, errr := hex.DecodeString(bhHex)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Deserialize the blockheader and return it.
@@ -396,7 +397,7 @@ func (r FutureGetBlockHeaderVerboseResult) Receive() (*btcjson.GetBlockHeaderVer
 
 	// Unmarshal result as a string.
 	var bh btcjson.GetBlockHeaderVerboseResult
-	err = json.Unmarshal(res, &bh)
+	err = er.E(json.Unmarshal(res, &bh))
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +443,7 @@ func (r FutureGetMempoolEntryResult) Receive() (*btcjson.GetMempoolEntryResult, 
 
 	// Unmarshal the result as an array of strings.
 	var mempoolEntryResult btcjson.GetMempoolEntryResult
-	err = json.Unmarshal(res, &mempoolEntryResult)
+	err = er.E(json.Unmarshal(res, &mempoolEntryResult))
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +481,7 @@ func (r FutureGetRawMempoolResult) Receive() ([]*chainhash.Hash, er.R) {
 
 	// Unmarshal the result as an array of strings.
 	var txHashStrs []string
-	err = json.Unmarshal(res, &txHashStrs)
+	err = er.E(json.Unmarshal(res, &txHashStrs))
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +533,7 @@ func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]btcjson.GetRawMe
 	// Unmarshal the result as a map of strings (tx shas) to their detailed
 	// results.
 	var mempoolItems map[string]btcjson.GetRawMempoolVerboseResult
-	err = json.Unmarshal(res, &mempoolItems)
+	err = er.E(json.Unmarshal(res, &mempoolItems))
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +573,7 @@ func (r FutureEstimateFeeResult) Receive() (float64, er.R) {
 
 	// Unmarshal result as a getinfo result object.
 	var fee float64
-	err = json.Unmarshal(res, &fee)
+	err = er.E(json.Unmarshal(res, &fee))
 	if err != nil {
 		return -1, err
 	}
@@ -611,7 +612,7 @@ func (r FutureVerifyChainResult) Receive() (bool, er.R) {
 
 	// Unmarshal the result as a boolean.
 	var verified bool
-	err = json.Unmarshal(res, &verified)
+	err = er.E(json.Unmarshal(res, &verified))
 	if err != nil {
 		return false, err
 	}
@@ -704,7 +705,7 @@ func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, er.R) {
 
 	// Unmarshal result as an gettxout result object.
 	var txOutInfo *btcjson.GetTxOutResult
-	err = json.Unmarshal(res, &txOutInfo)
+	err = er.E(json.Unmarshal(res, &txOutInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -752,7 +753,7 @@ func (r FutureRescanBlocksResult) Receive() ([]btcjson.RescannedBlock, er.R) {
 	}
 
 	var rescanBlocksResult []btcjson.RescannedBlock
-	err = json.Unmarshal(res, &rescanBlocksResult)
+	err = er.E(json.Unmarshal(res, &rescanBlocksResult))
 	if err != nil {
 		return nil, err
 	}
@@ -834,15 +835,15 @@ func (r FutureGetCFilterResult) Receive() (*wire.MsgCFilter, er.R) {
 
 	// Unmarshal result as a string.
 	var filterHex string
-	err = json.Unmarshal(res, &filterHex)
+	err = er.E(json.Unmarshal(res, &filterHex))
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode the serialized cf hex to raw bytes.
-	serializedFilter, err := hex.DecodeString(filterHex)
-	if err != nil {
-		return nil, err
+	serializedFilter, errr := hex.DecodeString(filterHex)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Assign the filter bytes to the correct field of the wire message.
@@ -889,7 +890,7 @@ func (r FutureGetCFilterHeaderResult) Receive() (*wire.MsgCFHeaders, er.R) {
 
 	// Unmarshal result as a string.
 	var headerHex string
-	err = json.Unmarshal(res, &headerHex)
+	err = er.E(json.Unmarshal(res, &headerHex))
 	if err != nil {
 		return nil, err
 	}
