@@ -5,7 +5,6 @@
 package base58_test
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/base58"
@@ -50,7 +49,7 @@ func TestBase58Check(t *testing.T) {
 	// test the two decoding failure cases
 	// case 1: checksum error
 	_, _, err := base58.CheckDecode("3MNQE1Y")
-	if err != base58.ErrChecksum {
+	if !base58.ErrChecksum.Is(err) {
 		t.Error("Checkdecode test failed, expected ErrChecksum")
 	}
 	// case 2: invalid formats (string lengths below 5 mean the version byte and/or the checksum
@@ -59,7 +58,7 @@ func TestBase58Check(t *testing.T) {
 	for len := 0; len < 4; len++ {
 		// make a string of length `len`
 		_, _, err = base58.CheckDecode(testString)
-		if err != base58.ErrInvalidFormat {
+		if !base58.ErrInvalidFormat.Is(err) {
 			t.Error("Checkdecode test failed, expected ErrInvalidFormat")
 		}
 	}

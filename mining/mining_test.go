@@ -6,7 +6,6 @@ package mining
 
 import (
 	"container/heap"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 

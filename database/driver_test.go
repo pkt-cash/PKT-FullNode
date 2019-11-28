@@ -6,11 +6,13 @@ package database_test
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
+	"github.com/pkt-cash/pktd/database/testutil"
 )
 
 var (
@@ -20,25 +22,6 @@ var (
 	// to easily iterate all supported drivers.
 	ignoreDbTypes = map[string]bool{"createopenfail": true}
 )
-
-// checkDbError ensures the passed error is a database.Error with an error code
-// that matches the passed  error code.
-func checkDbError(t *testing.T, testName string, gotErr er.R, wantErrCode database.ErrorCode) bool {
-	dbErr, ok := gotErr.(database.Error)
-	if !ok {
-		t.Errorf("%s: unexpected error type - got %T, want %T",
-			testName, gotErr, database.Error{})
-		return false
-	}
-	if dbErr.ErrorCode != wantErrCode {
-		t.Errorf("%s: unexpected error code - got %s (%s), want %s",
-			testName, dbErr.ErrorCode, dbErr.Description,
-			wantErrCode)
-		return false
-	}
-
-	return true
-}
 
 // TestAddDuplicateDriver ensures that adding a duplicate driver does not
 // overwrite an existing one.
@@ -69,7 +52,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	}
 	testName := "duplicate driver registration"
 	err := database.RegisterDriver(driver)
-	if !checkDbError(t, testName, err, database.ErrDbTypeRegistered) {
+	if !testutil.CheckDbError(t, testName, err, database.ErrDbTypeRegistered) {
 		return
 	}
 }
@@ -84,7 +67,7 @@ func TestCreateOpenFail(t *testing.T) {
 	openError := fmt.Errorf("failed to create or open database for "+
 		"database type [%v]", dbType)
 	bogusCreateDB := func(args ...interface{}) (database.DB, er.R) {
-		return nil, openError
+		return nil, er.E(openError)
 	}
 
 	// Create and add driver that intentionally fails when created or opened
@@ -99,7 +82,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure creating a database with the new type fails with the expected
 	// error.
 	_, err := database.Create(dbType)
-	if err != openError {
+	if er.Wrapped(err) != openError {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
 		return
@@ -108,7 +91,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure opening a database with the new type fails with the expected
 	// error.
 	_, err = database.Open(dbType)
-	if err != openError {
+	if er.Wrapped(err) != openError {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
 		return
@@ -123,7 +106,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	testName := "create with unsupported database type"
 	dbType := "unsupported"
 	_, err := database.Create(dbType)
-	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !testutil.CheckDbError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}
 
@@ -131,7 +114,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// expected error.
 	testName = "open with unsupported database type"
 	_, err = database.Open(dbType)
-	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !testutil.CheckDbError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}
 }

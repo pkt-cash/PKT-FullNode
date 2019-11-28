@@ -9,7 +9,6 @@ package ffldb
 
 import (
 	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"sync"
 )
@@ -42,7 +41,7 @@ type mockFile struct {
 // This allows it to be "reopened" without losing the data.
 //
 // This is part of the filer implementation.
-func (f *mockFile) Close() er.R {
+func (f *mockFile) Close() error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -59,7 +58,7 @@ func (f *mockFile) Close() er.R {
 // io.EOF.
 //
 // This is part of the filer implementation.
-func (f *mockFile) ReadAt(b []byte, off int64) (int, er.R) {
+func (f *mockFile) ReadAt(b []byte, off int64) (int, error) {
 	f.RLock()
 	defer f.RUnlock()
 
@@ -91,7 +90,7 @@ func (f *mockFile) ReadAt(b []byte, off int64) (int, er.R) {
 // Truncate changes the size of the mock file.
 //
 // This is part of the filer implementation.
-func (f *mockFile) Truncate(size int64) er.R {
+func (f *mockFile) Truncate(size int64) error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -115,7 +114,7 @@ func (f *mockFile) Truncate(size int64) er.R {
 // n != len(b).
 //
 // This is part of the filer implementation.
-func (f *mockFile) WriteAt(b []byte, off int64) (int, er.R) {
+func (f *mockFile) WriteAt(b []byte, off int64) (int, error) {
 	f.Lock()
 	defer f.Unlock()
 
@@ -152,7 +151,7 @@ func (f *mockFile) WriteAt(b []byte, off int64) (int, er.R) {
 // the mock file's forceSyncErr flag is set.
 //
 // This is part of the filer implementation.
-func (f *mockFile) Sync() er.R {
+func (f *mockFile) Sync() error {
 	if f.forceSyncErr {
 		return errSyncFail
 	}

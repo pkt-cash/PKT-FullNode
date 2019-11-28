@@ -6,7 +6,6 @@ package rpctest
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	rpc "github.com/pkt-cash/pktd/rpcclient"
@@ -72,17 +73,17 @@ func newConfig(prefix, certFile, keyFile string, extra []string) (*nodeConfig, e
 func (n *nodeConfig) setDefaults() er.R {
 	datadir, err := ioutil.TempDir("", n.prefix+"-data")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.dataDir = datadir
 	logdir, err := ioutil.TempDir("", n.prefix+"-logs")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.logDir = logdir
 	cert, err := ioutil.ReadFile(n.certFile)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.certificates = cert
 	return nil
@@ -167,7 +168,7 @@ func (n *nodeConfig) cleanup() er.R {
 	}
 	var err er.R
 	for _, dir := range dirs {
-		if err = os.RemoveAll(dir); err != nil {
+		if err = er.E(os.RemoveAll(dir)); err != nil {
 			log.Printf("Cannot remove dir %s: %v", dir, err)
 		}
 	}
@@ -203,22 +204,22 @@ func newNode(config *nodeConfig, dataDir string) (*node, er.R) {
 // otherwise, it will persist unless explicitly killed.
 func (n *node) start() er.R {
 	if err := n.cmd.Start(); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	pid, err := os.Create(filepath.Join(n.dataDir,
 		fmt.Sprintf("%s.pid", n.config)))
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	n.pidFile = pid.Name()
 	if _, err = fmt.Fprintf(pid, "%d\n", n.cmd.Process.Pid); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if err := pid.Close(); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -235,9 +236,9 @@ func (n *node) stop() er.R {
 	}
 	defer n.cmd.Wait()
 	if runtime.GOOS == "windows" {
-		return n.cmd.Process.Signal(os.Kill)
+		return er.E(n.cmd.Process.Signal(os.Kill))
 	}
-	return n.cmd.Process.Signal(os.Interrupt)
+	return er.E(n.cmd.Process.Signal(os.Interrupt))
 }
 
 // cleanup cleanups process and args files. The file housing the pid of the
@@ -276,10 +277,10 @@ func genCertPair(certFile, keyFile string) er.R {
 	}
 
 	// Write cert and key files.
-	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+	if err = er.E(ioutil.WriteFile(certFile, cert, 0666)); err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+	if err = er.E(ioutil.WriteFile(keyFile, key, 0600)); err != nil {
 		os.Remove(certFile)
 		return err
 	}

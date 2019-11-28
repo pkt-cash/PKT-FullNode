@@ -6,9 +6,10 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -134,7 +135,7 @@ func TestFilterClearWire(t *testing.T) {
 // decode of MsgFilterClear to confirm error paths work correctly.
 func TestFilterClearWireErrors(t *testing.T) {
 	pverNoFilterClear := BIP0037Version - 1
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	baseFilterClear := NewMsgFilterClear()
 	baseFilterClearEncoded := []byte{}
@@ -160,7 +161,7 @@ func TestFilterClearWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -168,7 +169,7 @@ func TestFilterClearWireErrors(t *testing.T) {
 
 		// For errors which are not of type MessageError, check them for
 		// equality.
-		if _, ok := err.(*MessageError); !ok {
+		if !MessageError.Is(err) {
 			if err != test.writeErr {
 				t.Errorf("BtcEncode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.writeErr)
@@ -180,7 +181,7 @@ func TestFilterClearWireErrors(t *testing.T) {
 		var msg MsgFilterClear
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
@@ -188,7 +189,7 @@ func TestFilterClearWireErrors(t *testing.T) {
 
 		// For errors which are not of type MessageError, check them for
 		// equality.
-		if _, ok := err.(*MessageError); !ok {
+		if !MessageError.Is(err) {
 			if err != test.readErr {
 				t.Errorf("BtcDecode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.readErr)

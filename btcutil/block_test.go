@@ -6,7 +6,6 @@ package btcutil_test
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -235,11 +235,12 @@ func TestNewBlockFromBlockAndBytes(t *testing.T) {
 // TestBlockErrors tests the error paths for the Block API.
 func TestBlockErrors(t *testing.T) {
 	// Ensure out of range errors are as expected.
-	wantErr := "transaction index -1 is out of range - max 3"
-	testErr := btcutil.OutOfRangeError(wantErr)
-	if testErr.Error() != wantErr {
+	msg := "transaction index -1 is out of range - max 3"
+	wantErr := "OutOfRangeError: " + msg
+	testErr := btcutil.OutOfRangeError.New(msg, nil)
+	if testErr.Message() != wantErr {
 		t.Errorf("OutOfRangeError: wrong error - got %v, want %v",
-			testErr.Error(), wantErr)
+			testErr.Message(), wantErr)
 	}
 
 	// Serialize the test block.
@@ -260,33 +261,33 @@ func TestBlockErrors(t *testing.T) {
 	// Truncate the block byte buffer to force errors.
 	shortBytes := block100000Bytes[:80]
 	_, err = btcutil.NewBlockFromBytes(shortBytes)
-	if err != io.EOF {
+	if er.Wrapped(err) != io.EOF {
 		t.Errorf("NewBlockFromBytes: did not get expected error - "+
 			"got %v, want %v", err, io.EOF)
 	}
 
 	// Ensure TxHash returns expected error on invalid indices.
 	_, err = b.TxHash(-1)
-	if _, ok := err.(btcutil.OutOfRangeError); !ok {
+	if !btcutil.OutOfRangeError.Is(err) {
 		t.Errorf("TxHash: wrong error - got: %v <%T>, "+
-			"want: <%T>", err, err, btcutil.OutOfRangeError(""))
+			"want: <%T>", err, err, btcutil.OutOfRangeError.Default())
 	}
 	_, err = b.TxHash(len(Block100000.Transactions) + 1)
-	if _, ok := err.(btcutil.OutOfRangeError); !ok {
+	if !btcutil.OutOfRangeError.Is(err) {
 		t.Errorf("TxHash: wrong error - got: %v <%T>, "+
-			"want: <%T>", err, err, btcutil.OutOfRangeError(""))
+			"want: <%T>", err, err, btcutil.OutOfRangeError.Default())
 	}
 
 	// Ensure Tx returns expected error on invalid indices.
 	_, err = b.Tx(-1)
-	if _, ok := err.(btcutil.OutOfRangeError); !ok {
+	if !btcutil.OutOfRangeError.Is(err) {
 		t.Errorf("Tx: wrong error - got: %v <%T>, "+
-			"want: <%T>", err, err, btcutil.OutOfRangeError(""))
+			"want: <%T>", err, err, btcutil.OutOfRangeError.Default())
 	}
 	_, err = b.Tx(len(Block100000.Transactions) + 1)
-	if _, ok := err.(btcutil.OutOfRangeError); !ok {
+	if !btcutil.OutOfRangeError.Is(err) {
 		t.Errorf("Tx: wrong error - got: %v <%T>, "+
-			"want: <%T>", err, err, btcutil.OutOfRangeError(""))
+			"want: <%T>", err, err, btcutil.OutOfRangeError.Default())
 	}
 
 	// Ensure TxLoc returns expected error with short byte buffer.
@@ -294,7 +295,7 @@ func TestBlockErrors(t *testing.T) {
 	// inject a short byte buffer.
 	b.SetBlockBytes(shortBytes)
 	_, err = b.TxLoc()
-	if err != io.EOF {
+	if er.Wrapped(err) != io.EOF {
 		t.Errorf("TxLoc: did not get expected error - "+
 			"got %v, want %v", err, io.EOF)
 	}

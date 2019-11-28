@@ -7,7 +7,9 @@ package txscript
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -458,7 +460,7 @@ func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
 // specified address and adds a vote for the specified network steward, if voteFor
 // and/or voteAgainst are non-null and if the address type is non-segwit.
 func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, er.R) {
-	if addr == nil {
+	if util.IsNil(addr) {
 		return nil, scriptError(ErrUnsupportedAddress,
 			"unable to generate payment script for nil address")
 	}

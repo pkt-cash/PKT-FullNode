@@ -7,11 +7,12 @@ package wire
 import (
 	"bytes"
 	"crypto/rand"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -202,7 +203,7 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	// version.
 	pver := uint32(70001)
 	pverNoMerkleBlock := BIP0037Version - 1
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	tests := []struct {
 		in       *MsgMerkleBlock // Value to encode
@@ -216,57 +217,57 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 		// Force error in version.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 0,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in prev block hash.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 4,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in merkle root.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 36,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in timestamp.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 68,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in difficulty bits.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 72,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in header nonce.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 76,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in transaction count.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 80,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in num hashes.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 84,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in hashes.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 85,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in num flag bytes.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 117,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in flag bytes.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 118,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error due to unsupported protocol version.
 		{
@@ -280,40 +281,20 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgMerkleBlock
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 }
@@ -353,9 +334,9 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 		err  er.R            // Expected error
 	}{
 		// Block that claims to have more than max allowed hashes.
-		{exceedMaxHashes, pver, BaseEncoding, &MessageError{}},
+		{exceedMaxHashes, pver, BaseEncoding, MessageError.Default()},
 		// Block that claims to have more than max allowed flag bytes.
-		{exceedMaxFlagBytes, pver, BaseEncoding, &MessageError{}},
+		{exceedMaxFlagBytes, pver, BaseEncoding, MessageError.Default()},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -364,7 +345,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 		var msg MsgMerkleBlock
 		r := bytes.NewReader(test.buf)
 		err := msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, reflect.TypeOf(test.err))
 			continue

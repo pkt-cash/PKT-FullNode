@@ -7,13 +7,12 @@ package rpctest
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

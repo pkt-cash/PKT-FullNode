@@ -7,7 +7,6 @@ package bech32_test
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/bech32"
 )

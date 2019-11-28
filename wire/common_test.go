@@ -398,7 +398,7 @@ func TestVarIntNonCanonical(t *testing.T) {
 		// Decode from wire format.
 		rbuf := bytes.NewReader(test.in)
 		val, err := ReadVarInt(rbuf, test.pver)
-		if _, ok := er.Wrapped(err).(*MessageError); !ok {
+		if !MessageError.Is(err) {
 			t.Errorf("ReadVarInt #%d (%s) unexpected error %v", i,
 				test.name, err)
 			continue
@@ -555,12 +555,12 @@ func TestVarStringOverflowErrors(t *testing.T) {
 	tests := []struct {
 		buf  []byte // Wire encoding
 		pver uint32 // Protocol version for wire encoding
-		err  error  // Expected error
+		err  er.R   // Expected error
 	}{
 		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-			pver, &MessageError{}},
+			pver, MessageError.Default()},
 		{[]byte{0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-			pver, &MessageError{}},
+			pver, MessageError.Default()},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -568,7 +568,7 @@ func TestVarStringOverflowErrors(t *testing.T) {
 		// Decode from wire format.
 		rbuf := bytes.NewReader(test.buf)
 		_, err := ReadVarString(rbuf, test.pver)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("ReadVarString #%d wrong error got: %v, "+
 				"want: %v", i, err, reflect.TypeOf(test.err))
 			continue
@@ -687,12 +687,12 @@ func TestVarBytesOverflowErrors(t *testing.T) {
 	tests := []struct {
 		buf  []byte // Wire encoding
 		pver uint32 // Protocol version for wire encoding
-		err  error  // Expected error
+		err  er.R   // Expected error
 	}{
 		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-			pver, &MessageError{}},
+			pver, MessageError.Default()},
 		{[]byte{0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-			pver, &MessageError{}},
+			pver, MessageError.Default()},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -701,7 +701,7 @@ func TestVarBytesOverflowErrors(t *testing.T) {
 		rbuf := bytes.NewReader(test.buf)
 		_, err := ReadVarBytes(rbuf, test.pver, MaxMessagePayload,
 			"test payload")
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("ReadVarBytes #%d wrong error got: %v, "+
 				"want: %v", i, err, reflect.TypeOf(test.err))
 			continue

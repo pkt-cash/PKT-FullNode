@@ -17,17 +17,12 @@ import (
 
 // OutOfRangeError describes an error due to accessing an element that is out
 // of range.
-type OutOfRangeError string
+var OutOfRangeError = er.GenericErrorType.Code("OutOfRangeError")
 
 // BlockHeightUnknown is the value returned for a block height that is unknown.
 // This is typically because the block has not been inserted into the main chain
 // yet.
 const BlockHeightUnknown = int32(-1)
-
-// Error satisfies the error interface and prints human-readable errors.
-func (e OutOfRangeError) Error() string {
-	return string(e)
-}
 
 // Block defines a bitcoin block that provides easier and more efficient
 // manipulation of raw blocks.  It also memoizes hashes for the block and its
@@ -119,7 +114,7 @@ func (b *Block) Tx(txNum int) (*Tx, er.R) {
 	if txNum < 0 || uint64(txNum) > numTx {
 		str := fmt.Sprintf("transaction index %d is out of range - max %d",
 			txNum, numTx-1)
-		return nil, er.E(OutOfRangeError(str))
+		return nil, OutOfRangeError.New(str, nil)
 	}
 
 	// Generate slice to hold all of the wrapped transactions if needed.

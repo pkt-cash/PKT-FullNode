@@ -7,7 +7,6 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 
@@ -431,7 +430,7 @@ func TestTxOutCompressionErrors(t *testing.T) {
 	// A compressed txout with missing compressed script must error.
 	compressedTxOut := hexToBytes("00")
 	_, _, _, err := decodeCompressedTxOut(compressedTxOut)
-	if !isDeserializeErr(err) {
+	if !errDeserialize0.Is(err) {
 		t.Fatalf("decodeCompressedTxOut with missing compressed script "+
 			"did not return expected error type - got %T, want "+
 			"errDeserialize", err)
@@ -440,7 +439,7 @@ func TestTxOutCompressionErrors(t *testing.T) {
 	// A compressed txout with short compressed script must error.
 	compressedTxOut = hexToBytes("0010")
 	_, _, _, err = decodeCompressedTxOut(compressedTxOut)
-	if !isDeserializeErr(err) {
+	if !errDeserialize0.Is(err) {
 		t.Fatalf("decodeCompressedTxOut with short compressed script "+
 			"did not return expected error type - got %T, want "+
 			"errDeserialize", err)

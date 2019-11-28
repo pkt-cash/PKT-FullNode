@@ -5,7 +5,6 @@
 package addrmgr_test
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"testing"
 

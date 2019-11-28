@@ -6,10 +6,10 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
-	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // TestFilterAddLatest tests the MsgFilterAdd API against the latest protocol
@@ -111,7 +111,7 @@ func TestFilterAddMaxDataSize(t *testing.T) {
 func TestFilterAddWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	pverNoFilterAdd := BIP0037Version - 1
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	baseData := []byte{0x01, 0x02, 0x03, 0x04}
 	baseFilterAdd := NewMsgFilterAdd(baseData)
@@ -130,12 +130,12 @@ func TestFilterAddWireErrors(t *testing.T) {
 		// Force error in data size.
 		{
 			baseFilterAdd, baseFilterAddEncoded, pver, BaseEncoding, 0,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error in data.
 		{
 			baseFilterAdd, baseFilterAddEncoded, pver, BaseEncoding, 1,
-			io.ErrShortWrite, io.EOF,
+			er.E(io.ErrShortWrite), er.E(io.EOF),
 		},
 		// Force error due to unsupported protocol version.
 		{
@@ -149,40 +149,20 @@ func TestFilterAddWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgFilterAdd
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 }

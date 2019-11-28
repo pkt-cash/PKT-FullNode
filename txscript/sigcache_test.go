@@ -6,8 +6,9 @@ package txscript
 
 import (
 	"crypto/rand"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -24,7 +25,7 @@ func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, er.R) 
 
 	var msgHash chainhash.Hash
 	if _, err := rand.Read(msgHash[:]); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, er.E(err)
 	}
 
 	sig, err := privKey.Sign(msgHash[:])

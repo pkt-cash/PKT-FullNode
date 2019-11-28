@@ -5,11 +5,12 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/btclog"
 	flags "github.com/jessevdk/go-flags"
@@ -37,14 +38,12 @@ func loadBlockDB() (database.DB, er.R) {
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
-		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
-
+		if !database.ErrDbDoesNotExist.Is(err) {
 			return nil, err
 		}
 
 		// Create the db if it does not exist.
-		err = os.MkdirAll(cfg.DataDir, 0700)
+		err = er.E(os.MkdirAll(cfg.DataDir, 0700))
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +99,7 @@ func realMain() er.R {
 			log.Error(err)
 		}
 
-		return err
+		return er.E(err)
 	}
 
 	return nil

@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -150,9 +150,10 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123"],"id":1}`,
 			unmarshalled: &btcjson.GetBlockCmd{
-				Hash:      "123",
-				Verbose:   btcjson.Bool(true),
-				VerboseTx: btcjson.Bool(false),
+				Hash:       "123",
+				Verbose:    btcjson.Bool(true),
+				VerboseTx:  btcjson.Bool(false),
+				VerbosePcp: btcjson.Bool(false),
 			},
 		},
 		{
@@ -169,9 +170,10 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123",true],"id":1}`,
 			unmarshalled: &btcjson.GetBlockCmd{
-				Hash:      "123",
-				Verbose:   btcjson.Bool(true),
-				VerboseTx: btcjson.Bool(false),
+				Hash:       "123",
+				Verbose:    btcjson.Bool(true),
+				VerboseTx:  btcjson.Bool(false),
+				VerbosePcp: btcjson.Bool(false),
 			},
 		},
 		{
@@ -184,9 +186,10 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123",true,true],"id":1}`,
 			unmarshalled: &btcjson.GetBlockCmd{
-				Hash:      "123",
-				Verbose:   btcjson.Bool(true),
-				VerboseTx: btcjson.Bool(true),
+				Hash:       "123",
+				Verbose:    btcjson.Bool(true),
+				VerboseTx:  btcjson.Bool(true),
+				VerbosePcp: btcjson.Bool(false),
 			},
 		},
 		{
@@ -1172,39 +1175,29 @@ func TestChainSvrCmdErrors(t *testing.T) {
 			name:       "template request with invalid type",
 			result:     &btcjson.TemplateRequest{},
 			marshalled: `{"mode":1}`,
-			err:        &json.UnmarshalTypeError{},
+			err:        er.E(&json.UnmarshalTypeError{}),
 		},
 		{
 			name:       "invalid template request sigoplimit field",
 			result:     &btcjson.TemplateRequest{},
 			marshalled: `{"sigoplimit":"invalid"}`,
-			err:        btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err:        btcjson.ErrInvalidType.Default(),
 		},
 		{
 			name:       "invalid template request sizelimit field",
 			result:     &btcjson.TemplateRequest{},
 			marshalled: `{"sizelimit":"invalid"}`,
-			err:        btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err:        btcjson.ErrInvalidType.Default(),
 		},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		err := json.Unmarshal([]byte(test.marshalled), &test.result)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
-			t.Errorf("Test #%d (%s) wrong error - got %T (%v), "+
-				"want %T", i, test.name, err, err, test.err)
+		err := er.E(json.Unmarshal([]byte(test.marshalled), &test.result))
+		if !er.FuzzyEquals(err, test.err) {
+			t.Errorf("Test #%d (%s) wrong error - got %T (%v), want %v",
+				i, test.name, err, err, test.err)
 			continue
-		}
-
-		if terr, ok := test.err.(btcjson.Error); ok {
-			gotErrorCode := err.(btcjson.Error).ErrorCode
-			if gotErrorCode != terr.ErrorCode {
-				t.Errorf("Test #%d (%s) mismatched error code "+
-					"- got %v (%v), want %v", i, test.name,
-					gotErrorCode, terr, terr.ErrorCode)
-				continue
-			}
 		}
 	}
 }

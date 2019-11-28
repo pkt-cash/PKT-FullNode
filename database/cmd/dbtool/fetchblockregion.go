@@ -6,10 +6,10 @@ package main
 
 import (
 	"encoding/hex"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strconv"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
@@ -49,13 +49,13 @@ func (cmd *blockRegionCmd) Execute(args []string) er.R {
 	if err != nil {
 		return err
 	}
-	startOffset, err := strconv.ParseUint(args[1], 10, 32)
-	if err != nil {
-		return err
+	startOffset, errr := strconv.ParseUint(args[1], 10, 32)
+	if errr != nil {
+		return er.E(errr)
 	}
-	regionLen, err := strconv.ParseUint(args[2], 10, 32)
-	if err != nil {
-		return err
+	regionLen, errr := strconv.ParseUint(args[2], 10, 32)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Load the block database.

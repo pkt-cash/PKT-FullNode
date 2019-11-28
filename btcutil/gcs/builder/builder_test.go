@@ -7,8 +7,9 @@ package builder_test
 
 import (
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
@@ -71,7 +72,7 @@ func TestUseBlockHash(t *testing.T) {
 	// Block hash #448710, pretty high difficulty.
 	hash, err := chainhash.NewHashFromStr(testHash)
 	if err != nil {
-		t.Fatalf("Hash from string failed: %s", err.Error())
+		t.Fatalf("Hash from string failed: %s", err)
 	}
 
 	// wire.OutPoint
@@ -83,11 +84,11 @@ func TestUseBlockHash(t *testing.T) {
 	// btcutil.Address
 	addr, err := btcutil.DecodeAddress(testAddr, &chaincfg.MainNetParams)
 	if err != nil {
-		t.Fatalf("Address decode failed: %s", err.Error())
+		t.Fatalf("Address decode failed: %s", err)
 	}
 	addrBytes, err := txscript.PayToAddrScript(addr)
 	if err != nil {
-		t.Fatalf("Address script build failed: %s", err.Error())
+		t.Fatalf("Address script build failed: %s", err)
 	}
 
 	// Create a GCSBuilder with a key hash and check that the key is derived
@@ -96,7 +97,7 @@ func TestUseBlockHash(t *testing.T) {
 	key, err := b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with key hash failed: %s",
-			err.Error())
+			err)
 	}
 	if key != testKey {
 		t.Fatalf("Key not derived correctly from key hash:\n%s\n%s",
@@ -116,7 +117,7 @@ func TestUseBlockHash(t *testing.T) {
 	key, err = b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with known key failed: %s",
-			err.Error())
+			err)
 	}
 	if key != testKey {
 		t.Fatalf("Key not copied correctly from known key:\n%s\n%s",
@@ -130,7 +131,7 @@ func TestUseBlockHash(t *testing.T) {
 	key1, err := b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with random key failed: %s",
-			err.Error())
+			err)
 	}
 	t.Logf("Random Key 1: %s", hex.EncodeToString(key1[:]))
 	BuilderTest(b, hash, builder.DefaultP, outPoint, addrBytes, witness, t)
@@ -140,7 +141,7 @@ func TestUseBlockHash(t *testing.T) {
 	key2, err := b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with random key failed: %s",
-			err.Error())
+			err)
 	}
 	t.Logf("Random Key 2: %s", hex.EncodeToString(key2[:]))
 	if key2 == key1 {
@@ -153,7 +154,7 @@ func TestUseBlockHash(t *testing.T) {
 	key, err = b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with known key failed: %s",
-			err.Error())
+			err)
 	}
 	if key != testKey {
 		t.Fatalf("Key not copied correctly from known key:\n%s\n%s",
@@ -167,7 +168,7 @@ func TestUseBlockHash(t *testing.T) {
 	key, err = b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with known key failed: %s",
-			err.Error())
+			err)
 	}
 	if key != testKey {
 		t.Fatalf("Key not copied correctly from known key:\n%s\n%s",
@@ -182,11 +183,11 @@ func TestUseBlockHash(t *testing.T) {
 	b.SetP(30).AddEntry(hash.CloneBytes()).AddEntries(contents).
 		AddHash(hash).AddEntry(addrBytes)
 	_, err = b.Key()
-	if err != gcs.ErrPTooBig {
+	if er.Wrapped(err) != gcs.ErrPTooBig {
 		t.Fatalf("No error on P too big!")
 	}
 	_, err = b.Build()
-	if err != gcs.ErrPTooBig {
+	if er.Wrapped(err) != gcs.ErrPTooBig {
 		t.Fatalf("No error on P too big!")
 	}
 }
@@ -198,14 +199,14 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	key, err := b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with key hash failed: %s",
-			err.Error())
+			err)
 	}
 
 	// Build a filter and test matches.
 	b.AddEntries(contents)
 	f, err := b.Build()
 	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
+		t.Fatalf("Filter build failed: %s", err)
 	}
 	if f.P() != p {
 		t.Fatalf("Filter built with wrong probability")
@@ -230,7 +231,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	b.AddHash(hash)
 	f, err = b.Build()
 	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
+		t.Fatalf("Filter build failed: %s", err)
 	}
 	match, err = f.Match(key, hash.CloneBytes())
 	if err != nil {
@@ -244,7 +245,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	b.AddEntry(addrBytes)
 	f, err = b.Build()
 	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
+		t.Fatalf("Filter build failed: %s", err)
 	}
 	match, err = f.MatchAny(key, [][]byte{addrBytes})
 	if err != nil {
@@ -259,7 +260,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	b.AddWitness(witness)
 	f, err = b.Build()
 	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
+		t.Fatalf("Filter build failed: %s", err)
 	}
 	match, err = f.MatchAny(key, witness)
 	if err != nil {
@@ -275,7 +276,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	b.AddWitness(witness)
 	f, err = b.Build()
 	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
+		t.Fatalf("Filter build failed: %s", err)
 	}
 	if f.N() != originalSize {
 		t.Fatal("Filter size increased with duplicate items")

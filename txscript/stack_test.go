@@ -6,42 +6,28 @@ package txscript
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // tstCheckScriptError ensures the type of the two passed errors are of the
 // same type (either both nil or both of type Error) and their error codes
 // match when not nil.
 func tstCheckScriptError(gotErr, wantErr er.R) er.R {
-	// Ensure the error code is of the expected type and the error
-	// code matches the value specified in the test instance.
-	if reflect.TypeOf(gotErr) != reflect.TypeOf(wantErr) {
-		return er.Errorf("wrong error - got %T (%[1]v), want %T",
-			gotErr, wantErr)
-	}
-	if gotErr == nil {
-		return nil
-	}
 
 	// Ensure the want error type is a script error.
-	werr, ok := wantErr.(Error)
-	if !ok {
+	if wantErr != nil && !Err.Is(wantErr) {
 		return er.Errorf("unexpected test error type %T", wantErr)
 	}
 
-	// Ensure the error codes match.  It's safe to use a raw type assert
-	// here since the code above already proved they are the same type and
-	// the want error is a script error.
-	gotErrorCode := gotErr.(Error).ErrorCode
-	if gotErrorCode != werr.ErrorCode {
-		return er.Errorf("mismatched error code - got %v (%v), want %v",
-			gotErrorCode, gotErr, werr.ErrorCode)
+	// Ensure the error code is of the expected type and the error
+	// code matches the value specified in the test instance.
+	if !er.FuzzyEquals(gotErr, wantErr) {
+		return er.Errorf("wrong error - got %T (%[1]v), want %T",
+			gotErr, wantErr)
 	}
-
 	return nil
 }
 

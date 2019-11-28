@@ -11,12 +11,12 @@ package hdkeychain
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 )
 
@@ -208,7 +208,7 @@ func TestBIP0032Vectors(t *testing.T) {
 
 tests:
 	for i, test := range tests {
-		masterSeed, err := hex.DecodeString(test.master)
+		masterSeed, err := util.DecodeHex(test.master)
 		if err != nil {
 			t.Errorf("DecodeString #%d (%s): unexpected error: %v",
 				i, test.name, err)
@@ -520,7 +520,7 @@ tests:
 
 // TestGenenerateSeed ensures the GenerateSeed function works as intended.
 func TestGenenerateSeed(t *testing.T) {
-	wantErr := errors.New("seed length must be between 128 and 512 bits")
+	wantErr := ErrInvalidSeedLen.New("seed length must be between 128 and 512 bits", nil)
 
 	tests := []struct {
 		name   string
@@ -541,7 +541,7 @@ func TestGenenerateSeed(t *testing.T) {
 
 	for i, test := range tests {
 		seed, err := GenerateSeed(test.length)
-		if !reflect.DeepEqual(err, test.err) {
+		if !er.Equals(err, test.err) {
 			t.Errorf("GenerateSeed #%d (%s): unexpected error -- "+
 				"want %v, got %v", i, test.name, test.err, err)
 			continue
@@ -582,7 +582,7 @@ func TestExtendedKeyAPI(t *testing.T) {
 			extKey:     "xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5",
 			isPrivate:  false,
 			parentFP:   3203769081,
-			privKeyErr: ErrNotPrivExtKey,
+			privKeyErr: ErrNotPrivExtKey.Default(),
 			pubKey:     "0357bfe1e341d01c69fe5654309956cbea516822fba8a601743a012a7896ee8dc2",
 			address:    "1NjxqbA9aZWnh17q1UW3rB4EPu79wDXj7x",
 		},
@@ -804,14 +804,14 @@ func TestErrors(t *testing.T) {
 	// Should get an error when seed has too few bytes.
 	net := &chaincfg.MainNetParams
 	_, err := NewMaster(bytes.Repeat([]byte{0x00}, 15), net)
-	if err != ErrInvalidSeedLen {
+	if !ErrInvalidSeedLen.Is(err) {
 		t.Fatalf("NewMaster: mismatched error -- got: %v, want: %v",
 			err, ErrInvalidSeedLen)
 	}
 
 	// Should get an error when seed has too many bytes.
 	_, err = NewMaster(bytes.Repeat([]byte{0x00}, 65), net)
-	if err != ErrInvalidSeedLen {
+	if !ErrInvalidSeedLen.Is(err) {
 		t.Fatalf("NewMaster: mismatched error -- got: %v, want: %v",
 			err, ErrInvalidSeedLen)
 	}
@@ -832,7 +832,7 @@ func TestErrors(t *testing.T) {
 
 	// Deriving a hardened child extended key should fail from a public key.
 	_, err = pubKey.Child(HardenedKeyStart)
-	if err != ErrDeriveHardFromPublic {
+	if !ErrDeriveHardFromPublic.Is(err) {
 		t.Fatalf("Child: mismatched error -- got: %v, want: %v",
 			err, ErrDeriveHardFromPublic)
 	}
@@ -848,12 +848,12 @@ func TestErrors(t *testing.T) {
 		{
 			name: "invalid key length",
 			key:  "xpub1234",
-			err:  ErrInvalidKeyLen,
+			err:  ErrInvalidKeyLen.Default(),
 		},
 		{
 			name: "bad checksum",
 			key:  "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EBygr15",
-			err:  ErrBadChecksum,
+			err:  ErrBadChecksum.Default(),
 		},
 		{
 			name: "pubkey not on curve",
@@ -865,7 +865,7 @@ func TestErrors(t *testing.T) {
 			key:       "xbad4LfUL9eKmA66w2GJdVMqhvDmYGJpTGjWRAtjHqoUY17sGaymoMV9Cm3ocn9Ud6Hh2vLFVC7KSKCRVVrqc6dsEdsTjRV1WUmkK85YEUujAPX",
 			err:       nil,
 			neuter:    true,
-			neuterErr: chaincfg.ErrUnknownHDKeyID,
+			neuterErr: chaincfg.ErrUnknownHDKeyID.Default(),
 		},
 	}
 
@@ -946,17 +946,16 @@ func TestZero(t *testing.T) {
 
 		wantErr := ErrNotPrivExtKey
 		_, err := key.ECPrivKey()
-		if !reflect.DeepEqual(err, wantErr) {
+		if !wantErr.Is(err) {
 			t.Errorf("ECPrivKey #%d (%s): mismatched error: want "+
 				"%v, got %v", i, testName, wantErr, err)
 			return false
 		}
 
-		wantErr = errors.New("pubkey string is empty")
 		_, err = key.ECPubKey()
-		if !reflect.DeepEqual(err, wantErr) {
+		if err.Message() != "pubkey string is empty" {
 			t.Errorf("ECPubKey #%d (%s): mismatched error: want "+
-				"%v, got %v", i, testName, wantErr, err)
+				"%v, got %v", i, testName, "pubkey string is empty", err)
 			return false
 		}
 
@@ -979,7 +978,7 @@ func TestZero(t *testing.T) {
 
 	for i, test := range tests {
 		// Create new key from seed and get the neutered version.
-		masterSeed, err := hex.DecodeString(test.master)
+		masterSeed, err := util.DecodeHex(test.master)
 		if err != nil {
 			t.Errorf("DecodeString #%d (%s): unexpected error: %v",
 				i, test.name, err)
@@ -1061,7 +1060,7 @@ func TestMaximumDepth(t *testing.T) {
 	}
 
 	noKey, err := extKey.Child(1)
-	if err != ErrDeriveBeyondMaxDepth {
+	if !ErrDeriveBeyondMaxDepth.Is(err) {
 		t.Fatalf("Child: mismatched error: want %v, got %v",
 			ErrDeriveBeyondMaxDepth, err)
 	}

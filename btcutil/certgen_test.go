@@ -7,7 +7,6 @@ package btcutil_test
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"testing"
 	"time"
@@ -42,16 +41,16 @@ func TestNewTLSCertPair(t *testing.T) {
 	}
 
 	// Ensure the DER-encoded key bytes can be successfully parsed.
-	_, err = x509.ParseECPrivateKey(pemKey.Bytes)
-	if err != nil {
-		t.Fatalf("failed with unexpected error: %v", err)
+	_, errr := x509.ParseECPrivateKey(pemKey.Bytes)
+	if errr != nil {
+		t.Fatalf("failed with unexpected error: %v", errr)
 	}
 
 	// Ensure the DER-encoded cert bytes can be successfully into an X.509
 	// certificate.
-	x509Cert, err := x509.ParseCertificate(pemCert.Bytes)
-	if err != nil {
-		t.Fatalf("failed with unexpected error: %v", err)
+	x509Cert, errr := x509.ParseCertificate(pemCert.Bytes)
+	if errr != nil {
+		t.Fatalf("failed with unexpected error: %v", errr)
 	}
 
 	// Ensure the specified organization is correct.

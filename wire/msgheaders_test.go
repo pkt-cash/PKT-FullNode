@@ -6,10 +6,11 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -52,7 +53,7 @@ func TestHeaders(t *testing.T) {
 	for i := 0; i < MaxBlockHeadersPerMsg+1; i++ {
 		err = msg.AddBlockHeader(bh)
 	}
-	if reflect.TypeOf(err) != reflect.TypeOf(&MessageError{}) {
+	if !MessageError.Is(err) {
 		t.Errorf("AddBlockHeader: expected error on too many headers " +
 			"not received")
 	}
@@ -227,7 +228,7 @@ func TestHeadersWire(t *testing.T) {
 // of MsgHeaders to confirm error paths work correctly.
 func TestHeadersWireErrors(t *testing.T) {
 	pver := ProtocolVersion
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot
@@ -304,13 +305,13 @@ func TestHeadersWireErrors(t *testing.T) {
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in header count.
-		{oneHeader, oneHeaderEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{oneHeader, oneHeaderEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in block header.
-		{oneHeader, oneHeaderEncoded, pver, BaseEncoding, 5, io.ErrShortWrite, io.EOF},
+		{oneHeader, oneHeaderEncoded, pver, BaseEncoding, 5, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error with greater than max headers.
 		{maxHeaders, maxHeadersEncoded, pver, BaseEncoding, 3, wireErr, wireErr},
 		// Force error with number of transactions.
-		{transHeader, transHeaderEncoded, pver, BaseEncoding, 81, io.ErrShortWrite, io.EOF},
+		{transHeader, transHeaderEncoded, pver, BaseEncoding, 81, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error with included transactions.
 		{transHeader, transHeaderEncoded, pver, BaseEncoding, len(transHeaderEncoded), nil, wireErr},
 	}
@@ -320,41 +321,20 @@ func TestHeadersWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgHeaders
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
 		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
-		}
-
 	}
 }

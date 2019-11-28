@@ -7,10 +7,10 @@ package gcs_test
 
 import (
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 )
 
@@ -19,7 +19,7 @@ func genRandFilterElements(numElements uint) ([][]byte, er.R) {
 	for i := range testContents {
 		randElem := make([]byte, 32)
 		if _, err := rand.Read(randElem); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		testContents[i] = randElem
 	}

@@ -12,7 +12,7 @@ import (
 // ascertain the specific reason for the rule violation.
 var Err er.ErrorType = er.NewErrorType("ruleerror.Err")
 
-var errorStrings map[*er.ErrorCode]string
+var errorStrings map[*er.ErrorCode]string = make(map[*er.ErrorCode]string)
 
 func mkError(code *er.ErrorCode, str string) *er.ErrorCode {
 	errorStrings[code] = str
@@ -363,10 +363,10 @@ func IsTxRuleErrorCode(ec *er.ErrorCode) bool {
 	return false
 }
 
-// extractRejectCode attempts to return a relevant reject code for a given error
+// ExtractRejectCode attempts to return a relevant reject code for a given error
 // by examining the error for known types.  It will return true if a code
 // was successfully extracted.
-func extractRejectCode(e er.R) (rejCode wire.RejectCode, errString string, found bool) {
+func ExtractRejectCode(e er.R) (rejCode wire.RejectCode, errString string, found bool) {
 	errCode := Err.Decode(e)
 	errString = errorStrings[errCode]
 	if errString == "" && e != nil {
@@ -444,7 +444,7 @@ func ErrToRejectErr(err er.R) (wire.RejectCode, string) {
 
 	// Return the reject code along with the error text if it can be
 	// extracted from the error.
-	rejectCode, str, found := extractRejectCode(err)
+	rejectCode, str, found := ExtractRejectCode(err)
 	if found {
 		return rejectCode, str
 	}

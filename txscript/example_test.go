@@ -7,6 +7,7 @@ package txscript_test
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -57,9 +58,9 @@ func ExamplePayToAddrScript() {
 func ExampleExtractPkScriptAddrs() {
 	// Start with a standard pay-to-pubkey-hash script.
 	scriptHex := "76a914128004ff2fcaf13b2b91eb654b1dc2b674f7ec6188ac"
-	script, err := hex.DecodeString(scriptHex)
-	if err != nil {
-		fmt.Println(err)
+	script, errr := hex.DecodeString(scriptHex)
+	if errr != nil {
+		fmt.Println(errr)
 		return
 	}
 
@@ -84,10 +85,10 @@ func ExampleExtractPkScriptAddrs() {
 func ExampleSignTxOutput() {
 	// Ordinarily the private key would come from whatever storage mechanism
 	// is being used, but for this example just hard code it.
-	privKeyBytes, err := hex.DecodeString("22a47fa09a223f2aa079edf85a7c2" +
+	privKeyBytes, errr := hex.DecodeString("22a47fa09a223f2aa079edf85a7c2" +
 		"d4f8720ee63e502ee2869afab7de234b80c")
-	if err != nil {
-		fmt.Println(err)
+	if errr != nil {
+		fmt.Println(errr)
 		return
 	}
 	privKey, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBytes)

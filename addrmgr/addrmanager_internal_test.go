@@ -1,7 +1,6 @@
 package addrmgr
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"net"

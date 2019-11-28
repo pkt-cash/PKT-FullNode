@@ -7,9 +7,10 @@ package database_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -23,7 +24,6 @@ func ExampleCreate() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )
@@ -50,7 +50,6 @@ func Example_basicUsage() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )
@@ -117,7 +116,6 @@ func Example_blockStorageAndRetrieval() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/database"
 	// 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	// )

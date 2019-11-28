@@ -6,7 +6,10 @@
 // anywhere in the project, do not import anything which is part of pktd.
 package globalcfg
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	// SatoshiPerBitcoin is the number of satoshi in one bitcoin (1 BTC).
@@ -68,51 +71,59 @@ func RemoveConfig() bool {
 	if !registered {
 		return false
 	}
+	fmt.Printf("Configuration removed\n")
 	registered = false
 	gConf = Config{}
 	return true
 }
 
+func checkRegistered() {
+	if !registered {
+		panic("globalcfg requested but not yet registered")
+	}
+}
+
 // GetMaxTimeOffsetSeconds is the maximum number of seconds a block time
 // is allowed to be ahead of the current time.
 func GetMaxTimeOffsetSeconds() time.Duration {
+	checkRegistered()
 	return gConf.MaxTimeOffsetSeconds
 }
 
 // GetMedianTimeBlocks provides the number of previous blocks which should be
 // used to calculate the median time used to validate block timestamps.
 func GetMedianTimeBlocks() int {
+	checkRegistered()
 	return gConf.MedianTimeBlocks
 }
 
 // GetProofOfWorkAlgorithm tells whether the chain in use uses a custom proof
 // of work algorithm or the normal sha256 proof of work.
 func GetProofOfWorkAlgorithm() ProofOfWork {
+	checkRegistered()
 	return gConf.ProofOfWorkAlgorithm
 }
 
 // IsPacketCryptAllowedVersion tells whether the specified version of PacketCrypt proof is allowed.
 func IsPacketCryptAllowedVersion(version int, blockHeight int32) bool {
+	checkRegistered()
 	return version <= 1 || blockHeight >= 113949
 }
 
 // HasNetworkSteward returns true for blockchains which require a network steward fee
 func HasNetworkSteward() bool {
+	checkRegistered()
 	return gConf.HasNetworkSteward
 }
 
 // SatoshiPerBitcoin returns the number of atomic units per "coin"
 func SatoshiPerBitcoin() int64 {
-	if gConf.SatoshiPerBitcoin == 0 {
-		return satoshiPerBitcoin
-	}
+	checkRegistered()
 	return gConf.SatoshiPerBitcoin
 }
 
 // MaxSatoshi returns the maximum number of atomic units of currency
 func MaxSatoshi() int64 {
-	if gConf.MaxSatoshi == 0 {
-		return maxSatoshi
-	}
+	checkRegistered()
 	return gConf.MaxSatoshi
 }

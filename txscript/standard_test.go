@@ -7,9 +7,10 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -24,7 +25,7 @@ func mustParseShortForm(script string) []byte {
 	s, err := parseShortForm(script)
 	if err != nil {
 		panic("invalid short form script in test source: err " +
-			err.Error() + ", script: " + script)
+			err.String() + ", script: " + script)
 	}
 
 	return s

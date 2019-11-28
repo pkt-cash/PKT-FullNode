@@ -6,12 +6,11 @@ package bloom_test
 
 import (
 	"bytes"
-	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bloom"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -25,7 +24,7 @@ func TestMerkleBlock3(t *testing.T) {
 		"104ecd3229b0571c3be876feaac0442a9f13c5a572742927af1dc623353" +
 		"ecf8c202225f64868137a18cdd85cbbb4c74fbccfd4f49639cf1bdc94a5" +
 		"672bb15ad5d4cac00000000"
-	blockBytes, err := hex.DecodeString(blockStr)
+	blockBytes, err := util.DecodeHex(blockStr)
 	if err != nil {
 		t.Errorf("TestMerkleBlock3 DecodeString failed: %v", err)
 		return
@@ -54,7 +53,7 @@ func TestMerkleBlock3(t *testing.T) {
 		"96b2c3ff60abe184f196367291b4d4c86041b8fa45d630100000001b50c" +
 		"c069d6a3e33e3ff84a5c41d9d3febe7c770fdcc96b2c3ff60abe184f196" +
 		"30101"
-	want, err := hex.DecodeString(wantStr)
+	want, err := util.DecodeHex(wantStr)
 	if err != nil {
 		t.Errorf("TestMerkleBlock3 DecodeString failed: %v", err)
 		return

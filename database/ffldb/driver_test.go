@@ -6,17 +6,19 @@ package ffldb_test
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/database/ffldb"
+	"github.com/pkt-cash/pktd/database/testutil"
 )
 
 // dbType is the database type name for this driver.
@@ -31,7 +33,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the expected error.
 	wantErrCode := database.ErrDbDoesNotExist
 	_, err := database.Open(dbType, "noexist", blockDataNet)
-	if !checkDbError(t, "Open", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "Open", err, wantErrCode) {
 		return
 	}
 
@@ -40,7 +42,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr := fmt.Errorf("invalid arguments to %s.Open -- expected "+
 		"database path and block network", dbType)
 	_, err = database.Open(dbType, 1, 2, 3)
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -51,7 +53,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr = fmt.Errorf("first argument to %s.Open is invalid -- "+
 		"expected database path string", dbType)
 	_, err = database.Open(dbType, 1, blockDataNet)
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -62,7 +64,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr = fmt.Errorf("second argument to %s.Open is invalid -- "+
 		"expected block network", dbType)
 	_, err = database.Open(dbType, "noexist", "invalid")
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -73,7 +75,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr = fmt.Errorf("invalid arguments to %s.Create -- expected "+
 		"database path and block network", dbType)
 	_, err = database.Create(dbType, 1, 2, 3)
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Create: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -84,7 +86,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr = fmt.Errorf("first argument to %s.Create is invalid -- "+
 		"expected database path string", dbType)
 	_, err = database.Create(dbType, 1, blockDataNet)
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Create: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -95,7 +97,7 @@ func TestCreateOpenFail(t *testing.T) {
 	wantErr = fmt.Errorf("second argument to %s.Create is invalid -- "+
 		"expected block network", dbType)
 	_, err = database.Create(dbType, "noexist", "invalid")
-	if err.Error() != wantErr.Error() {
+	if er.Wrapped(err).Error() != wantErr.Error() {
 		t.Errorf("Create: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -117,7 +119,7 @@ func TestCreateOpenFail(t *testing.T) {
 	err = db.View(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !checkDbError(t, "View", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "View", err, wantErrCode) {
 		return
 	}
 
@@ -125,25 +127,25 @@ func TestCreateOpenFail(t *testing.T) {
 	err = db.Update(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !checkDbError(t, "Update", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "Update", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	_, err = db.Begin(false)
-	if !checkDbError(t, "Begin(false)", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "Begin(false)", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	_, err = db.Begin(true)
-	if !checkDbError(t, "Begin(true)", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "Begin(true)", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	err = db.Close()
-	if !checkDbError(t, "Close", err, wantErrCode) {
+	if !testutil.CheckDbError(t, "Close", err, wantErrCode) {
 		return
 	}
 }

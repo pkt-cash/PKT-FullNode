@@ -8,8 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
-// ErrorCode identifies a kind of script error.
-//type ErrorCode int
+// Err identifies a kind of script error.
 var Err er.ErrorType = er.NewErrorType("txscript.Err")
 
 // These constants are used to identify a specific Error.

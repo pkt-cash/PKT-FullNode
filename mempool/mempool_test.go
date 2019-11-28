@@ -6,12 +6,13 @@ package mempool
 
 import (
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
@@ -287,10 +288,10 @@ func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32)
 // off of it.
 func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutput, er.R) {
 	// Use a hard coded key pair for deterministic results.
-	keyBytes, err := hex.DecodeString("700868df1838811ffbdf918fb482c1f7e" +
+	keyBytes, errr := hex.DecodeString("700868df1838811ffbdf918fb482c1f7e" +
 		"ad62db4b97bd7012c23e726485e577d")
-	if err != nil {
-		return nil, nil, err
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	signKey, signPub := btcec.PrivKeyFromBytes(btcec.S256(), keyBytes)
 
@@ -544,13 +545,12 @@ func TestOrphanReject(t *testing.T) {
 			t.Fatalf("ProcessTransaction: did not fail on orphan "+
 				"%v when allow orphans flag is false", tx.Hash())
 		}
-		expectedErr := RuleError{}
-		if reflect.TypeOf(err) != reflect.TypeOf(expectedErr) {
+		if !ruleerror.Err.Is(err) {
 			t.Fatalf("ProcessTransaction: wrong error got: <%T> %v, "+
-				"want: <%T>", err, err, expectedErr)
+				"want: <%T>", err, err, ruleerror.Err)
 		}
-		code, extracted := extractRejectCode(err)
-		if !extracted {
+		code, _, found := ruleerror.ExtractRejectCode(err)
+		if !found {
 			t.Fatalf("ProcessTransaction: failed to extract reject "+
 				"code from error %q", err)
 		}
@@ -1790,7 +1790,7 @@ func TestRBF(t *testing.T) {
 					testCase.err)
 			}
 			if testCase.err != "" && err != nil {
-				if !strings.Contains(err.Error(), testCase.err) {
+				if !strings.Contains(err.String(), testCase.err) {
 					ctx.t.Fatalf("expected error: %v\n"+
 						"got: %v", testCase.err, err)
 				}

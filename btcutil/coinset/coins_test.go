@@ -9,11 +9,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/coinset"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -50,13 +50,15 @@ type coinSelectTest struct {
 	inputCoins    []coinset.Coin
 	targetValue   btcutil.Amount
 	expectedCoins []coinset.Coin
-	expectedError er.R
+	expectedError *er.ErrorCode
 }
 
 func testCoinSelector(tests []coinSelectTest, t *testing.T) {
 	for testIndex, test := range tests {
 		cs, err := test.selector.CoinSelect(test.targetValue, test.inputCoins)
-		if err != test.expectedError {
+		if test.expectedError == nil && err == nil {
+		} else if test.expectedError != nil && test.expectedError.Is(err) {
+		} else {
 			t.Errorf("[%d] expected a different error: got=%v, expected=%v", testIndex, err, test.expectedError)
 			continue
 		}

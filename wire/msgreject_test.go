@@ -6,10 +6,11 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -309,7 +310,7 @@ func TestRejectWire(t *testing.T) {
 func TestRejectWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	pverNoReject := RejectVersion - 1
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	baseReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	baseReject.Hash = mainNetGenesisHash
@@ -335,13 +336,13 @@ func TestRejectWireErrors(t *testing.T) {
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in reject command.
-		{baseReject, baseRejectEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{baseReject, baseRejectEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in reject code.
-		{baseReject, baseRejectEncoded, pver, BaseEncoding, 6, io.ErrShortWrite, io.EOF},
+		{baseReject, baseRejectEncoded, pver, BaseEncoding, 6, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in reject reason.
-		{baseReject, baseRejectEncoded, pver, BaseEncoding, 7, io.ErrShortWrite, io.EOF},
+		{baseReject, baseRejectEncoded, pver, BaseEncoding, 7, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in reject hash.
-		{baseReject, baseRejectEncoded, pver, BaseEncoding, 23, io.ErrShortWrite, io.EOF},
+		{baseReject, baseRejectEncoded, pver, BaseEncoding, 23, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error due to unsupported protocol version.
 		{baseReject, baseRejectEncoded, pverNoReject, BaseEncoding, 6, wireErr, wireErr},
 	}
@@ -351,40 +352,20 @@ func TestRejectWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgReject
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 }

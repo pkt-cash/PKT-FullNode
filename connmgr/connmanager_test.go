@@ -5,14 +5,13 @@
 package connmgr
 
 import (
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 func init() {
@@ -52,13 +51,13 @@ func (c mockConn) RemoteAddr() net.Addr {
 }
 
 // Close handles closing the connection.
-func (c mockConn) Close() er.R {
+func (c mockConn) Close() error {
 	return nil
 }
 
-func (c mockConn) SetDeadline(t time.Time) er.R      { return nil }
-func (c mockConn) SetReadDeadline(t time.Time) er.R  { return nil }
-func (c mockConn) SetWriteDeadline(t time.Time) er.R { return nil }
+func (c mockConn) SetDeadline(t time.Time) error      { return nil }
+func (c mockConn) SetReadDeadline(t time.Time) error  { return nil }
+func (c mockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 // mockDialer mocks the net.Dial interface by returning a mock connection to
 // the given address.
@@ -565,18 +564,18 @@ type mockListener struct {
 // function.
 //
 // This is part of the net.Listener interface.
-func (m *mockListener) Accept() (net.Conn, er.R) {
+func (m *mockListener) Accept() (net.Conn, error) {
 	for conn := range m.provideConn {
 		return conn, nil
 	}
-	return nil, er.New("network connection closed")
+	return nil, er.Native(er.New("network connection closed"))
 }
 
 // Close closes the mock listener which will cause any blocked Accept
 // operations to be unblocked and return errors.
 //
 // This is part of the net.Listener interface.
-func (m *mockListener) Close() er.R {
+func (m *mockListener) Close() error {
 	close(m.provideConn)
 	return nil
 }

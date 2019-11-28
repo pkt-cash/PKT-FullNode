@@ -8,8 +8,9 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -71,8 +72,9 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 		return err
 	}
 
-	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt ||
-		enc&PacketCryptEncoding == PacketCryptEncoding {
+	if enc&NoPacketCryptEncoding == NoPacketCryptEncoding {
+	} else if enc&PacketCryptEncoding == PacketCryptEncoding ||
+		globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
 		if msg.Pcp == nil {
 			msg.Pcp = &PacketCryptProof{}
 		}
@@ -201,8 +203,9 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 		return err
 	}
 
-	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt &&
-		enc&NoPacketCryptEncoding != NoPacketCryptEncoding {
+	if enc&NoPacketCryptEncoding == NoPacketCryptEncoding {
+	} else if enc&PacketCryptEncoding == PacketCryptEncoding ||
+		globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
 		if msg.Pcp == nil {
 			return er.Errorf("proof of work is not defined")
 		}

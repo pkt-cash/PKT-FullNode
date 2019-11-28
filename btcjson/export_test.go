@@ -8,10 +8,6 @@ package btcjson
 // available to the test package.
 var TstHighestUsageFlagBit = highestUsageFlagBit
 
-// TstNumErrorCodes makes the internal numErrorCodes parameter available to the
-// test package.
-var TstNumErrorCodes = numErrorCodes
-
 // TstAssignField makes the internal assignField function available to the test
 // package.
 var TstAssignField = assignField

@@ -12,12 +12,12 @@ package fullblocktests
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"runtime"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
@@ -87,7 +87,7 @@ type RejectedBlock struct {
 	Name       string
 	Block      *wire.MsgBlock
 	Height     int32
-	RejectCode blockchain.ErrorCode
+	RejectCode *er.ErrorCode
 }
 
 // Ensure RejectedBlock implements the TestInstance interface.
@@ -801,11 +801,11 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 
 			switch rt := r.(type) {
 			case string:
-				err = errors.New(rt)
+				err = er.New(rt)
 			case er.R:
 				err = rt
 			default:
-				err = errors.New("Unknown panic")
+				err = er.New("Unknown panic")
 			}
 		}
 	}()
@@ -841,7 +841,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 		return AcceptedBlock{blockName, block, blockHeight, isMainChain,
 			isOrphan}
 	}
-	rejectBlock := func(blockName string, block *wire.MsgBlock, code blockchain.ErrorCode) TestInstance {
+	rejectBlock := func(blockName string, block *wire.MsgBlock, code *er.ErrorCode) TestInstance {
 		blockHeight := g.blockHeights[blockName]
 		return RejectedBlock{blockName, block, blockHeight, code}
 	}
@@ -891,7 +891,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 			expectTipBlock(tipName, g.blocksByName[tipName]),
 		})
 	}
-	rejected := func(code blockchain.ErrorCode) {
+	rejected := func(code *er.ErrorCode) {
 		tests = append(tests, []TestInstance{
 			rejectBlock(g.tipName, g.tip, code),
 		})

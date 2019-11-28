@@ -6,10 +6,11 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -278,7 +279,7 @@ func TestGetBlocksWireErrors(t *testing.T) {
 	// specifically here instead of the latest because the test data is
 	// using bytes encoded with that protocol version.
 	pver := uint32(60002)
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	// Block 99499 hash.
 	hashStr := "2710f40c87ec93d010a6fd95f42c59a2cbacc60b18cf6b7957535"
@@ -346,13 +347,13 @@ func TestGetBlocksWireErrors(t *testing.T) {
 		readErr  er.R            // Expected read error
 	}{
 		// Force error in protocol version.
-		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in block locator hash count.
-		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 4, io.ErrShortWrite, io.EOF},
+		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 4, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in block locator hashes.
-		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 5, io.ErrShortWrite, io.EOF},
+		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 5, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in stop hash.
-		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 69, io.ErrShortWrite, io.EOF},
+		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 69, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error with greater than max block locator hashes.
 		{maxGetBlocks, maxGetBlocksEncoded, pver, BaseEncoding, 7, wireErr, wireErr},
 	}
@@ -362,40 +363,20 @@ func TestGetBlocksWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgGetBlocks
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 }

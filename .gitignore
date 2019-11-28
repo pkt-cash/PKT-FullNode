@@ -35,6 +35,7 @@ _testmain.go
 /pktd
 /btcctl
 /wallet
+/pktd.test
 
 # IDE
 .vscode

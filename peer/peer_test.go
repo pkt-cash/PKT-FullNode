@@ -6,8 +6,6 @@
 package peer_test
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"strconv"
@@ -15,6 +13,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/peer"
@@ -59,16 +58,16 @@ func (c conn) RemoteAddr() net.Addr {
 }
 
 // Close handles closing the connection.
-func (c conn) Close() er.R {
+func (c conn) Close() error {
 	if c.Closer == nil {
 		return nil
 	}
 	return c.Closer.Close()
 }
 
-func (c conn) SetDeadline(t time.Time) er.R      { return nil }
-func (c conn) SetReadDeadline(t time.Time) er.R  { return nil }
-func (c conn) SetWriteDeadline(t time.Time) er.R { return nil }
+func (c conn) SetDeadline(t time.Time) error      { return nil }
+func (c conn) SetReadDeadline(t time.Time) error  { return nil }
+func (c conn) SetWriteDeadline(t time.Time) error { return nil }
 
 // addr mocks a network address
 type addr struct {
@@ -797,7 +796,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 				p.ProtocolVersion(),
 				peerCfg.ChainParams.Net,
 			)
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				close(outboundMessages)
 				return
 			}

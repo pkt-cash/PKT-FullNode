@@ -2,11 +2,11 @@ package chaincfg_test
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	. "github.com/pkt-cash/pktd/chaincfg"
 )
 
@@ -57,22 +57,22 @@ func TestRegister(t *testing.T) {
 				{
 					name:   "duplicate mainnet",
 					params: &MainNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate regtest",
 					params: &RegressionNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate testnet3",
 					params: &TestNet3Params,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate simnet",
 					params: &SimNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 			},
 			p2pkhMagics: []magicTest{
@@ -188,15 +188,15 @@ func TestRegister(t *testing.T) {
 				},
 				{
 					priv: mockNetParams.HDPrivateKeyID[:],
-					err:  ErrUnknownHDKeyID,
+					err:  ErrUnknownHDKeyID.Default(),
 				},
 				{
 					priv: []byte{0xff, 0xff, 0xff, 0xff},
-					err:  ErrUnknownHDKeyID,
+					err:  ErrUnknownHDKeyID.Default(),
 				},
 				{
 					priv: []byte{0xff},
-					err:  ErrUnknownHDKeyID,
+					err:  ErrUnknownHDKeyID.Default(),
 				},
 			},
 		},
@@ -313,27 +313,27 @@ func TestRegister(t *testing.T) {
 				{
 					name:   "duplicate mainnet",
 					params: &MainNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate regtest",
 					params: &RegressionNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate testnet3",
 					params: &TestNet3Params,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate simnet",
 					params: &SimNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 				{
 					name:   "duplicate mocknet",
 					params: &mockNetParams,
-					err:    ErrDuplicateNet,
+					err:    ErrDuplicateNet.Default(),
 				},
 			},
 			p2pkhMagics: []magicTest{
@@ -454,11 +454,11 @@ func TestRegister(t *testing.T) {
 				},
 				{
 					priv: []byte{0xff, 0xff, 0xff, 0xff},
-					err:  ErrUnknownHDKeyID,
+					err:  ErrUnknownHDKeyID.Default(),
 				},
 				{
 					priv: []byte{0xff},
-					err:  ErrUnknownHDKeyID,
+					err:  ErrUnknownHDKeyID.Default(),
 				},
 			},
 		},
@@ -467,7 +467,7 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		for _, regTest := range test.register {
 			err := Register(regTest.params)
-			if err != regTest.err {
+			if !er.Equals(err, regTest.err) {
 				t.Errorf("%s:%s: Registered network with unexpected error: got %v expected %v",
 					test.name, regTest.name, err, regTest.err)
 			}

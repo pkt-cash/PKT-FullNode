@@ -6,12 +6,12 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -71,7 +71,7 @@ func (bi *blockImporter) readBlock() ([]byte, er.R) {
 	err := binary.Read(bi.r, binary.LittleEndian, &net)
 	if err != nil {
 		if err != io.EOF {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// No block and no error means there are no more blocks to read.
@@ -85,7 +85,7 @@ func (bi *blockImporter) readBlock() ([]byte, er.R) {
 	// Read the block length and ensure it is sane.
 	var blockLen uint32
 	if err := binary.Read(bi.r, binary.LittleEndian, &blockLen); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if blockLen > wire.MaxBlockPayload {
 		return nil, er.Errorf("block payload of %d bytes is larger "+
@@ -95,7 +95,7 @@ func (bi *blockImporter) readBlock() ([]byte, er.R) {
 
 	serializedBlock := make([]byte, blockLen)
 	if _, err := io.ReadFull(bi.r, serializedBlock); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return serializedBlock, nil
@@ -170,8 +170,7 @@ out:
 		// notify the status handler with the error and bail.
 		serializedBlock, err := bi.readBlock()
 		if err != nil {
-			bi.errChan <- er.Errorf("Error reading from input "+
-				"file: %v", err.Error())
+			bi.errChan <- er.Errorf("Error reading from input file: %v", err)
 			break out
 		}
 
@@ -351,9 +350,9 @@ func (cmd *importCmd) Execute(args []string) er.R {
 		db.Close()
 	})
 
-	fi, err := os.Open(importCfg.InFile)
-	if err != nil {
-		return err
+	fi, errr := os.Open(importCfg.InFile)
+	if errr != nil {
+		return er.E(errr)
 	}
 	defer fi.Close()
 
@@ -376,8 +375,7 @@ func (cmd *importCmd) Execute(args []string) er.R {
 		resultsChan := importer.Import()
 		results := <-resultsChan
 		if results.err != nil {
-			dbErr, ok := results.err.(database.Error)
-			if !ok || ok && dbErr.ErrorCode != database.ErrDbNotOpen {
+			if !database.ErrDbNotOpen.Is(err) {
 				shutdownChannel <- results.err
 				return
 			}

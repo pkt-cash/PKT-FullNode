@@ -6,7 +6,6 @@ package mining
 
 import (
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/blockchain"

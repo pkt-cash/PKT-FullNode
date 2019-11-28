@@ -8,13 +8,13 @@ package blockchain
 import (
 	"compress/bzip2"
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/testdata"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -95,7 +95,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		// Create the root directory for test databases.
 		if !fileExists(testDbRoot) {
 			if err := os.MkdirAll(testDbRoot, 0700); err != nil {
-				err := fmt.Errorf("unable to create test db "+
+				err := er.Errorf("unable to create test db "+
 					"root: %v", err)
 				return nil, nil, err
 			}
@@ -133,7 +133,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 	})
 	if err != nil {
 		teardown()
-		err := fmt.Errorf("failed to create chain instance: %v", err)
+		err := er.Errorf("failed to create chain instance: %v", err)
 		return nil, nil, err
 	}
 	return chain, teardown, nil
@@ -150,7 +150,7 @@ func loadUtxoView(filename string) (*UtxoViewpoint, er.R) {
 	filename = filepath.Join("testdata", filename)
 	fi, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Choose read based on whether the file is compressed or not.
@@ -172,36 +172,38 @@ func loadUtxoView(filename string) (*UtxoViewpoint, er.R) {
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Output index of the utxo entry.
 		var index uint32
 		err = binary.Read(r, binary.LittleEndian, &index)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Num of serialized utxo entry bytes.
 		var numBytes uint32
 		err = binary.Read(r, binary.LittleEndian, &numBytes)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Serialized utxo entry.
 		serialized := make([]byte, numBytes)
 		_, err = io.ReadAtLeast(r, serialized, int(numBytes))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
-		// Deserialize it and add it to the view.
-		entry, err := deserializeUtxoEntry(serialized)
-		if err != nil {
-			return nil, err
+		{
+			// Deserialize it and add it to the view.
+			entry, err := deserializeUtxoEntry(serialized)
+			if err != nil {
+				return nil, err
+			}
+			view.Entries()[wire.OutPoint{Hash: hash, Index: index}] = entry
 		}
-		view.Entries()[wire.OutPoint{Hash: hash, Index: index}] = entry
 	}
 
 	return view, nil
@@ -228,64 +230,65 @@ func convertUtxoStore(r io.Reader, w io.Writer) er.R {
 			if err == io.EOF {
 				break
 			}
-			return err
+			return er.E(err)
 		}
 
 		// Num of serialized utxo entry bytes.
 		var numBytes uint32
 		err = binary.Read(r, littleEndian, &numBytes)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Serialized utxo entry.
 		serialized := make([]byte, numBytes)
 		_, err = io.ReadAtLeast(r, serialized, int(numBytes))
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
-		// Deserialize the entry.
-		entries, err := deserializeUtxoEntryV0(serialized)
-		if err != nil {
-			return err
-		}
-
-		// Loop through all of the utxos and write them out in the new
-		// format.
-		for outputIdx, entry := range entries {
-			// Reserialize the entries using the new format.
-			serialized, err := serializeUtxoEntry(entry)
+		{
+			// Deserialize the entry.
+			entries, err := deserializeUtxoEntryV0(serialized)
 			if err != nil {
 				return err
 			}
 
-			// Write the hash of the utxo entry.
-			_, err = w.Write(hash[:])
-			if err != nil {
-				return err
-			}
+			// Loop through all of the utxos and write them out in the new
+			// format.
+			for outputIdx, entry := range entries {
+				// Reserialize the entries using the new format.
+				serialized, err := serializeUtxoEntry(entry)
+				if err != nil {
+					return err
+				}
 
-			// Write the output index of the utxo entry.
-			err = binary.Write(w, littleEndian, outputIdx)
-			if err != nil {
-				return err
-			}
+				// Write the hash of the utxo entry.
+				_, errr := w.Write(hash[:])
+				if errr != nil {
+					return er.E(errr)
+				}
 
-			// Write num of serialized utxo entry bytes.
-			err = binary.Write(w, littleEndian, uint32(len(serialized)))
-			if err != nil {
-				return err
-			}
+				// Write the output index of the utxo entry.
+				errr = binary.Write(w, littleEndian, outputIdx)
+				if errr != nil {
+					return er.E(errr)
+				}
 
-			// Write the serialized utxo.
-			_, err = w.Write(serialized)
-			if err != nil {
-				return err
+				// Write num of serialized utxo entry bytes.
+				errr = binary.Write(w, littleEndian, uint32(len(serialized)))
+				if errr != nil {
+					return er.E(errr)
+				}
+
+				// Write the serialized utxo.
+				_, errr = w.Write(serialized)
+				if errr != nil {
+					return er.E(errr)
+				}
 			}
 		}
 	}
-
 	return nil
 }
 

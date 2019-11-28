@@ -6,7 +6,6 @@ package bloom_test
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"time"
 

@@ -6,7 +6,6 @@ package rpctest
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
@@ -126,9 +126,9 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	}
 
 	harnessID := strconv.Itoa(numTestInstances)
-	nodeTestData, err := ioutil.TempDir(testDir, "harness-"+harnessID)
-	if err != nil {
-		return nil, err
+	nodeTestData, errr := ioutil.TempDir(testDir, "harness-"+harnessID)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	certFile := filepath.Join(nodeTestData, "rpc.cert")
@@ -281,8 +281,8 @@ func (h *Harness) tearDown() er.R {
 		return err
 	}
 
-	if err := os.RemoveAll(h.testNodeDir); err != nil {
-		return err
+	if errr := os.RemoveAll(h.testNodeDir); errr != nil {
+		return er.E(errr)
 	}
 
 	delete(testInstances, h.testNodeDir)
@@ -496,6 +496,6 @@ func generateListeningAddresses() (string, string) {
 // baseDir is the directory path of the temp directory for all rpctest files.
 func baseDir() (string, er.R) {
 	dirPath := filepath.Join(os.TempDir(), "pktd", "rpctest")
-	err := os.MkdirAll(dirPath, 0755)
-	return dirPath, err
+	errr := os.MkdirAll(dirPath, 0755)
+	return dirPath, er.E(errr)
 }

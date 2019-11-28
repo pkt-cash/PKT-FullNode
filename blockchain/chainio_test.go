@@ -6,37 +6,15 @@ package blockchain
 
 import (
 	"bytes"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
 )
-
-// TestErrNotInMainChain ensures the functions related to errNotInMainChain work
-// as expected.
-func TestErrNotInMainChain(t *testing.T) {
-	errStr := "no block at height 1 exists"
-	err := er.R(errNotInMainChain(errStr))
-
-	// Ensure the stringized output for the error is as expected.
-	if err.Error() != errStr {
-		t.Fatalf("errNotInMainChain retuned unexpected error string - "+
-			"got %q, want %q", err.Error(), errStr)
-	}
-
-	// Ensure error is detected as the correct type.
-	if !isNotInMainChainErr(err) {
-		t.Fatalf("isNotInMainChainErr did not detect as expected type")
-	}
-	err = errors.New("something else")
-	if isNotInMainChainErr(err) {
-		t.Fatalf("isNotInMainChainErr detected incorrect type")
-	}
-}
 
 // TestStxoSerialization ensures serializing and deserializing spent transaction
 // output entries works as expected.
@@ -185,7 +163,7 @@ func TestStxoDecodeErrors(t *testing.T) {
 		// Ensure the expected error type is returned.
 		gotBytesRead, err := decodeSpentTxOut(test.serialized,
 			&test.stxo)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.errType) {
+		if !er.FuzzyEquals(err, test.errType) {
 			t.Errorf("decodeSpentTxOut (%s): expected error type "+
 				"does not match - got %T, want %T", test.name,
 				err, test.errType)
@@ -388,7 +366,7 @@ func TestSpendJournalErrors(t *testing.T) {
 		// slice is nil.
 		stxos, err := deserializeSpendJournalEntry(test.serialized,
 			test.blockTxns)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.errType) {
+		if !er.FuzzyEquals(err, test.errType) {
 			t.Errorf("deserializeSpendJournalEntry (%s): expected "+
 				"error type does not match - got %T, want %T",
 				test.name, err, test.errType)
@@ -551,7 +529,7 @@ func TestUtxoEntryHeaderCodeErrors(t *testing.T) {
 	for _, test := range tests {
 		// Ensure the expected error type is returned and the code is 0.
 		code, err := utxoEntryHeaderCode(test.entry)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.errType) {
+		if !er.FuzzyEquals(err, test.errType) {
 			t.Errorf("utxoEntryHeaderCode (%s): expected error "+
 				"type does not match - got %T, want %T",
 				test.name, err, test.errType)
@@ -591,7 +569,7 @@ func TestUtxoEntryDeserializeErrors(t *testing.T) {
 		// Ensure the expected error type is returned and the returned
 		// entry is nil.
 		entry, err := deserializeUtxoEntry(test.serialized)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.errType) {
+		if !er.FuzzyEquals(err, test.errType) {
 			t.Errorf("deserializeUtxoEntry (%s): expected error "+
 				"type does not match - got %T, want %T",
 				test.name, err, test.errType)
@@ -685,38 +663,28 @@ func TestBestChainStateDeserializeErrors(t *testing.T) {
 		{
 			name:       "nothing serialized",
 			serialized: hexToBytes(""),
-			errType:    database.Error{ErrorCode: database.ErrCorruption},
+			errType:    database.ErrCorruption.Default(),
 		},
 		{
 			name:       "short data in hash",
 			serialized: hexToBytes("0000"),
-			errType:    database.Error{ErrorCode: database.ErrCorruption},
+			errType:    database.ErrCorruption.Default(),
 		},
 		{
 			name:       "short data in work sum",
 			serialized: hexToBytes("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d61900000000000000000001000000000000000500000001000100"),
-			errType:    database.Error{ErrorCode: database.ErrCorruption},
+			errType:    database.ErrCorruption.Default(),
 		},
 	}
 
 	for _, test := range tests {
 		// Ensure the expected error type and code is returned.
 		_, err := deserializeBestChainState(test.serialized)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.errType) {
+		if !er.FuzzyEquals(err, test.errType) {
 			t.Errorf("deserializeBestChainState (%s): expected "+
 				"error type does not match - got %T, want %T",
 				test.name, err, test.errType)
 			continue
-		}
-		if derr, ok := err.(database.Error); ok {
-			tderr := test.errType.(database.Error)
-			if derr.ErrorCode != tderr.ErrorCode {
-				t.Errorf("deserializeBestChainState (%s): "+
-					"wrong  error code got: %v, want: %v",
-					test.name, derr.ErrorCode,
-					tderr.ErrorCode)
-				continue
-			}
 		}
 	}
 }

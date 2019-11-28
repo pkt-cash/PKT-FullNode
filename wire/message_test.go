@@ -7,12 +7,13 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -186,19 +187,20 @@ func TestReadMessageWireErrors(t *testing.T) {
 	btcnet := MainNet
 
 	// Ensure message errors are as expected with no function specified.
-	wantErr := "something bad happened"
-	testErr := MessageError{Description: wantErr}
-	if testErr.Error() != wantErr {
+	msg := "something bad happened"
+	wantErr := "wire.MessageError: " + msg
+	testErr := MessageError.New(msg, nil)
+	if testErr.Message() != wantErr {
 		t.Errorf("MessageError: wrong error - got %v, want %v",
-			testErr.Error(), wantErr)
+			testErr.Message(), wantErr)
 	}
 
 	// Ensure message errors are as expected with a function specified.
 	wantFunc := "foo"
-	testErr = MessageError{Func: wantFunc, Description: wantErr}
-	if testErr.Error() != wantFunc+": "+wantErr {
-		t.Errorf("MessageError: wrong error - got %v, want %v",
-			testErr.Error(), wantErr)
+	testErr = MessageError.New(wantFunc+": "+wantErr, nil)
+	want := "wire.MessageError: " + wantFunc + ": " + wantErr
+	if testErr.Message() != want {
+		t.Errorf("MessageError: wrong error - got [%v], want [%v]", testErr.Message(), want)
 	}
 
 	// Wire encoded bytes for main and testnet3 networks magic identifiers.
@@ -241,6 +243,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	discardBytes := makeHeader(btcnet, "bogus", 15*1024, 0)
 
 	tests := []struct {
+		name    string
 		buf     []byte     // Wire encoding
 		pver    uint32     // Protocol version for wire encoding
 		btcnet  BitcoinNet // Bitcoin network for wire encoding
@@ -250,103 +253,103 @@ func TestReadMessageWireErrors(t *testing.T) {
 	}{
 		// Latest protocol version with intentional read errors.
 
-		// Short header.
 		{
+			"Short header",
 			[]byte{},
 			pver,
 			btcnet,
 			0,
-			io.EOF,
+			er.E(io.EOF),
 			0,
 		},
 
-		// Wrong network.  Want MainNet, but giving TestNet3.
 		{
+			"Wrong network.  Want MainNet, but giving TestNet3",
 			testNet3Bytes,
 			pver,
 			btcnet,
 			len(testNet3Bytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 
-		// Exceed max overall message payload length.
 		{
+			"Exceed max overall message payload length",
 			exceedMaxPayloadBytes,
 			pver,
 			btcnet,
 			len(exceedMaxPayloadBytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 
-		// Invalid UTF-8 command.
 		{
+			"Invalid UTF-8 command",
 			badCommandBytes,
 			pver,
 			btcnet,
 			len(badCommandBytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 
-		// Valid, but unsupported command.
 		{
+			"Valid, but unsupported command",
 			unsupportedCommandBytes,
 			pver,
 			btcnet,
 			len(unsupportedCommandBytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 
-		// Exceed max allowed payload for a message of a specific type.
 		{
+			"Exceed max allowed payload for a message of a specific type",
 			exceedTypePayloadBytes,
 			pver,
 			btcnet,
 			len(exceedTypePayloadBytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 
-		// Message with a payload shorter than the header indicates.
 		{
+			"Message with a payload shorter than the header indicates",
 			shortPayloadBytes,
 			pver,
 			btcnet,
 			len(shortPayloadBytes),
-			io.EOF,
+			er.E(io.EOF),
 			24,
 		},
 
-		// Message with a bad checksum.
 		{
+			"Message with a bad checksum",
 			badChecksumBytes,
 			pver,
 			btcnet,
 			len(badChecksumBytes),
-			&MessageError{},
+			MessageError.Default(),
 			26,
 		},
 
-		// Message with a valid header, but wrong format.
 		{
+			"Message with a valid header, but wrong format",
 			badMessageBytes,
 			pver,
 			btcnet,
 			len(badMessageBytes),
-			io.EOF,
+			MessageError.Default(),
 			25,
 		},
 
-		// 15k bytes of data to discard.
 		{
+			"15k bytes of data to discard",
 			discardBytes,
 			pver,
 			btcnet,
 			len(discardBytes),
-			&MessageError{},
+			MessageError.Default(),
 			24,
 		},
 	}
@@ -356,9 +359,9 @@ func TestReadMessageWireErrors(t *testing.T) {
 		// Decode from wire format.
 		r := newFixedReader(test.max, test.buf)
 		nr, _, _, err := ReadMessageN(r, test.pver, test.btcnet)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
-			t.Errorf("ReadMessage #%d wrong error got: %v <%T>, "+
-				"want: %T", i, err, err, test.readErr)
+		if !er.FuzzyEquals(err, test.readErr) {
+			t.Errorf("ReadMessage [%s] wrong error got: %v <%T>, "+
+				"want: %v", test.name, err, err, test.readErr.Message())
 			continue
 		}
 
@@ -370,8 +373,8 @@ func TestReadMessageWireErrors(t *testing.T) {
 
 		// For errors which are not of type MessageError, check them for
 		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
+		if !MessageError.Is(err) {
+			if !er.FuzzyEquals(err, test.readErr) {
 				t.Errorf("ReadMessage #%d wrong error got: %v <%T>, "+
 					"want: %v <%T>", i, err, err,
 					test.readErr, test.readErr)
@@ -386,7 +389,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 func TestWriteMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := MainNet
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	// Fake message with a command that is too long.
 	badCommandMsg := &fakeMessage{command: "somethingtoolong"}
@@ -424,9 +427,9 @@ func TestWriteMessageWireErrors(t *testing.T) {
 		// Force error due to exceeding max payload for message type.
 		{exceedPayloadErrMsg, pver, btcnet, 0, wireErr, 0},
 		// Force error in header write.
-		{bogusMsg, pver, btcnet, 0, io.ErrShortWrite, 0},
+		{bogusMsg, pver, btcnet, 0, er.E(io.ErrShortWrite), 0},
 		// Force error in payload write.
-		{bogusMsg, pver, btcnet, 24, io.ErrShortWrite, 24},
+		{bogusMsg, pver, btcnet, 24, er.E(io.ErrShortWrite), 24},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -434,7 +437,7 @@ func TestWriteMessageWireErrors(t *testing.T) {
 		// Encode wire format.
 		w := newFixedWriter(test.max)
 		nw, err := WriteMessageN(w, test.msg, test.pver, test.btcnet)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("WriteMessage #%d wrong error got: %v <%T>, "+
 				"want: %T", i, err, err, test.err)
 			continue
@@ -448,8 +451,8 @@ func TestWriteMessageWireErrors(t *testing.T) {
 
 		// For errors which are not of type MessageError, check them for
 		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.err {
+		if !MessageError.Is(err) {
+			if !er.FuzzyEquals(err, test.err) {
 				t.Errorf("ReadMessage #%d wrong error got: %v <%T>, "+
 					"want: %v <%T>", i, err, err,
 					test.err, test.err)

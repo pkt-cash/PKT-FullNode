@@ -6,7 +6,6 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 )
 
@@ -22,7 +21,7 @@ type fixedWriter struct {
 // io.ErrShortWrite is returned and the writer is left unchanged.
 //
 // This satisfies the io.Writer interface.
-func (w *fixedWriter) Write(p []byte) (n int, err er.R) {
+func (w *fixedWriter) Write(p []byte) (n int, err error) {
 	lenp := len(p)
 	if w.pos+lenp > cap(w.b) {
 		return 0, io.ErrShortWrite
@@ -58,7 +57,7 @@ type fixedReader struct {
 // the fixed writer, an error is returned.
 //
 // This satisfies the io.Reader interface.
-func (fr *fixedReader) Read(p []byte) (n int, err er.R) {
+func (fr *fixedReader) Read(p []byte) (n int, err error) {
 	n, err = fr.iobuf.Read(p)
 	fr.pos += n
 	return

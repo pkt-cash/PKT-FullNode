@@ -5,12 +5,12 @@
 package blockchain
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -191,10 +191,12 @@ func (node *blockNode) CalcPastMedianTime() time.Time {
 	timestamps := make([]int64, medianTimeBlocks)
 	numNodes := 0
 	iterNode := node
+	if iterNode == nil {
+		panic("CalcPastMedianTime() called on nil")
+	}
 	for i := 0; i < medianTimeBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.timestamp
 		numNodes++
-
 		iterNode = iterNode.parent
 	}
 

@@ -5,13 +5,13 @@
 package addrmgr_test
 
 import (
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/wire"
@@ -117,7 +117,7 @@ func TestAddAddressByIP(t *testing.T) {
 	addrErr := &net.AddrError{}
 	var tests = []struct {
 		addrIP string
-		err    er.R
+		err    error
 	}{
 		{
 			someIP + ":8333",
@@ -148,7 +148,7 @@ func TestAddAddressByIP(t *testing.T) {
 			t.Errorf("TestGood test %d failed expected no error and got one", i)
 			continue
 		}
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if reflect.TypeOf(er.Wrapped(err)) != reflect.TypeOf(test.err) {
 			t.Errorf("TestGood test %d failed got %v, want %v", i,
 				reflect.TypeOf(err), reflect.TypeOf(test.err))
 			continue

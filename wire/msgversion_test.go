@@ -6,13 +6,14 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"net"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -80,9 +81,9 @@ func TestVersion(t *testing.T) {
 	// accounting for ":", "/"
 	err = msg.AddUserAgent(strings.Repeat("t",
 		MaxUserAgentLen-len(customUserAgent)-2+1), "")
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("AddUserAgent: expected error not received "+
-			"- got %v, want %T", err, MessageError{})
+			"- got %v, want %T", err, MessageError.Default())
 
 	}
 
@@ -251,7 +252,7 @@ func TestVersionWireErrors(t *testing.T) {
 	// version.
 	pver := uint32(60002)
 	enc := BaseEncoding
-	wireErr := &MessageError{}
+	wireErr := MessageError.Default()
 
 	// Ensure calling MsgVersion.BtcDecode with a non *bytes.Buffer returns
 	// error.
@@ -295,28 +296,28 @@ func TestVersionWireErrors(t *testing.T) {
 		readErr  er.R            // Expected read error
 	}{
 		// Force error in protocol version.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in services.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 4, io.ErrShortWrite, io.EOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 4, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in timestamp.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 12, io.ErrShortWrite, io.EOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 12, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in remote address.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 20, io.ErrShortWrite, io.EOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 20, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in local address.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 47, io.ErrShortWrite, io.ErrUnexpectedEOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 47, er.E(io.ErrShortWrite), er.E(io.ErrUnexpectedEOF)},
 		// Force error in nonce.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 73, io.ErrShortWrite, io.ErrUnexpectedEOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 73, er.E(io.ErrShortWrite), er.E(io.ErrUnexpectedEOF)},
 		// Force error in user agent length.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 81, io.ErrShortWrite, io.EOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 81, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in user agent.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 82, io.ErrShortWrite, io.ErrUnexpectedEOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 82, er.E(io.ErrShortWrite), er.E(io.ErrUnexpectedEOF)},
 		// Force error in last block.
-		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 98, io.ErrShortWrite, io.ErrUnexpectedEOF},
+		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 98, er.E(io.ErrShortWrite), er.E(io.ErrUnexpectedEOF)},
 		// Force error in relay tx - no read error should happen since
 		// it's optional.
 		{
 			baseVersionBIP0037, baseVersionBIP0037Encoded,
-			BIP0037Version, BaseEncoding, 101, io.ErrShortWrite, nil,
+			BIP0037Version, BaseEncoding, 101, er.E(io.ErrShortWrite), nil,
 		},
 		// Force error due to user agent too big
 		{exceedUAVer, exceedUAVerEncoded, pver, BaseEncoding, newLen, wireErr, wireErr},
@@ -327,40 +328,20 @@ func TestVersionWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgVersion
 		buf := bytes.NewBuffer(test.buf[0:test.max])
 		err = msg.BtcDecode(buf, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 }
@@ -511,9 +492,8 @@ var baseVersionEncoded = []byte{
 	0x00, 0x00, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01, // IP 127.0.0.1
 	0x20, 0x8d, // Port 8333 in big-endian
 	0xf3, 0xe0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, // Nonce
-	0x10, // Varint for user agent length
-	0x2f, 0x62, 0x74, 0x63, 0x64, 0x74, 0x65, 0x73,
-	0x74, 0x3a, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x2f, // User agent
+	0x10,                                                                           // Varint for user agent length
+	'/', 'p', 'k', 't', 'd', 't', 'e', 's', 't', ':', '0', '.', '0', '.', '1', '/', // User agent
 	0xfa, 0x92, 0x03, 0x00, // Last block
 }
 
@@ -557,9 +537,8 @@ var baseVersionBIP0037Encoded = []byte{
 	0x00, 0x00, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01, // IP 127.0.0.1
 	0x20, 0x8d, // Port 8333 in big-endian
 	0xf3, 0xe0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, // Nonce
-	0x10, // Varint for user agent length
-	0x2f, 0x62, 0x74, 0x63, 0x64, 0x74, 0x65, 0x73,
-	0x74, 0x3a, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x2f, // User agent
+	0x10,                                                                           // Varint for user agent length
+	'/', 'p', 'k', 't', 'd', 't', 'e', 's', 't', ':', '0', '.', '0', '.', '1', '/', // User agent
 	0xfa, 0x92, 0x03, 0x00, // Last block
 	0x01, // Relay tx
 }

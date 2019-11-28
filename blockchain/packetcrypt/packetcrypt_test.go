@@ -7,9 +7,12 @@ package packetcrypt_test
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"os"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 
@@ -203,4 +206,9 @@ func TestInsertCoinbaseCommit(t *testing.T) {
 		t.Errorf("cbc mismatch")
 		return
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(chaincfg.PktMainNetParams.GlobalConf)
+	os.Exit(m.Run())
 }

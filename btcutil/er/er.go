@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"runtime/debug"
 	"strings"
 )
@@ -35,6 +36,7 @@ type typedErr struct {
 type ErrorType struct {
 	Name       string
 	codeLookup map[int]*ErrorCode
+	Codes      []*ErrorCode
 }
 
 // NewErrorType creates a new error type, it must be identified by name.
@@ -111,9 +113,9 @@ func (e *ErrorType) newErrorCode(
 	var result *ErrorCode
 	var header string
 	if hasNumber {
-		header = fmt.Sprintf("%s(%d,\"%s\")", e.Name, number, info)
+		header = fmt.Sprintf("%s(%d)", info, number)
 	} else {
-		header = fmt.Sprintf("%s(\"%s\")", e.Name, info)
+		header = fmt.Sprintf("%s", info)
 	}
 	if detail != "" {
 		header = header + ": " + detail
@@ -126,6 +128,7 @@ func (e *ErrorType) newErrorCode(
 	if hasNumber {
 		e.codeLookup[number] = result
 	}
+	e.Codes = append(e.Codes, result)
 	return result
 }
 
@@ -158,6 +161,10 @@ func (te typedErr) AddMessage(m string) {
 }
 
 func (te typedErr) Message() string {
+	tem := te.err.Message()
+	if tem == "" {
+		return strings.Join(te.messages, ": ")
+	}
 	return fmt.Sprintf("%s: %s", strings.Join(te.messages, ": "), te.err.Message())
 }
 
@@ -316,4 +323,45 @@ func CauseOf(err R) R {
 		return te.err
 	}
 	return err
+}
+
+func equals(e, r R, fuzzy bool) bool {
+	if e == nil || r == nil {
+		return e == nil && r == nil
+	}
+	if te, ok := e.(typedErr); ok {
+		if tr, ok := r.(typedErr); ok {
+			return te.code == tr.code
+		}
+		// e is a typed error, r isn't
+		return false
+	}
+	if ee, ok := e.(err); ok {
+		if rr, ok := r.(err); ok {
+			if ee.e != nil && rr.e != nil {
+				// e and r are made by er.E(), check they wrap the same underlying error type
+				if ee.e == rr.e {
+					return true
+				}
+				if fuzzy {
+					return reflect.TypeOf(ee.e) == reflect.TypeOf(rr.e)
+				}
+			}
+			// doesn't wrap anything, therefore every er.R is unique
+			// TODO(cjd): Maybe we want to grab the pc of the caller to er.E() and
+			// store that so we can consider the same 2 errors which were made in an identical
+			// location.
+			return false
+		}
+		// differing types
+		return false
+	}
+	panic("I don't know what error type this is: " + reflect.TypeOf(e).Name())
+}
+
+func Equals(e, r R) bool {
+	return equals(e, r, false)
+}
+func FuzzyEquals(e, r R) bool {
+	return equals(e, r, true)
 }

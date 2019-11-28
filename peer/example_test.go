@@ -7,10 +7,10 @@ package peer_test
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
@@ -31,7 +31,7 @@ func mockRemotePeer() er.R {
 	// Accept connections on the simnet port.
 	listener, err := net.Listen("tcp", "127.0.0.1:18555")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	go func() {
 		conn, err := listener.Accept()
@@ -90,8 +90,8 @@ func Example_newOutboundPeer() {
 	}
 
 	// Establish the connection to the peer address and mark it connected.
-	conn, err := net.Dial("tcp", p.Addr())
-	if err != nil {
+	conn, errr := net.Dial("tcp", p.Addr())
+	if errr != nil {
 		fmt.Printf("net.Dial: error %v\n", err)
 		return
 	}

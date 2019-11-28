@@ -6,10 +6,11 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -217,8 +218,8 @@ func TestPingWireErrors(t *testing.T) {
 			pver,
 			BaseEncoding,
 			2,
-			io.ErrShortWrite,
-			io.ErrUnexpectedEOF,
+			er.E(io.ErrShortWrite),
+			er.E(io.ErrUnexpectedEOF),
 		},
 	}
 
@@ -227,7 +228,7 @@ func TestPingWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if err != test.writeErr {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -237,7 +238,7 @@ func TestPingWireErrors(t *testing.T) {
 		var msg MsgPing
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if err != test.readErr {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue

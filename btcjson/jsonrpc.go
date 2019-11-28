@@ -114,10 +114,14 @@ func SerializeError(err er.R) *RPCErr {
 	if code := Err.Decode(err); code != nil {
 		codeNum = code.Number
 	}
+	var st []string
+	if err.HasStack() {
+		st = err.Stack()
+	}
 	return &RPCErr{
 		Code:    codeNum,
-		Message: err.String(),
-		Stack:   err.Stack(),
+		Message: err.Message(),
+		Stack:   st,
 	}
 
 }

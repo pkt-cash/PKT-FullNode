@@ -6,9 +6,9 @@ package coinset
 
 import (
 	"container/list"
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sort"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -145,7 +145,8 @@ func NewMsgTxWithInputCoins(txVersion int32, inputCoins Coins) *wire.MsgTx {
 var (
 	// ErrCoinsNoSelectionAvailable is returned when a CoinSelector believes there is no
 	// possible combination of coins which can meet the requirements provided to the selector.
-	ErrCoinsNoSelectionAvailable = errors.New("no coin selection possible")
+	ErrCoinsNoSelectionAvailable = er.GenericErrorType.CodeWithDetail("ErrCoinsNoSelectionAvailable",
+		"no coin selection possible")
 )
 
 // satisfiesTargetValue checks that the totalValue is either exactly the targetValue
@@ -187,7 +188,7 @@ func (s MinIndexCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []Coi
 			return cs, nil
 		}
 	}
-	return nil, ErrCoinsNoSelectionAvailable
+	return nil, ErrCoinsNoSelectionAvailable.Default()
 }
 
 // MinNumberCoinSelector is a CoinSelector that attempts to construct
@@ -263,7 +264,7 @@ func (s MinPriorityCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []
 		}
 	}
 	if cutoffIndex < 0 {
-		return nil, ErrCoinsNoSelectionAvailable
+		return nil, ErrCoinsNoSelectionAvailable.Default()
 	}
 
 	// create sets of input coins that will obey minimum average valueAge
@@ -328,7 +329,7 @@ func (s MinPriorityCoinSelector) CoinSelect(targetValue btcutil.Amount, coins []
 		}
 	}
 
-	return nil, ErrCoinsNoSelectionAvailable
+	return nil, ErrCoinsNoSelectionAvailable.Default()
 }
 
 type byValueAge []Coin

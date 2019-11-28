@@ -7,10 +7,11 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -419,29 +420,29 @@ func TestTxWireErrors(t *testing.T) {
 		readErr  er.R            // Expected read error
 	}{
 		// Force error in version.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in number of transaction inputs.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 4, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 5, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 5, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input previous block output index.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 37, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 37, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input signature script length.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 41, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 41, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input signature script.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 42, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 42, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input sequence.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 49, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 49, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in number of transaction outputs.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 53, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 53, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output value.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 54, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 54, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output pk script length.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 62, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 62, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output pk script.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 63, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 63, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output lock time.
-		{multiTx, multiTxEncoded, pver, BaseEncoding, 206, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, BaseEncoding, 206, er.E(io.ErrShortWrite), er.E(io.EOF)},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -449,7 +450,7 @@ func TestTxWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if err != test.writeErr {
+		if !er.Equals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -459,7 +460,7 @@ func TestTxWireErrors(t *testing.T) {
 		var msg MsgTx
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if err != test.readErr {
+		if !er.Equals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
@@ -577,29 +578,29 @@ func TestTxSerializeErrors(t *testing.T) {
 		readErr  er.R   // Expected read error
 	}{
 		// Force error in version.
-		{multiTx, multiTxEncoded, 0, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in number of transaction inputs.
-		{multiTx, multiTxEncoded, 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 4, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, 5, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 5, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input previous block output index.
-		{multiTx, multiTxEncoded, 37, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 37, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input signature script length.
-		{multiTx, multiTxEncoded, 41, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 41, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input signature script.
-		{multiTx, multiTxEncoded, 42, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 42, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction input sequence.
-		{multiTx, multiTxEncoded, 49, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 49, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in number of transaction outputs.
-		{multiTx, multiTxEncoded, 53, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 53, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output value.
-		{multiTx, multiTxEncoded, 54, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 54, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output pk script length.
-		{multiTx, multiTxEncoded, 62, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 62, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output pk script.
-		{multiTx, multiTxEncoded, 63, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 63, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in transaction output lock time.
-		{multiTx, multiTxEncoded, 206, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 206, er.E(io.ErrShortWrite), er.E(io.EOF)},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -607,7 +608,7 @@ func TestTxSerializeErrors(t *testing.T) {
 		// Serialize the transaction.
 		w := newFixedWriter(test.max)
 		err := test.in.Serialize(w)
-		if err != test.writeErr {
+		if !er.Equals(err, test.writeErr) {
 			t.Errorf("Serialize #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -617,7 +618,7 @@ func TestTxSerializeErrors(t *testing.T) {
 		var tx MsgTx
 		r := newFixedReader(test.max, test.buf)
 		err = tx.Deserialize(r)
-		if err != test.readErr {
+		if !er.Equals(err, test.readErr) {
 			t.Errorf("Deserialize #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
@@ -649,7 +650,7 @@ func TestTxOverflowErrors(t *testing.T) {
 				0x00, 0x00, 0x00, 0x01, // Version
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, // Varint for number of input transactions
-			}, pver, BaseEncoding, txVer, &MessageError{},
+			}, pver, BaseEncoding, txVer, MessageError.Default(),
 		},
 
 		// Transaction that claims to have ~uint64(0) outputs.
@@ -659,7 +660,7 @@ func TestTxOverflowErrors(t *testing.T) {
 				0x00, // Varint for number of input transactions
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, // Varint for number of output transactions
-			}, pver, BaseEncoding, txVer, &MessageError{},
+			}, pver, BaseEncoding, txVer, MessageError.Default(),
 		},
 
 		// Transaction that has an input with a signature script that
@@ -675,7 +676,7 @@ func TestTxOverflowErrors(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, // Prevous output index
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, // Varint for length of signature script
-			}, pver, BaseEncoding, txVer, &MessageError{},
+			}, pver, BaseEncoding, txVer, MessageError.Default(),
 		},
 
 		// Transaction that has an output with a public key script
@@ -695,7 +696,7 @@ func TestTxOverflowErrors(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Transaction amount
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, // Varint for length of public key script
-			}, pver, BaseEncoding, txVer, &MessageError{},
+			}, pver, BaseEncoding, txVer, MessageError.Default(),
 		},
 	}
 
@@ -705,7 +706,7 @@ func TestTxOverflowErrors(t *testing.T) {
 		var msg MsgTx
 		r := bytes.NewReader(test.buf)
 		err := msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, reflect.TypeOf(test.err))
 			continue
@@ -714,7 +715,7 @@ func TestTxOverflowErrors(t *testing.T) {
 		// Decode from wire format.
 		r = bytes.NewReader(test.buf)
 		err = msg.Deserialize(r)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("Deserialize #%d wrong error got: %v, want: %v",
 				i, err, reflect.TypeOf(test.err))
 			continue

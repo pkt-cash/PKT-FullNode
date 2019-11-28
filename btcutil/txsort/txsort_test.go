@@ -6,13 +6,12 @@ package txsort_test
 
 import (
 	"bytes"
-	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/txsort"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -65,13 +64,13 @@ func TestSort(t *testing.T) {
 	for _, test := range tests {
 		// Load and deserialize the test transaction.
 		filePath := filepath.Join("testdata", test.hexFile)
-		txHexBytes, err := ioutil.ReadFile(filePath)
-		if err != nil {
+		txHexBytes, errr := ioutil.ReadFile(filePath)
+		if errr != nil {
 			t.Errorf("ReadFile (%s): failed to read test file: %v",
-				test.name, err)
+				test.name, errr)
 			continue
 		}
-		txBytes, err := hex.DecodeString(string(txHexBytes))
+		txBytes, err := util.DecodeHex(string(txHexBytes))
 		if err != nil {
 			t.Errorf("DecodeString (%s): failed to decode tx: %v",
 				test.name, err)

@@ -6,7 +6,6 @@
 package chaincfg
 
 import (
-	"errors"
 	"math"
 	"math/big"
 	"strings"
@@ -731,9 +730,7 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowSha256,
-	},
+	GlobalConf:               globalcfg.BitcoinDefaults(),
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
@@ -804,12 +801,14 @@ var (
 	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
 	// network could not be set due to the network already being a standard
 	// network or previously-registered into this package.
-	ErrDuplicateNet = errors.New("duplicate Bitcoin network")
+	ErrDuplicateNet = er.GenericErrorType.CodeWithDetail("ErrDuplicateNet",
+		"duplicate Bitcoin network")
 
 	// ErrUnknownHDKeyID describes an error where the provided id which
 	// is intended to identify the network for a hierarchical deterministic
 	// private extended key is not registered.
-	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
+	ErrUnknownHDKeyID = er.GenericErrorType.CodeWithDetail("ErrUnknownHDKeyID",
+		"unknown hd private extended key bytes")
 )
 
 var (
@@ -836,7 +835,7 @@ func (d DNSSeed) String() string {
 // or not.
 func Register(params *Params) er.R {
 	if _, ok := registeredNets[params.Net]; ok {
-		return er.E(ErrDuplicateNet)
+		return ErrDuplicateNet.Default()
 	}
 	registeredNets[params.Net] = struct{}{}
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
@@ -893,14 +892,14 @@ func IsBech32SegwitPrefix(prefix string) bool {
 // id is not registered, the ErrUnknownHDKeyID error will be returned.
 func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, er.R) {
 	if len(id) != 4 {
-		return nil, er.E(ErrUnknownHDKeyID)
+		return nil, ErrUnknownHDKeyID.Default()
 	}
 
 	var key [4]byte
 	copy(key[:], id)
 	pubBytes, ok := hdPrivToPubKeyIDs[key]
 	if !ok {
-		return nil, er.E(ErrUnknownHDKeyID)
+		return nil, ErrUnknownHDKeyID.Default()
 	}
 
 	return pubBytes, nil

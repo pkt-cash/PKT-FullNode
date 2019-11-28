@@ -6,13 +6,13 @@ package btcutil_test
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -91,7 +91,7 @@ func TestTxErrors(t *testing.T) {
 	// Truncate the transaction byte buffer to force errors.
 	shortBytes := testTxBytes[:4]
 	_, err = btcutil.NewTxFromBytes(shortBytes)
-	if err != io.EOF {
+	if er.Wrapped(err) != io.EOF {
 		t.Errorf("NewTxFromBytes: did not get expected error - "+
 			"got %v, want %v", err, io.EOF)
 	}

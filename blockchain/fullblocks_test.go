@@ -7,11 +7,12 @@ package blockchain_test
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/fullblocktests"
@@ -86,7 +87,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*blockchain.BlockChain,
 		// Create the root directory for test databases.
 		if !fileExists(testDbRoot) {
 			if err := os.MkdirAll(testDbRoot, 0700); err != nil {
-				err := fmt.Errorf("unable to create test db "+
+				err := er.Errorf("unable to create test db "+
 					"root: %v", err)
 				return nil, nil, err
 			}
@@ -124,7 +125,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*blockchain.BlockChain,
 	})
 	if err != nil {
 		teardown()
-		err := fmt.Errorf("failed to create chain instance: %v", err)
+		err := er.Errorf("failed to create chain instance: %v", err)
 		return nil, nil, err
 	}
 	return chain, teardown, nil
@@ -200,18 +201,17 @@ func TestFullBlocks(t *testing.T) {
 
 		// Ensure the error code is of the expected type and the reject
 		// code matches the value specified in the test instance.
-		rerr, ok := err.(blockchain.RuleError)
-		if !ok {
+		if !ruleerror.Err.Is(err) {
 			t.Fatalf("block %q (hash %s, height %d) returned "+
 				"unexpected error type -- got %T, want "+
 				"blockchain.RuleError", item.Name, block.Hash(),
 				blockHeight, err)
 		}
-		if rerr.ErrorCode != item.RejectCode {
+		if !item.RejectCode.Is(err) {
 			t.Fatalf("block %q (hash %s, height %d) does not have "+
 				"expected reject code -- got %v, want %v",
 				item.Name, block.Hash(), blockHeight,
-				rerr.ErrorCode, item.RejectCode)
+				err, item.RejectCode)
 		}
 	}
 
@@ -231,7 +231,7 @@ func TestFullBlocks(t *testing.T) {
 		// Ensure there is an error due to deserializing the block.
 		var msgBlock wire.MsgBlock
 		err := msgBlock.BtcDecode(bytes.NewReader(item.RawBlock), 0, wire.BaseEncoding)
-		if _, ok := err.(*wire.MessageError); !ok {
+		if !wire.MessageError.Is(err) {
 			t.Fatalf("block %q (hash %s, height %d) should have "+
 				"failed to decode", item.Name, blockHash,
 				blockHeight)
@@ -251,7 +251,7 @@ func TestFullBlocks(t *testing.T) {
 		_, isOrphan, err := chain.ProcessBlock(block, blockchain.BFNone)
 		if err != nil {
 			// Ensure the error code is of the expected type.
-			if _, ok := err.(blockchain.RuleError); !ok {
+			if !ruleerror.Err.Is(err) {
 				t.Fatalf("block %q (hash %s, height %d) "+
 					"returned unexpected error type -- "+
 					"got %T, want blockchain.RuleError",

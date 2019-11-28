@@ -5,8 +5,6 @@
 package rpctest
 
 import (
-	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"math/big"
 	"runtime"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"

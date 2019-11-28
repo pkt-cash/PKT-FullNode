@@ -183,7 +183,7 @@ func TestNewHashFromStr(t *testing.T) {
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		result, err := NewHashFromStr(test.in)
-		if err != test.err {
+		if !er.Equals(err, test.err) {
 			t.Errorf(unexpectedErrStr, i, err, test.err)
 			continue
 		} else if err != nil {

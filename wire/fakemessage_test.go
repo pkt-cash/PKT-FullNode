@@ -30,11 +30,7 @@ func (msg *fakeMessage) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding)
 // wire.Message interface.
 func (msg *fakeMessage) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	if msg.forceEncodeErr {
-		errr := &MessageError{
-			Func:        "fakeMessage.BtcEncode",
-			Description: "intentional error",
-		}
-		return er.E(errr)
+		return MessageError.New("fakeMessage.BtcEncode: intentional error", nil)
 	}
 
 	_, errr := w.Write(msg.payload)

@@ -6,7 +6,6 @@ package mempool
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 // TestCalcMinRequiredTxRelayFee tests the calcMinRequiredTxRelayFee API.
@@ -489,24 +489,24 @@ func TestCheckTransactionStandard(t *testing.T) {
 		}
 
 		// Ensure error type is a TxRuleError inside of a RuleError.
-		rerr, ok := err.(RuleError)
-		if !ok {
+		if !ruleerror.Err.Is(err) {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
 				"error type - got %T", test.name, err)
 			continue
 		}
-		txrerr, ok := rerr.Err.(TxRuleError)
-		if !ok {
+		code := ruleerror.Err.Decode(err)
+		if !ruleerror.IsTxRuleErrorCode(code) {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
-				"error type - got %T", test.name, rerr.Err)
+				"error type - got %T", test.name, err)
 			continue
 		}
 
 		// Ensure the reject code is the expected one.
-		if txrerr.RejectCode != test.code {
+		rejCode, _, _ := ruleerror.ExtractRejectCode(err)
+		if rejCode != test.code {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
 				"error code - got %v, want %v", test.name,
-				txrerr.RejectCode, test.code)
+				rejCode, test.code)
 			continue
 		}
 	}

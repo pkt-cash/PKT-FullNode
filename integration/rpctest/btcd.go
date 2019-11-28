@@ -5,12 +5,12 @@
 package rpctest
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -52,7 +52,7 @@ func pktdExecutablePath() (string, er.R) {
 	cmd := exec.Command(
 		"go", "build", "-o", outputPath, "github.com/pkt-cash/pktd",
 	)
-	err = cmd.Run()
+	err = er.E(cmd.Run())
 	if err != nil {
 		return "", er.Errorf("Failed to build pktd: %v", err)
 	}

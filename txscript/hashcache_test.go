@@ -5,10 +5,11 @@
 package txscript
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/wire"
@@ -29,7 +30,7 @@ func genTestTx() (*wire.MsgTx, er.R) {
 		}
 		_, err := rand.Read(randTxIn.PreviousOutPoint.Hash[:])
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		tx.TxIn = append(tx.TxIn, &randTxIn)
@@ -42,7 +43,7 @@ func genTestTx() (*wire.MsgTx, er.R) {
 			PkScript: make([]byte, rand.Intn(30)),
 		}
 		if _, err := rand.Read(randTxOut.PkScript); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		tx.TxOut = append(tx.TxOut, &randTxOut)
 	}
@@ -57,7 +58,8 @@ func genTestTx() (*wire.MsgTx, er.R) {
 func TestHashCacheAddContainsHashes(t *testing.T) {
 	t.Parallel()
 
-	rand.Seed(time.Now().Unix())
+	seed := time.Now().Unix()
+	rand.Seed(seed)
 
 	cache := NewHashCache(10)
 
