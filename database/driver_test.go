@@ -9,10 +9,9 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
-	"github.com/pkt-cash/pktd/database/testutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 var (
@@ -52,7 +51,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	}
 	testName := "duplicate driver registration"
 	err := database.RegisterDriver(driver)
-	if !testutil.CheckDbError(t, testName, err, database.ErrDbTypeRegistered) {
+	if !util.CheckError(t, testName, err, database.ErrDbTypeRegistered) {
 		return
 	}
 }
@@ -106,7 +105,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	testName := "create with unsupported database type"
 	dbType := "unsupported"
 	_, err := database.Create(dbType)
-	if !testutil.CheckDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !util.CheckError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}
 
@@ -114,7 +113,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// expected error.
 	testName = "open with unsupported database type"
 	_, err = database.Open(dbType)
-	if !testutil.CheckDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !util.CheckError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}
 }

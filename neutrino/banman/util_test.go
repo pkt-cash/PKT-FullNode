@@ -1,7 +1,6 @@
 package banman
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"reflect"
 	"testing"

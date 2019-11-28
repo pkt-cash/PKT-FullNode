@@ -1,8 +1,9 @@
 package pushtx_test
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 	"github.com/pkt-cash/pktd/wire"
@@ -16,7 +17,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 	testCases := []struct {
 		name string
 		msg  *wire.MsgReject
-		code pushtx.BroadcastErrorCode
+		code er.R
 	}{
 		{
 			name: "dust transaction",
@@ -30,7 +31,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectInvalid,
 				Reason: "spends inexistent output",
 			},
-			code: pushtx.Invalid,
+			code: pushtx.RejInvalid.Default(),
 		},
 		{
 			name: "nonstandard transaction",
@@ -38,7 +39,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectNonstandard,
 				Reason: "",
 			},
-			code: pushtx.Invalid,
+			code: pushtx.RejInvalid.Default(),
 		},
 		{
 			name: "insufficient fee transaction",
@@ -46,7 +47,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectInsufficientFee,
 				Reason: "",
 			},
-			code: pushtx.InsufficientFee,
+			code: pushtx.RejInsufficientFee.Default(),
 		},
 		{
 			name: "bitcoind mempool double spend",
@@ -54,7 +55,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "txn-mempool-conflict",
 			},
-			code: pushtx.Invalid,
+			code: pushtx.RejInvalid.Default(),
 		},
 		{
 			name: "bitcoind transaction in mempool",
@@ -62,7 +63,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "txn-already-in-mempool",
 			},
-			code: pushtx.Mempool,
+			code: pushtx.RejMempool.Default(),
 		},
 		{
 			name: "bitcoind transaction in chain",
@@ -70,7 +71,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "txn-already-known",
 			},
-			code: pushtx.Confirmed,
+			code: pushtx.RejConfirmed.Default(),
 		},
 		{
 			name: "btcd mempool double spend",
@@ -78,7 +79,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "already spent",
 			},
-			code: pushtx.Invalid,
+			code: pushtx.RejInvalid.Default(),
 		},
 		{
 			name: "btcd transaction in mempool",
@@ -86,7 +87,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "already have transaction",
 			},
-			code: pushtx.Mempool,
+			code: pushtx.RejMempool.Default(),
 		},
 		{
 			name: "btcd transaction in chain",
@@ -94,7 +95,7 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 				Code:   wire.RejectDuplicate,
 				Reason: "transaction already exists",
 			},
-			code: pushtx.Confirmed,
+			code: pushtx.RejConfirmed.Default(),
 		},
 	}
 
@@ -106,9 +107,9 @@ func TestParseBroadcastErrorCode(t *testing.T) {
 			broadcastErr := pushtx.ParseBroadcastError(
 				test.msg, "127.0.0.1:8333",
 			)
-			if broadcastErr.Code != test.code {
+			if !er.Equals(broadcastErr, test.code) {
 				t.Fatalf("expected BroadcastErrorCode %v, got "+
-					"%v", test.code, broadcastErr.Code)
+					"%v", test.code, broadcastErr)
 			}
 		})
 	}

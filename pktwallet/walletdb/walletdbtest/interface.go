@@ -6,9 +6,10 @@ package walletdbtest
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"reflect"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
@@ -179,7 +180,7 @@ func testReadWriteBucketInterface(tc *testContext, bucket walletdb.ReadWriteBuck
 	// Ensure creating a bucket that already exists fails with the
 	// expected error.
 	wantErr := walletdb.ErrBucketExists
-	if _, err := bucket.CreateBucket(testBucketName); err != wantErr {
+	if _, err := bucket.CreateBucket(testBucketName); !wantErr.Is(err) {
 		tc.t.Errorf("CreateBucket: unexpected error - got %v, "+
 			"want %v", err, wantErr)
 		return false
@@ -216,7 +217,7 @@ func testReadWriteBucketInterface(tc *testContext, bucket walletdb.ReadWriteBuck
 	// Ensure deleting a bucket that doesn't exist returns the
 	// expected error.
 	wantErr = walletdb.ErrBucketNotFound
-	if err := bucket.DeleteNestedBucket(testBucketName); err != wantErr {
+	if err := bucket.DeleteNestedBucket(testBucketName); !wantErr.Is(err) {
 		tc.t.Errorf("DeleteNestedBucket: unexpected error - got %v, "+
 			"want %v", err, wantErr)
 		return false
@@ -484,7 +485,7 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -502,18 +503,18 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 
 		tc.isWritable = true
 		if !testReadWriteBucketInterface(tc, rootBucket) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		if !testPutValues(tc, rootBucket, keyValues) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		// Return an error to force a rollback.
-		return forceRollbackError
+		return er.E(forceRollbackError)
 	})
-	if err != forceRollbackError {
-		if err == errSubTestFail {
+	if er.Wrapped(err) != forceRollbackError {
+		if er.Wrapped(err) == errSubTestFail {
 			return false
 		}
 
@@ -531,13 +532,13 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 		}
 
 		if !testGetValues(tc, rootBucket, rollbackValues(keyValues)) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -551,13 +552,13 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 		}
 
 		if !testPutValues(tc, rootBucket, keyValues) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -571,13 +572,13 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 		}
 
 		if !testGetValues(tc, rootBucket, keyValues) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -591,13 +592,13 @@ func testNamespaceAndTxInterfaces(tc *testContext, namespaceKey string) bool {
 		}
 
 		if !testDeleteValues(tc, rootBucket, keyValues) {
-			return errSubTestFail
+			return er.E(errSubTestFail)
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -621,7 +622,7 @@ func testAdditionalErrors(tc *testContext) bool {
 		// Ensure CreateBucket returns the expected error when no bucket
 		// key is specified.
 		wantErr := walletdb.ErrBucketNameRequired
-		if _, err := rootBucket.CreateBucket(nil); err != wantErr {
+		if _, err := rootBucket.CreateBucket(nil); !wantErr.Is(err) {
 			return er.Errorf("CreateBucket: unexpected error - "+
 				"got %v, want %v", err, wantErr)
 		}
@@ -629,7 +630,7 @@ func testAdditionalErrors(tc *testContext) bool {
 		// Ensure DeleteNestedBucket returns the expected error when no bucket
 		// key is specified.
 		wantErr = walletdb.ErrIncompatibleValue
-		if err := rootBucket.DeleteNestedBucket(nil); err != wantErr {
+		if err := rootBucket.DeleteNestedBucket(nil); !wantErr.Is(err) {
 			return er.Errorf("DeleteNestedBucket: unexpected error - "+
 				"got %v, want %v", err, wantErr)
 		}
@@ -637,7 +638,7 @@ func testAdditionalErrors(tc *testContext) bool {
 		// Ensure Put returns the expected error when no key is
 		// specified.
 		wantErr = walletdb.ErrKeyRequired
-		if err := rootBucket.Put(nil, nil); err != wantErr {
+		if err := rootBucket.Put(nil, nil); !wantErr.Is(err) {
 			return er.Errorf("Put: unexpected error - got %v, "+
 				"want %v", err, wantErr)
 		}
@@ -645,7 +646,7 @@ func testAdditionalErrors(tc *testContext) bool {
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if er.Wrapped(err) != errSubTestFail {
 			tc.t.Errorf("%v", err)
 		}
 		return false
@@ -663,12 +664,12 @@ func testAdditionalErrors(tc *testContext) bool {
 		return false
 	}
 	wantErr := walletdb.ErrTxClosed
-	if err := tx.Rollback(); err != wantErr {
+	if err := tx.Rollback(); !wantErr.Is(err) {
 		tc.t.Errorf("Rollback: unexpected error - got %v, want %v", err,
 			wantErr)
 		return false
 	}
-	if err := tx.Commit(); err != wantErr {
+	if err := tx.Commit(); !wantErr.Is(err) {
 		tc.t.Errorf("Commit: unexpected error - got %v, want %v", err,
 			wantErr)
 		return false

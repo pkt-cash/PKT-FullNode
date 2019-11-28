@@ -6,8 +6,9 @@ package snacl
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -56,7 +57,7 @@ func TestUnmarshalSecretKeyInvalid(t *testing.T) {
 	}
 
 	p := []byte("wrong password")
-	if err := sk.DeriveKey(&p); err != ErrInvalidPassword {
+	if err := sk.DeriveKey(&p); !ErrInvalidPassword.Is(err) {
 		t.Errorf("wrong password didn't fail")
 		return
 	}
@@ -111,7 +112,7 @@ func TestDeriveKey(t *testing.T) {
 
 func TestDeriveKeyInvalid(t *testing.T) {
 	bogusPass := []byte("bogus")
-	if err := key.DeriveKey(&bogusPass); err != ErrInvalidPassword {
+	if err := key.DeriveKey(&bogusPass); !ErrInvalidPassword.Is(err) {
 		t.Errorf("unexpected DeriveKey key failure: %v", err)
 	}
 }

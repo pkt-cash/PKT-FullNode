@@ -7,7 +7,6 @@ package wtxmgr
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -48,9 +48,9 @@ var (
 )
 
 func testDB() (walletdb.DB, func(), er.R) {
-	tmpDir, err := ioutil.TempDir("", "wtxmgr_test")
-	if err != nil {
-		return nil, func() {}, err
+	tmpDir, errr := ioutil.TempDir("", "wtxmgr_test")
+	if errr != nil {
+		return nil, func() {}, er.E(errr)
 	}
 	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
 	return db, func() { os.RemoveAll(tmpDir) }, err
@@ -59,9 +59,9 @@ func testDB() (walletdb.DB, func(), er.R) {
 var namespaceKey = []byte("txstore")
 
 func testStore() (*Store, walletdb.DB, func(), er.R) {
-	tmpDir, err := ioutil.TempDir("", "wtxmgr_test")
-	if err != nil {
-		return nil, nil, func() {}, err
+	tmpDir, errr := ioutil.TempDir("", "wtxmgr_test")
+	if errr != nil {
+		return nil, nil, func() {}, er.E(errr)
 	}
 
 	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))

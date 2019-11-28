@@ -7,9 +7,7 @@ package waddrmgr
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"reflect"
 	"testing"
@@ -17,6 +15,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/snacl"
@@ -59,7 +59,7 @@ func newHash(hexStr string) *chainhash.Hash {
 // snacl.ErrDecryptFailed.
 func failingSecretKeyGen(passphrase *[]byte,
 	config *ScryptOptions) (*snacl.SecretKey, er.R) {
-	return nil, snacl.ErrDecryptFailed
+	return nil, snacl.ErrDecryptFailed.Default()
 }
 
 // testContext is used to store context information about a running test which
@@ -173,7 +173,7 @@ func testManagedPubKeyAddress(tc *testContext, prefix string,
 	case tc.watchingOnly:
 		// Confirm expected watching-only error.
 		testName := fmt.Sprintf("%s PrivKey", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrWatchingOnly) {
+		if !util.CheckError(tc.t, testName, err, ErrWatchingOnly) {
 			return false
 		}
 	case tc.unlocked:
@@ -191,7 +191,7 @@ func testManagedPubKeyAddress(tc *testContext, prefix string,
 	default:
 		// Confirm expected locked error.
 		testName := fmt.Sprintf("%s PrivKey", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrLocked) {
+		if !util.CheckError(tc.t, testName, err, ErrLocked) {
 			return false
 		}
 	}
@@ -205,7 +205,7 @@ func testManagedPubKeyAddress(tc *testContext, prefix string,
 	case tc.watchingOnly:
 		// Confirm expected watching-only error.
 		testName := fmt.Sprintf("%s ExportPrivKey", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrWatchingOnly) {
+		if !util.CheckError(tc.t, testName, err, ErrWatchingOnly) {
 			return false
 		}
 	case tc.unlocked:
@@ -223,7 +223,7 @@ func testManagedPubKeyAddress(tc *testContext, prefix string,
 	default:
 		// Confirm expected locked error.
 		testName := fmt.Sprintf("%s ExportPrivKey", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrLocked) {
+		if !util.CheckError(tc.t, testName, err, ErrLocked) {
 			return false
 		}
 	}
@@ -256,7 +256,7 @@ func testManagedScriptAddress(tc *testContext, prefix string,
 	case tc.watchingOnly:
 		// Confirm expected watching-only error.
 		testName := fmt.Sprintf("%s Script", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrWatchingOnly) {
+		if !util.CheckError(tc.t, testName, err, ErrWatchingOnly) {
 			return false
 		}
 	case tc.unlocked:
@@ -273,7 +273,7 @@ func testManagedScriptAddress(tc *testContext, prefix string,
 	default:
 		// Confirm expected locked error.
 		testName := fmt.Sprintf("%s Script", prefix)
-		if !checkManagerError(tc.t, testName, err, ErrLocked) {
+		if !util.CheckError(tc.t, testName, err, ErrLocked) {
 			return false
 		}
 	}
@@ -647,7 +647,7 @@ func testLocking(tc *testContext) bool {
 	if tc.watchingOnly {
 		wantErrCode = ErrWatchingOnly
 	}
-	if !checkManagerError(tc.t, "Lock", err, wantErrCode) {
+	if !util.CheckError(tc.t, "Lock", err, wantErrCode) {
 		return false
 	}
 
@@ -660,7 +660,7 @@ func testLocking(tc *testContext) bool {
 		return tc.rootManager.Unlock(ns, privPassphrase)
 	})
 	if tc.watchingOnly {
-		if !checkManagerError(tc.t, "Unlock", err, ErrWatchingOnly) {
+		if !util.CheckError(tc.t, "Unlock", err, ErrWatchingOnly) {
 			return false
 		}
 	} else if err != nil {
@@ -680,7 +680,7 @@ func testLocking(tc *testContext) bool {
 		return tc.rootManager.Unlock(ns, privPassphrase)
 	})
 	if tc.watchingOnly {
-		if !checkManagerError(tc.t, "Unlock2", err, ErrWatchingOnly) {
+		if !util.CheckError(tc.t, "Unlock2", err, ErrWatchingOnly) {
 			return false
 		}
 	} else if err != nil {
@@ -702,7 +702,7 @@ func testLocking(tc *testContext) bool {
 	if tc.watchingOnly {
 		wantErrCode = ErrWatchingOnly
 	}
-	if !checkManagerError(tc.t, "Unlock", err, wantErrCode) {
+	if !util.CheckError(tc.t, "Unlock", err, wantErrCode) {
 		return false
 	}
 	if !tc.rootManager.IsLocked() {
@@ -1139,7 +1139,7 @@ func testChangePassphrase(tc *testContext) bool {
 			ns, pubPassphrase, pubPassphrase2, false, fastScrypt,
 		)
 	})
-	if !checkManagerError(tc.t, testName, err, ErrCrypto) {
+	if !util.CheckError(tc.t, testName, err, ErrCrypto) {
 		return false
 	}
 
@@ -1152,7 +1152,7 @@ func testChangePassphrase(tc *testContext) bool {
 			ns, []byte("bogus"), pubPassphrase2, false, fastScrypt,
 		)
 	})
-	if !checkManagerError(tc.t, testName, err, ErrWrongPassphrase) {
+	if !util.CheckError(tc.t, testName, err, ErrWrongPassphrase) {
 		return false
 	}
 
@@ -1204,7 +1204,7 @@ func testChangePassphrase(tc *testContext) bool {
 	if tc.watchingOnly {
 		wantErrCode = ErrWatchingOnly
 	}
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 
@@ -1279,7 +1279,7 @@ func testNewAccount(tc *testContext) bool {
 			_, err := tc.manager.NewAccount(ns, "test")
 			return err
 		})
-		if !checkManagerError(
+		if !util.CheckError(
 			tc.t, "Create account in watching-only mode", err,
 			ErrWatchingOnly,
 		) {
@@ -1294,7 +1294,7 @@ func testNewAccount(tc *testContext) bool {
 		_, err := tc.manager.NewAccount(ns, "test")
 		return err
 	})
-	if !checkManagerError(
+	if !util.CheckError(
 		tc.t, "Create account when wallet is locked", err, ErrLocked,
 	) {
 		tc.manager.Close()
@@ -1345,7 +1345,7 @@ func testNewAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode := ErrDuplicateAccount
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 	// Test account name validation
@@ -1356,7 +1356,7 @@ func testNewAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode = ErrInvalidAccount
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 	testName = "imported" // A reserved account name
@@ -1366,7 +1366,7 @@ func testNewAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode = ErrInvalidAccount
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 	return true
@@ -1407,7 +1407,7 @@ func testLookupAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode := ErrAccountNotFound
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 
@@ -1508,7 +1508,7 @@ func testRenameAccount(tc *testContext) bool {
 		return tc.manager.RenameAccount(ns, tc.account, testName)
 	})
 	wantErrCode := ErrDuplicateAccount
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 	// Test old account name is no longer valid
@@ -1518,7 +1518,7 @@ func testRenameAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode = ErrAccountNotFound
-	if !checkManagerError(tc.t, testName, err, wantErrCode) {
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
 		return false
 	}
 	return true
@@ -1638,9 +1638,9 @@ func testWatchingOnly(tc *testContext) bool {
 	// watching only.
 	woMgrName := "mgrtestwo.bin"
 	_ = os.Remove(woMgrName)
-	fi, err := os.OpenFile(woMgrName, os.O_CREATE|os.O_RDWR, 0600)
-	if err != nil {
-		tc.t.Errorf("%v", err)
+	fi, errr := os.OpenFile(woMgrName, os.O_CREATE|os.O_RDWR, 0600)
+	if errr != nil {
+		tc.t.Errorf("%v", errr)
 		return false
 	}
 	if err := tc.db.Copy(fi); err != nil {
@@ -1800,7 +1800,7 @@ func TestManager(t *testing.T) {
 		_, err := Open(ns, pubPassphrase, &chaincfg.MainNetParams)
 		return err
 	})
-	if !checkManagerError(t, "Open non-existant", err, ErrNoExist) {
+	if !util.CheckError(t, "Open non-existant", err, ErrNoExist) {
 		return
 	}
 
@@ -1838,7 +1838,7 @@ func TestManager(t *testing.T) {
 			&chaincfg.MainNetParams, fastScrypt, time.Time{},
 		)
 	})
-	if !checkManagerError(t, "Create existing", err, ErrAlreadyExists) {
+	if !util.CheckError(t, "Create existing", err, ErrAlreadyExists) {
 		mgr.Close()
 		return
 	}
@@ -1935,7 +1935,7 @@ func TestManagerHigherVersion(t *testing.T) {
 		_, err := Open(ns, pubPassphrase, &chaincfg.MainNetParams)
 		return err
 	})
-	if !checkManagerError(t, "Upgrade needed", err, ErrUpgrade) {
+	if !util.CheckError(t, "Upgrade needed", err, ErrUpgrade) {
 		t.Fatalf("expected error ErrUpgrade, got %v", err)
 	}
 
@@ -1959,7 +1959,7 @@ func TestManagerHigherVersion(t *testing.T) {
 		_, err := Open(ns, pubPassphrase, &chaincfg.MainNetParams)
 		return err
 	})
-	if !checkManagerError(t, "Upgrade needed", err, ErrUpgrade) {
+	if !util.CheckError(t, "Upgrade needed", err, ErrUpgrade) {
 		t.Fatalf("expected error ErrUpgrade, got %v", err)
 	}
 }
@@ -1989,11 +1989,11 @@ func TestEncryptDecryptErrors(t *testing.T) {
 	// Now the mgr is locked and encrypting/decrypting with private
 	// keys should fail.
 	_, err = mgr.Encrypt(CKTPrivate, []byte{})
-	checkManagerError(t, "encryption with private key fails when manager is locked",
+	util.CheckError(t, "encryption with private key fails when manager is locked",
 		err, ErrLocked)
 
 	_, err = mgr.Decrypt(CKTPrivate, []byte{})
-	checkManagerError(t, "decryption with private key fails when manager is locked",
+	util.CheckError(t, "decryption with private key fails when manager is locked",
 		err, ErrLocked)
 
 	// Unlock the manager for these tests
@@ -2011,10 +2011,10 @@ func TestEncryptDecryptErrors(t *testing.T) {
 	mgr.cryptoKeyPriv = &failingCryptoKey{}
 
 	_, err = mgr.Encrypt(CKTPrivate, []byte{})
-	checkManagerError(t, "failed encryption", err, ErrCrypto)
+	util.CheckError(t, "failed encryption", err, ErrCrypto)
 
 	_, err = mgr.Decrypt(CKTPrivate, []byte{})
-	checkManagerError(t, "failed decryption", err, ErrCrypto)
+	util.CheckError(t, "failed decryption", err, ErrCrypto)
 }
 
 // TestEncryptDecrypt ensures that encrypting and decrypting data with the

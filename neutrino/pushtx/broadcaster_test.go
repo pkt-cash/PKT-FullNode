@@ -1,9 +1,10 @@
 package pushtx
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/wire"
@@ -68,7 +69,7 @@ func TestBroadcaster(t *testing.T) {
 
 	broadcaster.Stop()
 
-	if err := broadcaster.Broadcast(tx); err != ErrBroadcasterStopped {
+	if err := broadcaster.Broadcast(tx); !ErrBroadcasterStopped.Is(err) {
 		t.Fatalf("expected ErrBroadcasterStopped, got %v", err)
 	}
 }
@@ -156,10 +157,10 @@ func TestRebroadcast(t *testing.T) {
 	broadcaster.cfg.Broadcast = func(tx *wire.MsgTx) er.R {
 		broadcastChan <- tx
 		if tx.TxHash() == txs[0].TxHash() {
-			return &BroadcastError{Code: Confirmed}
+			return RejConfirmed.Default()
 		}
 		if tx.TxHash() == txs[1].TxHash() {
-			return &BroadcastError{Code: Mempool}
+			return RejMempool.Default()
 		}
 		return nil
 	}

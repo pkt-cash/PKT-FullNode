@@ -3,8 +3,6 @@ package neutrino_test
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/btclog"
 	"github.com/pkt-cash/pktd/btcec"
@@ -465,7 +465,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 			inputs []*wire.TxIn, inputValues []btcutil.Amount,
 			scripts [][]byte, err er.R) {
 			if ourIndex == 1<<30 {
-				err = fmt.Errorf("Couldn't find our address " +
+				err = er.Errorf("Couldn't find our address " +
 					"in the passed transaction's outputs.")
 				return
 			}
@@ -526,7 +526,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 	}
 	banPeer(t, harness.svc, harness.h2)
 	err = harness.svc.SendTransaction(authTx1.Tx)
-	if err != nil && !strings.Contains(err.Error(), "already have") {
+	if err != nil && !strings.Contains(err.String(), "already have") {
 		t.Fatalf("Unable to send transaction to network: %s", err)
 	}
 	_, err = harness.h1.Node.Generate(1)
@@ -568,7 +568,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 	}
 	banPeer(t, harness.svc, harness.h2)
 	err = harness.svc.SendTransaction(authTx2.Tx)
-	if err != nil && !strings.Contains(err.Error(), "already have") {
+	if err != nil && !strings.Contains(err.String(), "already have") {
 		t.Fatalf("Unable to send transaction to network: %s", err)
 	}
 	_, err = harness.h1.Node.Generate(1)
@@ -785,7 +785,7 @@ func testRescanResults(harness *neutrinoHarness, t *testing.T) {
 	close(quitRescan)
 	err = <-errChan
 	quitRescan = nil
-	if err != neutrino.ErrRescanExit {
+	if !neutrino.ErrRescanExit.Is(err) {
 		t.Fatalf("Rescan ended with error: %s", err)
 	}
 
@@ -992,7 +992,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 	for err := range errChan {
 		if err != nil {
 			t.Errorf("%s", err)
-			lastErr = fmt.Errorf("Couldn't validate all " +
+			lastErr = er.Errorf("Couldn't validate all " +
 				"blocks, filters, and filter headers.")
 		}
 	}
@@ -1007,6 +1007,10 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 }
 
 func TestNeutrinoSync(t *testing.T) {
+	if "" == os.Getenv("ALL_TESTS") {
+		t.Skip("Skipping TestNeutrinoSync because it is slow, use ALL_TESTS=1 to enable")
+		return
+	}
 	// Set up logging.
 	logger := btclog.NewBackend(os.Stdout)
 	chainLogger := logger.Logger("CHAIN")
@@ -1107,9 +1111,9 @@ func TestNeutrinoSync(t *testing.T) {
 
 	// Create a temporary directory, initialize an empty walletdb with an
 	// SPV chain namespace, and create a configuration for the ChainService.
-	tempDir, err := ioutil.TempDir("", "neutrino")
-	if err != nil {
-		t.Fatalf("Failed to create temporary directory: %s", err)
+	tempDir, errr := ioutil.TempDir("", "neutrino")
+	if errr != nil {
+		t.Fatalf("Failed to create temporary directory: %s", er.E(errr))
 	}
 	defer os.RemoveAll(tempDir)
 	db, err := walletdb.Create("bdb", tempDir+"/weks.db")
@@ -1241,7 +1245,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 		}
 		haveBasicHeader, err = svc.RegFilterHeaders.FetchHeader(knownBestHash)
 		if err != nil {
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				haveBasicHeader = &chainhash.Hash{}
 				time.Sleep(syncUpdate)
 				total += syncUpdate
@@ -1313,7 +1317,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 
 		hash := head.BlockHash()
 		haveBasicHeader, err = svc.RegFilterHeaders.FetchHeader(&hash)
-		if err == io.EOF {
+		if er.Wrapped(err) == io.EOF {
 			// This sometimes happens due to reorgs after the
 			// service decides it's current. Just wait for the
 			// DB to catch up and try again.

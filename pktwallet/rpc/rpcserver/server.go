@@ -386,7 +386,7 @@ func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransacti
 	var startBlock, endBlock *wallet.BlockIdentifier
 	if req.StartingBlockHash != nil && req.StartingBlockHeight != 0 {
 		return nil, grpc.Errorf(codes.InvalidArgument,
-			"starting block hash and height may not be specified simultaneously", nil)
+			"starting block hash and height may not be specified simultaneously")
 	} else if req.StartingBlockHash != nil {
 		startBlockHash, err := chainhash.NewHash(req.StartingBlockHash)
 		if err != nil {

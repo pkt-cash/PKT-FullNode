@@ -5,12 +5,11 @@
 package zero_test
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	. "github.com/pkt-cash/pktd/pktwallet/internal/zero"
 )
 

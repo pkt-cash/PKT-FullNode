@@ -5,10 +5,10 @@
 package walletdb_test
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
@@ -50,7 +50,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 		Open:   bogusCreateDB,
 	}
 	err := walletdb.RegisterDriver(driver)
-	if err != walletdb.ErrDbTypeRegistered {
+	if !walletdb.ErrDbTypeRegistered.Is(err) {
 		t.Errorf("unexpected duplicate driver registration error - "+
 			"got %v, want %v", err, walletdb.ErrDbTypeRegistered)
 	}
@@ -73,7 +73,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// driver function that intentionally returns a failure which can be
 	// detected.
 	dbType := "createopenfail"
-	openError := fmt.Errorf("failed to create or open database for "+
+	openError := er.Errorf("failed to create or open database for "+
 		"database type [%v]", dbType)
 	bogusCreateDB := func(args ...interface{}) (walletdb.DB, er.R) {
 		return nil, openError
@@ -91,7 +91,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure creating a database with the new type fails with the expected
 	// error.
 	_, err := walletdb.Create(dbType)
-	if err != openError {
+	if err.String() != openError.String() {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
 		return
@@ -100,7 +100,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure opening a database with the new type fails with the expected
 	// error.
 	_, err = walletdb.Open(dbType)
-	if err != openError {
+	if err.String() != openError.String() {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
 		return
@@ -114,7 +114,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// expected error.
 	dbType := "unsupported"
 	_, err := walletdb.Create(dbType)
-	if err != walletdb.ErrDbUnknownType {
+	if !walletdb.ErrDbUnknownType.Is(err) {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			walletdb.ErrDbUnknownType)
 		return
@@ -123,7 +123,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// Ensure opening a database with the an unsupported type fails with the
 	// expected error.
 	_, err = walletdb.Open(dbType)
-	if err != walletdb.ErrDbUnknownType {
+	if !walletdb.ErrDbUnknownType.Is(err) {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			walletdb.ErrDbUnknownType)
 		return

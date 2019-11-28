@@ -1,12 +1,12 @@
 package neutrino
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"sort"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -21,7 +21,7 @@ import (
 func decodeHashNoError(str string) *chainhash.Hash {
 	hash, err := chainhash.NewHashFromStr(str)
 	if err != nil {
-		panic("Got error decoding hash: " + err.Error())
+		panic("Got error decoding hash: " + err.String())
 	}
 	return hash
 }
@@ -533,8 +533,7 @@ var (
 			},
 			banThreshold: 3,
 			badPeers:     []string{"c"},
-			expectedErr: er.Errorf("only 2 peers serving " +
-				"consistent filters, need 3"),
+			expectedErr:  er.Errorf("only 2 peers serving consistent filters, need 3"),
 		},
 	}
 )
@@ -545,9 +544,9 @@ func heightToHeader(height uint32) *wire.BlockHeader {
 }
 
 func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) {
-	tempDir, err := ioutil.TempDir("", "neutrino")
-	if err != nil {
-		t.Fatalf("Failed to create temporary directory: %s", err)
+	tempDir, errr := ioutil.TempDir("", "neutrino")
+	if errr != nil {
+		t.Fatalf("Failed to create temporary directory: %s", er.E(errr))
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -711,7 +710,7 @@ func TestResolveFilterMismatchFromBlock(t *testing.T) {
 				case testCase.expectedErr == nil:
 					t.Fatalf("Expected no error, got %v", err)
 
-				case err.Error() != testCase.expectedErr.Error():
+				case err.String() != testCase.expectedErr.String():
 					t.Fatalf("Expected error %v, got %v",
 						testCase.expectedErr, err)
 				}

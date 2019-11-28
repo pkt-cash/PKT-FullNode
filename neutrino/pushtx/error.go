@@ -53,6 +53,9 @@ func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) er.R {
 	//   RejectDuplicate
 	var code *er.ErrorCode
 	switch {
+	case msg.Code == wire.RejectDust:
+		return nil
+
 	// The cases below apply for reject messages sent from any kind of peer.
 	case msg.Code == wire.RejectInvalid || msg.Code == wire.RejectNonstandard:
 		code = RejInvalid
@@ -70,6 +73,9 @@ func ParseBroadcastError(msg *wire.MsgReject, peerAddr string) er.R {
 
 	// If the transaction was rejected due to it already existing in the
 	// peer's mempool, then return an error signaling so.
+	case msg.Code == wire.RejectDuplicate &&
+		strings.Contains(msg.Reason, "already have transaction"):
+		fallthrough
 	case msg.Code == wire.RejectDuplicate &&
 		strings.Contains(msg.Reason, "txn-already-in-mempool"):
 		code = RejMempool

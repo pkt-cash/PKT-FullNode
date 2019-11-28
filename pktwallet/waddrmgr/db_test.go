@@ -2,9 +2,9 @@ package waddrmgr
 
 import (
 	"encoding/binary"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -119,7 +119,7 @@ func TestStoreMaxReorgDepth(t *testing.T) {
 
 		firstBlock := blocks[0]
 		_, err = fetchBlockHash(ns, firstBlock.Height)
-		if !IsError(err, ErrBlockNotFound) {
+		if !ErrBlockNotFound.Is(err) {
 			return er.Errorf("expected ErrBlockNotFound, got %v",
 				err)
 		}

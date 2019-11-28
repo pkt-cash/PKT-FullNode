@@ -139,7 +139,10 @@ func (n *nodeConfig) arguments() []string {
 
 // command returns the exec.Cmd which will be used to start the pktd process.
 func (n *nodeConfig) command() *exec.Cmd {
-	return exec.Command(n.exe, n.arguments()...)
+	cmd := exec.Command(n.exe, n.arguments()...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd
 }
 
 // rpcConnConfig returns the rpc connection config that can be used to connect
@@ -203,6 +206,7 @@ func newNode(config *nodeConfig, dataDir string) (*node, er.R) {
 // test case, or panic, it is important that the process be stopped via stop(),
 // otherwise, it will persist unless explicitly killed.
 func (n *node) start() er.R {
+	fmt.Printf("Launching pktd with arguments: %v\n", n.cmd.Args)
 	if err := n.cmd.Start(); err != nil {
 		return er.E(err)
 	}

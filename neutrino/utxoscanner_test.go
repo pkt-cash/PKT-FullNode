@@ -2,11 +2,12 @@ package neutrino
 
 import (
 	"errors"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
@@ -454,7 +455,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 		GetBlock: func(chainhash.Hash, ...QueryOption,
 		) (*btcutil.Block, er.R) {
 			<-block
-			return nil, fetchErr
+			return nil, er.E(fetchErr)
 		},
 		GetBlockHash:       mockChainClient.GetBlockHash,
 		BestSnapshot:       mockChainClient.BestSnapshot,
@@ -510,7 +511,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 
 	select {
 	case err := <-err100000:
-		if err != ErrGetUtxoCancelled {
+		if !ErrGetUtxoCancelled.Is(err) {
 			t.Fatalf("unexpected error returned "+
 				"from Result, want: %v, got %v",
 				ErrGetUtxoCancelled, err)
@@ -540,7 +541,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 	// begins shut down, returning ErrShuttingDown.
 	select {
 	case err := <-err100001:
-		if err != ErrShuttingDown {
+		if !ErrShuttingDown.Is(err) {
 			t.Fatalf("unexpected error returned "+
 				"from Result, want: %v, got %v",
 				ErrShuttingDown, err)

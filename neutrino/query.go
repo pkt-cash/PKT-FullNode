@@ -1163,7 +1163,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	if err == nil && filter != nil {
 		return filter, nil
 	}
-	if err != nil && cache.ErrElementNotFound.Is(err) {
+	if err != nil && !cache.ErrElementNotFound.Is(err) {
 		return nil, err
 	}
 
@@ -1172,7 +1172,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	if err == nil && filter != nil {
 		return filter, nil
 	}
-	if err != nil && filterdb.ErrFilterNotFound.Is(err) {
+	if err != nil && !filterdb.ErrFilterNotFound.Is(err) {
 		return nil, err
 	}
 

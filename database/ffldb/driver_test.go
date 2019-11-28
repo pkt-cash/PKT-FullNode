@@ -13,12 +13,11 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/database/ffldb"
-	"github.com/pkt-cash/pktd/database/testutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // dbType is the database type name for this driver.
@@ -33,7 +32,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the expected error.
 	wantErrCode := database.ErrDbDoesNotExist
 	_, err := database.Open(dbType, "noexist", blockDataNet)
-	if !testutil.CheckDbError(t, "Open", err, wantErrCode) {
+	if !util.CheckError(t, "Open", err, wantErrCode) {
 		return
 	}
 
@@ -119,7 +118,7 @@ func TestCreateOpenFail(t *testing.T) {
 	err = db.View(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !testutil.CheckDbError(t, "View", err, wantErrCode) {
+	if !util.CheckError(t, "View", err, wantErrCode) {
 		return
 	}
 
@@ -127,25 +126,25 @@ func TestCreateOpenFail(t *testing.T) {
 	err = db.Update(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !testutil.CheckDbError(t, "Update", err, wantErrCode) {
+	if !util.CheckError(t, "Update", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	_, err = db.Begin(false)
-	if !testutil.CheckDbError(t, "Begin(false)", err, wantErrCode) {
+	if !util.CheckError(t, "Begin(false)", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	_, err = db.Begin(true)
-	if !testutil.CheckDbError(t, "Begin(true)", err, wantErrCode) {
+	if !util.CheckError(t, "Begin(true)", err, wantErrCode) {
 		return
 	}
 
 	wantErrCode = database.ErrDbNotOpen
 	err = db.Close()
-	if !testutil.CheckDbError(t, "Close", err, wantErrCode) {
+	if !util.CheckError(t, "Close", err, wantErrCode) {
 		return
 	}
 }

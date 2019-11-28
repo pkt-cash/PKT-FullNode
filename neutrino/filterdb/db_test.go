@@ -1,12 +1,13 @@
 package filterdb
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -17,9 +18,9 @@ import (
 )
 
 func createTestDatabase() (func(), FilterDatabase, er.R) {
-	tempDir, err := ioutil.TempDir("", "neutrino")
-	if err != nil {
-		return nil, nil, err
+	tempDir, errr := ioutil.TempDir("", "neutrino")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	db, err := walletdb.Create("bdb", tempDir+"/test.db")
@@ -67,16 +68,16 @@ func genRandFilter(numElements uint32) (*gcs.Filter, er.R) {
 	elements := make([][]byte, numElements)
 	for i := uint32(0); i < numElements; i++ {
 		var elem [20]byte
-		if _, err := rand.Read(elem[:]); err != nil {
-			return nil, err
+		if _, errr := rand.Read(elem[:]); errr != nil {
+			return nil, er.E(errr)
 		}
 
 		elements[i] = elem[:]
 	}
 
 	var key [16]byte
-	if _, err := rand.Read(key[:]); err != nil {
-		return nil, err
+	if _, errr := rand.Read(key[:]); errr != nil {
+		return nil, er.E(errr)
 	}
 
 	filter, err := gcs.BuildGCSFilter(

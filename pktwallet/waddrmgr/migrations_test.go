@@ -3,12 +3,10 @@ package waddrmgr
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -104,7 +102,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 		// Finally, since the migration has not yet started, we should
 		// not be able to find the birthday block within the database.
 		_, err := FetchBirthdayBlock(ns)
-		if !IsError(err, ErrBirthdayBlockNotSet) {
+		if !ErrBirthdayBlockNotSet.Is(err) {
 			return er.Errorf("expected ErrBirthdayBlockNotSet, "+
 				"got %v", err)
 		}
@@ -188,7 +186,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 		// Finally, since the migration has not yet started, we should
 		// not be able to find the birthday block within the database.
 		_, err := FetchBirthdayBlock(ns)
-		if !IsError(err, ErrBirthdayBlockNotSet) {
+		if !ErrBirthdayBlockNotSet.Is(err) {
 			return er.Errorf("expected ErrBirthdayBlockNotSet, "+
 				"got %v", err)
 		}
@@ -414,7 +412,7 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 						_, err := fetchBlockHash(
 							ns, block.Height,
 						)
-						if IsError(err, ErrBlockNotFound) {
+						if ErrBlockNotFound.Is(err) {
 							continue
 						}
 						return er.Errorf("expected "+

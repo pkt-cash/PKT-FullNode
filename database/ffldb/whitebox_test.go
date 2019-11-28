@@ -18,8 +18,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/database/testutil"
-
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/btcsuite/goleveldb/leveldb"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -167,7 +166,7 @@ func TestCornerCases(t *testing.T) {
 	testName := "openDB: fail due to file at target location"
 	wantErrCode := database.ErrDriverSpecific
 	idb, err := openDB(dbPath, blockDataNet, true)
-	if !testutil.CheckDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		if err == nil {
 			idb.Close()
 		}
@@ -196,7 +195,7 @@ func TestCornerCases(t *testing.T) {
 	}
 	store := idb.(*db).store
 	_, err = store.writeBlock([]byte{0x00})
-	if !testutil.CheckDbError(t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(t, testName, err, database.ErrDriverSpecific) {
 		return
 	}
 	_ = os.RemoveAll(filePath)
@@ -210,7 +209,7 @@ func TestCornerCases(t *testing.T) {
 	testName = "initDB: reinitialization"
 	wantErrCode = database.ErrDbNotOpen
 	err = initDB(ldb)
-	if !testutil.CheckDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 
@@ -221,7 +220,7 @@ func TestCornerCases(t *testing.T) {
 	err = idb.View(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !testutil.CheckDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 
@@ -231,7 +230,7 @@ func TestCornerCases(t *testing.T) {
 	err = idb.Update(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !testutil.CheckDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 }
@@ -307,7 +306,7 @@ func testWriteFailures(tc *testContext) bool {
 	}
 	store.writeCursor.Unlock()
 	err := tc.db.(*db).cache.flush()
-	if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	store.writeCursor.Lock()
@@ -362,7 +361,7 @@ func testWriteFailures(tc *testContext) bool {
 		testName := fmt.Sprintf("Force update commit failure - test "+
 			"%d, fileNum %d, maxsize %d", i, test.fileNum,
 			test.maxSize)
-		if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+		if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 			tc.t.Errorf("%v", err)
 			return false
 		}
@@ -400,12 +399,12 @@ func testBlockFileErrors(tc *testContext) bool {
 	store := tc.db.(*db).store
 	testName := "blockFile invalid file open"
 	_, err := store.blockFile(^uint32(0))
-	if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "openFile invalid file open"
 	_, err = store.openFile(^uint32(0))
-	if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
@@ -435,12 +434,12 @@ func testBlockFileErrors(tc *testContext) bool {
 		blockLen:     80,
 	}
 	_, err = store.readBlock(block0Hash, invalidLoc)
-	if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "readBlockRegion invalid file number"
 	_, err = store.readBlockRegion(invalidLoc, 0, 80)
-	if !testutil.CheckDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
@@ -455,7 +454,7 @@ func testBlockFileErrors(tc *testContext) bool {
 		testName = "FetchBlock closed file"
 		wantErrCode := database.ErrDriverSpecific
 		_, err := tx.FetchBlock(block0Hash)
-		if !testutil.CheckDbError(tc.t, testName, err, wantErrCode) {
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail.Default()
 		}
 
@@ -468,13 +467,13 @@ func testBlockFileErrors(tc *testContext) bool {
 			},
 		}
 		_, err = tx.FetchBlockRegion(&regions[0])
-		if !testutil.CheckDbError(tc.t, testName, err, wantErrCode) {
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail.Default()
 		}
 
 		testName = "FetchBlockRegions closed file"
 		_, err = tx.FetchBlockRegions(regions)
-		if !testutil.CheckDbError(tc.t, testName, err, wantErrCode) {
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail.Default()
 		}
 
@@ -562,7 +561,7 @@ func testCorruption(tc *testContext) bool {
 			testName := fmt.Sprintf("FetchBlock (test #%d): "+
 				"corruption", i)
 			_, err := tx.FetchBlock(block0Hash)
-			if !testutil.CheckDbError(tc.t, testName, err, test.wantErrCode) {
+			if !util.CheckError(tc.t, testName, err, test.wantErrCode) {
 				return errSubTestFail.Default()
 			}
 

@@ -5,10 +5,10 @@
 package txauthor_test
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	. "github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/wire"
@@ -183,16 +183,16 @@ func TestNewUnsignedTransaction(t *testing.T) {
 	for i, test := range tests {
 		inputSource := makeInputSource(test.UnspentOutputs)
 		tx, err := NewUnsignedTransaction(test.Outputs, test.RelayFee, inputSource, changeSource)
-		switch e := err.(type) {
-		case nil:
-		case InputSourceError:
+		switch {
+		case err == nil:
+		case InputSourceError.Is(err):
 			if !test.InputSourceError {
 				t.Errorf("Test %d: Returned InputSourceError but expected "+
 					"change output with amount %v", i, test.ChangeAmount)
 			}
 			continue
 		default:
-			t.Errorf("Test %d: Unexpected error: %v", i, e)
+			t.Errorf("Test %d: Unexpected error: %v", i, err)
 			continue
 		}
 		if tx.ChangeIndex < 0 {

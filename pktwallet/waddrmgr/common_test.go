@@ -6,13 +6,13 @@ package waddrmgr
 
 import (
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
@@ -207,26 +207,6 @@ var (
 	expectedInternalAddrs = expectedAddrs[5:]
 )
 
-// checkManagerError ensures the passed error is a ManagerError with an error
-// code that matches the passed  error code.
-func checkManagerError(t *testing.T, testName string, gotErr er.R,
-	wantErrCode ErrorCode) bool {
-
-	merr, ok := gotErr.(ManagerError)
-	if !ok {
-		t.Errorf("%s: unexpected error type - got %T, want %T",
-			testName, gotErr, ManagerError{})
-		return false
-	}
-	if merr.ErrorCode != wantErrCode {
-		t.Errorf("%s: unexpected error code - got %s (%s), want %s",
-			testName, merr.ErrorCode, merr.Description, wantErrCode)
-		return false
-	}
-
-	return true
-}
-
 // hexToBytes is a wrapper around hex.DecodeString that panics if there is an
 // error.  It MUST only be used with hard coded values in the tests.
 func hexToBytes(origHex string) []byte {
@@ -238,12 +218,12 @@ func hexToBytes(origHex string) []byte {
 }
 
 func emptyDB(t *testing.T) (tearDownFunc func(), db walletdb.DB) {
-	dirName, err := ioutil.TempDir("", "mgrtest")
-	if err != nil {
-		t.Fatalf("Failed to create db temp dir: %v", err)
+	dirName, errr := ioutil.TempDir("", "mgrtest")
+	if errr != nil {
+		t.Fatalf("Failed to create db temp dir: %v", errr)
 	}
 	dbPath := filepath.Join(dirName, "mgrtest.db")
-	db, err = walletdb.Create("bdb", dbPath)
+	db, err := walletdb.Create("bdb", dbPath)
 	if err != nil {
 		_ = os.RemoveAll(dirName)
 		t.Fatalf("createDbNamespace: unexpected error: %v", err)
@@ -259,12 +239,12 @@ func emptyDB(t *testing.T) (tearDownFunc func(), db walletdb.DB) {
 // that should be invoked to ensure it is closed and removed upon completion.
 func setupManager(t *testing.T) (tearDownFunc func(), db walletdb.DB, mgr *Manager) {
 	// Create a new manager in a temp directory.
-	dirName, err := ioutil.TempDir("", "mgrtest")
-	if err != nil {
-		t.Fatalf("Failed to create db temp dir: %v", err)
+	dirName, errr := ioutil.TempDir("", "mgrtest")
+	if errr != nil {
+		t.Fatalf("Failed to create db temp dir: %v", errr)
 	}
 	dbPath := filepath.Join(dirName, "mgrtest.db")
-	db, err = walletdb.Create("bdb", dbPath)
+	db, err := walletdb.Create("bdb", dbPath)
 	if err != nil {
 		_ = os.RemoveAll(dirName)
 		t.Fatalf("createDbNamespace: unexpected error: %v", err)

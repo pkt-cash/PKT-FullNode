@@ -3,12 +3,13 @@ package neutrino
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -31,10 +32,10 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	*headerfs.FilterHeaderStore, func(), er.R) {
 
 	// Set up the block and filter header stores.
-	tempDir, err := ioutil.TempDir("", "neutrino")
-	if err != nil {
+	tempDir, errr := ioutil.TempDir("", "neutrino")
+	if errr != nil {
 		return nil, nil, nil, nil, er.Errorf("Failed to create "+
-			"temporary directory: %s", err)
+			"temporary directory: %s", errr)
 	}
 
 	db, err := walletdb.Create("bdb", tempDir+"/weks.db")

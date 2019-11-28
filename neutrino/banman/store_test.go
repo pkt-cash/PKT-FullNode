@@ -1,13 +1,14 @@
 package banman_test
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -18,9 +19,9 @@ import (
 func createTestBanStore(t *testing.T) (banman.Store, func()) {
 	t.Helper()
 
-	dbDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("unable to create db dir: %v", err)
+	dbDir, errr := ioutil.TempDir("", "")
+	if errr != nil {
+		t.Fatalf("unable to create db dir: %v", er.E(errr))
 	}
 	dbPath := filepath.Join(dbDir, "test.db")
 

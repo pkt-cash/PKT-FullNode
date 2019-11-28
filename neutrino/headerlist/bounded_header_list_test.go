@@ -1,7 +1,6 @@
 package headerlist
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"

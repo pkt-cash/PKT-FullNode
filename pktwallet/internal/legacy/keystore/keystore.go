@@ -755,11 +755,12 @@ func (s *Store) ReadFrom(r io.Reader) (int64, error) {
 
 // WriteTo serializes a key store and writes it to a io.Writer,
 // returning the number of bytes written and any errors encountered.
-func (s *Store) WriteTo(w io.Writer) (n int64, err er.R) {
+func (s *Store) WriteTo(w io.Writer) (n int64, errr error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	return s.writeTo(w)
+	n, err := s.writeTo(w)
+	return n, er.Native(err)
 }
 
 func (s *Store) writeTo(w io.Writer) (n int64, err er.R) {
@@ -2132,8 +2133,9 @@ func (k *publicKey) ReadFrom(r io.Reader) (int64, error) {
 	return n, nil
 }
 
-func (k *publicKey) WriteTo(w io.Writer) (n int64, err er.R) {
-	return binaryWrite(w, binary.LittleEndian, []byte(*k))
+func (k *publicKey) WriteTo(w io.Writer) (int64, error) {
+	n, err := binaryWrite(w, binary.LittleEndian, []byte(*k))
+	return n, er.Native(err)
 }
 
 // PubKeyAddress implements WalletAddress and additionally provides the
@@ -3130,7 +3132,7 @@ func computeKdfParameters(targetSec float64, maxMem uint64) (*kdfParameters, er.
 	return params, nil
 }
 
-func (params *kdfParameters) WriteTo(w io.Writer) (n int64, err er.R) {
+func (params *kdfParameters) WriteTo(w io.Writer) (n int64, errr error) {
 	var written int64
 
 	memBytes := make([]byte, 8)
@@ -3148,8 +3150,9 @@ func (params *kdfParameters) WriteTo(w io.Writer) (n int64, err er.R) {
 		make([]byte, 256-(binary.Size(params)+4)), // padding
 	}
 	for _, data := range datas {
+		var err er.R
 		if written, err = binaryWrite(w, binary.LittleEndian, data); err != nil {
-			return n + written, err
+			return n + written, er.Native(err)
 		}
 		n += written
 	}

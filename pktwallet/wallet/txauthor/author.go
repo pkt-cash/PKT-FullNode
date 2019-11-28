@@ -34,18 +34,11 @@ type InputSource func(target btcutil.Amount) (total btcutil.Amount, inputs []*wi
 // so input sources can provide their own implementations describing the reason
 // for the error, for example, due to spendable policies or locked coins rather
 // than the wallet not having enough available input value.
-type InputSourceError interface {
-	er.R
-	InputSourceError()
-}
+var InputSourceError = er.NewErrorType("txauthor.InputSourceError")
 
-// Default implementation of InputSourceError.
-type insufficientFundsError struct{}
-
-func (insufficientFundsError) InputSourceError() {}
-func (insufficientFundsError) Error() string {
-	return "insufficient funds available to construct transaction"
-}
+// InsufficientFundsError is the default implementation of InputSourceError.
+var InsufficientFundsError = InputSourceError.CodeWithDetail("InsufficientFundsError",
+	"insufficient funds available to construct transaction")
 
 // AuthoredTx holds the state of a newly-created transaction and the change
 // output (if one was added).
@@ -188,7 +181,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 			return nil, err
 		}
 		if inputAmount < targetAmount+targetFee {
-			return nil, er.E(insufficientFundsError{})
+			return nil, InsufficientFundsError.Default()
 		}
 
 		// We count the types of inputs, which we'll use to estimate

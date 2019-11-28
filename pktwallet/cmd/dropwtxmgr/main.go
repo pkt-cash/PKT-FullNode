@@ -7,12 +7,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
@@ -69,8 +69,8 @@ func main() {
 
 func mainInt() int {
 	fmt.Println("Database path:", opts.DbPath)
-	_, err := os.Stat(opts.DbPath)
-	if os.IsNotExist(err) {
+	_, errr := os.Stat(opts.DbPath)
+	if os.IsNotExist(errr) {
 		fmt.Println("Database file does not exist")
 		return 1
 	}
@@ -111,7 +111,7 @@ func mainInt() int {
 
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		err := tx.DeleteTopLevelBucket(wtxmgrNamespace)
-		if err != nil && err != walletdb.ErrBucketNotFound {
+		if err != nil && !walletdb.ErrBucketNotFound.Is(err) {
 			return err
 		}
 		ns, err := tx.CreateTopLevelBucket(wtxmgrNamespace)

@@ -2,7 +2,6 @@ package cache_test
 
 import (
 	"crypto/rand"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"

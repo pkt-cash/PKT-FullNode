@@ -2,10 +2,10 @@ package lru
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/cache"
 )
 
@@ -231,7 +231,7 @@ func TestConcurrencySimple(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Get(i)
-			if err != nil && err != cache.ErrElementNotFound {
+			if err != nil && !cache.ErrElementNotFound.Is(err) {
 				t.Fatal(err)
 			}
 		}(i)
@@ -265,7 +265,7 @@ func TestConcurrencySmallCache(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Get(i)
-			if err != nil && err != cache.ErrElementNotFound {
+			if err != nil && !cache.ErrElementNotFound.Is(err) {
 				t.Fatal(err)
 			}
 		}(i)
@@ -299,7 +299,7 @@ func TestConcurrencyBigCache(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Get(i)
-			if err != nil && err != cache.ErrElementNotFound {
+			if err != nil && !cache.ErrElementNotFound.Is(err) {
 				t.Fatal(err)
 			}
 		}(i)

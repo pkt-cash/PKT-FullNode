@@ -7,10 +7,10 @@ package walletdb_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
@@ -20,7 +20,6 @@ func ExampleCreate() {
 	// This example assumes the bdb (bolt db) driver is imported.
 	//
 	// import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	// 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	// )
@@ -104,7 +103,6 @@ func Example_basicUsage() {
 	// This example assumes the bdb (bolt db) driver is imported.
 	//
 	// import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	// 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	// 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	// )

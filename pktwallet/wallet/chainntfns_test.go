@@ -1,12 +1,11 @@
 package wallet
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
@@ -121,9 +120,7 @@ func (s *mockBirthdayStore) Birthday() time.Time {
 // BirthdayBlock returns the birthday block of the wallet.
 func (s *mockBirthdayStore) BirthdayBlock() (waddrmgr.BlockStamp, bool, er.R) {
 	if s.birthdayBlock == nil {
-		err := waddrmgr.ManagerError{
-			ErrorCode: waddrmgr.ErrBirthdayBlockNotSet,
-		}
+		err := waddrmgr.ErrBirthdayBlockNotSet.Default()
 		return waddrmgr.BlockStamp{}, false, err
 	}
 
@@ -152,7 +149,7 @@ func TestBirthdaySanityCheckEmptyBirthdayBlock(t *testing.T) {
 	birthdayStore := &mockBirthdayStore{}
 
 	birthdayBlock, err := birthdaySanityCheck(chainConn, birthdayStore)
-	if !waddrmgr.IsError(err, waddrmgr.ErrBirthdayBlockNotSet) {
+	if !waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
 		t.Fatalf("expected ErrBirthdayBlockNotSet, got %v", err)
 	}
 

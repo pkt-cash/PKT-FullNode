@@ -6,10 +6,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"golang.org/x/crypto/ssh/terminal"
 
@@ -82,8 +83,8 @@ func init() {
 		opts.RPCCertificateFile = ""
 	}
 
-	_, err = flags.Parse(&opts)
-	if err != nil {
+	_, errr := flags.Parse(&opts)
+	if errr != nil {
 		os.Exit(1)
 	}
 
@@ -159,7 +160,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 	for _, output := range outputs {
 		outputAmount, err := btcutil.NewAmount(output.Amount)
 		if err != nil {
-			sourceErr = fmt.Errorf(
+			sourceErr = er.Errorf(
 				"invalid amount `%v` in listunspent result",
 				output.Amount)
 			break
@@ -168,7 +169,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 			continue
 		}
 		if !saneOutputValue(outputAmount) {
-			sourceErr = fmt.Errorf(
+			sourceErr = er.Errorf(
 				"impossible output amount `%v` in listunspent result",
 				outputAmount)
 			break
@@ -177,7 +178,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 
 		previousOutPoint, err := parseOutPoint(&output)
 		if err != nil {
-			sourceErr = fmt.Errorf(
+			sourceErr = er.Errorf(
 				"invalid data in listunspent result: %v",
 				err)
 			break
@@ -188,7 +189,7 @@ func makeInputSource(outputs []btcjson.ListUnspentResult) txauthor.InputSource {
 	}
 
 	if sourceErr == nil && totalInputValue == 0 {
-		sourceErr = noInputValue{}
+		sourceErr = er.E(noInputValue{})
 	}
 
 	return func(btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, er.R) {
@@ -223,9 +224,9 @@ func sweep() er.R {
 	}
 
 	// Open RPC client.
-	rpcCertificate, err := ioutil.ReadFile(opts.RPCCertificateFile)
-	if err != nil {
-		return errContext(err, "failed to read RPC certificate")
+	rpcCertificate, errr := ioutil.ReadFile(opts.RPCCertificateFile)
+	if errr != nil {
+		return errContext(er.E(errr), "failed to read RPC certificate")
 	}
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
 		Host:         opts.RPCConnect,
@@ -283,7 +284,7 @@ func sweep() er.R {
 		tx, err := txauthor.NewUnsignedTransaction(nil, opts.FeeRate.Amount,
 			inputSource, destinationSource)
 		if err != nil {
-			if err != (noInputValue{}) {
+			if er.Wrapped(err) != (noInputValue{}) {
 				reportError("Failed to create unsigned transaction: %v", err)
 			}
 			continue
@@ -335,10 +336,10 @@ func sweep() er.R {
 func promptSecret(what string) (string, er.R) {
 	fmt.Printf("%s: ", what)
 	fd := int(os.Stdin.Fd())
-	input, err := terminal.ReadPassword(fd)
+	input, errr := terminal.ReadPassword(fd)
 	fmt.Println()
-	if err != nil {
-		return "", err
+	if errr != nil {
+		return "", er.E(errr)
 	}
 	return string(input), nil
 }

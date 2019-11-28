@@ -6,12 +6,12 @@ package wallet
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -28,9 +28,9 @@ import (
 // non-dry run call produces a similar transaction to the dry-run.
 func TestTxToOutputsDryRun(t *testing.T) {
 	// Set up a wallet.
-	dir, err := ioutil.TempDir("", "createtx_test")
-	if err != nil {
-		t.Fatalf("Failed to create db dir: %v", err)
+	dir, errr := ioutil.TempDir("", "createtx_test")
+	if errr != nil {
+		t.Fatalf("Failed to create db dir: %v", errr)
 	}
 	defer os.RemoveAll(dir)
 

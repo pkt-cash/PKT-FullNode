@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -22,9 +22,9 @@ import (
 
 func createTestBlockHeaderStore() (func(), walletdb.DB, string,
 	*blockHeaderStore, er.R) {
-	tempDir, err := ioutil.TempDir("", "store_test")
-	if err != nil {
-		return nil, nil, "", nil, err
+	tempDir, errr := ioutil.TempDir("", "store_test")
+	if errr != nil {
+		return nil, nil, "", nil, er.E(errr)
 	}
 
 	dbPath := filepath.Join(tempDir, "test.db")
@@ -225,9 +225,9 @@ func TestBlockHeaderStoreRecovery(t *testing.T) {
 }
 
 func createTestFilterHeaderStore() (func(), walletdb.DB, string, *FilterHeaderStore, er.R) {
-	tempDir, err := ioutil.TempDir("", "store_test")
-	if err != nil {
-		return nil, nil, "", nil, err
+	tempDir, errr := ioutil.TempDir("", "store_test")
+	if errr != nil {
+		return nil, nil, "", nil, er.E(errr)
 	}
 
 	dbPath := filepath.Join(tempDir, "test.db")
@@ -620,7 +620,7 @@ func TestFilterHeaderStateAssertion(t *testing.T) {
 			// been removed.
 			_, err = fhs.FetchHeaderByHeight(chainTip)
 			if testCase.shouldRemove {
-				if _, ok := err.(*ErrHeaderNotFound); !ok {
+				if !ErrHeaderNotFound.Is(err) {
 					t.Fatal("expected file to be removed")
 				}
 			}

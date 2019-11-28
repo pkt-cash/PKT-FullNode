@@ -1,11 +1,10 @@
 package migration_test
 
 import (
-	"errors"
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -218,7 +217,7 @@ func TestUpgradeRevert(t *testing.T) {
 		},
 	}
 
-	if err := migration.Upgrade(m); err != migration.ErrReversion {
+	if err := migration.Upgrade(m); !migration.ErrReversion.Is(err) {
 		t.Fatalf("expected Upgrade to fail with ErrReversion, got %v",
 			err)
 	}
