@@ -14,6 +14,39 @@ var helpDescsEnUS = map[string]string{
 	"addmultisigaddress-nrequired": "The number of signatures required to redeem outputs paid to this address",
 	"addmultisigaddress--result0":  "The imported pay-to-script-hash address",
 
+	// AddP2shScriptCmd help.
+	"addp2shscript--synopsis": "Import a p2sh script in order to be able to watch a multisig wallet",
+	"addp2shscript-account":   "DEPRECATED -- Unused (all imported addresses belong to the imported account)",
+	"addp2shscript-segwit":    "If true then this will create a segwit address",
+	"addp2shscript-script":    "The redeem script to import",
+	"addp2shscript--result0":  "The address corrisponding to this script",
+
+	// CreateTransactionCmd help.
+	"createtransaction--synopsis":      "Create a transaction but do not send it to the chain",
+	"createtransaction-vote":           "True if you wish for this transaction to contain a network steward vote",
+	"createtransaction-minconf":        "Do not spend any outputs which don't have at least this number of confirmations (default 1)",
+	"createtransaction-changeaddress":  "Return extra coins to this address, if unspecified then one will be created",
+	"createtransaction-electrumformat": "If true, then the transaction result will be output in electrum incomplete transaction format, useful for signing later",
+	"createtransaction-amount":         "The amount of coins to send",
+	"createtransaction-toaddress":      "The recipient to send the coins to",
+	"createtransaction-fromaccount":    "The name of the account to send the coins from",
+	"createtransaction--result0":       "The hex encoded transaction result",
+
+	// SetNetworkStewardCmd help.
+	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",
+	"setnetworkstewardvote-voteagainst": "The script to vote against (if this is the current NS then this will cause a vote for an election)",
+	"setnetworkstewardvote-votefor":     "The script to vote for (in the event of an election, this is the address who should win)",
+	"setnetworkstewardvote-account":     "The account to configure voting for",
+
+	// GetNetworkStewardCmd help.
+	"getnetworkstewardvote--synopsis":         "Find out how the wallet is currently configured to vote in a network steward election",
+	"getnetworkstewardvote-account":           "Which account to get the network steward vote information for",
+	"getnetworkstewardvoteresult-voteagainst": "The script which your wallet is currently voting against",
+	"getnetworkstewardvoteresult-votefor":     "The script which your wallet is currently voting for",
+
+	// ResyncCmd help
+	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
+
 	// CreateMultisigCmd help.
 	"createmultisig--synopsis": "Generate a multisig address and redeem script.",
 	"createmultisig-keys":      "Pubkeys and/or pay-to-pubkey-hash addresses to partially control the multisig address",

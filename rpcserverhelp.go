@@ -18,6 +18,13 @@ import (
 
 // helpDescsEnUS defines the English descriptions used for the help strings.
 var helpDescsEnUS = map[string]string{
+	// CheckPcAnnCmd help.
+	"checkpcann--synopsis":      "Validate a single PacketCrypt announcement",
+	"checkpcann-parenthash":     "The hash of the most recent block when this announcement was mined, if nil then pktd will use the current chain",
+	"checkpcann-pcversion":      "The version of PacketCrypt to consider for this announcement",
+	"checkpcann-annhex":         "The announcement body as hex",
+	"checkpcannresult-workhash": "The result hash from validating the announcement, this is used to assess difficulty",
+
 	// DebugLevelCmd help.
 	"debuglevel--synopsis": "Dynamically changes the debug logging level.\n" +
 		"The levelspec can either a debug level or of the form:\n" +
@@ -168,6 +175,7 @@ var helpDescsEnUS = map[string]string{
 	"getblock-verbosetx":   "Specifies that each transaction is returned as a JSON object and only applies if the verbose flag is true (pktd extension)",
 	"getblock--condition0": "verbose=false",
 	"getblock--condition1": "verbose=true",
+	"getblock-verbosepcp":  "If true then the hex content of the PacketCrypt proof will also be included",
 	"getblock--result0":    "Hex-encoded bytes of the serialized block",
 
 	// GetBlockChainInfoCmd help.
@@ -244,6 +252,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-nextblockhash":     "The hash of the next block (only if there is one)",
 	"getblockverboseresult-strippedsize":      "The size of the block without witness data",
 	"getblockverboseresult-weight":            "The weight of the block",
+	"getblockverboseresult-packetcryptproof":  "The hex content of the PacketCrypt proof for this block",
 
 	// GetBlockCountCmd help.
 	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
@@ -717,6 +726,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"addnode":                nil,
 	"configureminingpayouts": nil,
 	"createrawtransaction":   {(*string)(nil)},
+	"checkpcann":             {(*btcjson.CheckPcAnnResult)(nil)},
 	"debuglevel":             {(*string)(nil), (*string)(nil)},
 	"decoderawtransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
 	"decodescript":           {(*btcjson.DecodeScriptResult)(nil)},
