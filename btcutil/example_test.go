@@ -58,14 +58,22 @@ func ExampleNewAmount() {
 	// invalid bitcoin amount
 }
 
+func formatOrDie(a btcutil.Amount, to string) string {
+	x, e := a.Format(to)
+	if e != nil {
+		panic(fmt.Sprintf("formatOrDie(%v) %v", to, e))
+	}
+	return x
+}
+
 func ExampleAmount_unitConversions() {
 	amount := btcutil.Amount(44433322211100)
 
-	fmt.Println("Satoshi to kBTC:", amount.Format(btcutil.AmountKiloBTC))
+	fmt.Println("Satoshi to kBTC:", formatOrDie(amount, "kBTC"))
 	fmt.Println("Satoshi to BTC:", amount)
-	fmt.Println("Satoshi to MilliBTC:", amount.Format(btcutil.AmountMilliBTC))
-	fmt.Println("Satoshi to MicroBTC:", amount.Format(btcutil.AmountMicroBTC))
-	fmt.Println("Satoshi to Satoshi:", amount.Format(btcutil.AmountSatoshi))
+	fmt.Println("Satoshi to MilliBTC:", formatOrDie(amount, "mBTC"))
+	fmt.Println("Satoshi to MicroBTC:", formatOrDie(amount, "uBTC"))
+	fmt.Println("Satoshi to Satoshi:", formatOrDie(amount, "Satoshi"))
 
 	// Output:
 	// Satoshi to kBTC: 444.333222111 kBTC
@@ -73,4 +81,21 @@ func ExampleAmount_unitConversions() {
 	// Satoshi to MilliBTC: 444333222.111 mBTC
 	// Satoshi to MicroBTC: 444333222111 μBTC
 	// Satoshi to Satoshi: 44433322211100 Satoshi
+}
+
+func ExampleAmount_unitConversions1() {
+	amount := btcutil.Amount(44433322211133)
+
+	fmt.Println("Satoshi to kBTC:", formatOrDie(amount, "kBTC"))
+	fmt.Println("Satoshi to BTC:", amount)
+	fmt.Println("Satoshi to MilliBTC:", formatOrDie(amount, "mBTC"))
+	fmt.Println("Satoshi to MicroBTC:", formatOrDie(amount, "uBTC"))
+	fmt.Println("Satoshi to Satoshi:", formatOrDie(amount, "Satoshi"))
+
+	// Output:
+	// Satoshi to kBTC: 444.33322211133 kBTC
+	// Satoshi to BTC: 444333.22211133 BTC
+	// Satoshi to MilliBTC: 444333222.11133 mBTC
+	// Satoshi to MicroBTC: 444333222111.33 μBTC
+	// Satoshi to Satoshi: 44433322211133 Satoshi
 }

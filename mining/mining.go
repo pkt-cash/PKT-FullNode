@@ -23,10 +23,6 @@ import (
 )
 
 const (
-	// MinHighPriority is the minimum priority value that allows a
-	// transaction to be considered high priority.
-	MinHighPriority = btcutil.SatoshiPerBitcoin * 144.0 / 250
-
 	// blockHeaderOverhead is the max number of bytes it takes to serialize
 	// a block header and max possible transaction count.
 	blockHeaderOverhead = wire.MaxBlockHeaderPayload + wire.MaxVarIntPayload
@@ -36,6 +32,12 @@ const (
 	// generated via pktd.
 	CoinbaseFlags = "/P2SH/pktd/"
 )
+
+// MinHighPriority is the minimum priority value that allows a
+// transaction to be considered high priority.
+func MinHighPriority() float64 {
+	return float64(globalcfg.SatoshiPerBitcoin()) * 144.0 / 250
+}
 
 // TxDesc is a descriptor about a transaction in a transaction source along with
 // additional metadata.
@@ -756,13 +758,13 @@ mempoolLoop:
 		// the priority size or there are no more high-priority
 		// transactions.
 		if !sortedByFee && (blockPlusTxWeight >= g.policy.BlockPrioritySize ||
-			prioItem.priority <= MinHighPriority) {
+			prioItem.priority <= MinHighPriority()) {
 
 			log.Tracef("Switching to sort by fees per "+
 				"kilobyte blockSize %d >= BlockPrioritySize "+
 				"%d || priority %.2f <= minHighPriority %.2f",
 				blockPlusTxWeight, g.policy.BlockPrioritySize,
-				prioItem.priority, MinHighPriority)
+				prioItem.priority, MinHighPriority())
 
 			sortedByFee = true
 			priorityQueue.SetLessFunc(txPQByFee)
@@ -774,7 +776,7 @@ mempoolLoop:
 			// final one in the high-priority section, so just fall
 			// though to the code below so it is added now.
 			if blockPlusTxWeight > g.policy.BlockPrioritySize ||
-				prioItem.priority < MinHighPriority {
+				prioItem.priority < MinHighPriority() {
 
 				heap.Push(priorityQueue, prioItem)
 				continue

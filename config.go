@@ -424,7 +424,7 @@ func loadConfig() (*config, []string, er.R) {
 		DbType:               defaultDbType,
 		RPCKey:               defaultRPCKeyFile,
 		RPCCert:              defaultRPCCertFile,
-		MinRelayTxFee:        mempool.DefaultMinRelayTxFee.ToBTC(),
+		MinRelayTxFee:        float64(mempool.DefaultMinRelayTxFee) / 1e8,
 		FreeTxRelayLimit:     defaultFreeTxRelayLimit,
 		TrickleInterval:      defaultTrickleInterval,
 		BlockMinSize:         defaultBlockMinSize,
@@ -580,11 +580,7 @@ func loadConfig() (*config, []string, er.R) {
 	// loop. And duplicating the powlimit twice in the config is also trash...
 	activeNetParams.PowLimit = blockchain.CompactToBig(activeNetParams.PowLimitBits)
 
-	if ok := globalcfg.SelectConfig(activeNetParams.GlobalConf); !ok {
-		err := er.Errorf("globalcfg.SelectConfig() called twice")
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
+	globalcfg.SelectConfig(activeNetParams.GlobalConf)
 
 	// Set the default policy for relaying non-standard transactions
 	// according to the default of the active network. The set

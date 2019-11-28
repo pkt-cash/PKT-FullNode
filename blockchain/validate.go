@@ -36,10 +36,6 @@ const (
 	// serializedHeightVersion is the block version which changed block
 	// coinbases to start with the serialized block height.
 	serializedHeightVersion = 2
-
-	// baseSubsidy is the starting subsidy amount for mined blocks.  This
-	// value is halved every SubsidyHalvingInterval blocks.
-	bitcoinBaseSubsidy = 50 * btcutil.SatoshiPerBitcoin
 )
 
 var (
@@ -191,6 +187,7 @@ func isBIP0030Node(node *blockNode) bool {
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
 func bitcoinCalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
+	bitcoinBaseSubsidy := 50 * globalcfg.SatoshiPerBitcoin()
 	if chainParams.SubsidyReductionInterval == 0 {
 		return bitcoinBaseSubsidy
 	}
@@ -283,10 +280,10 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 				"value of %v", satoshi)
 			return ruleerror.ErrNegativeTxOutValue.New(str, nil)
 		}
-		if satoshi > globalcfg.MaxSatoshi() {
+		if satoshi > int64(btcutil.MaxUnits()) {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", satoshi,
-				globalcfg.MaxSatoshi())
+				btcutil.MaxUnits())
 			return ruleerror.ErrOversizeTxOutValue.New(str, nil)
 		}
 
@@ -297,14 +294,14 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 		if totalSatoshi < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				globalcfg.MaxSatoshi())
+				btcutil.MaxUnits())
 			return ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
-		if totalSatoshi > globalcfg.MaxSatoshi() {
+		if totalSatoshi > int64(btcutil.MaxUnits()) {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshi,
-				globalcfg.MaxSatoshi())
+				btcutil.MaxUnits())
 			return ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
 	}
@@ -1019,11 +1016,11 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 				"value of %v", btcutil.Amount(originTxSatoshi))
 			return 0, ruleerror.ErrNegativeTxOutValue.New(str, nil)
 		}
-		if originTxSatoshi > globalcfg.MaxSatoshi() {
+		if originTxSatoshi > int64(btcutil.MaxUnits()) {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
 				btcutil.Amount(originTxSatoshi),
-				globalcfg.MaxSatoshi())
+				btcutil.MaxUnits())
 			return 0, ruleerror.ErrOversizeTxOutValue.New(str, nil)
 		}
 
@@ -1033,11 +1030,11 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		lastSatoshiIn := totalSatoshiIn
 		totalSatoshiIn += originTxSatoshi
 		if totalSatoshiIn < lastSatoshiIn ||
-			totalSatoshiIn > globalcfg.MaxSatoshi() {
+			totalSatoshiIn > int64(btcutil.MaxUnits()) {
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshiIn,
-				globalcfg.MaxSatoshi())
+				btcutil.MaxUnits())
 			return 0, ruleerror.ErrOversizeTxOutSum.New(str, nil)
 		}
 	}

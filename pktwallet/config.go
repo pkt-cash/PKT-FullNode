@@ -398,11 +398,7 @@ func loadConfig() (*config, []string, er.R) {
 	// loop. And duplicating the powlimit twice in the config is also trash...
 	activeNet.PowLimit = blockchain.CompactToBig(activeNet.PowLimitBits)
 
-	if ok := globalcfg.SelectConfig(activeNet.GlobalConf); !ok {
-		err := er.Errorf("globalcfg.SelectConfig() called twice")
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
+	globalcfg.SelectConfig(activeNet.GlobalConf)
 
 	// Append the network type to the log directory so it is "namespaced"
 	// per network.

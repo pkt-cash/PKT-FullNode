@@ -29,7 +29,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/connmgr"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/mempool"
@@ -1160,7 +1159,7 @@ func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
 // disconnected if an invalid fee filter value is provided.
 func (sp *serverPeer) OnFeeFilter(_ *peer.Peer, msg *wire.MsgFeeFilter) {
 	// Check that the passed minimum fee is a valid amount.
-	if msg.MinFee < 0 || msg.MinFee > globalcfg.MaxSatoshi() {
+	if msg.MinFee < 0 || msg.MinFee > int64(btcutil.MaxUnits()) {
 		peerLog.Debugf("Peer %v sent an invalid feefilter '%v' -- "+
 			"disconnecting", sp, btcutil.Amount(msg.MinFee))
 		sp.Disconnect()

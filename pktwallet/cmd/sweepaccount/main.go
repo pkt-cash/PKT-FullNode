@@ -345,7 +345,7 @@ func promptSecret(what string) (string, er.R) {
 }
 
 func saneOutputValue(amount btcutil.Amount) bool {
-	return amount >= 0 && amount <= btcutil.MaxSatoshi
+	return amount >= 0 && amount <= btcutil.MaxUnits()
 }
 
 func parseOutPoint(input *btcjson.ListUnspentResult) (wire.OutPoint, er.R) {

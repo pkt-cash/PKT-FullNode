@@ -1126,10 +1126,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	if isNew && !mp.cfg.Policy.DisableRelayPriority && txFee < minFee {
 		currentPriority := mining.CalcPriority(tx.MsgTx(), utxoView,
 			nextBlockHeight)
-		if currentPriority <= mining.MinHighPriority {
+		if currentPriority <= mining.MinHighPriority() {
 			str := fmt.Sprintf("transaction %v has insufficient "+
 				"priority (%g <= %g)", txHash,
-				currentPriority, mining.MinHighPriority)
+				currentPriority, mining.MinHighPriority())
 			return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 	}

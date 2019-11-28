@@ -524,19 +524,7 @@ var PktTestNetParams = Params{
 	},
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
-		HasNetworkSteward:    true,
-		SatoshiPerBitcoin:    0x40000000,
-		MaxSatoshi:           0x40000000 * 6000000000,
-
-		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
-		// algorithm depends on the number being odd
-		MedianTimeBlocks: 111,
-
-		// 1/10th that of bitcoin, because blocks come at a 10x rate
-		MaxTimeOffsetSeconds: 60 * 12,
-	},
+	GlobalConf: globalcfg.PktDefaults(),
 	InitialNetworkSteward: []byte{
 		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
 		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,
@@ -620,19 +608,7 @@ var PktMainNetParams = Params{
 	},
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
-		HasNetworkSteward:    true,
-		SatoshiPerBitcoin:    0x40000000,
-		MaxSatoshi:           0x40000000 * 6000000000,
-
-		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
-		// algorithm depends on the number being odd
-		MedianTimeBlocks: 111,
-
-		// 1/10th that of bitcoin, because blocks come at a 10x rate
-		MaxTimeOffsetSeconds: 60 * 12,
-	},
+	GlobalConf: globalcfg.PktDefaults(),
 	InitialNetworkSteward: []byte{
 		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
 		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,

@@ -9,46 +9,8 @@ import (
 	"strconv"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
-
-// AmountUnit describes a method of converting an Amount to something
-// other than the base unit of a bitcoin.  The value of the AmountUnit
-// is the exponent component of the decadic multiple to convert from
-// an amount in bitcoin to an amount counted in units.
-type AmountUnit int
-
-// These constants define various units used when describing a bitcoin
-// monetary amount.
-const (
-	AmountMegaBTC  AmountUnit = 6
-	AmountKiloBTC  AmountUnit = 3
-	AmountBTC      AmountUnit = 0
-	AmountMilliBTC AmountUnit = -3
-	AmountMicroBTC AmountUnit = -6
-	AmountSatoshi  AmountUnit = -8
-)
-
-// String returns the unit as a string.  For recognized units, the SI
-// prefix is used, or "Satoshi" for the base unit.  For all unrecognized
-// units, "1eN BTC" is returned, where N is the AmountUnit.
-func (u AmountUnit) String() string {
-	switch u {
-	case AmountMegaBTC:
-		return "MBTC"
-	case AmountKiloBTC:
-		return "kBTC"
-	case AmountBTC:
-		return "BTC"
-	case AmountMilliBTC:
-		return "mBTC"
-	case AmountMicroBTC:
-		return "μBTC"
-	case AmountSatoshi:
-		return "Satoshi"
-	default:
-		return "1e" + strconv.FormatInt(int64(u), 10) + " BTC"
-	}
-}
 
 // Amount represents the base bitcoin monetary unit (colloquially referred
 // to as a `Satoshi').  A single Amount is equal to 1e-8 of a bitcoin.
@@ -86,32 +48,59 @@ func NewAmount(f float64) (Amount, er.R) {
 		return 0, er.New("invalid bitcoin amount")
 	}
 
-	return round(f * SatoshiPerBitcoin), nil
+	return round(f * float64(globalcfg.SatoshiPerBitcoin())), nil
 }
 
 // ToUnit converts a monetary amount counted in bitcoin base units to a
 // floating point value representing an amount of bitcoin.
-func (a Amount) ToUnit(u AmountUnit) float64 {
-	return float64(a) / math.Pow10(int(u+8))
+func (a Amount) ToUnit(uname string) (float64, er.R) {
+	units := globalcfg.AmountUnits()
+	for _, u := range units {
+		if u.Name != uname {
+			continue
+		}
+		return float64(a) / float64(u.Units), nil
+	}
+	return math.NaN(), er.Errorf("%s is not a valid unit", uname)
 }
 
 // ToBTC is the equivalent of calling ToUnit with AmountBTC.
 func (a Amount) ToBTC() float64 {
-	return a.ToUnit(AmountBTC)
+	out, err := a.ToUnit(globalcfg.AmountUnits()[0].Name)
+	if err != nil {
+		panic("ToUnit failed with default unit")
+	}
+	return out
 }
 
 // Format formats a monetary amount counted in bitcoin base units as a
 // string for a given unit.  The conversion will succeed for any unit,
 // however, known units will be formated with an appended label describing
 // the units with SI notation, or "Satoshi" for the base unit.
-func (a Amount) Format(u AmountUnit) string {
-	units := " " + u.String()
-	return strconv.FormatFloat(a.ToUnit(u), 'f', -int(u+8), 64) + units
+func (a Amount) Format(uname string) (string, er.R) {
+	units := globalcfg.AmountUnits()
+	for _, u := range units {
+		if u.Name != uname {
+			continue
+		}
+		res := float64(a) / float64(u.Units)
+		n := u.Name
+		if u.ProperName != "" {
+			n = u.ProperName
+		}
+		units := " " + n
+		return strconv.FormatFloat(res, 'f', -u.Zeros, 64) + units, nil
+	}
+	return "", er.Errorf("%s is not a valid unit", uname)
 }
 
 // String is the equivalent of calling Format with AmountBTC.
 func (a Amount) String() string {
-	return a.Format(AmountBTC)
+	out, err := a.Format(globalcfg.AmountUnits()[0].Name)
+	if err != nil {
+		panic("Format failed with default unit")
+	}
+	return out
 }
 
 // MulF64 multiplies an Amount by a floating point value.  While this is not
@@ -120,4 +109,14 @@ func (a Amount) String() string {
 // a fee by multiplying by a percentage).
 func (a Amount) MulF64(f float64) Amount {
 	return round(float64(a) * f)
+}
+
+// MaxUnits returns the maximum number of atomic units of currency
+func MaxUnits() Amount {
+	return Amount(globalcfg.MaxUnitsI64())
+}
+
+// UnitsPerCoin returns the maximum number of atomic units per "coin"
+func UnitsPerCoin() Amount {
+	return Amount(globalcfg.UnitsPerCoinI64())
 }

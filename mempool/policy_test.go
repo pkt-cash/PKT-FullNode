@@ -49,8 +49,8 @@ func TestCalcMinRequiredTxRelayFee(t *testing.T) {
 		{
 			"max standard tx size with max satoshi relay fee",
 			maxStandardTxWeight / 4,
-			btcutil.MaxSatoshi,
-			btcutil.MaxSatoshi,
+			btcutil.MaxUnits(),
+			int64(btcutil.MaxUnits()),
 		},
 		{
 			"1500 bytes with 5000 relay fee",
@@ -248,8 +248,8 @@ func TestDust(t *testing.T) {
 		{
 			// Maximum allowed value is never dust.
 			"max satoshi amount is never dust",
-			wire.TxOut{Value: btcutil.MaxSatoshi, PkScript: pkScript},
-			btcutil.MaxSatoshi,
+			wire.TxOut{Value: int64(btcutil.MaxUnits()), PkScript: pkScript},
+			btcutil.MaxUnits(),
 			false,
 		},
 		{

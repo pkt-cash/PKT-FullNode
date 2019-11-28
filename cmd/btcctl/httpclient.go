@@ -91,7 +91,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 		return nil, err
 	}
 	httpResponse, errr := httpClient.Do(httpRequest)
-	if err != nil {
+	if errr != nil {
 		return nil, er.E(errr)
 	}
 

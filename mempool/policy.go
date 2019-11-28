@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -75,8 +74,8 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee btcutil.Amoun
 
 	// Set the minimum fee to the maximum possible value if the calculated
 	// fee is not in the valid range for monetary amounts.
-	if minFee < 0 || minFee > globalcfg.MaxSatoshi() {
-		minFee = globalcfg.MaxSatoshi()
+	if minFee < 0 || minFee > int64(btcutil.MaxUnits()) {
+		minFee = int64(btcutil.MaxUnits())
 	}
 
 	return minFee

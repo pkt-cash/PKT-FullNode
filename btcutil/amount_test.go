@@ -29,31 +29,31 @@ func TestAmountCreation(t *testing.T) {
 			name:     "max producible",
 			amount:   21e6,
 			valid:    true,
-			expected: MaxSatoshi,
+			expected: MaxUnits(),
 		},
 		{
 			name:     "min producible",
 			amount:   -21e6,
 			valid:    true,
-			expected: -MaxSatoshi,
+			expected: -MaxUnits(),
 		},
 		{
 			name:     "exceeds max producible",
 			amount:   21e6 + 1e-8,
 			valid:    true,
-			expected: MaxSatoshi + 1,
+			expected: MaxUnits() + 1,
 		},
 		{
 			name:     "exceeds min producible",
 			amount:   -21e6 - 1e-8,
 			valid:    true,
-			expected: -MaxSatoshi - 1,
+			expected: -MaxUnits() - 1,
 		},
 		{
 			name:     "one hundred",
 			amount:   100,
 			valid:    true,
-			expected: 100 * SatoshiPerBitcoin,
+			expected: 100 * UnitsPerCoin(),
 		},
 		{
 			name:     "fraction",
@@ -65,13 +65,13 @@ func TestAmountCreation(t *testing.T) {
 			name:     "rounding up",
 			amount:   54.999999999999943157,
 			valid:    true,
-			expected: 55 * SatoshiPerBitcoin,
+			expected: 55 * UnitsPerCoin(),
 		},
 		{
 			name:     "rounding down",
 			amount:   55.000000000000056843,
 			valid:    true,
-			expected: 55 * SatoshiPerBitcoin,
+			expected: 55 * UnitsPerCoin(),
 		},
 
 		// Negative tests.
@@ -114,35 +114,30 @@ func TestAmountUnitConversions(t *testing.T) {
 	tests := []struct {
 		name      string
 		amount    Amount
-		unit      AmountUnit
 		converted float64
 		s         string
 	}{
 		{
 			name:      "MBTC",
-			amount:    MaxSatoshi,
-			unit:      AmountMegaBTC,
+			amount:    MaxUnits(),
 			converted: 21,
 			s:         "21 MBTC",
 		},
 		{
 			name:      "kBTC",
 			amount:    44433322211100,
-			unit:      AmountKiloBTC,
 			converted: 444.33322211100,
 			s:         "444.333222111 kBTC",
 		},
 		{
 			name:      "BTC",
 			amount:    44433322211100,
-			unit:      AmountBTC,
 			converted: 444333.22211100,
 			s:         "444333.222111 BTC",
 		},
 		{
 			name:      "mBTC",
 			amount:    44433322211100,
-			unit:      AmountMilliBTC,
 			converted: 444333222.11100,
 			s:         "444333222.111 mBTC",
 		},
@@ -150,7 +145,6 @@ func TestAmountUnitConversions(t *testing.T) {
 
 			name:      "μBTC",
 			amount:    44433322211100,
-			unit:      AmountMicroBTC,
 			converted: 444333222111.00,
 			s:         "444333222111 μBTC",
 		},
@@ -158,42 +152,49 @@ func TestAmountUnitConversions(t *testing.T) {
 
 			name:      "satoshi",
 			amount:    44433322211100,
-			unit:      AmountSatoshi,
 			converted: 44433322211100,
 			s:         "44433322211100 Satoshi",
-		},
-		{
-
-			name:      "non-standard unit",
-			amount:    44433322211100,
-			unit:      AmountUnit(-1),
-			converted: 4443332.2211100,
-			s:         "4443332.22111 1e-1 BTC",
 		},
 	}
 
 	for _, test := range tests {
-		f := test.amount.ToUnit(test.unit)
+		f, e := test.amount.ToUnit(test.name)
+		if e != nil {
+			t.Errorf("error converting unit %v", e)
+			continue
+		}
 		if f != test.converted {
 			t.Errorf("%v: converted value %v does not match expected %v", test.name, f, test.converted)
 			continue
 		}
 
-		s := test.amount.Format(test.unit)
+		s, e := test.amount.Format(test.name)
+		if e != nil {
+			t.Errorf("error converting unit %v", e)
+			continue
+		}
 		if s != test.s {
 			t.Errorf("%v: format '%v' does not match expected '%v'", test.name, s, test.s)
 			continue
 		}
 
 		// Verify that Amount.ToBTC works as advertised.
-		f1 := test.amount.ToUnit(AmountBTC)
+		f1, e := test.amount.ToUnit("BTC")
+		if e != nil {
+			t.Errorf("error converting unit %v", e)
+			continue
+		}
 		f2 := test.amount.ToBTC()
 		if f1 != f2 {
 			t.Errorf("%v: ToBTC does not match ToUnit(AmountBTC): %v != %v", test.name, f1, f2)
 		}
 
 		// Verify that Amount.String works as advertised.
-		s1 := test.amount.Format(AmountBTC)
+		s1, e := test.amount.Format("BTC")
+		if e != nil {
+			t.Errorf("error converting unit %v", e)
+			continue
+		}
 		s2 := test.amount.String()
 		if s1 != s2 {
 			t.Errorf("%v: String does not match Format(AmountBitcoin): %v != %v", test.name, s1, s2)
