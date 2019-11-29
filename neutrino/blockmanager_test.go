@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -398,12 +400,16 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 		if test.partialInterval {
 			startHeight = wire.CFCheckptInterval / 3
 		}
+		failed := int32(0)
+		var wg sync.WaitGroup
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for i := startHeight; i <= maxHeight; i++ {
 				ntfn := <-bm.blockNtfnChan
 				if _, ok := ntfn.(*blockntfns.Connected); !ok {
-					t.Fatal("expected block connected " +
-						"notification")
+					atomic.StoreInt32(&failed, 1)
+					fmt.Println("expected block connected notification")
 				}
 			}
 		}()
@@ -429,6 +435,11 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 		if *tip != *lastCheckpoint {
 			t.Fatalf("expected tip to be %v, was %v",
 				lastCheckpoint, tip)
+		}
+
+		wg.Wait()
+		if failed != 0 {
+			t.Fail()
 		}
 	}
 }
@@ -632,12 +643,15 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		if test.partialInterval {
 			startHeight = wire.CFCheckptInterval / 3
 		}
+		failed := int32(0)
+		var wg sync.WaitGroup
+		wg.Add(1)
 		go func() {
 			for i := startHeight; i <= maxHeight; i++ {
 				ntfn := <-bm.blockNtfnChan
 				if _, ok := ntfn.(*blockntfns.Connected); !ok {
-					t.Fatal("expected block connected " +
-						"notification")
+					atomic.StoreInt32(&failed, 1)
+					fmt.Println("expected block connected notification")
 				}
 			}
 		}()
@@ -647,6 +661,11 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		bm.getCheckpointedCFHeaders(
 			headers.checkpoints, cfStore, wire.GCSFilterRegular,
 		)
+
+		wg.Wait()
+		if failed != 0 {
+			t.Fail()
+		}
 	}
 }
 

@@ -5,9 +5,11 @@
 package legacyrpc
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync/atomic"
 	"testing"
 )
 
@@ -21,12 +23,15 @@ func TestThrottle(t *testing.T) {
 		}),
 	)
 
+	failed := int32(0)
 	codes := make(chan int, 2)
 	for i := 0; i < cap(codes); i++ {
 		go func() {
 			res, err := http.Get(srv.URL)
 			if err != nil {
-				t.Fatal(err)
+				//t.Fatal(err)
+				fmt.Println(err)
+				atomic.StoreInt32(&failed, int32(1))
 			}
 			codes <- res.StatusCode
 		}()
@@ -44,5 +49,8 @@ func TestThrottle(t *testing.T) {
 	want := map[int]int{200: 1, 429: 1}
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("status codes: want: %v, got: %v", want, got)
+	}
+	if failed != 0 {
+		t.Fail()
 	}
 }

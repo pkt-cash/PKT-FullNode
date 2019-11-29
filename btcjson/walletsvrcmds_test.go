@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
@@ -104,19 +105,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			},
 		},
 		{
-			name: "encryptwallet",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("encryptwallet", "pass")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewEncryptWalletCmd("pass")
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"encryptwallet","params":["pass"],"id":1}`,
-			unmarshalled: &btcjson.EncryptWalletCmd{
-				Passphrase: "pass",
-			},
-		},
-		{
 			name: "estimatefee",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("estimatefee", 6)
@@ -126,19 +114,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"estimatefee","params":[6],"id":1}`,
 			unmarshalled: &btcjson.EstimateFeeCmd{
-				NumBlocks: 6,
-			},
-		},
-		{
-			name: "estimatepriority",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("estimatepriority", 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewEstimatePriorityCmd(6)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"estimatepriority","params":[6],"id":1}`,
-			unmarshalled: &btcjson.EstimatePriorityCmd{
 				NumBlocks: 6,
 			},
 		},
@@ -360,17 +335,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			},
 		},
 		{
-			name: "getwalletinfo",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getwalletinfo")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetWalletInfoCmd()
-			},
-			marshalled:   `{"jsonrpc":"1.0","method":"getwalletinfo","params":[],"id":1}`,
-			unmarshalled: &btcjson.GetWalletInfoCmd{},
-		},
-		{
 			name: "importprivkey",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("importprivkey", "abc")
@@ -466,17 +430,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.ListAccountsCmd{
 				MinConf: btcjson.Int(6),
 			},
-		},
-		{
-			name: "listaddressgroupings",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listaddressgroupings")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListAddressGroupingsCmd()
-			},
-			marshalled:   `{"jsonrpc":"1.0","method":"listaddressgroupings","params":[],"id":1}`,
-			unmarshalled: &btcjson.ListAddressGroupingsCmd{},
 		},
 		{
 			name: "listlockunspent",
@@ -832,57 +785,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			},
 		},
 		{
-			name: "move",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("move", "from", "to", 0.5)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewMoveCmd("from", "to", 0.5, nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"move","params":["from","to",0.5],"id":1}`,
-			unmarshalled: &btcjson.MoveCmd{
-				FromAccount: "from",
-				ToAccount:   "to",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(1),
-				Comment:     nil,
-			},
-		},
-		{
-			name: "move optional1",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("move", "from", "to", 0.5, 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewMoveCmd("from", "to", 0.5, btcjson.Int(6), nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"move","params":["from","to",0.5,6],"id":1}`,
-			unmarshalled: &btcjson.MoveCmd{
-				FromAccount: "from",
-				ToAccount:   "to",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(6),
-				Comment:     nil,
-			},
-		},
-		{
-			name: "move optional2",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("move", "from", "to", 0.5, 6, "comment")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewMoveCmd("from", "to", 0.5, btcjson.Int(6), btcjson.String("comment"))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"move","params":["from","to",0.5,6,"comment"],"id":1}`,
-			unmarshalled: &btcjson.MoveCmd{
-				FromAccount: "from",
-				ToAccount:   "to",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(6),
-				Comment:     btcjson.String("comment"),
-			},
-		},
-		{
 			name: "sendfrom",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("sendfrom", "from", "1Address", 0.5)
@@ -1038,20 +940,6 @@ func TestWalletSvrCmds(t *testing.T) {
 				Amount:    0.5,
 				Comment:   btcjson.String("comment"),
 				CommentTo: btcjson.String("commentto"),
-			},
-		},
-		{
-			name: "setaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("setaccount", "1Address", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewSetAccountCmd("1Address", "acct")
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"setaccount","params":["1Address","acct"],"id":1}`,
-			unmarshalled: &btcjson.SetAccountCmd{
-				Address: "1Address",
-				Account: "acct",
 			},
 		},
 		{

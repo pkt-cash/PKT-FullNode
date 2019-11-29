@@ -3,6 +3,7 @@ package lru
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -215,13 +216,15 @@ func TestConcurrencySimple(t *testing.T) {
 	c := NewCache(5)
 	var wg sync.WaitGroup
 
+	failed := int32(0)
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Put(i, &sizeable{value: i, size: 1})
 			if err != nil {
-				t.Fatal(err)
+				atomic.StoreInt32(&failed, 1)
+				fmt.Printf("Failed in goroutine %v", err)
 			}
 		}(i)
 	}
@@ -232,12 +235,16 @@ func TestConcurrencySimple(t *testing.T) {
 			defer wg.Done()
 			_, err := c.Get(i)
 			if err != nil && !cache.ErrElementNotFound.Is(err) {
-				t.Fatal(err)
+				fmt.Printf("Failed in goroutine %v", err)
+				atomic.StoreInt32(&failed, 1)
 			}
 		}(i)
 	}
 
 	wg.Wait()
+	if failed != 0 {
+		t.Fail()
+	}
 }
 
 // TestConcurrencySmallCache is a test that checks concurrent access to the
@@ -248,14 +255,15 @@ func TestConcurrencySmallCache(t *testing.T) {
 	t.Parallel()
 	c := NewCache(5)
 	var wg sync.WaitGroup
-
+	failed := int32(0)
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Put(i, &sizeable{value: i, size: 1})
 			if err != nil {
-				t.Fatal(err)
+				atomic.StoreInt32(&failed, 1)
+				fmt.Printf("Failed in goroutine %v", err)
 			}
 		}(i)
 	}
@@ -266,12 +274,16 @@ func TestConcurrencySmallCache(t *testing.T) {
 			defer wg.Done()
 			_, err := c.Get(i)
 			if err != nil && !cache.ErrElementNotFound.Is(err) {
-				t.Fatal(err)
+				atomic.StoreInt32(&failed, 1)
+				fmt.Printf("Failed in goroutine %v", err)
 			}
 		}(i)
 	}
 
 	wg.Wait()
+	if failed != 0 {
+		t.Fail()
+	}
 }
 
 // TestConcurrencyBigCache is a test that checks concurrent access to the
@@ -282,14 +294,15 @@ func TestConcurrencyBigCache(t *testing.T) {
 	t.Parallel()
 	c := NewCache(100)
 	var wg sync.WaitGroup
-
+	failed := int32(0)
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			_, err := c.Put(i, &sizeable{value: i, size: 1})
 			if err != nil {
-				t.Fatal(err)
+				atomic.StoreInt32(&failed, 1)
+				fmt.Printf("Failed in goroutine %v", err)
 			}
 		}(i)
 	}
@@ -300,10 +313,14 @@ func TestConcurrencyBigCache(t *testing.T) {
 			defer wg.Done()
 			_, err := c.Get(i)
 			if err != nil && !cache.ErrElementNotFound.Is(err) {
-				t.Fatal(err)
+				atomic.StoreInt32(&failed, 1)
+				fmt.Printf("Failed in goroutine %v", err)
 			}
 		}(i)
 	}
 
 	wg.Wait()
+	if failed != 0 {
+		t.Fail()
+	}
 }

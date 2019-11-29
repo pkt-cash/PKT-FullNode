@@ -1217,7 +1217,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	//
 	// OP_CHECKMULTISIG counts for 20 sigops.
 	tooManySigOps = repeatOpcode(txscript.OP_CHECKMULTISIG, maxBlockSigOps/20)
-	tooManySigOps = append(manySigOps, txscript.OP_CHECKSIG)
+	tooManySigOps = append(tooManySigOps, txscript.OP_CHECKSIG)
 	g.nextBlock("b32", outs[9], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
 	rejected(blockchain.ErrTooManySigOps)
@@ -1238,7 +1238,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	//                \-> b34(10)
 	//
 	tooManySigOps = repeatOpcode(txscript.OP_CHECKMULTISIGVERIFY, maxBlockSigOps/20)
-	tooManySigOps = append(manySigOps, txscript.OP_CHECKSIG)
+	tooManySigOps = append(tooManySigOps, txscript.OP_CHECKSIG)
 	g.nextBlock("b34", outs[10], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
 	rejected(blockchain.ErrTooManySigOps)
@@ -2100,9 +2100,8 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	//      \-> bralt0 -> ... -> bralt#
 	g.setTip(reorgStartBlockName)
 	testInstances = nil
-	chain2TipName := g.tipName
 	for i := uint16(0); i < numLargeReorgBlocks; i++ {
-		chain2TipName = fmt.Sprintf("bralt%d", i)
+		chain2TipName := fmt.Sprintf("bralt%d", i)
 		g.nextBlock(chain2TipName, nil)
 		testInstances = append(testInstances, acceptBlock(g.tipName,
 			g.tip, false, false))
@@ -2116,7 +2115,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	//   ... -> bralt0 -> ... -> bralt# -> bralt#+1
 	//      \-> br0    -> ... -> br#
 	g.nextBlock(fmt.Sprintf("bralt%d", g.tipHeight+1), nil)
-	chain2TipName = g.tipName
+	chain2TipName := g.tipName
 	accepted()
 
 	// Extend the first chain by two to force a large reorg back to it.
@@ -2125,11 +2124,9 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	//      \-> bralt0 -> ... -> bralt# -> bralt#+1
 	g.setTip(chain1TipName)
 	g.nextBlock(fmt.Sprintf("br%d", g.tipHeight+1), nil)
-	chain1TipName = g.tipName
 	acceptedToSideChainWithExpectedTip(chain2TipName)
 
 	g.nextBlock(fmt.Sprintf("br%d", g.tipHeight+2), nil)
-	chain1TipName = g.tipName
 	accepted()
 
 	return tests, nil

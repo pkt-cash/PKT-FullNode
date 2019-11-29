@@ -1037,7 +1037,7 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	if sinfo.RequiredSigs() != sinfo.RequiredSigs() {
+	if sinfo.RequiredSigs() != sinfo2.RequiredSigs() {
 		t.Errorf("original and serailised scriptinfo requiredsigs "+
 			"don't match %d != %d", sinfo.RequiredSigs(),
 			sinfo2.RequiredSigs())

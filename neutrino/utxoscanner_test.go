@@ -231,7 +231,7 @@ func TestDequeueAtHeight(t *testing.T) {
 	}
 
 	// Now, add the requests in order of their block heights.
-	req100000, err = scanner.Enqueue(makeTestInputWithScript(), 100000)
+	_, err = scanner.Enqueue(makeTestInputWithScript(), 100000)
 	if err != nil {
 		t.Fatalf("unable to enqueue scan request: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestDequeueAtHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to enqueue scan request: %v", err)
 	}
-	req100000, err = scanner.Enqueue(makeTestInputWithScript(), 100000)
+	_, err = scanner.Enqueue(makeTestInputWithScript(), 100000)
 	if err != nil {
 		t.Fatalf("unable to enqueue scan request: %v", err)
 	}

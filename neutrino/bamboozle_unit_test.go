@@ -211,7 +211,7 @@ var (
 			decodeHashNoError("01234567890abcdeffedcba09f76543210"),
 		},
 	}
-	headers4 = func() *wire.MsgCFHeaders {
+	_ = func() *wire.MsgCFHeaders {
 		cfh := &wire.MsgCFHeaders{
 			FilterHashes: []*chainhash.Hash{
 				decodeHashNoError("fedcba09f7654321001234567890abcdef"),

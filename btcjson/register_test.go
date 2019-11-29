@@ -104,6 +104,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 			name:   "embedded field",
 			method: "registertestcmd",
 			cmdFunc: func() interface{} {
+				//lint:ignore U1000 this field must be present for the test
 				type test struct{ int }
 				return (*test)(nil)
 			},
@@ -113,6 +114,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 			name:   "unexported field",
 			method: "registertestcmd",
 			cmdFunc: func() interface{} {
+				//lint:ignore U1000 this field must be present for the test
 				type test struct{ a int }
 				return (*test)(nil)
 			},

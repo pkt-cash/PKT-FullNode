@@ -15,7 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"golang.org/x/crypto/ripemd160"
 )
 
 type CustomParamStruct struct {

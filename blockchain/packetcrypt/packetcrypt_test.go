@@ -198,7 +198,7 @@ func TestInsertCoinbaseCommit(t *testing.T) {
 		t.Errorf("ExtractCoinbaseCommit() returned nil")
 	}
 
-	if bytes.Compare(cbc2.Bytes[:], cbc.Bytes[:]) != 0 {
+	if !bytes.Equal(cbc2.Bytes[:], cbc.Bytes[:]) {
 		t.Errorf("expected %v", hex.EncodeToString(cbc.Bytes[:]))
 		t.Errorf("got      %v", hex.EncodeToString(cbc2.Bytes[:]))
 		t.Errorf("cbc mismatch")

@@ -606,11 +606,7 @@ func testInternalAddresses(tc *testContext) bool {
 		return false
 	}
 	tc.unlocked = false
-	if !testResults() {
-		return false
-	}
-
-	return true
+	return testResults()
 }
 
 // testLocking tests the basic locking semantics of the address manager work
@@ -861,11 +857,7 @@ func testImportPrivateKey(tc *testContext) bool {
 		return false
 	}
 	tc.unlocked = false
-	if !testResults() {
-		return false
-	}
-
-	return true
+	return testResults()
 }
 
 // testImportScript tests that importing scripts works properly.  It ensures
@@ -1029,11 +1021,7 @@ func testImportScript(tc *testContext) bool {
 		return false
 	}
 	tc.unlocked = false
-	if !testResults() {
-		return false
-	}
-
-	return true
+	return testResults()
 }
 
 // testMarkUsed ensures used addresses are flagged as such.
@@ -1353,10 +1341,7 @@ func testNewAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode = ErrInvalidAccount
-	if !util.CheckError(tc.t, testName, err, wantErrCode) {
-		return false
-	}
-	return true
+	return util.CheckError(tc.t, testName, err, wantErrCode)
 }
 
 // testLookupAccount tests the basic account lookup func of the address manager
@@ -1406,6 +1391,9 @@ func testLookupAccount(tc *testContext) bool {
 		lastAccount, err = tc.manager.LastAccount(ns)
 		return err
 	})
+	if err != nil {
+		tc.t.Errorf("tc.manager.LastAccount(ns) -> %v", err)
+	}
 	var expectedLastAccount uint32
 	expectedLastAccount = 1
 	if !tc.create {
@@ -1505,10 +1493,7 @@ func testRenameAccount(tc *testContext) bool {
 		return err
 	})
 	wantErrCode = ErrAccountNotFound
-	if !util.CheckError(tc.t, testName, err, wantErrCode) {
-		return false
-	}
-	return true
+	return util.CheckError(tc.t, testName, err, wantErrCode)
 }
 
 // testForEachAccount tests the retrieve all accounts func of the address

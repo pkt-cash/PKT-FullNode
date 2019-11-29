@@ -386,13 +386,13 @@ func TestMigrationStoreMaxReorgDepth(t *testing.T) {
 					return err
 				}
 				expectedBlock := blocks[len(blocks)-1]
-				if block.Height != block.Height {
+				if block.Height != expectedBlock.Height {
 					return er.Errorf("expected synced to "+
 						"block height %v, got %v",
 						expectedBlock.Height,
 						block.Height)
 				}
-				if block.Hash != block.Hash {
+				if block.Hash != expectedBlock.Hash {
 					return er.Errorf("expected synced to "+
 						"block hash %v, got %v",
 						expectedBlock.Hash,

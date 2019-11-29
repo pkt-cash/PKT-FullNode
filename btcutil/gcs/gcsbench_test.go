@@ -101,7 +101,7 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 
 	var localMatch bool
 	for i := 0; i < b.N; i++ {
-		localMatch, err = filter.Match(key, []byte("Nate"))
+		_, err = filter.Match(key, []byte("Nate"))
 		if err != nil {
 			b.Fatalf("unable to match filter: %v", err)
 		}
