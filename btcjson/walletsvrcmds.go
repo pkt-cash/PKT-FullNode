@@ -161,6 +161,7 @@ func NewGetBalanceCmd(account *string, minConf *int) *GetBalanceCmd {
 // GetNewAddressCmd defines the getnewaddress JSON-RPC command.
 type GetNewAddressCmd struct {
 	Account *string
+	Legacy  *bool
 }
 
 // NewGetNewAddressCmd returns a new instance which can be used to issue a

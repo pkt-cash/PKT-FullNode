@@ -733,11 +733,15 @@ func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	if cmd.Account != nil {
 		acctName = *cmd.Account
 	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
+	scope := waddrmgr.KeyScopeBIP0084
+	if cmd.Legacy != nil && *cmd.Legacy {
+		scope = waddrmgr.KeyScopeBIP0044
+	}
+	account, err := w.AccountNumber(scope, acctName)
 	if err != nil {
 		return nil, err
 	}
-	addr, err := w.NewAddress(account, waddrmgr.KeyScopeBIP0044)
+	addr, err := w.NewAddress(account, scope)
 	if err != nil {
 		return nil, err
 	}
