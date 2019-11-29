@@ -114,11 +114,6 @@ var rpcHandlers = map[string]struct {
 	"walletpassphrase":       {handler: walletPassphrase},
 	"walletpassphrasechange": {handler: walletPassphraseChange},
 
-	// Reference methods which can't be implemented by pktwallet due to
-	// design decision differences
-	"move":       {handler: unsupported, noHelp: true},
-	"setaccount": {handler: unsupported, noHelp: true},
-
 	// Extensions to the reference client JSON-RPC API
 	"createnewaccount":      {handler: createNewAccount},
 	"getbestblock":          {handler: getBestBlock},
@@ -136,18 +131,6 @@ var rpcHandlers = map[string]struct {
 	"listalltransactions":     {handler: listAllTransactions},
 	"renameaccount":           {handler: renameAccount},
 	"walletislocked":          {handler: walletIsLocked},
-}
-
-// unimplemented handles an unimplemented RPC request with the
-// appropiate error.
-func unimplemented(interface{}, *wallet.Wallet) (interface{}, er.R) {
-	return nil, btcjson.ErrRPCUnimplemented.New("Method unimplemented", nil)
-}
-
-// unsupported handles a standard bitcoind RPC request which is
-// unsupported by pktwallet due to design differences.
-func unsupported(interface{}, *wallet.Wallet) (interface{}, er.R) {
-	return nil, btcjson.ErrRPCMisc.New("Request unsupported by pktwallet", nil)
 }
 
 // lazyHandler is a closure over a requestHandler or passthrough request with
