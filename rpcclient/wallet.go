@@ -2152,37 +2152,6 @@ func (r FutureImportPubKeyResult) Receive() er.R {
 	return err
 }
 
-// ImportPubKeyAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See ImportPubKey for the blocking version and more details.
-func (c *Client) ImportPubKeyAsync(pubKey string) FutureImportPubKeyResult {
-	cmd := btcjson.NewImportPubKeyCmd(pubKey, nil)
-	return c.sendCmd(cmd)
-}
-
-// ImportPubKey imports the passed public key.
-func (c *Client) ImportPubKey(pubKey string) er.R {
-	return c.ImportPubKeyAsync(pubKey).Receive()
-}
-
-// ImportPubKeyRescanAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See ImportPubKey for the blocking version and more details.
-func (c *Client) ImportPubKeyRescanAsync(pubKey string, rescan bool) FutureImportPubKeyResult {
-	cmd := btcjson.NewImportPubKeyCmd(pubKey, &rescan)
-	return c.sendCmd(cmd)
-}
-
-// ImportPubKeyRescan imports the passed public key. When rescan is true, the
-// block history is scanned for transactions addressed to provided pubkey.
-func (c *Client) ImportPubKeyRescan(pubKey string, rescan bool) er.R {
-	return c.ImportPubKeyRescanAsync(pubKey, rescan).Receive()
-}
-
 // ***********************
 // Miscellaneous Functions
 // ***********************
@@ -2228,14 +2197,3 @@ func (c *Client) GetInfoAsync() FutureGetInfoResult {
 func (c *Client) GetInfo() (*btcjson.InfoWalletResult, er.R) {
 	return c.GetInfoAsync().Receive()
 }
-
-// TODO(davec): Implement
-// backupwallet (NYI in pktwallet)
-// encryptwallet (Won't be supported by pktwallet since it's always encrypted)
-// getwalletinfo (NYI in pktwallet or btcjson)
-// listaddressgroupings (NYI in pktwallet)
-// listreceivedbyaccount (NYI in pktwallet)
-
-// DUMP
-// importwallet (NYI in pktwallet)
-// dumpwallet (NYI in pktwallet)

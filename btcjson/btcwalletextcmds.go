@@ -20,32 +20,6 @@ func NewCreateNewAccountCmd(account string) *CreateNewAccountCmd {
 	}
 }
 
-// DumpWalletCmd defines the dumpwallet JSON-RPC command.
-type DumpWalletCmd struct {
-	Filename string
-}
-
-// NewDumpWalletCmd returns a new instance which can be used to issue a
-// dumpwallet JSON-RPC command.
-func NewDumpWalletCmd(filename string) *DumpWalletCmd {
-	return &DumpWalletCmd{
-		Filename: filename,
-	}
-}
-
-// ImportWalletCmd defines the importwallet JSON-RPC command.
-type ImportWalletCmd struct {
-	Filename string
-}
-
-// NewImportWalletCmd returns a new instance which can be used to issue a
-// importwallet JSON-RPC command.
-func NewImportWalletCmd(filename string) *ImportWalletCmd {
-	return &ImportWalletCmd{
-		Filename: filename,
-	}
-}
-
 // RenameAccountCmd defines the renameaccount JSON-RPC command.
 type RenameAccountCmd struct {
 	OldAccount string
@@ -66,7 +40,5 @@ func init() {
 	flags := UFWalletOnly
 
 	MustRegisterCmd("createnewaccount", (*CreateNewAccountCmd)(nil), flags)
-	MustRegisterCmd("dumpwallet", (*DumpWalletCmd)(nil), flags)
-	MustRegisterCmd("importwallet", (*ImportWalletCmd)(nil), flags)
 	MustRegisterCmd("renameaccount", (*RenameAccountCmd)(nil), flags)
 }

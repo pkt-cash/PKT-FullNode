@@ -75,19 +75,6 @@ func NewDumpPrivKeyCmd(address string) *DumpPrivKeyCmd {
 	}
 }
 
-// EncryptWalletCmd defines the encryptwallet JSON-RPC command.
-type EncryptWalletCmd struct {
-	Passphrase string
-}
-
-// NewEncryptWalletCmd returns a new instance which can be used to issue a
-// encryptwallet JSON-RPC command.
-func NewEncryptWalletCmd(passphrase string) *EncryptWalletCmd {
-	return &EncryptWalletCmd{
-		Passphrase: passphrase,
-	}
-}
-
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {
 	NumBlocks int64
@@ -295,15 +282,6 @@ func NewListAccountsCmd(minConf *int) *ListAccountsCmd {
 	return &ListAccountsCmd{
 		MinConf: minConf,
 	}
-}
-
-// ListAddressGroupingsCmd defines the listaddressgroupings JSON-RPC command.
-type ListAddressGroupingsCmd struct{}
-
-// NewListAddressGroupingsCmd returns a new instance which can be used to issue
-// a listaddressgroupoings JSON-RPC command.
-func NewListAddressGroupingsCmd() *ListAddressGroupingsCmd {
-	return &ListAddressGroupingsCmd{}
 }
 
 // ListLockUnspentCmd defines the listlockunspent JSON-RPC command.
@@ -682,7 +660,6 @@ func init() {
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("resync", (*struct{})(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
-	MustRegisterCmd("encryptwallet", (*EncryptWalletCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getaccount", (*GetAccountCmd)(nil), flags)
 	MustRegisterCmd("getaccountaddress", (*GetAccountAddressCmd)(nil), flags)
@@ -697,7 +674,6 @@ func init() {
 	MustRegisterCmd("importprivkey", (*ImportPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("keypoolrefill", (*KeyPoolRefillCmd)(nil), flags)
 	MustRegisterCmd("listaccounts", (*ListAccountsCmd)(nil), flags)
-	MustRegisterCmd("listaddressgroupings", (*ListAddressGroupingsCmd)(nil), flags)
 	MustRegisterCmd("listlockunspent", (*ListLockUnspentCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaccount", (*ListReceivedByAccountCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaddress", (*ListReceivedByAddressCmd)(nil), flags)

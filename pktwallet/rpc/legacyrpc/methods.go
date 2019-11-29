@@ -114,17 +114,10 @@ var rpcHandlers = map[string]struct {
 	"walletpassphrase":       {handler: walletPassphrase},
 	"walletpassphrasechange": {handler: walletPassphraseChange},
 
-	// Reference implementation methods (still unimplemented)
-	"backupwallet":         {handler: unimplemented, noHelp: true},
-	"dumpwallet":           {handler: unimplemented, noHelp: true},
-	"importwallet":         {handler: unimplemented, noHelp: true},
-	"listaddressgroupings": {handler: unimplemented, noHelp: true},
-
 	// Reference methods which can't be implemented by pktwallet due to
 	// design decision differences
-	"encryptwallet": {handler: unsupported, noHelp: true},
-	"move":          {handler: unsupported, noHelp: true},
-	"setaccount":    {handler: unsupported, noHelp: true},
+	"move":       {handler: unsupported, noHelp: true},
+	"setaccount": {handler: unsupported, noHelp: true},
 
 	// Extensions to the reference client JSON-RPC API
 	"createnewaccount":      {handler: createNewAccount},
@@ -383,18 +376,6 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
 	}
 	return key, err
-}
-
-// dumpWallet handles a dumpwallet request by returning  all private
-// keys in a wallet, or an appropiate error if the wallet is locked.
-// TODO: finish this to match bitcoind by writing the dump to a file.
-func dumpWallet(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	keys, err := w.DumpPrivKeys()
-	if waddrmgr.ErrLocked.Is(err) {
-		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
-	}
-
-	return keys, err
 }
 
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
