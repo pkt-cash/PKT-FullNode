@@ -244,13 +244,6 @@ type blockIterator struct {
 	err  er.R
 }
 
-func makeBlockIterator(ns walletdb.ReadWriteBucket, height int32) blockIterator {
-	seek := make([]byte, 4)
-	byteOrder.PutUint32(seek, uint32(height))
-	c := ns.NestedReadWriteBucket(bucketBlocks).ReadWriteCursor()
-	return blockIterator{c: c, seek: seek}
-}
-
 func makeReadBlockIterator(ns walletdb.ReadBucket, height int32) blockIterator {
 	seek := make([]byte, 4)
 	byteOrder.PutUint32(seek, uint32(height))
@@ -406,15 +399,6 @@ func putTxRecord(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Block) er.R 
 	err = ns.NestedReadWriteBucket(bucketTxRecords).Put(k, v)
 	if err != nil {
 		str := fmt.Sprintf("%s: put failed for %v", bucketTxRecords, rec.Hash)
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
-
-func putRawTxRecord(ns walletdb.ReadWriteBucket, k, v []byte) er.R {
-	err := ns.NestedReadWriteBucket(bucketTxRecords).Put(k, v)
-	if err != nil {
-		str := fmt.Sprintf("%s: put failed", bucketTxRecords)
 		return storeError(ErrDatabase, str, err)
 	}
 	return nil
@@ -704,11 +688,6 @@ type creditIterator struct {
 	err    er.R
 }
 
-func makeCreditIterator(ns walletdb.ReadWriteBucket, prefix []byte) creditIterator {
-	c := ns.NestedReadWriteBucket(bucketCredits).ReadWriteCursor()
-	return creditIterator{c: c, prefix: prefix}
-}
-
 func makeReadCreditIterator(ns walletdb.ReadBucket, prefix []byte) creditIterator {
 	c := ns.NestedReadBucket(bucketCredits).ReadCursor()
 	return creditIterator{c: readCursor{c}, prefix: prefix}
@@ -936,11 +915,6 @@ type debitIterator struct {
 	cv     []byte
 	elem   DebitRecord
 	err    er.R
-}
-
-func makeDebitIterator(ns walletdb.ReadWriteBucket, prefix []byte) debitIterator {
-	c := ns.NestedReadWriteBucket(bucketDebits).ReadWriteCursor()
-	return debitIterator{c: c, prefix: prefix}
 }
 
 func makeReadDebitIterator(ns walletdb.ReadBucket, prefix []byte) debitIterator {
@@ -1180,20 +1154,6 @@ func (it *unminedCreditIterator) next() bool {
 		return false
 	}
 	return true
-}
-
-// unavailable until https://github.com/boltdb/bolt/issues/620 is fixed.
-// func (it *unminedCreditIterator) delete() error {
-// 	err := it.c.Delete()
-// 	if err != nil {
-// 		str := "failed to delete unmined credit"
-// 		return storeError(ErrDatabase, str, err)
-// 	}
-// 	return nil
-// }
-
-func (it *unminedCreditIterator) reposition(txHash *chainhash.Hash, index uint32) {
-	it.c.Seek(canonicalOutPoint(txHash, index))
 }
 
 // Outpoints spent by unmined transactions are saved in the unmined inputs
@@ -1448,50 +1408,4 @@ func fetchVersion(ns walletdb.ReadBucket) (uint32, er.R) {
 	}
 
 	return byteOrder.Uint32(v), nil
-}
-
-func scopedUpdate(db walletdb.DB, namespaceKey []byte, f func(walletdb.ReadWriteBucket) er.R) er.R {
-	tx, err := db.BeginReadWriteTx()
-	if err != nil {
-		str := "cannot begin update"
-		return storeError(ErrDatabase, str, err)
-	}
-	err = f(tx.ReadWriteBucket(namespaceKey))
-	if err != nil {
-		rollbackErr := tx.Rollback()
-		if rollbackErr != nil {
-			const desc = "rollback failed"
-			if !Err.Is(err) {
-				// This really shouldn't happen.
-				return storeError(ErrDatabase, desc, rollbackErr)
-			}
-			err.AddMessage(desc)
-			return err
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		str := "commit failed"
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
-
-func scopedView(db walletdb.DB, namespaceKey []byte, f func(walletdb.ReadBucket) er.R) er.R {
-	tx, err := db.BeginReadTx()
-	if err != nil {
-		str := "cannot begin view"
-		return storeError(ErrDatabase, str, err)
-	}
-	err = f(tx.ReadBucket(namespaceKey))
-	rollbackErr := tx.Rollback()
-	if err != nil {
-		return err
-	}
-	if rollbackErr != nil {
-		str := "cannot close view"
-		return storeError(ErrDatabase, str, rollbackErr)
-	}
-	return nil
 }

@@ -287,14 +287,6 @@ func uint32ToBytes(number uint32) []byte {
 	return buf
 }
 
-// uint64ToBytes converts a 64 bit unsigned integer into a 8-byte slice in
-// little-endian order: 1 -> [1 0 0 0 0 0 0 0].
-func uint64ToBytes(number uint64) []byte {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, number)
-	return buf
-}
-
 // stringToBytes converts a string into a variable length byte slice in
 // little-endian order: "abc" -> [3 0 0 0 61 62 63]
 func stringToBytes(s string) []byte {
@@ -321,15 +313,6 @@ func scopeToBytes(scope *KeyScope) [scopeKeySize]byte {
 	binary.LittleEndian.PutUint32(scopeBytes[4:], scope.Coin)
 
 	return scopeBytes
-}
-
-// scopeFromBytes decodes a serializes manager scope into its concrete manager
-// scope struct.
-func scopeFromBytes(scopeBytes []byte) KeyScope {
-	return KeyScope{
-		Purpose: binary.LittleEndian.Uint32(scopeBytes[:]),
-		Coin:    binary.LittleEndian.Uint32(scopeBytes[4:]),
-	}
 }
 
 // scopeSchemaToBytes encodes the passed scope schema as a set of bytes
@@ -371,22 +354,6 @@ func fetchScopeAddrSchema(ns walletdb.ReadBucket,
 	}
 
 	return scopeSchemaFromBytes(schemaBytes), nil
-}
-
-// putScopeAddrSchema attempts to store the passed addr scehma for the given
-// manager scope.
-func putScopeAddrTypes(ns walletdb.ReadWriteBucket, scope *KeyScope,
-	schema *ScopeAddrSchema) er.R {
-
-	scopeSchemaBucket := ns.NestedReadWriteBucket(scopeSchemaBucketName)
-	if scopeSchemaBucket == nil {
-		str := fmt.Sprintf("unable to find scope schema bucket")
-		return managerError(ErrScopeNotFound, str, nil)
-	}
-
-	scopeKey := scopeToBytes(scope)
-	schemaBytes := scopeSchemaToBytes(schema)
-	return scopeSchemaBucket.Put(scopeKey[:], schemaBytes)
 }
 
 func fetchReadScopeBucket(ns walletdb.ReadBucket, scope *KeyScope) (walletdb.ReadBucket, er.R) {

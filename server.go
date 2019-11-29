@@ -69,9 +69,6 @@ var (
 	userAgentVersion = fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
 )
 
-// zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
-var zeroHash chainhash.Hash
-
 // onionAddr implements the net.Addr interface and represents a tor address.
 type onionAddr struct {
 	addr string

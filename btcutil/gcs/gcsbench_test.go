@@ -29,7 +29,6 @@ func genRandFilterElements(numElements uint) ([][]byte, er.R) {
 
 var (
 	generatedFilter *gcs.Filter
-	filterErr       er.R
 )
 
 // BenchmarkGCSFilterBuild benchmarks building a filter.
@@ -116,8 +115,6 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 }
 
 var (
-	randElems1, _        = genRandFilterElements(1)
-	randElems10, _       = genRandFilterElements(10)
 	randElems100, _      = genRandFilterElements(100)
 	randElems1000, _     = genRandFilterElements(1000)
 	randElems10000, _    = genRandFilterElements(10000)

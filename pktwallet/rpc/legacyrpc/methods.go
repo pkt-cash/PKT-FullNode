@@ -33,12 +33,6 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 )
 
-// confirmed checks whether a transaction at height txHeight has met minconf
-// confirmations for a blockchain at height curHeight.
-func confirmed(minconf, txHeight, curHeight int32) bool {
-	return confirms(txHeight, curHeight) >= minconf
-}
-
 // confirms returns the number of confirmations for a transaction in a block at
 // height txHeight (or -1 for an unconfirmed tx) given the chain height
 // curHeight.
@@ -1111,8 +1105,6 @@ func listReceivedByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.
 		confirmations int32
 		// Hashes of transactions which include an output paying to the address
 		tx []string
-		// Account which the address belongs to
-		account string
 	}
 
 	syncBlock := w.Manager.SyncedTo()

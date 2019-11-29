@@ -376,50 +376,6 @@ func (f *wsClientFilter) existsAddress(a btcutil.Address) bool {
 	return ok
 }
 
-// removeAddress removes the passed address, if it exists, from the
-// wsClientFilter.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeAddress(a btcutil.Address) {
-	switch a := a.(type) {
-	case *btcutil.AddressPubKeyHash:
-		delete(f.pubKeyHashes, *a.Hash160())
-		return
-	case *btcutil.AddressScriptHash:
-		delete(f.scriptHashes, *a.Hash160())
-		return
-	case *btcutil.AddressPubKey:
-		serializedPubKey := a.ScriptAddress()
-		switch len(serializedPubKey) {
-		case 33: // compressed
-			var compressedPubKey [33]byte
-			copy(compressedPubKey[:], serializedPubKey)
-			delete(f.compressedPubKeys, compressedPubKey)
-			return
-		case 65: // uncompressed
-			var uncompressedPubKey [65]byte
-			copy(uncompressedPubKey[:], serializedPubKey)
-			delete(f.uncompressedPubKeys, uncompressedPubKey)
-			return
-		}
-	}
-
-	delete(f.otherAddresses, a.EncodeAddress())
-}
-
-// removeAddressStr parses an address from a string and then removes it from the
-// wsClientFilter using removeAddress.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeAddressStr(s string, params *chaincfg.Params) {
-	a, err := btcutil.DecodeAddress(s, params)
-	if err == nil {
-		f.removeAddress(a)
-	} else {
-		delete(f.otherAddresses, s)
-	}
-}
-
 // addUnspentOutPoint adds an outpoint to the wsClientFilter.
 //
 // NOTE: This extension was ported from github.com/decred/dcrd
@@ -434,14 +390,6 @@ func (f *wsClientFilter) addUnspentOutPoint(op *wire.OutPoint) {
 func (f *wsClientFilter) existsUnspentOutPoint(op *wire.OutPoint) bool {
 	_, ok := f.unspent[*op]
 	return ok
-}
-
-// removeUnspentOutPoint removes the passed outpoint, if it exists, from the
-// wsClientFilter.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeUnspentOutPoint(op *wire.OutPoint) {
-	delete(f.unspent, *op)
 }
 
 // Notification types

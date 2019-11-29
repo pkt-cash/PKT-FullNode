@@ -698,6 +698,11 @@ func TestTxOverflowErrors(t *testing.T) {
 				0xff, // Varint for length of public key script
 			}, pver, BaseEncoding, txVer, MessageError.Default(),
 		},
+
+		{
+			multiWitnessTxEncodedNonZeroFlag,
+			pver, WitnessEncoding, txVer, MessageError.Default(),
+		},
 	}
 
 	t.Logf("Running %d tests", len(tests))

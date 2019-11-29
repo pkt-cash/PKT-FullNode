@@ -43,18 +43,6 @@ func (c *failingCryptoKey) Decrypt(in []byte) ([]byte, er.R) {
 	return nil, er.New("failed to decrypt")
 }
 
-// newHash converts the passed big-endian hex string into a chainhash.Hash.
-// It only differs from the one available in wire in that it panics on an
-// error since it will only (and must only) be called with hard-coded, and
-// therefore known good, hashes.
-func newHash(hexStr string) *chainhash.Hash {
-	hash, err := chainhash.NewHashFromStr(hexStr)
-	if err != nil {
-		panic(err)
-	}
-	return hash
-}
-
 // failingSecretKeyGen is a SecretKeyGenerator that always returns
 // snacl.ErrDecryptFailed.
 func failingSecretKeyGen(passphrase *[]byte,
@@ -96,7 +84,6 @@ type expectedAddr struct {
 	addressHash    []byte
 	internal       bool
 	compressed     bool
-	used           bool
 	imported       bool
 	pubKey         []byte
 	privKey        []byte

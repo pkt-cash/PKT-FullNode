@@ -134,7 +134,6 @@ type managedAddress struct {
 	imported         bool
 	internal         bool
 	compressed       bool
-	used             bool
 	addrType         AddressType
 	pubKey           *btcec.PublicKey
 	privKeyEncrypted []byte
@@ -519,7 +518,6 @@ type scriptAddress struct {
 	scriptEncrypted      []byte
 	scriptCT             []byte
 	scriptMutex          sync.Mutex
-	used                 bool
 }
 
 // Enforce scriptAddress satisfies the ManagedScriptAddress interface.

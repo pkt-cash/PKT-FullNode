@@ -38,13 +38,6 @@ const (
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
 	blockHdrSize = wire.MaxBlockHeaderPayload
-
-	// blockHdrOffset defines the offsets into a block index row for the
-	// block header.
-	//
-	// The serialized block index row format is:
-	//   <blocklocation><blockheader>
-	blockHdrOffset = blockLocSize
 )
 
 var (

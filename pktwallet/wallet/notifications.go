@@ -6,8 +6,9 @@ package wallet
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -15,7 +16,6 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 // TODO: It would be good to send errors during notification creation to the rpc
@@ -486,27 +486,6 @@ func (s *NotificationServer) notifyUnspentOutput(account uint32, hash *chainhash
 	n := &SpentnessNotifications{
 		hash:  hash,
 		index: index,
-	}
-	for _, c := range clients {
-		c <- n
-	}
-}
-
-// notifySpentOutput notifies registered clients that a previously-unspent
-// output is now spent, and includes the spender hash and input index in the
-// notification.
-func (s *NotificationServer) notifySpentOutput(account uint32, op *wire.OutPoint, spenderHash *chainhash.Hash, spenderIndex uint32) {
-	defer s.mu.Unlock()
-	s.mu.Lock()
-	clients := s.spentness[account]
-	if len(clients) == 0 {
-		return
-	}
-	n := &SpentnessNotifications{
-		hash:         &op.Hash,
-		index:        op.Index,
-		spenderHash:  spenderHash,
-		spenderIndex: spenderIndex,
 	}
 	for _, c := range clients {
 		c <- n

@@ -16,7 +16,6 @@ import (
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
 	"github.com/pkt-cash/pktd/connmgr"
@@ -89,7 +88,6 @@ func init() {
 	netsync.UseLogger(syncLog)
 	mempool.UseLogger(txmpLog)
 
-	packetcrypt.UseLogger(pcptLog)
 	block.UseLogger(pcptLog)
 	proof.UseLogger(pcptLog)
 }

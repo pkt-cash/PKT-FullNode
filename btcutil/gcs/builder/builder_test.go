@@ -21,9 +21,6 @@ import (
 )
 
 var (
-	// No need to allocate an err variable in every test
-	err er.R
-
 	// List of values for building a filter
 	contents = [][]byte{
 		[]byte("Alex"),
