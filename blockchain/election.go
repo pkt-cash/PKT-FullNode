@@ -7,6 +7,7 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/database"
@@ -15,7 +16,7 @@ import (
 
 func electionIsVoteAgainst(pkScript, networkSteward []byte) bool {
 	_, va := txscript.ElectionGetVotesForAgainst(pkScript)
-	return va != nil && bytes.Compare(va, networkSteward) == 0
+	return va != nil && bytes.Equal(va, networkSteward)
 }
 
 type ElectionState struct {

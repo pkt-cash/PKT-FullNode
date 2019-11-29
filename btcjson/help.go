@@ -7,10 +7,11 @@ package btcjson
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // baseHelpDescs house the various help labels, types, and example values used
@@ -270,7 +271,7 @@ func resultTypeHelp(xT descLookupFunc, rt reflect.Type, fieldDescKey string) str
 	w.Init(&formatted, 0, 4, 1, ' ', 0)
 	for i, text := range results {
 		if i == len(results)-1 {
-			fmt.Fprintf(w, text)
+			fmt.Fprint(w, text)
 		} else {
 			fmt.Fprintln(w, text)
 		}

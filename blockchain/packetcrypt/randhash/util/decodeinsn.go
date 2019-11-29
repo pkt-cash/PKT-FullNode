@@ -40,7 +40,7 @@ package util
 
 func DecodeInsn_REGA(insn uint32) uint32         { return (insn >> 9) & 0x1ff }
 func DecodeInsn_REGB(insn uint32) uint32         { return (insn >> 20) & 0x1ff }
-func DecodeInsn_HAS_IMM(insn uint32) bool        { return 0 != ((insn >> 18) & 1) }
+func DecodeInsn_HAS_IMM(insn uint32) bool        { return ((insn >> 18) & 1) != 0 }
 func DecodeInsn_MEMORY_CARRY(insn uint32) uint32 { return (insn >> 9) & 15 }
 func DecodeInsn_MEMORY_WITH_CARRY(insn, carry uint32) uint32 {
 	return (insn & ^(uint32(15) << 9)) | ((carry & 15) << 9)

@@ -325,7 +325,7 @@ func throttled(threshold int64, h http.Handler) http.Handler {
 
 		if current-1 >= threshold {
 			log.Warnf("Reached threshold of %d concurrent active clients", threshold)
-			http.Error(w, "429 Too Many Requests", 429)
+			http.Error(w, "429 Too Many Requests", http.StatusTooManyRequests)
 			return
 		}
 
@@ -454,7 +454,6 @@ out:
 					break out
 				}
 				s.requestProcessShutdown()
-				break
 
 			default:
 				req := req // Copy for the closure

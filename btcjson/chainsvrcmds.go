@@ -244,25 +244,25 @@ func convertTemplateRequestField(fieldName string, iface interface{}) (interface
 // UnmarshalJSON provides a custom Unmarshal method for TemplateRequest.  This
 // is necessary because the SigOpLimit and SizeLimit fields can only be specific
 // types.
-func (t *TemplateRequest) UnmarshalJSON(data []byte) er.R {
+func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 	type templateRequest TemplateRequest
 
 	request := (*templateRequest)(t)
 	if err := json.Unmarshal(data, &request); err != nil {
-		return er.E(err)
+		return er.Native(er.E(err))
 	}
 
 	// The SigOpLimit field can only be nil, bool, or int64.
 	val, err := convertTemplateRequestField("sigoplimit", request.SigOpLimit)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 	request.SigOpLimit = val
 
 	// The SizeLimit field can only be nil, bool, or int64.
 	val, err = convertTemplateRequestField("sizelimit", request.SizeLimit)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 	request.SizeLimit = val
 

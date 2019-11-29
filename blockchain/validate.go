@@ -1254,7 +1254,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block,
 		expectedTax := PktCalcNetworkStewardPayout(subsidy)
 		found := false
 		for _, txOut := range transactions[0].MsgTx().TxOut {
-			if bytes.Compare(txOut.PkScript, oldEs.NetworkSteward) != 0 {
+			if !bytes.Equal(txOut.PkScript, oldEs.NetworkSteward) {
 				continue
 			}
 			if txOut.Value != expectedTax {

@@ -952,7 +952,7 @@ func (s *ChainService) IsBanned(addr string) bool {
 	// Log how much time left the peer will remain banned for, if any.
 	if time.Now().Before(banStatus.Expiration) {
 		log.Debugf("Peer %v is banned for another %v", addr,
-			banStatus.Expiration.Sub(time.Now()))
+			time.Until(banStatus.Expiration))
 	}
 
 	return banStatus.Banned

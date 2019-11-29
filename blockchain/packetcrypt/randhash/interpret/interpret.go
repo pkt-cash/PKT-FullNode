@@ -26,7 +26,7 @@ const RandHash_MEMORY_SZ int = 256
 const RandHash_INOUT_SZ int64 = 256
 
 func getReg(stack []uint32, index uint32) uint32 {
-	if index < 0 || index > uint32(len(stack)) {
+	if index > uint32(len(stack)) {
 		panic("reference to out-of-bounds register")
 	}
 	return stack[index]

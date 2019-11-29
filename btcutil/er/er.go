@@ -115,7 +115,7 @@ func (e *ErrorType) newErrorCode(
 	if hasNumber {
 		header = fmt.Sprintf("%s(%d)", info, number)
 	} else {
-		header = fmt.Sprintf("%s", info)
+		header = info
 	}
 	if detail != "" {
 		header = header + ": " + detail
@@ -268,7 +268,7 @@ func (e err) Native() error {
 //////
 
 func captureStack() []byte {
-	if "" == os.Getenv("ENABLE_STACKTRACE") {
+	if os.Getenv("ENABLE_STACKTRACE") == "" {
 		return nil
 	}
 	return debug.Stack()

@@ -58,7 +58,7 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 		x := b2.Sum(nil)
 		copy(hash[:], x)
 	}
-	if bytes.Compare(hash[:], ann.GetContentHash()) != 0 {
+	if !bytes.Equal(hash[:], ann.GetContentHash()) {
 		return er.New("announcement content proof hash mismatch")
 	}
 	return nil
@@ -131,7 +131,7 @@ var pcCoinbasePrefix = [...]byte{0x6a, 0x30, 0x09, 0xf9, 0x11, 0x02}
 
 func ExtractCoinbaseCommit(coinbaseTx *wire.MsgTx) *wire.PcCoinbaseCommit {
 	for _, tx := range coinbaseTx.TxOut {
-		if len(tx.PkScript) > 6 && bytes.Compare(tx.PkScript[:6], pcCoinbasePrefix[:]) == 0 {
+		if len(tx.PkScript) > 6 && bytes.Equal(tx.PkScript[:6], pcCoinbasePrefix[:]) {
 			out := wire.PcCoinbaseCommit{}
 			copy(out.Bytes[:], tx.PkScript[2:])
 			return &out

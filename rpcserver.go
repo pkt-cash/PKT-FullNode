@@ -2103,7 +2103,7 @@ func handleCheckPcShare(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 		copy(buf[32:], hash)
 		txHash = chainhash.DoubleHashH(buf[:])
 	}
-	if bytes.Compare(txHash[:], mb.Header.MerkleRoot[:]) != 0 {
+	if !bytes.Equal(txHash[:], mb.Header.MerkleRoot[:]) {
 		return nil, btcjson.NewRPCError(
 			btcjson.ErrRPCVerify,
 			fmt.Sprintf("Share validation failed: merkle root mismatch, expected [%s]"+
@@ -3517,7 +3517,7 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 
 		// We'll then map the rule error to the appropriate RPC error,
 		// matching bitcoind's behavior.
-		code := btcjson.ErrRPCTxError
+		var code *er.ErrorCode
 
 		switch ruleErrCode {
 		case ruleerror.ErrOrphanTransactionDisallowed:

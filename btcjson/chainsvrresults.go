@@ -352,7 +352,7 @@ func (v *Vin) HasWitness() bool {
 }
 
 // MarshalJSON provides a custom Marshal method for Vin.
-func (v *Vin) MarshalJSON() ([]byte, er.R) {
+func (v *Vin) MarshalJSON() ([]byte, error) {
 	if v.IsCoinBase() {
 		coinbaseStruct := struct {
 			Coinbase string   `json:"coinbase"`
@@ -364,7 +364,7 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 			Witness:  v.Witness,
 		}
 		out, err := json.Marshal(coinbaseStruct)
-		return out, er.E(err)
+		return out, er.Native(er.E(err))
 	}
 
 	if v.HasWitness() {
@@ -382,7 +382,7 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 			Sequence:  v.Sequence,
 		}
 		out, err := json.Marshal(txStruct)
-		return out, er.E(err)
+		return out, er.Native(er.E(err))
 	}
 
 	txStruct := struct {
@@ -397,7 +397,7 @@ func (v *Vin) MarshalJSON() ([]byte, er.R) {
 		Sequence:  v.Sequence,
 	}
 	out, err := json.Marshal(txStruct)
-	return out, er.E(err)
+	return out, er.Native(er.E(err))
 }
 
 // PrevOut represents previous output for an input Vin.
@@ -429,7 +429,7 @@ func (v *VinPrevOut) HasWitness() bool {
 }
 
 // MarshalJSON provides a custom Marshal method for VinPrevOut.
-func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
+func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 	if v.IsCoinBase() {
 		coinbaseStruct := struct {
 			Coinbase string `json:"coinbase"`
@@ -439,7 +439,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 			Sequence: v.Sequence,
 		}
 		out, err := json.Marshal(coinbaseStruct)
-		return out, er.E(err)
+		return out, er.Native(er.E(err))
 	}
 
 	if v.HasWitness() {
@@ -459,7 +459,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 			Sequence:  v.Sequence,
 		}
 		out, err := json.Marshal(txStruct)
-		return out, er.E(err)
+		return out, er.Native(er.E(err))
 	}
 
 	txStruct := struct {
@@ -476,7 +476,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, er.R) {
 		Sequence:  v.Sequence,
 	}
 	out, err := json.Marshal(txStruct)
-	return out, er.E(err)
+	return out, er.Native(er.E(err))
 }
 
 // Vout models parts of the tx data.  It is defined separately since both

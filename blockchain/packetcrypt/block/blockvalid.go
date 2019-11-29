@@ -136,7 +136,7 @@ func ValidatePcProof(
 	}
 
 	// Compare to merkle root commitment
-	if bytes.Compare(pcpHash[:], cb.MerkleRoot()) != 0 {
+	if !bytes.Equal(pcpHash[:], cb.MerkleRoot()) {
 		return false, er.New("Validate_checkBlock_PCP_MISMATCH")
 	}
 

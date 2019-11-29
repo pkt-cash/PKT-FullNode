@@ -2246,9 +2246,7 @@ out:
 			// When an InvVect has been added to a block, we can
 			// now remove it, if it was present.
 			case broadcastInventoryDel:
-				if _, ok := pendingInvs[*msg]; ok {
-					delete(pendingInvs, *msg)
-				}
+				delete(pendingInvs, *msg)
 			}
 
 		case <-timer.C:

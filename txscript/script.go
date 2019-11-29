@@ -9,8 +9,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -701,14 +702,13 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 			}
 		}
 
-	default:
-		// Consensus treats undefined hashtypes like normal SigHashAll
-		// for purposes of hash generation.
-		fallthrough
 	case SigHashOld:
 		fallthrough
 	case SigHashAll:
-		// Nothing special here.
+		fallthrough
+	default:
+		// Consensus treats undefined hashtypes like normal SigHashAll
+		// for purposes of hash generation.
 	}
 	if hashType&SigHashAnyOneCanPay != 0 {
 		txCopy.TxIn = txCopy.TxIn[idx : idx+1]

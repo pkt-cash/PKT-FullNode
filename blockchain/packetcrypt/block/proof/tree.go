@@ -175,10 +175,7 @@ func (te *TreeNode) recompute() bool {
 func (te *TreeNode) SetHash(h []byte) bool {
 	log.Tracef("TreeNode[%d].SetHash(%s)", te.Number(), hex.EncodeToString(h))
 	if te.flags.has(FHasHash) {
-		if bytes.Compare(h, te.hash[:]) != 0 {
-			return false
-		}
-		return true
+		return bytes.Equal(h, te.hash[:])
 	}
 	copy(te.hash[:], h)
 	te.flags |= FHasHash
@@ -194,10 +191,7 @@ func (te *TreeNode) SetHash(h []byte) bool {
 func (te *TreeNode) SetStart(s uint64) bool {
 	log.Tracef("TreeNode[%d].SetStart(%016x)", te.Number(), s)
 	if te.flags.has(FHasStart) {
-		if s != te.Start() {
-			return false
-		}
-		return true
+		return s == te.Start()
 	}
 	te.start = s
 	te.flags |= FHasStart
@@ -215,10 +209,7 @@ func (te *TreeNode) SetStart(s uint64) bool {
 func (te *TreeNode) SetEnd(s uint64) bool {
 	log.Tracef("TreeNode[%d].SetEnd(%016x)", te.Number(), s)
 	if te.flags.has(FHasEnd) {
-		if s != te.End() {
-			return false
-		}
-		return true
+		return s == te.End()
 	}
 	te.end = s
 	te.flags |= FHasEnd
@@ -238,10 +229,7 @@ func (te *TreeNode) SetEnd(s uint64) bool {
 func (te *TreeNode) SetRange(s uint64) bool {
 	log.Tracef("TreeNode[%d].SetEnd(%016x)", te.Number(), s)
 	if te.flags.has(FHasRange) {
-		if s != te.Range() {
-			return false
-		}
-		return true
+		return s == te.Range()
 	}
 	te.raNge = s
 	te.flags |= FHasRange
@@ -284,7 +272,7 @@ func (te *TreeNode) HasExplicitRange() bool {
 	// * Not a PAD_ENTRY - pad entries have a hardcoded 0 range (ffff - ffff)
 	// * Not a PAD_SIBLING - because we know the start of the next entry (it's hardcoded)
 	//       in practice all PAD_SIBLINGS should be COMPUTABLE but we add this for completeness.
-	return 0 == (te.flags & (FLeaf | FComputable | FPadEntry | FPadSibling))
+	return (te.flags & (FLeaf | FComputable | FPadEntry | FPadSibling)) == 0
 }
 
 // returns a list of bits representing the left and right turns which one makes in the tree

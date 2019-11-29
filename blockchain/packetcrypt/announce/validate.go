@@ -116,7 +116,7 @@ func merkleIsValid(merkleProof []byte, item4Hash *[64]byte, itemNo int) bool {
 		itemNo >>= 1
 		pcutil.HashCompress64(buf[64*(itemNo&1):][:64], buf[:])
 	}
-	return bytes.Compare(buf[64*(itemNo&1):][:64], merkleProof[64*announceMerkleDepth:]) == 0
+	return bytes.Equal(buf[64*(itemNo&1):][:64], merkleProof[64*announceMerkleDepth:])
 }
 
 func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packetCryptVersion int) (*chainhash.Hash, er.R) {
@@ -189,7 +189,7 @@ func CheckAnn(pcAnn *wire.PacketCryptAnn, parentBlockHash *chainhash.Hash, packe
 		if mkItem2(itemNo, ctx.itemBytes[:], ctx.annHash0[32:], &prog) != 0 {
 			return nil, er.New("Validate_checkAnn_BAD_PROGRAM0_EXEC")
 		}
-	} else if bytes.Compare(ctx.itemBytes[:wire.PcItem4PrefixLen], pcAnn.GetItem4Prefix()) != 0 {
+	} else if !bytes.Equal(ctx.itemBytes[:wire.PcItem4PrefixLen], pcAnn.GetItem4Prefix()) {
 		return nil, er.New("Validate_checkAnn_INVAL_ITEM4")
 	}
 	pcutil.HashCompress64(ctx.item4Hash[:], ctx.itemBytes[:])
