@@ -2065,48 +2065,6 @@ func (c *Client) DumpPrivKey(address btcutil.Address) (*btcutil.WIF, er.R) {
 	return c.DumpPrivKeyAsync(address).Receive()
 }
 
-// FutureImportAddressResult is a future promise to deliver the result of an
-// ImportAddressAsync RPC invocation (or an applicable error).
-type FutureImportAddressResult chan *response
-
-// Receive waits for the response promised by the future and returns the result
-// of importing the passed public address.
-func (r FutureImportAddressResult) Receive() er.R {
-	_, err := receiveFuture(r)
-	return err
-}
-
-// ImportAddressAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See ImportAddress for the blocking version and more details.
-func (c *Client) ImportAddressAsync(address string) FutureImportAddressResult {
-	cmd := btcjson.NewImportAddressCmd(address, "", nil)
-	return c.sendCmd(cmd)
-}
-
-// ImportAddress imports the passed public address.
-func (c *Client) ImportAddress(address string) er.R {
-	return c.ImportAddressAsync(address).Receive()
-}
-
-// ImportAddressRescanAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See ImportAddress for the blocking version and more details.
-func (c *Client) ImportAddressRescanAsync(address string, account string, rescan bool) FutureImportAddressResult {
-	cmd := btcjson.NewImportAddressCmd(address, account, &rescan)
-	return c.sendCmd(cmd)
-}
-
-// ImportAddressRescan imports the passed public address. When rescan is true,
-// the block history is scanned for transactions addressed to provided address.
-func (c *Client) ImportAddressRescan(address string, account string, rescan bool) er.R {
-	return c.ImportAddressRescanAsync(address, account, rescan).Receive()
-}
-
 // FutureImportPrivKeyResult is a future promise to deliver the result of an
 // ImportPrivKeyAsync RPC invocation (or an applicable error).
 type FutureImportPrivKeyResult chan *response
