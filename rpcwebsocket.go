@@ -29,7 +29,6 @@ import (
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -254,8 +253,8 @@ type wsClientFilter struct {
 	mu sync.Mutex
 
 	// Implemented fast paths for address lookup.
-	pubKeyHashes        map[[ripemd160.Size]byte]struct{}
-	scriptHashes        map[[ripemd160.Size]byte]struct{}
+	pubKeyHashes        map[[btcutil.Hash160Size]byte]struct{}
+	scriptHashes        map[[btcutil.Hash160Size]byte]struct{}
 	compressedPubKeys   map[[33]byte]struct{}
 	uncompressedPubKeys map[[65]byte]struct{}
 
@@ -274,8 +273,8 @@ type wsClientFilter struct {
 // NOTE: This extension was ported from github.com/decred/dcrd
 func newWSClientFilter(addresses []string, unspentOutPoints []wire.OutPoint, params *chaincfg.Params) *wsClientFilter {
 	filter := &wsClientFilter{
-		pubKeyHashes:        map[[ripemd160.Size]byte]struct{}{},
-		scriptHashes:        map[[ripemd160.Size]byte]struct{}{},
+		pubKeyHashes:        map[[btcutil.Hash160Size]byte]struct{}{},
+		scriptHashes:        map[[btcutil.Hash160Size]byte]struct{}{},
 		compressedPubKeys:   map[[33]byte]struct{}{},
 		uncompressedPubKeys: map[[65]byte]struct{}{},
 		otherAddresses:      map[string]struct{}{},

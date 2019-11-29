@@ -55,7 +55,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "1MirQ9bwyQcGVJPwKUgapu5ouK2E2Ey4gX",
 			valid:   true,
 			result: btcutil.TstAddressPubKeyHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0xe3, 0x4c, 0xce, 0x70, 0xc8, 0x63, 0x73, 0x27, 0x3e, 0xfc,
 					0xc5, 0x4c, 0xe7, 0xd2, 0xa4, 0x91, 0xbb, 0x4a, 0x0e, 0x84},
 				chaincfg.MainNetParams.PubKeyHashAddrID),
@@ -73,7 +73,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "12MzCDwodF9G1e7jfwLXfR164RNtx4BRVG",
 			valid:   true,
 			result: btcutil.TstAddressPubKeyHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0x0e, 0xf0, 0x30, 0x10, 0x7f, 0xd2, 0x6e, 0x0b, 0x6b, 0xf4,
 					0x05, 0x12, 0xbc, 0xa2, 0xce, 0xb1, 0xdd, 0x80, 0xad, 0xaa},
 				chaincfg.MainNetParams.PubKeyHashAddrID),
@@ -91,7 +91,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "LM2WMpR1Rp6j3Sa59cMXMs1SPzj9eXpGc1",
 			valid:   true,
 			result: btcutil.TstAddressPubKeyHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0x13, 0xc6, 0x0d, 0x8e, 0x68, 0xd7, 0x34, 0x9f, 0x5b, 0x4c,
 					0xa3, 0x62, 0xc3, 0x95, 0x4b, 0x15, 0x04, 0x50, 0x61, 0xb1},
 				CustomParams.PubKeyHashAddrID),
@@ -109,7 +109,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "mrX9vMRYLfVy1BnZbc5gZjuyaqH3ZW2ZHz",
 			valid:   true,
 			result: btcutil.TstAddressPubKeyHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0x78, 0xb3, 0x16, 0xa0, 0x86, 0x47, 0xd5, 0xb7, 0x72, 0x83,
 					0xe5, 0x12, 0xd3, 0x60, 0x3f, 0x1f, 0x1c, 0x8d, 0xe6, 0x8f},
 				chaincfg.TestNet3Params.PubKeyHashAddrID),
@@ -153,7 +153,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "3QJmV3qfvL9SuYo34YihAf3sRCW3qSinyC",
 			valid:   true,
 			result: btcutil.TstAddressScriptHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0xf8, 0x15, 0xb0, 0x36, 0xd9, 0xbb, 0xbc, 0xe5, 0xe9, 0xf2,
 					0xa0, 0x0a, 0xbd, 0x1b, 0xf3, 0xdc, 0x91, 0xe9, 0x55, 0x10},
 				chaincfg.MainNetParams.ScriptHashAddrID),
@@ -190,7 +190,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "MVcg9uEvtWuP5N6V48EHfEtbz48qR8TKZ9",
 			valid:   true,
 			result: btcutil.TstAddressScriptHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0xee, 0x34, 0xac, 0x67, 0x6b, 0xda, 0xf6, 0xe3, 0x70, 0xc8,
 					0xc8, 0x20, 0xb9, 0x48, 0xed, 0xfa, 0xd3, 0xa8, 0x73, 0xd8},
 				CustomParams.ScriptHashAddrID),
@@ -211,7 +211,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "3NukJ6fYZJ5Kk8bPjycAnruZkE5Q7UW7i8",
 			valid:   true,
 			result: btcutil.TstAddressScriptHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0xe8, 0xc3, 0x00, 0xc8, 0x79, 0x86, 0xef, 0xa8, 0x4c, 0x37,
 					0xc0, 0x51, 0x99, 0x29, 0x01, 0x9e, 0xf8, 0x6e, 0xb5, 0xb4},
 				chaincfg.MainNetParams.ScriptHashAddrID),
@@ -230,7 +230,7 @@ func TestAddresses(t *testing.T) {
 			encoded: "2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n",
 			valid:   true,
 			result: btcutil.TstAddressScriptHash(
-				[ripemd160.Size]byte{
+				[btcutil.Hash160Size]byte{
 					0xc5, 0x79, 0x34, 0x2c, 0x2c, 0x4c, 0x92, 0x20, 0x20, 0x5e,
 					0x2c, 0xdc, 0x28, 0x56, 0x17, 0x04, 0x0c, 0x92, 0x4a, 0x0a},
 				chaincfg.TestNet3Params.ScriptHashAddrID),

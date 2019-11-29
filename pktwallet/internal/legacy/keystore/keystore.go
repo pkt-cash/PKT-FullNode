@@ -23,8 +23,6 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"golang.org/x/crypto/ripemd160"
-
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -2291,7 +2289,7 @@ func (a *btcAddress) ReadFrom(r io.Reader) (int64, error) {
 	var chkInitVector uint32
 	var chkPrivKey uint32
 	var chkPubKey uint32
-	var pubKeyHash [ripemd160.Size]byte
+	var pubKeyHash [btcutil.Hash160Size]byte
 	var pubKey publicKey
 
 	// Read serialized key store into addr fields and checksums.
@@ -2854,7 +2852,7 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (int64, error) {
 	// Checksums
 	var chkScriptHash uint32
 	var chkScript uint32
-	var scriptHash [ripemd160.Size]byte
+	var scriptHash [btcutil.Hash160Size]byte
 
 	// Read serialized key store into addr fields and checksums.
 	datas := []interface{}{
@@ -3200,7 +3198,7 @@ func (params *kdfParameters) ReadFrom(r io.Reader) (n int64, errr error) {
 }
 
 type addrEntry struct {
-	pubKeyHash160 [ripemd160.Size]byte
+	pubKeyHash160 [btcutil.Hash160Size]byte
 	addr          btcAddress
 }
 
@@ -3241,7 +3239,7 @@ func (e *addrEntry) ReadFrom(r io.Reader) (int64, error) {
 
 // scriptEntry is the entry type for a P2SH script.
 type scriptEntry struct {
-	scriptHash160 [ripemd160.Size]byte
+	scriptHash160 [btcutil.Hash160Size]byte
 	script        scriptAddress
 }
 

@@ -16,7 +16,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/base58"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"golang.org/x/crypto/ripemd160"
 )
 
 // UnsupportedWitnessVerError describes an error where a segwit address being
@@ -62,7 +61,7 @@ var (
 func encodeAddress(hash160 []byte, netID byte) string {
 	// Format is 1 byte for a network and address class (i.e. P2PKH vs
 	// P2SH), 20 bytes for a RIPEMD160 hash, and 4 bytes of checksum.
-	return base58.CheckEncode(hash160[:ripemd160.Size], netID)
+	return base58.CheckEncode(hash160[:Hash160Size], netID)
 }
 
 // encodeSegWitAddress creates a bech32 encoded address string representation
@@ -188,7 +187,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
 		return nil, er.New("decoded address is of unknown format")
 	}
 	switch len(decoded) {
-	case ripemd160.Size: // P2PKH or P2SH
+	case Hash160Size: // P2PKH or P2SH
 		isP2PKH := netID == defaultNet.PubKeyHashAddrID
 		isP2SH := netID == defaultNet.ScriptHashAddrID
 		switch hash160 := decoded; {
@@ -253,7 +252,7 @@ func decodeSegWitAddress(address string) (byte, []byte, er.R) {
 // AddressPubKeyHash is an Address for a pay-to-pubkey-hash (P2PKH)
 // transaction.
 type AddressPubKeyHash struct {
-	hash  [ripemd160.Size]byte
+	hash  [Hash160Size]byte
 	netID byte
 }
 
@@ -270,7 +269,7 @@ func NewAddressPubKeyHash(pkHash []byte, net *chaincfg.Params) (*AddressPubKeyHa
 // known.
 func newAddressPubKeyHash(pkHash []byte, netID byte) (*AddressPubKeyHash, er.R) {
 	// Check for a valid pubkey hash length.
-	if len(pkHash) != ripemd160.Size {
+	if len(pkHash) != Hash160Size {
 		return nil, er.New("pkHash must be 20 bytes")
 	}
 
@@ -307,14 +306,14 @@ func (a *AddressPubKeyHash) String() string {
 // Hash160 returns the underlying array of the pubkey hash.  This can be useful
 // when an array is more appropiate than a slice (for example, when used as map
 // keys).
-func (a *AddressPubKeyHash) Hash160() *[ripemd160.Size]byte {
+func (a *AddressPubKeyHash) Hash160() *[Hash160Size]byte {
 	return &a.hash
 }
 
 // AddressScriptHash is an Address for a pay-to-script-hash (P2SH)
 // transaction.
 type AddressScriptHash struct {
-	hash  [ripemd160.Size]byte
+	hash  [Hash160Size]byte
 	netID byte
 }
 
@@ -337,7 +336,7 @@ func NewAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*Add
 // known.
 func newAddressScriptHashFromHash(scriptHash []byte, netID byte) (*AddressScriptHash, er.R) {
 	// Check for a valid script hash length.
-	if len(scriptHash) != ripemd160.Size {
+	if len(scriptHash) != Hash160Size {
 		return nil, er.New("scriptHash must be 20 bytes")
 	}
 
@@ -374,7 +373,7 @@ func (a *AddressScriptHash) String() string {
 // Hash160 returns the underlying array of the script hash.  This can be useful
 // when an array is more appropiate than a slice (for example, when used as map
 // keys).
-func (a *AddressScriptHash) Hash160() *[ripemd160.Size]byte {
+func (a *AddressScriptHash) Hash160() *[Hash160Size]byte {
 	return &a.hash
 }
 

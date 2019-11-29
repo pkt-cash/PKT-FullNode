@@ -15,7 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/base58"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
-	"golang.org/x/crypto/ripemd160"
 )
 
 // SetBlockBytes sets the internal serialized block byte buffer to the passed
@@ -33,7 +32,7 @@ func TstAppDataDir(goos, appName string, roaming bool) string {
 
 // TstAddressPubKeyHash makes an AddressPubKeyHash, setting the
 // unexported fields with the parameters hash and netID.
-func TstAddressPubKeyHash(hash [ripemd160.Size]byte,
+func TstAddressPubKeyHash(hash [Hash160Size]byte,
 	netID byte) *AddressPubKeyHash {
 
 	return &AddressPubKeyHash{
@@ -44,7 +43,7 @@ func TstAddressPubKeyHash(hash [ripemd160.Size]byte,
 
 // TstAddressScriptHash makes an AddressScriptHash, setting the
 // unexported fields with the parameters hash and netID.
-func TstAddressScriptHash(hash [ripemd160.Size]byte,
+func TstAddressScriptHash(hash [Hash160Size]byte,
 	netID byte) *AddressScriptHash {
 
 	return &AddressScriptHash{
@@ -94,7 +93,7 @@ func TstAddressPubKey(serializedPubKey []byte, pubKeyFormat PubKeyFormat,
 // P2PKH and P2SH bitcoin addresses.
 func TstAddressSAddr(addr string) []byte {
 	decoded := base58.Decode(addr)
-	return decoded[1 : 1+ripemd160.Size]
+	return decoded[1 : 1+Hash160Size]
 }
 
 // TstAddressSegwitSAddr returns the expected witness program bytes for

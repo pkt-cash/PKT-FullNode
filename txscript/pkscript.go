@@ -10,7 +10,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
-	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -192,7 +191,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 		// a P2PKH redeem script.
 		pubKey := sigScript[len(sigScript)-compressedPubKeyLen:]
 		if btcec.IsCompressedPubKey(pubKey) {
-			pubKeyHash := hash160(pubKey)
+			pubKeyHash := btcutil.Hash160(pubKey)
 			script, err := payToPubKeyHashScript(pubKeyHash)
 			if err != nil {
 				return PkScript{}, err
@@ -218,7 +217,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 		}
 		redeemScript := parsedOpcodes[len(parsedOpcodes)-1].data
 
-		scriptHash := hash160(redeemScript)
+		scriptHash := btcutil.Hash160(redeemScript)
 		script, err := payToScriptHashScript(scriptHash)
 		if err != nil {
 			return PkScript{}, err
@@ -242,7 +241,7 @@ func computeWitnessPkScript(witness wire.TxWitness) (PkScript, er.R) {
 	// If the witness stack has a size of 2 and its last item is a
 	// compressed public key, then this is a P2WPKH witness.
 	case len(witness) == 2 && len(lastWitnessItem) == compressedPubKeyLen:
-		pubKeyHash := hash160(lastWitnessItem)
+		pubKeyHash := btcutil.Hash160(lastWitnessItem)
 		script, err := payToWitnessPubKeyHashScript(pubKeyHash)
 		if err != nil {
 			return pkScript, err
@@ -264,17 +263,4 @@ func computeWitnessPkScript(witness wire.TxWitness) (PkScript, er.R) {
 	}
 
 	return pkScript, nil
-}
-
-// hash160 returns the RIPEMD160 hash of the SHA-256 HASH of the given data.
-func hash160(data []byte) []byte {
-	h := sha256.Sum256(data)
-	return ripemd160h(h[:])
-}
-
-// ripemd160h returns the RIPEMD160 hash of the given data.
-func ripemd160h(data []byte) []byte {
-	h := ripemd160.New()
-	h.Write(data)
-	return h.Sum(nil)
 }

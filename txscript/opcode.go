@@ -11,11 +11,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"hash"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
-
-	"golang.org/x/crypto/ripemd160"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -1941,12 +1939,6 @@ func opcodeWithin(op *parsedOpcode, vm *Engine) er.R {
 	return nil
 }
 
-// calcHash calculates the hash of hasher over buf.
-func calcHash(buf []byte, hasher hash.Hash) []byte {
-	hasher.Write(buf)
-	return hasher.Sum(nil)
-}
-
 // opcodeRipemd160 treats the top item of the data stack as raw bytes and
 // replaces it with ripemd160(data).
 //
@@ -1957,7 +1949,7 @@ func opcodeRipemd160(op *parsedOpcode, vm *Engine) er.R {
 		return err
 	}
 
-	vm.dstack.PushByteArray(calcHash(buf, ripemd160.New()))
+	vm.dstack.PushByteArray(btcutil.Ripemd160(buf))
 	return nil
 }
 
@@ -2001,8 +1993,7 @@ func opcodeHash160(op *parsedOpcode, vm *Engine) er.R {
 		return err
 	}
 
-	hash := sha256.Sum256(buf)
-	vm.dstack.PushByteArray(calcHash(hash[:], ripemd160.New()))
+	vm.dstack.PushByteArray(btcutil.Hash160(buf))
 	return nil
 }
 
