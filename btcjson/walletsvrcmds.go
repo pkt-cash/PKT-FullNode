@@ -101,19 +101,6 @@ func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
 	}
 }
 
-// EstimatePriorityCmd defines the estimatepriority JSON-RPC command.
-type EstimatePriorityCmd struct {
-	NumBlocks int64
-}
-
-// NewEstimatePriorityCmd returns a new instance which can be used to issue a
-// estimatepriority JSON-RPC command.
-func NewEstimatePriorityCmd(numBlocks int64) *EstimatePriorityCmd {
-	return &EstimatePriorityCmd{
-		NumBlocks: numBlocks,
-	}
-}
-
 // GetAccountCmd defines the getaccount JSON-RPC command.
 type GetAccountCmd struct {
 	Address string
@@ -705,7 +692,6 @@ func init() {
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("encryptwallet", (*EncryptWalletCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
-	MustRegisterCmd("estimatepriority", (*EstimatePriorityCmd)(nil), flags)
 	MustRegisterCmd("getaccount", (*GetAccountCmd)(nil), flags)
 	MustRegisterCmd("getaccountaddress", (*GetAccountAddressCmd)(nil), flags)
 	MustRegisterCmd("getaddressesbyaccount", (*GetAddressesByAccountCmd)(nil), flags)

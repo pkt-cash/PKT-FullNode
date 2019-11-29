@@ -219,14 +219,13 @@ var rpcAskWallet = map[string]struct{}{
 
 // Commands that are currently unimplemented, but should ultimately be.
 var rpcUnimplemented = map[string]struct{}{
-	"estimatepriority": {},
-	"getchaintips":     {},
-	"getmempoolentry":  {},
-	"getnetworkinfo":   {},
-	"getwork":          {},
-	"invalidateblock":  {},
-	"preciousblock":    {},
-	"reconsiderblock":  {},
+	"getchaintips":    {},
+	"getmempoolentry": {},
+	"getnetworkinfo":  {},
+	"getwork":         {},
+	"invalidateblock": {},
+	"preciousblock":   {},
+	"reconsiderblock": {},
 }
 
 // Commands that are available to a limited user
