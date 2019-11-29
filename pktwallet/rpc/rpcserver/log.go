@@ -25,6 +25,7 @@ import (
 
 // UseLogger sets the logger to use for the gRPC server.
 func UseLogger(l btclog.Logger) {
+	//lint:ignore SA1019 deprecated but we're not going to upgrade to a new logger today
 	grpclog.SetLogger(logger{l})
 }
 

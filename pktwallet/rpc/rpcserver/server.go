@@ -25,6 +25,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
@@ -54,11 +55,11 @@ const (
 // recognized errors.
 //
 // This function is by no means complete and should be expanded based on other
-// known errors.  Any RPC handler not returning a gRPC error (with grpc.Errorf)
+// known errors.  Any RPC handler not returning a gRPC error (with status.Errorf)
 // should return this result instead.
 func translateError(err er.R) error {
 	code := errorCode(err)
-	return grpc.Errorf(code, "%s", err.String())
+	return status.Errorf(code, "%s", err.String())
 }
 
 func errorCode(err er.R) codes.Code {
@@ -203,7 +204,7 @@ func (s *walletServer) NextAccount(ctx context.Context, req *pb.NextAccountReque
 	defer zero.Bytes(req.Passphrase)
 
 	if req.AccountName == "" {
-		return nil, grpc.Errorf(codes.InvalidArgument, "account name may not be empty")
+		return nil, status.Errorf(codes.InvalidArgument, "account name may not be empty")
 	}
 
 	lock := make(chan time.Time, 1)
@@ -236,7 +237,7 @@ func (s *walletServer) NextAddress(ctx context.Context, req *pb.NextAddressReque
 	case pb.NextAddressRequest_BIP0044_INTERNAL:
 		addr, err = s.wallet.NewChangeAddress(req.Account, waddrmgr.KeyScopeBIP0044)
 	default:
-		return nil, grpc.Errorf(codes.InvalidArgument, "kind=%v", req.Kind)
+		return nil, status.Errorf(codes.InvalidArgument, "kind=%v", req.Kind)
 	}
 	if err != nil {
 		return nil, translateError(err)
@@ -252,7 +253,7 @@ func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPriva
 
 	wif, err := btcutil.DecodeWIF(req.PrivateKeyWif)
 	if err != nil {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"Invalid WIF-encoded private key: %v", err)
 	}
 
@@ -268,7 +269,7 @@ func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPriva
 	// At the moment, only the special-cased import account can be used to
 	// import keys.
 	if req.Account != waddrmgr.ImportedAddrAccount {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"Only the imported account accepts private key imports")
 	}
 
@@ -367,12 +368,12 @@ func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransacti
 
 	var startBlock, endBlock *wallet.BlockIdentifier
 	if req.StartingBlockHash != nil && req.StartingBlockHeight != 0 {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"starting block hash and height may not be specified simultaneously")
 	} else if req.StartingBlockHash != nil {
 		startBlockHash, err := chainhash.NewHash(req.StartingBlockHash)
 		if err != nil {
-			return nil, grpc.Errorf(codes.InvalidArgument, "%s", err.String())
+			return nil, status.Errorf(codes.InvalidArgument, "%s", err.String())
 		}
 		startBlock = wallet.NewBlockIdentifierFromHash(startBlockHash)
 	} else if req.StartingBlockHeight != 0 {
@@ -380,12 +381,12 @@ func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransacti
 	}
 
 	if req.EndingBlockHash != nil && req.EndingBlockHeight != 0 {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"ending block hash and height may not be specified simultaneously")
 	} else if req.EndingBlockHash != nil {
 		endBlockHash, err := chainhash.NewHash(req.EndingBlockHash)
 		if err != nil {
-			return nil, grpc.Errorf(codes.InvalidArgument, "%s", err.String())
+			return nil, status.Errorf(codes.InvalidArgument, "%s", err.String())
 		}
 		endBlock = wallet.NewBlockIdentifierFromHash(endBlockHash)
 	} else if req.EndingBlockHeight != 0 {
@@ -395,13 +396,13 @@ func (s *walletServer) GetTransactions(ctx context.Context, req *pb.GetTransacti
 	var minRecentTxs int
 	if req.MinimumRecentTransactions != 0 {
 		if endBlock != nil {
-			return nil, grpc.Errorf(codes.InvalidArgument,
+			return nil, status.Errorf(codes.InvalidArgument,
 				"ending block and minimum number of recent transactions "+
 					"may not be specified simultaneously")
 		}
 		minRecentTxs = int(req.MinimumRecentTransactions)
 		if minRecentTxs < 0 {
-			return nil, grpc.Errorf(codes.InvalidArgument,
+			return nil, status.Errorf(codes.InvalidArgument,
 				"minimum number of recent transactions may not be negative")
 		}
 	}
@@ -430,7 +431,7 @@ func (s *walletServer) ChangePassphrase(ctx context.Context, req *pb.ChangePassp
 	case pb.ChangePassphraseRequest_PUBLIC:
 		err = s.wallet.ChangePublicPassphrase(req.OldPassphrase, req.NewPassphrase)
 	default:
-		return nil, grpc.Errorf(codes.InvalidArgument, "Unknown key type (%d)", req.Key)
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown key type (%d)", req.Key)
 	}
 	if err != nil {
 		return nil, translateError(err)
@@ -448,7 +449,7 @@ func (s *walletServer) SignTransaction(ctx context.Context, req *pb.SignTransact
 	var tx wire.MsgTx
 	err := tx.Deserialize(bytes.NewReader(req.SerializedTransaction))
 	if err != nil {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"Bytes do not represent a valid raw transaction: %v", err)
 	}
 
@@ -498,7 +499,7 @@ func (s *walletServer) PublishTransaction(ctx context.Context, req *pb.PublishTr
 	var msgTx wire.MsgTx
 	err := msgTx.Deserialize(bytes.NewReader(req.SignedTransaction))
 	if err != nil {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"Bytes do not represent a valid raw transaction: %v", err)
 	}
 
@@ -605,7 +606,7 @@ func (s *walletServer) SpentnessNotifications(req *pb.SpentnessNotificationsRequ
 	svr pb.WalletService_SpentnessNotificationsServer) error {
 
 	if req.NoNotifyUnspent && req.NoNotifySpent {
-		return grpc.Errorf(codes.InvalidArgument,
+		return status.Errorf(codes.InvalidArgument,
 			"no_notify_unspent and no_notify_spent may not both be true")
 	}
 
@@ -747,7 +748,7 @@ func (s *loaderServer) CloseWallet(ctx context.Context, req *pb.CloseWalletReque
 
 	err := s.loader.UnloadWallet()
 	if wallet.ErrNotLoaded.Is(err) {
-		return nil, grpc.Errorf(codes.FailedPrecondition, "wallet is not loaded")
+		return nil, status.Errorf(codes.FailedPrecondition, "wallet is not loaded")
 	}
 	if err != nil {
 		return nil, translateError(err)
@@ -765,20 +766,20 @@ func (s *loaderServer) StartConsensusRpc(ctx context.Context, req *pb.StartConse
 	s.mu.Lock()
 
 	if s.rpcClient != nil {
-		return nil, grpc.Errorf(codes.FailedPrecondition, "RPC client already created")
+		return nil, status.Errorf(codes.FailedPrecondition, "RPC client already created")
 	}
 
 	networkAddress, err := cfgutil.NormalizeAddress(req.NetworkAddress,
 		s.activeNet.RPCClientPort)
 	if err != nil {
-		return nil, grpc.Errorf(codes.InvalidArgument,
+		return nil, status.Errorf(codes.InvalidArgument,
 			"Network address is ill-formed: %v", err)
 	}
 
 	// Error if the wallet is already syncing with the network.
 	wallet, walletLoaded := s.loader.LoadedWallet()
 	if walletLoaded && wallet.SynchronizingToNetwork() {
-		return nil, grpc.Errorf(codes.FailedPrecondition,
+		return nil, status.Errorf(codes.FailedPrecondition,
 			"wallet is loaded and already synchronizing")
 	}
 
@@ -791,10 +792,10 @@ func (s *loaderServer) StartConsensusRpc(ctx context.Context, req *pb.StartConse
 	err = rpcClient.Start()
 	if err != nil {
 		if rpcclient.ErrInvalidAuth.Is(err) {
-			return nil, grpc.Errorf(codes.InvalidArgument,
+			return nil, status.Errorf(codes.InvalidArgument,
 				"Invalid RPC credentials: %v", err)
 		}
-		return nil, grpc.Errorf(codes.NotFound,
+		return nil, status.Errorf(codes.NotFound,
 			"Connection to RPC server failed: %v", err)
 	}
 
