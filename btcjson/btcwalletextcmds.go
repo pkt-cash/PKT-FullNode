@@ -33,21 +33,6 @@ func NewDumpWalletCmd(filename string) *DumpWalletCmd {
 	}
 }
 
-// ImportPubKeyCmd defines the importpubkey JSON-RPC command.
-type ImportPubKeyCmd struct {
-	PubKey string
-	Rescan *bool `jsonrpcdefault:"true"`
-}
-
-// NewImportPubKeyCmd returns a new instance which can be used to issue an
-// importpubkey JSON-RPC command.
-func NewImportPubKeyCmd(pubKey string, rescan *bool) *ImportPubKeyCmd {
-	return &ImportPubKeyCmd{
-		PubKey: pubKey,
-		Rescan: rescan,
-	}
-}
-
 // ImportWalletCmd defines the importwallet JSON-RPC command.
 type ImportWalletCmd struct {
 	Filename string
@@ -82,7 +67,6 @@ func init() {
 
 	MustRegisterCmd("createnewaccount", (*CreateNewAccountCmd)(nil), flags)
 	MustRegisterCmd("dumpwallet", (*DumpWalletCmd)(nil), flags)
-	MustRegisterCmd("importpubkey", (*ImportPubKeyCmd)(nil), flags)
 	MustRegisterCmd("importwallet", (*ImportWalletCmd)(nil), flags)
 	MustRegisterCmd("renameaccount", (*RenameAccountCmd)(nil), flags)
 }
