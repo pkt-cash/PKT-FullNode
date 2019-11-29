@@ -19,7 +19,6 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/mining/cpuminer"
@@ -78,7 +77,6 @@ var (
 func init() {
 	addrmgr.UseLogger(amgrLog)
 	connmgr.UseLogger(cmgrLog)
-	database.UseLogger(bcdbLog)
 	blockchain.UseLogger(chanLog)
 	indexers.UseLogger(indxLog)
 	mining.UseLogger(minrLog)

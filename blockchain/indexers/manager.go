@@ -5,7 +5,6 @@
 package indexers
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -14,7 +13,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -463,34 +461,6 @@ func indexNeedsInputs(index Indexer) bool {
 	}
 
 	return false
-}
-
-// dbFetchTx looks up the passed transaction hash in the transaction index and
-// loads it from the database.
-func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, er.R) {
-	// Look up the location of the transaction.
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
-	if err != nil {
-		return nil, err
-	}
-	if blockRegion == nil {
-		return nil, er.Errorf("transaction %v not found", hash)
-	}
-
-	// Load the raw transaction bytes from the database.
-	txBytes, err := dbTx.FetchBlockRegion(blockRegion)
-	if err != nil {
-		return nil, err
-	}
-
-	// Deserialize the transaction.
-	var msgTx wire.MsgTx
-	err = msgTx.Deserialize(bytes.NewReader(txBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	return &msgTx, nil
 }
 
 // ConnectBlock must be invoked when a block is extending the main chain.  It

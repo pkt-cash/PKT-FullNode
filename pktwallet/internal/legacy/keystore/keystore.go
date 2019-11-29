@@ -37,10 +37,6 @@ const (
 
 	// Length in bytes of KDF output.
 	kdfOutputBytes = 32
-
-	// Maximum length in bytes of a comment that can have a size represented
-	// as a uint16.
-	maxCommentLen = (1 << 16) - 1
 )
 
 const (
