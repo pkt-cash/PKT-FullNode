@@ -117,7 +117,6 @@ var rpcHandlers = map[string]struct {
 	// Reference implementation methods (still unimplemented)
 	"backupwallet":         {handler: unimplemented, noHelp: true},
 	"dumpwallet":           {handler: unimplemented, noHelp: true},
-	"getwalletinfo":        {handler: unimplemented, noHelp: true},
 	"importwallet":         {handler: unimplemented, noHelp: true},
 	"listaddressgroupings": {handler: unimplemented, noHelp: true},
 

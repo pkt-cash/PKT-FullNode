@@ -191,7 +191,6 @@ var rpcAskWallet = map[string]struct{}{
 	"gettransaction":         {},
 	"gettxoutsetinfo":        {},
 	"getunconfirmedbalance":  {},
-	"getwalletinfo":          {},
 	"importprivkey":          {},
 	"importwallet":           {},
 	"keypoolrefill":          {},
