@@ -1720,6 +1720,9 @@ func (b *blockManager) getCFHeadersForAllPeers(height uint32,
 	// or at the end of the maximum-size response message, whichever is
 	// larger.
 	stopHeader, stopHeight, err := b.server.BlockHeaders.ChainTip()
+	if err != nil {
+		return nil, 0
+	}
 	if stopHeight-height >= wire.MaxCFHeadersPerMsg {
 		stopHeader, err = b.server.BlockHeaders.FetchHeaderByHeight(
 			height + wire.MaxCFHeadersPerMsg - 1,

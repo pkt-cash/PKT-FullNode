@@ -1474,7 +1474,7 @@ func (s *ScopedKeyManager) RenameAccount(ns walletdb.ReadWriteBucket,
 	row, ok := rowInterface.(*dbDefaultAccountRow)
 	if !ok {
 		str := fmt.Sprintf("unsupported account type %T", row)
-		err = managerError(ErrDatabase, str, nil)
+		return managerError(ErrDatabase, str, nil)
 	}
 
 	// Remove the old name key from the account id index.

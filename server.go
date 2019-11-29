@@ -2475,7 +2475,12 @@ out:
 					s.services)
 				err = s.addrManager.AddLocalAddress(na, addrmgr.UpnpPrio)
 				if err != nil {
-					// XXX DeletePortMapping?
+					srvrLog.Warnf("UPnP AddLocalAddress() failed %v", err)
+					err = s.nat.DeletePortMapping("tcp", int(lport), int(lport))
+					if err != nil {
+						srvrLog.Warnf("UPnP DeletePortMapping() failed %v", err)
+					}
+					continue
 				}
 				srvrLog.Warnf("Successfully bound via UPnP to %s", addrmgr.NetAddressKey(na))
 				first = false
