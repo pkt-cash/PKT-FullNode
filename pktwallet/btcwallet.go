@@ -20,7 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
-	libwalletdb "github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 var (
@@ -159,10 +159,10 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 		if cfg.UseSPV {
 			var (
 				chainService *neutrino.ChainService
-				spvdb        libwalletdb.DB
+				spvdb        walletdb.DB
 			)
 			netDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-			spvdb, err = libwalletdb.Create("bdb",
+			spvdb, err = walletdb.Create("bdb",
 				filepath.Join(netDir, "neutrino.db"))
 			defer spvdb.Close()
 			if err != nil {
