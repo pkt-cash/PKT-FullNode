@@ -432,9 +432,6 @@ func payToPubKeyScriptBuilder(serializedPubKey []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddData(serializedPubKey).
 		AddOp(OP_CHECKSIG)
 }
-func payToPubKeyScript(serializedPubKey []byte) ([]byte, er.R) {
-	return payToPubKeyScriptBuilder(serializedPubKey).Script()
-}
 
 // appendVote adds a vote to the end of a ScriptBuilder if a voteFor and/or voteAgainst
 // is specified. If neither is specified then it will not alter the ScriptBuilder at

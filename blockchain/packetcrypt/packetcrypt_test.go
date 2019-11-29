@@ -22,8 +22,6 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-const NumberOfTx int = 4
-
 func div16Ceil(x int) int {
 	l := x / 16
 	if l*16 < x {
