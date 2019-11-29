@@ -860,7 +860,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, er.R) {
 		}
 	}
 
-	sort.Sort(sort.StringSlice(usageTexts))
+	sort.Strings(usageTexts)
 	c.usage = strings.Join(usageTexts, "\n")
 	return c.usage, nil
 }

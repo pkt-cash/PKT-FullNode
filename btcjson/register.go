@@ -7,12 +7,13 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // UsageFlag define flags that specify additional properties about the
@@ -288,6 +289,6 @@ func RegisteredCmdMethods() []string {
 		methods = append(methods, k)
 	}
 
-	sort.Sort(sort.StringSlice(methods))
+	sort.Strings(methods)
 	return methods
 }
