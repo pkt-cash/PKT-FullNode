@@ -47,8 +47,6 @@ const (
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
 
-	walletDbWatchingOnlyName = "wowallet.db"
-
 	// recoveryBatchSize is the default number of blocks that will be
 	// scanned successively by the recovery manager, in the event that the
 	// wallet is started in recovery mode.
@@ -112,11 +110,6 @@ type Wallet struct {
 	lockState          chan bool
 	changePassphrase   chan changePassphraseRequest
 	changePassphrases  chan changePassphrasesRequest
-
-	// Information for reorganization handling.
-	reorganizingLock sync.Mutex
-	reorganizeToHash chainhash.Hash
-	reorganizing     bool
 
 	NtfnServer *NotificationServer
 
@@ -1460,26 +1453,6 @@ func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
 	return <-err
 }
 
-// accountUsed returns whether there are any recorded transactions spending to
-// a given account. It returns true if atleast one address in the account was
-// used and false if no address in the account was used.
-func (w *Wallet) accountUsed(addrmgrNs walletdb.ReadWriteBucket, account uint32) (bool, er.R) {
-	var used bool
-	breakOut := er.New("not a real error")
-	err := w.Manager.ForEachAccountAddress(addrmgrNs, account,
-		func(maddr waddrmgr.ManagedAddress) er.R {
-			used = maddr.Used(addrmgrNs)
-			if used {
-				return breakOut
-			}
-			return nil
-		})
-	if err == breakOut {
-		err = nil
-	}
-	return used, err
-}
-
 // AccountAddresses returns the addresses for every created address for an
 // account.
 func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err er.R) {
@@ -1785,8 +1758,6 @@ func (w *Wallet) RenameAccount(scope waddrmgr.KeyScope, account uint32, newName 
 	}
 	return err
 }
-
-const maxEmptyAccounts = 100
 
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed

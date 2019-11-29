@@ -66,7 +66,6 @@ func realMain() er.R {
 	log = backendLogger.Logger("MAIN")
 	dbLog := backendLogger.Logger("BCDB")
 	dbLog.SetLevel(btclog.LevelDebug)
-	database.UseLogger(dbLog)
 
 	// Setup the parser options and commands.
 	appName := filepath.Base(os.Args[0])
