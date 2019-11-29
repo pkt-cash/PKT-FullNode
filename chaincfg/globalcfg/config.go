@@ -35,7 +35,7 @@ type Config struct {
 	HasNetworkSteward    bool
 	MaxUnits             int64
 	UnitsPerCoin         int64
-	MaxTimeOffsetSeconds time.Duration
+	MaxTimeOffset        time.Duration
 	MedianTimeBlocks     int
 	Amounts              []CoinAmount
 }
@@ -50,7 +50,7 @@ func BitcoinDefaults() Config {
 		HasNetworkSteward:    false,
 		MaxUnits:             21e6 * 1e8,
 		UnitsPerCoin:         1e8,
-		MaxTimeOffsetSeconds: 2 * 60 * 60,
+		MaxTimeOffset:        2 * 60 * 60,
 		MedianTimeBlocks:     11,
 		Amounts: []CoinAmount{
 			{Name: "BTC", Units: 1e8, Zeros: 8},
@@ -88,7 +88,7 @@ func PktDefaults() Config {
 		MedianTimeBlocks: 111,
 
 		// 1/10th that of bitcoin, because blocks come at a 10x rate
-		MaxTimeOffsetSeconds: 60 * 12,
+		MaxTimeOffset: 60 * 12,
 	}
 }
 
@@ -107,11 +107,11 @@ func checkRegistered() {
 	}
 }
 
-// GetMaxTimeOffsetSeconds is the maximum number of seconds a block time
+// GetMaxTimeOffset is the maximum number of seconds a block time
 // is allowed to be ahead of the current time.
-func GetMaxTimeOffsetSeconds() time.Duration {
+func GetMaxTimeOffset() time.Duration {
 	checkRegistered()
-	return gConf.MaxTimeOffsetSeconds
+	return gConf.MaxTimeOffset
 }
 
 // GetMedianTimeBlocks provides the number of previous blocks which should be

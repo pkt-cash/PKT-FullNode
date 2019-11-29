@@ -1655,7 +1655,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	msgBlock := template.Block
 	header := &msgBlock.Header
 	adjustedTime := state.timeSource.AdjustedTime()
-	maxTime := adjustedTime.Add(time.Second * globalcfg.GetMaxTimeOffsetSeconds())
+	maxTime := adjustedTime.Add(time.Second * globalcfg.GetMaxTimeOffset())
 	if header.Timestamp.After(maxTime) {
 		return nil, btcjson.NewRPCError(
 			btcjson.ErrRPCOutOfRange,
