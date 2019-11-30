@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -268,6 +269,14 @@ func generateResponses(msgs []wire.Message,
 // a partial interval is already written to the store.
 func TestBlockManagerInitialInterval(t *testing.T) {
 	t.Parallel()
+	var wg sync.WaitGroup
+	failed := int32(0)
+	defer func() {
+		wg.Wait()
+		if failed != 0 {
+			t.Fail()
+		}
+	}()
 
 	type testCase struct {
 		// permute indicates whether responses should be permutated.
@@ -400,8 +409,6 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 		if test.partialInterval {
 			startHeight = wire.CFCheckptInterval / 3
 		}
-		failed := int32(0)
-		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -436,11 +443,6 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 			t.Fatalf("expected tip to be %v, was %v",
 				lastCheckpoint, tip)
 		}
-
-		wg.Wait()
-		if failed != 0 {
-			t.Fail()
-		}
 	}
 }
 
@@ -448,8 +450,19 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 // determine it is receiving corrupt checkpoints and filter headers.
 func TestBlockManagerInvalidInterval(t *testing.T) {
 	t.Parallel()
+	var wg sync.WaitGroup
+	failed := int32(0)
+	defer func() {
+		wg.Wait()
+		if failed != 0 {
+			t.Fail()
+		}
+	}()
 
 	type testCase struct {
+		name      string
+		maxHeight uint32
+
 		// wrongGenesis indicates whether we should start deriving the
 		// filters from a wrong genesis.
 		wrongGenesis bool
@@ -477,39 +490,49 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		// the wrong genesis, the block manager should be able to
 		// determine that the first interval doesn't line up.
 		{
+			name:         "first interval doesn't line up",
 			wrongGenesis: true,
 			firstInvalid: 0,
+			maxHeight:    1,
 		},
 
 		// With checkpoints calculated from the wrong genesis, and a
 		// partial set of filter headers already written, the first
 		// interval should be considered invalid.
 		{
+			name:            "partial set of filter headers already written",
 			wrongGenesis:    true,
 			partialInterval: true,
 			firstInvalid:    0,
+			maxHeight:       333,
 		},
 
 		// With intervals not lining up, the second interval should
 		// be determined invalid.
 		{
+			name:               "intervals not lining up",
 			intervalMisaligned: true,
 			firstInvalid:       1,
+			maxHeight:          1001,
 		},
 
 		// With misaligned intervals and a partial interval written, the
 		// second interval should be considered invalid.
 		{
+			name:               "misaligned intervals and a partial interval written",
 			intervalMisaligned: true,
 			partialInterval:    true,
 			firstInvalid:       1,
+			maxHeight:          1001,
 		},
 
 		// With responses having invalid prev hashes, the second
 		// interval should be deemed invalid.
 		{
+			name:            "responses having invalid prev hashes",
 			invalidPrevHash: true,
 			firstInvalid:    1,
+			maxHeight:       1001,
 		},
 	}
 
@@ -643,15 +666,31 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		if test.partialInterval {
 			startHeight = wire.CFCheckptInterval / 3
 		}
-		failed := int32(0)
-		var wg sync.WaitGroup
+		// Not all of the block Ntfns ever get received, so this test asserts that
+		// the number given in the test case is what is in fact received and it waits
+		// 1/2 second without receiving another one and then it will exit.
+		// If ever an ntfn is blocked up for 1/2 second then this will spuriously fail
+		// but given this is a unit test in a controlled environment, I find that
+		// highly unlikely.
 		wg.Add(1)
 		go func() {
-			for i := startHeight; i <= maxHeight; i++ {
-				ntfn := <-bm.blockNtfnChan
-				if _, ok := ntfn.(*blockntfns.Connected); !ok {
-					atomic.StoreInt32(&failed, 1)
-					fmt.Println("expected block connected notification")
+			t := test
+			defer wg.Done()
+			var ntfn blockntfns.BlockNtfn
+			for i := startHeight; i <= t.maxHeight; i++ {
+				select {
+				case ntfn = <-bm.blockNtfnChan:
+					if _, ok := ntfn.(*blockntfns.Connected); !ok {
+						atomic.StoreInt32(&failed, 1)
+						fmt.Println("expected block connected notification")
+					}
+				case <-time.After(500 * time.Millisecond):
+					if i != t.maxHeight {
+						atomic.StoreInt32(&failed, 1)
+						fmt.Printf("Error in test: %s, stopped receiving BlockNtfns after %d, not %d\n",
+							t.name, i, t.maxHeight)
+					}
+					return
 				}
 			}
 		}()
@@ -661,11 +700,6 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		bm.getCheckpointedCFHeaders(
 			headers.checkpoints, cfStore, wire.GCSFilterRegular,
 		)
-
-		wg.Wait()
-		if failed != 0 {
-			t.Fail()
-		}
 	}
 }
 
