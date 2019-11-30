@@ -187,8 +187,16 @@ func (te typedErr) Wrapped0() error {
 	return te.err.Wrapped0()
 }
 
+type typedErrAsNative struct {
+	e typedErr
+}
+
+func (ten typedErrAsNative) Error() string {
+	return ten.e.String()
+}
+
 func (te typedErr) Native() error {
-	return errors.New(te.String())
+	return typedErrAsNative{e: te}
 }
 
 //////
@@ -307,6 +315,9 @@ func E(e error) R {
 		return nil
 	}
 	if en, ok := e.(errAsNative); ok {
+		return en.e
+	}
+	if en, ok := e.(typedErrAsNative); ok {
 		return en.e
 	}
 	return err{
