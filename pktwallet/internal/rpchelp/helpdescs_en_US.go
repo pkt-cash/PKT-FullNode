@@ -118,6 +118,7 @@ var helpDescsEnUS = map[string]string{
 	// GetNewAddressCmd help.
 	"getnewaddress--synopsis": "Generates and returns a new payment address.",
 	"getnewaddress-account":   "DEPRECATED -- Account name the new address will belong to (default=\"default\")",
+	"getnewaddress-legacy":    "If true then this will create a legacy form address rather than a new segwit address",
 	"getnewaddress--result0":  "The payment address",
 
 	// GetRawChangeAddressCmd help.

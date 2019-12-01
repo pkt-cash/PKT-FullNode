@@ -339,7 +339,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 			pver,
 			btcnet,
 			len(badMessageBytes),
-			MessageError.Default(),
+			er.E(io.EOF),
 			25,
 		},
 
