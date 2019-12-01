@@ -20,3 +20,4 @@ install:
 script:
   - export PATH=$PATH:$HOME/gopath/bin
   - ./goclean.sh
+
