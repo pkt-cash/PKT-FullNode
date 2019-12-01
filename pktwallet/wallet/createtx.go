@@ -8,6 +8,7 @@ package wallet
 import (
 	"sort"
 
+	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -22,16 +23,20 @@ import (
 
 // byAmount defines the methods needed to satisify sort.Interface to
 // sort credits by their output amount.
-type byAmount []wtxmgr.Credit
+// type byAmount []wtxmgr.Credit
+// func (s byAmount) Len() int           { return len(s) }
+// func (s byAmount) Less(i, j int) bool { return s[i].Amount < s[j].Amount }
+// func (s byAmount) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func (s byAmount) Len() int           { return len(s) }
-func (s byAmount) Less(i, j int) bool { return s[i].Amount < s[j].Amount }
-func (s byAmount) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+type byAge []wtxmgr.Credit
+
+func (s byAge) Len() int           { return len(s) }
+func (s byAge) Less(i, j int) bool { return s[i].Height < s[j].Height }
+func (s byAge) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func makeInputSource(eligible []wtxmgr.Credit) txauthor.InputSource {
-	// Pick largest outputs first.  This is only done for compatibility with
-	// previous tx creation code, not because it's a good idea.
-	sort.Sort(sort.Reverse(byAmount(eligible)))
+	// Sort outputs by age, oldest first
+	sort.Sort(byAge(eligible))
 
 	// Current inputs and their total value.  These are closed over by the
 	// returned input source and reused across multiple calls.
@@ -239,6 +244,14 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 		if output.FromCoinBase {
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, bs.Height) {
+				continue
+			}
+			if !w.chainParams.GlobalConf.HasNetworkSteward {
+			} else if bs.Height-129600+1440 < output.Height {
+			} else if int64(output.Amount) != blockchain.PktCalcNetworkStewardPayout(
+				blockchain.CalcBlockSubsidy(output.Height, w.chainParams)) {
+			} else {
+				log.Debugf("Skipping burned output at height %d\n", output.Height)
 				continue
 			}
 		}
