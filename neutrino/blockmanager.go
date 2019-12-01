@@ -2616,6 +2616,8 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 	b.newHeadersSignal.Broadcast()
 }
 
+var timeLastLogged time.Time
+
 func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 	maxTimestamp time.Time, reorgAttempt bool) er.R {
 	diff, err := b.calcNextRequiredDifficulty(
@@ -2633,7 +2635,11 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 			return err
 		}
 	} else {
-		//log.Warn("We need to be checking packetcrypt proofs here, this is currently insecure")
+		if time.Since(timeLastLogged) > time.Second*5 {
+			log.Warn("PacketCryptProofs are not being checked, this is not secure " +
+				"unless it is only connected to a trusted pktd instance")
+			timeLastLogged = time.Now()
+		}
 	}
 	// Ensure the block time is not too far in the future.
 	if blockHeader.Timestamp.After(maxTimestamp) {
