@@ -7,12 +7,9 @@ go:
   - "1.12.x"
 sudo: false
 install:
-  - go build
-  - go build -o wallet ./pktwallet
-  - go build ./cmd/...
-  - go test ./...
+  - GO111MODULE=on go build
+  - GO111MODULE=on go build -o wallet ./pktwallet
+  - GO111MODULE=on go build ./cmd/...
+  - GO111MODULE=on go test ./...
 #  - go test -tags="rpctest" ./...
   - golangci-lint run --max-issues-per-linter 1000 --new-from-rev f158033947f8a658bab5001b0156168b85fcc70e
-script:
-  - export PATH=$PATH:$HOME/gopath/bin
-  - ./goclean.sh
