@@ -1,4 +1,10 @@
 language: go
+notifications:
+  irc:
+    channels:
+      - "chat.freenode.net#pkt"
+    on_success: change
+    on_failure: always
 branches:
   only:
   - master
