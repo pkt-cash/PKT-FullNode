@@ -69,7 +69,7 @@ func write64(w io.Writer, x uint64) er.R {
 
 func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 	// magic
-	if _, err := w.Write([]byte("\x00EPTF\xff\x00")); err != nil {
+	if _, err := w.Write([]byte("EPTF\xff\x00")); err != nil {
 		return er.E(err)
 	}
 
