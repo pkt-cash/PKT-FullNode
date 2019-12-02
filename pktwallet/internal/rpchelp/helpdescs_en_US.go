@@ -30,6 +30,7 @@ var helpDescsEnUS = map[string]string{
 	"createtransaction-amount":         "The amount of coins to send",
 	"createtransaction-toaddress":      "The recipient to send the coins to",
 	"createtransaction-fromaccount":    "The name of the account to send the coins from",
+	"createtransaction-inputminheight": "The minimum block height to take inputs from (default: 0)",
 	"createtransaction--result0":       "The hex encoded transaction result",
 
 	// SetNetworkStewardCmd help.

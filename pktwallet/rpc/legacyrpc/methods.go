@@ -1365,12 +1365,13 @@ func sendOutputs(
 	feeSatPerKb btcutil.Amount,
 	dryRun bool,
 	changeAddress *string,
+	inputMinHeight int,
 ) (*txauthor.AuthoredTx, er.R) {
 	outputs, err := makeOutputs(amounts, vote, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
-	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, true, changeAddress)
+	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, true, changeAddress, inputMinHeight)
 	if err != nil {
 		if ruleerror.ErrNegativeTxOutValue.Is(err) {
 			return nil, errNeedPositiveAmount()
@@ -1397,7 +1398,7 @@ func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
 		return "", err
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, false, nil)
+	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, false, nil, 0)
 	if err != nil {
 		return "", err
 	}
@@ -1472,6 +1473,10 @@ func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RP
 	if minconf < 0 {
 		return nil, errNeedPositiveMinconf()
 	}
+	inputMinHeight := 0
+	if cmd.InputMinHeight != nil && *cmd.InputMinHeight > 0 {
+		inputMinHeight = *cmd.InputMinHeight
+	}
 	// Create map of address and amount pairs.
 	amt, err := btcutil.NewAmount(cmd.Amount)
 	if err != nil {
@@ -1489,7 +1494,8 @@ func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RP
 		}
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, true, cmd.ChangeAddress)
+	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, true, cmd.ChangeAddress,
+		inputMinHeight)
 	if err != nil {
 		return "", err
 	}

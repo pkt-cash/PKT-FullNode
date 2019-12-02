@@ -112,7 +112,8 @@ func (s secretSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 // the database. A tx created with this set to true will intentionally have no
 // input scripts added and SHOULD NOT be broadcasted.
 func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
-	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool, changeAddress *string) (
+	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool, changeAddress *string,
+	inputMinHeight int) (
 	tx *txauthor.AuthoredTx, err er.R) {
 
 	chainClient, err := w.requireChainClient()
@@ -134,7 +135,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		return nil, err
 	}
 
-	eligible, err := w.findEligibleOutputs(dbtx, account, minconf, bs)
+	eligible, err := w.findEligibleOutputs(dbtx, account, minconf, bs, inputMinHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +218,13 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	return tx, nil
 }
 
-func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minconf int32, bs *waddrmgr.BlockStamp) ([]wtxmgr.Credit, er.R) {
+func (w *Wallet) findEligibleOutputs(
+	dbtx walletdb.ReadTx,
+	account uint32,
+	minconf int32,
+	bs *waddrmgr.BlockStamp,
+	inputMinHeight int,
+) ([]wtxmgr.Credit, er.R) {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -239,6 +246,11 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 		// confirmations.  Coinbase transactions must have have reached
 		// maturity before their outputs may be spent.
 		if !confirmed(minconf, output.Height, bs.Height) {
+			continue
+		}
+		if output.Height < int32(inputMinHeight) {
+			log.Debugf("Skipping output %s at height %d because it is below minimum %d\n",
+				output.String(), output.Height, inputMinHeight)
 			continue
 		}
 		if output.FromCoinBase {

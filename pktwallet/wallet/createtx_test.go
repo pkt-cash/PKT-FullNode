@@ -124,7 +124,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 
 	// First do a few dry-runs, making sure the number of addresses in the
 	// database us not inflated.
-	dryRunTx, err := w.txToOutputs(txOuts, 0, 1, 1000, true, nil)
+	dryRunTx, err := w.txToOutputs(txOuts, 0, 1, 1000, true, nil, 0)
 	if err != nil {
 		t.Fatalf("unable to author tx: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 		t.Fatalf("expected 1 address, found %v", len(addresses))
 	}
 
-	dryRunTx2, err := w.txToOutputs(txOuts, 0, 1, 1000, true, nil)
+	dryRunTx2, err := w.txToOutputs(txOuts, 0, 1, 1000, true, nil, 0)
 	if err != nil {
 		t.Fatalf("unable to author tx: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 
 	// Now we do a proper, non-dry run. This should add a change address
 	// to the database.
-	tx, err := w.txToOutputs(txOuts, 0, 1, 1000, false, nil)
+	tx, err := w.txToOutputs(txOuts, 0, 1, 1000, false, nil, 0)
 	if err != nil {
 		t.Fatalf("unable to author tx: %v", err)
 	}

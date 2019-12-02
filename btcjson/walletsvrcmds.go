@@ -442,6 +442,7 @@ type CreateTransactionCmd struct {
 	Amount         float64
 	ElectrumFormat *bool
 	ChangeAddress  *string
+	InputMinHeight *int
 	MinConf        *int `jsonrpcdefault:"1"`
 	Vote           *bool
 }
