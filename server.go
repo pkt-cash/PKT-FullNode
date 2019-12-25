@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	mathrand "math/rand"
 	"net"
 	"runtime"
 	"sort"
@@ -1702,69 +1703,73 @@ func (s *server) handleBanPeerMsg(state *peerState, sp *serverPeer) {
 	state.banned[host] = time.Now().Add(cfg.BanDuration)
 }
 
+func (s *server) sendInvMsgToPeer(sp *serverPeer, msg relayMsg) bool {
+	if !sp.Connected() {
+		return false
+	}
+	// If the inventory is a block and the peer prefers headers,
+	// generate and send a headers message instead of an inventory
+	// message.
+	if msg.invVect.Type == wire.InvTypeBlock && sp.WantsHeaders() {
+		blockHeader, ok := msg.data.(wire.BlockHeader)
+		if !ok {
+			peerLog.Warnf("Underlying data for headers" +
+				" is not a block header")
+			return false
+		}
+		msgHeaders := wire.NewMsgHeaders()
+		if err := msgHeaders.AddBlockHeader(&blockHeader); err != nil {
+			peerLog.Errorf("Failed to add block"+
+				" header: %v", err)
+			return false
+		}
+		sp.QueueMessage(msgHeaders, nil)
+		return false
+	}
+
+	if msg.invVect.Type == wire.InvTypeTx {
+		// Don't relay the transaction to the peer when it has
+		// transaction relaying disabled.
+		if sp.relayTxDisabled() {
+			return false
+		}
+
+		txD, ok := msg.data.(*mempool.TxDesc)
+		if !ok {
+			peerLog.Warnf("Underlying data for tx inv "+
+				"relay is not a *mempool.TxDesc: %T",
+				msg.data)
+			return false
+		}
+
+		// Don't relay the transaction if the transaction fee-per-kb
+		// is less than the peer's feefilter.
+		feeFilter := atomic.LoadInt64(&sp.feeFilter)
+		if feeFilter > 0 && txD.FeePerKB < feeFilter {
+			return false
+		}
+
+		// Don't relay the transaction if there is a bloom
+		// filter loaded and the transaction doesn't match it.
+		if sp.filter.IsLoaded() {
+			if !sp.filter.MatchTxAndUpdate(txD.Tx) {
+				return false
+			}
+		}
+	}
+
+	// Queue the inventory to be relayed with the next batch.
+	// It will be ignored if the peer is already known to
+	// have the inventory.
+	sp.QueueInventory(msg.invVect)
+	return true
+}
+
 // handleRelayInvMsg deals with relaying inventory to peers that are not already
 // known to have it.  It is invoked from the peerHandler goroutine.
 func (s *server) handleRelayInvMsg(state *peerState, msg relayMsg) {
 	state.forAllPeers(func(sp *serverPeer) {
-		if !sp.Connected() {
-			return
-		}
-
-		// If the inventory is a block and the peer prefers headers,
-		// generate and send a headers message instead of an inventory
-		// message.
-		if msg.invVect.Type == wire.InvTypeBlock && sp.WantsHeaders() {
-			blockHeader, ok := msg.data.(wire.BlockHeader)
-			if !ok {
-				peerLog.Warnf("Underlying data for headers" +
-					" is not a block header")
-				return
-			}
-			msgHeaders := wire.NewMsgHeaders()
-			if err := msgHeaders.AddBlockHeader(&blockHeader); err != nil {
-				peerLog.Errorf("Failed to add block"+
-					" header: %v", err)
-				return
-			}
-			sp.QueueMessage(msgHeaders, nil)
-			return
-		}
-
-		if msg.invVect.Type == wire.InvTypeTx {
-			// Don't relay the transaction to the peer when it has
-			// transaction relaying disabled.
-			if sp.relayTxDisabled() {
-				return
-			}
-
-			txD, ok := msg.data.(*mempool.TxDesc)
-			if !ok {
-				peerLog.Warnf("Underlying data for tx inv "+
-					"relay is not a *mempool.TxDesc: %T",
-					msg.data)
-				return
-			}
-
-			// Don't relay the transaction if the transaction fee-per-kb
-			// is less than the peer's feefilter.
-			feeFilter := atomic.LoadInt64(&sp.feeFilter)
-			if feeFilter > 0 && txD.FeePerKB < feeFilter {
-				return
-			}
-
-			// Don't relay the transaction if there is a bloom
-			// filter loaded and the transaction doesn't match it.
-			if sp.filter.IsLoaded() {
-				if !sp.filter.MatchTxAndUpdate(txD.Tx) {
-					return
-				}
-			}
-		}
-
-		// Queue the inventory to be relayed with the next batch.
-		// It will be ignored if the peer is already known to
-		// have the inventory.
-		sp.QueueInventory(msg.invVect)
+		s.sendInvMsgToPeer(sp, msg)
 	})
 }
 
@@ -2053,6 +2058,37 @@ func (s *server) peerDoneHandler(sp *serverPeer) {
 	close(sp.quit)
 }
 
+func (s *server) sendRandomInv(state *peerState) {
+	descs := s.txMemPool.TxDescs()
+	if len(descs) == 0 {
+		return
+	}
+	winningTx := descs[mathrand.Intn(len(descs))]
+	candidates := make([]*serverPeer, 0, state.Count())
+	state.forAllPeers(func(sp *serverPeer) {
+		if !sp.Connected() {
+			return
+		}
+		candidates = append(candidates, sp)
+	})
+	iv := wire.NewInvVect(wire.InvTypeTx, winningTx.Tx.Hash())
+	msg := relayMsg{invVect: iv, data: winningTx}
+	for {
+		if len(candidates) == 0 {
+			return
+		}
+		i := mathrand.Intn(len(candidates))
+		winningPeer := candidates[i]
+		if !s.sendInvMsgToPeer(winningPeer, msg) {
+			candidates = append(candidates[:i], candidates[i+1:]...)
+			continue
+		}
+		srvrLog.Debugf("Sending random tx [%s] to random peer [%s]",
+			winningTx.Tx.Hash().String(), winningPeer.String())
+		break
+	}
+}
+
 // peerHandler is used to handle peer operations such as adding and removing
 // peers to and from the server, banning peers, and broadcasting messages to
 // peers.  It must be run in a goroutine.
@@ -2066,6 +2102,8 @@ func (s *server) peerHandler() {
 	s.syncManager.Start()
 
 	srvrLog.Tracef("Starting peer handler")
+
+	randomInvTicker := time.NewTicker(time.Second * 10)
 
 	state := &peerState{
 		inboundPeers:    make(map[int32]*serverPeer),
@@ -2127,6 +2165,9 @@ out:
 				sp.Disconnect()
 			})
 			break out
+
+		case <-randomInvTicker.C:
+			s.sendRandomInv(state)
 		}
 	}
 
