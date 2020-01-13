@@ -66,7 +66,7 @@ func newHTTPClient(cfg *config) (*http.Client, er.R) {
 // to the server described in the passed config struct.  It also attempts to
 // unmarshal the response as a JSON-RPC response and returns either the result
 // field or the error field depending on whether or not there is an error.
-func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
+func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.R) {
 	// Generate a request to the configured RPC server.
 	protocol := "http"
 	if !cfg.NoTLS {
@@ -122,8 +122,5 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, er.R) {
 		return nil, err
 	}
 
-	if resp.Error != nil {
-		return nil, er.New(resp.Error.Message)
-	}
-	return resp.Result, nil
+	return &resp, nil
 }

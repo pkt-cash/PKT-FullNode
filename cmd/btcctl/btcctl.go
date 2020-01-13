@@ -141,11 +141,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	if result.Error != nil {
+		fmt.Fprintln(os.Stderr, result.Error.Message)
+		for _, line := range result.Error.Stack {
+			fmt.Fprintln(os.Stderr, line)
+		}
+		return
+	}
+
 	// Choose how to display the result based on its type.
-	strResult := string(result)
+	strResult := string(result.Result)
+	//fmt.Printf("raw result %v", strResult)
 	if strings.HasPrefix(strResult, "{") || strings.HasPrefix(strResult, "[") {
 		var dst bytes.Buffer
-		if err := json.Indent(&dst, result, "", "  "); err != nil {
+		if err := json.Indent(&dst, result.Result, "", "  "); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to format result: %v",
 				err)
 			os.Exit(1)
@@ -154,7 +163,7 @@ func main() {
 
 	} else if strings.HasPrefix(strResult, `"`) {
 		var str string
-		if err := json.Unmarshal(result, &str); err != nil {
+		if err := json.Unmarshal(result.Result, &str); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to unmarshal result: %v",
 				err)
 			os.Exit(1)
