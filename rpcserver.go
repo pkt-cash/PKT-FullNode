@@ -31,6 +31,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -1042,12 +1043,12 @@ func handleGetBestBlockHash(s *rpcServer, cmd interface{}, closeChan <-chan stru
 
 // getDifficultyRatio returns the proof-of-work difficulty as a multiple of the
 // minimum difficulty using the passed bits field from the header of a block.
-func getDifficultyRatio(bits uint32, params *chaincfg.Params) float64 {
+func getDifficultyRatio0(bits uint32, powLimitBits uint32) float64 {
 	// The minimum difficulty is the max possible proof-of-work limit bits
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block
 	// with the compact form which loses precision.
-	max := blockchain.CompactToBig(params.PowLimitBits)
+	max := blockchain.CompactToBig(powLimitBits)
 	target := blockchain.CompactToBig(bits)
 
 	difficulty := new(big.Rat).SetFrac(max, target)
@@ -1055,9 +1056,13 @@ func getDifficultyRatio(bits uint32, params *chaincfg.Params) float64 {
 	diff, err := strconv.ParseFloat(outString, 64)
 	if err != nil {
 		rpcsLog.Errorf("Cannot get difficulty: %v", err)
-		return 0
+		return -1
 	}
 	return diff
+}
+
+func getDifficultyRatio(bits uint32, params *chaincfg.Params) float64 {
+	return getDifficultyRatio0(bits, params.PowLimitBits)
 }
 
 // handleGetBlock implements the getblock command.
@@ -1118,24 +1123,49 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		nextHashString = nextHash.String()
 	}
 
+	var pcVer *int
+	var pcAnnCount *uint64
+	pcAnnBits := ""
+	var pcAnnDifficulty *float64
+	var pcBlkDifficulty *float64
+	if blk.MsgBlock().Pcp != nil {
+		pcVer = &blk.MsgBlock().Pcp.Version
+		commit := packetcrypt.ExtractCoinbaseCommit(blk.MsgBlock().Transactions[0])
+		pac := commit.AnnCount()
+		pcAnnCount = &pac
+		amd := commit.AnnMinDifficulty()
+		pcAnnBits = fmt.Sprintf("%08x", amd)
+		anndiff := getDifficultyRatio0(amd, 0x207fffff)
+		pcAnnDifficulty = &anndiff
+		effectiveTarget := difficulty.GetEffectiveTarget(
+			blk.MsgBlock().Header.Bits, amd, pac, *pcVer)
+		blkdiff := getDifficultyRatio0(effectiveTarget, 0x207fffff)
+		pcBlkDifficulty = &blkdiff
+	}
+
 	params := s.cfg.ChainParams
 	blockHeader := &blk.MsgBlock().Header
 	blockReply := btcjson.GetBlockVerboseResult{
-		Hash:          c.Hash,
-		Version:       blockHeader.Version,
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version),
-		MerkleRoot:    blockHeader.MerkleRoot.String(),
-		PreviousHash:  blockHeader.PrevBlock.String(),
-		Nonce:         blockHeader.Nonce,
-		Time:          blockHeader.Timestamp.Unix(),
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        int64(blockHeight),
-		Size:          int32(len(blkBytes)),
-		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:        int32(blockchain.GetBlockWeight(blk)),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits), 16),
-		Difficulty:    getDifficultyRatio(blockHeader.Bits, params),
-		NextHash:      nextHashString,
+		Hash:            c.Hash,
+		Version:         blockHeader.Version,
+		VersionHex:      fmt.Sprintf("%08x", blockHeader.Version),
+		MerkleRoot:      blockHeader.MerkleRoot.String(),
+		PreviousHash:    blockHeader.PrevBlock.String(),
+		Nonce:           blockHeader.Nonce,
+		Time:            blockHeader.Timestamp.Unix(),
+		Confirmations:   int64(1 + best.Height - blockHeight),
+		Height:          int64(blockHeight),
+		Size:            int32(len(blkBytes)),
+		StrippedSize:    int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:          int32(blockchain.GetBlockWeight(blk)),
+		Bits:            strconv.FormatInt(int64(blockHeader.Bits), 16),
+		Difficulty:      getDifficultyRatio(blockHeader.Bits, params),
+		NextHash:        nextHashString,
+		PcpVersion:      pcVer,
+		PcAnnCount:      pcAnnCount,
+		PcAnnBits:       pcAnnBits,
+		PcAnnDifficulty: pcAnnDifficulty,
+		PcBlkDifficulty: pcBlkDifficulty,
 	}
 
 	if c.VerboseTx == nil || !*c.VerboseTx {
