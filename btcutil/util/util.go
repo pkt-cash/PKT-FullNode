@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/hex"
+	"os"
 	"testing"
 	"unsafe"
 
@@ -26,4 +27,9 @@ func CheckError(t *testing.T, testName string, gotErr er.R, wantErrCode *er.Erro
 	}
 
 	return true
+}
+
+func Exists(path string) bool {
+	_, errr := os.Stat(path)
+	return !os.IsNotExist(errr)
 }

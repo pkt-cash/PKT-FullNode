@@ -70,6 +70,9 @@ func (tx *transaction) ReadBucket(key []byte) walletdb.ReadBucket {
 }
 
 func (tx *transaction) ReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
+	if key == nil {
+		return (*bucket)(tx.boltTx.Cursor().Bucket())
+	}
 	boltBucket := tx.boltTx.Bucket(key)
 	if boltBucket == nil {
 		return nil
