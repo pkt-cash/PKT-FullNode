@@ -1371,7 +1371,7 @@ func sendOutputs(
 	if err != nil {
 		return nil, err
 	}
-	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, true, changeAddress, inputMinHeight)
+	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, dryRun, changeAddress, inputMinHeight)
 	if err != nil {
 		if ruleerror.ErrNegativeTxOutValue.Is(err) {
 			return nil, errNeedPositiveAmount()
