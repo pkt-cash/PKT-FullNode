@@ -6,6 +6,8 @@
 package wallet
 
 import (
+	"bytes"
+	"encoding/hex"
 	"sort"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -111,10 +113,7 @@ func (s secretSource) GetScript(addr btcutil.Address) ([]byte, er.R) {
 // NOTE: The dryRun argument can be set true to create a tx that doesn't alter
 // the database. A tx created with this set to true will intentionally have no
 // input scripts added and SHOULD NOT be broadcasted.
-func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
-	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool, changeAddress *string,
-	inputMinHeight int) (
-	tx *txauthor.AuthoredTx, err er.R) {
+func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R) {
 
 	chainClient, err := w.requireChainClient()
 	if err != nil {
@@ -135,7 +134,12 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		return nil, err
 	}
 
-	eligible, err := w.findEligibleOutputs(dbtx, account, minconf, bs, inputMinHeight)
+	var needAmount btcutil.Amount
+	for _, out := range txr.Outputs {
+		needAmount += btcutil.Amount(out.Value)
+	}
+	eligible, err := w.findEligibleOutputs(
+		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs, txr.InputMinHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -147,19 +151,25 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		// created from account 0.
 		var changeAddr btcutil.Address
 		var err er.R
-		if changeAddress != nil {
-			changeAddr, err = btcutil.DecodeAddress(*changeAddress, w.ChainParams())
-		} else if account == waddrmgr.ImportedAddrAccount {
-			changeAddr, err = w.newChangeAddress(addrmgrNs, 0)
+		if txr.ChangeAddress != nil {
+			changeAddr = *txr.ChangeAddress
 		} else {
-			changeAddr, err = w.newChangeAddress(addrmgrNs, account)
+			for _, c := range eligible {
+				_, addrs, _, _ := txscript.ExtractPkScriptAddrs(c.PkScript, w.chainParams)
+				if len(addrs) == 1 {
+					changeAddr = addrs[0]
+				}
+			}
+			if changeAddr == nil {
+				err = er.New("Unable to find qualifying change address")
+			}
 		}
 		if err != nil {
 			return nil, err
 		}
 		return txscript.PayToAddrScript(changeAddr)
 	}
-	tx, err = txauthor.NewUnsignedTransaction(outputs, feeSatPerKb,
+	tx, err = txauthor.NewUnsignedTransaction(txr.Outputs, txr.FeeSatPerKB,
 		inputSource, changeSource)
 	if err != nil {
 		return nil, err
@@ -176,7 +186,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	// scripts, and don't commit the database transaction. The DB will be
 	// rolled back when this method returns to ensure the dry run didn't
 	// alter the DB in any way.
-	if dryRun {
+	if txr.DryRun {
 		return tx, nil
 	}
 
@@ -192,12 +202,6 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 
 	if err := dbtx.Commit(); err != nil {
 		return nil, err
-	}
-
-	if tx.ChangeIndex >= 0 && account == waddrmgr.ImportedAddrAccount {
-		changeAmount := btcutil.Amount(tx.Tx.TxOut[tx.ChangeIndex].Value)
-		log.Warnf("Spend from imported account produced change: moving"+
-			" %v from imported account into default account.", changeAmount)
 	}
 
 	// Finally, we'll request the backend to notify us of the transaction
@@ -220,43 +224,59 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 
 func (w *Wallet) findEligibleOutputs(
 	dbtx walletdb.ReadTx,
-	account uint32,
+	needAmount btcutil.Amount,
+	fromAddresses *[]btcutil.Address,
 	minconf int32,
 	bs *waddrmgr.BlockStamp,
 	inputMinHeight int,
 ) ([]wtxmgr.Credit, er.R) {
-	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
-	unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
-	if err != nil {
-		return nil, err
+	haveAmounts := make(map[string]btcutil.Amount)
+	var winningAddr []byte
+
+	var fromScripts [][]byte
+	if fromAddresses != nil {
+		for _, addr := range *fromAddresses {
+			fromScripts = append(fromScripts, addr.ScriptAddress())
+		}
 	}
 
-	// TODO: Eventually all of these filters (except perhaps output locking)
-	// should be handled by the call to UnspentOutputs (or similar).
-	// Because one of these filters requires matching the output script to
-	// the desired account, this change depends on making wtxmgr a waddrmgr
-	// dependancy and requesting unspent outputs for a single account.
-	eligible := make([]wtxmgr.Credit, 0, len(unspent))
-	for i := range unspent {
-		output := &unspent[i]
+	eligible := make([]wtxmgr.Credit, 0, 50)
+	_, err := w.TxStore.UnspentOutputs(txmgrNs, func(output *wtxmgr.Credit) bool {
+
+		// Verify that the output is coming from one of the addresses which we accept to spend from
+		if len(fromScripts) > 0 {
+			ok := false
+			for _, scr := range fromScripts {
+				if bytes.Equal(scr, output.PkScript) {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				// Skip because not one of the accepted addresses
+				return true
+			}
+		}
 
 		// Only include this output if it meets the required number of
 		// confirmations.  Coinbase transactions must have have reached
 		// maturity before their outputs may be spent.
 		if !confirmed(minconf, output.Height, bs.Height) {
-			continue
+			return true
 		}
+
 		if output.Height < int32(inputMinHeight) {
 			log.Debugf("Skipping output %s at height %d because it is below minimum %d\n",
 				output.String(), output.Height, inputMinHeight)
-			continue
+			return true
 		}
+
 		if output.FromCoinBase {
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, bs.Height) {
-				continue
+				return true
 			}
 			if !w.chainParams.GlobalConf.HasNetworkSteward {
 			} else if bs.Height-129600+1440 < output.Height {
@@ -264,31 +284,42 @@ func (w *Wallet) findEligibleOutputs(
 				blockchain.CalcBlockSubsidy(output.Height, w.chainParams)) {
 			} else {
 				log.Debugf("Skipping burned output at height %d\n", output.Height)
-				continue
+				return true
 			}
 		}
 
 		// Locked unspent outputs are skipped.
 		if w.LockedOutpoint(output.OutPoint) {
-			continue
+			return true
 		}
 
-		// Only include the output if it is associated with the passed
-		// account.
-		//
-		// TODO: Handle multisig outputs by determining if enough of the
-		// addresses are controlled.
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
-			output.PkScript, w.chainParams)
-		if err != nil || len(addrs) != 1 {
-			continue
-		}
-		_, addrAcct, err := w.Manager.AddrAccount(addrmgrNs, addrs[0])
-		if err != nil || addrAcct != account {
-			continue
-		}
 		eligible = append(eligible, *output)
+
+		str := hex.EncodeToString(output.PkScript)
+		haveAmounts[str] += output.Amount
+		if haveAmounts[str] >= needAmount {
+			winningAddr = output.PkScript
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	// Lastly, we select one address from the elligable group (if possible) so as not
+	// to mix addresses when it is not necessary to do so.
+	if len(winningAddr) > 0 {
+		n := 0
+		for _, x := range eligible {
+			if bytes.Equal(x.PkScript, winningAddr) {
+				eligible[n] = x
+				n++
+			}
+		}
+		eligible = eligible[:n]
+	}
+
 	return eligible, nil
 }
 

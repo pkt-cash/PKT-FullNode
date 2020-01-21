@@ -109,7 +109,6 @@ var rpcHandlers = map[string]struct {
 	"walletpassphrasechange": {handler: walletPassphraseChange},
 
 	// Extensions to the reference client JSON-RPC API
-	"createnewaccount":      {handler: createNewAccount},
 	"getbestblock":          {handler: getBestBlock},
 	"setnetworkstewardvote": {handler: setNetworkStewardVote},
 	"getnetworkstewardvote": {handler: getNetworkStewardVote},
@@ -636,27 +635,6 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 // automatically this does nothing since refilling is never manually required.
 func keypoolRefill(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return nil, nil
-}
-
-// createNewAccount handles a createnewaccount request by creating and
-// returning a new account. If the last account has no transaction history
-// as per BIP 0044 a new account cannot be created so an error will be returned.
-func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.CreateNewAccountCmd)
-
-	// The wildcard * is reserved by the rpc server with the special meaning
-	// of "all accounts", so disallow naming accounts to this string.
-	if cmd.Account == "*" {
-		return nil, errReservedAccountName()
-	}
-
-	_, err := w.NextAccount(waddrmgr.KeyScopeBIP0044, cmd.Account)
-	if waddrmgr.ErrLocked.Is(err) {
-		return nil, btcjson.ErrRPCWalletUnlockNeeded.New(
-			"Creating an account requires the wallet to be unlocked. "+
-				"Enter the wallet passphrase with walletpassphrase to unlock", nil)
-	}
-	return nil, err
 }
 
 // renameAccount handles a renameaccount request by renaming an account.
@@ -1360,18 +1338,43 @@ func sendOutputs(
 	w *wallet.Wallet,
 	amounts map[string]btcutil.Amount,
 	vote *waddrmgr.NetworkStewardVote,
-	account uint32,
+	fromAddressses *[]string,
 	minconf int32,
 	feeSatPerKb btcutil.Amount,
 	dryRun bool,
 	changeAddress *string,
 	inputMinHeight int,
 ) (*txauthor.AuthoredTx, er.R) {
-	outputs, err := makeOutputs(amounts, vote, w.ChainParams())
+	req := wallet.CreateTxReq{
+		Minconf:        minconf,
+		FeeSatPerKB:    feeSatPerKb,
+		DryRun:         dryRun,
+		InputMinHeight: inputMinHeight,
+	}
+	var err er.R
+	req.Outputs, err = makeOutputs(amounts, vote, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
-	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, dryRun, changeAddress, inputMinHeight)
+	if changeAddress != nil {
+		addr, err := btcutil.DecodeAddress(*changeAddress, w.ChainParams())
+		if err != nil {
+			return nil, err
+		}
+		req.ChangeAddress = &addr
+	}
+	if fromAddressses != nil {
+		addrs := make([]btcutil.Address, 0, len(*fromAddressses))
+		for _, addrStr := range *fromAddressses {
+			addr, err := btcutil.DecodeAddress(addrStr, w.ChainParams())
+			if err != nil {
+				return nil, err
+			}
+			addrs = append(addrs, addr)
+		}
+		req.InputAddresses = &addrs
+	}
+	tx, err := w.SendOutputs(req)
 	if err != nil {
 		if ruleerror.ErrNegativeTxOutValue.Is(err) {
 			return nil, errNeedPositiveAmount()
@@ -1391,14 +1394,14 @@ func sendOutputs(
 // It returns the transaction hash in string format upon success
 // All errors are returned in btcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
-	account uint32, minconf int32, feeSatPerKb btcutil.Amount) (string, er.R) {
+	fromAddressses *[]string, minconf int32, feeSatPerKb btcutil.Amount) (string, er.R) {
 
-	vote, err := w.NetworkStewardVote(account, waddrmgr.KeyScopeBIP0044)
+	vote, err := w.NetworkStewardVote(0, waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return "", err
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, false, nil, 0)
+	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, 0)
 	if err != nil {
 		return "", err
 	}
@@ -1426,13 +1429,6 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) 
 		return nil, errCommentsUnsupported()
 	}
 
-	account, err := w.AccountNumber(
-		waddrmgr.KeyScopeBIP0044, cmd.FromAccount,
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	// Check that signed integer parameters are positive.
 	if cmd.Amount < 0 {
 		return nil, errNeedPositiveAmount()
@@ -1450,20 +1446,12 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) 
 		cmd.ToAddress: amt,
 	}
 
-	return sendPairs(w, pairs, account, minConf,
-		txrules.DefaultRelayFeePerKb)
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb)
 }
 
 func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.CreateTransactionCmd)
 	feeSatPerKb := txrules.DefaultRelayFeePerKb
-
-	account, err := w.AccountNumber(
-		waddrmgr.KeyScopeBIP0044, cmd.FromAccount,
-	)
-	if err != nil {
-		return nil, err
-	}
 
 	// Check that signed integer parameters are positive.
 	if cmd.Amount < 0 {
@@ -1488,14 +1476,14 @@ func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RP
 
 	var vote *waddrmgr.NetworkStewardVote
 	if cmd.Vote != nil && *cmd.Vote {
-		vote, err = w.NetworkStewardVote(account, waddrmgr.KeyScopeBIP0044)
+		vote, err = w.NetworkStewardVote(0, waddrmgr.KeyScopeBIP0044)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, account, minconf, feeSatPerKb, true, cmd.ChangeAddress,
-		inputMinHeight)
+	tx, err := sendOutputs(w, amounts, vote, cmd.FromAddresses, minconf,
+		feeSatPerKb, true, cmd.ChangeAddress, inputMinHeight)
 	if err != nil {
 		return "", err
 	}
@@ -1530,11 +1518,6 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		return nil, errCommentsUnsupported()
 	}
 
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.FromAccount)
-	if err != nil {
-		return nil, err
-	}
-
 	// Check that minconf is positive.
 	minConf := int32(*cmd.MinConf)
 	if minConf < 0 {
@@ -1551,7 +1534,7 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		pairs[k] = amt
 	}
 
-	return sendPairs(w, pairs, account, minConf, txrules.DefaultRelayFeePerKb)
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb)
 }
 
 // sendToAddress handles a sendtoaddress RPC request by creating a new
@@ -1584,8 +1567,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1,
-		txrules.DefaultRelayFeePerKb)
+	return sendPairs(w, pairs, nil, 1, txrules.DefaultRelayFeePerKb)
 }
 
 // setTxFee sets the transaction fee per kilobyte added to transactions.

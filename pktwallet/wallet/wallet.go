@@ -341,7 +341,7 @@ func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.C
 	if err != nil {
 		return nil, nil, err
 	}
-	unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
+	unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
 	return addrs, unspent, err
 }
 
@@ -655,7 +655,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 	}
 	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txMgrNS := tx.ReadBucket(wtxmgrNamespaceKey)
-		credits, err := w.TxStore.UnspentOutputs(txMgrNS)
+		credits, err := w.TxStore.UnspentOutputs(txMgrNS, nil)
 		if err != nil {
 			return err
 		}
@@ -1159,15 +1159,18 @@ func logFilterBlocksResp(block wtxmgr.BlockMeta,
 }
 
 type (
+	CreateTxReq struct {
+		InputAddresses *[]btcutil.Address
+		Outputs        []*wire.TxOut
+		Minconf        int32
+		FeeSatPerKB    btcutil.Amount
+		DryRun         bool
+		ChangeAddress  *btcutil.Address
+		InputMinHeight int
+	}
 	createTxRequest struct {
-		account        uint32
-		outputs        []*wire.TxOut
-		minconf        int32
-		feeSatPerKB    btcutil.Amount
-		dryRun         bool
-		changeAddress  *string
-		resp           chan createTxResponse
-		inputMinHeight int
+		req  CreateTxReq
+		resp chan createTxResponse
 	}
 	createTxResponse struct {
 		tx  *txauthor.AuthoredTx
@@ -1196,9 +1199,7 @@ out:
 				txr.resp <- createTxResponse{nil, err}
 				continue
 			}
-			tx, err := w.txToOutputs(txr.outputs, txr.account,
-				txr.minconf, txr.feeSatPerKB, txr.dryRun, txr.changeAddress,
-				txr.inputMinHeight)
+			tx, err := w.txToOutputs(txr.req)
 			heldUnlock.release()
 			txr.resp <- createTxResponse{tx, err}
 		case <-quit:
@@ -1217,20 +1218,10 @@ out:
 //
 // NOTE: The dryRun argument can be set true to create a tx that doesn't alter
 // the database. A tx created with this set to true SHOULD NOT be broadcasted.
-func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
-	minconf int32, satPerKb btcutil.Amount, dryRun bool, changeAddress *string,
-	inputMinHeight int) (
-	*txauthor.AuthoredTx, er.R) {
-
+func (w *Wallet) CreateSimpleTx(r CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 	req := createTxRequest{
-		account:        account,
-		outputs:        outputs,
-		minconf:        minconf,
-		feeSatPerKB:    satPerKb,
-		dryRun:         dryRun,
-		changeAddress:  changeAddress,
-		resp:           make(chan createTxResponse),
-		inputMinHeight: inputMinHeight,
+		req:  r,
+		resp: make(chan createTxResponse),
 	}
 	w.createTxRequests <- req
 	resp := <-req.resp
@@ -1514,7 +1505,7 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
 
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
+		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
 		if err != nil {
 			return err
 		}
@@ -2306,7 +2297,7 @@ func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, er.R) {
 		syncBlock := w.Manager.SyncedTo()
 		syncBlockHash = &syncBlock.Hash
 		syncBlockHeight = syncBlock.Height
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
+		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
 		if err != nil {
 			return err
 		}
@@ -2397,7 +2388,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 		// Fetch all unspent outputs, and iterate over them tallying each
 		// account's balance where the output script pays to an account address
 		// and the required number of confirmations is met.
-		unspentOutputs, err := w.TxStore.UnspentOutputs(txmgrNs)
+		unspentOutputs, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
 		if err != nil {
 			return err
 		}
@@ -2487,7 +2478,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 		syncBlock := w.Manager.SyncedTo()
 
 		filter := len(addresses) != 0
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
+		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
 		if err != nil {
 			return err
 		}
@@ -3126,13 +3117,11 @@ func (w *Wallet) TotalReceivedForAddr(addr btcutil.Address, minConf int32) (btcu
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
-	minconf int32, satPerKb btcutil.Amount, dryRun bool,
-	changeAddress *string, inputMinHeight int) (*txauthor.AuthoredTx, er.R) {
+func (w *Wallet) SendOutputs(txr CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
-	for _, output := range outputs {
+	for _, output := range txr.Outputs {
 		err := txrules.CheckOutput(
 			output, txrules.DefaultRelayFeePerKb,
 		)
@@ -3145,13 +3134,11 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	// transaction will be added to the database in order to ensure that we
 	// continue to re-broadcast the transaction upon restarts until it has
 	// been confirmed.
-	createdTx, err := w.CreateSimpleTx(
-		account, outputs, minconf, satPerKb, dryRun, changeAddress, inputMinHeight,
-	)
+	createdTx, err := w.CreateSimpleTx(txr)
 	if err != nil {
 		return nil, err
 	}
-	if dryRun {
+	if txr.DryRun {
 		return createdTx, nil
 	}
 

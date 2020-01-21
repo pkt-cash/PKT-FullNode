@@ -518,7 +518,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			}
 
 			// Check that unspent outputs match expected.
-			unspent, err := s.UnspentOutputs(ns)
+			unspent, err := s.UnspentOutputs(ns, nil)
 			if err != nil {
 				t.Fatalf("%s: failed to fetch unspent outputs: %v", test.name, err)
 			}
@@ -609,7 +609,7 @@ func TestFindingSpentCredits(t *testing.T) {
 	if bal != expectedBal {
 		t.Fatalf("bad balance: %v != %v", bal, expectedBal)
 	}
-	unspents, err := s.UnspentOutputs(ns)
+	unspents, err := s.UnspentOutputs(ns, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1602,7 +1602,7 @@ func TestOutputsAfterRemoveDoubleSpend(t *testing.T) {
 		commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
 			t.Helper()
 
-			outputs, err := store.UnspentOutputs(ns)
+			outputs, err := store.UnspentOutputs(ns, nil)
 			if err != nil {
 				t.Fatalf("unable to get unspent outputs: %v", err)
 			}
@@ -1779,7 +1779,7 @@ func testInsertMempoolDoubleSpendTx(t *testing.T, first bool) {
 				len(unminedTxs))
 		}
 
-		minedTxs, err := store.UnspentOutputs(ns)
+		minedTxs, err := store.UnspentOutputs(ns, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1971,7 +1971,7 @@ func TestInsertConfirmedDoubleSpendTx(t *testing.T) {
 				len(unminedTxs))
 		}
 
-		minedTxs, err := store.UnspentOutputs(ns)
+		minedTxs, err := store.UnspentOutputs(ns, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2025,7 +2025,7 @@ func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
 	// We'll confirm that there is one unspent output in the store, which
 	// should be the coinbase output created above.
 	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
-		minedTxs, err := store.UnspentOutputs(ns)
+		minedTxs, err := store.UnspentOutputs(ns, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2072,7 +2072,7 @@ func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
 	// We should see one unspent output within the store once again, this
 	// time being the change output of the spending transaction.
 	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
-		minedTxs, err := store.UnspentOutputs(ns)
+		minedTxs, err := store.UnspentOutputs(ns, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2105,7 +2105,7 @@ func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
 	// Finally, we'll ensure the change output is still the only unspent
 	// output within the store.
 	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
-		minedTxs, err := store.UnspentOutputs(ns)
+		minedTxs, err := store.UnspentOutputs(ns, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

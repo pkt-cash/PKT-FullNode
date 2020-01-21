@@ -65,7 +65,6 @@ var Methods = []struct {
 	{"walletlock", nil},
 	{"walletpassphrase", nil},
 	{"walletpassphrasechange", nil},
-	{"createnewaccount", nil},
 	{"exportwatchingwallet", returnsString},
 	{"getbestblock", []interface{}{(*btcjson.GetBestBlockResult)(nil)}},
 	{"getunconfirmedbalance", returnsNumber},

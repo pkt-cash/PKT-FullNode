@@ -7,6 +7,7 @@ package wtxmgr
 
 import (
 	"bytes"
+	"errors"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -687,9 +688,12 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 	return putMinedBalance(ns, minedBalance)
 }
 
+var errrBreak = errors.New("Stop loop")
+var errBreak = er.E(errrBreak)
+
 // UnspentOutputs returns all unspent received transaction outputs.
 // The order is undefined.
-func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
+func (s *Store) UnspentOutputs(ns walletdb.ReadBucket, filter func(c *Credit) bool) ([]Credit, er.R) {
 	var unspent []Credit
 
 	var op wire.OutPoint
@@ -733,8 +737,14 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
 			FromCoinBase: blockchain.IsCoinBaseTx(&rec.MsgTx),
 		}
 		unspent = append(unspent, cred)
+		if filter != nil && !filter(&cred) {
+			return errBreak
+		}
 		return nil
 	})
+	if er.Wrapped(err) == errrBreak {
+		return unspent, nil
+	}
 	if err != nil {
 		if Err.Is(err) {
 			return nil, err

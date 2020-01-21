@@ -412,12 +412,12 @@ func NewLockUnspentCmd(unlock bool, transactions []TransactionInput) *LockUnspen
 
 // SendFromCmd defines the sendfrom JSON-RPC command.
 type SendFromCmd struct {
-	FromAccount string
-	ToAddress   string
-	Amount      float64 // In BTC
-	MinConf     *int    `jsonrpcdefault:"1"`
-	Comment     *string
-	CommentTo   *string
+	ToAddress     string
+	Amount        float64 // In BTC
+	FromAddresses *[]string
+	MinConf       *int `jsonrpcdefault:"1"`
+	Comment       *string
+	CommentTo     *string
 }
 
 // NewSendFromCmd returns a new instance which can be used to issue a sendfrom
@@ -425,21 +425,21 @@ type SendFromCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewSendFromCmd(fromAccount, toAddress string, amount float64, minConf *int, comment, commentTo *string) *SendFromCmd {
+func NewSendFromCmd(fromAddresses *[]string, toAddress string, amount float64, minConf *int, comment, commentTo *string) *SendFromCmd {
 	return &SendFromCmd{
-		FromAccount: fromAccount,
-		ToAddress:   toAddress,
-		Amount:      amount,
-		MinConf:     minConf,
-		Comment:     comment,
-		CommentTo:   commentTo,
+		FromAddresses: fromAddresses,
+		ToAddress:     toAddress,
+		Amount:        amount,
+		MinConf:       minConf,
+		Comment:       comment,
+		CommentTo:     commentTo,
 	}
 }
 
 type CreateTransactionCmd struct {
-	FromAccount    string
 	ToAddress      string
 	Amount         float64
+	FromAddresses  *[]string
 	ElectrumFormat *bool
 	ChangeAddress  *string
 	InputMinHeight *int
@@ -449,10 +449,10 @@ type CreateTransactionCmd struct {
 
 // SendManyCmd defines the sendmany JSON-RPC command.
 type SendManyCmd struct {
-	FromAccount string
-	Amounts     map[string]float64 `jsonrpcusage:"{\"address\":amount,...}"` // In BTC
-	MinConf     *int               `jsonrpcdefault:"1"`
-	Comment     *string
+	Amounts       map[string]float64 `jsonrpcusage:"{\"address\":amount,...}"` // In BTC
+	FromAddresses *[]string
+	MinConf       *int `jsonrpcdefault:"1"`
+	Comment       *string
 }
 
 // NewSendManyCmd returns a new instance which can be used to issue a sendmany
@@ -460,12 +460,12 @@ type SendManyCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewSendManyCmd(fromAccount string, amounts map[string]float64, minConf *int, comment *string) *SendManyCmd {
+func NewSendManyCmd(fromAddresses *[]string, amounts map[string]float64, minConf *int, comment *string) *SendManyCmd {
 	return &SendManyCmd{
-		FromAccount: fromAccount,
-		Amounts:     amounts,
-		MinConf:     minConf,
-		Comment:     comment,
+		FromAddresses: fromAddresses,
+		Amounts:       amounts,
+		MinConf:       minConf,
+		Comment:       comment,
 	}
 }
 

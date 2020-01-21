@@ -29,7 +29,7 @@ var helpDescsEnUS = map[string]string{
 	"createtransaction-electrumformat": "If true, then the transaction result will be output in electrum incomplete transaction format, useful for signing later",
 	"createtransaction-amount":         "The amount of coins to send",
 	"createtransaction-toaddress":      "The recipient to send the coins to",
-	"createtransaction-fromaccount":    "The name of the account to send the coins from",
+	"createtransaction-fromaddresses":  "Addresses to use for selecting coins to spend",
 	"createtransaction-inputminheight": "The minimum block height to take inputs from (default: 0)",
 	"createtransaction--result0":       "The hex encoded transaction result",
 
@@ -297,18 +297,18 @@ var helpDescsEnUS = map[string]string{
 	// SendFromCmd help.
 	"sendfrom--synopsis": "DEPRECATED -- Authors, signs, and sends a transaction that outputs some amount to a payment address.\n" +
 		"A change output is automatically included to send extra output value back to the original account.",
-	"sendfrom-fromaccount": "Account to pick unspent outputs from",
-	"sendfrom-toaddress":   "Address to pay",
-	"sendfrom-amount":      "Amount to send to the payment address valued in bitcoin",
-	"sendfrom-minconf":     "Minimum number of block confirmations required before a transaction output is eligible to be spent",
-	"sendfrom-comment":     "Unused",
-	"sendfrom-commentto":   "Unused",
-	"sendfrom--result0":    "The transaction hash of the sent transaction",
+	"sendfrom-fromaddresses": "Addresses to use for selecting coins to spend",
+	"sendfrom-toaddress":     "Address to pay",
+	"sendfrom-amount":        "Amount to send to the payment address valued in bitcoin",
+	"sendfrom-minconf":       "Minimum number of block confirmations required before a transaction output is eligible to be spent",
+	"sendfrom-comment":       "Unused",
+	"sendfrom-commentto":     "Unused",
+	"sendfrom--result0":      "The transaction hash of the sent transaction",
 
 	// SendManyCmd help.
 	"sendmany--synopsis": "Authors, signs, and sends a transaction that outputs to many payment addresses.\n" +
 		"A change output is automatically included to send extra output value back to the original account.",
-	"sendmany-fromaccount":    "DEPRECATED -- Account to pick unspent outputs from",
+	"sendmany-fromaddresses":  "Addresses to use for selecting coins to spend",
 	"sendmany-amounts":        "Pairs of payment addresses and the output amount to pay each",
 	"sendmany-amounts--desc":  "JSON object using payment addresses as keys and output amounts valued in bitcoin to send to each address",
 	"sendmany-amounts--key":   "Address to pay",

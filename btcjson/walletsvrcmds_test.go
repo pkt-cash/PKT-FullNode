@@ -787,126 +787,126 @@ func TestWalletSvrCmds(t *testing.T) {
 		{
 			name: "sendfrom",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendfrom", "from", "1Address", 0.5)
+				return btcjson.NewCmd("sendfrom", "1Address", 0.5, &[]string{"from"})
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewSendFromCmd("from", "1Address", 0.5, nil, nil, nil)
+				return btcjson.NewSendFromCmd(&[]string{"from"}, "1Address", 0.5, nil, nil, nil)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["from","1Address",0.5],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["1Address",0.5,["from"]],"id":1}`,
 			unmarshalled: &btcjson.SendFromCmd{
-				FromAccount: "from",
-				ToAddress:   "1Address",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(1),
-				Comment:     nil,
-				CommentTo:   nil,
+				ToAddress:     "1Address",
+				Amount:        0.5,
+				FromAddresses: &[]string{"from"},
+				MinConf:       btcjson.Int(1),
+				Comment:       nil,
+				CommentTo:     nil,
 			},
 		},
 		{
 			name: "sendfrom optional1",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendfrom", "from", "1Address", 0.5, 6)
+				return btcjson.NewCmd("sendfrom", "1Address", 0.5, &[]string{"from"}, 6)
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewSendFromCmd("from", "1Address", 0.5, btcjson.Int(6), nil, nil)
+				return btcjson.NewSendFromCmd(&[]string{"from"}, "1Address", 0.5, btcjson.Int(6), nil, nil)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["from","1Address",0.5,6],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["1Address",0.5,["from"],6],"id":1}`,
 			unmarshalled: &btcjson.SendFromCmd{
-				FromAccount: "from",
-				ToAddress:   "1Address",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(6),
-				Comment:     nil,
-				CommentTo:   nil,
+				FromAddresses: &[]string{"from"},
+				ToAddress:     "1Address",
+				Amount:        0.5,
+				MinConf:       btcjson.Int(6),
+				Comment:       nil,
+				CommentTo:     nil,
 			},
 		},
 		{
 			name: "sendfrom optional2",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendfrom", "from", "1Address", 0.5, 6, "comment")
+				return btcjson.NewCmd("sendfrom", "1Address", 0.5, &[]string{"from"}, 6, "comment")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewSendFromCmd("from", "1Address", 0.5, btcjson.Int(6),
+				return btcjson.NewSendFromCmd(&[]string{"from"}, "1Address", 0.5, btcjson.Int(6),
 					btcjson.String("comment"), nil)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["from","1Address",0.5,6,"comment"],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["1Address",0.5,["from"],6,"comment"],"id":1}`,
 			unmarshalled: &btcjson.SendFromCmd{
-				FromAccount: "from",
-				ToAddress:   "1Address",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(6),
-				Comment:     btcjson.String("comment"),
-				CommentTo:   nil,
+				FromAddresses: &[]string{"from"},
+				ToAddress:     "1Address",
+				Amount:        0.5,
+				MinConf:       btcjson.Int(6),
+				Comment:       btcjson.String("comment"),
+				CommentTo:     nil,
 			},
 		},
 		{
 			name: "sendfrom optional3",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendfrom", "from", "1Address", 0.5, 6, "comment", "commentto")
+				return btcjson.NewCmd("sendfrom", "1Address", 0.5, &[]string{"from"}, 6, "comment", "commentto")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewSendFromCmd("from", "1Address", 0.5, btcjson.Int(6),
+				return btcjson.NewSendFromCmd(&[]string{"from"}, "1Address", 0.5, btcjson.Int(6),
 					btcjson.String("comment"), btcjson.String("commentto"))
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["from","1Address",0.5,6,"comment","commentto"],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendfrom","params":["1Address",0.5,["from"],6,"comment","commentto"],"id":1}`,
 			unmarshalled: &btcjson.SendFromCmd{
-				FromAccount: "from",
-				ToAddress:   "1Address",
-				Amount:      0.5,
-				MinConf:     btcjson.Int(6),
-				Comment:     btcjson.String("comment"),
-				CommentTo:   btcjson.String("commentto"),
+				FromAddresses: &[]string{"from"},
+				ToAddress:     "1Address",
+				Amount:        0.5,
+				MinConf:       btcjson.Int(6),
+				Comment:       btcjson.String("comment"),
+				CommentTo:     btcjson.String("commentto"),
 			},
 		},
 		{
 			name: "sendmany",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendmany", "from", `{"1Address":0.5}`)
+				return btcjson.NewCmd("sendmany", `{"1Address":0.5}`, &[]string{"from"})
 			},
 			staticCmd: func() interface{} {
 				amounts := map[string]float64{"1Address": 0.5}
-				return btcjson.NewSendManyCmd("from", amounts, nil, nil)
+				return btcjson.NewSendManyCmd(&[]string{"from"}, amounts, nil, nil)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":["from",{"1Address":0.5}],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":[{"1Address":0.5},["from"]],"id":1}`,
 			unmarshalled: &btcjson.SendManyCmd{
-				FromAccount: "from",
-				Amounts:     map[string]float64{"1Address": 0.5},
-				MinConf:     btcjson.Int(1),
-				Comment:     nil,
+				FromAddresses: &[]string{"from"},
+				Amounts:       map[string]float64{"1Address": 0.5},
+				MinConf:       btcjson.Int(1),
+				Comment:       nil,
 			},
 		},
 		{
 			name: "sendmany optional1",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendmany", "from", `{"1Address":0.5}`, 6)
+				return btcjson.NewCmd("sendmany", `{"1Address":0.5}`, &[]string{"from"}, 6)
 			},
 			staticCmd: func() interface{} {
 				amounts := map[string]float64{"1Address": 0.5}
-				return btcjson.NewSendManyCmd("from", amounts, btcjson.Int(6), nil)
+				return btcjson.NewSendManyCmd(&[]string{"from"}, amounts, btcjson.Int(6), nil)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":["from",{"1Address":0.5},6],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":[{"1Address":0.5},["from"],6],"id":1}`,
 			unmarshalled: &btcjson.SendManyCmd{
-				FromAccount: "from",
-				Amounts:     map[string]float64{"1Address": 0.5},
-				MinConf:     btcjson.Int(6),
-				Comment:     nil,
+				FromAddresses: &[]string{"from"},
+				Amounts:       map[string]float64{"1Address": 0.5},
+				MinConf:       btcjson.Int(6),
+				Comment:       nil,
 			},
 		},
 		{
 			name: "sendmany optional2",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("sendmany", "from", `{"1Address":0.5}`, 6, "comment")
+				return btcjson.NewCmd("sendmany", `{"1Address":0.5}`, &[]string{"from"}, 6, "comment")
 			},
 			staticCmd: func() interface{} {
 				amounts := map[string]float64{"1Address": 0.5}
-				return btcjson.NewSendManyCmd("from", amounts, btcjson.Int(6), btcjson.String("comment"))
+				return btcjson.NewSendManyCmd(&[]string{"from"}, amounts, btcjson.Int(6), btcjson.String("comment"))
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":["from",{"1Address":0.5},6,"comment"],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"sendmany","params":[{"1Address":0.5},["from"],6,"comment"],"id":1}`,
 			unmarshalled: &btcjson.SendManyCmd{
-				FromAccount: "from",
-				Amounts:     map[string]float64{"1Address": 0.5},
-				MinConf:     btcjson.Int(6),
-				Comment:     btcjson.String("comment"),
+				FromAddresses: &[]string{"from"},
+				Amounts:       map[string]float64{"1Address": 0.5},
+				MinConf:       btcjson.Int(6),
+				Comment:       btcjson.String("comment"),
 			},
 		},
 		{

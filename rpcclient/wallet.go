@@ -552,9 +552,9 @@ func (r FutureSendFromResult) Receive() (*chainhash.Hash, er.R) {
 // returned instance.
 //
 // See SendFrom for the blocking version and more details.
-func (c *Client) SendFromAsync(fromAccount string, toAddress btcutil.Address, amount btcutil.Amount) FutureSendFromResult {
+func (c *Client) SendFromAsync(fromAddresses *[]string, toAddress btcutil.Address, amount btcutil.Amount) FutureSendFromResult {
 	addr := toAddress.EncodeAddress()
-	cmd := btcjson.NewSendFromCmd(fromAccount, addr, amount.ToBTC(), nil,
+	cmd := btcjson.NewSendFromCmd(fromAddresses, addr, amount.ToBTC(), nil,
 		nil, nil)
 	return c.sendCmd(cmd)
 }
@@ -567,8 +567,8 @@ func (c *Client) SendFromAsync(fromAccount string, toAddress btcutil.Address, am
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendFrom(fromAccount string, toAddress btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, er.R) {
-	return c.SendFromAsync(fromAccount, toAddress, amount).Receive()
+func (c *Client) SendFrom(fromAddresses *[]string, toAddress btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, er.R) {
+	return c.SendFromAsync(fromAddresses, toAddress, amount).Receive()
 }
 
 // SendFromMinConfAsync returns an instance of a type that can be used to get
@@ -576,9 +576,9 @@ func (c *Client) SendFrom(fromAccount string, toAddress btcutil.Address, amount 
 // the returned instance.
 //
 // See SendFromMinConf for the blocking version and more details.
-func (c *Client) SendFromMinConfAsync(fromAccount string, toAddress btcutil.Address, amount btcutil.Amount, minConfirms int) FutureSendFromResult {
+func (c *Client) SendFromMinConfAsync(fromAddresses *[]string, toAddress btcutil.Address, amount btcutil.Amount, minConfirms int) FutureSendFromResult {
 	addr := toAddress.EncodeAddress()
-	cmd := btcjson.NewSendFromCmd(fromAccount, addr, amount.ToBTC(),
+	cmd := btcjson.NewSendFromCmd(fromAddresses, addr, amount.ToBTC(),
 		&minConfirms, nil, nil)
 	return c.sendCmd(cmd)
 }
@@ -592,8 +592,8 @@ func (c *Client) SendFromMinConfAsync(fromAccount string, toAddress btcutil.Addr
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendFromMinConf(fromAccount string, toAddress btcutil.Address, amount btcutil.Amount, minConfirms int) (*chainhash.Hash, er.R) {
-	return c.SendFromMinConfAsync(fromAccount, toAddress, amount,
+func (c *Client) SendFromMinConf(fromAddresses *[]string, toAddress btcutil.Address, amount btcutil.Amount, minConfirms int) (*chainhash.Hash, er.R) {
+	return c.SendFromMinConfAsync(fromAddresses, toAddress, amount,
 		minConfirms).Receive()
 }
 
@@ -602,12 +602,12 @@ func (c *Client) SendFromMinConf(fromAccount string, toAddress btcutil.Address, 
 // the returned instance.
 //
 // See SendFromComment for the blocking version and more details.
-func (c *Client) SendFromCommentAsync(fromAccount string,
+func (c *Client) SendFromCommentAsync(fromAddresses *[]string,
 	toAddress btcutil.Address, amount btcutil.Amount, minConfirms int,
 	comment, commentTo string) FutureSendFromResult {
 
 	addr := toAddress.EncodeAddress()
-	cmd := btcjson.NewSendFromCmd(fromAccount, addr, amount.ToBTC(),
+	cmd := btcjson.NewSendFromCmd(fromAddresses, addr, amount.ToBTC(),
 		&minConfirms, &comment, &commentTo)
 	return c.sendCmd(cmd)
 }
@@ -623,11 +623,11 @@ func (c *Client) SendFromCommentAsync(fromAccount string,
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendFromComment(fromAccount string, toAddress btcutil.Address,
+func (c *Client) SendFromComment(fromAddresses *[]string, toAddress btcutil.Address,
 	amount btcutil.Amount, minConfirms int,
 	comment, commentTo string) (*chainhash.Hash, er.R) {
 
-	return c.SendFromCommentAsync(fromAccount, toAddress, amount,
+	return c.SendFromCommentAsync(fromAddresses, toAddress, amount,
 		minConfirms, comment, commentTo).Receive()
 }
 
@@ -660,12 +660,12 @@ func (r FutureSendManyResult) Receive() (*chainhash.Hash, er.R) {
 // returned instance.
 //
 // See SendMany for the blocking version and more details.
-func (c *Client) SendManyAsync(fromAccount string, amounts map[btcutil.Address]btcutil.Amount) FutureSendManyResult {
+func (c *Client) SendManyAsync(fromAddresses *[]string, amounts map[btcutil.Address]btcutil.Amount) FutureSendManyResult {
 	convertedAmounts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
 		convertedAmounts[addr.EncodeAddress()] = amount.ToBTC()
 	}
-	cmd := btcjson.NewSendManyCmd(fromAccount, convertedAmounts, nil, nil)
+	cmd := btcjson.NewSendManyCmd(fromAddresses, convertedAmounts, nil, nil)
 	return c.sendCmd(cmd)
 }
 
@@ -677,8 +677,8 @@ func (c *Client) SendManyAsync(fromAccount string, amounts map[btcutil.Address]b
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendMany(fromAccount string, amounts map[btcutil.Address]btcutil.Amount) (*chainhash.Hash, er.R) {
-	return c.SendManyAsync(fromAccount, amounts).Receive()
+func (c *Client) SendMany(fromAddresses *[]string, amounts map[btcutil.Address]btcutil.Amount) (*chainhash.Hash, er.R) {
+	return c.SendManyAsync(fromAddresses, amounts).Receive()
 }
 
 // SendManyMinConfAsync returns an instance of a type that can be used to get
@@ -686,7 +686,7 @@ func (c *Client) SendMany(fromAccount string, amounts map[btcutil.Address]btcuti
 // the returned instance.
 //
 // See SendManyMinConf for the blocking version and more details.
-func (c *Client) SendManyMinConfAsync(fromAccount string,
+func (c *Client) SendManyMinConfAsync(fromAddresses *[]string,
 	amounts map[btcutil.Address]btcutil.Amount,
 	minConfirms int) FutureSendManyResult {
 
@@ -694,7 +694,7 @@ func (c *Client) SendManyMinConfAsync(fromAccount string,
 	for addr, amount := range amounts {
 		convertedAmounts[addr.EncodeAddress()] = amount.ToBTC()
 	}
-	cmd := btcjson.NewSendManyCmd(fromAccount, convertedAmounts,
+	cmd := btcjson.NewSendManyCmd(fromAddresses, convertedAmounts,
 		&minConfirms, nil)
 	return c.sendCmd(cmd)
 }
@@ -708,11 +708,11 @@ func (c *Client) SendManyMinConfAsync(fromAccount string,
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendManyMinConf(fromAccount string,
+func (c *Client) SendManyMinConf(fromAddresses *[]string,
 	amounts map[btcutil.Address]btcutil.Amount,
 	minConfirms int) (*chainhash.Hash, er.R) {
 
-	return c.SendManyMinConfAsync(fromAccount, amounts, minConfirms).Receive()
+	return c.SendManyMinConfAsync(fromAddresses, amounts, minConfirms).Receive()
 }
 
 // SendManyCommentAsync returns an instance of a type that can be used to get
@@ -720,7 +720,7 @@ func (c *Client) SendManyMinConf(fromAccount string,
 // the returned instance.
 //
 // See SendManyComment for the blocking version and more details.
-func (c *Client) SendManyCommentAsync(fromAccount string,
+func (c *Client) SendManyCommentAsync(fromAddresses *[]string,
 	amounts map[btcutil.Address]btcutil.Amount, minConfirms int,
 	comment string) FutureSendManyResult {
 
@@ -728,7 +728,7 @@ func (c *Client) SendManyCommentAsync(fromAccount string,
 	for addr, amount := range amounts {
 		convertedAmounts[addr.EncodeAddress()] = amount.ToBTC()
 	}
-	cmd := btcjson.NewSendManyCmd(fromAccount, convertedAmounts,
+	cmd := btcjson.NewSendManyCmd(fromAddresses, convertedAmounts,
 		&minConfirms, &comment)
 	return c.sendCmd(cmd)
 }
@@ -743,11 +743,11 @@ func (c *Client) SendManyCommentAsync(fromAccount string,
 //
 // NOTE: This function requires to the wallet to be unlocked.  See the
 // WalletPassphrase function for more details.
-func (c *Client) SendManyComment(fromAccount string,
+func (c *Client) SendManyComment(fromAddresses *[]string,
 	amounts map[btcutil.Address]btcutil.Amount, minConfirms int,
 	comment string) (*chainhash.Hash, er.R) {
 
-	return c.SendManyCommentAsync(fromAccount, amounts, minConfirms,
+	return c.SendManyCommentAsync(fromAddresses, amounts, minConfirms,
 		comment).Receive()
 }
 
