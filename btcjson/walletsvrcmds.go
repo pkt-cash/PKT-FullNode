@@ -101,19 +101,6 @@ func NewGetAccountCmd(address string) *GetAccountCmd {
 	}
 }
 
-// GetAccountAddressCmd defines the getaccountaddress JSON-RPC command.
-type GetAccountAddressCmd struct {
-	Account string
-}
-
-// NewGetAccountAddressCmd returns a new instance which can be used to issue a
-// getaccountaddress JSON-RPC command.
-func NewGetAccountAddressCmd(account string) *GetAccountAddressCmd {
-	return &GetAccountAddressCmd{
-		Account: account,
-	}
-}
-
 // GetAddressesByAccountCmd defines the getaddressesbyaccount JSON-RPC command.
 type GetAddressesByAccountCmd struct {
 	Account string
@@ -624,7 +611,6 @@ func init() {
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getaccount", (*GetAccountCmd)(nil), flags)
-	MustRegisterCmd("getaccountaddress", (*GetAccountAddressCmd)(nil), flags)
 	MustRegisterCmd("getaddressesbyaccount", (*GetAddressesByAccountCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
 	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)

@@ -7,19 +7,6 @@
 
 package btcjson
 
-// CreateNewAccountCmd defines the createnewaccount JSON-RPC command.
-type CreateNewAccountCmd struct {
-	Account string
-}
-
-// NewCreateNewAccountCmd returns a new instance which can be used to issue a
-// createnewaccount JSON-RPC command.
-func NewCreateNewAccountCmd(account string) *CreateNewAccountCmd {
-	return &CreateNewAccountCmd{
-		Account: account,
-	}
-}
-
 // RenameAccountCmd defines the renameaccount JSON-RPC command.
 type RenameAccountCmd struct {
 	OldAccount string
@@ -39,6 +26,5 @@ func init() {
 	// The commands in this file are only usable with a wallet server.
 	flags := UFWalletOnly
 
-	MustRegisterCmd("createnewaccount", (*CreateNewAccountCmd)(nil), flags)
 	MustRegisterCmd("renameaccount", (*RenameAccountCmd)(nil), flags)
 }

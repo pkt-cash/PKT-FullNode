@@ -175,7 +175,6 @@ var rpcAskWallet = map[string]struct{}{
 	"createmultisig":         {},
 	"dumpprivkey":            {},
 	"getaccount":             {},
-	"getaccountaddress":      {},
 	"getaddressesbyaccount":  {},
 	"getbalance":             {},
 	"getnewaddress":          {},

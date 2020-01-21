@@ -67,12 +67,6 @@ var helpDescsEnUS = map[string]string{
 	"getaccount-address":   "The address to query the account for",
 	"getaccount--result0":  "The name of the account that 'address' belongs to",
 
-	// GetAccountAddressCmd help.
-	"getaccountaddress--synopsis": "DEPRECATED -- Returns the most recent external payment address for an account that has not been seen publicly.\n" +
-		"A new address is generated for the account if the most recently generated address has been seen on the blockchain or in mempool.",
-	"getaccountaddress-account":  "The account of the returned address",
-	"getaccountaddress--result0": "The unused address for 'account'",
-
 	// GetAddressesByAccountCmd help.
 	"getaddressesbyaccount--synopsis": "DEPRECATED -- Returns all addresses strings controlled by a single account.",
 	"getaddressesbyaccount-account":   "Account name to fetch addresses for",
@@ -400,11 +394,6 @@ var helpDescsEnUS = map[string]string{
 	"walletpassphrasechange--synopsis":     "Change the wallet passphrase.",
 	"walletpassphrasechange-oldpassphrase": "The old wallet passphrase",
 	"walletpassphrasechange-newpassphrase": "The new wallet passphrase",
-
-	// CreateNewAccountCmd help.
-	"createnewaccount--synopsis": "Creates a new account.\n" +
-		"The wallet must be unlocked for this request to succeed.",
-	"createnewaccount-account": "Name of the new account",
 
 	// ExportWatchingWalletCmd help.
 	"exportwatchingwallet--synopsis": "Creates and returns a duplicate of the wallet database without any private keys to be used as a watching-only wallet.",

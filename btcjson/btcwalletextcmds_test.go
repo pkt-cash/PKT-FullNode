@@ -32,19 +32,6 @@ func TestBtcWalletExtCmds(t *testing.T) {
 		unmarshalled interface{}
 	}{
 		{
-			name: "createnewaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("createnewaccount", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewCreateNewAccountCmd("acct")
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"createnewaccount","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.CreateNewAccountCmd{
-				Account: "acct",
-			},
-		},
-		{
 			name: "renameaccount",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("renameaccount", "oldacct", "newacct")

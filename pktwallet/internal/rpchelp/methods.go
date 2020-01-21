@@ -32,7 +32,6 @@ var Methods = []struct {
 	{"addp2shscript", returnsString},
 	{"dumpprivkey", returnsString},
 	{"getaccount", returnsString},
-	{"getaccountaddress", returnsString},
 	{"getaddressesbyaccount", returnsStringArray},
 	{"getbalance", append(returnsNumber, returnsNumber[0])},
 	{"getbestblockhash", returnsString},

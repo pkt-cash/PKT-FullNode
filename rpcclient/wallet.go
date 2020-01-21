@@ -855,21 +855,6 @@ func (r FutureCreateNewAccountResult) Receive() er.R {
 	return err
 }
 
-// CreateNewAccountAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See CreateNewAccount for the blocking version and more details.
-func (c *Client) CreateNewAccountAsync(account string) FutureCreateNewAccountResult {
-	cmd := btcjson.NewCreateNewAccountCmd(account)
-	return c.sendCmd(cmd)
-}
-
-// CreateNewAccount creates a new wallet account.
-func (c *Client) CreateNewAccount(account string) er.R {
-	return c.CreateNewAccountAsync(account).Receive()
-}
-
 // FutureGetNewAddressResult is a future promise to deliver the result of a
 // GetNewAddressAsync RPC invocation (or an applicable error).
 type FutureGetNewAddressResult chan *response
@@ -983,44 +968,6 @@ func (c *Client) AddWitnessAddressAsync(address string) FutureAddWitnessAddressR
 // address (P2SH of the witness script).
 func (c *Client) AddWitnessAddress(address string) (btcutil.Address, er.R) {
 	return c.AddWitnessAddressAsync(address).Receive()
-}
-
-// FutureGetAccountAddressResult is a future promise to deliver the result of a
-// GetAccountAddressAsync RPC invocation (or an applicable error).
-type FutureGetAccountAddressResult chan *response
-
-// Receive waits for the response promised by the future and returns the current
-// Bitcoin address for receiving payments to the specified account.
-func (r FutureGetAccountAddressResult) Receive() (btcutil.Address, er.R) {
-	res, err := receiveFuture(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal result as a string.
-	var addr string
-	err = er.E(json.Unmarshal(res, &addr))
-	if err != nil {
-		return nil, err
-	}
-
-	return btcutil.DecodeAddress(addr, &chaincfg.MainNetParams)
-}
-
-// GetAccountAddressAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See GetAccountAddress for the blocking version and more details.
-func (c *Client) GetAccountAddressAsync(account string) FutureGetAccountAddressResult {
-	cmd := btcjson.NewGetAccountAddressCmd(account)
-	return c.sendCmd(cmd)
-}
-
-// GetAccountAddress returns the current Bitcoin address for receiving payments
-// to the specified account.
-func (c *Client) GetAccountAddress(account string) (btcutil.Address, er.R) {
-	return c.GetAccountAddressAsync(account).Receive()
 }
 
 // FutureGetAccountResult is a future promise to deliver the result of a

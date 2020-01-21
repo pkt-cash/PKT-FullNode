@@ -74,7 +74,6 @@ var rpcHandlers = map[string]struct {
 	"createmultisig":         {handler: createMultiSig},
 	"dumpprivkey":            {handler: dumpPrivKey},
 	"getaccount":             {handler: getAccount},
-	"getaccountaddress":      {handler: getAccountAddress},
 	"getaddressesbyaccount":  {handler: getAddressesByAccount},
 	"getbalance":             {handler: getBalance},
 	"getbestblockhash":       {handler: getBestBlockHash},
@@ -498,27 +497,6 @@ func getAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		return nil, errAccountNameNotFound()
 	}
 	return acctName, nil
-}
-
-// getAccountAddress handles a getaccountaddress by returning the most
-// recently-created chained address that has not yet been used (does not yet
-// appear in the blockchain, or any tx that has arrived in the pktd mempool).
-// If the most recently-requested address has been used, a new address (the
-// next chained address in the keypool) is used.  This can fail if the keypool
-// runs out (and will return btcjson.ErrRPCWalletKeypoolRanOut if that happens).
-func getAccountAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetAccountAddressCmd)
-
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
-	if err != nil {
-		return nil, err
-	}
-	addr, err := w.CurrentAddress(account, waddrmgr.KeyScopeBIP0044)
-	if err != nil {
-		return nil, err
-	}
-
-	return addr.EncodeAddress(), err
 }
 
 func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
