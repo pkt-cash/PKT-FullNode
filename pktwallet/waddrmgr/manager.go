@@ -550,20 +550,6 @@ func (m *Manager) FetchScopedKeyManager(scope KeyScope) (*ScopedKeyManager, er.R
 	return sm, nil
 }
 
-// ActiveScopedKeyManagers returns a slice of all the active scoped key
-// managers currently known by the root key manager.
-func (m *Manager) ActiveScopedKeyManagers() []*ScopedKeyManager {
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
-
-	var scopedManagers []*ScopedKeyManager
-	for _, smgr := range m.scopedManagers {
-		scopedManagers = append(scopedManagers, smgr)
-	}
-
-	return scopedManagers
-}
-
 // ScopesForExternalAddrType returns the set of key scopes that are able to
 // produce the target address type as external addresses.
 func (m *Manager) ScopesForExternalAddrType(addrType AddressType) []KeyScope {
@@ -571,16 +557,6 @@ func (m *Manager) ScopesForExternalAddrType(addrType AddressType) []KeyScope {
 	defer m.mtx.RUnlock()
 
 	scopes := m.externalAddrSchemas[addrType]
-	return scopes
-}
-
-// ScopesForInternalAddrTypes returns the set of key scopes that are able to
-// produce the target address type as internal addresses.
-func (m *Manager) ScopesForInternalAddrTypes(addrType AddressType) []KeyScope {
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
-
-	scopes := m.internalAddrSchemas[addrType]
 	return scopes
 }
 
@@ -692,27 +668,6 @@ func (m *Manager) AddrAccount(ns walletdb.ReadBucket,
 	// any of the managers, so we'll exit with an error.
 	str := fmt.Sprintf("unable to find key for addr %v", address)
 	return nil, 0, managerError(ErrAddressNotFound, str, nil)
-}
-
-// ForEachActiveAccountAddress calls the given function with each active
-// address of the given account stored in the manager, across all active
-// scopes, breaking early on error.
-//
-// TODO(tuxcanfly): actually return only active addresses
-func (m *Manager) ForEachActiveAccountAddress(ns walletdb.ReadBucket,
-	account uint32, fn func(maddr ManagedAddress) er.R) er.R {
-
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
-
-	for _, scopedMgr := range m.scopedManagers {
-		err := scopedMgr.ForEachActiveAccountAddress(ns, account, fn)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // ForEachActiveAddress calls the given function with each active address

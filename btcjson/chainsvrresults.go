@@ -184,65 +184,11 @@ type GetBlockTemplateResult struct {
 	RejectReasion string   `json:"reject-reason,omitempty"`
 }
 
-// GetMempoolEntryResult models the data returned from the getmempoolentry
-// command.
-type GetMempoolEntryResult struct {
-	Size             int32    `json:"size"`
-	Fee              float64  `json:"fee"`
-	ModifiedFee      float64  `json:"modifiedfee"`
-	Time             int64    `json:"time"`
-	Height           int64    `json:"height"`
-	StartingPriority float64  `json:"startingpriority"`
-	CurrentPriority  float64  `json:"currentpriority"`
-	DescendantCount  int64    `json:"descendantcount"`
-	DescendantSize   int64    `json:"descendantsize"`
-	DescendantFees   float64  `json:"descendantfees"`
-	AncestorCount    int64    `json:"ancestorcount"`
-	AncestorSize     int64    `json:"ancestorsize"`
-	AncestorFees     float64  `json:"ancestorfees"`
-	Depends          []string `json:"depends"`
-}
-
 // GetMempoolInfoResult models the data returned from the getmempoolinfo
 // command.
 type GetMempoolInfoResult struct {
 	Size  int64 `json:"size"`
 	Bytes int64 `json:"bytes"`
-}
-
-// NetworksResult models the networks data from the getnetworkinfo command.
-type NetworksResult struct {
-	Name                      string `json:"name"`
-	Limited                   bool   `json:"limited"`
-	Reachable                 bool   `json:"reachable"`
-	Proxy                     string `json:"proxy"`
-	ProxyRandomizeCredentials bool   `json:"proxy_randomize_credentials"`
-}
-
-// LocalAddressesResult models the localaddresses data from the getnetworkinfo
-// command.
-type LocalAddressesResult struct {
-	Address string `json:"address"`
-	Port    uint16 `json:"port"`
-	Score   int32  `json:"score"`
-}
-
-// GetNetworkInfoResult models the data returned from the getnetworkinfo
-// command.
-type GetNetworkInfoResult struct {
-	Version         int32                  `json:"version"`
-	SubVersion      string                 `json:"subversion"`
-	ProtocolVersion int32                  `json:"protocolversion"`
-	LocalServices   string                 `json:"localservices"`
-	LocalRelay      bool                   `json:"localrelay"`
-	TimeOffset      int64                  `json:"timeoffset"`
-	Connections     int32                  `json:"connections"`
-	NetworkActive   bool                   `json:"networkactive"`
-	Networks        []NetworksResult       `json:"networks"`
-	RelayFee        float64                `json:"relayfee"`
-	IncrementalFee  float64                `json:"incrementalfee"`
-	LocalAddresses  []LocalAddressesResult `json:"localaddresses"`
-	Warnings        string                 `json:"warnings"`
 }
 
 // GetNetworkStewardResult models the data returned from the getnetworksteward command.
@@ -506,14 +452,6 @@ type GetMiningInfoResult struct {
 	NetworkHashPS      int64   `json:"networkhashps"`
 	PooledTx           uint64  `json:"pooledtx"`
 	TestNet            bool    `json:"testnet"`
-}
-
-// GetWorkResult models the data from the getwork command.
-type GetWorkResult struct {
-	Data     string `json:"data"`
-	Hash1    string `json:"hash1"`
-	Midstate string `json:"midstate"`
-	Target   string `json:"target"`
 }
 
 // InfoChainResult models the data returned by the chain server getinfo command.

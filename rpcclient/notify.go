@@ -937,51 +937,6 @@ func newOutPointFromWire(op *wire.OutPoint) btcjson.OutPoint {
 	}
 }
 
-// NotifySpentAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See NotifySpent for the blocking version and more details.
-//
-// NOTE: This is a pktd extension and requires a websocket connection.
-//
-// NOTE: Deprecated. Use LoadTxFilterAsync instead.
-func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentResult {
-	// Not supported in HTTP POST mode.
-	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired.Default())
-	}
-
-	// Ignore the notification if the client is not interested in
-	// notifications.
-	if c.ntfnHandlers == nil {
-		return newNilFutureResult()
-	}
-
-	ops := make([]btcjson.OutPoint, 0, len(outpoints))
-	for _, outpoint := range outpoints {
-		ops = append(ops, newOutPointFromWire(outpoint))
-	}
-	cmd := btcjson.NewNotifySpentCmd(ops)
-	return c.sendCmd(cmd)
-}
-
-// NotifySpent registers the client to receive notifications when the passed
-// transaction outputs are spent.  The notifications are delivered to the
-// notification handlers associated with the client.  Calling this function has
-// no effect if there are no notification handlers and will result in an error
-// if the client is configured to run in HTTP POST mode.
-//
-// The notifications delivered as a result of this call will be via
-// OnRedeemingTx.
-//
-// NOTE: This is a pktd extension and requires a websocket connection.
-//
-// NOTE: Deprecated. Use LoadTxFilter instead.
-func (c *Client) NotifySpent(outpoints []*wire.OutPoint) er.R {
-	return c.NotifySpentAsync(outpoints).Receive()
-}
-
 // FutureNotifyNewTransactionsResult is a future promise to deliver the result
 // of a NotifyNewTransactionsAsync RPC invocation (or an applicable error).
 type FutureNotifyNewTransactionsResult chan *response
@@ -1215,85 +1170,6 @@ func (c *Client) Rescan(startBlock *chainhash.Hash,
 	outpoints []*wire.OutPoint) er.R {
 
 	return c.RescanAsync(startBlock, addresses, outpoints).Receive()
-}
-
-// RescanEndBlockAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See RescanEndBlock for the blocking version and more details.
-//
-// NOTE: This is a pktd extension and requires a websocket connection.
-//
-// NOTE: Deprecated. Use RescanBlocksAsync instead.
-func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
-	addresses []btcutil.Address, outpoints []*wire.OutPoint,
-	endBlock *chainhash.Hash) FutureRescanResult {
-
-	// Not supported in HTTP POST mode.
-	if c.config.HTTPPostMode {
-		return newFutureError(ErrWebsocketsRequired.Default())
-	}
-
-	// Ignore the notification if the client is not interested in
-	// notifications.
-	if c.ntfnHandlers == nil {
-		return newNilFutureResult()
-	}
-
-	// Convert block hashes to strings.
-	var startBlockHashStr, endBlockHashStr string
-	if startBlock != nil {
-		startBlockHashStr = startBlock.String()
-	}
-	if endBlock != nil {
-		endBlockHashStr = endBlock.String()
-	}
-
-	// Convert addresses to strings.
-	addrs := make([]string, 0, len(addresses))
-	for _, addr := range addresses {
-		addrs = append(addrs, addr.String())
-	}
-
-	// Convert outpoints.
-	ops := make([]btcjson.OutPoint, 0, len(outpoints))
-	for _, op := range outpoints {
-		ops = append(ops, newOutPointFromWire(op))
-	}
-
-	cmd := btcjson.NewRescanCmd(startBlockHashStr, addrs, ops,
-		&endBlockHashStr)
-	return c.sendCmd(cmd)
-}
-
-// RescanEndHeight rescans the block chain starting from the provided starting
-// block up to the provided ending block for transactions that pay to the
-// passed addresses and transactions which spend the passed outpoints.
-//
-// The notifications of found transactions are delivered to the notification
-// handlers associated with client and this call will not return until the
-// rescan has completed.  Calling this function has no effect if there are no
-// notification handlers and will result in an error if the client is configured
-// to run in HTTP POST mode.
-//
-// The notifications delivered as a result of this call will be via one of
-// OnRedeemingTx (for transactions which spend from the one of the
-// passed outpoints), OnRecvTx (for transactions that receive funds
-// to one of the passed addresses), and OnRescanProgress (for rescan progress
-// updates).
-//
-// See Rescan to also perform a rescan through current end of the longest chain.
-//
-// NOTE: This is a pktd extension and requires a websocket connection.
-//
-// NOTE: Deprecated. Use RescanBlocks instead.
-func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
-	addresses []btcutil.Address, outpoints []*wire.OutPoint,
-	endBlock *chainhash.Hash) er.R {
-
-	return c.RescanEndBlockAsync(startBlock, addresses, outpoints,
-		endBlock).Receive()
 }
 
 // FutureLoadTxFilterResult is a future promise to deliver the result

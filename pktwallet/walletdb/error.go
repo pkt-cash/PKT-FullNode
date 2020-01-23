@@ -40,11 +40,6 @@ var (
 	ErrDbNotOpen = Err.CodeWithDetail("ErrDbNotOpen",
 		"database not open")
 
-	// ErrDbAlreadyOpen is returned when open is called on a database that
-	// is already open.
-	ErrDbAlreadyOpen = Err.CodeWithDetail("ErrDbAlreadyOpen",
-		"database already open")
-
 	// ErrInvalid is returned if the specified database is not valid.
 	ErrInvalid = Err.CodeWithDetail("ErrInvalid",
 		"invalid database")

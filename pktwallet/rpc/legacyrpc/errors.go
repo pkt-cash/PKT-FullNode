@@ -34,20 +34,12 @@ func errParse(msg string, err er.R) er.R {
 // message text will be reliable because we *know* that people are going to start depending
 // on them.
 
-func errAddressNotInWallet() er.R {
-	return btcjson.ErrRPCWallet.New("address not found in wallet", nil)
-}
-
 func errAccountNameNotFound() er.R {
 	return btcjson.ErrRPCWalletInvalidAccountName.New("account name not found", nil)
 }
 
 func errNotImportedAccount() er.R {
 	return btcjson.ErrRPCWallet.New("imported addresses must belong to the imported account", nil)
-}
-
-func errReservedAccountName() er.R {
-	return btcjson.ErrRPCInvalidParameter.New("Account name is reserved by RPC server", nil)
 }
 
 func errCommentsUnsupported() er.R {

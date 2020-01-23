@@ -1937,16 +1937,6 @@ func (s *ScopedKeyManager) ForEachAccountAddress(ns walletdb.ReadBucket,
 	return nil
 }
 
-// ForEachActiveAccountAddress calls the given function with each active
-// address of the given account stored in the manager, breaking early on error.
-//
-// TODO(tuxcanfly): actually return only active addresses
-func (s *ScopedKeyManager) ForEachActiveAccountAddress(ns walletdb.ReadBucket, account uint32,
-	fn func(maddr ManagedAddress) er.R) er.R {
-
-	return s.ForEachAccountAddress(ns, account, fn)
-}
-
 // ForEachActiveAddress calls the given function with each active address
 // stored in the manager, breaking early on error.
 func (s *ScopedKeyManager) ForEachActiveAddress(ns walletdb.ReadBucket,

@@ -134,32 +134,3 @@ func ConnectNode(from *Harness, to *Harness) er.R {
 
 	return nil
 }
-
-// TearDownAll tears down all active test harnesses.
-func TearDownAll() er.R {
-	harnessStateMtx.Lock()
-	defer harnessStateMtx.Unlock()
-
-	for _, harness := range testInstances {
-		if err := harness.tearDown(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// ActiveHarnesses returns a slice of all currently active test harnesses. A
-// test harness if considered "active" if it has been created, but not yet torn
-// down.
-func ActiveHarnesses() []*Harness {
-	harnessStateMtx.RLock()
-	defer harnessStateMtx.RUnlock()
-
-	activeNodes := make([]*Harness, 0, len(testInstances))
-	for _, harness := range testInstances {
-		activeNodes = append(activeNodes, harness)
-	}
-
-	return activeNodes
-}

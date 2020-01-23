@@ -377,7 +377,7 @@ func FuzzyEquals(e, r R) bool {
 	return equals(e, r, true)
 }
 
-var errrLoopbreak = errors.New("Loop Break (if you're seeing this error, it should have been caught)")
+var errrLoopbreak = errors.New("loop break (if you're seeing this error, it should have been caught)")
 
 // A (non) error which is used to break out of a forEach loop
 var LoopBreak = E(errrLoopbreak)

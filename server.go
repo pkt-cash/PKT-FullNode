@@ -200,7 +200,6 @@ type server struct {
 	bytesSent     uint64 // Total bytes sent by all peers since start.
 	started       int32
 	shutdown      int32
-	shutdownSched int32
 	startupTime   int64
 
 	chainParams          *chaincfg.Params
@@ -2398,46 +2397,6 @@ func (s *server) WaitForShutdown() {
 	s.wg.Wait()
 }
 
-// ScheduleShutdown schedules a server shutdown after the specified duration.
-// It also dynamically adjusts how often to warn the server is going down based
-// on remaining duration.
-func (s *server) ScheduleShutdown(duration time.Duration) {
-	// Don't schedule shutdown more than once.
-	if atomic.AddInt32(&s.shutdownSched, 1) != 1 {
-		return
-	}
-	srvrLog.Warnf("Server shutdown in %v", duration)
-	go func() {
-		remaining := duration
-		tickDuration := dynamicTickDuration(remaining)
-		done := time.After(remaining)
-		ticker := time.NewTicker(tickDuration)
-	out:
-		for {
-			select {
-			case <-done:
-				ticker.Stop()
-				s.Stop()
-				break out
-			case <-ticker.C:
-				remaining = remaining - tickDuration
-				if remaining < time.Second {
-					continue
-				}
-
-				// Change tick duration dynamically based on remaining time.
-				newDuration := dynamicTickDuration(remaining)
-				if tickDuration != newDuration {
-					tickDuration = newDuration
-					ticker.Stop()
-					ticker = time.NewTicker(tickDuration)
-				}
-				srvrLog.Warnf("Server shutdown in %v", remaining)
-			}
-		}
-	}()
-}
-
 // parseListeners determines whether each listen address is IPv4 and IPv6 and
 // returns a slice of appropriate net.Addrs to listen on with TCP. It also
 // properly detects addresses which apply to "all interfaces" and adds the
@@ -3099,28 +3058,6 @@ func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.Se
 	}
 
 	return nil
-}
-
-// dynamicTickDuration is a convenience function used to dynamically choose a
-// tick duration based on remaining time.  It is primarily used during
-// server shutdown to make shutdown warnings more frequent as the shutdown time
-// approaches.
-func dynamicTickDuration(remaining time.Duration) time.Duration {
-	switch {
-	case remaining <= time.Second*5:
-		return time.Second
-	case remaining <= time.Second*15:
-		return time.Second * 5
-	case remaining <= time.Minute:
-		return time.Second * 15
-	case remaining <= time.Minute*5:
-		return time.Minute
-	case remaining <= time.Minute*15:
-		return time.Minute * 5
-	case remaining <= time.Hour:
-		return time.Minute * 15
-	}
-	return time.Hour
 }
 
 // isWhitelisted returns whether the IP address is included in the whitelisted

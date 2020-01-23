@@ -22,16 +22,8 @@ import (
 type AddNodeSubCmd string
 
 const (
-	// ANAdd indicates the specified host should be added as a persistent
-	// peer.
-	ANAdd AddNodeSubCmd = "add"
-
 	// ANRemove indicates the specified peer should be removed.
 	ANRemove AddNodeSubCmd = "remove"
-
-	// ANOneTry indicates the specified host should try to connect once,
-	// but it should not be made persistent.
-	ANOneTry AddNodeSubCmd = "onetry"
 )
 
 // AddNodeCmd defines the addnode JSON-RPC command.
@@ -446,12 +438,6 @@ type GetMiningPayoutsResult map[string]float64
 // GetNetworkStewardCmd defines the getnetworksteward JSON-RPC command.
 type GetNetworkStewardCmd struct{}
 
-// NewGetNetworkStewardCmd returns a new instance which can be used to issue a getnetworksteward
-// JSON-RPC command.
-func NewGetNetworkStewardCmd() *GetNetworkStewardCmd {
-	return &GetNetworkStewardCmd{}
-}
-
 // GetPeerInfoCmd defines the getpeerinfo JSON-RPC command.
 type GetPeerInfoCmd struct{}
 
@@ -462,10 +448,6 @@ func NewGetPeerInfoCmd() *GetPeerInfoCmd {
 }
 
 type GetRawBlockTemplateCmd struct{}
-
-func NewGetRawBlockTemplateCmd() *GetRawBlockTemplateCmd {
-	return &GetRawBlockTemplateCmd{}
-}
 
 type CheckPcShareCmdStructure struct {
 	ShareTarget  uint32   `json:"sharetarget"`

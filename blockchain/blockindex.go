@@ -41,13 +41,6 @@ const (
 	statusNone blockStatus = 0
 )
 
-// HaveData returns whether the full block data is stored in the database. This
-// will return false for a block node where only the header is downloaded or
-// kept.
-func (status blockStatus) HaveData() bool {
-	return status&statusDataStored != 0
-}
-
 // KnownValid returns whether the block is known to be valid. This will return
 // false for a valid block that has not been fully validated yet.
 func (status blockStatus) KnownValid() bool {
@@ -309,17 +302,6 @@ func (bi *blockIndex) NodeStatus(node *blockNode) blockStatus {
 func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockStatus) {
 	bi.Lock()
 	node.status |= flags
-	bi.dirty[node] = struct{}{}
-	bi.Unlock()
-}
-
-// UnsetStatusFlags flips the provided status flags on the block node to off,
-// regardless of whether they were on or off previously.
-//
-// This function is safe for concurrent access.
-func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockStatus) {
-	bi.Lock()
-	node.status &^= flags
 	bi.dirty[node] = struct{}{}
 	bi.Unlock()
 }

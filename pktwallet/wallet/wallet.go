@@ -54,12 +54,6 @@ const (
 )
 
 var (
-	// ErrNotSynced describes an error where an operation cannot complete
-	// due wallet being out of sync (and perhaps currently syncing with)
-	// the remote chain server.
-	ErrNotSynced = Err.CodeWithDetail("ErrNotSynced",
-		"wallet is not synchronized with the chain server")
-
 	// ErrWalletShuttingDown is an error returned when we attempt to make a
 	// request to the wallet but it is in the process of or has already shut
 	// down.
@@ -1432,22 +1426,6 @@ func (w *Wallet) ChangePublicPassphrase(old, new []byte) er.R {
 	return <-err
 }
 
-// ChangePassphrases modifies the public and private passphrase of the wallet
-// atomically.
-func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
-	privateNew []byte) er.R {
-
-	err := make(chan er.R, 1)
-	w.changePassphrases <- changePassphrasesRequest{
-		publicOld:  publicOld,
-		publicNew:  publicNew,
-		privateOld: privateOld,
-		privateNew: privateNew,
-		err:        err,
-	}
-	return <-err
-}
-
 // AccountAddresses returns the addresses for every created address for an
 // account.
 func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err er.R) {
@@ -1664,22 +1642,6 @@ func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) 
 	return privKey, err
 }
 
-// HaveAddress returns whether the wallet is the owner of the address a.
-func (w *Wallet) HaveAddress(a btcutil.Address) (bool, er.R) {
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		_, err := w.Manager.Address(addrmgrNs, a)
-		return err
-	})
-	if err == nil {
-		return true, nil
-	}
-	if waddrmgr.ErrAddressNotFound.Is(err) {
-		return false, nil
-	}
-	return false, err
-}
-
 // AccountOfAddress finds the account that an address is associated with.
 func (w *Wallet) AccountOfAddress(a btcutil.Address) (uint32, er.R) {
 	var account uint32
@@ -1737,25 +1699,6 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 		return err
 	})
 	return accountName, err
-}
-
-// AccountProperties returns the properties of an account, including address
-// indexes and name. It first fetches the desynced information from the address
-// manager, then updates the indexes based on the address pools.
-func (w *Wallet) AccountProperties(scope waddrmgr.KeyScope, acct uint32) (*waddrmgr.AccountProperties, er.R) {
-	manager, err := w.Manager.FetchScopedKeyManager(scope)
-	if err != nil {
-		return nil, err
-	}
-
-	var props *waddrmgr.AccountProperties
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err er.R
-		props, err = manager.AccountProperties(waddrmgrNs, acct)
-		return err
-	})
-	return props, err
 }
 
 // RenameAccount sets the name for an account number to newName.
@@ -2370,76 +2313,6 @@ func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, er.R) {
 	}, err
 }
 
-// AccountBalanceResult is a single result for the Wallet.AccountBalances method.
-type AccountBalanceResult struct {
-	AccountNumber  uint32
-	AccountName    string
-	AccountBalance btcutil.Amount
-}
-
-// AccountBalances returns all accounts in the wallet and their balances.
-// Balances are determined by excluding transactions that have not met
-// requiredConfs confirmations.
-func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
-	requiredConfs int32) ([]AccountBalanceResult, er.R) {
-
-	manager, err := w.Manager.FetchScopedKeyManager(scope)
-	if err != nil {
-		return nil, err
-	}
-
-	var results []AccountBalanceResult
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-
-		syncBlock := w.Manager.SyncedTo()
-
-		// Fill out all account info except for the balances.
-		lastAcct, err := manager.LastAccount(addrmgrNs)
-		if err != nil {
-			return err
-		}
-		results = make([]AccountBalanceResult, lastAcct+2)
-		for i := range results[:len(results)-1] {
-			accountName, err := manager.AccountName(addrmgrNs, uint32(i))
-			if err != nil {
-				return err
-			}
-			results[i].AccountNumber = uint32(i)
-			results[i].AccountName = accountName
-		}
-		results[len(results)-1].AccountNumber = waddrmgr.ImportedAddrAccount
-		results[len(results)-1].AccountName = waddrmgr.ImportedAddrAccountName
-
-		// Fetch all unspent outputs, and iterate over them tallying each
-		// account's balance where the output script pays to an account address
-		// and the required number of confirmations is met.
-		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
-			if !confirmed(requiredConfs, output.Height, syncBlock.Height) {
-			} else if output.FromCoinBase && !confirmed(int32(w.ChainParams().CoinbaseMaturity),
-				output.Height, syncBlock.Height) {
-			} else if _, addrs, _, err := txscript.ExtractPkScriptAddrs(
-				output.PkScript, w.chainParams); err != nil || len(addrs) == 0 {
-			} else if outputAcct, err := manager.AddrAccount(addrmgrNs, addrs[0]); err != nil {
-				log.Infof("No known account for address [%s]", addrs[0].String())
-			} else {
-				switch {
-				case outputAcct == waddrmgr.ImportedAddrAccount:
-					results[len(results)-1].AccountBalance += output.Amount
-				case outputAcct > lastAcct:
-					return er.New("waddrmgr.Manager.AddrAccount returned account " +
-						"beyond recorded last account")
-				default:
-					results[outputAcct].AccountBalance += output.Amount
-				}
-			}
-			return nil
-		})
-	})
-	return results, err
-}
-
 // creditSlice satisifies the sort.Interface interface to provide sorting
 // transaction credits from oldest to newest.  Credits with the same receive
 // time and mined in the same block are not guaranteed to be sorted by the order
@@ -2616,40 +2489,6 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 		return nil
 	})
 	return results, err
-}
-
-// DumpPrivKeys returns the WIF-encoded private keys for all addresses with
-// private keys in a wallet.
-func (w *Wallet) DumpPrivKeys() ([]string, er.R) {
-	var privkeys []string
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		// Iterate over each active address, appending the private key to
-		// privkeys.
-		return w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) er.R {
-			ma, err := w.Manager.Address(addrmgrNs, addr)
-			if err != nil {
-				return err
-			}
-
-			// Only those addresses with keys needed.
-			pka, ok := ma.(waddrmgr.ManagedPubKeyAddress)
-			if !ok {
-				return nil
-			}
-
-			wif, err := pka.ExportPrivKey()
-			if err != nil {
-				// It would be nice to zero out the array here. However,
-				// since strings in go are immutable, and we have no
-				// control over the caller I don't think we can. :(
-				return err
-			}
-			privkeys = append(privkeys, wif.String())
-			return nil
-		})
-	})
-	return privkeys, err
 }
 
 // DumpWIFPrivateKey returns the WIF encoded private key for a
@@ -3003,84 +2842,6 @@ func confirms(txHeight, curHeight int32) int32 {
 	default:
 		return curHeight - txHeight + 1
 	}
-}
-
-// AccountTotalReceivedResult is a single result for the
-// Wallet.TotalReceivedForAccounts method.
-type AccountTotalReceivedResult struct {
-	AccountNumber    uint32
-	AccountName      string
-	TotalReceived    btcutil.Amount
-	LastConfirmation int32
-}
-
-// TotalReceivedForAccounts iterates through a wallet's transaction history,
-// returning the total amount of Bitcoin received for all accounts.
-func (w *Wallet) TotalReceivedForAccounts(scope waddrmgr.KeyScope,
-	minConf int32) ([]AccountTotalReceivedResult, er.R) {
-
-	manager, err := w.Manager.FetchScopedKeyManager(scope)
-	if err != nil {
-		return nil, err
-	}
-
-	var results []AccountTotalReceivedResult
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-
-		syncBlock := w.Manager.SyncedTo()
-
-		err := manager.ForEachAccount(addrmgrNs, func(account uint32) er.R {
-			accountName, err := manager.AccountName(addrmgrNs, account)
-			if err != nil {
-				return err
-			}
-			results = append(results, AccountTotalReceivedResult{
-				AccountNumber: account,
-				AccountName:   accountName,
-			})
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		var stopHeight int32
-
-		if minConf > 0 {
-			stopHeight = syncBlock.Height - minConf + 1
-		} else {
-			stopHeight = -1
-		}
-
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
-			for i := range details {
-				detail := &details[i]
-				for _, cred := range detail.Credits {
-					pkScript := detail.MsgTx.TxOut[cred.Index].PkScript
-					var outputAcct uint32
-					_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, w.chainParams)
-					if err == nil && len(addrs) > 0 {
-						_, outputAcct, err = w.Manager.AddrAccount(addrmgrNs, addrs[0])
-					}
-					if err == nil {
-						acctIndex := int(outputAcct)
-						if outputAcct == waddrmgr.ImportedAddrAccount {
-							acctIndex = len(results) - 1
-						}
-						res := &results[acctIndex]
-						res.TotalReceived += cred.Amount
-						res.LastConfirmation = confirms(
-							detail.Block.Height, syncBlock.Height)
-					}
-				}
-			}
-			return false, nil
-		}
-		return w.TxStore.RangeTransactions(txmgrNs, 0, stopHeight, rangeFn)
-	})
-	return results, err
 }
 
 // TotalReceivedForAddr iterates through a wallet's transaction history,
@@ -3469,13 +3230,6 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 // belongs to.
 func (w *Wallet) ChainParams() *chaincfg.Params {
 	return w.chainParams
-}
-
-// Database returns the underlying walletdb database. This method is provided
-// in order to allow applications wrapping pktwallet to store app-specific data
-// with the wallet's database.
-func (w *Wallet) Database() walletdb.DB {
-	return w.db
 }
 
 // Create creates an new wallet, writing it to an empty database.  If the passed

@@ -83,10 +83,6 @@ var (
 	// configured to run in HTTP POST mode.
 	ErrWebsocketsRequired = Err.CodeWithDetail("ErrWebsocketsRequired",
 		"a websocket connection is required to use this feature")
-
-	// ErrRPC means the pktd instance responded with an RPC error
-	ErrRPC = Err.CodeWithDetail("ErrJSONRPCError",
-		"the pktd instance responded with a JSON RPC error")
 )
 
 const (
@@ -913,15 +909,6 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 	c.sendRequest(jReq)
 
 	return responseChan
-}
-
-// sendCmdAndWait sends the passed command to the associated server, waits
-// for the reply, and returns the result from it.  It will return the error
-// field in the reply if there is one.
-func (c *Client) sendCmdAndWait(cmd interface{}) (interface{}, er.R) {
-	// Marshal the command to JSON-RPC, send it to the connected server, and
-	// wait for a response on the returned channel.
-	return receiveFuture(c.sendCmd(cmd))
 }
 
 // Disconnected returns whether or not the server is disconnected.  If a

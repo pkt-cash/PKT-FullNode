@@ -33,20 +33,9 @@ var (
 	// does not exist.
 	ErrDbDoesNotExist = Err.Code("ErrDbDoesNotExist")
 
-	// ErrDbExists indicates create is called for a database that
-	// already exists.
-	ErrDbExists = Err.Code("ErrDbExists")
-
 	// ErrDbNotOpen indicates a database instance is accessed before
 	// it is opened or after it is closed.
 	ErrDbNotOpen = Err.Code("ErrDbNotOpen")
-
-	// ErrDbAlreadyOpen indicates open was called on a database that
-	// is already open.
-	ErrDbAlreadyOpen = Err.Code("ErrDbAlreadyOpen")
-
-	// ErrInvalid indicates the specified database is not valid.
-	ErrInvalid = Err.Code("ErrInvalid")
 
 	// ErrCorruption indicates a checksum failure occurred which invariably
 	// means the database is corrupt.
@@ -82,17 +71,6 @@ var (
 
 	// ErrKeyRequired indicates at attempt to insert a zero-length key.
 	ErrKeyRequired = Err.Code("ErrKeyRequired")
-
-	// ErrKeyTooLarge indicates an attmempt to insert a key that is larger
-	// than the max allowed key size.  The max key size depends on the
-	// specific backend driver being used.  As a general rule, key sizes
-	// should be relatively, so this should rarely be an issue.
-	ErrKeyTooLarge = Err.Code("ErrKeyTooLarge")
-
-	// ErrValueTooLarge indicates an attmpt to insert a value that is larger
-	// than max allowed value size.  The max key size depends on the
-	// specific backend driver being used.
-	ErrValueTooLarge = Err.Code("ErrValueTooLarge")
 
 	// ErrIncompatibleValue indicates the value in question is invalid for
 	// the specific requested operation.  For example, trying create or

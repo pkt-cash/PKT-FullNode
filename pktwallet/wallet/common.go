@@ -8,7 +8,6 @@ package wallet
 import (
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -22,15 +21,6 @@ import (
 type BlockIdentity struct {
 	Hash   chainhash.Hash
 	Height int32
-}
-
-// None returns whether there is no block described by the instance.  When
-// associated with a transaction, this indicates the transaction is unmined.
-func (b *BlockIdentity) None() bool {
-	// BUG: Because dcrwallet uses both 0 and -1 in various places to refer
-	// to an unmined transaction this must check against both and may not
-	// ever be usable to represent the genesis block.
-	return *b == BlockIdentity{Height: -1} || *b == BlockIdentity{}
 }
 
 // OutputKind describes a kind of transaction output.  This is used to
@@ -56,33 +46,4 @@ type TransactionOutput struct {
 	//TxExpiry        uint32
 	ContainingBlock BlockIdentity
 	ReceiveTime     time.Time
-}
-
-// OutputRedeemer identifies the transaction input which redeems an output.
-type OutputRedeemer struct {
-	TxHash     chainhash.Hash
-	InputIndex uint32
-}
-
-// P2SHMultiSigOutput describes a transaction output with a pay-to-script-hash
-// output script and an imported redemption script.  Along with common details
-// of the output, this structure also includes the P2SH address the script was
-// created from and the number of signatures required to redeem it.
-//
-// TODO: Could be useful to return how many of the required signatures can be
-// created by this wallet.
-type P2SHMultiSigOutput struct {
-	// TODO: Add a TransactionOutput member to this struct and remove these
-	// fields which are duplicated by it.  This improves consistency.  Only
-	// not done now because wtxmgr APIs don't support an efficient way of
-	// fetching other Transactionoutput data together with the rest of the
-	// multisig info.
-	OutPoint        wire.OutPoint
-	OutputAmount    btcutil.Amount
-	ContainingBlock BlockIdentity
-
-	P2SHAddress  *btcutil.AddressScriptHash
-	RedeemScript []byte
-	M, N         uint8           // M of N signatures required to redeem
-	Redeemer     *OutputRedeemer // nil unless spent
 }

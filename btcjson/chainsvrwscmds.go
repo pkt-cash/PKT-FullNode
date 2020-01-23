@@ -60,12 +60,6 @@ func NewNotifyNewTransactionsCmd(verbose *bool) *NotifyNewTransactionsCmd {
 // SessionCmd defines the session JSON-RPC command.
 type SessionCmd struct{}
 
-// NewSessionCmd returns a new instance which can be used to issue a session
-// JSON-RPC command.
-func NewSessionCmd() *SessionCmd {
-	return &SessionCmd{}
-}
-
 // StopNotifyNewTransactionsCmd defines the stopnotifynewtransactions JSON-RPC command.
 type StopNotifyNewTransactionsCmd struct{}
 

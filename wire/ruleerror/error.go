@@ -276,12 +276,6 @@ var (
 	ErrBadPow = mkError(Err.Code("ErrBadPow"),
 		"ErrBadPow")
 
-	// ErrPowBadCoinbase indicates that the coinbase commitment is malformed for
-	// the pow.
-	// This error message is not aligned with bitcoind
-	ErrPowBadCoinbase = mkError(Err.Code("ErrPowBadCoinbase"),
-		"ErrPowBadCoinbase")
-
 	// ErrPowCannotVerify indicates that the pow cannot be verified because there
 	// is a missing block header required to check one of the announcements.
 	// This error message is not aligned with bitcoind

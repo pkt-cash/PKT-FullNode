@@ -217,10 +217,6 @@ var (
 	// ErrBadPow indicates that the proof of work was somehow malformed
 	ErrBadPow = ruleerror.ErrBadPow
 
-	// ErrPowBadCoinbase indicates that the coinbase commitment is malformed for
-	// the pow.
-	ErrPowBadCoinbase = ruleerror.ErrPowBadCoinbase
-
 	// ErrPowCannotVerify indicates that the pow cannot be verified because there
 	// is a missing block header required to check one of the announcements.
 	ErrPowCannotVerify = ruleerror.ErrPowCannotVerify

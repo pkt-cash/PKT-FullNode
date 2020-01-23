@@ -387,9 +387,6 @@ type StatsSnap struct {
 // It is used as a callback to get newest block details.
 type HashFunc func() (hash *chainhash.Hash, height int32, err er.R)
 
-// AddrFunc is a func which takes an address and returns a related address.
-type AddrFunc func(remoteAddr *wire.NetAddress) *wire.NetAddress
-
 // HostToNetAddrFunc is a func which takes a host, port, services and returns
 // the netaddress.
 type HostToNetAddrFunc func(host string, port uint16,
@@ -748,17 +745,6 @@ func (p *Peer) BytesSent() uint64 {
 // This function is safe for concurrent access.
 func (p *Peer) BytesReceived() uint64 {
 	return atomic.LoadUint64(&p.bytesReceived)
-}
-
-// TimeConnected returns the time at which the peer connected.
-//
-// This function is safe for concurrent access.
-func (p *Peer) TimeConnected() time.Time {
-	p.statsMtx.RLock()
-	timeConnected := p.timeConnected
-	p.statsMtx.RUnlock()
-
-	return timeConnected
 }
 
 // TimeOffset returns the number of seconds the local time was offset from the

@@ -12,13 +12,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -60,10 +58,6 @@ var (
 	// Used to protest concurrent access to above declared variables.
 	harnessStateMtx sync.RWMutex
 )
-
-// HarnessTestCase represents a test-case which utilizes an instance of the
-// Harness to exercise functionality.
-type HarnessTestCase func(r *Harness, t *testing.T)
 
 // Harness fully encapsulates an active pktd process to provide a unified
 // platform for creating rpc driven integration tests involving pktd. The
@@ -330,44 +324,6 @@ func (h *Harness) connectRPCClient() er.R {
 	return nil
 }
 
-// NewAddress returns a fresh address spendable by the Harness' internal
-// wallet.
-//
-// This function is safe for concurrent access.
-func (h *Harness) NewAddress() (btcutil.Address, er.R) {
-	return h.wallet.NewAddress()
-}
-
-// ConfirmedBalance returns the confirmed balance of the Harness' internal
-// wallet.
-//
-// This function is safe for concurrent access.
-func (h *Harness) ConfirmedBalance() btcutil.Amount {
-	return h.wallet.ConfirmedBalance()
-}
-
-// SendOutputs creates, signs, and finally broadcasts a transaction spending
-// the harness' available mature coinbase outputs creating new outputs
-// according to targetOutputs.
-//
-// This function is safe for concurrent access.
-func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
-
-	return h.wallet.SendOutputs(targetOutputs, feeRate)
-}
-
-// SendOutputsWithoutChange creates and sends a transaction that pays to the
-// specified outputs while observing the passed fee rate and ignoring a change
-// output. The passed fee rate should be expressed in sat/b.
-//
-// This function is safe for concurrent access.
-func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
-
-	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
-}
-
 // CreateTransaction returns a fully signed transaction paying to the specified
 // outputs while observing the desired fee rate. The passed fee rate should be
 // expressed in satoshis-per-byte. The transaction being created can optionally
@@ -385,42 +341,11 @@ func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
 	return h.wallet.CreateTransaction(targetOutputs, feeRate, change)
 }
 
-// UnlockOutputs unlocks any outputs which were previously marked as
-// unspendabe due to being selected to fund a transaction via the
-// CreateTransaction method.
-//
-// This function is safe for concurrent access.
-func (h *Harness) UnlockOutputs(inputs []*wire.TxIn) {
-	h.wallet.UnlockOutputs(inputs)
-}
-
-// RPCConfig returns the harnesses current rpc configuration. This allows other
-// potential RPC clients created within tests to connect to a given test
-// harness instance.
-func (h *Harness) RPCConfig() rpcclient.ConnConfig {
-	return h.node.config.rpcConnConfig()
-}
-
 // P2PAddress returns the harness' P2P listening address. This allows potential
 // peers (such as SPV peers) created within tests to connect to a given test
 // harness instance.
 func (h *Harness) P2PAddress() string {
 	return h.node.config.listen
-}
-
-// GenerateAndSubmitBlock creates a block whose contents include the passed
-// transactions and submits it to the running simnet node. For generating
-// blocks with only a coinbase tx, callers can simply pass nil instead of
-// transactions to be mined. Additionally, a custom block version can be set by
-// the caller. A blockVersion of -1 indicates that the current default block
-// version should be used. An uninitialized time.Time should be used for the
-// blockTime parameter if one doesn't wish to set a custom time.
-//
-// This function is safe for concurrent access.
-func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
-	blockTime time.Time) (*btcutil.Block, er.R) {
-	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
-		blockVersion, blockTime, []wire.TxOut{})
 }
 
 // GenerateAndSubmitBlockWithCustomCoinbaseOutputs creates a block whose

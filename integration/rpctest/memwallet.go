@@ -363,16 +363,6 @@ func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 	return addr, nil
 }
 
-// NewAddress returns a fresh address spendable by the wallet.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) NewAddress() (btcutil.Address, er.R) {
-	m.Lock()
-	defer m.Unlock()
-
-	return m.newAddress()
-}
-
 // fundTx attempts to fund a transaction sending amt bitcoin. The coins are
 // selected such that the final amount spent pays enough fees as dictated by the
 // passed fee rate. The passed fee rate should be expressed in
@@ -446,34 +436,6 @@ func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
 	return er.Errorf("not enough funds for coin selection")
 }
 
-// SendOutputs creates, then sends a transaction paying to the specified output
-// while observing the passed fee rate. The passed fee rate should be expressed
-// in satoshis-per-byte.
-func (m *memWallet) SendOutputs(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
-
-	tx, err := m.CreateTransaction(outputs, feeRate, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.rpc.SendRawTransaction(tx, true)
-}
-
-// SendOutputsWithoutChange creates and sends a transaction that pays to the
-// specified outputs while observing the passed fee rate and ignoring a change
-// output. The passed fee rate should be expressed in sat/b.
-func (m *memWallet) SendOutputsWithoutChange(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
-
-	tx, err := m.CreateTransaction(outputs, feeRate, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.rpc.SendRawTransaction(tx, true)
-}
-
 // CreateTransaction returns a fully signed transaction paying to the specified
 // outputs while observing the desired fee rate. The passed fee rate should be
 // expressed in satoshis-per-byte. The transaction being created can optionally
@@ -539,45 +501,6 @@ func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
 	}
 
 	return tx, nil
-}
-
-// UnlockOutputs unlocks any outputs which were previously locked due to
-// being selected to fund a transaction via the CreateTransaction method.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) UnlockOutputs(inputs []*wire.TxIn) {
-	m.Lock()
-	defer m.Unlock()
-
-	for _, input := range inputs {
-		utxo, ok := m.utxos[input.PreviousOutPoint]
-		if !ok {
-			continue
-		}
-
-		utxo.isLocked = false
-	}
-}
-
-// ConfirmedBalance returns the confirmed balance of the wallet.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) ConfirmedBalance() btcutil.Amount {
-	m.RLock()
-	defer m.RUnlock()
-
-	var balance btcutil.Amount
-	for _, utxo := range m.utxos {
-		// Prevent any immature or locked outputs from contributing to
-		// the wallet's total confirmed balance.
-		if !utxo.isMature(m.currentHeight) || utxo.isLocked {
-			continue
-		}
-
-		balance += utxo.value
-	}
-
-	return balance
 }
 
 // keyToAddr maps the passed private to corresponding p2pkh address.

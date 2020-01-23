@@ -4,8 +4,6 @@
 
 package cfgutil
 
-import "github.com/pkt-cash/pktd/btcutil/er"
-
 // ExplicitString is a string value implementing the flags.Marshaler and
 // flags.Unmarshaler interfaces so it may be used as a config struct field.  It
 // records whether the value was explicitly set by the flags package.  This is
@@ -26,13 +24,3 @@ func NewExplicitString(defaultValue string) *ExplicitString {
 // ExplicitlySet returns whether the flag was explicitly set through the
 // flags.Unmarshaler interface.
 func (e *ExplicitString) ExplicitlySet() bool { return e.explicitlySet }
-
-// MarshalFlag implements the flags.Marshaler interface.
-func (e *ExplicitString) MarshalFlag() (string, er.R) { return e.Value, nil }
-
-// UnmarshalFlag implements the flags.Unmarshaler interface.
-func (e *ExplicitString) UnmarshalFlag(value string) er.R {
-	e.Value = value
-	e.explicitlySet = true
-	return nil
-}

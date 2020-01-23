@@ -10,11 +10,10 @@ import "github.com/pkt-cash/pktd/btcjson"
 
 // Common return types.
 var (
-	returnsBool        = []interface{}{(*bool)(nil)}
-	returnsNumber      = []interface{}{(*float64)(nil)}
-	returnsString      = []interface{}{(*string)(nil)}
-	returnsStringArray = []interface{}{(*[]string)(nil)}
-	returnsLTRArray    = []interface{}{(*[]btcjson.ListTransactionsResult)(nil)}
+	returnsBool     = []interface{}{(*bool)(nil)}
+	returnsNumber   = []interface{}{(*float64)(nil)}
+	returnsString   = []interface{}{(*string)(nil)}
+	returnsLTRArray = []interface{}{(*[]btcjson.ListTransactionsResult)(nil)}
 )
 
 // Methods contains all methods and result types that help is generated for,

@@ -25,10 +25,8 @@ func NewErrRPCInternal() er.R {
 // General application defined JSON errors.
 var (
 	ErrRPCMisc                = Err.CodeWithNumber("ErrRPCMisc", -1)
-	ErrRPCForbiddenBySafeMode = Err.CodeWithNumber("ErrRPCForbiddenBySafeMode", -2)
 	ErrRPCType                = Err.CodeWithNumber("ErrRPCType", -3)
 	ErrRPCInvalidAddressOrKey = Err.CodeWithNumber("ErrRPCInvalidAddressOrKey", -5)
-	ErrRPCOutOfMemory         = Err.CodeWithNumber("ErrRPCOutOfMemory", -7)
 	ErrRPCInvalidParameter    = Err.CodeWithNumber("ErrRPCInvalidParameter", -8)
 	ErrRPCDatabase            = Err.CodeWithNumber("ErrRPCDatabase", -20)
 	ErrRPCDeserialization     = Err.CodeWithNumber("ErrRPCDeserialization", -22)
@@ -37,7 +35,6 @@ var (
 
 // Peer-to-peer client errors.
 var (
-	ErrRPCClientNotConnected      = Err.CodeWithNumber("ErrRPCClientNotConnected", -9)
 	ErrRPCClientInInitialDownload = Err.CodeWithNumber("ErrRPCClientInInitialDownload", -10)
 	ErrRPCClientNodeNotAdded      = Err.CodeWithNumber("ErrRPCClientNodeNotAdded", -24)
 )
@@ -45,16 +42,11 @@ var (
 // Wallet JSON errors
 var (
 	ErrRPCWallet                   = Err.CodeWithNumber("ErrRPCWallet", -4)
-	ErrRPCWalletInsufficientFunds  = Err.CodeWithNumber("ErrRPCWalletInsufficientFunds", -6)
 	ErrRPCWalletInvalidAccountName = Err.CodeWithNumber("ErrRPCWalletInvalidAccountName", -11)
-	ErrRPCWalletKeypoolRanOut      = Err.CodeWithNumber("ErrRPCWalletKeypoolRanOut", -12)
 	ErrRPCWalletUnlockNeeded       = Err.CodeWithNumberAndDetail("ErrRPCWalletUnlockNeeded", -13,
 		"Enter the wallet passphrase with walletpassphrase first")
 	ErrRPCWalletPassphraseIncorrect = Err.CodeWithNumberAndDetail("ErrRPCWalletPassphraseIncorrect", -14,
 		"Incorrect passphrase")
-	ErrRPCWalletWrongEncState    = Err.CodeWithNumber("ErrRPCWalletWrongEncState", -15)
-	ErrRPCWalletEncryptionFailed = Err.CodeWithNumber("ErrRPCWalletEncryptionFailed", -16)
-	ErrRPCWalletAlreadyUnlocked  = Err.CodeWithNumber("ErrRPCWalletAlreadyUnlocked", -17)
 )
 
 // Specific Errors related to commands.  These are the ones a user of the RPC
@@ -62,20 +54,16 @@ var (
 // more general errors above.
 var (
 	ErrRPCBlockNotFound = Err.CodeWithNumber("ErrRPCBlockNotFound", -5)
-	ErrRPCBlockCount    = Err.CodeWithNumber("ErrRPCBlockCount", -5)
-	ErrRPCBestBlockHash = Err.CodeWithNumber("ErrRPCBestBlockHash", -5)
 	ErrRPCDifficulty    = Err.CodeWithNumber("ErrRPCDifficulty", -5)
 	ErrRPCOutOfRange    = Err.CodeWithNumber("ErrRPCOutOfRange", -1)
 	ErrRPCNoTxInfo      = Err.CodeWithNumberAndDetail("ErrRPCNoTxInfo", -5,
 		"No information for transaction")
-	ErrRPCNoCFIndex         = Err.CodeWithNumber("ErrRPCNoCFIndex", -5)
-	ErrRPCNoNewestBlockInfo = Err.CodeWithNumber("ErrRPCNoNewestBlockInfo", -5)
-	ErrRPCInvalidTxVout     = Err.CodeWithNumber("ErrRPCInvalidTxVout", -5)
-	ErrRPCRawTxString       = Err.CodeWithNumber("ErrRPCRawTxString", -32602)
-	ErrRPCDecodeHexString   = Err.CodeWithNumber("ErrRPCDecodeHexString", -22)
-	ErrRPCTxError           = Err.CodeWithNumber("ErrRPCTxError", -25)
-	ErrRPCTxRejected        = Err.CodeWithNumber("ErrRPCTxRejected", -26)
-	ErrRPCTxAlreadyInChain  = Err.CodeWithNumber("ErrRPCTxAlreadyInChain", -27)
+	ErrRPCNoCFIndex        = Err.CodeWithNumber("ErrRPCNoCFIndex", -5)
+	ErrRPCInvalidTxVout    = Err.CodeWithNumber("ErrRPCInvalidTxVout", -5)
+	ErrRPCDecodeHexString  = Err.CodeWithNumber("ErrRPCDecodeHexString", -22)
+	ErrRPCTxError          = Err.CodeWithNumber("ErrRPCTxError", -25)
+	ErrRPCTxRejected       = Err.CodeWithNumber("ErrRPCTxRejected", -26)
+	ErrRPCTxAlreadyInChain = Err.CodeWithNumber("ErrRPCTxAlreadyInChain", -27)
 )
 
 // Errors that are specific to pktd.

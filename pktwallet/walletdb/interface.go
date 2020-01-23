@@ -171,13 +171,6 @@ type ReadWriteCursor interface {
 	Delete() er.R
 }
 
-// BucketIsEmpty returns whether the bucket is empty, that is, whether there are
-// no key/value pairs or nested buckets.
-func BucketIsEmpty(bucket ReadBucket) bool {
-	k, v := bucket.ReadCursor().First()
-	return k == nil && v == nil
-}
-
 // DB represents an ACID database.  All database access is performed through
 // read or read+write transactions.
 type DB interface {

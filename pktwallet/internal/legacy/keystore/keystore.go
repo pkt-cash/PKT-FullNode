@@ -14,7 +14,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -27,7 +26,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/rename"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -56,8 +54,6 @@ var (
 		"checksum mismatch")
 	ErrDuplicate = Err.CodeWithDetail("ErrDuplicate",
 		"duplicate key or address")
-	ErrMalformedEntry = Err.CodeWithDetail("ErrMalformedEntry",
-		"malformed entry")
 	ErrWatchingOnly = Err.CodeWithDetail("ErrWatchingOnly",
 		"keystore is watching-only")
 	ErrLocked = Err.CodeWithDetail("ErrLocked",
@@ -284,10 +280,6 @@ func (v version) String() string {
 	return str
 }
 
-func (v version) Uint32() uint32 {
-	return uint32(v.major)<<6 | uint32(v.minor)<<4 | uint32(v.bugfix)<<2 | uint32(v.autoincrement)
-}
-
 func (v *version) ReadFrom(r io.Reader) (int64, error) {
 	// Read 4 bytes for the version.
 	var versBytes [4]byte
@@ -327,46 +319,6 @@ func (v version) LT(v2 version) bool {
 		return true
 
 	case v.autoincrement < v2.autoincrement:
-		return true
-
-	default:
-		return false
-	}
-}
-
-// EQ returns whether v2 is an equal version to v.
-func (v version) EQ(v2 version) bool {
-	switch {
-	case v.major != v2.major:
-		return false
-
-	case v.minor != v2.minor:
-		return false
-
-	case v.bugfix != v2.bugfix:
-		return false
-
-	case v.autoincrement != v2.autoincrement:
-		return false
-
-	default:
-		return true
-	}
-}
-
-// GT returns whether v is a later version than v2.
-func (v version) GT(v2 version) bool {
-	switch {
-	case v.major > v2.major:
-		return true
-
-	case v.minor > v2.minor:
-		return true
-
-	case v.bugfix > v2.bugfix:
-		return true
-
-	case v.autoincrement > v2.autoincrement:
 		return true
 
 	default:
@@ -517,12 +469,9 @@ func getAddressKey(addr btcutil.Address) addressKey {
 // io.ReaderFrom and io.WriterTo interfaces to read from and
 // write to any type of byte streams, including files.
 type Store struct {
-	// TODO: Use atomic operations for dirty so the reader lock
-	// doesn't need to be grabbed.
-	dirty bool
-	path  string
-	dir   string
-	file  string
+	path string
+	dir  string
+	file string
 
 	mtx          sync.RWMutex
 	vers         version
@@ -823,55 +772,6 @@ func (s *Store) writeTo(w io.Writer) (n int64, err er.R) {
 	return n, nil
 }
 
-// TODO: set this automatically.
-func (s *Store) MarkDirty() {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	s.dirty = true
-}
-
-func (s *Store) WriteIfDirty() er.R {
-	s.mtx.RLock()
-	if !s.dirty {
-		s.mtx.RUnlock()
-		return nil
-	}
-
-	// TempFile creates the file 0600, so no need to chmod it.
-	fi, errr := ioutil.TempFile(s.dir, s.file)
-	if errr != nil {
-		s.mtx.RUnlock()
-		return er.E(errr)
-	}
-	fiPath := fi.Name()
-
-	_, err := s.writeTo(fi)
-	if err != nil {
-		s.mtx.RUnlock()
-		fi.Close()
-		return err
-	}
-	errr = fi.Sync()
-	if errr != nil {
-		s.mtx.RUnlock()
-		fi.Close()
-		return er.E(errr)
-	}
-	fi.Close()
-
-	err = rename.Atomic(fiPath, s.path)
-	s.mtx.RUnlock()
-
-	if err == nil {
-		s.mtx.Lock()
-		s.dirty = false
-		s.mtx.Unlock()
-	}
-
-	return err
-}
-
 // OpenDir opens a new key store from the specified directory.  If the file
 // does not exist, the error from the os package will be returned, and can
 // be checked with os.IsNotExist to differentiate missing file errors from
@@ -1028,23 +928,6 @@ func (s *Store) nextChainedAddress(bs *BlockStamp) (btcutil.Address, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	return addr.Address(), nil
-}
-
-// ChangeAddress returns the next chained address from the key store, marking
-// the address for a change transaction output.
-func (s *Store) ChangeAddress(bs *BlockStamp) (btcutil.Address, er.R) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	addr, err := s.nextChainedBtcAddress(bs)
-	if err != nil {
-		return nil, err
-	}
-
-	addr.flags.change = true
-
-	// Create and return payment address for address hash.
 	return addr.Address(), nil
 }
 
@@ -1295,57 +1178,6 @@ func (s *Store) SetSyncStatus(a btcutil.Address, ss SyncStatus) er.R {
 	return nil
 }
 
-// SetSyncedWith marks already synced addresses in the key store to be in
-// sync with the recently-seen block described by the blockstamp.
-// Unsynced addresses are unaffected by this method and must be marked
-// as in sync with MarkAddressSynced or MarkAllSynced to be considered
-// in sync with bs.
-//
-// If bs is nil, the entire key store is marked unsynced.
-func (s *Store) SetSyncedWith(bs *BlockStamp) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	if bs == nil {
-		s.recent.hashes = s.recent.hashes[:0]
-		s.recent.lastHeight = s.keyGenerator.firstBlock
-		s.keyGenerator.setSyncStatus(Unsynced(s.keyGenerator.firstBlock))
-		return
-	}
-
-	// Check if we're trying to rollback the last seen history.
-	// If so, and this bs is already saved, remove anything
-	// after and return.  Otherwire, remove previous hashes.
-	if bs.Height < s.recent.lastHeight {
-		maybeIdx := len(s.recent.hashes) - 1 - int(s.recent.lastHeight-bs.Height)
-		if maybeIdx >= 0 && maybeIdx < len(s.recent.hashes) &&
-			*s.recent.hashes[maybeIdx] == *bs.Hash {
-
-			s.recent.lastHeight = bs.Height
-			// subslice out the removed hashes.
-			s.recent.hashes = s.recent.hashes[:maybeIdx]
-			return
-		}
-		s.recent.hashes = nil
-	}
-
-	if bs.Height != s.recent.lastHeight+1 {
-		s.recent.hashes = nil
-	}
-
-	s.recent.lastHeight = bs.Height
-
-	if len(s.recent.hashes) == 20 {
-		// Make room for the most recent hash.
-		copy(s.recent.hashes, s.recent.hashes[1:])
-
-		// Set new block in the last position.
-		s.recent.hashes[19] = bs.Hash
-	} else {
-		s.recent.hashes = append(s.recent.hashes, bs.Hash)
-	}
-}
-
 // SyncHeight returns details about the block that a wallet is marked at least
 // synced through.  The height is the height that rescans should start at when
 // syncing a wallet back to the best chain.
@@ -1387,16 +1219,6 @@ func (s *Store) SyncedTo() (hash *chainhash.Hash, height int32) {
 		}
 	}
 	return
-}
-
-// NewIterateRecentBlocks returns an iterator for recently-seen blocks.
-// The iterator starts at the most recently-added block, and Prev should
-// be used to access earlier blocks.
-func (s *Store) NewIterateRecentBlocks() *BlockIterator {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-
-	return s.recent.iter(s)
 }
 
 // ImportPrivateKey imports a WIF private key into the keystore.  The imported
@@ -1487,16 +1309,6 @@ func (s *Store) ImportScript(script []byte, bs *BlockStamp) (btcutil.Address, er
 
 	// Create and return address.
 	return addr, nil
-}
-
-// CreateDate returns the Unix time of the key store creation time.  This
-// is used to compare the key store creation time against block headers and
-// set a better minimum block height of where to being rescans.
-func (s *Store) CreateDate() int64 {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-
-	return s.createDate
 }
 
 // ExportWatchingWallet creates and returns a new key store with the same
@@ -1931,59 +1743,6 @@ func (rb *recentBlocks) WriteTo(w io.Writer) (int64, error) {
 	}
 
 	return written, nil
-}
-
-// BlockIterator allows for the forwards and backwards iteration of recently
-// seen blocks.
-type BlockIterator struct {
-	storeMtx *sync.RWMutex
-	height   int32
-	index    int
-	rb       *recentBlocks
-}
-
-func (rb *recentBlocks) iter(s *Store) *BlockIterator {
-	if rb.lastHeight == -1 || len(rb.hashes) == 0 {
-		return nil
-	}
-	return &BlockIterator{
-		storeMtx: &s.mtx,
-		height:   rb.lastHeight,
-		index:    len(rb.hashes) - 1,
-		rb:       rb,
-	}
-}
-
-func (it *BlockIterator) Next() bool {
-	it.storeMtx.RLock()
-	defer it.storeMtx.RUnlock()
-
-	if it.index+1 >= len(it.rb.hashes) {
-		return false
-	}
-	it.index++
-	return true
-}
-
-func (it *BlockIterator) Prev() bool {
-	it.storeMtx.RLock()
-	defer it.storeMtx.RUnlock()
-
-	if it.index-1 < 0 {
-		return false
-	}
-	it.index--
-	return true
-}
-
-func (it *BlockIterator) BlockStamp() BlockStamp {
-	it.storeMtx.RLock()
-	defer it.storeMtx.RUnlock()
-
-	return BlockStamp{
-		Height: it.rb.lastHeight - int32(len(it.rb.hashes)-1-it.index),
-		Hash:   it.rb.hashes[it.index],
-	}
 }
 
 // unusedSpace is a wrapper type to read or write one or more types
