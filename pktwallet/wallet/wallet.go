@@ -1489,6 +1489,32 @@ type Balances struct {
 	ImmatureReward btcutil.Amount
 }
 
+func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]Balances, er.R) {
+	bals := make(map[btcutil.Address]Balances)
+	return bals, walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+		// Get current block.  The block height used for calculating
+		// the number of tx confirmations.
+		syncBlock := w.Manager.SyncedTo()
+		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
+			if _, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams); err != nil {
+				return err
+			} else if len(addrs) > 0 {
+				bal := bals[addrs[0]]
+				bal.Total += output.Amount
+				if output.FromCoinBase && !confirmed(int32(w.chainParams.CoinbaseMaturity),
+					output.Height, syncBlock.Height) {
+					bal.ImmatureReward += output.Amount
+				} else if confirmed(confirms, output.Height, syncBlock.Height) {
+					bal.Spendable += output.Amount
+				}
+				bals[addrs[0]] = bal
+			}
+			return nil
+		})
+	})
+}
+
 // CalculateAccountBalances sums the amounts of all unspent transaction
 // outputs to the given account of a wallet and returns the balance.
 //
@@ -3104,7 +3130,16 @@ func (w *Wallet) SendOutputs(txr CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
+	hasSweep := false
 	for _, output := range txr.Outputs {
+		if output.Value == 0 {
+			if hasSweep {
+				return nil, er.New("Multiple outputs with zero value, a single output with zero value " +
+					"will sweep the address(es) to this output, multiple zero value outputs are ambiguous")
+			}
+			hasSweep = true
+			continue
+		}
 		err := txrules.CheckOutput(
 			output, txrules.DefaultRelayFeePerKb,
 		)

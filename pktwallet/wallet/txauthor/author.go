@@ -7,7 +7,9 @@ package txauthor
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+	"math"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -175,13 +177,28 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 	estimatedSize := txsizes.EstimateVirtualSize(0, 1, 0, outputs, true)
 	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
 
+	// If one of the outputs has a value of zero, this means we want to sweep everything
+	// except for fees to that output.
+	var sweepTo *wire.TxOut
+	for _, out := range outputs {
+		if out.Value == 0 {
+			sweepTo = out
+		}
+	}
+
 	for {
-		inputAmount, inputs, inputValues, scripts, err := fetchInputs(targetAmount + targetFee)
+		synthTargetAmount := targetAmount + targetFee
+		if sweepTo != nil {
+			synthTargetAmount = btcutil.Amount(math.MaxInt64)
+		}
+		inputAmount, inputs, inputValues, scripts, err := fetchInputs(synthTargetAmount)
 		if err != nil {
 			return nil, err
 		}
 		if inputAmount < targetAmount+targetFee {
-			return nil, InsufficientFundsError.Default()
+			return nil, InsufficientFundsError.New(fmt.Sprintf("Unable to create transaction paying [%s] "+
+				"with fee of [%s] because only [%s] is available (from [%d] inputs)",
+				targetAmount.String(), targetFee.String(), inputAmount.String(), len(inputs)), nil)
 		}
 
 		// We count the types of inputs, which we'll use to estimate
@@ -207,6 +224,12 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		if remainingAmount < maxRequiredFee {
 			targetFee = maxRequiredFee
 			continue
+		}
+
+		if sweepTo != nil {
+			sweep := remainingAmount - maxRequiredFee
+			sweepTo.Value = int64(sweep)
+			targetAmount += sweep
 		}
 
 		unsignedTransaction := &wire.MsgTx{

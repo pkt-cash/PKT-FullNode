@@ -353,6 +353,14 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return key, err
 }
 
+func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	bals, err := w.CalculateAddressBalances()
+	if err != nil {
+		return nil, err
+	}
+	balance = bals.Spendable
+}
+
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
 // all addresses for an account, or an error if the requested account does
 // not exist.

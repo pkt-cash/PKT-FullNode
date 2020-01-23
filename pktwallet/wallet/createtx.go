@@ -8,13 +8,14 @@ package wallet
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -22,6 +23,9 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
+
+// Maximum number of inputs which will be included in a transaction
+const MaxInputsPerTx = 4500
 
 // byAmount defines the methods needed to satisify sort.Interface to
 // sort credits by their output amount.
@@ -134,15 +138,34 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		return nil, err
 	}
 
+	var sweepOutput *wire.TxOut
 	var needAmount btcutil.Amount
 	for _, out := range txr.Outputs {
 		needAmount += btcutil.Amount(out.Value)
+		if out.Value == 0 {
+			sweepOutput = out
+		}
+	}
+	if sweepOutput != nil {
+		needAmount = 0
 	}
 	eligible, err := w.findEligibleOutputs(
 		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs, txr.InputMinHeight)
 	if err != nil {
 		return nil, err
 	}
+
+	addrStr := "<all>"
+	if txr.InputAddresses != nil {
+		addrs := make([]string, 0, len(*txr.InputAddresses))
+		for _, a := range *txr.InputAddresses {
+			addrs = append(addrs, fmt.Sprintf("%s (%s)",
+				a.EncodeAddress(), hex.EncodeToString(a.ScriptAddress())))
+		}
+		addrStr = strings.Join(addrs, ", ")
+	}
+	log.Debugf("Found [%d] eligable inputs from addresses including [%s]",
+		len(eligible), addrStr)
 
 	inputSource := makeInputSource(eligible)
 	changeSource := func() ([]byte, er.R) {
@@ -222,6 +245,25 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	return tx, nil
 }
 
+func addrMatch(w *Wallet, script []byte, fromAddresses *[]btcutil.Address) bool {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.chainParams)
+	if err != nil || len(addrs) != 1 {
+		// Can't use this address, lets continue
+		return false
+	}
+	for _, addr := range *fromAddresses {
+		if bytes.Equal(addrs[0].ScriptAddress(), addr.ScriptAddress()) {
+			return true
+		}
+	}
+	return false
+}
+
+type amountCount struct {
+	amount btcutil.Amount
+	count  int
+}
+
 func (w *Wallet) findEligibleOutputs(
 	dbtx walletdb.ReadTx,
 	needAmount btcutil.Amount,
@@ -232,32 +274,18 @@ func (w *Wallet) findEligibleOutputs(
 ) ([]wtxmgr.Credit, er.R) {
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
-	haveAmounts := make(map[string]btcutil.Amount)
+	haveAmounts := make(map[string]*amountCount)
 	var winningAddr []byte
-
-	var fromScripts [][]byte
-	if fromAddresses != nil {
-		for _, addr := range *fromAddresses {
-			fromScripts = append(fromScripts, addr.ScriptAddress())
-		}
-	}
 
 	eligible := make([]wtxmgr.Credit, 0, 50)
 	if err := w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
 
 		// Verify that the output is coming from one of the addresses which we accept to spend from
-		if len(fromScripts) > 0 {
-			ok := false
-			for _, scr := range fromScripts {
-				if bytes.Equal(scr, output.PkScript) {
-					ok = true
-					break
-				}
-			}
-			if !ok {
-				// Skip because not one of the accepted addresses
-				return nil
-			}
+		// This is inherently expensive to filter at this level and ideally it would be moved into
+		// the database by storing address->credit mappings directly, but after each transaction
+		// is loaded, it's not much more effort to also extract the addresses each time.
+		if fromAddresses != nil && !addrMatch(w, output.PkScript, fromAddresses) {
+			return nil
 		}
 
 		// Only include this output if it meets the required number of
@@ -296,8 +324,15 @@ func (w *Wallet) findEligibleOutputs(
 		eligible = append(eligible, *output)
 
 		str := hex.EncodeToString(output.PkScript)
-		haveAmounts[str] += output.Amount
-		if haveAmounts[str] >= needAmount {
+		ha := haveAmounts[str]
+		if ha == nil {
+			haa := amountCount{}
+			ha = &haa
+			haveAmounts[str] = ha
+		}
+		ha.amount += output.Amount
+		ha.count += 1
+		if (needAmount > 0 && ha.amount >= needAmount) || ha.count > MaxInputsPerTx {
 			winningAddr = output.PkScript
 			return er.LoopBreak
 		}
@@ -317,6 +352,8 @@ func (w *Wallet) findEligibleOutputs(
 			}
 		}
 		eligible = eligible[:n]
+	} else if len(eligible) > MaxInputsPerTx {
+		eligible = eligible[:MaxInputsPerTx]
 	}
 
 	return eligible, nil
