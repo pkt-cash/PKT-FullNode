@@ -89,7 +89,6 @@ var rpcHandlers = map[string]struct {
 	"keypoolrefill":          {handler: keypoolRefill},
 	"listaccounts":           {handler: listAccounts},
 	"listlockunspent":        {handler: listLockUnspent},
-	"listreceivedbyaccount":  {handler: listReceivedByAccount},
 	"listreceivedbyaddress":  {handler: listReceivedByAddress},
 	"listsinceblock":         {handlerWithChain: listSinceBlock},
 	"listtransactions":       {handler: listTransactions},
@@ -1025,37 +1024,6 @@ func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 // all locked outpoints.
 func listLockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return w.LockedOutpoints(), nil
-}
-
-// listReceivedByAccount handles a listreceivedbyaccount request by returning
-// a slice of objects, each one containing:
-//  "account": the receiving account;
-//  "amount": total amount received by the account;
-//  "confirmations": number of confirmations of the most recent transaction.
-// It takes two parameters:
-//  "minconf": minimum number of confirmations to consider a transaction -
-//             default: one;
-//  "includeempty": whether or not to include addresses that have no transactions -
-//                  default: false.
-func listReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.ListReceivedByAccountCmd)
-
-	results, err := w.TotalReceivedForAccounts(
-		waddrmgr.KeyScopeBIP0044, int32(*cmd.MinConf),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	jsonResults := make([]btcjson.ListReceivedByAccountResult, 0, len(results))
-	for _, result := range results {
-		jsonResults = append(jsonResults, btcjson.ListReceivedByAccountResult{
-			Account:       result.AccountName,
-			Amount:        result.TotalReceived.ToBTC(),
-			Confirmations: uint64(result.LastConfirmation),
-		})
-	}
-	return jsonResults, nil
 }
 
 // listReceivedByAddress handles a listreceivedbyaddress request by returning

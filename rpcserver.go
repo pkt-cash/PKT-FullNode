@@ -188,7 +188,6 @@ var rpcAskWallet = map[string]struct{}{
 	"keypoolrefill":          {},
 	"listaccounts":           {},
 	"listlockunspent":        {},
-	"listreceivedbyaccount":  {},
 	"listreceivedbyaddress":  {},
 	"listsinceblock":         {},
 	"listtransactions":       {},

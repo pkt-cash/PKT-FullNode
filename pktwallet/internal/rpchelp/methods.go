@@ -48,7 +48,6 @@ var Methods = []struct {
 	{"keypoolrefill", nil},
 	{"listaccounts", []interface{}{(*map[string]float64)(nil)}},
 	{"listlockunspent", []interface{}{(*[]btcjson.TransactionInput)(nil)}},
-	{"listreceivedbyaccount", []interface{}{(*[]btcjson.ListReceivedByAccountResult)(nil)}},
 	{"listreceivedbyaddress", []interface{}{(*[]btcjson.ListReceivedByAddressResult)(nil)}},
 	{"listsinceblock", []interface{}{(*btcjson.ListSinceBlockResult)(nil)}},
 	{"listtransactions", returnsLTRArray},

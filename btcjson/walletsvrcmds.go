@@ -285,26 +285,6 @@ func NewListLockUnspentCmd() *ListLockUnspentCmd {
 	return &ListLockUnspentCmd{}
 }
 
-// ListReceivedByAccountCmd defines the listreceivedbyaccount JSON-RPC command.
-type ListReceivedByAccountCmd struct {
-	MinConf          *int  `jsonrpcdefault:"1"`
-	IncludeEmpty     *bool `jsonrpcdefault:"false"`
-	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
-}
-
-// NewListReceivedByAccountCmd returns a new instance which can be used to issue
-// a listreceivedbyaccount JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewListReceivedByAccountCmd(minConf *int, includeEmpty, includeWatchOnly *bool) *ListReceivedByAccountCmd {
-	return &ListReceivedByAccountCmd{
-		MinConf:          minConf,
-		IncludeEmpty:     includeEmpty,
-		IncludeWatchOnly: includeWatchOnly,
-	}
-}
-
 // ListReceivedByAddressCmd defines the listreceivedbyaddress JSON-RPC command.
 type ListReceivedByAddressCmd struct {
 	MinConf          *int  `jsonrpcdefault:"1"`
@@ -629,7 +609,6 @@ func init() {
 	MustRegisterCmd("keypoolrefill", (*KeyPoolRefillCmd)(nil), flags)
 	MustRegisterCmd("listaccounts", (*ListAccountsCmd)(nil), flags)
 	MustRegisterCmd("listlockunspent", (*ListLockUnspentCmd)(nil), flags)
-	MustRegisterCmd("listreceivedbyaccount", (*ListReceivedByAccountCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaddress", (*ListReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("listsinceblock", (*ListSinceBlockCmd)(nil), flags)
 	MustRegisterCmd("listtransactions", (*ListTransactionsCmd)(nil), flags)

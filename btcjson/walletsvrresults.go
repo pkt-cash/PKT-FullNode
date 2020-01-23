@@ -82,14 +82,6 @@ type ListTransactionsResult struct {
 	OtherAccount      string   `json:"otheraccount,omitempty"`
 }
 
-// ListReceivedByAccountResult models the data from the listreceivedbyaccount
-// command.
-type ListReceivedByAccountResult struct {
-	Account       string  `json:"account"`
-	Amount        float64 `json:"amount"`
-	Confirmations uint64  `json:"confirmations"`
-}
-
 // ListReceivedByAddressResult models the data from the listreceivedbyaddress
 // command.
 type ListReceivedByAddressResult struct {

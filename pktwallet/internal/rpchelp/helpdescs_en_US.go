@@ -201,12 +201,6 @@ var helpDescsEnUS = map[string]string{
 	"transactioninput-txid": "The transaction hash of the referenced output",
 	"transactioninput-vout": "The output index of the referenced output",
 
-	// ListReceivedByAccountCmd help.
-	"listreceivedbyaccount--synopsis":        "DEPRECATED -- Returns a JSON array of objects listing all accounts and the total amount received by each account.",
-	"listreceivedbyaccount-minconf":          "Minimum number of block confirmations required before a transaction is considered",
-	"listreceivedbyaccount-includeempty":     "Unused",
-	"listreceivedbyaccount-includewatchonly": "Unused",
-
 	// ListReceivedByAccountResult help.
 	"listreceivedbyaccountresult-account":       "The name of the account",
 	"listreceivedbyaccountresult-amount":        "Total amount received by payment addresses of the account valued in bitcoin",

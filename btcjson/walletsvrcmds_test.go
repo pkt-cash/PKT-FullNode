@@ -430,66 +430,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.ListLockUnspentCmd{},
 		},
 		{
-			name: "listreceivedbyaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listreceivedbyaccount")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListReceivedByAccountCmd(nil, nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listreceivedbyaccount","params":[],"id":1}`,
-			unmarshalled: &btcjson.ListReceivedByAccountCmd{
-				MinConf:          btcjson.Int(1),
-				IncludeEmpty:     btcjson.Bool(false),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listreceivedbyaccount optional1",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listreceivedbyaccount", 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListReceivedByAccountCmd(btcjson.Int(6), nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listreceivedbyaccount","params":[6],"id":1}`,
-			unmarshalled: &btcjson.ListReceivedByAccountCmd{
-				MinConf:          btcjson.Int(6),
-				IncludeEmpty:     btcjson.Bool(false),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listreceivedbyaccount optional2",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listreceivedbyaccount", 6, true)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListReceivedByAccountCmd(btcjson.Int(6), btcjson.Bool(true), nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listreceivedbyaccount","params":[6,true],"id":1}`,
-			unmarshalled: &btcjson.ListReceivedByAccountCmd{
-				MinConf:          btcjson.Int(6),
-				IncludeEmpty:     btcjson.Bool(true),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listreceivedbyaccount optional3",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listreceivedbyaccount", 6, true, false)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListReceivedByAccountCmd(btcjson.Int(6), btcjson.Bool(true), btcjson.Bool(false))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listreceivedbyaccount","params":[6,true,false],"id":1}`,
-			unmarshalled: &btcjson.ListReceivedByAccountCmd{
-				MinConf:          btcjson.Int(6),
-				IncludeEmpty:     btcjson.Bool(true),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
 			name: "listreceivedbyaddress",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("listreceivedbyaddress")
