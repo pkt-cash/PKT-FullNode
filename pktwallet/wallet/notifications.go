@@ -154,7 +154,7 @@ func makeTxSummary(dbtx walletdb.ReadTx, w *Wallet, details *wtxmgr.TxDetails) T
 
 func totalBalances(dbtx walletdb.ReadTx, w *Wallet, m map[uint32]btcutil.Amount) er.R {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
-	unspent, err := w.TxStore.UnspentOutputs(dbtx.ReadBucket(wtxmgrNamespaceKey), nil)
+	unspent, err := w.TxStore.GetUnspentOutputs(dbtx.ReadBucket(wtxmgrNamespaceKey))
 	if err != nil {
 		return err
 	}

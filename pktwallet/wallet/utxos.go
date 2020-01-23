@@ -35,7 +35,7 @@ func (w *Wallet) UnspentOutputs(policy OutputSelectionPolicy) ([]*TransactionOut
 
 		// TODO: actually stream outputs from the db instead of fetching
 		// all of them at once.
-		outputs, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
+		outputs, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 		if err != nil {
 			return err
 		}

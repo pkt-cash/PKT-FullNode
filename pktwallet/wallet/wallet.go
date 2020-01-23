@@ -341,7 +341,7 @@ func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.C
 	if err != nil {
 		return nil, nil, err
 	}
-	unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
+	unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 	return addrs, unspent, err
 }
 
@@ -655,7 +655,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 	}
 	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txMgrNS := tx.ReadBucket(wtxmgrNamespaceKey)
-		credits, err := w.TxStore.UnspentOutputs(txMgrNS, nil)
+		credits, err := w.TxStore.GetUnspentOutputs(txMgrNS)
 		if err != nil {
 			return err
 		}
@@ -1505,13 +1505,7 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
 
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
-		if err != nil {
-			return err
-		}
-		for i := range unspent {
-			output := &unspent[i]
-
+		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
 			var outputAcct uint32
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(
 				output.PkScript, w.chainParams)
@@ -1519,7 +1513,8 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 				_, outputAcct, err = w.Manager.AddrAccount(addrmgrNs, addrs[0])
 			}
 			if err != nil || outputAcct != account {
-				continue
+				// disregard the error and keep searching
+				return nil
 			}
 
 			bals.Total += output.Amount
@@ -1529,8 +1524,8 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 			} else if confirmed(confirms, output.Height, syncBlock.Height) {
 				bals.Spendable += output.Amount
 			}
-		}
-		return nil
+			return nil
+		})
 	})
 	return bals, err
 }
@@ -2297,7 +2292,7 @@ func (w *Wallet) Accounts(scope waddrmgr.KeyScope) (*AccountsResult, er.R) {
 		syncBlock := w.Manager.SyncedTo()
 		syncBlockHash = &syncBlock.Hash
 		syncBlockHeight = syncBlock.Height
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
+		unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 		if err != nil {
 			return err
 		}
@@ -2388,39 +2383,27 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 		// Fetch all unspent outputs, and iterate over them tallying each
 		// account's balance where the output script pays to an account address
 		// and the required number of confirmations is met.
-		unspentOutputs, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
-		if err != nil {
-			return err
-		}
-		for i := range unspentOutputs {
-			output := &unspentOutputs[i]
+		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
 			if !confirmed(requiredConfs, output.Height, syncBlock.Height) {
-				continue
-			}
-			if output.FromCoinBase && !confirmed(int32(w.ChainParams().CoinbaseMaturity),
+			} else if output.FromCoinBase && !confirmed(int32(w.ChainParams().CoinbaseMaturity),
 				output.Height, syncBlock.Height) {
-				continue
-			}
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams)
-			if err != nil || len(addrs) == 0 {
-				continue
-			}
-			outputAcct, err := manager.AddrAccount(addrmgrNs, addrs[0])
-			if err != nil {
+			} else if _, addrs, _, err := txscript.ExtractPkScriptAddrs(
+				output.PkScript, w.chainParams); err != nil || len(addrs) == 0 {
+			} else if outputAcct, err := manager.AddrAccount(addrmgrNs, addrs[0]); err != nil {
 				log.Infof("No known account for address [%s]", addrs[0].String())
-				continue
+			} else {
+				switch {
+				case outputAcct == waddrmgr.ImportedAddrAccount:
+					results[len(results)-1].AccountBalance += output.Amount
+				case outputAcct > lastAcct:
+					return er.New("waddrmgr.Manager.AddrAccount returned account " +
+						"beyond recorded last account")
+				default:
+					results[outputAcct].AccountBalance += output.Amount
+				}
 			}
-			switch {
-			case outputAcct == waddrmgr.ImportedAddrAccount:
-				results[len(results)-1].AccountBalance += output.Amount
-			case outputAcct > lastAcct:
-				return er.New("waddrmgr.Manager.AddrAccount returned account " +
-					"beyond recorded last account")
-			default:
-				results[outputAcct].AccountBalance += output.Amount
-			}
-		}
-		return nil
+			return nil
+		})
 	})
 	return results, err
 }
@@ -2478,7 +2461,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 		syncBlock := w.Manager.SyncedTo()
 
 		filter := len(addresses) != 0
-		unspent, err := w.TxStore.UnspentOutputs(txmgrNs, nil)
+		unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 		if err != nil {
 			return err
 		}

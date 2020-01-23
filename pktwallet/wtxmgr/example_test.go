@@ -241,7 +241,7 @@ func Example_basicUsage() {
 	fmt.Println(bal)
 
 	// Fetch unspent outputs.
-	utxos, err := s.UnspentOutputs(b, nil)
+	utxos, err := s.GetUnspentOutputs(b)
 	if err != nil {
 		fmt.Println(err)
 	}

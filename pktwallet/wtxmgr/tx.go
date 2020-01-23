@@ -7,7 +7,6 @@ package wtxmgr
 
 import (
 	"bytes"
-	"errors"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -688,17 +687,13 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 	return putMinedBalance(ns, minedBalance)
 }
 
-var errrBreak = errors.New("Stop loop")
-var errBreak = er.E(errrBreak)
-
-// UnspentOutputs returns all unspent received transaction outputs.
-// The order is undefined.
-func (s *Store) UnspentOutputs(ns walletdb.ReadBucket, filter func(c *Credit) bool) ([]Credit, er.R) {
-	var unspent []Credit
+// ForEachUnspentOutput runs the visitor over each unspent output (in undefined order)
+// Any error type other than wtxmgr.Err or er.LoopBreak will be wrapped as wtxmgr.ErrDatabase
+func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Credit) er.R) er.R {
 
 	var op wire.OutPoint
 	var block Block
-	err := ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) er.R {
+	if err := ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) er.R {
 		err := readCanonicalOutPoint(k, &op)
 		if err != nil {
 			return err
@@ -736,24 +731,15 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket, filter func(c *Credit) bo
 			Received:     rec.Received,
 			FromCoinBase: blockchain.IsCoinBaseTx(&rec.MsgTx),
 		}
-		unspent = append(unspent, cred)
-		if filter != nil && !filter(&cred) {
-			return errBreak
+		return visitor(&cred)
+	}); err != nil {
+		if er.IsLoopBreak(err) || Err.Is(err) {
+			return err
 		}
-		return nil
-	})
-	if er.Wrapped(err) == errrBreak {
-		return unspent, nil
-	}
-	if err != nil {
-		if Err.Is(err) {
-			return nil, err
-		}
-		str := "failed iterating unspent bucket"
-		return nil, storeError(ErrDatabase, str, err)
+		return storeError(ErrDatabase, "failed iterating unspent bucket", err)
 	}
 
-	err = ns.NestedReadBucket(bucketUnminedCredits).ForEach(func(k, v []byte) er.R {
+	if err := ns.NestedReadBucket(bucketUnminedCredits).ForEach(func(k, v []byte) er.R {
 		if existsRawUnminedInput(ns, k) != nil {
 			// Output is spent by an unmined transaction.
 			// Skip to next unmined credit.
@@ -785,18 +771,26 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket, filter func(c *Credit) bo
 			Received:     rec.Received,
 			FromCoinBase: blockchain.IsCoinBaseTx(&rec.MsgTx),
 		}
-		unspent = append(unspent, cred)
-		return nil
-	})
-	if err != nil {
-		if Err.Is(err) {
-			return nil, err
+		return visitor(&cred)
+	}); err != nil {
+		if er.IsLoopBreak(err) || Err.Is(err) {
+			return err
 		}
-		str := "failed iterating unmined credits bucket"
-		return nil, storeError(ErrDatabase, str, err)
+		return storeError(ErrDatabase, "failed iterating unmined credits bucket", err)
 	}
 
-	return unspent, nil
+	return nil
+}
+
+// GetUnspentOutputs returns all unspent received transaction outputs.
+// The order is undefined.
+func (s *Store) GetUnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
+	var unspent []Credit
+	err := s.ForEachUnspentOutput(ns, func(c *Credit) er.R {
+		unspent = append(unspent, *c)
+		return nil
+	})
+	return unspent, err
 }
 
 // Balance returns the spendable wallet balance (total value of all unspent

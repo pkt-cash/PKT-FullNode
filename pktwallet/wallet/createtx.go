@@ -243,7 +243,7 @@ func (w *Wallet) findEligibleOutputs(
 	}
 
 	eligible := make([]wtxmgr.Credit, 0, 50)
-	_, err := w.TxStore.UnspentOutputs(txmgrNs, func(output *wtxmgr.Credit) bool {
+	if err := w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
 
 		// Verify that the output is coming from one of the addresses which we accept to spend from
 		if len(fromScripts) > 0 {
@@ -256,7 +256,7 @@ func (w *Wallet) findEligibleOutputs(
 			}
 			if !ok {
 				// Skip because not one of the accepted addresses
-				return true
+				return nil
 			}
 		}
 
@@ -264,19 +264,19 @@ func (w *Wallet) findEligibleOutputs(
 		// confirmations.  Coinbase transactions must have have reached
 		// maturity before their outputs may be spent.
 		if !confirmed(minconf, output.Height, bs.Height) {
-			return true
+			return nil
 		}
 
 		if output.Height < int32(inputMinHeight) {
 			log.Debugf("Skipping output %s at height %d because it is below minimum %d\n",
 				output.String(), output.Height, inputMinHeight)
-			return true
+			return nil
 		}
 
 		if output.FromCoinBase {
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, bs.Height) {
-				return true
+				return nil
 			}
 			if !w.chainParams.GlobalConf.HasNetworkSteward {
 			} else if bs.Height-129600+1440 < output.Height {
@@ -284,13 +284,13 @@ func (w *Wallet) findEligibleOutputs(
 				blockchain.CalcBlockSubsidy(output.Height, w.chainParams)) {
 			} else {
 				log.Debugf("Skipping burned output at height %d\n", output.Height)
-				return true
+				return nil
 			}
 		}
 
 		// Locked unspent outputs are skipped.
 		if w.LockedOutpoint(output.OutPoint) {
-			return true
+			return nil
 		}
 
 		eligible = append(eligible, *output)
@@ -299,11 +299,10 @@ func (w *Wallet) findEligibleOutputs(
 		haveAmounts[str] += output.Amount
 		if haveAmounts[str] >= needAmount {
 			winningAddr = output.PkScript
-			return false
+			return er.LoopBreak
 		}
-		return true
-	})
-	if err != nil {
+		return nil
+	}); err != nil && !er.IsLoopBreak(err) {
 		return nil, err
 	}
 

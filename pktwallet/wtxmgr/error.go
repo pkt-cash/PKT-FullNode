@@ -10,7 +10,7 @@ import (
 )
 
 // Err identifies a category of error.
-var Err er.ErrorType = er.NewErrorType("wtxmgr.Error")
+var Err er.ErrorType = er.NewErrorType("wtxmgr.Err")
 
 // These constants are used to identify a specific Error.
 var (

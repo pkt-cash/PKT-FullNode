@@ -80,7 +80,7 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 
 		// We should see one confirmed unspent output before the
 		// migration, and none after.
-		utxos, err := s.UnspentOutputs(ns, nil)
+		utxos, err := s.GetUnspentOutputs(ns)
 		if err != nil {
 			return err
 		}
