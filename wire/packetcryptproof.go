@@ -127,24 +127,9 @@ func (h *PacketCryptProof) BtcEncode(w io.Writer, pver uint32, enc MessageEncodi
 	return writePacketCryptProof(w, pver, enc, h)
 }
 
-// Deserialize reads a PacketCryptProof from the on-disk format
-func (h *PacketCryptProof) Deserialize(r io.Reader) er.R {
-	return readPacketCryptProof(r, 0, WitnessEncoding, h)
-}
-
 // Serialize writes a PacketCryptProof to the on-disk format
 func (h *PacketCryptProof) Serialize(w io.Writer) er.R {
 	return writePacketCryptProof(w, 0, WitnessEncoding, h)
-}
-
-// PcProofFromBytes is a helper function which reads a byte array into a PacketCryptProof
-func PcProofFromBytes(b []byte) *PacketCryptProof {
-	bb := bytes.NewBuffer(b)
-	out := PacketCryptProof{}
-	if err := out.Deserialize(bb); err != nil {
-		panic("failed to decode pcp")
-	}
-	return &out
 }
 
 // SerializeSize gets the size of the PacketCryptProof when serialized

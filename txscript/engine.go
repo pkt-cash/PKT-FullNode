@@ -839,18 +839,6 @@ func (vm *Engine) SetStack(data [][]byte) {
 	setStack(&vm.dstack, data)
 }
 
-// GetAltStack returns the contents of the alternate stack as an array where the
-// last item in the array is the top of the stack.
-func (vm *Engine) GetAltStack() [][]byte {
-	return getStack(&vm.astack)
-}
-
-// SetAltStack sets the contents of the alternate stack to the contents of the
-// provided array where the last item in the array will be the top of the stack.
-func (vm *Engine) SetAltStack(data [][]byte) {
-	setStack(&vm.astack, data)
-}
-
 // NewEngine returns a new script engine for the provided public key script,
 // transaction, and input index.  The flags modify the behavior of the script
 // engine according to the description provided by each flag.

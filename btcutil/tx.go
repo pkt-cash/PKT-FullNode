@@ -51,21 +51,6 @@ func (t *Tx) Hash() *chainhash.Hash {
 	return &hash
 }
 
-// WitnessHash returns the witness hash (wtxid) of the transaction.  This is
-// equivalent to calling WitnessHash on the underlying wire.MsgTx, however it
-// caches the result so subsequent calls are more efficient.
-func (t *Tx) WitnessHash() *chainhash.Hash {
-	// Return the cached hash if it has already been generated.
-	if t.txHashWitness != nil {
-		return t.txHashWitness
-	}
-
-	// Cache the hash and return it.
-	hash := t.msgTx.WitnessHash()
-	t.txHashWitness = &hash
-	return &hash
-}
-
 // HasWitness returns false if none of the inputs within the transaction
 // contain witness data, true false otherwise. This equivalent to calling
 // HasWitness on the underlying wire.MsgTx, however it caches the result so

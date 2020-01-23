@@ -35,6 +35,7 @@ const (
 	// RawPubKey is just raw public key to be used within scripts, This
 	// type indicates that a scoped manager with this address type
 	// shouldn't be consulted during historical rescans.
+	//lint:ignore U1001 this is not used but removing it causes numbers to change
 	RawPubKey
 
 	// NestedWitnessPubKey represents a p2wkh output nested within a p2sh

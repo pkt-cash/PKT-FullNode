@@ -90,6 +90,7 @@ const (
 	UpnpPrio
 
 	// HTTPPrio signifies the address was obtained from an external HTTP service.
+	//lint:ignore U1001 removing this will cause ManualPrio to change number
 	HTTPPrio
 
 	// ManualPrio signifies the address was provided by --externalip.

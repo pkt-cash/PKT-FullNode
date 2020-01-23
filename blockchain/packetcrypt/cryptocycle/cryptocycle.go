@@ -50,11 +50,12 @@ func (s *State) SetAdditionalZeros(v byte) { s.SetBitRange(0, 4, v) }
 func (s *State) GetVersion() byte         { return s.GetBitRange(25, 7) }
 func (s *State) IsFailed() bool           { return s.GetBitRange(24, 1) != 0 }
 func (s *State) GetLength() byte          { return s.GetBitRange(17, 7) }
-func (s *State) IsTruncated() bool        { return s.GetBitRange(16, 1) != 0 }
 func (s *State) GetAddLen() byte          { return s.GetBitRange(13, 3) }
 func (s *State) IsDecrypt() bool          { return s.GetBitRange(12, 1) != 0 }
 func (s *State) GetTrailingZeros() byte   { return s.GetBitRange(8, 4) }
 func (s *State) GetAdditionalZeros() byte { return s.GetBitRange(0, 4) }
+
+// func (s *State) IsTruncated() bool        { return s.GetBitRange(16, 1) != 0 }
 
 func GetItemNo(state *State) uint64 {
 	return binary.LittleEndian.Uint64(state.Bytes[16:24])

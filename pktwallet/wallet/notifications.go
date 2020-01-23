@@ -396,82 +396,14 @@ type AccountBalance struct {
 	TotalBalance btcutil.Amount
 }
 
-// TransactionNotificationsClient receives TransactionNotifications from the
-// NotificationServer over the channel C.
-type TransactionNotificationsClient struct {
-	C      <-chan *TransactionNotifications
-	server *NotificationServer
-}
-
-// TransactionNotifications returns a client for receiving
-// TransactionNotifiations notifications over a channel.  The channel is
-// unbuffered.
-//
-// When finished, the Done method should be called on the client to disassociate
-// it from the server.
-func (s *NotificationServer) TransactionNotifications() TransactionNotificationsClient {
-	c := make(chan *TransactionNotifications)
-	s.mu.Lock()
-	s.transactions = append(s.transactions, c)
-	s.mu.Unlock()
-	return TransactionNotificationsClient{
-		C:      c,
-		server: s,
-	}
-}
-
-// Done deregisters the client from the server and drains any remaining
-// messages.  It must be called exactly once when the client is finished
-// receiving notifications.
-func (c *TransactionNotificationsClient) Done() {
-	go func() {
-		// Drain notifications until the client channel is removed from
-		// the server and closed.
-		for range c.C {
-		}
-	}()
-	go func() {
-		s := c.server
-		s.mu.Lock()
-		clients := s.transactions
-		for i, ch := range clients {
-			if c.C == ch {
-				clients[i] = clients[len(clients)-1]
-				s.transactions = clients[:len(clients)-1]
-				close(ch)
-				break
-			}
-		}
-		s.mu.Unlock()
-	}()
-}
-
 // SpentnessNotifications is a notification that is fired for transaction
 // outputs controlled by some account's keys.  The notification may be about a
 // newly added unspent transaction output or that a previously unspent output is
 // now spent.  When spent, the notification includes the spending transaction's
 // hash and input index.
 type SpentnessNotifications struct {
-	hash         *chainhash.Hash
-	spenderHash  *chainhash.Hash
-	index        uint32
-	spenderIndex uint32
-}
-
-// Hash returns the transaction hash of the spent output.
-func (n *SpentnessNotifications) Hash() *chainhash.Hash {
-	return n.hash
-}
-
-// Index returns the transaction output index of the spent output.
-func (n *SpentnessNotifications) Index() uint32 {
-	return n.index
-}
-
-// Spender returns the spending transction's hash and input index, if any.  If
-// the output is unspent, the final bool return is false.
-func (n *SpentnessNotifications) Spender() (*chainhash.Hash, uint32, bool) {
-	return n.spenderHash, n.spenderIndex, n.spenderHash != nil
+	hash  *chainhash.Hash
+	index uint32
 }
 
 // notifyUnspentOutput notifies registered clients of a new unspent output that
@@ -490,54 +422,6 @@ func (s *NotificationServer) notifyUnspentOutput(account uint32, hash *chainhash
 	for _, c := range clients {
 		c <- n
 	}
-}
-
-// SpentnessNotificationsClient receives SpentnessNotifications from the
-// NotificationServer over the channel C.
-type SpentnessNotificationsClient struct {
-	C       <-chan *SpentnessNotifications
-	account uint32
-	server  *NotificationServer
-}
-
-// AccountSpentnessNotifications registers a client for spentness changes of
-// outputs controlled by the account.
-func (s *NotificationServer) AccountSpentnessNotifications(account uint32) SpentnessNotificationsClient {
-	c := make(chan *SpentnessNotifications)
-	s.mu.Lock()
-	s.spentness[account] = append(s.spentness[account], c)
-	s.mu.Unlock()
-	return SpentnessNotificationsClient{
-		C:       c,
-		account: account,
-		server:  s,
-	}
-}
-
-// Done deregisters the client from the server and drains any remaining
-// messages.  It must be called exactly once when the client is finished
-// receiving notifications.
-func (c *SpentnessNotificationsClient) Done() {
-	go func() {
-		// Drain notifications until the client channel is removed from
-		// the server and closed.
-		for range c.C {
-		}
-	}()
-	go func() {
-		s := c.server
-		s.mu.Lock()
-		clients := s.spentness[c.account]
-		for i, ch := range clients {
-			if c.C == ch {
-				clients[i] = clients[len(clients)-1]
-				s.spentness[c.account] = clients[:len(clients)-1]
-				close(ch)
-				break
-			}
-		}
-		s.mu.Unlock()
-	}()
 }
 
 // AccountNotification contains properties regarding an account, such as its
@@ -568,48 +452,4 @@ func (s *NotificationServer) notifyAccountProperties(props *waddrmgr.AccountProp
 	for _, c := range clients {
 		c <- n
 	}
-}
-
-// AccountNotificationsClient receives AccountNotifications over the channel C.
-type AccountNotificationsClient struct {
-	C      chan *AccountNotification
-	server *NotificationServer
-}
-
-// AccountNotifications returns a client for receiving AccountNotifications over
-// a channel.  The channel is unbuffered.  When finished, the client's Done
-// method should be called to disassociate the client from the server.
-func (s *NotificationServer) AccountNotifications() AccountNotificationsClient {
-	c := make(chan *AccountNotification)
-	s.mu.Lock()
-	s.accountClients = append(s.accountClients, c)
-	s.mu.Unlock()
-	return AccountNotificationsClient{
-		C:      c,
-		server: s,
-	}
-}
-
-// Done deregisters the client from the server and drains any remaining
-// messages.  It must be called exactly once when the client is finished
-// receiving notifications.
-func (c *AccountNotificationsClient) Done() {
-	go func() {
-		for range c.C {
-		}
-	}()
-	go func() {
-		s := c.server
-		s.mu.Lock()
-		clients := s.accountClients
-		for i, ch := range clients {
-			if c.C == ch {
-				clients[i] = clients[len(clients)-1]
-				s.accountClients = clients[:len(clients)-1]
-				close(ch)
-				break
-			}
-		}
-		s.mu.Unlock()
-	}()
 }

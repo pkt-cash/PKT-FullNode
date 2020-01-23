@@ -326,16 +326,6 @@ func E(e error) R {
 	}
 }
 
-func CauseOf(err R) R {
-	if err == nil {
-		return err
-	}
-	if te, ok := err.(typedErr); ok {
-		return te.err
-	}
-	return err
-}
-
 func equals(e, r R, fuzzy bool) bool {
 	if e == nil || r == nil {
 		return e == nil && r == nil

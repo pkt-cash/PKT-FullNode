@@ -477,18 +477,6 @@ func (a *AddressPubKey) String() string {
 	return hex.EncodeToString(a.serialize())
 }
 
-// Format returns the format (uncompressed, compressed, etc) of the
-// pay-to-pubkey address.
-func (a *AddressPubKey) Format() PubKeyFormat {
-	return a.pubKeyFormat
-}
-
-// SetFormat sets the format (uncompressed, compressed, etc) of the
-// pay-to-pubkey address.
-func (a *AddressPubKey) SetFormat(pkFormat PubKeyFormat) {
-	a.pubKeyFormat = pkFormat
-}
-
 // AddressPubKeyHash returns the pay-to-pubkey address converted to a
 // pay-to-pubkey-hash address.  Note that the public key format (uncompressed,
 // compressed, etc) will change the resulting address.  This is expected since

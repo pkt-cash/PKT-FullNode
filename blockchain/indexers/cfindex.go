@@ -325,13 +325,6 @@ func (idx *CfIndex) FilterHeadersByBlockHashes(blockHashes []*chainhash.Hash,
 	return idx.entriesByBlockHashes(cfHeaderKeys, filterType, blockHashes)
 }
 
-// FilterHashByBlockHash returns the serialized contents of a block's basic
-// committed filter hash.
-func (idx *CfIndex) FilterHashByBlockHash(h *chainhash.Hash,
-	filterType wire.FilterType) ([]byte, er.R) {
-	return idx.entryByBlockHash(cfHashKeys, filterType, h)
-}
-
 // FilterHashesByBlockHashes returns the serialized contents of a block's basic
 // committed filter hash for a set of blocks by hash.
 func (idx *CfIndex) FilterHashesByBlockHashes(blockHashes []*chainhash.Hash,

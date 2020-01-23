@@ -73,16 +73,6 @@ func out4(ctx *Context, a uint128) {
 	ctx.stack = append(ctx.stack, U128_0(a), U128_1(a), U128_2(a), U128_3(a))
 }
 
-// for testing
-func out1x(inout []uint32, x uint32) { inout[4] = x }
-func out2x(inout []uint32, x uint64) { inout[4] = uint32(x); inout[5] = uint32(x >> 32) }
-func out4x(inout []uint32, a uint128) {
-	inout[4] = U128_0(a)
-	inout[5] = U128_1(a)
-	inout[6] = U128_2(a)
-	inout[7] = U128_3(a)
-}
-
 type Context struct {
 	stack    []uint32
 	scopes   []int

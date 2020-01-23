@@ -468,18 +468,6 @@ func (h *blockHeaderStore) LatestBlockLocator() (blockchain.BlockLocator, er.R) 
 	return h.blockLocatorFromHash(chainTipHash)
 }
 
-// BlockLocatorFromHash computes a block locator given a particular hash. The
-// standard Bitcoin algorithm to compute block locators are employed.
-func (h *blockHeaderStore) BlockLocatorFromHash(hash *chainhash.Hash) (
-	blockchain.BlockLocator, er.R) {
-
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
-	return h.blockLocatorFromHash(hash)
-}
-
 // CheckConnectivity cycles through all of the block headers on disk, from last
 // to first, and makes sure they all connect to each other. Additionally, at
 // each block header, we also ensure that the index entry for that height and

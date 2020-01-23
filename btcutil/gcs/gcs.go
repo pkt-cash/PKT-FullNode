@@ -240,39 +240,6 @@ func (f *Filter) NBytes() ([]byte, er.R) {
 	return buffer.Bytes(), nil
 }
 
-// PBytes returns the serialized format of the GCS filter with P, which does
-// not include N (returned by a separate method) or the key used by SipHash.
-func (f *Filter) PBytes() ([]byte, er.R) {
-	filterData := make([]byte, len(f.filterData)+1)
-	filterData[0] = f.p
-	copy(filterData[1:], f.filterData)
-	return filterData, nil
-}
-
-// NPBytes returns the serialized format of the GCS filter with N and P, which
-// does not include the key used by SipHash.
-func (f *Filter) NPBytes() ([]byte, er.R) {
-	var buffer bytes.Buffer
-	buffer.Grow(wire.VarIntSerializeSize(uint64(f.n)) + 1 + len(f.filterData))
-
-	err := wire.WriteVarInt(&buffer, varIntProtoVer, uint64(f.n))
-	if err != nil {
-		return nil, err
-	}
-
-	errr := buffer.WriteByte(f.p)
-	if errr != nil {
-		return nil, er.E(errr)
-	}
-
-	_, errr = buffer.Write(f.filterData)
-	if errr != nil {
-		return nil, er.E(errr)
-	}
-
-	return buffer.Bytes(), nil
-}
-
 // P returns the filter's collision probability as a negative power of 2 (that
 // is, a collision probability of `1/2**20` is represented as 20).
 func (f *Filter) P() uint8 {

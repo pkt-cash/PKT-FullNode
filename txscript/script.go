@@ -576,20 +576,6 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	return chainhash.DoubleHashB(sigHash.Bytes()), nil
 }
 
-// CalcWitnessSigHash computes the sighash digest for the specified input of
-// the target transaction observing the desired sig hash type.
-func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType,
-	tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
-
-	parsedScript, err := parseScript(script)
-	if err != nil {
-		return nil, er.Errorf("cannot parse output script: %v", err)
-	}
-
-	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx,
-		amt)
-}
-
 // shallowCopyTx creates a shallow copy of the transaction for use when
 // calculating the signature hash.  It is used over the Copy method on the
 // transaction itself since that is a deep copy and therefore does more work and

@@ -70,7 +70,3 @@ func (b *headerProgressLogger) LogBlockHeight(timestamp time.Time, height int32)
 	b.receivedLogBlocks = 0
 	b.lastBlockLogTime = now
 }
-
-func (b *headerProgressLogger) SetLastLogTime(time time.Time) {
-	b.lastBlockLogTime = time
-}

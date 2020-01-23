@@ -30,11 +30,6 @@ var (
 	ErrDbDoesNotExist = Err.CodeWithDetail("ErrDbDoesNotExist",
 		"database does not exist")
 
-	// ErrDbExists is returned when create is called for a database that
-	// already exists.
-	ErrDbExists = Err.CodeWithDetail("ErrDbExists",
-		"database already exists")
-
 	// ErrDbNotOpen is returned when a database instance is accessed before
 	// it is opened or after it is closed.
 	ErrDbNotOpen = Err.CodeWithDetail("ErrDbNotOpen",

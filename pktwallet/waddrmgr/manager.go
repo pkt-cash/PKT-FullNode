@@ -550,16 +550,6 @@ func (m *Manager) FetchScopedKeyManager(scope KeyScope) (*ScopedKeyManager, er.R
 	return sm, nil
 }
 
-// ScopesForExternalAddrType returns the set of key scopes that are able to
-// produce the target address type as external addresses.
-func (m *Manager) ScopesForExternalAddrType(addrType AddressType) []KeyScope {
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
-
-	scopes := m.externalAddrSchemas[addrType]
-	return scopes
-}
-
 // NeuterRootKey is a special method that should be used once a caller is
 // *certain* that no further scoped managers are to be created. This method
 // will *delete* the encrypted master HD root private key from the database.

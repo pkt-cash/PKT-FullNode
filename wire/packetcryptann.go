@@ -68,10 +68,10 @@ func (p *PacketCryptAnn) GetWorkTarget() uint32 {
 	return binary.LittleEndian.Uint32(p.Header[8:12])
 }
 
-// GetContentType provides the uint32 content type ID
-func (p *PacketCryptAnn) GetContentType() uint32 {
-	return binary.LittleEndian.Uint32(p.Header[16:20])
-}
+// // GetContentType provides the uint32 content type ID
+// func (p *PacketCryptAnn) GetContentType() uint32 {
+// 	return binary.LittleEndian.Uint32(p.Header[16:20])
+// }
 
 // GetContentLength provides the length of the announcement content
 func (p *PacketCryptAnn) GetContentLength() uint32 {
