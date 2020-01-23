@@ -6,10 +6,12 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
 	"runtime"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
@@ -65,7 +67,7 @@ out:
 					"transaction %s:%d",
 					txIn.PreviousOutPoint, txVI.tx.Hash(),
 					txVI.txInIndex)
-				err := ruleError(ErrMissingTxOut, str)
+				err := ruleerror.ErrMissingTxOut.New(str, nil)
 				v.sendResult(err)
 				break out
 			}
@@ -86,7 +88,7 @@ out:
 					txVI.tx.Hash(), txVI.txInIndex,
 					txIn.PreviousOutPoint, err, witness,
 					sigScript, pkScript)
-				err := ruleError(ErrScriptMalformed, str)
+				err := ruleerror.ErrScriptMalformed.New(str, nil)
 				v.sendResult(err)
 				break out
 			}
@@ -100,7 +102,7 @@ out:
 					txVI.tx.Hash(), txVI.txInIndex,
 					txIn.PreviousOutPoint, err, witness,
 					sigScript, pkScript)
-				err := ruleError(ErrScriptValidation, str)
+				err := ruleerror.ErrScriptValidation.New(str, nil)
 				v.sendResult(err)
 				break out
 			}

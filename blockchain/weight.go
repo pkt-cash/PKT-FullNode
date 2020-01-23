@@ -6,7 +6,9 @@ package blockchain
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
@@ -103,7 +105,7 @@ func GetSigOpCost(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bi
 					"exist or has already been spent",
 					txIn.PreviousOutPoint, tx.Hash(),
 					txInIndex)
-				return 0, ruleError(ErrMissingTxOut, str)
+				return 0, ruleerror.ErrMissingTxOut.New(str, nil)
 			}
 
 			witness := txIn.Witness

@@ -412,7 +412,7 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView 
 				"transaction %s:%d either does not exist or "+
 				"has already been spent", txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
-			return sequenceLock, ruleError(ErrMissingTxOut, str)
+			return sequenceLock, ruleerror.ErrMissingTxOut.New(str, nil)
 		}
 
 		// If the input height is set to the mempool height, then we

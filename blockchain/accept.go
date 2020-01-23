@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/database"
@@ -30,10 +31,10 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	prevNode := b.index.LookupNode(prevHash)
 	if prevNode == nil {
 		str := fmt.Sprintf("previous block %s is unknown", prevHash)
-		return false, ruleError(ErrPreviousBlockUnknown, str)
+		return false, ruleerror.ErrPreviousBlockUnknown.New(str, nil)
 	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
 		str := fmt.Sprintf("previous block %s is known to be invalid", prevHash)
-		return false, ruleError(ErrInvalidAncestorBlock, str)
+		return false, ruleerror.ErrInvalidAncestorBlock.New(str, nil)
 	}
 
 	blockHeight := prevNode.height + 1

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -159,13 +160,13 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	}
 	if exists {
 		str := fmt.Sprintf("already have block %v", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, ruleerror.ErrDuplicateBlock.New(str, nil)
 	}
 
 	// The block must not already exist as an orphan.
 	if _, exists := b.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, ruleerror.ErrDuplicateBlock.New(str, nil)
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
@@ -200,7 +201,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
 				blockHeader.Timestamp, checkpointTime)
-			return false, false, ruleError(ErrCheckpointTimeTooOld, str)
+			return false, false, ruleerror.ErrCheckpointTimeTooOld.New(str, nil)
 		}
 		if !fastAdd {
 			// Even though the checks prior to now have already ensured the
@@ -217,7 +218,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+
 					"checkpoint", currentTarget)
-				return false, false, ruleError(ErrDifficultyTooLow, str)
+				return false, false, ruleerror.ErrDifficultyTooLow.New(str, nil)
 			}
 		}
 	}
