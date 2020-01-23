@@ -75,6 +75,11 @@ func NewDumpPrivKeyCmd(address string) *DumpPrivKeyCmd {
 	}
 }
 
+// GetAddressBalances defines the getaddressbalances JSON-RPC command.
+type GetAddressBalancesCmd struct {
+	MinConf *int `jsonrpcdefault:"1"`
+}
+
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {
 	NumBlocks int64
@@ -607,6 +612,7 @@ func init() {
 	MustRegisterCmd("addwitnessaddress", (*AddWitnessAddressCmd)(nil), flags)
 	MustRegisterCmd("createmultisig", (*CreateMultisigCmd)(nil), flags)
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
+	MustRegisterCmd("getaddressbalances", (*GetAddressBalancesCmd)(nil), flags)
 	MustRegisterCmd("resync", (*struct{})(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)

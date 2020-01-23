@@ -26,6 +26,7 @@ var Methods = []struct {
 	{"addmultisigaddress", returnsString},
 	{"createmultisig", []interface{}{(*btcjson.CreateMultiSigResult)(nil)}},
 	{"createtransaction", returnsString},
+	{"getaddressbalances", []interface{}{(*[]btcjson.GetAddressBalancesResult)(nil)}},
 	{"setnetworkstewardvote", []interface{}{(*btcjson.SetNetworkStewardVoteResult)(nil)}},
 	{"getnetworkstewardvote", []interface{}{(*btcjson.GetNetworkStewardVoteResult)(nil)}},
 	{"resync", nil},

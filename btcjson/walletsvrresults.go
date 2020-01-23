@@ -169,3 +169,10 @@ type GetNetworkStewardVoteResult struct {
 	VoteFor     string `json:"votefor,omitempty"`
 	VoteAgainst string `json:"voteagainst,omitempty"`
 }
+
+type GetAddressBalancesResult struct {
+	Address        string  `json:"address"`
+	Total          float64 `json:"total"`
+	Spendable      float64 `json:"spendable"`
+	ImmatureReward float64 `json:"immaturereward"`
+}

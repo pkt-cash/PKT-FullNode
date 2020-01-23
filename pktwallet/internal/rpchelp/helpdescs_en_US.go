@@ -33,6 +33,14 @@ var helpDescsEnUS = map[string]string{
 	"createtransaction-inputminheight": "The minimum block height to take inputs from (default: 0)",
 	"createtransaction--result0":       "The hex encoded transaction result",
 
+	// GetAddressBalancesCmd help.
+	"getaddressbalances--synopsis":            "Get balances for each address",
+	"getaddressbalances-minconf":              "Minimum number of confirmations for coins to be considered received",
+	"getaddressbalancesresult-immaturereward": "Mined coins which have not yet matured",
+	"getaddressbalancesresult-spendable":      "Balance which is currently spendable",
+	"getaddressbalancesresult-total":          "Total balance",
+	"getaddressbalancesresult-address":        "The address which has this balance",
+
 	// SetNetworkStewardCmd help.
 	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",
 	"setnetworkstewardvote-voteagainst": "The script to vote against (if this is the current NS then this will cause a vote for an election)",

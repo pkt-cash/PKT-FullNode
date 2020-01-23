@@ -114,6 +114,7 @@ var rpcHandlers = map[string]struct {
 	"addp2shscript":         {handler: addP2shScript},
 	"createtransaction":     {handlerWithChain: createTransaction},
 	"resync":                {handlerWithChain: resync},
+	"getaddressbalances":    {handler: getAddressBalances},
 	// This was an extension but the reference implementation added it as
 	// well, but with a different API (no account parameter).  It's listed
 	// here because it hasn't been update to use the reference
@@ -354,11 +355,21 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 }
 
 func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	bals, err := w.CalculateAddressBalances()
-	if err != nil {
+	cmd := icmd.(*btcjson.GetAddressBalancesCmd)
+	if bals, err := w.CalculateAddressBalances(int32(*cmd.MinConf)); err != nil {
 		return nil, err
+	} else {
+		results := make([]btcjson.GetAddressBalancesResult, 0, len(bals))
+		for addr, bal := range bals {
+			results = append(results, btcjson.GetAddressBalancesResult{
+				Address:        addr.EncodeAddress(),
+				Spendable:      bal.Spendable.ToBTC(),
+				Total:          bal.Total.ToBTC(),
+				ImmatureReward: bal.ImmatureReward.ToBTC(),
+			})
+		}
+		return results, nil
 	}
-	balance = bals.Spendable
 }
 
 // getAddressesByAccount handles a getaddressesbyaccount request by returning

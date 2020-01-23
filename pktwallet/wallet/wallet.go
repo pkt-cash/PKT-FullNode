@@ -1489,8 +1489,9 @@ type Balances struct {
 	ImmatureReward btcutil.Amount
 }
 
-func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]Balances, er.R) {
-	bals := make(map[btcutil.Address]Balances)
+func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]*Balances, er.R) {
+	bals := make(map[btcutil.Address]*Balances)
+	bals0 := make(map[string]*Balances)
 	return bals, walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
 		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
 		// Get current block.  The block height used for calculating
@@ -1500,7 +1501,13 @@ func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]B
 			if _, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams); err != nil {
 				return err
 			} else if len(addrs) > 0 {
-				bal := bals[addrs[0]]
+				bal := bals0[string(addrs[0].ScriptAddress())]
+				if bal == nil {
+					_bal := Balances{}
+					bal = &_bal
+					bals0[string(addrs[0].ScriptAddress())] = bal
+					bals[addrs[0]] = bal
+				}
 				bal.Total += output.Amount
 				if output.FromCoinBase && !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					output.Height, syncBlock.Height) {
@@ -1508,7 +1515,6 @@ func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]B
 				} else if confirmed(confirms, output.Height, syncBlock.Height) {
 					bal.Spendable += output.Amount
 				}
-				bals[addrs[0]] = bal
 			}
 			return nil
 		})
