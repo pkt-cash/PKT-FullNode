@@ -70,16 +70,6 @@ var helpDescsEnUS = map[string]string{
 	"dumpprivkey-address":   "The address to return a private key for",
 	"dumpprivkey--result0":  "The WIF-encoded private key",
 
-	// GetAccountCmd help.
-	"getaccount--synopsis": "DEPRECATED -- Lookup the account name that some wallet address belongs to.",
-	"getaccount-address":   "The address to query the account for",
-	"getaccount--result0":  "The name of the account that 'address' belongs to",
-
-	// GetAddressesByAccountCmd help.
-	"getaddressesbyaccount--synopsis": "DEPRECATED -- Returns all addresses strings controlled by a single account.",
-	"getaddressesbyaccount-account":   "Account name to fetch addresses for",
-	"getaddressesbyaccount--result0":  "All addresses controlled by 'account'",
-
 	// GetBalanceCmd help.
 	"getbalance--synopsis":   "Calculates and returns the balance of one or all accounts.",
 	"getbalance-minconf":     "Minimum number of block confirmations required before an unspent output's value is included in the balance",
@@ -123,17 +113,6 @@ var helpDescsEnUS = map[string]string{
 	"getnewaddress-account":   "DEPRECATED -- Account name the new address will belong to (default=\"default\")",
 	"getnewaddress-legacy":    "If true then this will create a legacy form address rather than a new segwit address",
 	"getnewaddress--result0":  "The payment address",
-
-	// GetRawChangeAddressCmd help.
-	"getrawchangeaddress--synopsis": "Generates and returns a new internal payment address for use as a change address in raw transactions.",
-	"getrawchangeaddress-account":   "Account name the new internal address will belong to (default=\"default\")",
-	"getrawchangeaddress--result0":  "The internal payment address",
-
-	// GetReceivedByAccountCmd help.
-	"getreceivedbyaccount--synopsis": "DEPRECATED -- Returns the total amount received by addresses of some account, including spent outputs.",
-	"getreceivedbyaccount-account":   "Account name to query total received amount for",
-	"getreceivedbyaccount-minconf":   "Minimum number of block confirmations required before an output's value is included in the total",
-	"getreceivedbyaccount--result0":  "The total received amount valued in bitcoin",
 
 	// GetReceivedByAddressCmd help.
 	"getreceivedbyaddress--synopsis": "Returns the total amount received by a single address, including spent outputs.",
@@ -182,17 +161,6 @@ var helpDescsEnUS = map[string]string{
 	"importprivkey-privkey":   "The WIF-encoded private key",
 	"importprivkey-label":     "Unused (must be unset or 'imported')",
 	"importprivkey-rescan":    "Rescan the blockchain (since the genesis block) for outputs controlled by the imported key",
-
-	// KeypoolRefillCmd help.
-	"keypoolrefill--synopsis": "DEPRECATED -- This request does nothing since no keypool is maintained.",
-	"keypoolrefill-newsize":   "Unused",
-
-	// ListAccountsCmd help.
-	"listaccounts--synopsis":       "DEPRECATED -- Returns a JSON object of all accounts and their balances.",
-	"listaccounts-minconf":         "Minimum number of block confirmations required before an unspent output's value is included in the balance",
-	"listaccounts--result0--desc":  "JSON object with account names as keys and bitcoin amounts as values",
-	"listaccounts--result0--key":   "The account name",
-	"listaccounts--result0--value": "The account balance valued in bitcoin",
 
 	// ListLockUnspentCmd help.
 	"listlockunspent--synopsis": "Returns a JSON array of outpoints marked as locked (with lockunspent) for this wallet session.",
@@ -423,11 +391,6 @@ var helpDescsEnUS = map[string]string{
 	// ListAllTransactionsCmd help.
 	"listalltransactions--synopsis": "Returns a JSON array of objects in the same format as 'listtransactions' without limiting the number of returned objects.",
 	"listalltransactions-account":   "Unused (must be unset or \"*\")",
-
-	// RenameAccountCmd help.
-	"renameaccount--synopsis":  "Renames an account.",
-	"renameaccount-oldaccount": "The old account name to rename",
-	"renameaccount-newaccount": "The new name for the account",
 
 	// WalletIsLockedCmd help.
 	"walletislocked--synopsis": "Returns whether or not the wallet is locked.",

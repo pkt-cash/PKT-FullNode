@@ -118,32 +118,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			},
 		},
 		{
-			name: "getaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getaccount", "1Address")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetAccountCmd("1Address")
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getaccount","params":["1Address"],"id":1}`,
-			unmarshalled: &btcjson.GetAccountCmd{
-				Address: "1Address",
-			},
-		},
-		{
-			name: "getaddressesbyaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getaddressesbyaccount", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetAddressesByAccountCmd("acct")
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getaddressesbyaccount","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.GetAddressesByAccountCmd{
-				Account: "acct",
-			},
-		},
-		{
 			name: "getbalance",
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("getbalance")
@@ -209,60 +183,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			marshalled: `{"jsonrpc":"1.0","method":"getnewaddress","params":["acct"],"id":1}`,
 			unmarshalled: &btcjson.GetNewAddressCmd{
 				Account: btcjson.String("acct"),
-			},
-		},
-		{
-			name: "getrawchangeaddress",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getrawchangeaddress")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetRawChangeAddressCmd(nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getrawchangeaddress","params":[],"id":1}`,
-			unmarshalled: &btcjson.GetRawChangeAddressCmd{
-				Account: nil,
-			},
-		},
-		{
-			name: "getrawchangeaddress optional",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getrawchangeaddress", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetRawChangeAddressCmd(btcjson.String("acct"))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getrawchangeaddress","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.GetRawChangeAddressCmd{
-				Account: btcjson.String("acct"),
-			},
-		},
-		{
-			name: "getreceivedbyaccount",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getreceivedbyaccount", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetReceivedByAccountCmd("acct", nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getreceivedbyaccount","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.GetReceivedByAccountCmd{
-				Account: "acct",
-				MinConf: btcjson.Int(1),
-			},
-		},
-		{
-			name: "getreceivedbyaccount optional",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getreceivedbyaccount", "acct", 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetReceivedByAccountCmd("acct", btcjson.Int(6))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getreceivedbyaccount","params":["acct",6],"id":1}`,
-			unmarshalled: &btcjson.GetReceivedByAccountCmd{
-				Account: "acct",
-				MinConf: btcjson.Int(6),
 			},
 		},
 		{
@@ -364,58 +284,6 @@ func TestWalletSvrCmds(t *testing.T) {
 				PrivKey: "abc",
 				Label:   btcjson.String("label"),
 				Rescan:  btcjson.Bool(false),
-			},
-		},
-		{
-			name: "keypoolrefill",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("keypoolrefill")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewKeyPoolRefillCmd(nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"keypoolrefill","params":[],"id":1}`,
-			unmarshalled: &btcjson.KeyPoolRefillCmd{
-				NewSize: btcjson.Uint(100),
-			},
-		},
-		{
-			name: "keypoolrefill optional",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("keypoolrefill", 200)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewKeyPoolRefillCmd(btcjson.Uint(200))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"keypoolrefill","params":[200],"id":1}`,
-			unmarshalled: &btcjson.KeyPoolRefillCmd{
-				NewSize: btcjson.Uint(200),
-			},
-		},
-		{
-			name: "listaccounts",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listaccounts")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListAccountsCmd(nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listaccounts","params":[],"id":1}`,
-			unmarshalled: &btcjson.ListAccountsCmd{
-				MinConf: btcjson.Int(1),
-			},
-		},
-		{
-			name: "listaccounts optional",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listaccounts", 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListAccountsCmd(btcjson.Int(6))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listaccounts","params":[6],"id":1}`,
-			unmarshalled: &btcjson.ListAccountsCmd{
-				MinConf: btcjson.Int(6),
 			},
 		},
 		{

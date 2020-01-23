@@ -915,23 +915,6 @@ func (r FutureGetRawChangeAddressResult) Receive() (btcutil.Address, er.R) {
 	return btcutil.DecodeAddress(addr, &chaincfg.MainNetParams)
 }
 
-// GetRawChangeAddressAsync returns an instance of a type that can be used to
-// get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See GetRawChangeAddress for the blocking version and more details.
-func (c *Client) GetRawChangeAddressAsync(account string) FutureGetRawChangeAddressResult {
-	cmd := btcjson.NewGetRawChangeAddressCmd(&account)
-	return c.sendCmd(cmd)
-}
-
-// GetRawChangeAddress returns a new address for receiving change that will be
-// associated with the provided account.  Note that this is only for raw
-// transactions and NOT for normal use.
-func (c *Client) GetRawChangeAddress(account string) (btcutil.Address, er.R) {
-	return c.GetRawChangeAddressAsync(account).Receive()
-}
-
 // FutureAddWitnessAddressResult is a future promise to deliver the result of
 // a AddWitnessAddressAsync RPC invocation (or an applicable error).
 type FutureAddWitnessAddressResult chan *response
@@ -992,22 +975,6 @@ func (r FutureGetAccountResult) Receive() (string, er.R) {
 	return account, nil
 }
 
-// GetAccountAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See GetAccount for the blocking version and more details.
-func (c *Client) GetAccountAsync(address btcutil.Address) FutureGetAccountResult {
-	addr := address.EncodeAddress()
-	cmd := btcjson.NewGetAccountCmd(addr)
-	return c.sendCmd(cmd)
-}
-
-// GetAccount returns the account associated with the passed address.
-func (c *Client) GetAccount(address btcutil.Address) (string, er.R) {
-	return c.GetAccountAsync(address).Receive()
-}
-
 // FutureSetAccountResult is a future promise to deliver the result of a
 // SetAccountAsync RPC invocation (or an applicable error).
 type FutureSetAccountResult chan *response
@@ -1051,22 +1018,6 @@ func (r FutureGetAddressesByAccountResult) Receive() ([]btcutil.Address, er.R) {
 	return addrs, nil
 }
 
-// GetAddressesByAccountAsync returns an instance of a type that can be used to
-// get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See GetAddressesByAccount for the blocking version and more details.
-func (c *Client) GetAddressesByAccountAsync(account string) FutureGetAddressesByAccountResult {
-	cmd := btcjson.NewGetAddressesByAccountCmd(account)
-	return c.sendCmd(cmd)
-}
-
-// GetAddressesByAccount returns the list of addresses associated with the
-// passed account.
-func (c *Client) GetAddressesByAccount(account string) ([]btcutil.Address, er.R) {
-	return c.GetAddressesByAccountAsync(account).Receive()
-}
-
 // FutureRenameAccountResult is a future promise to deliver the result of a
 // RenameAccountAsync RPC invocation (or an applicable error).
 type FutureRenameAccountResult chan *response
@@ -1076,21 +1027,6 @@ type FutureRenameAccountResult chan *response
 func (r FutureRenameAccountResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
-}
-
-// RenameAccountAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See RenameAccount for the blocking version and more details.
-func (c *Client) RenameAccountAsync(oldAccount, newAccount string) FutureRenameAccountResult {
-	cmd := btcjson.NewRenameAccountCmd(oldAccount, newAccount)
-	return c.sendCmd(cmd)
-}
-
-// RenameAccount creates a new wallet account.
-func (c *Client) RenameAccount(oldAccount, newAccount string) er.R {
-	return c.RenameAccountAsync(oldAccount, newAccount).Receive()
 }
 
 // FutureValidateAddressResult is a future promise to deliver the result of a
@@ -1142,39 +1078,6 @@ func (r FutureKeyPoolRefillResult) Receive() er.R {
 	return err
 }
 
-// KeyPoolRefillAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See KeyPoolRefill for the blocking version and more details.
-func (c *Client) KeyPoolRefillAsync() FutureKeyPoolRefillResult {
-	cmd := btcjson.NewKeyPoolRefillCmd(nil)
-	return c.sendCmd(cmd)
-}
-
-// KeyPoolRefill fills the key pool as necessary to reach the default size.
-//
-// See KeyPoolRefillSize to override the size of the key pool.
-func (c *Client) KeyPoolRefill() er.R {
-	return c.KeyPoolRefillAsync().Receive()
-}
-
-// KeyPoolRefillSizeAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See KeyPoolRefillSize for the blocking version and more details.
-func (c *Client) KeyPoolRefillSizeAsync(newSize uint) FutureKeyPoolRefillResult {
-	cmd := btcjson.NewKeyPoolRefillCmd(&newSize)
-	return c.sendCmd(cmd)
-}
-
-// KeyPoolRefillSize fills the key pool as necessary to reach the specified
-// size.
-func (c *Client) KeyPoolRefillSize(newSize uint) er.R {
-	return c.KeyPoolRefillSizeAsync(newSize).Receive()
-}
-
 // ************************
 // Amount/Balance Functions
 // ************************
@@ -1210,42 +1113,6 @@ func (r FutureListAccountsResult) Receive() (map[string]btcutil.Amount, er.R) {
 	}
 
 	return accountsMap, nil
-}
-
-// ListAccountsAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See ListAccounts for the blocking version and more details.
-func (c *Client) ListAccountsAsync() FutureListAccountsResult {
-	cmd := btcjson.NewListAccountsCmd(nil)
-	return c.sendCmd(cmd)
-}
-
-// ListAccounts returns a map of account names and their associated balances
-// using the default number of minimum confirmations.
-//
-// See ListAccountsMinConf to override the minimum number of confirmations.
-func (c *Client) ListAccounts() (map[string]btcutil.Amount, er.R) {
-	return c.ListAccountsAsync().Receive()
-}
-
-// ListAccountsMinConfAsync returns an instance of a type that can be used to
-// get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See ListAccountsMinConf for the blocking version and more details.
-func (c *Client) ListAccountsMinConfAsync(minConfirms int) FutureListAccountsResult {
-	cmd := btcjson.NewListAccountsCmd(&minConfirms)
-	return c.sendCmd(cmd)
-}
-
-// ListAccountsMinConf returns a map of account names and their associated
-// balances using the specified number of minimum confirmations.
-//
-// See ListAccounts to use the default minimum number of confirmations.
-func (c *Client) ListAccountsMinConf(minConfirms int) (map[string]btcutil.Amount, er.R) {
-	return c.ListAccountsMinConfAsync(minConfirms).Receive()
 }
 
 // FutureGetBalanceResult is a future promise to deliver the result of a
@@ -1377,44 +1244,6 @@ func (r FutureGetReceivedByAccountResult) Receive() (btcutil.Amount, er.R) {
 	}
 
 	return btcutil.Amount(amount), nil
-}
-
-// GetReceivedByAccountAsync returns an instance of a type that can be used to
-// get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See GetReceivedByAccount for the blocking version and more details.
-func (c *Client) GetReceivedByAccountAsync(account string) FutureGetReceivedByAccountResult {
-	cmd := btcjson.NewGetReceivedByAccountCmd(account, nil)
-	return c.sendCmd(cmd)
-}
-
-// GetReceivedByAccount returns the total amount received with the specified
-// account with at least the default number of minimum confirmations.
-//
-// See GetReceivedByAccountMinConf to override the minimum number of
-// confirmations.
-func (c *Client) GetReceivedByAccount(account string) (btcutil.Amount, er.R) {
-	return c.GetReceivedByAccountAsync(account).Receive()
-}
-
-// GetReceivedByAccountMinConfAsync returns an instance of a type that can be
-// used to get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See GetReceivedByAccountMinConf for the blocking version and more details.
-func (c *Client) GetReceivedByAccountMinConfAsync(account string, minConfirms int) FutureGetReceivedByAccountResult {
-	cmd := btcjson.NewGetReceivedByAccountCmd(account, &minConfirms)
-	return c.sendCmd(cmd)
-}
-
-// GetReceivedByAccountMinConf returns the total amount received with the
-// specified account with at least the specified number of minimum
-// confirmations.
-//
-// See GetReceivedByAccount to use the default minimum number of confirmations.
-func (c *Client) GetReceivedByAccountMinConf(account string, minConfirms int) (btcutil.Amount, er.R) {
-	return c.GetReceivedByAccountMinConfAsync(account, minConfirms).Receive()
 }
 
 // FutureGetUnconfirmedBalanceResult is a future promise to deliver the result

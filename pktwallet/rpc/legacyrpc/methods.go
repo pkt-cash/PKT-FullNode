@@ -73,21 +73,15 @@ var rpcHandlers = map[string]struct {
 	"addmultisigaddress":     {handler: addMultiSigAddress},
 	"createmultisig":         {handler: createMultiSig},
 	"dumpprivkey":            {handler: dumpPrivKey},
-	"getaccount":             {handler: getAccount},
-	"getaddressesbyaccount":  {handler: getAddressesByAccount},
 	"getbalance":             {handler: getBalance},
 	"getbestblockhash":       {handler: getBestBlockHash},
 	"getblockcount":          {handler: getBlockCount},
 	"getinfo":                {handlerWithChain: getInfo},
 	"getnewaddress":          {handler: getNewAddress},
-	"getrawchangeaddress":    {handler: getRawChangeAddress},
-	"getreceivedbyaccount":   {handler: getReceivedByAccount},
 	"getreceivedbyaddress":   {handler: getReceivedByAddress},
 	"gettransaction":         {handler: getTransaction},
 	"help":                   {handler: helpNoChainRPC, handlerWithChain: helpWithChainRPC},
 	"importprivkey":          {handler: importPrivKey},
-	"keypoolrefill":          {handler: keypoolRefill},
-	"listaccounts":           {handler: listAccounts},
 	"listlockunspent":        {handler: listLockUnspent},
 	"listreceivedbyaddress":  {handler: listReceivedByAddress},
 	"listsinceblock":         {handlerWithChain: listSinceBlock},
@@ -121,7 +115,6 @@ var rpcHandlers = map[string]struct {
 	"getunconfirmedbalance":   {handler: getUnconfirmedBalance},
 	"listaddresstransactions": {handler: listAddressTransactions},
 	"listalltransactions":     {handler: listAllTransactions},
-	"renameaccount":           {handler: renameAccount},
 	"walletislocked":          {handler: walletIsLocked},
 }
 
@@ -371,29 +364,6 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 	}
 }
 
-// getAddressesByAccount handles a getaddressesbyaccount request by returning
-// all addresses for an account, or an error if the requested account does
-// not exist.
-func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetAddressesByAccountCmd)
-
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
-	if err != nil {
-		return nil, err
-	}
-
-	addrs, err := w.AccountAddresses(account)
-	if err != nil {
-		return nil, err
-	}
-
-	addrStrs := make([]string, len(addrs))
-	for i, a := range addrs {
-		addrStrs[i] = a.EncodeAddress()
-	}
-	return addrStrs, nil
-}
-
 // getBalance handles a getbalance request by returning the balance for an
 // account (wallet), or an error if the requested account does not
 // exist.
@@ -492,29 +462,6 @@ func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, er.R) {
 		return nil, btcjson.ErrRPCInvalidAddressOrKey.New(msg, nil)
 	}
 	return addr, nil
-}
-
-// getAccount handles a getaccount request by returning the account name
-// associated with a single address.
-func getAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetAccountCmd)
-
-	addr, err := decodeAddress(cmd.Address, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch the associated account
-	account, err := w.AccountOfAddress(addr)
-	if err != nil {
-		return nil, errAddressNotInWallet()
-	}
-
-	acctName, err := w.AccountName(waddrmgr.KeyScopeBIP0044, account)
-	if err != nil {
-		return nil, errAccountNameNotFound()
-	}
-	return acctName, nil
 }
 
 func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
@@ -627,31 +574,6 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return nil, err
 }
 
-// keypoolRefill handles the keypoolrefill command. Since we handle the keypool
-// automatically this does nothing since refilling is never manually required.
-func keypoolRefill(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	return nil, nil
-}
-
-// renameAccount handles a renameaccount request by renaming an account.
-// If the account does not exist an appropiate error will be returned.
-func renameAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.RenameAccountCmd)
-
-	// The wildcard * is reserved by the rpc server with the special meaning
-	// of "all accounts", so disallow naming accounts to this string.
-	if cmd.NewAccount == "*" {
-		return nil, errReservedAccountName()
-	}
-
-	// Check that given account exists
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.OldAccount)
-	if err != nil {
-		return nil, err
-	}
-	return nil, w.RenameAccount(waddrmgr.KeyScopeBIP0044, account, cmd.NewAccount)
-}
-
 // getNewAddress handles a getnewaddress request by returning a new
 // address for an account.  If the account does not exist an appropiate
 // error is returned.
@@ -679,57 +601,6 @@ func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 
 	// Return the new payment address string.
 	return addr.EncodeAddress(), nil
-}
-
-// getRawChangeAddress handles a getrawchangeaddress request by creating
-// and returning a new change address for an account.
-//
-// Note: bitcoind allows specifying the account as an optional parameter,
-// but ignores the parameter.
-func getRawChangeAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetRawChangeAddressCmd)
-
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
-	if err != nil {
-		return nil, err
-	}
-	addr, err := w.NewChangeAddress(account, waddrmgr.KeyScopeBIP0044)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the new payment address string.
-	return addr.EncodeAddress(), nil
-}
-
-// getReceivedByAccount handles a getreceivedbyaccount request by returning
-// the total amount received by addresses of an account.
-func getReceivedByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetReceivedByAccountCmd)
-
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: This is more inefficient that it could be, but the entire
-	// algorithm is already dominated by reading every transaction in the
-	// wallet's history.
-	results, err := w.TotalReceivedForAccounts(
-		waddrmgr.KeyScopeBIP0044, int32(*cmd.MinConf),
-	)
-	if err != nil {
-		return nil, err
-	}
-	acctIndex := int(account)
-	if account == waddrmgr.ImportedAddrAccount {
-		acctIndex = len(results) - 1
-	}
-	return results[acctIndex].TotalReceived.ToBTC(), nil
 }
 
 // getReceivedByAddress handles a getreceivedbyaddress request by returning
@@ -1001,23 +872,6 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 	}
 	return nil, btcjson.ErrRPCInvalidParameter.New(
 		fmt.Sprintf("No help for method '%s'", *cmd.Command), nil)
-}
-
-// listAccounts handles a listaccounts request by returning a map of account
-// names to their balances.
-func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.ListAccountsCmd)
-
-	accountBalances := map[string]float64{}
-	results, err := w.AccountBalances(waddrmgr.KeyScopeBIP0044, int32(*cmd.MinConf))
-	if err != nil {
-		return nil, err
-	}
-	for _, result := range results {
-		accountBalances[result.AccountName] = result.AccountBalance.ToBTC()
-	}
-	// Return the map.  This will be marshaled into a JSON object.
-	return accountBalances, nil
 }
 
 // listLockUnspent handles a listlockunspent request by returning an slice of

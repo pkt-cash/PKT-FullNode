@@ -93,32 +93,6 @@ func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
 	}
 }
 
-// GetAccountCmd defines the getaccount JSON-RPC command.
-type GetAccountCmd struct {
-	Address string
-}
-
-// NewGetAccountCmd returns a new instance which can be used to issue a
-// getaccount JSON-RPC command.
-func NewGetAccountCmd(address string) *GetAccountCmd {
-	return &GetAccountCmd{
-		Address: address,
-	}
-}
-
-// GetAddressesByAccountCmd defines the getaddressesbyaccount JSON-RPC command.
-type GetAddressesByAccountCmd struct {
-	Account string
-}
-
-// NewGetAddressesByAccountCmd returns a new instance which can be used to issue
-// a getaddressesbyaccount JSON-RPC command.
-func NewGetAddressesByAccountCmd(account string) *GetAddressesByAccountCmd {
-	return &GetAddressesByAccountCmd{
-		Account: account,
-	}
-}
-
 // GetBalanceCmd defines the getbalance JSON-RPC command.
 type GetBalanceCmd struct {
 	Account *string
@@ -151,40 +125,6 @@ type GetNewAddressCmd struct {
 func NewGetNewAddressCmd(account *string) *GetNewAddressCmd {
 	return &GetNewAddressCmd{
 		Account: account,
-	}
-}
-
-// GetRawChangeAddressCmd defines the getrawchangeaddress JSON-RPC command.
-type GetRawChangeAddressCmd struct {
-	Account *string
-}
-
-// NewGetRawChangeAddressCmd returns a new instance which can be used to issue a
-// getrawchangeaddress JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewGetRawChangeAddressCmd(account *string) *GetRawChangeAddressCmd {
-	return &GetRawChangeAddressCmd{
-		Account: account,
-	}
-}
-
-// GetReceivedByAccountCmd defines the getreceivedbyaccount JSON-RPC command.
-type GetReceivedByAccountCmd struct {
-	Account string
-	MinConf *int `jsonrpcdefault:"1"`
-}
-
-// NewGetReceivedByAccountCmd returns a new instance which can be used to issue
-// a getreceivedbyaccount JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewGetReceivedByAccountCmd(account string, minConf *int) *GetReceivedByAccountCmd {
-	return &GetReceivedByAccountCmd{
-		Account: account,
-		MinConf: minConf,
 	}
 }
 
@@ -241,38 +181,6 @@ func NewImportPrivKeyCmd(privKey string, label *string, rescan *bool) *ImportPri
 		PrivKey: privKey,
 		Label:   label,
 		Rescan:  rescan,
-	}
-}
-
-// KeyPoolRefillCmd defines the keypoolrefill JSON-RPC command.
-type KeyPoolRefillCmd struct {
-	NewSize *uint `jsonrpcdefault:"100"`
-}
-
-// NewKeyPoolRefillCmd returns a new instance which can be used to issue a
-// keypoolrefill JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewKeyPoolRefillCmd(newSize *uint) *KeyPoolRefillCmd {
-	return &KeyPoolRefillCmd{
-		NewSize: newSize,
-	}
-}
-
-// ListAccountsCmd defines the listaccounts JSON-RPC command.
-type ListAccountsCmd struct {
-	MinConf *int `jsonrpcdefault:"1"`
-}
-
-// NewListAccountsCmd returns a new instance which can be used to issue a
-// listaccounts JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewListAccountsCmd(minConf *int) *ListAccountsCmd {
-	return &ListAccountsCmd{
-		MinConf: minConf,
 	}
 }
 
@@ -596,18 +504,12 @@ func init() {
 	MustRegisterCmd("resync", (*struct{})(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
-	MustRegisterCmd("getaccount", (*GetAccountCmd)(nil), flags)
-	MustRegisterCmd("getaddressesbyaccount", (*GetAddressesByAccountCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
 	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)
-	MustRegisterCmd("getrawchangeaddress", (*GetRawChangeAddressCmd)(nil), flags)
-	MustRegisterCmd("getreceivedbyaccount", (*GetReceivedByAccountCmd)(nil), flags)
 	MustRegisterCmd("getreceivedbyaddress", (*GetReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("gettransaction", (*GetTransactionCmd)(nil), flags)
 	MustRegisterCmd("importprivkey", (*ImportPrivKeyCmd)(nil), flags)
-	MustRegisterCmd("keypoolrefill", (*KeyPoolRefillCmd)(nil), flags)
-	MustRegisterCmd("listaccounts", (*ListAccountsCmd)(nil), flags)
 	MustRegisterCmd("listlockunspent", (*ListLockUnspentCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaddress", (*ListReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("listsinceblock", (*ListSinceBlockCmd)(nil), flags)
