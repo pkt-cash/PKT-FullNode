@@ -90,61 +90,6 @@ func (r FutureListTransactionsResult) Receive() ([]btcjson.ListTransactionsResul
 	return transactions, nil
 }
 
-// ListTransactionsAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See ListTransactions for the blocking version and more details.
-func (c *Client) ListTransactionsAsync(account string) FutureListTransactionsResult {
-	cmd := btcjson.NewListTransactionsCmd(&account, nil, nil, nil)
-	return c.sendCmd(cmd)
-}
-
-// ListTransactions returns a list of the most recent transactions.
-//
-// See the ListTransactionsCount and ListTransactionsCountFrom to control the
-// number of transactions returned and starting point, respectively.
-func (c *Client) ListTransactions(account string) ([]btcjson.ListTransactionsResult, er.R) {
-	return c.ListTransactionsAsync(account).Receive()
-}
-
-// ListTransactionsCountAsync returns an instance of a type that can be used to
-// get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See ListTransactionsCount for the blocking version and more details.
-func (c *Client) ListTransactionsCountAsync(account string, count int) FutureListTransactionsResult {
-	cmd := btcjson.NewListTransactionsCmd(&account, &count, nil, nil)
-	return c.sendCmd(cmd)
-}
-
-// ListTransactionsCount returns a list of the most recent transactions up
-// to the passed count.
-//
-// See the ListTransactions and ListTransactionsCountFrom functions for
-// different options.
-func (c *Client) ListTransactionsCount(account string, count int) ([]btcjson.ListTransactionsResult, er.R) {
-	return c.ListTransactionsCountAsync(account, count).Receive()
-}
-
-// ListTransactionsCountFromAsync returns an instance of a type that can be used
-// to get the result of the RPC at some future time by invoking the Receive
-// function on the returned instance.
-//
-// See ListTransactionsCountFrom for the blocking version and more details.
-func (c *Client) ListTransactionsCountFromAsync(account string, count, from int) FutureListTransactionsResult {
-	cmd := btcjson.NewListTransactionsCmd(&account, &count, &from, nil)
-	return c.sendCmd(cmd)
-}
-
-// ListTransactionsCountFrom returns a list of the most recent transactions up
-// to the passed count while skipping the first 'from' transactions.
-//
-// See the ListTransactions and ListTransactionsCount functions to use defaults.
-func (c *Client) ListTransactionsCountFrom(account string, count, from int) ([]btcjson.ListTransactionsResult, er.R) {
-	return c.ListTransactionsCountFromAsync(account, count, from).Receive()
-}
-
 // FutureListUnspentResult is a future promise to deliver the result of a
 // ListUnspentAsync, ListUnspentMinAsync, ListUnspentMinMaxAsync, or
 // ListUnspentMinMaxAddressesAsync RPC invocation (or an applicable error).
@@ -778,28 +723,6 @@ func (r FutureAddMultisigAddressResult) Receive() (btcutil.Address, er.R) {
 	return btcutil.DecodeAddress(addr, &chaincfg.MainNetParams)
 }
 
-// AddMultisigAddressAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See AddMultisigAddress for the blocking version and more details.
-func (c *Client) AddMultisigAddressAsync(requiredSigs int, addresses []btcutil.Address, account string) FutureAddMultisigAddressResult {
-	addrs := make([]string, 0, len(addresses))
-	for _, addr := range addresses {
-		addrs = append(addrs, addr.String())
-	}
-
-	cmd := btcjson.NewAddMultisigAddressCmd(requiredSigs, addrs, &account)
-	return c.sendCmd(cmd)
-}
-
-// AddMultisigAddress adds a multisignature address that requires the specified
-// number of signatures for the provided addresses to the wallet.
-func (c *Client) AddMultisigAddress(requiredSigs int, addresses []btcutil.Address, account string) (btcutil.Address, er.R) {
-	return c.AddMultisigAddressAsync(requiredSigs, addresses,
-		account).Receive()
-}
-
 // FutureCreateMultisigResult is a future promise to deliver the result of a
 // CreateMultisigAsync RPC invocation (or an applicable error).
 type FutureCreateMultisigResult chan *response
@@ -875,21 +798,6 @@ func (r FutureGetNewAddressResult) Receive() (btcutil.Address, er.R) {
 	}
 
 	return btcutil.DecodeAddress(addr, &chaincfg.MainNetParams)
-}
-
-// GetNewAddressAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See GetNewAddress for the blocking version and more details.
-func (c *Client) GetNewAddressAsync(account string) FutureGetNewAddressResult {
-	cmd := btcjson.NewGetNewAddressCmd(&account)
-	return c.sendCmd(cmd)
-}
-
-// GetNewAddress returns a new address.
-func (c *Client) GetNewAddress(account string) (btcutil.Address, er.R) {
-	return c.GetNewAddressAsync(account).Receive()
 }
 
 // FutureGetRawChangeAddressResult is a future promise to deliver the result of
@@ -1174,48 +1082,6 @@ func (r FutureGetBalanceParseResult) Receive() (btcutil.Amount, er.R) {
 	}
 
 	return btcutil.Amount(amount), nil
-}
-
-// GetBalanceAsync returns an instance of a type that can be used to get the
-// result of the RPC at some future time by invoking the Receive function on the
-// returned instance.
-//
-// See GetBalance for the blocking version and more details.
-func (c *Client) GetBalanceAsync(account string) FutureGetBalanceResult {
-	cmd := btcjson.NewGetBalanceCmd(&account, nil)
-	return c.sendCmd(cmd)
-}
-
-// GetBalance returns the available balance from the server for the specified
-// account using the default number of minimum confirmations.  The account may
-// be "*" for all accounts.
-//
-// See GetBalanceMinConf to override the minimum number of confirmations.
-func (c *Client) GetBalance(account string) (btcutil.Amount, er.R) {
-	return c.GetBalanceAsync(account).Receive()
-}
-
-// GetBalanceMinConfAsync returns an instance of a type that can be used to get
-// the result of the RPC at some future time by invoking the Receive function on
-// the returned instance.
-//
-// See GetBalanceMinConf for the blocking version and more details.
-func (c *Client) GetBalanceMinConfAsync(account string, minConfirms int) FutureGetBalanceResult {
-	cmd := btcjson.NewGetBalanceCmd(&account, &minConfirms)
-	return c.sendCmd(cmd)
-}
-
-// GetBalanceMinConf returns the available balance from the server for the
-// specified account using the specified number of minimum confirmations.  The
-// account may be "*" for all accounts.
-//
-// See GetBalance to use the default minimum number of confirmations.
-func (c *Client) GetBalanceMinConf(account string, minConfirms int) (btcutil.Amount, er.R) {
-	if c.config.EnableBCInfoHacks {
-		response := c.GetBalanceMinConfAsync(account, minConfirms)
-		return FutureGetBalanceParseResult(response).Receive()
-	}
-	return c.GetBalanceMinConfAsync(account, minConfirms).Receive()
 }
 
 // FutureGetReceivedByAccountResult is a future promise to deliver the result of

@@ -36,31 +36,10 @@ func TestWalletSvrCmds(t *testing.T) {
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("addmultisigaddress", 2, []string{"031234", "035678"})
 			},
-			staticCmd: func() interface{} {
-				keys := []string{"031234", "035678"}
-				return btcjson.NewAddMultisigAddressCmd(2, keys, nil)
-			},
 			marshalled: `{"jsonrpc":"1.0","method":"addmultisigaddress","params":[2,["031234","035678"]],"id":1}`,
 			unmarshalled: &btcjson.AddMultisigAddressCmd{
 				NRequired: 2,
 				Keys:      []string{"031234", "035678"},
-				Account:   nil,
-			},
-		},
-		{
-			name: "addmultisigaddress optional",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("addmultisigaddress", 2, []string{"031234", "035678"}, "test")
-			},
-			staticCmd: func() interface{} {
-				keys := []string{"031234", "035678"}
-				return btcjson.NewAddMultisigAddressCmd(2, keys, btcjson.String("test"))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"addmultisigaddress","params":[2,["031234","035678"],"test"],"id":1}`,
-			unmarshalled: &btcjson.AddMultisigAddressCmd{
-				NRequired: 2,
-				Keys:      []string{"031234", "035678"},
-				Account:   btcjson.String("test"),
 			},
 		},
 		{
@@ -122,41 +101,9 @@ func TestWalletSvrCmds(t *testing.T) {
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("getbalance")
 			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetBalanceCmd(nil, nil)
-			},
 			marshalled: `{"jsonrpc":"1.0","method":"getbalance","params":[],"id":1}`,
 			unmarshalled: &btcjson.GetBalanceCmd{
-				Account: nil,
 				MinConf: btcjson.Int(1),
-			},
-		},
-		{
-			name: "getbalance optional1",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getbalance", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetBalanceCmd(btcjson.String("acct"), nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getbalance","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.GetBalanceCmd{
-				Account: btcjson.String("acct"),
-				MinConf: btcjson.Int(1),
-			},
-		},
-		{
-			name: "getbalance optional2",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getbalance", "acct", 6)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetBalanceCmd(btcjson.String("acct"), btcjson.Int(6))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getbalance","params":["acct",6],"id":1}`,
-			unmarshalled: &btcjson.GetBalanceCmd{
-				Account: btcjson.String("acct"),
-				MinConf: btcjson.Int(6),
 			},
 		},
 		{
@@ -164,25 +111,17 @@ func TestWalletSvrCmds(t *testing.T) {
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("getnewaddress")
 			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetNewAddressCmd(nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getnewaddress","params":[],"id":1}`,
-			unmarshalled: &btcjson.GetNewAddressCmd{
-				Account: nil,
-			},
+			marshalled:   `{"jsonrpc":"1.0","method":"getnewaddress","params":[],"id":1}`,
+			unmarshalled: &btcjson.GetNewAddressCmd{},
 		},
 		{
 			name: "getnewaddress optional",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("getnewaddress", "acct")
+				return btcjson.NewCmd("getnewaddress", true)
 			},
-			staticCmd: func() interface{} {
-				return btcjson.NewGetNewAddressCmd(btcjson.String("acct"))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"getnewaddress","params":["acct"],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"getnewaddress","params":[true],"id":1}`,
 			unmarshalled: &btcjson.GetNewAddressCmd{
-				Account: btcjson.String("acct"),
+				Legacy: func() *bool { x := true; return &x }(),
 			},
 		},
 		{
@@ -422,81 +361,21 @@ func TestWalletSvrCmds(t *testing.T) {
 			newCmd: func() (interface{}, er.R) {
 				return btcjson.NewCmd("listtransactions")
 			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListTransactionsCmd(nil, nil, nil, nil)
-			},
 			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":[],"id":1}`,
 			unmarshalled: &btcjson.ListTransactionsCmd{
-				Account:          nil,
-				Count:            btcjson.Int(10),
-				From:             btcjson.Int(0),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listtransactions optional1",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listtransactions", "acct")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListTransactionsCmd(btcjson.String("acct"), nil, nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":["acct"],"id":1}`,
-			unmarshalled: &btcjson.ListTransactionsCmd{
-				Account:          btcjson.String("acct"),
-				Count:            btcjson.Int(10),
-				From:             btcjson.Int(0),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listtransactions optional2",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listtransactions", "acct", 20)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListTransactionsCmd(btcjson.String("acct"), btcjson.Int(20), nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":["acct",20],"id":1}`,
-			unmarshalled: &btcjson.ListTransactionsCmd{
-				Account:          btcjson.String("acct"),
-				Count:            btcjson.Int(20),
-				From:             btcjson.Int(0),
-				IncludeWatchOnly: btcjson.Bool(false),
+				Count: btcjson.Int(10),
+				From:  btcjson.Int(0),
 			},
 		},
 		{
 			name: "listtransactions optional3",
 			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listtransactions", "acct", 20, 1)
+				return btcjson.NewCmd("listtransactions", 20, 1)
 			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListTransactionsCmd(btcjson.String("acct"), btcjson.Int(20),
-					btcjson.Int(1), nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":["acct",20,1],"id":1}`,
+			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":[20,1],"id":1}`,
 			unmarshalled: &btcjson.ListTransactionsCmd{
-				Account:          btcjson.String("acct"),
-				Count:            btcjson.Int(20),
-				From:             btcjson.Int(1),
-				IncludeWatchOnly: btcjson.Bool(false),
-			},
-		},
-		{
-			name: "listtransactions optional4",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("listtransactions", "acct", 20, 1, true)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewListTransactionsCmd(btcjson.String("acct"), btcjson.Int(20),
-					btcjson.Int(1), btcjson.Bool(true))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"listtransactions","params":["acct",20,1,true],"id":1}`,
-			unmarshalled: &btcjson.ListTransactionsCmd{
-				Account:          btcjson.String("acct"),
-				Count:            btcjson.Int(20),
-				From:             btcjson.Int(1),
-				IncludeWatchOnly: btcjson.Bool(true),
+				Count: btcjson.Int(20),
+				From:  btcjson.Int(1),
 			},
 		},
 		{
@@ -894,18 +773,20 @@ func TestWalletSvrCmds(t *testing.T) {
 	for i, test := range tests {
 		// Marshal the command as created by the new static command
 		// creation function.
-		marshalled, err := btcjson.MarshalCmd(testID, test.staticCmd())
-		if err != nil {
-			t.Errorf("MarshalCmd #%d (%s) unexpected error: %v", i,
-				test.name, err)
-			continue
-		}
+		if test.staticCmd != nil {
+			marshalled, err := btcjson.MarshalCmd(testID, test.staticCmd())
+			if err != nil {
+				t.Errorf("MarshalCmd #%d (%s) unexpected error: %v", i,
+					test.name, err)
+				continue
+			}
 
-		if !bytes.Equal(marshalled, []byte(test.marshalled)) {
-			t.Errorf("Test #%d (%s) unexpected marshalled data - "+
-				"got %s, want %s", i, test.name, marshalled,
-				test.marshalled)
-			continue
+			if !bytes.Equal(marshalled, []byte(test.marshalled)) {
+				t.Errorf("Test #%d (%s) unexpected marshalled data - "+
+					"got %s, want %s", i, test.name, marshalled,
+					test.marshalled)
+				continue
+			}
 		}
 
 		// Ensure the command is created without error via the generic
@@ -918,7 +799,7 @@ func TestWalletSvrCmds(t *testing.T) {
 
 		// Marshal the command as created by the generic new command
 		// creation function.
-		marshalled, err = btcjson.MarshalCmd(testID, cmd)
+		marshalled, err := btcjson.MarshalCmd(testID, cmd)
 		if err != nil {
 			t.Errorf("MarshalCmd #%d (%s) unexpected error: %v", i,
 				test.name, err)

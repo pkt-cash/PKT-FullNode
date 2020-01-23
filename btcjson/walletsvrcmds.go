@@ -12,26 +12,11 @@ package btcjson
 type AddMultisigAddressCmd struct {
 	NRequired int
 	Keys      []string
-	Account   *string
-}
-
-// NewAddMultisigAddressCmd returns a new instance which can be used to issue a
-// addmultisigaddress JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewAddMultisigAddressCmd(nRequired int, keys []string, account *string) *AddMultisigAddressCmd {
-	return &AddMultisigAddressCmd{
-		NRequired: nRequired,
-		Keys:      keys,
-		Account:   account,
-	}
 }
 
 type AddP2shScriptCmd struct {
-	Script  string
-	Segwit  bool
-	Account *string
+	Script string
+	Segwit bool
 }
 
 // AddWitnessAddressCmd defines the addwitnessaddress JSON-RPC command.
@@ -95,37 +80,12 @@ func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
 
 // GetBalanceCmd defines the getbalance JSON-RPC command.
 type GetBalanceCmd struct {
-	Account *string
 	MinConf *int `jsonrpcdefault:"1"`
-}
-
-// NewGetBalanceCmd returns a new instance which can be used to issue a
-// getbalance JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewGetBalanceCmd(account *string, minConf *int) *GetBalanceCmd {
-	return &GetBalanceCmd{
-		Account: account,
-		MinConf: minConf,
-	}
 }
 
 // GetNewAddressCmd defines the getnewaddress JSON-RPC command.
 type GetNewAddressCmd struct {
-	Account *string
-	Legacy  *bool
-}
-
-// NewGetNewAddressCmd returns a new instance which can be used to issue a
-// getnewaddress JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewGetNewAddressCmd(account *string) *GetNewAddressCmd {
-	return &GetNewAddressCmd{
-		Account: account,
-	}
+	Legacy *bool
 }
 
 // GetReceivedByAddressCmd defines the getreceivedbyaddress JSON-RPC command.
@@ -235,24 +195,8 @@ func NewListSinceBlockCmd(blockHash *string, targetConfirms *int, includeWatchOn
 
 // ListTransactionsCmd defines the listtransactions JSON-RPC command.
 type ListTransactionsCmd struct {
-	Account          *string
-	Count            *int  `jsonrpcdefault:"10"`
-	From             *int  `jsonrpcdefault:"0"`
-	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
-}
-
-// NewListTransactionsCmd returns a new instance which can be used to issue a
-// listtransactions JSON-RPC command.
-//
-// The parameters which are pointers indicate they are optional.  Passing nil
-// for optional parameters will use the default value.
-func NewListTransactionsCmd(account *string, count, from *int, includeWatchOnly *bool) *ListTransactionsCmd {
-	return &ListTransactionsCmd{
-		Account:          account,
-		Count:            count,
-		From:             from,
-		IncludeWatchOnly: includeWatchOnly,
-	}
+	Count *int `jsonrpcdefault:"10"`
+	From  *int `jsonrpcdefault:"0"`
 }
 
 // ListUnspentCmd defines the listunspent JSON-RPC command.
@@ -471,24 +415,8 @@ func NewWalletPassphraseChangeCmd(oldPassphrase, newPassphrase string) *WalletPa
 
 // SetNetworkStewardVoteCmd is the argument to the wallet command setnetworkstewardvote
 type SetNetworkStewardVoteCmd struct {
-	Account     *string `json:"account"`
 	VoteFor     *string `json:"votefor"`
 	VoteAgainst *string `json:"voteagainst"`
-}
-
-// NewSetNetworkStewardVoteCmd creates the argument to the wallet command setnetworkstewardvote
-func NewSetNetworkStewardVoteCmd(voteFor *string, voteAgainst *string) *SetNetworkStewardVoteCmd {
-	return &SetNetworkStewardVoteCmd{VoteFor: voteFor, VoteAgainst: voteAgainst}
-}
-
-// GetNetworkStewardVoteCmd is the argument to the wallet command getnetworkstewardvote
-type GetNetworkStewardVoteCmd struct {
-	Account *string `json:"account"`
-}
-
-// NewGetNetworkStewardVoteCmd creates the argument to the wallet command getnetworkstewardvote
-func NewGetNetworkStewardVoteCmd(account *string) *GetNetworkStewardVoteCmd {
-	return &GetNetworkStewardVoteCmd{Account: account}
 }
 
 func init() {
@@ -505,7 +433,7 @@ func init() {
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
-	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)
+	MustRegisterCmd("getnetworkstewardvote", (*struct{})(nil), flags)
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)
 	MustRegisterCmd("getreceivedbyaddress", (*GetReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("gettransaction", (*GetTransactionCmd)(nil), flags)

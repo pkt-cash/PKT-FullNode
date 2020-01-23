@@ -251,9 +251,6 @@ func makeMultiSigScript(w *wallet.Wallet, keys []string, nRequired int) ([]byte,
 
 func addP2shScript(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.AddP2shScriptCmd)
-	if cmd.Account != nil && *cmd.Account != waddrmgr.ImportedAddrAccountName {
-		return nil, errNotImportedAccount()
-	}
 	script, err := decodeHexStr(cmd.Script)
 	if err != nil {
 		return nil, err
@@ -276,11 +273,6 @@ func addP2shScript(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 // multisig address to the given wallet.
 func addMultiSigAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.AddMultisigAddressCmd)
-
-	// If an account is specified, ensure that is the imported account.
-	if cmd.Account != nil && *cmd.Account != waddrmgr.ImportedAddrAccountName {
-		return nil, errNotImportedAccount()
-	}
 
 	secp256k1Addrs := make([]btcutil.Address, len(cmd.Keys))
 	for i, k := range cmd.Keys {
@@ -369,31 +361,11 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 // exist.
 func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetBalanceCmd)
-
-	var balance btcutil.Amount
-	var err er.R
-	accountName := "*"
-	if cmd.Account != nil {
-		accountName = *cmd.Account
-	}
-	if accountName == "*" {
-		balance, err = w.CalculateBalance(int32(*cmd.MinConf))
-		if err != nil {
-			return nil, err
-		}
+	if balance, err := w.CalculateBalance(int32(*cmd.MinConf)); err != nil {
+		return nil, err
 	} else {
-		var account uint32
-		account, err = w.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
-		if err != nil {
-			return nil, err
-		}
-		bals, err := w.CalculateAccountBalances(account, int32(*cmd.MinConf))
-		if err != nil {
-			return nil, err
-		}
-		balance = bals.Spendable
+		return balance.ToBTC(), nil
 	}
-	return balance.ToBTC(), nil
 }
 
 // getBestBlock handles a getbestblock request by returning a JSON object
@@ -466,43 +438,25 @@ func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, er.R) {
 
 func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SetNetworkStewardVoteCmd)
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
-	if err != nil {
-		return nil, err
-	}
 	vote := waddrmgr.NetworkStewardVote{}
-	if cmd.VoteFor != nil {
-		vote.VoteFor, err = decodeHexStr(*cmd.VoteFor)
-		if err != nil {
-			return nil, err
-		}
+	if cmd.VoteFor == nil {
+	} else if vf, err := decodeHexStr(*cmd.VoteFor); err != nil {
+		return nil, err
+	} else {
+		vote.VoteFor = vf
 	}
-	if cmd.VoteAgainst != nil {
-		vote.VoteAgainst, err = decodeHexStr(*cmd.VoteAgainst)
-		if err != nil {
-			return nil, err
-		}
+	if cmd.VoteAgainst == nil {
+	} else if va, err := decodeHexStr(*cmd.VoteAgainst); err != nil {
+		return nil, err
+	} else {
+		vote.VoteAgainst = va
 	}
 	result := &btcjson.SetNetworkStewardVoteResult{}
-	return result, w.PutNetworkStewardVote(account, waddrmgr.KeyScopeBIP0044, &vote)
+	return result, w.PutNetworkStewardVote(waddrmgr.DefaultAccountNum, waddrmgr.KeyScopeBIP0044, &vote)
 }
 
 func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetNetworkStewardVoteCmd)
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
-	if err != nil {
-		return nil, err
-	}
-
-	vote, err := w.NetworkStewardVote(account, waddrmgr.KeyScopeBIP0044)
+	vote, err := w.NetworkStewardVote(waddrmgr.DefaultAccountNum, waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
@@ -582,25 +536,15 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetNewAddressCmd)
 
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
 	scope := waddrmgr.KeyScopeBIP0084
 	if cmd.Legacy != nil && *cmd.Legacy {
 		scope = waddrmgr.KeyScopeBIP0044
 	}
-	account, err := w.AccountNumber(scope, acctName)
-	if err != nil {
+	if addr, err := w.NewAddress(waddrmgr.DefaultAccountNum, scope); err != nil {
 		return nil, err
+	} else {
+		return addr.EncodeAddress(), nil
 	}
-	addr, err := w.NewAddress(account, scope)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the new payment address string.
-	return addr.EncodeAddress(), nil
 }
 
 // getReceivedByAddress handles a getreceivedbyaddress request by returning
@@ -1025,19 +969,6 @@ func listSinceBlock(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCCl
 // array of maps with details of sent and recevied wallet transactions.
 func listTransactions(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ListTransactionsCmd)
-
-	// TODO: ListTransactions does not currently understand the difference
-	// between transactions pertaining to one account from another.  This
-	// will be resolved when wtxmgr is combined with the waddrmgr namespace.
-
-	if cmd.Account != nil && *cmd.Account != "*" {
-		// For now, don't bother trying to continue if the user
-		// specified an account, since this can't be (easily or
-		// efficiently) calculated.
-		return nil, btcjson.ErrRPCWallet.New(
-			"Transactions are not yet grouped by account", nil)
-	}
-
 	return w.ListTransactions(*cmd.From, *cmd.Count)
 }
 

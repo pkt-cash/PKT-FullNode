@@ -39,7 +39,7 @@ func TestRPCMethodHelpGeneration(t *testing.T) {
 
 	defer func() {
 		if needsGenerate && !t.Failed() {
-			t.Error("Generated help texts are out of date: run 'go generate'")
+			t.Error("Generated help texts are out of date: run 'go generate ./...'")
 			return
 		}
 		if t.Failed() {
