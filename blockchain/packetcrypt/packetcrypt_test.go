@@ -7,8 +7,12 @@ package packetcrypt_test
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
+	"os"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 
@@ -18,8 +22,6 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-const NumberOfTx int = 4
-
 func div16Ceil(x int) int {
 	l := x / 16
 	if l*16 < x {
@@ -28,7 +30,7 @@ func div16Ceil(x int) int {
 	return l
 }
 
-func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, error) {
+func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, er.R) {
 	if decrypt {
 		msg = msg[:len(msg)-16]
 	}
@@ -53,21 +55,21 @@ func doCryptoCycle(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []
 	cryptocycle.CryptoCycle(&s)
 
 	if s.IsFailed() {
-		return nil, nil, errors.New("failed")
+		return nil, nil, er.New("failed")
 	}
 	return s.Bytes[16:32], s.Bytes[48+a16*16:][:len(msg)], nil
 }
 
-func doGoCrypt(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, error) {
+func doGoCrypt(msg, additional, nonce, key []byte, decrypt bool) ([]byte, []byte, er.R) {
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
-		return nil, nil, errors.New("chacha.New()")
+		return nil, nil, er.New("chacha.New()")
 	}
 	if decrypt {
 		plain := make([]byte, 0, len(msg)-16)
 		plain, err := chacha.Open(plain, nonce, msg, additional)
 		if err != nil {
-			return nil, nil, errors.New("key.Open()")
+			return nil, nil, er.New("key.Open()")
 		}
 		return msg[len(msg)-16:], plain, nil
 	}
@@ -196,10 +198,15 @@ func TestInsertCoinbaseCommit(t *testing.T) {
 		t.Errorf("ExtractCoinbaseCommit() returned nil")
 	}
 
-	if bytes.Compare(cbc2.Bytes[:], cbc.Bytes[:]) != 0 {
+	if !bytes.Equal(cbc2.Bytes[:], cbc.Bytes[:]) {
 		t.Errorf("expected %v", hex.EncodeToString(cbc.Bytes[:]))
 		t.Errorf("got      %v", hex.EncodeToString(cbc2.Bytes[:]))
 		t.Errorf("cbc mismatch")
 		return
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(chaincfg.PktMainNetParams.GlobalConf)
+	os.Exit(m.Run())
 }

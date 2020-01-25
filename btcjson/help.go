@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // baseHelpDescs house the various help labels, types, and example values used
@@ -269,7 +271,7 @@ func resultTypeHelp(xT descLookupFunc, rt reflect.Type, fieldDescKey string) str
 	w.Init(&formatted, 0, 4, 1, ' ', 0)
 	for i, text := range results {
 		if i == len(results)-1 {
-			fmt.Fprintf(w, text)
+			fmt.Fprint(w, text)
 		} else {
 			fmt.Fprintln(w, text)
 		}
@@ -502,7 +504,7 @@ func isValidResultType(kind reflect.Kind) bool {
 //   "help--condition1": "command specified"
 //   "help--result0":    "List of commands"
 //   "help--result1":    "Help for specified command"
-func GenerateHelp(method string, descs map[string]string, resultTypes ...interface{}) (string, error) {
+func GenerateHelp(method string, descs map[string]string, resultTypes ...interface{}) (string, er.R) {
 	// Look up details about the provided method and error out if not
 	// registered.
 	registerLock.RLock()

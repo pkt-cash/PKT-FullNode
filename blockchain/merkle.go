@@ -11,7 +11,10 @@ import (
 	"math"
 	"math/bits"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 )
@@ -211,19 +214,19 @@ func ExtractWitnessCommitment(tx *btcutil.Tx) ([]byte, bool) {
 
 // ValidateWitnessCommitment validates the witness commitment (if any) found
 // within the coinbase transaction of the passed block.
-func ValidateWitnessCommitment(blk *btcutil.Block) error {
+func ValidateWitnessCommitment(blk *btcutil.Block) er.R {
 	// If the block doesn't have any transactions at all, then we won't be
 	// able to extract a commitment from the non-existent coinbase
 	// transaction. So we exit early here.
 	if len(blk.Transactions()) == 0 {
 		str := "cannot validate witness commitment of block without " +
 			"transactions"
-		return ruleError(ErrNoTransactions, str)
+		return ruleerror.ErrNoTransactions.New(str, nil)
 	}
 
 	coinbaseTx := blk.Transactions()[0]
 	if len(coinbaseTx.MsgTx().TxIn) == 0 {
-		return ruleError(ErrNoTxInputs, "transaction has no inputs")
+		return ruleerror.ErrNoTxInputs.New("transaction has no inputs", nil)
 	}
 
 	witnessCommitment, witnessFound := ExtractWitnessCommitment(coinbaseTx)
@@ -237,7 +240,7 @@ func ValidateWitnessCommitment(blk *btcutil.Block) error {
 			if msgTx.HasWitness() {
 				str := fmt.Sprintf("block contains transaction with witness" +
 					" data, yet no witness commitment present")
-				return ruleError(ErrUnexpectedWitness, str)
+				return ruleerror.ErrUnexpectedWitness.New(str, nil)
 			}
 		}
 		return nil
@@ -252,14 +255,14 @@ func ValidateWitnessCommitment(blk *btcutil.Block) error {
 		str := fmt.Sprintf("the coinbase transaction has %d items in "+
 			"its witness stack when only one is allowed",
 			len(coinbaseWitness))
-		return ruleError(ErrInvalidWitnessCommitment, str)
+		return ruleerror.ErrInvalidWitnessCommitment.New(str, nil)
 	}
 	witnessNonce := coinbaseWitness[0]
 	if len(witnessNonce) != CoinbaseWitnessDataLen {
 		str := fmt.Sprintf("the coinbase transaction witness nonce "+
 			"has %d bytes when it must be %d bytes",
 			len(witnessNonce), CoinbaseWitnessDataLen)
-		return ruleError(ErrInvalidWitnessCommitment, str)
+		return ruleerror.ErrInvalidWitnessCommitment.New(str, nil)
 	}
 
 	// Finally, with the preliminary checks out of the way, we can check if
@@ -278,7 +281,7 @@ func ValidateWitnessCommitment(blk *btcutil.Block) error {
 		str := fmt.Sprintf("witness commitment does not match: "+
 			"computed %v, coinbase includes %v", computedCommitment,
 			witnessCommitment)
-		return ruleError(ErrWitnessCommitmentMismatch, str)
+		return ruleerror.ErrWitnessCommitmentMismatch.New(str, nil)
 	}
 
 	return nil

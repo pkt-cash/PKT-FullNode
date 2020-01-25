@@ -7,6 +7,7 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 )
 
@@ -101,7 +102,7 @@ func TestMakeScriptNum(t *testing.T) {
 		num             scriptNum
 		numLen          int
 		minimalEncoding bool
-		err             error
+		err             er.R
 	}{
 		// Minimal encoding must reject negative 0.
 		{hexToBytes("80"), 0, defaultScriptNumLen, true, errMinimalData},

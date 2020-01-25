@@ -7,16 +7,24 @@
 package main
 
 import (
-	"errors"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
 // helpDescsEnUS defines the English descriptions used for the help strings.
 var helpDescsEnUS = map[string]string{
+	// CheckPcAnnCmd help.
+	"checkpcann--synopsis":      "Validate a single PacketCrypt announcement",
+	"checkpcann-parenthash":     "The hash of the most recent block when this announcement was mined, if nil then pktd will use the current chain",
+	"checkpcann-pcversion":      "The version of PacketCrypt to consider for this announcement",
+	"checkpcann-annhex":         "The announcement body as hex",
+	"checkpcannresult-workhash": "The result hash from validating the announcement, this is used to assess difficulty",
+
 	// DebugLevelCmd help.
 	"debuglevel--synopsis": "Dynamically changes the debug logging level.\n" +
 		"The levelspec can either a debug level or of the form:\n" +
@@ -167,6 +175,7 @@ var helpDescsEnUS = map[string]string{
 	"getblock-verbosetx":   "Specifies that each transaction is returned as a JSON object and only applies if the verbose flag is true (pktd extension)",
 	"getblock--condition0": "verbose=false",
 	"getblock--condition1": "verbose=true",
+	"getblock-verbosepcp":  "If true then the hex content of the PacketCrypt proof will also be included",
 	"getblock--result0":    "Hex-encoded bytes of the serialized block",
 
 	// GetBlockChainInfoCmd help.
@@ -226,23 +235,29 @@ var helpDescsEnUS = map[string]string{
 	"searchrawtransactionsresult-vsize":         "The virtual size of the transaction in bytes",
 
 	// GetBlockVerboseResult help.
-	"getblockverboseresult-hash":              "The hash of the block (same as provided)",
-	"getblockverboseresult-confirmations":     "The number of confirmations",
-	"getblockverboseresult-size":              "The size of the block",
-	"getblockverboseresult-height":            "The height of the block in the block chain",
-	"getblockverboseresult-version":           "The block version",
-	"getblockverboseresult-versionHex":        "The block version in hexadecimal",
-	"getblockverboseresult-merkleroot":        "Root hash of the merkle tree",
-	"getblockverboseresult-tx":                "The transaction hashes (only when verbosetx=false)",
-	"getblockverboseresult-rawtx":             "The transactions as JSON objects (only when verbosetx=true)",
-	"getblockverboseresult-time":              "The block time in seconds since 1 Jan 1970 GMT",
-	"getblockverboseresult-nonce":             "The block nonce",
-	"getblockverboseresult-bits":              "The bits which represent the block difficulty",
-	"getblockverboseresult-difficulty":        "The proof-of-work difficulty as a multiple of the minimum difficulty",
-	"getblockverboseresult-previousblockhash": "The hash of the previous block",
-	"getblockverboseresult-nextblockhash":     "The hash of the next block (only if there is one)",
-	"getblockverboseresult-strippedsize":      "The size of the block without witness data",
-	"getblockverboseresult-weight":            "The weight of the block",
+	"getblockverboseresult-hash":                     "The hash of the block (same as provided)",
+	"getblockverboseresult-confirmations":            "The number of confirmations",
+	"getblockverboseresult-size":                     "The size of the block",
+	"getblockverboseresult-height":                   "The height of the block in the block chain",
+	"getblockverboseresult-version":                  "The block version",
+	"getblockverboseresult-versionHex":               "The block version in hexadecimal",
+	"getblockverboseresult-merkleroot":               "Root hash of the merkle tree",
+	"getblockverboseresult-tx":                       "The transaction hashes (only when verbosetx=false)",
+	"getblockverboseresult-rawtx":                    "The transactions as JSON objects (only when verbosetx=true)",
+	"getblockverboseresult-time":                     "The block time in seconds since 1 Jan 1970 GMT",
+	"getblockverboseresult-nonce":                    "The block nonce",
+	"getblockverboseresult-bits":                     "The bits which represent the block difficulty",
+	"getblockverboseresult-difficulty":               "The proof-of-work difficulty as a multiple of the minimum difficulty",
+	"getblockverboseresult-previousblockhash":        "The hash of the previous block",
+	"getblockverboseresult-nextblockhash":            "The hash of the next block (only if there is one)",
+	"getblockverboseresult-strippedsize":             "The size of the block without witness data",
+	"getblockverboseresult-weight":                   "The weight of the block",
+	"getblockverboseresult-packetcryptproof":         "The hex content of the PacketCrypt proof for this block",
+	"getblockverboseresult-packetcryptblkdifficulty": "The estimated number of encryptions needed by the block miner",
+	"getblockverboseresult-packetcryptanndifficulty": "The estimated number of encryptions needed for each announcement",
+	"getblockverboseresult-packetcryptannbits":       "The bits which represent minimum announcement difficulty",
+	"getblockverboseresult-packetcryptanncount":      "The number of announcements which the winning miner was using",
+	"getblockverboseresult-packetcryptversion":       "The version of the PacketCrypt proof",
 
 	// GetBlockCountCmd help.
 	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
@@ -716,6 +731,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"addnode":                nil,
 	"configureminingpayouts": nil,
 	"createrawtransaction":   {(*string)(nil)},
+	"checkpcann":             {(*btcjson.CheckPcAnnResult)(nil)},
 	"debuglevel":             {(*string)(nil), (*string)(nil)},
 	"decoderawtransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
 	"decodescript":           {(*btcjson.DecodeScriptResult)(nil)},
@@ -791,7 +807,7 @@ type helpCacher struct {
 // rpcMethodHelp returns an RPC help string for the provided method.
 //
 // This function is safe for concurrent access.
-func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
+func (c *helpCacher) rpcMethodHelp(method string) (string, er.R) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -803,7 +819,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
 	// Look up the result types for the method.
 	resultTypes, ok := rpcResultTypes[method]
 	if !ok {
-		return "", errors.New("no result types specified for method " +
+		return "", er.New("no result types specified for method " +
 			method)
 	}
 
@@ -819,7 +835,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
 // rpcUsage returns one-line usage for all support RPC commands.
 //
 // This function is safe for concurrent access.
-func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
+func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, er.R) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -849,7 +865,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 		}
 	}
 
-	sort.Sort(sort.StringSlice(usageTexts))
+	sort.Strings(usageTexts)
 	c.usage = strings.Join(usageTexts, "\n")
 	return c.usage, nil
 }

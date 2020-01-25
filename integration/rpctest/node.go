@@ -14,8 +14,10 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	rpc "github.com/pkt-cash/pktd/rpcclient"
-	"github.com/pkt-cash/btcutil"
 )
 
 // nodeConfig contains all the args, and data required to launch a pktd process
@@ -41,7 +43,7 @@ type nodeConfig struct {
 }
 
 // newConfig returns a newConfig with all default values.
-func newConfig(prefix, certFile, keyFile string, extra []string) (*nodeConfig, error) {
+func newConfig(prefix, certFile, keyFile string, extra []string) (*nodeConfig, er.R) {
 	pktdPath, err := pktdExecutablePath()
 	if err != nil {
 		pktdPath = "pktd"
@@ -68,20 +70,20 @@ func newConfig(prefix, certFile, keyFile string, extra []string) (*nodeConfig, e
 // setDefaults sets the default values of the config. It also creates the
 // temporary data, and log directories which must be cleaned up with a call to
 // cleanup().
-func (n *nodeConfig) setDefaults() error {
+func (n *nodeConfig) setDefaults() er.R {
 	datadir, err := ioutil.TempDir("", n.prefix+"-data")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.dataDir = datadir
 	logdir, err := ioutil.TempDir("", n.prefix+"-logs")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.logDir = logdir
 	cert, err := ioutil.ReadFile(n.certFile)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	n.certificates = cert
 	return nil
@@ -137,7 +139,10 @@ func (n *nodeConfig) arguments() []string {
 
 // command returns the exec.Cmd which will be used to start the pktd process.
 func (n *nodeConfig) command() *exec.Cmd {
-	return exec.Command(n.exe, n.arguments()...)
+	cmd := exec.Command(n.exe, n.arguments()...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd
 }
 
 // rpcConnConfig returns the rpc connection config that can be used to connect
@@ -159,14 +164,14 @@ func (n *nodeConfig) String() string {
 }
 
 // cleanup removes the tmp data and log directories.
-func (n *nodeConfig) cleanup() error {
+func (n *nodeConfig) cleanup() er.R {
 	dirs := []string{
 		n.logDir,
 		n.dataDir,
 	}
-	var err error
+	var err er.R
 	for _, dir := range dirs {
-		if err = os.RemoveAll(dir); err != nil {
+		if err = er.E(os.RemoveAll(dir)); err != nil {
 			log.Printf("Cannot remove dir %s: %v", dir, err)
 		}
 	}
@@ -187,7 +192,7 @@ type node struct {
 // newNode creates a new node instance according to the passed config. dataDir
 // will be used to hold a file recording the pid of the launched process, and
 // as the base for the log and data directories for pktd.
-func newNode(config *nodeConfig, dataDir string) (*node, error) {
+func newNode(config *nodeConfig, dataDir string) (*node, er.R) {
 	return &node{
 		config:  config,
 		dataDir: dataDir,
@@ -200,24 +205,25 @@ func newNode(config *nodeConfig, dataDir string) (*node, error) {
 // terminate the process in case of a hang, or panic. In the case of a failing
 // test case, or panic, it is important that the process be stopped via stop(),
 // otherwise, it will persist unless explicitly killed.
-func (n *node) start() error {
+func (n *node) start() er.R {
+	fmt.Printf("Launching pktd with arguments: %v\n", n.cmd.Args)
 	if err := n.cmd.Start(); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	pid, err := os.Create(filepath.Join(n.dataDir,
 		fmt.Sprintf("%s.pid", n.config)))
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	n.pidFile = pid.Name()
 	if _, err = fmt.Fprintf(pid, "%d\n", n.cmd.Process.Pid); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if err := pid.Close(); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -226,7 +232,7 @@ func (n *node) start() error {
 // stop interrupts the running pktd process process, and waits until it exits
 // properly. On windows, interrupt is not supported, so a kill signal is used
 // instead
-func (n *node) stop() error {
+func (n *node) stop() er.R {
 	if n.cmd == nil || n.cmd.Process == nil {
 		// return if not properly initialized
 		// or error starting the process
@@ -234,15 +240,15 @@ func (n *node) stop() error {
 	}
 	defer n.cmd.Wait()
 	if runtime.GOOS == "windows" {
-		return n.cmd.Process.Signal(os.Kill)
+		return er.E(n.cmd.Process.Signal(os.Kill))
 	}
-	return n.cmd.Process.Signal(os.Interrupt)
+	return er.E(n.cmd.Process.Signal(os.Interrupt))
 }
 
 // cleanup cleanups process and args files. The file housing the pid of the
 // created process will be deleted, as well as any directories created by the
 // process.
-func (n *node) cleanup() error {
+func (n *node) cleanup() er.R {
 	if n.pidFile != "" {
 		if err := os.Remove(n.pidFile); err != nil {
 			log.Printf("unable to remove file %s: %v", n.pidFile,
@@ -255,7 +261,7 @@ func (n *node) cleanup() error {
 
 // shutdown terminates the running pktd process, and cleans up all
 // file/directories created by node.
-func (n *node) shutdown() error {
+func (n *node) shutdown() er.R {
 	if err := n.stop(); err != nil {
 		return err
 	}
@@ -266,7 +272,7 @@ func (n *node) shutdown() error {
 }
 
 // genCertPair generates a key/cert pair to the paths provided.
-func genCertPair(certFile, keyFile string) error {
+func genCertPair(certFile, keyFile string) er.R {
 	org := "rpctest autogenerated cert"
 	validUntil := time.Now().Add(10 * 365 * 24 * time.Hour)
 	cert, key, err := btcutil.NewTLSCertPair(org, validUntil, nil)
@@ -275,10 +281,10 @@ func genCertPair(certFile, keyFile string) error {
 	}
 
 	// Write cert and key files.
-	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+	if err = er.E(ioutil.WriteFile(certFile, cert, 0666)); err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+	if err = er.E(ioutil.WriteFile(keyFile, key, 0600)); err != nil {
 		os.Remove(certFile)
 		return err
 	}

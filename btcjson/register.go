@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // UsageFlag define flags that specify additional properties about the
@@ -154,7 +156,7 @@ func isAcceptableKind(kind reflect.Kind) bool {
 // passed struct, so it does not need to be an actual instance.  Therefore, it
 // is recommended to simply pass a nil pointer cast to the appropriate type.
 // For example, (*FooCmd)(nil).
-func RegisterCmd(method string, cmd interface{}, flags UsageFlag) error {
+func RegisterCmd(method string, cmd interface{}, flags UsageFlag) er.R {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
@@ -287,6 +289,6 @@ func RegisteredCmdMethods() []string {
 		methods = append(methods, k)
 	}
 
-	sort.Sort(sort.StringSlice(methods))
+	sort.Strings(methods)
 	return methods
 }

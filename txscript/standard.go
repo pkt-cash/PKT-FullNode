@@ -8,7 +8,10 @@ package txscript
 import (
 	"fmt"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -255,7 +258,7 @@ type ScriptInfo struct {
 // be analysed, i.e. if they do not parse or the pkScript is not a push-only
 // script
 func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
-	bip16, segwit bool) (*ScriptInfo, error) {
+	bip16, segwit bool) (*ScriptInfo, er.R) {
 
 	sigPops, err := parseScript(sigScript)
 	if err != nil {
@@ -361,7 +364,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 // CalcMultiSigStats returns the number of public keys and signatures from
 // a multi-signature transaction script.  The passed script MUST already be
 // known to be a multi-signature script.
-func CalcMultiSigStats(script []byte) (int, int, error) {
+func CalcMultiSigStats(script []byte) (int, int, er.R) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return 0, 0, err
@@ -391,7 +394,7 @@ func payToPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).
 		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG)
 }
-func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 	return payToPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
@@ -400,7 +403,7 @@ func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 func payToWitnessPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_0).AddData(pubKeyHash)
 }
-func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 	return payToWitnessPubKeyHashScriptBuilder(pubKeyHash).Script()
 }
 
@@ -410,7 +413,7 @@ func payToScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_HASH160).AddData(scriptHash).
 		AddOp(OP_EQUAL)
 }
-func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
+func payToScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 	return payToScriptHashScriptBuilder(scriptHash).Script()
 }
 
@@ -419,7 +422,7 @@ func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
 func payToWitnessScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddOp(OP_0).AddData(scriptHash)
 }
-func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
+func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 	return payToWitnessScriptHashScriptBuilder(scriptHash).Script()
 }
 
@@ -428,9 +431,6 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
 func payToPubKeyScriptBuilder(serializedPubKey []byte) *ScriptBuilder {
 	return NewScriptBuilder().AddData(serializedPubKey).
 		AddOp(OP_CHECKSIG)
-}
-func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
-	return payToPubKeyScriptBuilder(serializedPubKey).Script()
 }
 
 // appendVote adds a vote to the end of a ScriptBuilder if a voteFor and/or voteAgainst
@@ -456,8 +456,8 @@ func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
 // PayToAddrScriptWithVote creates a new script to pay a transaction output to a the
 // specified address and adds a vote for the specified network steward, if voteFor
 // and/or voteAgainst are non-null and if the address type is non-segwit.
-func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, error) {
-	if addr == nil {
+func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, er.R) {
+	if util.IsNil(addr) {
 		return nil, scriptError(ErrUnsupportedAddress,
 			"unable to generate payment script for nil address")
 	}
@@ -489,7 +489,7 @@ func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) 
 
 // PayToAddrScript creates a new script to pay a transaction output to the
 // specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func PayToAddrScript(addr btcutil.Address) ([]byte, er.R) {
 	return PayToAddrScriptWithVote(addr, nil, nil)
 }
 
@@ -522,7 +522,7 @@ func stripVote(pops []parsedOpcode) []parsedOpcode {
 // NullDataScript creates a provably-prunable script containing OP_RETURN
 // followed by the passed data.  An Error with the error code ErrTooMuchNullData
 // will be returned if the length of the passed data exceeds MaxDataCarrierSize.
-func NullDataScript(data []byte) ([]byte, error) {
+func NullDataScript(data []byte) ([]byte, er.R) {
 	if len(data) > MaxDataCarrierSize {
 		str := fmt.Sprintf("data size %d is larger than max "+
 			"allowed size %d", len(data), MaxDataCarrierSize)
@@ -536,7 +536,7 @@ func NullDataScript(data []byte) ([]byte, error) {
 // nrequired of the keys in pubkeys are required to have signed the transaction
 // for success.  An Error with the error code ErrTooManyRequiredSigs will be
 // returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
+func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er.R) {
 	if len(pubkeys) < nrequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -556,7 +556,7 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 
 // PushedData returns an array of byte slices containing any pushed data found
 // in the passed script.  This includes OP_0, but not OP_1 - OP_16.
-func PushedData(script []byte) ([][]byte, error) {
+func PushedData(script []byte) ([][]byte, er.R) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return nil, err
@@ -577,7 +577,7 @@ func PushedData(script []byte) ([][]byte, error) {
 // signatures associated with the passed PkScript.  Note that it only works for
 // 'standard' transaction script types.  Any data such as public keys which are
 // invalid are omitted from the results.
-func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, error) {
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, er.R) {
 	var addrs []btcutil.Address
 	var requiredSigs int
 
@@ -680,86 +680,4 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 	}
 
 	return scriptClass, addrs, requiredSigs, nil
-}
-
-// AtomicSwapDataPushes houses the data pushes found in atomic swap contracts.
-type AtomicSwapDataPushes struct {
-	RecipientHash160 [20]byte
-	RefundHash160    [20]byte
-	SecretHash       [32]byte
-	SecretSize       int64
-	LockTime         int64
-}
-
-// ExtractAtomicSwapDataPushes returns the data pushes from an atomic swap
-// contract.  If the script is not an atomic swap contract,
-// ExtractAtomicSwapDataPushes returns (nil, nil).  Non-nil errors are returned
-// for unparsable scripts.
-//
-// NOTE: Atomic swaps are not considered standard script types by the dcrd
-// mempool policy and should be used with P2SH.  The atomic swap format is also
-// expected to change to use a more secure hash function in the future.
-//
-// This function is only defined in the txscript package due to API limitations
-// which prevent callers using txscript to parse nonstandard scripts.
-func ExtractAtomicSwapDataPushes(version uint16, pkScript []byte) (*AtomicSwapDataPushes, error) {
-	pops, err := parseScript(pkScript)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(pops) != 20 {
-		return nil, nil
-	}
-	isAtomicSwap := pops[0].opcode.value == OP_IF &&
-		pops[1].opcode.value == OP_SIZE &&
-		canonicalPush(pops[2]) &&
-		pops[3].opcode.value == OP_EQUALVERIFY &&
-		pops[4].opcode.value == OP_SHA256 &&
-		pops[5].opcode.value == OP_DATA_32 &&
-		pops[6].opcode.value == OP_EQUALVERIFY &&
-		pops[7].opcode.value == OP_DUP &&
-		pops[8].opcode.value == OP_HASH160 &&
-		pops[9].opcode.value == OP_DATA_20 &&
-		pops[10].opcode.value == OP_ELSE &&
-		canonicalPush(pops[11]) &&
-		pops[12].opcode.value == OP_CHECKLOCKTIMEVERIFY &&
-		pops[13].opcode.value == OP_DROP &&
-		pops[14].opcode.value == OP_DUP &&
-		pops[15].opcode.value == OP_HASH160 &&
-		pops[16].opcode.value == OP_DATA_20 &&
-		pops[17].opcode.value == OP_ENDIF &&
-		pops[18].opcode.value == OP_EQUALVERIFY &&
-		pops[19].opcode.value == OP_CHECKSIG
-	if !isAtomicSwap {
-		return nil, nil
-	}
-
-	pushes := new(AtomicSwapDataPushes)
-	copy(pushes.SecretHash[:], pops[5].data)
-	copy(pushes.RecipientHash160[:], pops[9].data)
-	copy(pushes.RefundHash160[:], pops[16].data)
-	if pops[2].data != nil {
-		locktime, err := makeScriptNum(pops[2].data, true, 5)
-		if err != nil {
-			return nil, nil
-		}
-		pushes.SecretSize = int64(locktime)
-	} else if op := pops[2].opcode; isSmallInt(op) {
-		pushes.SecretSize = int64(asSmallInt(op))
-	} else {
-		return nil, nil
-	}
-	if pops[11].data != nil {
-		locktime, err := makeScriptNum(pops[11].data, true, 5)
-		if err != nil {
-			return nil, nil
-		}
-		pushes.LockTime = int64(locktime)
-	} else if op := pops[11].opcode; isSmallInt(op) {
-		pushes.LockTime = int64(asSmallInt(op))
-	} else {
-		return nil, nil
-	}
-	return pushes, nil
 }

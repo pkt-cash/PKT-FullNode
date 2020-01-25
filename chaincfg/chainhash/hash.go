@@ -8,6 +8,8 @@ package chainhash
 import (
 	"encoding/hex"
 	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // HashSize of array used to store hashes.  See Hash.
@@ -47,10 +49,10 @@ func (hash *Hash) CloneBytes() []byte {
 
 // SetBytes sets the bytes which represent the hash.  An error is returned if
 // the number of bytes passed in is not HashSize.
-func (hash *Hash) SetBytes(newHash []byte) error {
+func (hash *Hash) SetBytes(newHash []byte) er.R {
 	nhlen := len(newHash)
 	if nhlen != HashSize {
-		return fmt.Errorf("invalid hash length of %v, want %v", nhlen,
+		return er.Errorf("invalid hash length of %v, want %v", nhlen,
 			HashSize)
 	}
 	copy(hash[:], newHash)
@@ -71,7 +73,7 @@ func (hash *Hash) IsEqual(target *Hash) bool {
 
 // NewHash returns a new Hash from a byte slice.  An error is returned if
 // the number of bytes passed in is not HashSize.
-func NewHash(newHash []byte) (*Hash, error) {
+func NewHash(newHash []byte) (*Hash, er.R) {
 	var sh Hash
 	err := sh.SetBytes(newHash)
 	if err != nil {
@@ -83,7 +85,7 @@ func NewHash(newHash []byte) (*Hash, error) {
 // NewHashFromStr creates a Hash from a hash string.  The string should be
 // the hexadecimal string of a byte-reversed hash, but any missing characters
 // result in zero padding at the end of the Hash.
-func NewHashFromStr(hash string) (*Hash, error) {
+func NewHashFromStr(hash string) (*Hash, er.R) {
 	ret := new(Hash)
 	err := Decode(ret, hash)
 	if err != nil {
@@ -94,10 +96,10 @@ func NewHashFromStr(hash string) (*Hash, error) {
 
 // Decode decodes the byte-reversed hexadecimal string encoding of a Hash to a
 // destination.
-func Decode(dst *Hash, src string) error {
+func Decode(dst *Hash, src string) er.R {
 	// Return error if hash string is too long.
 	if len(src) > MaxHashStringSize {
-		return ErrHashStrSize
+		return er.E(ErrHashStrSize)
 	}
 
 	// Hex decoder expects the hash to be a multiple of two.  When not, pad
@@ -113,9 +115,9 @@ func Decode(dst *Hash, src string) error {
 
 	// Hex decode the source bytes to a temporary destination.
 	var reversedHash Hash
-	_, err := hex.Decode(reversedHash[HashSize-hex.DecodedLen(len(srcBytes)):], srcBytes)
-	if err != nil {
-		return err
+	_, errr := hex.Decode(reversedHash[HashSize-hex.DecodedLen(len(srcBytes)):], srcBytes)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Reverse copy from the temporary hash to destination.  Because the

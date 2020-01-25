@@ -16,6 +16,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/pkt-cash/pktd/blockchain/indexers"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
 )
@@ -33,14 +34,14 @@ var (
 
 // winServiceMain is only invoked on Windows.  It detects when pktd is running
 // as a service and reacts accordingly.
-var winServiceMain func() (bool, error)
+var winServiceMain func() (bool, er.R)
 
 // pktdMain is the real main function for pktd.  It is necessary to work around
 // the fact that deferred functions do not run when os.Exit() is called.  The
 // optional serverChan parameter is mainly used by the service code to be
 // notified with the server once it is setup so it can gracefully stop it when
 // requested from the service control manager.
-func pktdMain(serverChan chan<- *server) error {
+func pktdMain(serverChan chan<- *server) er.R {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	tcfg, _, err := loadConfig()
@@ -77,10 +78,10 @@ func pktdMain(serverChan chan<- *server) error {
 
 	// Write cpu profile if requested.
 	if cfg.CPUProfile != "" {
-		f, err := os.Create(cfg.CPUProfile)
-		if err != nil {
+		f, errr := os.Create(cfg.CPUProfile)
+		if errr != nil {
 			pktdLog.Errorf("Unable to create cpu profile: %v", err)
-			return err
+			return er.E(errr)
 		}
 		pprof.StartCPUProfile(f)
 		defer f.Close()
@@ -173,7 +174,7 @@ func pktdMain(serverChan chan<- *server) error {
 
 // removeRegressionDB removes the existing regression test database if running
 // in regression test mode and it already exists.
-func removeRegressionDB(dbPath string) error {
+func removeRegressionDB(dbPath string) er.R {
 	// Don't do anything if not in regression test mode.
 	if !cfg.RegressionTest {
 		return nil
@@ -184,14 +185,14 @@ func removeRegressionDB(dbPath string) error {
 	if err == nil {
 		pktdLog.Infof("Removing regression test database from '%s'", dbPath)
 		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
+			errr := os.RemoveAll(dbPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
+			errr := os.Remove(dbPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 	}
@@ -248,7 +249,7 @@ func warnMultipleDBs() {
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func loadBlockDB() (database.DB, error) {
+func loadBlockDB() (database.DB, er.R) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
@@ -275,16 +276,14 @@ func loadBlockDB() (database.DB, error) {
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
-		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
-
+		if !database.ErrDbDoesNotExist.Is(err) {
 			return nil, err
 		}
 
 		// Create the db if it does not exist.
-		err = os.MkdirAll(cfg.DataDir, 0700)
-		if err != nil {
-			return nil, err
+		errr := os.MkdirAll(cfg.DataDir, 0700)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		db, err = database.Create(cfg.DbType, dbPath, activeNetParams.Net)
 		if err != nil {

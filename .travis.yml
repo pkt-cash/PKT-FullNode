@@ -1,5 +1,22 @@
 language: go
+notifications:
+  irc:
+    channels:
+      - "chat.freenode.net#pkt"
+    on_success: change
+    on_failure: always
 branches:
   only:
-    - master
-    - pktd-mergeall
+  - master
+  - pktd-mergeall
+go:
+  - "1.12.x"
+sudo: false
+script:
+  - GO111MODULE=on go build
+  - GO111MODULE=on go build -o wallet ./pktwallet
+  - GO111MODULE=on go build ./cmd/...
+  - GO111MODULE=on go test ./...
+#  - go test -tags="rpctest" ./...
+  - GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.21.0
+  - GO111MODULE=on golangci-lint run --max-issues-per-linter 1000 --timeout 600s --new-from-rev f158033947f8a658bab5001b0156168b85fcc70e

@@ -12,14 +12,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 const (
@@ -60,10 +59,6 @@ var (
 	harnessStateMtx sync.RWMutex
 )
 
-// HarnessTestCase represents a test-case which utilizes an instance of the
-// Harness to exercise functionality.
-type HarnessTestCase func(r *Harness, t *testing.T)
-
 // Harness fully encapsulates an active pktd process to provide a unified
 // platform for creating rpc driven integration tests involving pktd. The
 // active pktd node will typically be run in simnet mode in order to allow for
@@ -98,7 +93,7 @@ type Harness struct {
 //
 // NOTE: This function is safe for concurrent access.
 func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
-	extraArgs []string) (*Harness, error) {
+	extraArgs []string) (*Harness, er.R) {
 
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
@@ -115,7 +110,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	case wire.SimNet:
 		extraArgs = append(extraArgs, "--simnet")
 	default:
-		return nil, fmt.Errorf("rpctest.New must be called with one " +
+		return nil, er.Errorf("rpctest.New must be called with one " +
 			"of the supported chain networks")
 	}
 
@@ -125,9 +120,9 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	}
 
 	harnessID := strconv.Itoa(numTestInstances)
-	nodeTestData, err := ioutil.TempDir(testDir, "harness-"+harnessID)
-	if err != nil {
-		return nil, err
+	nodeTestData, errr := ioutil.TempDir(testDir, "harness-"+harnessID)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	certFile := filepath.Join(nodeTestData, "rpc.cert")
@@ -213,7 +208,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 //
 // NOTE: This method and TearDown should always be called from the same
 // goroutine as they are not concurrent safe.
-func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) error {
+func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) er.R {
 	// Start the pktd node itself. This spawns a new process which will be
 	// managed
 	if err := h.node.start(); err != nil {
@@ -271,7 +266,7 @@ func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) error {
 // killed, and temporary directories removed.
 //
 // This function MUST be called with the harness state mutex held (for writes).
-func (h *Harness) tearDown() error {
+func (h *Harness) tearDown() er.R {
 	if h.Node != nil {
 		h.Node.Shutdown()
 	}
@@ -280,8 +275,8 @@ func (h *Harness) tearDown() error {
 		return err
 	}
 
-	if err := os.RemoveAll(h.testNodeDir); err != nil {
-		return err
+	if errr := os.RemoveAll(h.testNodeDir); errr != nil {
+		return er.E(errr)
 	}
 
 	delete(testInstances, h.testNodeDir)
@@ -294,7 +289,7 @@ func (h *Harness) tearDown() error {
 //
 // NOTE: This method and SetUp should always be called from the same goroutine
 // as they are not concurrent safe.
-func (h *Harness) TearDown() error {
+func (h *Harness) TearDown() er.R {
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
 
@@ -307,9 +302,9 @@ func (h *Harness) TearDown() error {
 // the time between subsequent attempts. If after h.maxConnRetries attempts,
 // we're not able to establish a connection, this function returns with an
 // error.
-func (h *Harness) connectRPCClient() error {
+func (h *Harness) connectRPCClient() er.R {
 	var client *rpcclient.Client
-	var err error
+	var err er.R
 
 	rpcConf := h.node.config.rpcConnConfig()
 	for i := 0; i < h.maxConnRetries; i++ {
@@ -321,50 +316,12 @@ func (h *Harness) connectRPCClient() error {
 	}
 
 	if client == nil {
-		return fmt.Errorf("connection timeout")
+		return er.Errorf("connection timeout")
 	}
 
 	h.Node = client
 	h.wallet.SetRPCClient(client)
 	return nil
-}
-
-// NewAddress returns a fresh address spendable by the Harness' internal
-// wallet.
-//
-// This function is safe for concurrent access.
-func (h *Harness) NewAddress() (btcutil.Address, error) {
-	return h.wallet.NewAddress()
-}
-
-// ConfirmedBalance returns the confirmed balance of the Harness' internal
-// wallet.
-//
-// This function is safe for concurrent access.
-func (h *Harness) ConfirmedBalance() btcutil.Amount {
-	return h.wallet.ConfirmedBalance()
-}
-
-// SendOutputs creates, signs, and finally broadcasts a transaction spending
-// the harness' available mature coinbase outputs creating new outputs
-// according to targetOutputs.
-//
-// This function is safe for concurrent access.
-func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
-
-	return h.wallet.SendOutputs(targetOutputs, feeRate)
-}
-
-// SendOutputsWithoutChange creates and sends a transaction that pays to the
-// specified outputs while observing the passed fee rate and ignoring a change
-// output. The passed fee rate should be expressed in sat/b.
-//
-// This function is safe for concurrent access.
-func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
-
-	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
 }
 
 // CreateTransaction returns a fully signed transaction paying to the specified
@@ -379,25 +336,9 @@ func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount, change bool) (*wire.MsgTx, error) {
+	feeRate btcutil.Amount, change bool) (*wire.MsgTx, er.R) {
 
 	return h.wallet.CreateTransaction(targetOutputs, feeRate, change)
-}
-
-// UnlockOutputs unlocks any outputs which were previously marked as
-// unspendabe due to being selected to fund a transaction via the
-// CreateTransaction method.
-//
-// This function is safe for concurrent access.
-func (h *Harness) UnlockOutputs(inputs []*wire.TxIn) {
-	h.wallet.UnlockOutputs(inputs)
-}
-
-// RPCConfig returns the harnesses current rpc configuration. This allows other
-// potential RPC clients created within tests to connect to a given test
-// harness instance.
-func (h *Harness) RPCConfig() rpcclient.ConnConfig {
-	return h.node.config.rpcConnConfig()
 }
 
 // P2PAddress returns the harness' P2P listening address. This allows potential
@@ -405,21 +346,6 @@ func (h *Harness) RPCConfig() rpcclient.ConnConfig {
 // harness instance.
 func (h *Harness) P2PAddress() string {
 	return h.node.config.listen
-}
-
-// GenerateAndSubmitBlock creates a block whose contents include the passed
-// transactions and submits it to the running simnet node. For generating
-// blocks with only a coinbase tx, callers can simply pass nil instead of
-// transactions to be mined. Additionally, a custom block version can be set by
-// the caller. A blockVersion of -1 indicates that the current default block
-// version should be used. An uninitialized time.Time should be used for the
-// blockTime parameter if one doesn't wish to set a custom time.
-//
-// This function is safe for concurrent access.
-func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
-	blockTime time.Time) (*btcutil.Block, error) {
-	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
-		blockVersion, blockTime, []wire.TxOut{})
 }
 
 // GenerateAndSubmitBlockWithCustomCoinbaseOutputs creates a block whose
@@ -438,7 +364,7 @@ func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
 // This function is safe for concurrent access.
 func (h *Harness) GenerateAndSubmitBlockWithCustomCoinbaseOutputs(
 	txns []*btcutil.Tx, blockVersion int32, blockTime time.Time,
-	mineTo []wire.TxOut) (*btcutil.Block, error) {
+	mineTo []wire.TxOut) (*btcutil.Block, er.R) {
 
 	h.Lock()
 	defer h.Unlock()
@@ -493,8 +419,8 @@ func generateListeningAddresses() (string, string) {
 }
 
 // baseDir is the directory path of the temp directory for all rpctest files.
-func baseDir() (string, error) {
+func baseDir() (string, er.R) {
 	dirPath := filepath.Join(os.TempDir(), "pktd", "rpctest")
-	err := os.MkdirAll(dirPath, 0755)
-	return dirPath, err
+	errr := os.MkdirAll(dirPath, 0755)
+	return dirPath, er.E(errr)
 }

@@ -82,14 +82,6 @@ type ListTransactionsResult struct {
 	OtherAccount      string   `json:"otheraccount,omitempty"`
 }
 
-// ListReceivedByAccountResult models the data from the listreceivedbyaccount
-// command.
-type ListReceivedByAccountResult struct {
-	Account       string  `json:"account"`
-	Amount        float64 `json:"amount"`
-	Confirmations uint64  `json:"confirmations"`
-}
-
 // ListReceivedByAddressResult models the data from the listreceivedbyaddress
 // command.
 type ListReceivedByAddressResult struct {
@@ -168,4 +160,11 @@ type SetNetworkStewardVoteResult struct{}
 type GetNetworkStewardVoteResult struct {
 	VoteFor     string `json:"votefor,omitempty"`
 	VoteAgainst string `json:"voteagainst,omitempty"`
+}
+
+type GetAddressBalancesResult struct {
+	Address        string  `json:"address"`
+	Total          float64 `json:"total"`
+	Spendable      float64 `json:"spendable"`
+	ImmatureReward float64 `json:"immaturereward"`
 }

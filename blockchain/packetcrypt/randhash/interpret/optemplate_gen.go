@@ -59,13 +59,14 @@ func ROTL8_16(a uint16, b uint16) uint16 {
 func ROTL8(a uint32, b uint32) uint32 {
 	return (uint32(ROTL8_16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(ROTL8_16(uint16(a), uint16(b)))
 }
-func rotr8(a uint8, b uint8) uint8 { return shll8(a, 8-b) | shrl8(a, b) }
-func ROTR8_16(a uint16, b uint16) uint16 {
-	return (uint16(rotr8(uint8(a>>8), uint8(b>>8))) << 8) | uint16(rotr8(uint8(a), uint8(b)))
-}
-func ROTR8(a uint32, b uint32) uint32 {
-	return (uint32(ROTR8_16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(ROTR8_16(uint16(a), uint16(b)))
-}
+
+// func rotr8(a uint8, b uint8) uint8 { return shll8(a, 8-b) | shrl8(a, b) }
+// func ROTR8_16(a uint16, b uint16) uint16 {
+// 	return (uint16(rotr8(uint8(a>>8), uint8(b>>8))) << 8) | uint16(rotr8(uint8(a), uint8(b)))
+// }
+// func ROTR8(a uint32, b uint32) uint32 {
+// 	return (uint32(ROTR8_16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(ROTR8_16(uint16(a), uint16(b)))
+// }
 
 func mul8(a uint8, b uint8) uint8 { return a * b }
 func MUL8_16(a uint16, b uint16) uint16 {
@@ -137,10 +138,11 @@ func rotl16(a uint16, b uint16) uint16 { return shll16(a, b) | shrl16(a, 16-b) }
 func ROTL16(a uint32, b uint32) uint32 {
 	return (uint32(rotl16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(rotl16(uint16(a), uint16(b)))
 }
-func rotr16(a uint16, b uint16) uint16 { return shll16(a, 16-b) | shrl16(a, b) }
-func ROTR16(a uint32, b uint32) uint32 {
-	return (uint32(rotr16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(rotr16(uint16(a), uint16(b)))
-}
+
+// func rotr16(a uint16, b uint16) uint16 { return shll16(a, 16-b) | shrl16(a, b) }
+// func ROTR16(a uint32, b uint32) uint32 {
+// 	return (uint32(rotr16(uint16(a>>16), uint16(b>>16))) << 16) | uint32(rotr16(uint16(a), uint16(b)))
+// }
 
 func mul16(a uint16, b uint16) uint16 { return a * b }
 func MUL16(a uint32, b uint32) uint32 {
@@ -182,8 +184,9 @@ func shra32(a uint32, b uint32) uint32 { return uint32(int32(a) >> (b & 31)) }
 func SHRA32(a uint32, b uint32) uint32 { return shra32(a, b) }
 func rotl32(a uint32, b uint32) uint32 { return shll32(a, b) | shrl32(a, 32-b) }
 func ROTL32(a uint32, b uint32) uint32 { return rotl32(a, b) }
-func rotr32(a uint32, b uint32) uint32 { return shll32(a, 32-b) | shrl32(a, b) }
-func ROTR32(a uint32, b uint32) uint32 { return rotr32(a, b) }
+
+// func rotr32(a uint32, b uint32) uint32 { return shll32(a, 32-b) | shrl32(a, b) }
+// func ROTR32(a uint32, b uint32) uint32 { return rotr32(a, b) }
 
 func mul32(a uint32, b uint32) uint32 { return a * b }
 func MUL32(a uint32, b uint32) uint32 { return mul32(a, b) }
@@ -426,14 +429,15 @@ func POPCNT8_16(a uint16) uint16 {
 func POPCNT8(a uint32) uint32 {
 	return (uint32(POPCNT8_16(uint16(a>>16))) << 16) | uint32(POPCNT8_16(uint16(a)))
 }
-func clz8(a uint8) uint8        { return uint8(bits.LeadingZeros8(a)) }
-func CLZ8_16(a uint16) uint16   { return (uint16(clz8(uint8(a>>8))) << 8) | uint16(clz8(uint8(a))) }
-func CLZ8(a uint32) uint32      { return (uint32(CLZ8_16(uint16(a>>16))) << 16) | uint32(CLZ8_16(uint16(a))) }
-func bswap8(a uint8) uint8      { return a }
-func BSWAP8_16(a uint16) uint16 { return (uint16(bswap8(uint8(a>>8))) << 8) | uint16(bswap8(uint8(a))) }
-func BSWAP8(a uint32) uint32 {
-	return (uint32(BSWAP8_16(uint16(a>>16))) << 16) | uint32(BSWAP8_16(uint16(a)))
-}
+func clz8(a uint8) uint8      { return uint8(bits.LeadingZeros8(a)) }
+func CLZ8_16(a uint16) uint16 { return (uint16(clz8(uint8(a>>8))) << 8) | uint16(clz8(uint8(a))) }
+func CLZ8(a uint32) uint32    { return (uint32(CLZ8_16(uint16(a>>16))) << 16) | uint32(CLZ8_16(uint16(a))) }
+
+// func bswap8(a uint8) uint8      { return a }
+// func BSWAP8_16(a uint16) uint16 { return (uint16(bswap8(uint8(a>>8))) << 8) | uint16(bswap8(uint8(a))) }
+// func BSWAP8(a uint32) uint32 {
+// 	return (uint32(BSWAP8_16(uint16(a>>16))) << 16) | uint32(BSWAP8_16(uint16(a)))
+// }
 func ctz8(a uint8) uint8      { return uint8(bits.TrailingZeros8(a)) }
 func CTZ8_16(a uint16) uint16 { return (uint16(ctz8(uint8(a>>8))) << 8) | uint16(ctz8(uint8(a))) }
 func CTZ8(a uint32) uint32    { return (uint32(CTZ8_16(uint16(a>>16))) << 16) | uint32(CTZ8_16(uint16(a))) }
@@ -460,11 +464,11 @@ func BSWAP32(a uint32) uint32  { return bswap32(a) }
 func ctz32(a uint32) uint32    { return uint32(bits.TrailingZeros32(a)) }
 func CTZ32(a uint32) uint32    { return ctz32(a) }
 
-func popcnt64(a uint64) uint64           { return uint64(bits.OnesCount64(a)) }
-func POPCNT64(a uint32, b uint32) uint64 { return popcnt64((uint64(b) << 32) | uint64(a)) }
-func clz64(a uint64) uint64              { return uint64(bits.LeadingZeros64(a)) }
-func CLZ64(a uint32, b uint32) uint64    { return clz64((uint64(b) << 32) | uint64(a)) }
-func bswap64(a uint64) uint64            { return bits.ReverseBytes64(a) }
-func BSWAP64(a uint32, b uint32) uint64  { return bswap64((uint64(b) << 32) | uint64(a)) }
-func ctz64(a uint64) uint64              { return uint64(bits.TrailingZeros64(a)) }
-func CTZ64(a uint32, b uint32) uint64    { return ctz64((uint64(b) << 32) | uint64(a)) }
+// func popcnt64(a uint64) uint64           { return uint64(bits.OnesCount64(a)) }
+// func POPCNT64(a uint32, b uint32) uint64 { return popcnt64((uint64(b) << 32) | uint64(a)) }
+// func clz64(a uint64) uint64              { return uint64(bits.LeadingZeros64(a)) }
+// func CLZ64(a uint32, b uint32) uint64    { return clz64((uint64(b) << 32) | uint64(a)) }
+// func bswap64(a uint64) uint64            { return bits.ReverseBytes64(a) }
+// func BSWAP64(a uint32, b uint32) uint64  { return bswap64((uint64(b) << 32) | uint64(a)) }
+// func ctz64(a uint64) uint64              { return uint64(bits.TrailingZeros64(a)) }
+// func CTZ64(a uint32, b uint32) uint64    { return ctz64((uint64(b) << 32) | uint64(a)) }

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -220,38 +222,38 @@ func TestNetAddressWireErrors(t *testing.T) {
 		pver     uint32      // Protocol version for wire encoding
 		ts       bool        // Include timestamp flag
 		max      int         // Max size of fixed buffer to induce errors
-		writeErr error       // Expected write error
-		readErr  error       // Expected read error
+		writeErr er.R        // Expected write error
+		readErr  er.R        // Expected read error
 	}{
 		// Latest protocol version with timestamp and intentional
 		// read/write errors.
 		// Force errors on timestamp.
-		{&baseNetAddr, []byte{}, pver, true, 0, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, true, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on services.
-		{&baseNetAddr, []byte{}, pver, true, 4, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, true, 4, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on ip.
-		{&baseNetAddr, []byte{}, pver, true, 12, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, true, 12, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on port.
-		{&baseNetAddr, []byte{}, pver, true, 28, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, true, 28, er.E(io.ErrShortWrite), er.E(io.EOF)},
 
 		// Latest protocol version with no timestamp and intentional
 		// read/write errors.
 		// Force errors on services.
-		{&baseNetAddr, []byte{}, pver, false, 0, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, false, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on ip.
-		{&baseNetAddr, []byte{}, pver, false, 8, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, false, 8, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on port.
-		{&baseNetAddr, []byte{}, pver, false, 24, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pver, false, 24, er.E(io.ErrShortWrite), er.E(io.EOF)},
 
 		// Protocol version before NetAddressTimeVersion with timestamp
 		// flag set (should not have timestamp due to old protocol
 		// version) and  intentional read/write errors.
 		// Force errors on services.
-		{&baseNetAddr, []byte{}, pverNAT, true, 0, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pverNAT, true, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on ip.
-		{&baseNetAddr, []byte{}, pverNAT, true, 8, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pverNAT, true, 8, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force errors on port.
-		{&baseNetAddr, []byte{}, pverNAT, true, 24, io.ErrShortWrite, io.EOF},
+		{&baseNetAddr, []byte{}, pverNAT, true, 24, er.E(io.ErrShortWrite), er.E(io.EOF)},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -259,7 +261,7 @@ func TestNetAddressWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := writeNetAddress(w, test.pver, test.in, test.ts)
-		if err != test.writeErr {
+		if !er.Equals(err, test.writeErr) {
 			t.Errorf("writeNetAddress #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -269,7 +271,7 @@ func TestNetAddressWireErrors(t *testing.T) {
 		var na NetAddress
 		r := newFixedReader(test.max, test.buf)
 		err = readNetAddress(r, test.pver, &na, test.ts)
-		if err != test.readErr {
+		if !er.Equals(err, test.readErr) {
 			t.Errorf("readNetAddress #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue

@@ -11,7 +11,6 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -23,6 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -32,7 +33,7 @@ import (
 type AddrManager struct {
 	mtx            sync.Mutex
 	peersFile      string
-	lookupFunc     func(string) ([]net.IP, error)
+	lookupFunc     func(string) ([]net.IP, er.R)
 	rand           *rand.Rand
 	key            [32]byte
 	addrIndex      map[string]*KnownAddress // address key to ka for all addrs.
@@ -89,6 +90,7 @@ const (
 	UpnpPrio
 
 	// HTTPPrio signifies the address was obtained from an external HTTP service.
+	//lint:ignore U1001 removing this will cause ManualPrio to change number
 	HTTPPrio
 
 	// ManualPrio signifies the address was provided by --externalip.
@@ -428,7 +430,7 @@ func (a *AddrManager) loadPeers() {
 	if err != nil {
 		log.Errorf("Failed to parse file %s: %v", a.peersFile, err)
 		// if it is invalid we nuke the old one unconditionally.
-		err = os.Remove(a.peersFile)
+		err = er.E(os.Remove(a.peersFile))
 		if err != nil {
 			log.Warnf("Failed to remove corrupt peers file %s: %v",
 				a.peersFile, err)
@@ -439,30 +441,30 @@ func (a *AddrManager) loadPeers() {
 	log.Infof("Loaded %d addresses from file '%s'", a.numAddresses(), a.peersFile)
 }
 
-func (a *AddrManager) deserializePeers(filePath string) error {
+func (a *AddrManager) deserializePeers(filePath string) er.R {
 
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
+	_, errr := os.Stat(filePath)
+	if os.IsNotExist(errr) {
 		return nil
 	}
-	r, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("%s error opening file: %v", filePath, err)
+	r, errr := os.Open(filePath)
+	if errr != nil {
+		return er.Errorf("%s error opening file: %v", filePath, errr)
 	}
 	defer r.Close()
 
 	var sam serializedAddrManager
 	dec := json.NewDecoder(r)
-	err = dec.Decode(&sam)
-	if err != nil {
-		return fmt.Errorf("error reading %s: %v", filePath, err)
+	errr = dec.Decode(&sam)
+	if errr != nil {
+		return er.Errorf("error reading %s: %v", filePath, errr)
 	}
 
 	// Since decoding JSON is backwards compatible (i.e., only decodes
 	// fields it understands), we'll only return an error upon seeing a
 	// version past our latest supported version.
 	if sam.Version > serialisationVersion {
-		return fmt.Errorf("unknown version %v in serialized "+
+		return er.Errorf("unknown version %v in serialized "+
 			"addrmanager", sam.Version)
 	}
 
@@ -477,9 +479,10 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 		if sam.Version == 1 {
 			v.Services = wire.SFNodeNetwork
 		}
+		var err er.R
 		ka.na, err = a.DeserializeNetAddress(v.Addr, v.Services)
 		if err != nil {
-			return fmt.Errorf("failed to deserialize netaddress "+
+			return er.Errorf("failed to deserialize netaddress "+
 				"%s: %v", v.Addr, err)
 		}
 
@@ -491,7 +494,7 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 		}
 		ka.srcAddr, err = a.DeserializeNetAddress(v.Src, v.SrcServices)
 		if err != nil {
-			return fmt.Errorf("failed to deserialize netaddress "+
+			return er.Errorf("failed to deserialize netaddress "+
 				"%s: %v", v.Src, err)
 		}
 
@@ -505,7 +508,7 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 		for _, val := range sam.NewBuckets[i] {
 			ka, ok := a.addrIndex[val]
 			if !ok {
-				return fmt.Errorf("newbucket contains %s but "+
+				return er.Errorf("newbucket contains %s but "+
 					"none in address list", val)
 			}
 
@@ -520,7 +523,7 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 		for _, val := range sam.TriedBuckets[i] {
 			ka, ok := a.addrIndex[val]
 			if !ok {
-				return fmt.Errorf("Newbucket contains %s but "+
+				return er.Errorf("Newbucket contains %s but "+
 					"none in address list", val)
 			}
 
@@ -533,12 +536,12 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 	// Sanity checking.
 	for k, v := range a.addrIndex {
 		if v.refs == 0 && !v.tried {
-			return fmt.Errorf("address %s after serialisation "+
+			return er.Errorf("address %s after serialisation "+
 				"with no references", k)
 		}
 
 		if v.refs > 0 && v.tried {
-			return fmt.Errorf("address %s after serialisation "+
+			return er.Errorf("address %s after serialisation "+
 				"which is both new and tried!", k)
 		}
 	}
@@ -548,15 +551,15 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 
 // DeserializeNetAddress converts a given address string to a *wire.NetAddress.
 func (a *AddrManager) DeserializeNetAddress(addr string,
-	services wire.ServiceFlag) (*wire.NetAddress, error) {
+	services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return a.HostToNetAddress(host, uint16(port), services)
@@ -581,7 +584,7 @@ func (a *AddrManager) Start() {
 }
 
 // Stop gracefully shuts down the address manager by stopping the main handler.
-func (a *AddrManager) Stop() error {
+func (a *AddrManager) Stop() er.R {
 	if atomic.AddInt32(&a.shutdown, 1) != 1 {
 		log.Warnf("Address manager is already in the process of " +
 			"shutting down")
@@ -618,20 +621,20 @@ func (a *AddrManager) AddAddress(addr, srcAddr *wire.NetAddress) {
 
 // AddAddressByIP adds an address where we are given an ip:port and not a
 // wire.NetAddress.
-func (a *AddrManager) AddAddressByIP(addrIP string) error {
+func (a *AddrManager) AddAddressByIP(addrIP string) er.R {
 	// Split IP and port
 	addr, portStr, err := net.SplitHostPort(addrIP)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	// Put it in wire.Netaddress
 	ip := net.ParseIP(addr)
 	if ip == nil {
-		return fmt.Errorf("invalid ip address %s", addr)
+		return er.Errorf("invalid ip address %s", addr)
 	}
 	port, err := strconv.ParseUint(portStr, 10, 0)
 	if err != nil {
-		return fmt.Errorf("invalid port %s: %v", portStr, err)
+		return er.Errorf("invalid port %s: %v", portStr, err)
 	}
 	na := wire.NewNetAddressIPPort(ip, uint16(port), 0)
 	a.AddAddress(na, na) // XXX use correct src address
@@ -720,7 +723,7 @@ func (a *AddrManager) reset() {
 // HostToNetAddress returns a netaddress given a host address.  If the address
 // is a Tor .onion address this will be taken care of.  Else if the host is
 // not an IP address it will be resolved (via Tor if required).
-func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, error) {
+func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
@@ -730,7 +733,7 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.S
 		data, err := base32.StdEncoding.DecodeString(
 			strings.ToUpper(host[:16]))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		prefix := []byte{0xfd, 0x87, 0xd8, 0x7e, 0xeb, 0x43}
 		ip = net.IP(append(prefix, data...))
@@ -740,7 +743,7 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.S
 			return nil, err
 		}
 		if len(ips) == 0 {
-			return nil, fmt.Errorf("no addresses found for %s", host)
+			return nil, er.Errorf("no addresses found for %s", host)
 		}
 		ip = ips[0]
 	}
@@ -994,9 +997,9 @@ func (a *AddrManager) SetServices(addr *wire.NetAddress, services wire.ServiceFl
 
 // AddLocalAddress adds na to the list of known local addresses to advertise
 // with the given priority.
-func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) error {
+func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) er.R {
 	if !IsRoutable(na) {
-		return fmt.Errorf("address %s is not routable", na.IP)
+		return er.Errorf("address %s is not routable", na.IP)
 	}
 
 	a.lamtx.Lock()
@@ -1137,7 +1140,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 
 // New returns a new bitcoin address manager.
 // Use Start to begin processing asynchronous address updates.
-func New(dataDir string, lookupFunc func(string) ([]net.IP, error)) *AddrManager {
+func New(dataDir string, lookupFunc func(string) ([]net.IP, er.R)) *AddrManager {
 	am := AddrManager{
 		peersFile:      filepath.Join(dataDir, "peers.json"),
 		lookupFunc:     lookupFunc,

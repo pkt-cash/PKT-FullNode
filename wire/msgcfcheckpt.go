@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -38,7 +40,7 @@ type MsgCFCheckpt struct {
 }
 
 // AddCFHeader adds a new committed filter header to the message.
-func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
+func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) er.R {
 	if len(msg.FilterHeaders) == cap(msg.FilterHeaders) {
 		str := fmt.Sprintf("FilterHeaders has insufficient capacity for "+
 			"additional header: len = %d", len(msg.FilterHeaders))
@@ -51,7 +53,7 @@ func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) er.R {
 	// Read filter type
 	err := readElement(r, &msg.FilterType)
 	if err != nil {
@@ -72,7 +74,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 
 	// Refuse to decode an insane number of cfheaders.
 	if count > maxCFHeadersLen {
-		return ErrInsaneCFHeaderCount
+		return er.E(ErrInsaneCFHeaderCount)
 	}
 
 	// Create a contiguous slice of hashes to deserialize into in order to
@@ -92,7 +94,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) er.R {
 	// Write filter type
 	err := writeElement(w, msg.FilterType)
 	if err != nil {
@@ -120,22 +122,6 @@ func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) 
 	}
 
 	return nil
-}
-
-// Deserialize decodes a filter header from r into the receiver using a format
-// that is suitable for long-term storage such as a database. This function
-// differs from BtcDecode in that BtcDecode decodes from the bitcoin wire
-// protocol as it was sent across the network.  The wire encoding can
-// technically differ depending on the protocol version and doesn't even really
-// need to match the format of a stored filter header at all. As of the time
-// this comment was written, the encoded filter header is the same in both
-// instances, but there is a distinct difference and separating the two allows
-// the API to be flexible enough to deal with changes.
-func (msg *MsgCFCheckpt) Deserialize(r io.Reader) error {
-	// At the current time, there is no difference between the wire encoding
-	// and the stable long-term storage format.  As a result, make use of
-	// BtcDecode.
-	return msg.BtcDecode(r, 0, BaseEncoding)
 }
 
 // Command returns the protocol command string for the message.  This is part

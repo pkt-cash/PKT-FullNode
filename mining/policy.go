@@ -6,8 +6,8 @@ package mining
 
 import (
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 const (

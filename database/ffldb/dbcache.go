@@ -10,10 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/database/internal/treap"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/util"
+	"github.com/pkt-cash/pktd/database/internal/treap"
 )
 
 const (
@@ -24,19 +26,6 @@ const (
 	// threshold in between database cache flushes when the cache size has
 	// not been exceeded.
 	defaultFlushSecs = 300 // 5 minutes
-
-	// ldbBatchHeaderSize is the size of a leveldb batch header which
-	// includes the sequence header and record counter.
-	//
-	// ldbRecordIKeySize is the size of the ikey used internally by leveldb
-	// when appending a record to a batch.
-	//
-	// These are used to help preallocate space needed for a batch in one
-	// allocation instead of letting leveldb itself constantly grow it.
-	// This results in far less pressure on the GC and consequently helps
-	// prevent the GC from allocating a lot of extra unneeded space.
-	ldbBatchHeaderSize = 12
-	ldbRecordIKeySize  = 8
 )
 
 // ldbCacheIter wraps a treap iterator to provide the additional functionality
@@ -395,7 +384,7 @@ type dbCache struct {
 // a particular point in time.
 //
 // The snapshot must be released after use by calling Release.
-func (c *dbCache) Snapshot() (*dbCacheSnapshot, error) {
+func (c *dbCache) Snapshot() (*dbCacheSnapshot, er.R) {
 	dbSnapshot, err := c.ldb.GetSnapshot()
 	if err != nil {
 		str := "failed to open transaction"
@@ -420,7 +409,7 @@ func (c *dbCache) Snapshot() (*dbCacheSnapshot, error) {
 // the transaction to be rolled back and are returned from this function.
 // Otherwise, the transaction is committed when the user-supplied function
 // returns a nil error.
-func (c *dbCache) updateDB(fn func(ldbTx *leveldb.Transaction) error) error {
+func (c *dbCache) updateDB(fn func(ldbTx *leveldb.Transaction) er.R) er.R {
 	// Start a leveldb transaction.
 	ldbTx, err := c.ldb.OpenTransaction()
 	if err != nil {
@@ -449,10 +438,10 @@ type TreapForEacher interface {
 
 // commitTreaps atomically commits all of the passed pending add/update/remove
 // updates to the underlying database.
-func (c *dbCache) commitTreaps(pendingKeys, pendingRemove TreapForEacher) error {
+func (c *dbCache) commitTreaps(pendingKeys, pendingRemove TreapForEacher) er.R {
 	// Perform all leveldb updates using an atomic transaction.
-	return c.updateDB(func(ldbTx *leveldb.Transaction) error {
-		var innerErr error
+	return c.updateDB(func(ldbTx *leveldb.Transaction) er.R {
+		var innerErr er.R
 		pendingKeys.ForEach(func(k, v []byte) bool {
 			if dbErr := ldbTx.Put(k, v, nil); dbErr != nil {
 				str := fmt.Sprintf("failed to put key %q to "+
@@ -485,7 +474,7 @@ func (c *dbCache) commitTreaps(pendingKeys, pendingRemove TreapForEacher) error 
 // cache to the underlying database.
 //
 // This function MUST be called with the database write lock held.
-func (c *dbCache) flush() error {
+func (c *dbCache) flush() er.R {
 	c.lastFlush = time.Now()
 
 	// Sync the current write file associated with the block store.  This is
@@ -564,7 +553,7 @@ func (c *dbCache) needsFlush(tx *transaction) bool {
 //
 // This function MUST be called during a database write transaction which in
 // turn implies the database write lock will be held.
-func (c *dbCache) commitTx(tx *transaction) error {
+func (c *dbCache) commitTx(tx *transaction) er.R {
 	// Flush the cache and write the current transaction directly to the
 	// database if a flush is needed.
 	if c.needsFlush(tx) {
@@ -624,7 +613,7 @@ func (c *dbCache) commitTx(tx *transaction) error {
 // the underlying leveldb database.
 //
 // This function MUST be called with the database write lock held.
-func (c *dbCache) Close() error {
+func (c *dbCache) Close() er.R {
 	// Flush any outstanding cached entries to disk.
 	if err := c.flush(); err != nil {
 		// Even if there is an error while flushing, attempt to close

@@ -9,13 +9,15 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 const (
@@ -138,7 +140,7 @@ var (
 
 // fetchBlockHashFunc defines a callback function to use in order to convert a
 // serialized block ID to an associated block hash.
-type fetchBlockHashFunc func(serializedID []byte) (*chainhash.Hash, error)
+type fetchBlockHashFunc func(serializedID []byte) (*chainhash.Hash, er.R)
 
 // serializeAddrIndexEntry serializes the provided block id and transaction
 // location according to the format described in detail above.
@@ -155,7 +157,7 @@ func serializeAddrIndexEntry(blockID uint32, txLoc wire.TxLoc) []byte {
 // provided region struct according to the format described in detail above and
 // uses the passed block hash fetching function in order to conver the block ID
 // to the associated block hash.
-func deserializeAddrIndexEntry(serialized []byte, region *database.BlockRegion, fetchBlockHash fetchBlockHashFunc) error {
+func deserializeAddrIndexEntry(serialized []byte, region *database.BlockRegion, fetchBlockHash fetchBlockHashFunc) er.R {
 	// Ensure there are enough bytes to decode.
 	if len(serialized) < txEntrySize {
 		return errDeserialize("unexpected end of data")
@@ -182,7 +184,7 @@ func keyForLevel(addrKey [addrKeySize]byte, level uint8) [levelKeySize]byte {
 
 // dbPutAddrIndexEntry updates the address index to include the provided entry
 // according to the level-based scheme described in detail above.
-func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, blockID uint32, txLoc wire.TxLoc) error {
+func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, blockID uint32, txLoc wire.TxLoc) er.R {
 	// Start with level 0 and its initial max number of entries.
 	curLevel := uint8(0)
 	maxLevelBytes := level0MaxEntries * txEntrySize
@@ -253,7 +255,7 @@ func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, block
 // the given address key and the number of entries skipped since it could have
 // been less in the case where there are less total entries than the requested
 // number of entries to skip.
-func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]database.BlockRegion, uint32, error) {
+func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]database.BlockRegion, uint32, er.R) {
 	// When the reverse flag is not set, all levels need to be fetched
 	// because numToSkip and numRequested are counted from the oldest
 	// transactions (highest level) and thus the total count is needed.
@@ -316,12 +318,8 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 			// Ensure any deserialization errors are returned as
 			// database corruption errors.
 			if isDeserializeErr(err) {
-				err = database.Error{
-					ErrorCode: database.ErrCorruption,
-					Description: fmt.Sprintf("failed to "+
-						"deserialized address index "+
-						"for key %x: %v", addrKey, err),
-				}
+				err = database.ErrCorruption.New(fmt.Sprintf(
+					"failed to deserialized address index for key %x", addrKey), err)
 			}
 
 			return nil, 0, err
@@ -356,7 +354,7 @@ func maxEntriesForLevel(level uint8) int {
 // dbRemoveAddrIndexEntries removes the specified number of entries from from
 // the address index for the provided key.  An assertion error will be returned
 // if the count exceeds the total number of entries in the index.
-func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, count int) error {
+func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, count int) er.R {
 	// Nothing to do if no entries are being deleted.
 	if count <= 0 {
 		return nil
@@ -367,7 +365,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, 
 	// number of database reads and because there is more than one exit
 	// path that needs to apply the updates.
 	pendingUpdates := make(map[uint8][]byte)
-	applyPending := func() error {
+	applyPending := func() er.R {
 		for level, data := range pendingUpdates {
 			curLevelKey := keyForLevel(addrKey, level)
 			if len(data) == 0 {
@@ -395,7 +393,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, 
 		curLevelKey := keyForLevel(addrKey, level)
 		curLevelData := bucket.Get(curLevelKey[:])
 		if len(curLevelData) == 0 && numRemaining > 0 {
-			return AssertError(fmt.Sprintf("dbRemoveAddrIndexEntries "+
+			return er.New(fmt.Sprintf("dbRemoveAddrIndexEntries "+
 				"not enough entries for address key %x to "+
 				"delete %d entries", addrKey, count))
 		}
@@ -527,7 +525,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, 
 
 // addrToKey converts known address types to an addrindex key.  An error is
 // returned for unsupported types.
-func addrToKey(addr btcutil.Address) ([addrKeySize]byte, error) {
+func addrToKey(addr btcutil.Address) ([addrKeySize]byte, er.R) {
 	switch addr := addr.(type) {
 	case *btcutil.AddressPubKeyHash:
 		var result [addrKeySize]byte
@@ -566,7 +564,7 @@ func addrToKey(addr btcutil.Address) ([addrKeySize]byte, error) {
 		return result, nil
 	}
 
-	return [addrKeySize]byte{}, errUnsupportedAddressType
+	return [addrKeySize]byte{}, er.E(errUnsupportedAddressType)
 }
 
 // AddrIndex implements a transaction by address index.  That is to say, it
@@ -621,7 +619,7 @@ func (idx *AddrIndex) NeedsInputs() bool {
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Init() error {
+func (idx *AddrIndex) Init() er.R {
 	// Nothing to do.
 	return nil
 }
@@ -645,7 +643,7 @@ func (idx *AddrIndex) Name() string {
 // index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Create(dbTx database.Tx) error {
+func (idx *AddrIndex) Create(dbTx database.Tx) er.R {
 	_, err := dbTx.Metadata().CreateBucket(addrIndexKey)
 	return err
 }
@@ -727,7 +725,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *btcutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []blockchain.SpentTxOut) er.R {
 
 	// The offset and length of the transactions within the serialized
 	// block.
@@ -767,7 +765,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []blockchain.SpentTxOut) er.R {
 
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
@@ -796,7 +794,7 @@ func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
 // that involve a given address.
 //
 // This function is safe for concurrent access.
-func (idx *AddrIndex) TxRegionsForAddress(dbTx database.Tx, addr btcutil.Address, numToSkip, numRequested uint32, reverse bool) ([]database.BlockRegion, uint32, error) {
+func (idx *AddrIndex) TxRegionsForAddress(dbTx database.Tx, addr btcutil.Address, numToSkip, numRequested uint32, reverse bool) ([]database.BlockRegion, uint32, er.R) {
 	addrKey, err := addrToKey(addr)
 	if err != nil {
 		return nil, 0, err
@@ -804,15 +802,15 @@ func (idx *AddrIndex) TxRegionsForAddress(dbTx database.Tx, addr btcutil.Address
 
 	var regions []database.BlockRegion
 	var skipped uint32
-	err = idx.db.View(func(dbTx database.Tx) error {
+	err = idx.db.View(func(dbTx database.Tx) er.R {
 		// Create closure to lookup the block hash given the ID using
 		// the database transaction.
-		fetchBlockHash := func(id []byte) (*chainhash.Hash, error) {
+		fetchBlockHash := func(id []byte) (*chainhash.Hash, er.R) {
 			// Deserialize and populate the result.
 			return dbFetchBlockHashBySerializedID(dbTx, id)
 		}
 
-		var err error
+		var err er.R
 		addrIdxBucket := dbTx.Metadata().Bucket(addrIndexKey)
 		regions, skipped, err = dbFetchAddrIndexEntries(addrIdxBucket,
 			addrKey, numToSkip, numRequested, reverse,
@@ -962,6 +960,6 @@ func NewAddrIndex(db database.DB, chainParams *chaincfg.Params) *AddrIndex {
 
 // DropAddrIndex drops the address index from the provided database if it
 // exists.
-func DropAddrIndex(db database.DB, interrupt <-chan struct{}) error {
+func DropAddrIndex(db database.DB, interrupt <-chan struct{}) er.R {
 	return dropIndex(db, addrIndexKey, addrIndexName, interrupt)
 }

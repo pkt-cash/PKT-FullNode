@@ -5,16 +5,15 @@
 package indexers
 
 import (
-	"errors"
-
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/gcs"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/gcs"
-	"github.com/pkt-cash/btcutil/gcs/builder"
 )
 
 const (
@@ -57,19 +56,19 @@ var (
 
 // dbFetchFilterIdxEntry retrieves a data blob from the filter index database.
 // An entry's absence is not considered an error.
-func dbFetchFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) ([]byte, error) {
+func dbFetchFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) ([]byte, er.R) {
 	idx := dbTx.Metadata().Bucket(cfIndexParentBucketKey).Bucket(key)
 	return idx.Get(h[:]), nil
 }
 
 // dbStoreFilterIdxEntry stores a data blob in the filter index database.
-func dbStoreFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash, f []byte) error {
+func dbStoreFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash, f []byte) er.R {
 	idx := dbTx.Metadata().Bucket(cfIndexParentBucketKey).Bucket(key)
 	return idx.Put(h[:], f)
 }
 
 // dbDeleteFilterIdxEntry deletes a data blob from the filter index database.
-func dbDeleteFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) error {
+func dbDeleteFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) er.R {
 	idx := dbTx.Metadata().Bucket(cfIndexParentBucketKey).Bucket(key)
 	return idx.Delete(h[:])
 }
@@ -96,7 +95,7 @@ func (idx *CfIndex) NeedsInputs() bool {
 
 // Init initializes the hash-based cf index. This is part of the Indexer
 // interface.
-func (idx *CfIndex) Init() error {
+func (idx *CfIndex) Init() er.R {
 	return nil // Nothing to do.
 }
 
@@ -115,7 +114,7 @@ func (idx *CfIndex) Name() string {
 // Create is invoked when the indexer manager determines the index needs to
 // be created for the first time. It creates buckets for the two hash-based cf
 // indexes (regular only currently).
-func (idx *CfIndex) Create(dbTx database.Tx) error {
+func (idx *CfIndex) Create(dbTx database.Tx) er.R {
 	meta := dbTx.Metadata()
 
 	cfIndexParentBucket, err := meta.CreateBucket(cfIndexParentBucketKey)
@@ -150,9 +149,9 @@ func (idx *CfIndex) Create(dbTx database.Tx) error {
 // storeFilter stores a given filter, and performs the steps needed to
 // generate the filter's header.
 func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
-	filterType wire.FilterType) error {
+	filterType wire.FilterType) er.R {
 	if uint8(filterType) > maxFilterType {
-		return errors.New("unsupported filter type")
+		return er.New("unsupported filter type")
 	}
 
 	// Figure out which buckets to use.
@@ -210,7 +209,7 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 // connected to the main chain. This indexer adds a hash-to-cf mapping for
 // every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []blockchain.SpentTxOut) er.R {
 
 	prevScripts := make([][]byte, len(stxos))
 	for i, stxo := range stxos {
@@ -229,7 +228,7 @@ func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 // disconnected from the main chain.  This indexer removes the hash-to-cf
 // mapping for every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	_ []blockchain.SpentTxOut) error {
+	_ []blockchain.SpentTxOut) er.R {
 
 	for _, key := range cfIndexKeys {
 		err := dbDeleteFilterIdxEntry(dbTx, key, block.Hash())
@@ -258,16 +257,16 @@ func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
 // entryByBlockHash fetches a filter index entry of a particular type
 // (eg. filter, filter header, etc) for a filter type and block hash.
 func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
-	filterType wire.FilterType, h *chainhash.Hash) ([]byte, error) {
+	filterType wire.FilterType, h *chainhash.Hash) ([]byte, er.R) {
 
 	if uint8(filterType) > maxFilterType {
-		return nil, errors.New("unsupported filter type")
+		return nil, er.New("unsupported filter type")
 	}
 	key := filterTypeKeys[filterType]
 
 	var entry []byte
-	err := idx.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := idx.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		entry, err = dbFetchFilterIdxEntry(dbTx, key, h)
 		return err
 	})
@@ -277,15 +276,15 @@ func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
 // entriesByBlockHashes batch fetches a filter index entry of a particular type
 // (eg. filter, filter header, etc) for a filter type and slice of block hashes.
 func (idx *CfIndex) entriesByBlockHashes(filterTypeKeys [][]byte,
-	filterType wire.FilterType, blockHashes []*chainhash.Hash) ([][]byte, error) {
+	filterType wire.FilterType, blockHashes []*chainhash.Hash) ([][]byte, er.R) {
 
 	if uint8(filterType) > maxFilterType {
-		return nil, errors.New("unsupported filter type")
+		return nil, er.New("unsupported filter type")
 	}
 	key := filterTypeKeys[filterType]
 
 	entries := make([][]byte, 0, len(blockHashes))
-	err := idx.db.View(func(dbTx database.Tx) error {
+	err := idx.db.View(func(dbTx database.Tx) er.R {
 		for _, blockHash := range blockHashes {
 			entry, err := dbFetchFilterIdxEntry(dbTx, key, blockHash)
 			if err != nil {
@@ -301,42 +300,35 @@ func (idx *CfIndex) entriesByBlockHashes(filterTypeKeys [][]byte,
 // FilterByBlockHash returns the serialized contents of a block's basic or
 // committed filter.
 func (idx *CfIndex) FilterByBlockHash(h *chainhash.Hash,
-	filterType wire.FilterType) ([]byte, error) {
+	filterType wire.FilterType) ([]byte, er.R) {
 	return idx.entryByBlockHash(cfIndexKeys, filterType, h)
 }
 
 // FiltersByBlockHashes returns the serialized contents of a block's basic or
 // committed filter for a set of blocks by hash.
 func (idx *CfIndex) FiltersByBlockHashes(blockHashes []*chainhash.Hash,
-	filterType wire.FilterType) ([][]byte, error) {
+	filterType wire.FilterType) ([][]byte, er.R) {
 	return idx.entriesByBlockHashes(cfIndexKeys, filterType, blockHashes)
 }
 
 // FilterHeaderByBlockHash returns the serialized contents of a block's basic
 // committed filter header.
 func (idx *CfIndex) FilterHeaderByBlockHash(h *chainhash.Hash,
-	filterType wire.FilterType) ([]byte, error) {
+	filterType wire.FilterType) ([]byte, er.R) {
 	return idx.entryByBlockHash(cfHeaderKeys, filterType, h)
 }
 
 // FilterHeadersByBlockHashes returns the serialized contents of a block's
 // basic committed filter header for a set of blocks by hash.
 func (idx *CfIndex) FilterHeadersByBlockHashes(blockHashes []*chainhash.Hash,
-	filterType wire.FilterType) ([][]byte, error) {
+	filterType wire.FilterType) ([][]byte, er.R) {
 	return idx.entriesByBlockHashes(cfHeaderKeys, filterType, blockHashes)
-}
-
-// FilterHashByBlockHash returns the serialized contents of a block's basic
-// committed filter hash.
-func (idx *CfIndex) FilterHashByBlockHash(h *chainhash.Hash,
-	filterType wire.FilterType) ([]byte, error) {
-	return idx.entryByBlockHash(cfHashKeys, filterType, h)
 }
 
 // FilterHashesByBlockHashes returns the serialized contents of a block's basic
 // committed filter hash for a set of blocks by hash.
 func (idx *CfIndex) FilterHashesByBlockHashes(blockHashes []*chainhash.Hash,
-	filterType wire.FilterType) ([][]byte, error) {
+	filterType wire.FilterType) ([][]byte, er.R) {
 	return idx.entriesByBlockHashes(cfHashKeys, filterType, blockHashes)
 }
 
@@ -352,6 +344,6 @@ func NewCfIndex(db database.DB, chainParams *chaincfg.Params) *CfIndex {
 }
 
 // DropCfIndex drops the CF index from the provided database if exists.
-func DropCfIndex(db database.DB, interrupt <-chan struct{}) error {
+func DropCfIndex(db database.DB, interrupt <-chan struct{}) er.R {
 	return dropIndex(db, cfIndexParentBucketKey, cfIndexName, interrupt)
 }

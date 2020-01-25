@@ -10,11 +10,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // This example demonstrates creating a new database.
@@ -68,7 +70,7 @@ func Example_basicUsage() {
 	// Use the Update function of the database to perform a managed
 	// read-write transaction.  The transaction will automatically be rolled
 	// back if the supplied inner function returns a non-nil error.
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		// Store a key/value pair directly in the metadata bucket.
 		// Typically a nested bucket would be used for a given feature,
 		// but this example is using the metadata bucket directly for
@@ -81,7 +83,7 @@ func Example_basicUsage() {
 
 		// Read the key back and ensure it matches.
 		if !bytes.Equal(tx.Metadata().Get(key), value) {
-			return fmt.Errorf("unexpected value for key '%s'", key)
+			return er.Errorf("unexpected value for key '%s'", key)
 		}
 
 		// Create a new nested bucket under the metadata bucket.
@@ -94,7 +96,7 @@ func Example_basicUsage() {
 		// The key from above that was set in the metadata bucket does
 		// not exist in this new nested bucket.
 		if nestedBucket.Get(key) != nil {
-			return fmt.Errorf("key '%s' is not expected nil", key)
+			return er.Errorf("key '%s' is not expected nil", key)
 		}
 
 		return nil
@@ -134,7 +136,7 @@ func Example_blockStorageAndRetrieval() {
 	// Use the Update function of the database to perform a managed
 	// read-write transaction and store a genesis block in the database as
 	// and example.
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		genesisBlock := chaincfg.MainNetParams.GenesisBlock
 		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
 	})
@@ -146,7 +148,7 @@ func Example_blockStorageAndRetrieval() {
 	// Use the View function of the database to perform a managed read-only
 	// transaction and fetch the block stored above.
 	var loadedBlockBytes []byte
-	err = db.Update(func(tx database.Tx) error {
+	err = db.Update(func(tx database.Tx) er.R {
 		genesisHash := chaincfg.MainNetParams.GenesisHash
 		blockBytes, err := tx.FetchBlock(genesisHash)
 		if err != nil {

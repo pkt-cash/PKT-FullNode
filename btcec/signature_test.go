@@ -13,6 +13,8 @@ import (
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 type signatureTest struct {
@@ -335,7 +337,7 @@ var signatureTests = []signatureTest{
 
 func TestSignatures(t *testing.T) {
 	for _, test := range signatureTests {
-		var err error
+		var err er.R
 		if test.der {
 			_, err = ParseDERSignature(test.sig, S256())
 		} else {
@@ -536,7 +538,7 @@ var recoveryTests = []struct {
 	msg string
 	sig string
 	pub string
-	err error
+	err er.R
 }{
 	{
 		// Valid curve point recovered.
@@ -548,7 +550,7 @@ var recoveryTests = []struct {
 		// Invalid curve point recovered.
 		msg: "00c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c",
 		sig: "0100b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75f00b940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549",
-		err: fmt.Errorf("invalid square root"),
+		err: er.Errorf("invalid square root"),
 	},
 	{
 		// Low R and S values.

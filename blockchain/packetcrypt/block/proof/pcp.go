@@ -7,8 +7,8 @@ package proof
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 
@@ -22,7 +22,7 @@ func PcpHash(
 	annCount uint64,
 	annIndexes *[4]uint64,
 	pcp *wire.PacketCryptProof,
-) (*[32]byte, error) {
+) (*[32]byte, er.R) {
 
 	// We need to bump the numbers to account for the zero entry
 	var annIdxs [4]uint64
@@ -43,7 +43,7 @@ func PcpHash(
 		e := tree.GetAnnEntry(annIdxs[i])
 		log.Trace("Setting ann hash")
 		if !e.SetHash(annHashes[i][:]) {
-			return nil, errors.New("SetHash returned false, duplicate data")
+			return nil, er.New("SetHash returned false, duplicate data")
 		}
 	}
 
@@ -55,35 +55,35 @@ func PcpHash(
 		if e.HasExplicitRange() {
 			var raNge [8]byte
 			if _, err := buf.Read(raNge[:]); err != nil {
-				return nil, errors.New("runt input")
+				return nil, er.New("runt input")
 			}
 			log.Trace("Setting explicit range")
 			if !e.SetRange(binary.LittleEndian.Uint64(raNge[:])) {
-				return nil, errors.New("SetRange returned false, duplicate data")
+				return nil, er.New("SetRange returned false, duplicate data")
 			}
 		}
 		if (e.Flags() & (FHasHash | FComputable)) == 0 {
 			var hash [32]byte
 			if _, err := buf.Read(hash[:]); err != nil {
-				return nil, errors.New("runt input")
+				return nil, er.New("runt input")
 			}
 			log.Trace("Setting provided hash")
 			if !e.SetHash(hash[:]) {
-				return nil, errors.New("SetHash returned false, duplicate data")
+				return nil, er.New("SetHash returned false, duplicate data")
 			}
 		}
 	}
 	if buf.Len() != 0 {
-		return nil, errors.New("extra data at the end of the proof")
+		return nil, er.New("extra data at the end of the proof")
 	}
 
 	// The rules should have triggered computation of everything missing
 	r := tree.GetRoot()
 	if r.Flags() != FComputable|FFirstEntry|FHasHash|FHasRange|FHasStart|FHasEnd {
-		return nil, fmt.Errorf("root has unexpected flags %v", r.Flags())
+		return nil, er.Errorf("root has unexpected flags %v", r.Flags())
 	}
 	if r.Start() != 0 || r.End() != uint64Max || r.Range() != uint64Max {
-		return nil, errors.New("root has unexpected values for start/end/range")
+		return nil, er.New("root has unexpected values for start/end/range")
 	}
 
 	var outBuf [48]byte

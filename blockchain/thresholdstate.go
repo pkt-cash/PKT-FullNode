@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -89,7 +91,7 @@ type thresholdConditionChecker interface {
 	// has been met.  This typically involves checking whether or not the
 	// bit associated with the condition is set, but can be more complex as
 	// needed.
-	Condition(*blockNode) (bool, error)
+	Condition(*blockNode) (bool, er.R)
 }
 
 // thresholdStateCache provides a type to cache the threshold states of each
@@ -128,7 +130,7 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 // threshold states for previous windows are only calculated once.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, er.R) {
 
 	// Handle the case where it's hard-wired in the parameters
 	if checker.BeginTime() == math.MaxInt64 && checker.EndTime() == math.MaxInt64 {
@@ -271,7 +273,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 // deployment ID for the block AFTER the end of the current best chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error) {
+func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, er.R) {
 	b.chainLock.Lock()
 	state, err := b.deploymentState(b.bestChain.Tip(), deploymentID)
 	b.chainLock.Unlock()
@@ -283,7 +285,7 @@ func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error)
 // false otherwise.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
+func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, er.R) {
 	b.chainLock.Lock()
 	state, err := b.deploymentState(b.bestChain.Tip(), deploymentID)
 	b.chainLock.Unlock()
@@ -304,7 +306,7 @@ func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
 // AFTER the passed node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) deploymentState(prevNode *blockNode, deploymentID uint32) (ThresholdState, error) {
+func (b *BlockChain) deploymentState(prevNode *blockNode, deploymentID uint32) (ThresholdState, er.R) {
 	if deploymentID > uint32(len(b.chainParams.Deployments)) {
 		return ThresholdFailed, DeploymentError(deploymentID)
 	}
@@ -319,7 +321,7 @@ func (b *BlockChain) deploymentState(prevNode *blockNode, deploymentID uint32) (
 // initThresholdCaches initializes the threshold state caches for each warning
 // bit and defined deployment and provides warnings if the chain is current per
 // the warnUnknownVersions and warnUnknownRuleActivations functions.
-func (b *BlockChain) initThresholdCaches() error {
+func (b *BlockChain) initThresholdCaches() er.R {
 	// Initialize the warning and deployment caches by calculating the
 	// threshold state for each of them.  This will ensure the caches are
 	// populated and any states that needed to be recalculated due to

@@ -6,17 +6,12 @@ package blockchain
 
 import (
 	"fmt"
-	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/btcutil"
 )
-
-// CheckpointConfirmations is the number of blocks before the end of the current
-// best block chain that a good checkpoint candidate must be.
-const CheckpointConfirmations = 2016
 
 // newHashFromStr converts the passed big-endian hex string into a
 // chainhash.Hash.  It only differs from the one available in chainhash in that
@@ -84,7 +79,7 @@ func (b *BlockChain) verifyCheckpoint(height int32, hash *chainhash.Hash) bool {
 // should really only happen for blocks before the first checkpoint).
 //
 // This function MUST be called with the chain lock held (for reads).
-func (b *BlockChain) findPreviousCheckpoint() (*blockNode, error) {
+func (b *BlockChain) findPreviousCheckpoint() (*blockNode, er.R) {
 	if !b.HasCheckpoints() {
 		return nil, nil
 	}
@@ -165,97 +160,4 @@ func (b *BlockChain) findPreviousCheckpoint() (*blockNode, error) {
 	}
 
 	return b.checkpointNode, nil
-}
-
-// isNonstandardTransaction determines whether a transaction contains any
-// scripts which are not one of the standard types.
-func isNonstandardTransaction(tx *btcutil.Tx) bool {
-	// Check all of the output public key scripts for non-standard scripts.
-	for _, txOut := range tx.MsgTx().TxOut {
-		scriptClass := txscript.GetScriptClass(txOut.PkScript)
-		if scriptClass == txscript.NonStandardTy {
-			return true
-		}
-	}
-	return false
-}
-
-// IsCheckpointCandidate returns whether or not the passed block is a good
-// checkpoint candidate.
-//
-// The factors used to determine a good checkpoint are:
-//  - The block must be in the main chain
-//  - The block must be at least 'CheckpointConfirmations' blocks prior to the
-//    current end of the main chain
-//  - The timestamps for the blocks before and after the checkpoint must have
-//    timestamps which are also before and after the checkpoint, respectively
-//    (due to the median time allowance this is not always the case)
-//  - The block must not contain any strange transaction such as those with
-//    nonstandard scripts
-//
-// The intent is that candidates are reviewed by a developer to make the final
-// decision and then manually added to the list of checkpoints for a network.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, error) {
-	b.chainLock.RLock()
-	defer b.chainLock.RUnlock()
-
-	// A checkpoint must be in the main chain.
-	node := b.index.LookupNode(block.Hash())
-	if node == nil || !b.bestChain.Contains(node) {
-		return false, nil
-	}
-
-	// Ensure the height of the passed block and the entry for the block in
-	// the main chain match.  This should always be the case unless the
-	// caller provided an invalid block.
-	if node.height != block.Height() {
-		return false, fmt.Errorf("passed block height of %d does not "+
-			"match the main chain height of %d", block.Height(),
-			node.height)
-	}
-
-	// A checkpoint must be at least CheckpointConfirmations blocks
-	// before the end of the main chain.
-	mainChainHeight := b.bestChain.Tip().height
-	if node.height > (mainChainHeight - CheckpointConfirmations) {
-		return false, nil
-	}
-
-	// A checkpoint must be have at least one block after it.
-	//
-	// This should always succeed since the check above already made sure it
-	// is CheckpointConfirmations back, but be safe in case the constant
-	// changes.
-	nextNode := b.bestChain.Next(node)
-	if nextNode == nil {
-		return false, nil
-	}
-
-	// A checkpoint must be have at least one block before it.
-	if node.parent == nil {
-		return false, nil
-	}
-
-	// A checkpoint must have timestamps for the block and the blocks on
-	// either side of it in order (due to the median time allowance this is
-	// not always the case).
-	prevTime := time.Unix(node.parent.timestamp, 0)
-	curTime := block.MsgBlock().Header.Timestamp
-	nextTime := time.Unix(nextNode.timestamp, 0)
-	if prevTime.After(curTime) || nextTime.Before(curTime) {
-		return false, nil
-	}
-
-	// A checkpoint must have transactions that only contain standard
-	// scripts.
-	for _, tx := range block.Transactions() {
-		if isNonstandardTransaction(tx) {
-			return false, nil
-		}
-	}
-
-	// All of the checks passed, so the block is a candidate.
-	return true, nil
 }

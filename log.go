@@ -11,23 +11,20 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/btcsuite/btclog"
+	"github.com/jrick/logrotate/rotator"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/mining/cpuminer"
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/txscript"
-
-	"github.com/btcsuite/btclog"
-	"github.com/jrick/logrotate/rotator"
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and
@@ -80,7 +77,6 @@ var (
 func init() {
 	addrmgr.UseLogger(amgrLog)
 	connmgr.UseLogger(cmgrLog)
-	database.UseLogger(bcdbLog)
 	blockchain.UseLogger(chanLog)
 	indexers.UseLogger(indxLog)
 	mining.UseLogger(minrLog)
@@ -90,7 +86,6 @@ func init() {
 	netsync.UseLogger(syncLog)
 	mempool.UseLogger(txmpLog)
 
-	packetcrypt.UseLogger(pcptLog)
 	block.UseLogger(pcptLog)
 	proof.UseLogger(pcptLog)
 }

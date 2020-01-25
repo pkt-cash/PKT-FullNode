@@ -5,15 +5,16 @@
 package main
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // rpcPeer provides a peer for use with the RPC server and implements the
@@ -77,8 +78,8 @@ var _ rpcserverConnManager = &rpcConnManager{}
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) Connect(addr string, permanent bool) error {
-	replyChan := make(chan error)
+func (cm *rpcConnManager) Connect(addr string, permanent bool) er.R {
+	replyChan := make(chan er.R)
 	cm.server.query <- connectNodeMsg{
 		addr:      addr,
 		permanent: permanent,
@@ -93,8 +94,8 @@ func (cm *rpcConnManager) Connect(addr string, permanent bool) error {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) RemoveByID(id int32) error {
-	replyChan := make(chan error)
+func (cm *rpcConnManager) RemoveByID(id int32) er.R {
+	replyChan := make(chan er.R)
 	cm.server.query <- removeNodeMsg{
 		cmp:   func(sp *serverPeer) bool { return sp.ID() == id },
 		reply: replyChan,
@@ -108,8 +109,8 @@ func (cm *rpcConnManager) RemoveByID(id int32) error {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) RemoveByAddr(addr string) error {
-	replyChan := make(chan error)
+func (cm *rpcConnManager) RemoveByAddr(addr string) er.R {
+	replyChan := make(chan er.R)
 	cm.server.query <- removeNodeMsg{
 		cmp:   func(sp *serverPeer) bool { return sp.Addr() == addr },
 		reply: replyChan,
@@ -123,8 +124,8 @@ func (cm *rpcConnManager) RemoveByAddr(addr string) error {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) DisconnectByID(id int32) error {
-	replyChan := make(chan error)
+func (cm *rpcConnManager) DisconnectByID(id int32) er.R {
+	replyChan := make(chan er.R)
 	cm.server.query <- disconnectNodeMsg{
 		cmp:   func(sp *serverPeer) bool { return sp.ID() == id },
 		reply: replyChan,
@@ -138,8 +139,8 @@ func (cm *rpcConnManager) DisconnectByID(id int32) error {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) DisconnectByAddr(addr string) error {
-	replyChan := make(chan error)
+func (cm *rpcConnManager) DisconnectByAddr(addr string) er.R {
+	replyChan := make(chan er.R)
 	cm.server.query <- disconnectNodeMsg{
 		cmp:   func(sp *serverPeer) bool { return sp.Addr() == addr },
 		reply: replyChan,
@@ -247,7 +248,7 @@ func (b *rpcSyncMgr) IsCurrent() bool {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
+func (b *rpcSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, er.R) {
 	return b.syncMgr.ProcessBlock(block, flags)
 }
 

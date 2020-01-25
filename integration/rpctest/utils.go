@@ -5,6 +5,7 @@
 package rpctest
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"time"
 
@@ -33,7 +34,7 @@ const (
 // passed JoinType. This function be used to to ensure all active test
 // harnesses are at a consistent state before proceeding to an assertion or
 // check within rpc tests.
-func JoinNodes(nodes []*Harness, joinType JoinType) error {
+func JoinNodes(nodes []*Harness, joinType JoinType) er.R {
 	switch joinType {
 	case Blocks:
 		return syncBlocks(nodes)
@@ -44,7 +45,7 @@ func JoinNodes(nodes []*Harness, joinType JoinType) error {
 }
 
 // syncMempools blocks until all nodes have identical mempools.
-func syncMempools(nodes []*Harness) error {
+func syncMempools(nodes []*Harness) er.R {
 	poolsMatch := false
 
 retry:
@@ -76,7 +77,7 @@ retry:
 }
 
 // syncBlocks blocks until all nodes report the same best chain.
-func syncBlocks(nodes []*Harness) error {
+func syncBlocks(nodes []*Harness) er.R {
 	blocksMatch := false
 
 retry:
@@ -107,7 +108,7 @@ retry:
 // harness and the "to" harness.  The connection made is flagged as persistent,
 // therefore in the case of disconnects, "from" will attempt to reestablish a
 // connection to the "to" harness.
-func ConnectNode(from *Harness, to *Harness) error {
+func ConnectNode(from *Harness, to *Harness) er.R {
 	peerInfo, err := from.Node.GetPeerInfo()
 	if err != nil {
 		return err
@@ -132,33 +133,4 @@ func ConnectNode(from *Harness, to *Harness) error {
 	}
 
 	return nil
-}
-
-// TearDownAll tears down all active test harnesses.
-func TearDownAll() error {
-	harnessStateMtx.Lock()
-	defer harnessStateMtx.Unlock()
-
-	for _, harness := range testInstances {
-		if err := harness.tearDown(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// ActiveHarnesses returns a slice of all currently active test harnesses. A
-// test harness if considered "active" if it has been created, but not yet torn
-// down.
-func ActiveHarnesses() []*Harness {
-	harnessStateMtx.RLock()
-	defer harnessStateMtx.RUnlock()
-
-	activeNodes := make([]*Harness, 0, len(testInstances))
-	for _, harness := range testInstances {
-		activeNodes = append(activeNodes, harness)
-	}
-
-	return activeNodes
 }

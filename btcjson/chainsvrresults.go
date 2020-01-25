@@ -5,7 +5,11 @@
 
 package btcjson
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // GetBlockHeaderVerboseResult models the data from the getblockheader command when
 // the verbose flag is set.  When the verbose flag is not set, getblockheader
@@ -29,24 +33,29 @@ type GetBlockHeaderVerboseResult struct {
 // verbose flag is set.  When the verbose flag is not set, getblock returns a
 // hex-encoded string.
 type GetBlockVerboseResult struct {
-	Hash          string        `json:"hash"`
-	Confirmations int64         `json:"confirmations"`
-	StrippedSize  int32         `json:"strippedsize"`
-	Size          int32         `json:"size"`
-	Weight        int32         `json:"weight"`
-	Height        int64         `json:"height"`
-	Version       int32         `json:"version"`
-	VersionHex    string        `json:"versionHex"`
-	MerkleRoot    string        `json:"merkleroot"`
-	Tx            []string      `json:"tx,omitempty"`
-	RawTx         []TxRawResult `json:"rawtx,omitempty"`
-	Time          int64         `json:"time"`
-	Nonce         uint32        `json:"nonce"`
-	Bits          string        `json:"bits"`
-	Difficulty    float64       `json:"difficulty"`
-	PreviousHash  string        `json:"previousblockhash"`
-	NextHash      string        `json:"nextblockhash,omitempty"`
-	PcpHex        string        `json:"packetcryptproof,omitempty"`
+	Hash            string        `json:"hash"`
+	Confirmations   int64         `json:"confirmations"`
+	StrippedSize    int32         `json:"strippedsize"`
+	Size            int32         `json:"size"`
+	Weight          int32         `json:"weight"`
+	Height          int64         `json:"height"`
+	Version         int32         `json:"version"`
+	VersionHex      string        `json:"versionHex"`
+	MerkleRoot      string        `json:"merkleroot"`
+	Tx              []string      `json:"tx,omitempty"`
+	RawTx           []TxRawResult `json:"rawtx,omitempty"`
+	Time            int64         `json:"time"`
+	Nonce           uint32        `json:"nonce"`
+	Bits            string        `json:"bits"`
+	Difficulty      float64       `json:"difficulty"`
+	PreviousHash    string        `json:"previousblockhash"`
+	NextHash        string        `json:"nextblockhash,omitempty"`
+	PcpHex          string        `json:"packetcryptproof,omitempty"`
+	PcpVersion      *int          `json:"packetcryptversion,omitempty"`
+	PcAnnCount      *uint64       `json:"packetcryptanncount,omitempty"`
+	PcAnnBits       string        `json:"packetcryptannbits,omitempty"`
+	PcAnnDifficulty *float64      `json:"packetcryptanndifficulty,omitempty"`
+	PcBlkDifficulty *float64      `json:"packetcryptblkdifficulty,omitempty"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig
@@ -175,65 +184,11 @@ type GetBlockTemplateResult struct {
 	RejectReasion string   `json:"reject-reason,omitempty"`
 }
 
-// GetMempoolEntryResult models the data returned from the getmempoolentry
-// command.
-type GetMempoolEntryResult struct {
-	Size             int32    `json:"size"`
-	Fee              float64  `json:"fee"`
-	ModifiedFee      float64  `json:"modifiedfee"`
-	Time             int64    `json:"time"`
-	Height           int64    `json:"height"`
-	StartingPriority float64  `json:"startingpriority"`
-	CurrentPriority  float64  `json:"currentpriority"`
-	DescendantCount  int64    `json:"descendantcount"`
-	DescendantSize   int64    `json:"descendantsize"`
-	DescendantFees   float64  `json:"descendantfees"`
-	AncestorCount    int64    `json:"ancestorcount"`
-	AncestorSize     int64    `json:"ancestorsize"`
-	AncestorFees     float64  `json:"ancestorfees"`
-	Depends          []string `json:"depends"`
-}
-
 // GetMempoolInfoResult models the data returned from the getmempoolinfo
 // command.
 type GetMempoolInfoResult struct {
 	Size  int64 `json:"size"`
 	Bytes int64 `json:"bytes"`
-}
-
-// NetworksResult models the networks data from the getnetworkinfo command.
-type NetworksResult struct {
-	Name                      string `json:"name"`
-	Limited                   bool   `json:"limited"`
-	Reachable                 bool   `json:"reachable"`
-	Proxy                     string `json:"proxy"`
-	ProxyRandomizeCredentials bool   `json:"proxy_randomize_credentials"`
-}
-
-// LocalAddressesResult models the localaddresses data from the getnetworkinfo
-// command.
-type LocalAddressesResult struct {
-	Address string `json:"address"`
-	Port    uint16 `json:"port"`
-	Score   int32  `json:"score"`
-}
-
-// GetNetworkInfoResult models the data returned from the getnetworkinfo
-// command.
-type GetNetworkInfoResult struct {
-	Version         int32                  `json:"version"`
-	SubVersion      string                 `json:"subversion"`
-	ProtocolVersion int32                  `json:"protocolversion"`
-	LocalServices   string                 `json:"localservices"`
-	LocalRelay      bool                   `json:"localrelay"`
-	TimeOffset      int64                  `json:"timeoffset"`
-	Connections     int32                  `json:"connections"`
-	NetworkActive   bool                   `json:"networkactive"`
-	Networks        []NetworksResult       `json:"networks"`
-	RelayFee        float64                `json:"relayfee"`
-	IncrementalFee  float64                `json:"incrementalfee"`
-	LocalAddresses  []LocalAddressesResult `json:"localaddresses"`
-	Warnings        string                 `json:"warnings"`
 }
 
 // GetNetworkStewardResult models the data returned from the getnetworksteward command.
@@ -359,7 +314,8 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Sequence: v.Sequence,
 			Witness:  v.Witness,
 		}
-		return json.Marshal(coinbaseStruct)
+		out, err := json.Marshal(coinbaseStruct)
+		return out, er.Native(er.E(err))
 	}
 
 	if v.HasWitness() {
@@ -376,7 +332,8 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Witness:   v.Witness,
 			Sequence:  v.Sequence,
 		}
-		return json.Marshal(txStruct)
+		out, err := json.Marshal(txStruct)
+		return out, er.Native(er.E(err))
 	}
 
 	txStruct := struct {
@@ -390,7 +347,8 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 		ScriptSig: v.ScriptSig,
 		Sequence:  v.Sequence,
 	}
-	return json.Marshal(txStruct)
+	out, err := json.Marshal(txStruct)
+	return out, er.Native(er.E(err))
 }
 
 // PrevOut represents previous output for an input Vin.
@@ -431,7 +389,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			Coinbase: v.Coinbase,
 			Sequence: v.Sequence,
 		}
-		return json.Marshal(coinbaseStruct)
+		out, err := json.Marshal(coinbaseStruct)
+		return out, er.Native(er.E(err))
 	}
 
 	if v.HasWitness() {
@@ -450,7 +409,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			PrevOut:   v.PrevOut,
 			Sequence:  v.Sequence,
 		}
-		return json.Marshal(txStruct)
+		out, err := json.Marshal(txStruct)
+		return out, er.Native(er.E(err))
 	}
 
 	txStruct := struct {
@@ -466,7 +426,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 		PrevOut:   v.PrevOut,
 		Sequence:  v.Sequence,
 	}
-	return json.Marshal(txStruct)
+	out, err := json.Marshal(txStruct)
+	return out, er.Native(er.E(err))
 }
 
 // Vout models parts of the tx data.  It is defined separately since both
@@ -491,14 +452,6 @@ type GetMiningInfoResult struct {
 	NetworkHashPS      int64   `json:"networkhashps"`
 	PooledTx           uint64  `json:"pooledtx"`
 	TestNet            bool    `json:"testnet"`
-}
-
-// GetWorkResult models the data from the getwork command.
-type GetWorkResult struct {
-	Data     string `json:"data"`
-	Hash1    string `json:"hash1"`
-	Midstate string `json:"midstate"`
-	Target   string `json:"target"`
 }
 
 // InfoChainResult models the data returned by the chain server getinfo command.

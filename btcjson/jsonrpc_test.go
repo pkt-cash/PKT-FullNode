@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // TestIsValidIDType ensures the IsValidIDType function behaves as expected.
@@ -61,7 +62,7 @@ func TestMarshalResponse(t *testing.T) {
 	tests := []struct {
 		name     string
 		result   interface{}
-		jsonErr  *btcjson.RPCError
+		jsonErr  er.R
 		expected []byte
 	}{
 		{
@@ -73,10 +74,10 @@ func TestMarshalResponse(t *testing.T) {
 		{
 			name:   "result with error",
 			result: nil,
-			jsonErr: func() *btcjson.RPCError {
-				return btcjson.NewRPCError(btcjson.ErrRPCBlockNotFound, "123 not found")
+			jsonErr: func() er.R {
+				return btcjson.NewRPCError(btcjson.ErrRPCBlockNotFound, "123 not found", nil)
 			}(),
-			expected: []byte(`{"result":null,"error":{"code":-5,"message":"123 not found"},"id":1}`),
+			expected: []byte(`{"result":null,"error":{"code":-5,"message":"ErrRPCBlockNotFound(-5): 123 not found"},"id":1}`),
 		},
 	}
 
@@ -112,9 +113,9 @@ func TestMiscErrors(t *testing.T) {
 
 	// Force an error in MarshalResponse by giving it an id type that is not
 	// supported.
-	wantErr := btcjson.Error{ErrorCode: btcjson.ErrInvalidType}
+	wantErr := btcjson.ErrInvalidType.Default()
 	_, err = btcjson.MarshalResponse(make(chan int), nil, nil)
-	if jerr, ok := err.(btcjson.Error); !ok || jerr.ErrorCode != wantErr.ErrorCode {
+	if !er.FuzzyEquals(err, wantErr) {
 		t.Errorf("MarshalResult: did not receive expected error - got "+
 			"%v (%[1]T), want %v (%[2]T)", err, wantErr)
 		return
@@ -123,7 +124,7 @@ func TestMiscErrors(t *testing.T) {
 	// Force an error in MarshalResponse by giving it a result type that
 	// can't be marshalled.
 	_, err = btcjson.MarshalResponse(1, make(chan int), nil)
-	if _, ok := err.(*json.UnsupportedTypeError); !ok {
+	if _, ok := er.Wrapped(err).(*json.UnsupportedTypeError); !ok {
 		wantErr := &json.UnsupportedTypeError{}
 		t.Errorf("MarshalResult: did not receive expected error - got "+
 			"%v (%[1]T), want %T", err, wantErr)
@@ -136,24 +137,23 @@ func TestRPCError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		in   *btcjson.RPCError
+		in   er.R
 		want string
 	}{
 		{
-			btcjson.ErrRPCInvalidRequest,
-			"-32600: Invalid request",
+			btcjson.ErrRPCInvalidRequest.Default(),
+			"ErrRPCInvalidRequest(-32600)",
 		},
 		{
-			btcjson.ErrRPCMethodNotFound,
-			"-32601: Method not found",
+			btcjson.ErrRPCMethodNotFound.Default(),
+			"ErrRPCMethodNotFound(-32601)",
 		},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		result := test.in.Error()
-		if result != test.want {
-			t.Errorf("Error #%d\n got: %s want: %s", i, result,
+		if test.in.Message() != test.want {
+			t.Errorf("Error #%d\n got: %s want: %s", i, test.in.Message(),
 				test.want)
 			continue
 		}

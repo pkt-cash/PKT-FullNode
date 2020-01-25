@@ -8,21 +8,23 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // dirEmpty returns whether or not the specified directory path is empty.
-func dirEmpty(dirPath string) (bool, error) {
-	f, err := os.Open(dirPath)
-	if err != nil {
-		return false, err
+func dirEmpty(dirPath string) (bool, er.R) {
+	f, errr := os.Open(dirPath)
+	if errr != nil {
+		return false, er.E(errr)
 	}
 	defer f.Close()
 
 	// Read the names of a max of one entry from the directory.  When the
 	// directory is empty, an io.EOF error will be returned, so allow it.
-	names, err := f.Readdirnames(1)
-	if err != nil && err != io.EOF {
-		return false, err
+	names, errr := f.Readdirnames(1)
+	if errr != nil && errr != io.EOF {
+		return false, er.E(errr)
 	}
 
 	return len(names) == 0, nil
@@ -51,7 +53,7 @@ func oldBtcdHomeDir() string {
 // upgradeDBPathNet moves the database for a specific network from its
 // location prior to pktd version 0.2.0 and uses heuristics to ascertain the old
 // database type to rename to the new format.
-func upgradeDBPathNet(oldDbPath, netName string) error {
+func upgradeDBPathNet(oldDbPath, netName string) er.R {
 	// Prior to version 0.2.0, the database was named the same thing for
 	// both sqlite and leveldb.  Use heuristics to figure out the type
 	// of the database and move it to the new path and name introduced with
@@ -73,15 +75,15 @@ func upgradeDBPathNet(oldDbPath, netName string) error {
 		newDbPath := filepath.Join(newDbRoot, newDbName)
 
 		// Create the new path if needed.
-		err = os.MkdirAll(newDbRoot, 0700)
-		if err != nil {
-			return err
+		errr := os.MkdirAll(newDbRoot, 0700)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Move and rename the old database.
-		err := os.Rename(oldDbPath, newDbPath)
-		if err != nil {
-			return err
+		errr = os.Rename(oldDbPath, newDbPath)
+		if errr != nil {
+			return er.E(errr)
 		}
 	}
 
@@ -90,7 +92,7 @@ func upgradeDBPathNet(oldDbPath, netName string) error {
 
 // upgradeDBPaths moves the databases from their locations prior to pktd
 // version 0.2.0 to their new locations.
-func upgradeDBPaths() error {
+func upgradeDBPaths() er.R {
 	// Prior to version 0.2.0, the databases were in the "db" directory and
 	// their names were suffixed by "testnet" and "regtest" for their
 	// respective networks.  Check for the old database and update it to the
@@ -101,12 +103,12 @@ func upgradeDBPaths() error {
 	upgradeDBPathNet(filepath.Join(oldDbRoot, "pktd_regtest.db"), "regtest")
 
 	// Remove the old db directory.
-	return os.RemoveAll(oldDbRoot)
+	return er.E(os.RemoveAll(oldDbRoot))
 }
 
 // upgradeDataPaths moves the application data from its location prior to pktd
 // version 0.3.3 to its new location.
-func upgradeDataPaths() error {
+func upgradeDataPaths() er.R {
 	// No need to migrate if the old and new home paths are the same.
 	oldHomePath := oldBtcdHomeDir()
 	newHomePath := defaultHomeDir
@@ -119,18 +121,18 @@ func upgradeDataPaths() error {
 		// Create the new path.
 		pktdLog.Infof("Migrating application home path from '%s' to '%s'",
 			oldHomePath, newHomePath)
-		err := os.MkdirAll(newHomePath, 0700)
-		if err != nil {
-			return err
+		errr := os.MkdirAll(newHomePath, 0700)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Move old pktd.conf into new location if needed.
 		oldConfPath := filepath.Join(oldHomePath, defaultConfigFilename)
 		newConfPath := filepath.Join(newHomePath, defaultConfigFilename)
 		if fileExists(oldConfPath) && !fileExists(newConfPath) {
-			err := os.Rename(oldConfPath, newConfPath)
-			if err != nil {
-				return err
+			errr := os.Rename(oldConfPath, newConfPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 
@@ -138,9 +140,9 @@ func upgradeDataPaths() error {
 		oldDataPath := filepath.Join(oldHomePath, defaultDataDirname)
 		newDataPath := filepath.Join(newHomePath, defaultDataDirname)
 		if fileExists(oldDataPath) && !fileExists(newDataPath) {
-			err := os.Rename(oldDataPath, newDataPath)
-			if err != nil {
-				return err
+			errr := os.Rename(oldDataPath, newDataPath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		}
 
@@ -150,9 +152,9 @@ func upgradeDataPaths() error {
 			return err
 		}
 		if ohpEmpty {
-			err := os.Remove(oldHomePath)
-			if err != nil {
-				return err
+			errr := os.Remove(oldHomePath)
+			if errr != nil {
+				return er.E(errr)
 			}
 		} else {
 			pktdLog.Warnf("Not removing '%s' since it contains files "+
@@ -166,7 +168,7 @@ func upgradeDataPaths() error {
 }
 
 // doUpgrades performs upgrades to pktd as new versions require it.
-func doUpgrades() error {
+func doUpgrades() er.R {
 	err := upgradeDBPaths()
 	if err != nil {
 		return err

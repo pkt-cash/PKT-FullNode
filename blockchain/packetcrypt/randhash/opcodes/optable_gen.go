@@ -89,8 +89,6 @@ const (
 	OpCode_END       = iota
 
 	OpCode_INVALID_BIG = iota
-
-	OpCode__MAX
 )
 
 func (o OpCode) String() string {

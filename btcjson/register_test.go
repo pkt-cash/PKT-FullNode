@@ -9,6 +9,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
@@ -63,7 +65,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 		method  string
 		cmdFunc func() interface{}
 		flags   btcjson.UsageFlag
-		err     btcjson.Error
+		err     er.R
 	}{
 		{
 			name:   "duplicate method",
@@ -71,7 +73,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 			cmdFunc: func() interface{} {
 				return struct{}{}
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrDuplicateMethod},
+			err: btcjson.ErrDuplicateMethod.Default(),
 		},
 		{
 			name:   "invalid usage flags",
@@ -80,7 +82,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				return 0
 			},
 			flags: btcjson.TstHighestUsageFlagBit,
-			err:   btcjson.Error{ErrorCode: btcjson.ErrInvalidUsageFlags},
+			err:   btcjson.ErrInvalidUsageFlags.Default(),
 		},
 		{
 			name:   "invalid type",
@@ -88,7 +90,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 			cmdFunc: func() interface{} {
 				return 0
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err: btcjson.ErrInvalidType.Default(),
 		},
 		{
 			name:   "invalid type 2",
@@ -96,25 +98,27 @@ func TestRegisterCmdErrors(t *testing.T) {
 			cmdFunc: func() interface{} {
 				return &[]string{}
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err: btcjson.ErrInvalidType.Default(),
 		},
 		{
 			name:   "embedded field",
 			method: "registertestcmd",
 			cmdFunc: func() interface{} {
+				//lint:ignore U1001 this field must be present for the test
 				type test struct{ int }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrEmbeddedType},
+			err: btcjson.ErrEmbeddedType.Default(),
 		},
 		{
 			name:   "unexported field",
 			method: "registertestcmd",
 			cmdFunc: func() interface{} {
+				//lint:ignore U1001 this field must be present for the test
 				type test struct{ a int }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnexportedField},
+			err: btcjson.ErrUnexportedField.Default(),
 		},
 		{
 			name:   "unsupported field type 1",
@@ -123,7 +127,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A **int }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "unsupported field type 2",
@@ -132,7 +136,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A chan int }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "unsupported field type 3",
@@ -141,7 +145,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A complex64 }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "unsupported field type 4",
@@ -150,7 +154,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A complex128 }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "unsupported field type 5",
@@ -159,7 +163,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A func() }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "unsupported field type 6",
@@ -168,7 +172,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				type test struct{ A interface{} }
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrUnsupportedFieldType},
+			err: btcjson.ErrUnsupportedFieldType.Default(),
 		},
 		{
 			name:   "required after optional",
@@ -180,7 +184,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				}
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrNonOptionalField},
+			err: btcjson.ErrNonOptionalField.Default(),
 		},
 		{
 			name:   "non-optional with default",
@@ -191,7 +195,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				}
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrNonOptionalDefault},
+			err: btcjson.ErrNonOptionalDefault.Default(),
 		},
 		{
 			name:   "mismatched default",
@@ -202,7 +206,7 @@ func TestRegisterCmdErrors(t *testing.T) {
 				}
 				return (*test)(nil)
 			},
-			err: btcjson.Error{ErrorCode: btcjson.ErrMismatchedDefault},
+			err: btcjson.ErrMismatchedDefault.Default(),
 		},
 	}
 
@@ -210,16 +214,9 @@ func TestRegisterCmdErrors(t *testing.T) {
 	for i, test := range tests {
 		err := btcjson.RegisterCmd(test.method, test.cmdFunc(),
 			test.flags)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("Test #%d (%s) wrong error - got %T, "+
 				"want %T", i, test.name, err, test.err)
-			continue
-		}
-		gotErrorCode := err.(btcjson.Error).ErrorCode
-		if gotErrorCode != test.err.ErrorCode {
-			t.Errorf("Test #%d (%s) mismatched error code - got "+
-				"%v, want %v", i, test.name, gotErrorCode,
-				test.err.ErrorCode)
 			continue
 		}
 	}
@@ -256,7 +253,7 @@ func TestRegisteredCmdMethods(t *testing.T) {
 	// Ensure the returned methods are sorted.
 	sortedMethods := make([]string, len(methods))
 	copy(sortedMethods, methods)
-	sort.Sort(sort.StringSlice(sortedMethods))
+	sort.Strings(sortedMethods)
 	if !reflect.DeepEqual(sortedMethods, methods) {
 		t.Fatal("RegisteredCmdMethods: methods are not sorted")
 	}

@@ -7,8 +7,11 @@ package blockchain
 import (
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/btcutil"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if
@@ -21,17 +24,17 @@ import (
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags) (bool, error) {
+func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags) (bool, er.R) {
 	// The height of this block is one more than the referenced previous
 	// block.
 	prevHash := &block.MsgBlock().Header.PrevBlock
 	prevNode := b.index.LookupNode(prevHash)
 	if prevNode == nil {
 		str := fmt.Sprintf("previous block %s is unknown", prevHash)
-		return false, ruleError(ErrPreviousBlockUnknown, str)
+		return false, ruleerror.ErrPreviousBlockUnknown.New(str, nil)
 	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
 		str := fmt.Sprintf("previous block %s is known to be invalid", prevHash)
-		return false, ruleError(ErrInvalidAncestorBlock, str)
+		return false, ruleerror.ErrInvalidAncestorBlock.New(str, nil)
 	}
 
 	blockHeight := prevNode.height + 1
@@ -53,7 +56,7 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// expensive connection logic.  It also has some other nice properties
 	// such as making blocks that never become part of the main chain or
 	// blocks that fail to connect available for further analysis.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx database.Tx) er.R {
 		return dbStoreBlock(dbTx, block)
 	})
 	if err != nil {

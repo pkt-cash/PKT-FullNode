@@ -8,15 +8,16 @@ package blockchain
 import (
 	"compress/bzip2"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/blockchain/testdata"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
@@ -62,16 +63,16 @@ func isSupportedDbType(dbType string) bool {
 // loadBlocks reads files containing bitcoin block data (gzipped but otherwise
 // in the format bitcoind writes) from disk and returns them as an array of
 // btcutil.Block.  This is largely borrowed from the test code in pktdb.
-func loadBlocks(filename string) (blocks []*btcutil.Block, err error) {
+func loadBlocks(filename string) (blocks []*btcutil.Block, err er.R) {
 	return testdata.LoadBlocks(filepath.Join("testdata/", filename))
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis
 // block already inserted.  In addition to the new chain instance, it returns
 // a teardown function the caller should invoke when done testing to clean up.
-func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), error) {
+func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er.R) {
 	if !isSupportedDbType(testDbType) {
-		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
+		return nil, nil, er.Errorf("unsupported db type %v", testDbType)
 	}
 
 	// Handle memory database specially since it doesn't need the disk
@@ -81,7 +82,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 	if testDbType == "memdb" {
 		ndb, err := database.Create(testDbType)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating db: %v", err)
+			return nil, nil, er.Errorf("error creating db: %v", err)
 		}
 		db = ndb
 
@@ -94,7 +95,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		// Create the root directory for test databases.
 		if !fileExists(testDbRoot) {
 			if err := os.MkdirAll(testDbRoot, 0700); err != nil {
-				err := fmt.Errorf("unable to create test db "+
+				err := er.Errorf("unable to create test db "+
 					"root: %v", err)
 				return nil, nil, err
 			}
@@ -105,7 +106,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		_ = os.RemoveAll(dbPath)
 		ndb, err := database.Create(testDbType, dbPath, blockDataNet)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating db: %v", err)
+			return nil, nil, er.Errorf("error creating db: %v", err)
 		}
 		db = ndb
 
@@ -132,14 +133,14 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 	})
 	if err != nil {
 		teardown()
-		err := fmt.Errorf("failed to create chain instance: %v", err)
+		err := er.Errorf("failed to create chain instance: %v", err)
 		return nil, nil, err
 	}
 	return chain, teardown, nil
 }
 
 // loadUtxoView returns a utxo view loaded from a file.
-func loadUtxoView(filename string) (*UtxoViewpoint, error) {
+func loadUtxoView(filename string) (*UtxoViewpoint, er.R) {
 	// The utxostore file format is:
 	// <tx hash><output index><serialized utxo len><serialized utxo>
 	//
@@ -149,7 +150,7 @@ func loadUtxoView(filename string) (*UtxoViewpoint, error) {
 	filename = filepath.Join("testdata", filename)
 	fi, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Choose read based on whether the file is compressed or not.
@@ -171,121 +172,41 @@ func loadUtxoView(filename string) (*UtxoViewpoint, error) {
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Output index of the utxo entry.
 		var index uint32
 		err = binary.Read(r, binary.LittleEndian, &index)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Num of serialized utxo entry bytes.
 		var numBytes uint32
 		err = binary.Read(r, binary.LittleEndian, &numBytes)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Serialized utxo entry.
 		serialized := make([]byte, numBytes)
 		_, err = io.ReadAtLeast(r, serialized, int(numBytes))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
-		// Deserialize it and add it to the view.
-		entry, err := deserializeUtxoEntry(serialized)
-		if err != nil {
-			return nil, err
+		{
+			// Deserialize it and add it to the view.
+			entry, err := deserializeUtxoEntry(serialized)
+			if err != nil {
+				return nil, err
+			}
+			view.Entries()[wire.OutPoint{Hash: hash, Index: index}] = entry
 		}
-		view.Entries()[wire.OutPoint{Hash: hash, Index: index}] = entry
 	}
 
 	return view, nil
-}
-
-// convertUtxoStore reads a utxostore from the legacy format and writes it back
-// out using the latest format.  It is only useful for converting utxostore data
-// used in the tests, which has already been done.  However, the code is left
-// available for future reference.
-func convertUtxoStore(r io.Reader, w io.Writer) error {
-	// The old utxostore file format was:
-	// <tx hash><serialized utxo len><serialized utxo>
-	//
-	// The serialized utxo len was a little endian uint32 and the serialized
-	// utxo uses the format described in upgrade.go.
-
-	littleEndian := binary.LittleEndian
-	for {
-		// Hash of the utxo entry.
-		var hash chainhash.Hash
-		_, err := io.ReadAtLeast(r, hash[:], len(hash[:]))
-		if err != nil {
-			// Expected EOF at the right offset.
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-
-		// Num of serialized utxo entry bytes.
-		var numBytes uint32
-		err = binary.Read(r, littleEndian, &numBytes)
-		if err != nil {
-			return err
-		}
-
-		// Serialized utxo entry.
-		serialized := make([]byte, numBytes)
-		_, err = io.ReadAtLeast(r, serialized, int(numBytes))
-		if err != nil {
-			return err
-		}
-
-		// Deserialize the entry.
-		entries, err := deserializeUtxoEntryV0(serialized)
-		if err != nil {
-			return err
-		}
-
-		// Loop through all of the utxos and write them out in the new
-		// format.
-		for outputIdx, entry := range entries {
-			// Reserialize the entries using the new format.
-			serialized, err := serializeUtxoEntry(entry)
-			if err != nil {
-				return err
-			}
-
-			// Write the hash of the utxo entry.
-			_, err = w.Write(hash[:])
-			if err != nil {
-				return err
-			}
-
-			// Write the output index of the utxo entry.
-			err = binary.Write(w, littleEndian, outputIdx)
-			if err != nil {
-				return err
-			}
-
-			// Write num of serialized utxo entry bytes.
-			err = binary.Write(w, littleEndian, uint32(len(serialized)))
-			if err != nil {
-				return err
-			}
-
-			// Write the serialized utxo.
-			_, err = w.Write(serialized)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 // TstSetCoinbaseMaturity makes the ability to set the coinbase maturity

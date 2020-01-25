@@ -6,6 +6,8 @@ package wire
 
 import (
 	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MessageError describes an issue with a message.
@@ -15,20 +17,9 @@ import (
 // This provides a mechanism for the caller to type assert the error to
 // differentiate between general io errors such as io.EOF and issues that
 // resulted from malformed messages.
-type MessageError struct {
-	Func        string // Function name
-	Description string // Human readable description of the issue
-}
-
-// Error satisfies the error interface and prints human-readable errors.
-func (e *MessageError) Error() string {
-	if e.Func != "" {
-		return fmt.Sprintf("%v: %v", e.Func, e.Description)
-	}
-	return e.Description
-}
+var MessageError *er.ErrorCode = er.GenericErrorType.Code("wire.MessageError")
 
 // messageError creates an error for the given function and description.
-func messageError(f string, desc string) *MessageError {
-	return &MessageError{Func: f, Description: desc}
+func messageError(f string, desc string) er.R {
+	return MessageError.New(fmt.Sprintf("%s: %s", f, desc), nil)
 }

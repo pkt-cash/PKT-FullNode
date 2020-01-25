@@ -9,8 +9,6 @@ const (
     #define OpCodes_ALL
     #define OpCodes_VISITOR(x) OpCode_ ## x = iota;
     #include "OpCodes.h"
-
-    OpCode__MAX
 )
 
 func (o OpCode) String() string {

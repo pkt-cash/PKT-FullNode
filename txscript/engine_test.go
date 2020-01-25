@@ -126,7 +126,7 @@ func TestCheckErrorCondition(t *testing.T) {
 		}
 
 		err = vm.CheckErrorCondition(false)
-		if !IsErrorCode(err, ErrScriptUnfinished) {
+		if !ErrScriptUnfinished.Is(err) {
 			t.Fatalf("got unexepected error %v on %dth iteration",
 				err, i)
 		}
@@ -188,7 +188,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 
 	for i, test := range tests {
 		_, err := NewEngine(pkScript, tx, 0, test, nil, nil, -1)
-		if !IsErrorCode(err, ErrInvalidFlags) {
+		if !ErrInvalidFlags.Is(err) {
 			t.Fatalf("TestInvalidFlagCombinations #%d unexpected "+
 				"error: %v", i, err)
 		}

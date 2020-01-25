@@ -8,6 +8,8 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -15,7 +17,7 @@ import (
 // genRandomSig returns a random message, a signature of the message under the
 // public key and the public key. This function is used to generate randomized
 // test data.
-func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, error) {
+func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, er.R) {
 	privKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, nil, nil, err
@@ -23,7 +25,7 @@ func genRandomSig() (*chainhash.Hash, *btcec.Signature, *btcec.PublicKey, error)
 
 	var msgHash chainhash.Hash
 	if _, err := rand.Read(msgHash[:]); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, er.E(err)
 	}
 
 	sig, err := privKey.Sign(msgHash[:])

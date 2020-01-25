@@ -7,18 +7,18 @@ package rpctest
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"sync"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/pkt-cash/btcutil/hdkeychain"
 )
 
 var (
@@ -110,7 +110,7 @@ type memWallet struct {
 
 // newMemWallet creates and returns a fully initialized instance of the
 // memWallet given a particular blockchain's parameters.
-func newMemWallet(net *chaincfg.Params, harnessID uint32) (*memWallet, error) {
+func newMemWallet(net *chaincfg.Params, harnessID uint32) (*memWallet, er.R) {
 	// The wallet's final HD seed is: hdSeed || harnessID. This method
 	// ensures that each harness instance uses a deterministic root seed
 	// based on its harness ID.
@@ -334,7 +334,7 @@ func (m *memWallet) unwindBlock(update *chainUpdate) {
 // newAddress returns a new address from the wallet's hd key chain.  It also
 // loads the address into the RPC client's transaction filter to ensure any
 // transactions that involve it are delivered via the notifications.
-func (m *memWallet) newAddress() (btcutil.Address, error) {
+func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 	index := m.hdIndex
 
 	childKey, err := m.hdRoot.Child(index)
@@ -363,16 +363,6 @@ func (m *memWallet) newAddress() (btcutil.Address, error) {
 	return addr, nil
 }
 
-// NewAddress returns a fresh address spendable by the wallet.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) NewAddress() (btcutil.Address, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	return m.newAddress()
-}
-
 // fundTx attempts to fund a transaction sending amt bitcoin. The coins are
 // selected such that the final amount spent pays enough fees as dictated by the
 // passed fee rate. The passed fee rate should be expressed in
@@ -381,7 +371,7 @@ func (m *memWallet) NewAddress() (btcutil.Address, error) {
 //
 // NOTE: The memWallet's mutex must be held when this function is called.
 func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
-	feeRate btcutil.Amount, change bool) error {
+	feeRate btcutil.Amount, change bool) er.R {
 
 	const (
 		// spendSize is the largest number of bytes of a sigScript
@@ -443,35 +433,7 @@ func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
 
 	// If we've reached this point, then coin selection failed due to an
 	// insufficient amount of coins.
-	return fmt.Errorf("not enough funds for coin selection")
-}
-
-// SendOutputs creates, then sends a transaction paying to the specified output
-// while observing the passed fee rate. The passed fee rate should be expressed
-// in satoshis-per-byte.
-func (m *memWallet) SendOutputs(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
-
-	tx, err := m.CreateTransaction(outputs, feeRate, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.rpc.SendRawTransaction(tx, true)
-}
-
-// SendOutputsWithoutChange creates and sends a transaction that pays to the
-// specified outputs while observing the passed fee rate and ignoring a change
-// output. The passed fee rate should be expressed in sat/b.
-func (m *memWallet) SendOutputsWithoutChange(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
-
-	tx, err := m.CreateTransaction(outputs, feeRate, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.rpc.SendRawTransaction(tx, true)
+	return er.Errorf("not enough funds for coin selection")
 }
 
 // CreateTransaction returns a fully signed transaction paying to the specified
@@ -481,7 +443,7 @@ func (m *memWallet) SendOutputsWithoutChange(outputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
-	feeRate btcutil.Amount, change bool) (*wire.MsgTx, error) {
+	feeRate btcutil.Amount, change bool) (*wire.MsgTx, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
@@ -541,47 +503,8 @@ func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
 	return tx, nil
 }
 
-// UnlockOutputs unlocks any outputs which were previously locked due to
-// being selected to fund a transaction via the CreateTransaction method.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) UnlockOutputs(inputs []*wire.TxIn) {
-	m.Lock()
-	defer m.Unlock()
-
-	for _, input := range inputs {
-		utxo, ok := m.utxos[input.PreviousOutPoint]
-		if !ok {
-			continue
-		}
-
-		utxo.isLocked = false
-	}
-}
-
-// ConfirmedBalance returns the confirmed balance of the wallet.
-//
-// This function is safe for concurrent access.
-func (m *memWallet) ConfirmedBalance() btcutil.Amount {
-	m.RLock()
-	defer m.RUnlock()
-
-	var balance btcutil.Amount
-	for _, utxo := range m.utxos {
-		// Prevent any immature or locked outputs from contributing to
-		// the wallet's total confirmed balance.
-		if !utxo.isMature(m.currentHeight) || utxo.isLocked {
-			continue
-		}
-
-		balance += utxo.value
-	}
-
-	return balance
-}
-
 // keyToAddr maps the passed private to corresponding p2pkh address.
-func keyToAddr(key *btcec.PrivateKey, net *chaincfg.Params) (btcutil.Address, error) {
+func keyToAddr(key *btcec.PrivateKey, net *chaincfg.Params) (btcutil.Address, er.R) {
 	serializedKey := key.PubKey().SerializeCompressed()
 	pubKeyAddr, err := btcutil.NewAddressPubKey(serializedKey, net)
 	if err != nil {

@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/database"
@@ -39,7 +42,7 @@ const (
 // the main chain or any side chains.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
+func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, er.R) {
 	// Check block index first (could be main chain or side chain blocks).
 	if b.index.HaveBlock(hash) {
 		return true, nil
@@ -47,8 +50,8 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 
 	// Check in the database.
 	var exists bool
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		exists, err = dbTx.HasBlock(hash)
 		if err != nil || !exists {
 			return err
@@ -64,7 +67,7 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 		// instead of only the current main chain so it can be consulted
 		// directly.
 		_, err = dbFetchHeightByHash(dbTx, hash)
-		if isNotInMainChainErr(err) {
+		if errNotInMainChain0.Is(err) {
 			exists = false
 			return nil
 		}
@@ -82,7 +85,7 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 // are needed to pass along to maybeAcceptBlock.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) error {
+func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) er.R {
 	// Start with processing at least the passed hash.  Leave a little room
 	// for additional orphan blocks that need to be processed without
 	// needing to grow the array in the common case.
@@ -141,7 +144,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags BehaviorFlags) e
 // whether or not the block is an orphan.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bool, bool, error) {
+func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bool, bool, er.R) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -157,13 +160,13 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	}
 	if exists {
 		str := fmt.Sprintf("already have block %v", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, ruleerror.ErrDuplicateBlock.New(str, nil)
 	}
 
 	// The block must not already exist as an orphan.
 	if _, exists := b.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, ruleerror.ErrDuplicateBlock.New(str, nil)
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
@@ -198,7 +201,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
 				blockHeader.Timestamp, checkpointTime)
-			return false, false, ruleError(ErrCheckpointTimeTooOld, str)
+			return false, false, ruleerror.ErrCheckpointTimeTooOld.New(str, nil)
 		}
 		if !fastAdd {
 			// Even though the checks prior to now have already ensured the
@@ -215,7 +218,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+
 					"checkpoint", currentTarget)
-				return false, false, ruleError(ErrDifficultyTooLow, str)
+				return false, false, ruleerror.ErrDifficultyTooLow.New(str, nil)
 			}
 		}
 	}

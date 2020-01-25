@@ -10,9 +10,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // mustParseShortForm parses the passed short form script and returns the
@@ -23,7 +25,7 @@ func mustParseShortForm(script string) []byte {
 	s, err := parseShortForm(script)
 	if err != nil {
 		panic("invalid short form script in test source: err " +
-			err.Error() + ", script: " + script)
+			err.String() + ", script: " + script)
 	}
 
 	return s
@@ -347,6 +349,13 @@ func TestExtractPkScriptAddrs(t *testing.T) {
 		class, addrs, reqSigs, err := ExtractPkScriptAddrs(
 			test.script, &chaincfg.MainNetParams)
 		if err != nil {
+			if test.name != "script that does not parse" {
+				t.Errorf("ExtractPkScriptAddrs() returned %v in test %v",
+					err, test.name)
+				continue
+			}
+		} else if test.name == "script that does not parse" {
+			t.Errorf("ExtractPkScriptAddrs() expected an error")
 		}
 
 		if !reflect.DeepEqual(addrs, test.addrs) {
@@ -387,7 +396,7 @@ func TestCalcScriptInfo(t *testing.T) {
 		segwit bool
 
 		scriptInfo    ScriptInfo
-		scriptInfoErr error
+		scriptInfoErr er.R
 	}{
 		{
 			// Invented scripts, the hashes do not match
@@ -643,7 +652,7 @@ func TestPayToAddrScript(t *testing.T) {
 	tests := []struct {
 		in       btcutil.Address
 		expected string
-		err      error
+		err      er.R
 	}{
 		// pay-to-pubkey-hash address on mainnet
 		{
@@ -744,7 +753,7 @@ func TestMultiSigScript(t *testing.T) {
 		keys      []*btcutil.AddressPubKey
 		nrequired int
 		expected  string
-		err       error
+		err       er.R
 	}{
 		{
 			[]*btcutil.AddressPubKey{
@@ -825,7 +834,7 @@ func TestCalcMultiSigStats(t *testing.T) {
 	tests := []struct {
 		name   string
 		script string
-		err    error
+		err    er.R
 	}{
 		{
 			name: "short script",
@@ -1134,7 +1143,7 @@ func TestNullDataScript(t *testing.T) {
 		name     string
 		data     []byte
 		expected []byte
-		err      error
+		err      er.R
 		class    ScriptClass
 	}{
 		{

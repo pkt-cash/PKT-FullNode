@@ -6,18 +6,18 @@
 package peer_test
 
 import (
-	"errors"
 	"io"
 	"net"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/btcsuite/go-socks/socks"
 )
 
 // conn mocks a network connection by implementing the net.Conn interface.  It
@@ -225,7 +225,7 @@ func TestPeerConnection(t *testing.T) {
 				verack <- struct{}{}
 			},
 			OnWrite: func(p *peer.Peer, bytesWritten int, msg wire.Message,
-				err error) {
+				err er.R) {
 				if _, ok := msg.(*wire.MsgVerAck); ok {
 					verack <- struct{}{}
 				}
@@ -282,11 +282,11 @@ func TestPeerConnection(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		setup func() (*peer.Peer, *peer.Peer, error)
+		setup func() (*peer.Peer, *peer.Peer, er.R)
 	}{
 		{
 			"basic handshake",
-			func() (*peer.Peer, *peer.Peer, error) {
+			func() (*peer.Peer, *peer.Peer, er.R) {
 				inConn, outConn := pipe(
 					&conn{raddr: "10.0.0.1:8333"},
 					&conn{raddr: "10.0.0.2:8333"},
@@ -304,7 +304,7 @@ func TestPeerConnection(t *testing.T) {
 					select {
 					case <-verack:
 					case <-time.After(time.Second):
-						return nil, nil, errors.New("verack timeout")
+						return nil, nil, er.New("verack timeout")
 					}
 				}
 				return inPeer, outPeer, nil
@@ -312,7 +312,7 @@ func TestPeerConnection(t *testing.T) {
 		},
 		{
 			"socks proxy",
-			func() (*peer.Peer, *peer.Peer, error) {
+			func() (*peer.Peer, *peer.Peer, er.R) {
 				inConn, outConn := pipe(
 					&conn{raddr: "10.0.0.1:8333", proxy: true},
 					&conn{raddr: "10.0.0.2:8333"},
@@ -330,7 +330,7 @@ func TestPeerConnection(t *testing.T) {
 					select {
 					case <-verack:
 					case <-time.After(time.Second):
-						return nil, nil, errors.New("verack timeout")
+						return nil, nil, er.New("verack timeout")
 					}
 				}
 				return inPeer, outPeer, nil
@@ -614,8 +614,8 @@ func TestPeerListeners(t *testing.T) {
 func TestOutboundPeer(t *testing.T) {
 
 	peerCfg := &peer.Config{
-		NewestBlock: func() (*chainhash.Hash, int32, error) {
-			return nil, 0, errors.New("newest block not found")
+		NewestBlock: func() (*chainhash.Hash, int32, er.R) {
+			return nil, 0, er.New("newest block not found")
 		},
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
@@ -672,7 +672,7 @@ func TestOutboundPeer(t *testing.T) {
 	p.Disconnect()
 
 	// Test NewestBlock
-	var newestBlock = func() (*chainhash.Hash, int32, error) {
+	var newestBlock = func() (*chainhash.Hash, int32, er.R) {
 		hashStr := "14a0810ac680a3eb3f82edc878cea25ec41d6b790744e5daeef"
 		hash, err := chainhash.NewHashFromStr(hashStr)
 		if err != nil {
@@ -796,7 +796,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 				p.ProtocolVersion(),
 				peerCfg.ChainParams.Net,
 			)
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				close(outboundMessages)
 				return
 			}

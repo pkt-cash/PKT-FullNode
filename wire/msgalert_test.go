@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -51,7 +53,7 @@ func TestMsgAlert(t *testing.T) {
 	var buf bytes.Buffer
 	err := msg.BtcEncode(&buf, pver, encoding)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err.String())
 	}
 	// expected = 0x0c + serializedpayload + 0x08 + signature
 	expectedBuf := append([]byte{0x0c}, serializedpayload...)
@@ -68,7 +70,7 @@ func TestMsgAlert(t *testing.T) {
 	buf = *new(bytes.Buffer)
 	err = msg.BtcEncode(&buf, pver, encoding)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err.String())
 	}
 	// empty Alert is 45 null bytes, see Alert comments
 	// for details
@@ -199,17 +201,17 @@ func TestMsgAlertWireErrors(t *testing.T) {
 		pver     uint32          // Protocol version for wire encoding
 		enc      MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		writeErr er.R            // Expected write error
+		readErr  er.R            // Expected read error
 	}{
 		// Force error in payload length.
-		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
+		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in payload.
-		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 1, io.ErrShortWrite, io.EOF},
+		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 1, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in signature length.
-		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 13, io.ErrShortWrite, io.EOF},
+		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 13, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in signature.
-		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 14, io.ErrShortWrite, io.EOF},
+		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 14, er.E(io.ErrShortWrite), er.E(io.EOF)},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -217,40 +219,20 @@ func TestMsgAlertWireErrors(t *testing.T) {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
 		err := test.in.BtcEncode(w, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.writeErr {
-				t.Errorf("BtcEncode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.writeErr)
-				continue
-			}
 		}
 
 		// Decode from wire format.
 		var msg MsgAlert
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
-		}
-
-		// For errors which are not of type MessageError, check them for
-		// equality.
-		if _, ok := err.(*MessageError); !ok {
-			if err != test.readErr {
-				t.Errorf("BtcDecode #%d wrong error got: %v, "+
-					"want: %v", i, err, test.readErr)
-				continue
-			}
 		}
 	}
 
@@ -258,9 +240,9 @@ func TestMsgAlertWireErrors(t *testing.T) {
 	baseMsgAlert.SerializedPayload = []byte{}
 	w := new(bytes.Buffer)
 	err := baseMsgAlert.BtcEncode(w, pver, encoding)
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("MsgAlert.BtcEncode wrong error got: %T, want: %T",
-			err, MessageError{})
+			err, MessageError.Default())
 	}
 
 	// Test Payload Serialize error
@@ -269,9 +251,9 @@ func TestMsgAlertWireErrors(t *testing.T) {
 	baseMsgAlert.Payload.SetCancel = make([]int32, maxCountSetCancel+1)
 	buf := *new(bytes.Buffer)
 	err = baseMsgAlert.BtcEncode(&buf, pver, encoding)
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("MsgAlert.BtcEncode wrong error got: %T, want: %T",
-			err, MessageError{})
+			err, MessageError.Default())
 	}
 
 	// overflow the max number of elements in SetSubVer
@@ -279,9 +261,9 @@ func TestMsgAlertWireErrors(t *testing.T) {
 	baseMsgAlert.Payload.SetSubVer = make([]string, maxCountSetSubVer+1)
 	buf = *new(bytes.Buffer)
 	err = baseMsgAlert.BtcEncode(&buf, pver, encoding)
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("MsgAlert.BtcEncode wrong error got: %T, want: %T",
-			err, MessageError{})
+			err, MessageError.Default())
 	}
 }
 
@@ -297,12 +279,12 @@ func TestAlert(t *testing.T) {
 	w := new(bytes.Buffer)
 	err := alert.Serialize(w, pver)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err.String())
 	}
 	serializedpayload := w.Bytes()
 	newAlert, err := NewAlertFromPayload(serializedpayload, pver)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err.String())
 	}
 
 	if alert.Version != newAlert.Version {
@@ -393,36 +375,36 @@ func TestAlertErrors(t *testing.T) {
 		buf      []byte // Wire encoding
 		pver     uint32 // Protocol version for wire encoding
 		max      int    // Max size of fixed buffer to induce errors
-		writeErr error  // Expected write error
-		readErr  error  // Expected read error
+		writeErr er.R   // Expected write error
+		readErr  er.R   // Expected read error
 	}{
 		// Force error in Version
-		{baseAlert, baseAlertEncoded, pver, 0, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 0, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in SetCancel VarInt.
-		{baseAlert, baseAlertEncoded, pver, 28, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 28, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in SetCancel ints.
-		{baseAlert, baseAlertEncoded, pver, 29, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 29, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in MinVer
-		{baseAlert, baseAlertEncoded, pver, 40, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 40, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in SetSubVer string VarInt.
-		{baseAlert, baseAlertEncoded, pver, 41, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 41, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in SetSubVer strings.
-		{baseAlert, baseAlertEncoded, pver, 48, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 48, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in Priority
-		{baseAlert, baseAlertEncoded, pver, 60, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 60, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in Comment string.
-		{baseAlert, baseAlertEncoded, pver, 62, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 62, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in StatusBar string.
-		{baseAlert, baseAlertEncoded, pver, 64, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 64, er.E(io.ErrShortWrite), er.E(io.EOF)},
 		// Force error in Reserved string.
-		{baseAlert, baseAlertEncoded, pver, 70, io.ErrShortWrite, io.EOF},
+		{baseAlert, baseAlertEncoded, pver, 70, er.E(io.ErrShortWrite), er.E(io.EOF)},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		w := newFixedWriter(test.max)
 		err := test.in.Serialize(w, test.pver)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
+		if !er.FuzzyEquals(err, test.writeErr) {
 			t.Errorf("Alert.Serialize #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
@@ -431,7 +413,7 @@ func TestAlertErrors(t *testing.T) {
 		var alert Alert
 		r := newFixedReader(test.max, test.buf)
 		err = alert.Deserialize(r, test.pver)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("Alert.Deserialize #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
@@ -451,9 +433,9 @@ func TestAlertErrors(t *testing.T) {
 	var alert Alert
 	r := bytes.NewReader(badAlertEncoded)
 	err := alert.Deserialize(r, pver)
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("Alert.Deserialize wrong error got: %T, want: %T",
-			err, MessageError{})
+			err, MessageError.Default())
 	}
 
 	// overflow the max number of elements in SetSubVer
@@ -468,8 +450,8 @@ func TestAlertErrors(t *testing.T) {
 	}
 	r = bytes.NewReader(badAlertEncoded)
 	err = alert.Deserialize(r, pver)
-	if _, ok := err.(*MessageError); !ok {
+	if !MessageError.Is(err) {
 		t.Errorf("Alert.Deserialize wrong error got: %T, want: %T",
-			err, MessageError{})
+			err, MessageError.Default())
 	}
 }

@@ -12,19 +12,21 @@ package fullblocktests
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"runtime"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 const (
@@ -86,7 +88,7 @@ type RejectedBlock struct {
 	Name       string
 	Block      *wire.MsgBlock
 	Height     int32
-	RejectCode blockchain.ErrorCode
+	RejectCode *er.ErrorCode
 }
 
 // Ensure RejectedBlock implements the TestInstance interface.
@@ -197,7 +199,7 @@ type testGenerator struct {
 
 // makeTestGenerator returns a test generator instance initialized with the
 // genesis block as the tip.
-func makeTestGenerator(params *chaincfg.Params) (testGenerator, error) {
+func makeTestGenerator(params *chaincfg.Params) (testGenerator, er.R) {
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), []byte{0x01})
 	genesis := params.GenesisBlock
 	genesisHash := genesis.BlockHash()
@@ -243,7 +245,7 @@ func pushDataScript(items ...[]byte) []byte {
 // standardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks.
-func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, error) {
+func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, er.R) {
 	return txscript.NewScriptBuilder().AddInt64(int64(blockHeight)).
 		AddInt64(int64(extraNonce)).Script()
 }
@@ -788,7 +790,7 @@ func (g *testGenerator) assertTipBlockTxOutOpReturn(txIndex, txOutIndex uint32) 
 // contains additional information about the expected result, however that
 // information can be ignored when doing comparison tests between two
 // independent versions over the peer-to-peer network.
-func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
+func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 	// In order to simplify the generation code which really should never
 	// fail unless the test code itself is broken, panics are used
 	// internally.  This deferred func ensures any panics don't escape the
@@ -800,11 +802,11 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 
 			switch rt := r.(type) {
 			case string:
-				err = errors.New(rt)
-			case error:
+				err = er.New(rt)
+			case er.R:
 				err = rt
 			default:
-				err = errors.New("Unknown panic")
+				err = er.New("Unknown panic")
 			}
 		}
 	}()
@@ -840,7 +842,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		return AcceptedBlock{blockName, block, blockHeight, isMainChain,
 			isOrphan}
 	}
-	rejectBlock := func(blockName string, block *wire.MsgBlock, code blockchain.ErrorCode) TestInstance {
+	rejectBlock := func(blockName string, block *wire.MsgBlock, code *er.ErrorCode) TestInstance {
 		blockHeight := g.blockHeights[blockName]
 		return RejectedBlock{blockName, block, blockHeight, code}
 	}
@@ -890,7 +892,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 			expectTipBlock(tipName, g.blocksByName[tipName]),
 		})
 	}
-	rejected := func(code blockchain.ErrorCode) {
+	rejected := func(code *er.ErrorCode) {
 		tests = append(tests, []TestInstance{
 			rejectBlock(g.tipName, g.tip, code),
 		})
@@ -997,7 +999,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	acceptedToSideChainWithExpectedTip("b6")
 
 	g.nextBlock("b8", outs[4])
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// ---------------------------------------------------------------------
 	// Too much proof-of-work coinbase tests.
@@ -1010,7 +1012,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//               \-> b3(1) -> b4(2)
 	g.setTip("b6")
 	g.nextBlock("b9", outs[4], additionalCoinbase(1))
-	rejected(blockchain.ErrBadCoinbaseValue)
+	rejected(ruleerror.ErrBadCoinbaseValue)
 
 	// Create a fork that ends with block that generates too much coinbase.
 	//
@@ -1022,7 +1024,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	acceptedToSideChainWithExpectedTip("b6")
 
 	g.nextBlock("b11", outs[4], additionalCoinbase(1))
-	rejected(blockchain.ErrBadCoinbaseValue)
+	rejected(ruleerror.ErrBadCoinbaseValue)
 
 	// Create a fork that ends with block that generates too much coinbase
 	// as before, but with a valid fork first.
@@ -1038,7 +1040,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	tests = append(tests, []TestInstance{
 		acceptBlock("b13", b13, false, true),
 		acceptBlock("b14", b14, false, true),
-		rejectBlock("b12", b12, blockchain.ErrBadCoinbaseValue),
+		rejectBlock("b12", b12, ruleerror.ErrBadCoinbaseValue),
 		expectTipBlock("b13", b13),
 	})
 
@@ -1065,7 +1067,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	tooManySigOps := repeatOpcode(txscript.OP_CHECKSIG, maxBlockSigOps+1)
 	g.nextBlock("b16", outs[6], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// ---------------------------------------------------------------------
 	// Cross-fork spend tests.
@@ -1078,7 +1080,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//    \-> b3(1) -> b4(2)
 	g.setTip("b15")
 	g.nextBlock("b17", &b3Tx1Out)
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// Create block that forks and spends a tx created on a third fork.
 	//
@@ -1090,7 +1092,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	acceptedToSideChainWithExpectedTip("b15")
 
 	g.nextBlock("b19", outs[6])
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// ---------------------------------------------------------------------
 	// Immature coinbase tests.
@@ -1102,7 +1104,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//                          \-> b20(7)
 	g.setTip("b15")
 	g.nextBlock("b20", outs[7])
-	rejected(blockchain.ErrImmatureSpend)
+	rejected(ruleerror.ErrImmatureSpend)
 
 	// Create block that spends immature coinbase on a fork.
 	//
@@ -1113,7 +1115,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	acceptedToSideChainWithExpectedTip("b15")
 
 	g.nextBlock("b22", outs[7])
-	rejected(blockchain.ErrImmatureSpend)
+	rejected(ruleerror.ErrImmatureSpend)
 
 	// ---------------------------------------------------------------------
 	// Max block size tests.
@@ -1143,7 +1145,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		replaceSpendScript(sizePadScript)(b)
 	})
 	g.assertTipBlockSize(maxBlockSize + 1)
-	rejected(blockchain.ErrBlockTooBig)
+	rejected(ruleerror.ErrBlockTooBig)
 
 	// Parent was rejected, so this block must either be an orphan or
 	// outright rejected due to an invalid parent.
@@ -1163,7 +1165,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.setTip("b15")
 	tooSmallCbScript := repeatOpcode(0x00, minCoinbaseScriptLen-1)
 	g.nextBlock("b26", outs[6], replaceCoinbaseSigScript(tooSmallCbScript))
-	rejected(blockchain.ErrBadCoinbaseScriptLen)
+	rejected(ruleerror.ErrBadCoinbaseScriptLen)
 
 	// Parent was rejected, so this block must either be an orphan or
 	// outright rejected due to an invalid parent.
@@ -1179,7 +1181,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.setTip("b15")
 	tooLargeCbScript := repeatOpcode(0x00, maxCoinbaseScriptLen+1)
 	g.nextBlock("b28", outs[6], replaceCoinbaseSigScript(tooLargeCbScript))
-	rejected(blockchain.ErrBadCoinbaseScriptLen)
+	rejected(ruleerror.ErrBadCoinbaseScriptLen)
 
 	// Parent was rejected, so this block must either be an orphan or
 	// outright rejected due to an invalid parent.
@@ -1216,10 +1218,10 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//
 	// OP_CHECKMULTISIG counts for 20 sigops.
 	tooManySigOps = repeatOpcode(txscript.OP_CHECKMULTISIG, maxBlockSigOps/20)
-	tooManySigOps = append(manySigOps, txscript.OP_CHECKSIG)
+	tooManySigOps = append(tooManySigOps, txscript.OP_CHECKSIG)
 	g.nextBlock("b32", outs[9], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// Create block with max signature operations as OP_CHECKMULTISIGVERIFY.
 	//
@@ -1237,10 +1239,10 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//                \-> b34(10)
 	//
 	tooManySigOps = repeatOpcode(txscript.OP_CHECKMULTISIGVERIFY, maxBlockSigOps/20)
-	tooManySigOps = append(manySigOps, txscript.OP_CHECKSIG)
+	tooManySigOps = append(tooManySigOps, txscript.OP_CHECKSIG)
 	g.nextBlock("b34", outs[10], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// Create block with max signature operations as OP_CHECKSIGVERIFY.
 	//
@@ -1261,7 +1263,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	tooManySigOps = repeatOpcode(txscript.OP_CHECKSIGVERIFY, maxBlockSigOps+1)
 	g.nextBlock("b36", outs[11], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// ---------------------------------------------------------------------
 	// Spending of tx outputs in block that failed to connect tests.
@@ -1278,11 +1280,11 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	doubleSpendTx := createSpendTx(outs[11], lowFee)
 	g.nextBlock("b37", outs[11], additionalTx(doubleSpendTx))
 	b37Tx1Out := makeSpendableOut(g.tip, 1, 0)
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	g.setTip("b35")
 	g.nextBlock("b38", &b37Tx1Out)
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// ---------------------------------------------------------------------
 	// Pay-to-script-hash signature operation count tests.
@@ -1354,7 +1356,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		tx.TxOut[0].PkScript = repeatOpcode(txscript.OP_CHECKSIG, fill)
 		b.AddTransaction(tx)
 	})
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// Create a block with the max allowed signature operations where the
 	// majority of them are in pay-to-script-hash scripts.
@@ -1417,7 +1419,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		nonCoinbaseTx := createSpendTx(outs[14], lowFee)
 		b.Transactions[0] = nonCoinbaseTx
 	})
-	rejected(blockchain.ErrFirstTxNotCoinbase)
+	rejected(ruleerror.ErrFirstTxNotCoinbase)
 
 	// Create block with no transactions.
 	//
@@ -1427,7 +1429,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b45", nil, func(b *wire.MsgBlock) {
 		b.Transactions = nil
 	})
-	rejected(blockchain.ErrNoTransactions)
+	rejected(ruleerror.ErrNoTransactions)
 
 	// Create block with invalid proof of work.
 	//
@@ -1452,7 +1454,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		}
 		g.updateBlockState("b46", origHash, "b46", b46)
 	}
-	rejected(blockchain.ErrHighHash)
+	rejected(ruleerror.ErrHighHash)
 
 	// Create block with a timestamp too far in the future.
 	//
@@ -1464,7 +1466,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		nowPlus3Hours := time.Now().Add(time.Hour * 3)
 		b.Header.Timestamp = time.Unix(nowPlus3Hours.Unix(), 0)
 	})
-	rejected(blockchain.ErrTimeTooNew)
+	rejected(ruleerror.ErrTimeTooNew)
 
 	// Create block with an invalid merkle root.
 	//
@@ -1474,7 +1476,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b48", outs[14], func(b *wire.MsgBlock) {
 		b.Header.MerkleRoot = chainhash.Hash{}
 	})
-	rejected(blockchain.ErrBadMerkleRoot)
+	rejected(ruleerror.ErrBadMerkleRoot)
 
 	// Create block with an invalid proof-of-work limit.
 	//
@@ -1484,7 +1486,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b49", outs[14], func(b *wire.MsgBlock) {
 		b.Header.Bits--
 	})
-	rejected(blockchain.ErrUnexpectedDifficulty)
+	rejected(ruleerror.ErrUnexpectedDifficulty)
 
 	// Create block with an invalid negative proof-of-work limit.
 	//
@@ -1500,7 +1502,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b49a.Header.Bits = 0x01810000 // -1 in compact form.
 		g.updateBlockState("b49a", origHash, "b49a", b49a)
 	}
-	rejected(blockchain.ErrUnexpectedDifficulty)
+	rejected(ruleerror.ErrUnexpectedDifficulty)
 
 	// Create block with two coinbase transactions.
 	//
@@ -1509,7 +1511,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.setTip("b43")
 	coinbaseTx := g.createCoinbaseTx(g.tipHeight + 1)
 	g.nextBlock("b50", outs[14], additionalTx(coinbaseTx))
-	rejected(blockchain.ErrMultipleCoinbases)
+	rejected(ruleerror.ErrMultipleCoinbases)
 
 	// Create block with duplicate transactions.
 	//
@@ -1523,7 +1525,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.AddTransaction(b.Transactions[1])
 	})
 	g.assertTipBlockNumTxns(3)
-	rejected(blockchain.ErrDuplicateTx)
+	rejected(ruleerror.ErrDuplicateTx)
 
 	// Create a block that spends a transaction that does not exist.
 	//
@@ -1536,7 +1538,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.Transactions[1].TxIn[0].PreviousOutPoint.Hash = *hash
 		b.Transactions[1].TxIn[0].PreviousOutPoint.Index = 0
 	})
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// ---------------------------------------------------------------------
 	// Block header median time tests.
@@ -1561,7 +1563,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		}
 		b.Header.Timestamp = medianBlock.Header.Timestamp
 	})
-	rejected(blockchain.ErrTimeTooOld)
+	rejected(ruleerror.ErrTimeTooOld)
 
 	// Create a block with a timestamp that is one second after the median
 	// time.  The block must be accepted.
@@ -1632,7 +1634,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.assertTipBlockNumTxns(4)
 	g.assertTipBlockHash(b57.BlockHash())
 	g.assertTipBlockMerkleRoot(b57.Header.MerkleRoot)
-	rejected(blockchain.ErrDuplicateTx)
+	rejected(ruleerror.ErrDuplicateTx)
 
 	// Since the two blocks have the same hash and the generator state now
 	// has b56 associated with the hash, manually remove b56, replace it
@@ -1673,7 +1675,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.AddTransaction(b.Transactions[3])
 	})
 	g.assertTipBlockNumTxns(8)
-	rejected(blockchain.ErrDuplicateTx)
+	rejected(ruleerror.ErrDuplicateTx)
 
 	// ---------------------------------------------------------------------
 	// Invalid transaction type tests.
@@ -1688,7 +1690,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b58", outs[17], func(b *wire.MsgBlock) {
 		b.Transactions[1].TxIn[0].PreviousOutPoint.Index = 42
 	})
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// Create block with transaction that pays more than its inputs.
 	//
@@ -1698,7 +1700,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b59", outs[17], func(b *wire.MsgBlock) {
 		b.Transactions[1].TxOut[0].Value = int64(outs[17].amount) + 1
 	})
-	rejected(blockchain.ErrSpendTooHigh)
+	rejected(ruleerror.ErrSpendTooHigh)
 
 	// ---------------------------------------------------------------------
 	// BIP0030 tests.
@@ -1722,7 +1724,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		parent := g.blocks[b.Header.PrevBlock]
 		b.Transactions[0] = parent.Transactions[0]
 	})
-	rejected(blockchain.ErrOverwriteTx)
+	rejected(ruleerror.ErrOverwriteTx)
 
 	// ---------------------------------------------------------------------
 	// Blocks with non-final transaction tests.
@@ -1740,7 +1742,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.Transactions[1].LockTime = 0xffffffff
 		b.Transactions[1].TxIn[0].Sequence = 0
 	})
-	rejected(blockchain.ErrUnfinalizedTx)
+	rejected(ruleerror.ErrUnfinalizedTx)
 
 	// Create block that contains a non-final coinbase transaction.
 	//
@@ -1754,7 +1756,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.Transactions[0].LockTime = 0xffffffff
 		b.Transactions[0].TxIn[0].Sequence = 0
 	})
-	rejected(blockchain.ErrUnfinalizedTx)
+	rejected(ruleerror.ErrUnfinalizedTx)
 
 	// ---------------------------------------------------------------------
 	// Non-canonical variable-length integer tests.
@@ -1816,7 +1818,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.AddTransaction(tx3)
 		b.AddTransaction(tx2)
 	})
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// Create block that double spends a transaction created in the same
 	// block.
@@ -1831,7 +1833,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		b.AddTransaction(tx3)
 		b.AddTransaction(tx4)
 	})
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// ---------------------------------------------------------------------
 	// Extra subsidy tests.
@@ -1844,7 +1846,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//                 \-> b68(20)
 	g.setTip("b65")
 	g.nextBlock("b68", outs[20], additionalCoinbase(10), additionalSpendFee(9))
-	rejected(blockchain.ErrBadCoinbaseValue)
+	rejected(ruleerror.ErrBadCoinbaseValue)
 
 	// Create block that pays 10 extra to the coinbase and a tx that pays
 	// the extra 10 fee.
@@ -1892,7 +1894,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		maxScriptElementSize+1)
 	g.nextBlock("b70", outs[21], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// Create block with more than max allowed signature operations such
 	// that the signature operation that pushes it over the limit is before
@@ -1908,7 +1910,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	binary.LittleEndian.PutUint32(tooManySigOps[maxBlockSigOps+2:], 0xffffffff)
 	g.nextBlock("b71", outs[21], replaceSpendScript(tooManySigOps))
 	g.assertTipBlockSigOpsCount(maxBlockSigOps + 1)
-	rejected(blockchain.ErrTooManySigOps)
+	rejected(ruleerror.ErrTooManySigOps)
 
 	// Create block with the max allowed signature operations such that all
 	// counted signature operations are before an invalid push data that
@@ -2022,7 +2024,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	// to effective negate that behavior.
 	b75OpReturnOut.amount++
 	g.nextBlock("b80", &b75OpReturnOut)
-	rejected(blockchain.ErrMissingTxOut)
+	rejected(ruleerror.ErrMissingTxOut)
 
 	// Create a block that has a transaction with multiple OP_RETURNs.  Even
 	// though it's not considered a standard transaction, it is still valid
@@ -2099,9 +2101,8 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//      \-> bralt0 -> ... -> bralt#
 	g.setTip(reorgStartBlockName)
 	testInstances = nil
-	chain2TipName := g.tipName
 	for i := uint16(0); i < numLargeReorgBlocks; i++ {
-		chain2TipName = fmt.Sprintf("bralt%d", i)
+		chain2TipName := fmt.Sprintf("bralt%d", i)
 		g.nextBlock(chain2TipName, nil)
 		testInstances = append(testInstances, acceptBlock(g.tipName,
 			g.tip, false, false))
@@ -2115,7 +2116,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//   ... -> bralt0 -> ... -> bralt# -> bralt#+1
 	//      \-> br0    -> ... -> br#
 	g.nextBlock(fmt.Sprintf("bralt%d", g.tipHeight+1), nil)
-	chain2TipName = g.tipName
+	chain2TipName := g.tipName
 	accepted()
 
 	// Extend the first chain by two to force a large reorg back to it.
@@ -2124,11 +2125,9 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//      \-> bralt0 -> ... -> bralt# -> bralt#+1
 	g.setTip(chain1TipName)
 	g.nextBlock(fmt.Sprintf("br%d", g.tipHeight+1), nil)
-	chain1TipName = g.tipName
 	acceptedToSideChainWithExpectedTip(chain2TipName)
 
 	g.nextBlock(fmt.Sprintf("br%d", g.tipHeight+2), nil)
-	chain1TipName = g.tipName
 	accepted()
 
 	return tests, nil

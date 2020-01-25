@@ -5,12 +5,13 @@
 package addrmgr_test
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/wire"
@@ -98,8 +99,8 @@ func addNaTest(ip string, port uint16, want string) {
 	naTests = append(naTests, test)
 }
 
-func lookupFunc(host string) ([]net.IP, error) {
-	return nil, errors.New("not implemented")
+func lookupFunc(host string) ([]net.IP, er.R) {
+	return nil, er.New("not implemented")
 }
 
 func TestStartStop(t *testing.T) {
@@ -147,7 +148,7 @@ func TestAddAddressByIP(t *testing.T) {
 			t.Errorf("TestGood test %d failed expected no error and got one", i)
 			continue
 		}
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if reflect.TypeOf(er.Wrapped(err)) != reflect.TypeOf(test.err) {
 			t.Errorf("TestGood test %d failed got %v, want %v", i,
 				reflect.TypeOf(err), reflect.TypeOf(test.err))
 			continue
@@ -259,7 +260,7 @@ func TestNeedMoreAddresses(t *testing.T) {
 	}
 	addrs := make([]*wire.NetAddress, addrsToAdd)
 
-	var err error
+	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.%d.173.147:8333", i/128+60, i%128+60)
 		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
@@ -287,7 +288,7 @@ func TestGood(t *testing.T) {
 	addrsToAdd := 64 * 64
 	addrs := make([]*wire.NetAddress, addrsToAdd)
 
-	var err error
+	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.173.147.%d:8333", i/64+60, i%64+60)
 		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)

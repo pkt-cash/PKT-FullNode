@@ -6,11 +6,12 @@
 package chaincfg
 
 import (
-	"errors"
 	"math"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -523,19 +524,7 @@ var PktTestNetParams = Params{
 	},
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
-		HasNetworkSteward:    true,
-		SatoshiPerBitcoin:    0x40000000,
-		MaxSatoshi:           0x40000000 * 6000000000,
-
-		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
-		// algorithm depends on the number being odd
-		MedianTimeBlocks: 111,
-
-		// 1/10th that of bitcoin, because blocks come at a 10x rate
-		MaxTimeOffsetSeconds: 60 * 12,
-	},
+	GlobalConf: globalcfg.PktDefaults(),
 	InitialNetworkSteward: []byte{
 		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
 		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,
@@ -619,19 +608,7 @@ var PktMainNetParams = Params{
 	},
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowPacketCrypt,
-		HasNetworkSteward:    true,
-		SatoshiPerBitcoin:    0x40000000,
-		MaxSatoshi:           0x40000000 * 6000000000,
-
-		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
-		// algorithm depends on the number being odd
-		MedianTimeBlocks: 111,
-
-		// 1/10th that of bitcoin, because blocks come at a 10x rate
-		MaxTimeOffsetSeconds: 60 * 12,
-	},
+	GlobalConf: globalcfg.PktDefaults(),
 	InitialNetworkSteward: []byte{
 		0x00, 0x20, 0xd5, 0xc1, 0x00, 0x5c, 0x0d, 0x40,
 		0x12, 0xd3, 0xae, 0x26, 0x72, 0x31, 0x9e, 0x7f,
@@ -729,9 +706,7 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-	GlobalConf: globalcfg.Config{
-		ProofOfWorkAlgorithm: globalcfg.PowSha256,
-	},
+	GlobalConf:               globalcfg.BitcoinDefaults(),
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
@@ -802,12 +777,14 @@ var (
 	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
 	// network could not be set due to the network already being a standard
 	// network or previously-registered into this package.
-	ErrDuplicateNet = errors.New("duplicate Bitcoin network")
+	ErrDuplicateNet = er.GenericErrorType.CodeWithDetail("ErrDuplicateNet",
+		"duplicate Bitcoin network")
 
 	// ErrUnknownHDKeyID describes an error where the provided id which
 	// is intended to identify the network for a hierarchical deterministic
 	// private extended key is not registered.
-	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
+	ErrUnknownHDKeyID = er.GenericErrorType.CodeWithDetail("ErrUnknownHDKeyID",
+		"unknown hd private extended key bytes")
 )
 
 var (
@@ -832,9 +809,9 @@ func (d DNSSeed) String() string {
 // as early as possible.  Then, library packages may lookup networks or network
 // parameters based on inputs and work regardless of the network being standard
 // or not.
-func Register(params *Params) error {
+func Register(params *Params) er.R {
 	if _, ok := registeredNets[params.Net]; ok {
-		return ErrDuplicateNet
+		return ErrDuplicateNet.Default()
 	}
 	registeredNets[params.Net] = struct{}{}
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
@@ -851,7 +828,7 @@ func Register(params *Params) error {
 // is an error.  This should only be called from package init functions.
 func mustRegister(params *Params) {
 	if err := Register(params); err != nil {
-		panic("failed to register network: " + err.Error())
+		panic("failed to register network: " + err.String())
 	}
 }
 
@@ -889,16 +866,16 @@ func IsBech32SegwitPrefix(prefix string) bool {
 // HDPrivateKeyToPublicKeyID accepts a private hierarchical deterministic
 // extended key id and returns the associated public key id.  When the provided
 // id is not registered, the ErrUnknownHDKeyID error will be returned.
-func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, error) {
+func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, er.R) {
 	if len(id) != 4 {
-		return nil, ErrUnknownHDKeyID
+		return nil, ErrUnknownHDKeyID.Default()
 	}
 
 	var key [4]byte
 	copy(key[:], id)
 	pubBytes, ok := hdPrivToPubKeyIDs[key]
 	if !ok {
-		return nil, ErrUnknownHDKeyID
+		return nil, ErrUnknownHDKeyID.Default()
 	}
 
 	return pubBytes, nil

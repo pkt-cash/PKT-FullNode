@@ -6,8 +6,9 @@ package interpret
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
@@ -25,7 +26,7 @@ const RandHash_MEMORY_SZ int = 256
 const RandHash_INOUT_SZ int64 = 256
 
 func getReg(stack []uint32, index uint32) uint32 {
-	if index < 0 || index > uint32(len(stack)) {
+	if index > uint32(len(stack)) {
 		panic("reference to out-of-bounds register")
 	}
 	return stack[index]
@@ -70,16 +71,6 @@ func out2(ctx *Context, a uint64) {
 func out4(ctx *Context, a uint128) {
 	ctx.varCount += 4
 	ctx.stack = append(ctx.stack, U128_0(a), U128_1(a), U128_2(a), U128_3(a))
-}
-
-// for testing
-func out1x(inout []uint32, x uint32) { inout[4] = x }
-func out2x(inout []uint32, x uint64) { inout[4] = uint32(x); inout[5] = uint32(x >> 32) }
-func out4x(inout []uint32, a uint128) {
-	inout[4] = U128_0(a)
-	inout[5] = U128_1(a)
-	inout[6] = U128_2(a)
-	inout[7] = U128_3(a)
 }
 
 type Context struct {
@@ -249,7 +240,7 @@ func interpret(ctx *Context, pc int) int {
 	}
 }
 
-func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
+func Interpret(prog []uint32, ccState, memory []byte, cycles int) er.R {
 	if len(memory) < RandHash_MEMORY_SZ*4 {
 		panic("memory size too small")
 	}
@@ -268,9 +259,9 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) error {
 		interpret(&ctx, 0)
 
 		if ctx.opCtr > util.Conf_RandHash_MAX_OPS {
-			return errors.New("RandHash_TOO_LONG")
+			return er.New("RandHash_TOO_LONG")
 		} else if ctx.opCtr < util.Conf_RandHash_MIN_OPS {
-			return errors.New("RandHash_TOO_SHORT")
+			return er.New("RandHash_TOO_SHORT")
 		}
 
 		ctx.hashctr = 0

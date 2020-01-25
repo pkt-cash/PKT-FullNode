@@ -10,9 +10,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // txValidateItem holds a transaction along with which input to validate.
@@ -29,7 +32,7 @@ type txValidateItem struct {
 type txValidator struct {
 	validateChan chan *txValidateItem
 	quitChan     chan struct{}
-	resultChan   chan error
+	resultChan   chan er.R
 	utxoView     *UtxoViewpoint
 	flags        txscript.ScriptFlags
 	sigCache     *txscript.SigCache
@@ -40,7 +43,7 @@ type txValidator struct {
 // result channel while respecting the quit channel.  This allows orderly
 // shutdown when the validation process is aborted early due to a validation
 // error in one of the other goroutines.
-func (v *txValidator) sendResult(result error) {
+func (v *txValidator) sendResult(result er.R) {
 	select {
 	case v.resultChan <- result:
 	case <-v.quitChan:
@@ -64,7 +67,7 @@ out:
 					"transaction %s:%d",
 					txIn.PreviousOutPoint, txVI.tx.Hash(),
 					txVI.txInIndex)
-				err := ruleError(ErrMissingTxOut, str)
+				err := ruleerror.ErrMissingTxOut.New(str, nil)
 				v.sendResult(err)
 				break out
 			}
@@ -85,7 +88,7 @@ out:
 					txVI.tx.Hash(), txVI.txInIndex,
 					txIn.PreviousOutPoint, err, witness,
 					sigScript, pkScript)
-				err := ruleError(ErrScriptMalformed, str)
+				err := ruleerror.ErrScriptMalformed.New(str, nil)
 				v.sendResult(err)
 				break out
 			}
@@ -99,7 +102,7 @@ out:
 					txVI.tx.Hash(), txVI.txInIndex,
 					txIn.PreviousOutPoint, err, witness,
 					sigScript, pkScript)
-				err := ruleError(ErrScriptValidation, str)
+				err := ruleerror.ErrScriptValidation.New(str, nil)
 				v.sendResult(err)
 				break out
 			}
@@ -115,7 +118,7 @@ out:
 
 // Validate validates the scripts for all of the passed transaction inputs using
 // multiple goroutines.
-func (v *txValidator) Validate(items []*txValidateItem) error {
+func (v *txValidator) Validate(items []*txValidateItem) er.R {
 	if len(items) == 0 {
 		return nil
 	}
@@ -178,7 +181,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
-		resultChan:   make(chan error),
+		resultChan:   make(chan er.R),
 		utxoView:     utxoView,
 		sigCache:     sigCache,
 		hashCache:    hashCache,
@@ -190,7 +193,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 // using multiple goroutines.
 func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 	flags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache) error {
+	hashCache *txscript.HashCache) er.R {
 
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.
@@ -242,7 +245,7 @@ func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 // the passed block using multiple goroutines.
 func checkBlockScripts(block *btcutil.Block, utxoView *UtxoViewpoint,
 	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache) error {
+	hashCache *txscript.HashCache) er.R {
 
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.

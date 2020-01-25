@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // makeParams creates a slice of interface values for the given struct.
@@ -35,7 +37,7 @@ func makeParams(rt reflect.Type, rv reflect.Value) []interface{} {
 // is suitable for transmission to an RPC server.  The provided command type
 // must be a registered type.  All commands provided by this package are
 // registered by default.
-func MarshalCmd(id interface{}, cmd interface{}) ([]byte, error) {
+func MarshalCmd(id interface{}, cmd interface{}) ([]byte, er.R) {
 	// Look up the cmd type and error out if not registered.
 	rt := reflect.TypeOf(cmd)
 	registerLock.RLock()
@@ -63,12 +65,13 @@ func MarshalCmd(id interface{}, cmd interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(rawCmd)
+	out, errr := json.Marshal(rawCmd)
+	return out, er.E(errr)
 }
 
 // checkNumParams ensures the supplied number of params is at least the minimum
 // required number for the command and less than the maximum allowed.
-func checkNumParams(numParams int, info *methodInfo) error {
+func checkNumParams(numParams int, info *methodInfo) er.R {
 	if numParams < info.numReqParams || numParams > info.maxParams {
 		if info.numReqParams == info.maxParams {
 			str := fmt.Sprintf("wrong number of params (expected "+
@@ -107,7 +110,7 @@ func populateDefaults(numParams int, info *methodInfo, rv reflect.Value) {
 // UnmarshalCmd unmarshals a JSON-RPC request into a suitable concrete command
 // so long as the method type contained within the marshalled request is
 // registered.
-func UnmarshalCmd(r *Request) (interface{}, error) {
+func UnmarshalCmd(r *Request) (interface{}, er.R) {
 	registerLock.RLock()
 	rtp, ok := methodToConcreteType[r.Method]
 	info := methodToInfo[r.Method]
@@ -233,7 +236,7 @@ func baseType(arg reflect.Type) (reflect.Type, int) {
 // direct type assignments, indirection, conversion of numeric types, and
 // unmarshaling of strings into arrays, slices, structs, and maps via
 // json.Unmarshal.
-func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect.Value) error {
+func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect.Value) er.R {
 	// Just error now when the types have no chance of being compatible.
 	destBaseType, destIndirects := baseType(dest.Type())
 	srcBaseType, srcIndirects := baseType(src.Type())
@@ -508,7 +511,7 @@ func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect
 //   - Conversion from string to arrays, slices, structs, and maps by treating
 //     the string as marshalled JSON and calling json.Unmarshal into the
 //     destination field
-func NewCmd(method string, args ...interface{}) (interface{}, error) {
+func NewCmd(method string, args ...interface{}) (interface{}, er.R) {
 	// Look up details about the provided method.  Any methods that aren't
 	// registered are an error.
 	registerLock.RLock()

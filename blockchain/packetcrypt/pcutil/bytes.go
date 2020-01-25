@@ -4,35 +4,6 @@
 
 package pcutil
 
-import "encoding/binary"
-
-func U32FromB(out []uint32, b []byte) []uint32 {
-	if len(b)%4 != 0 {
-		panic("length of b must be a multiple of 4")
-	}
-	if out == nil {
-		out = make([]uint32, len(b)/4)
-	} else {
-		out = out[:len(b)/4]
-	}
-	for i := 0; i < len(out); i++ {
-		out[i] = binary.LittleEndian.Uint32(b[i*4:][:4])
-	}
-	return out
-}
-
-func BFromU32(out []byte, in []uint32) []byte {
-	if out == nil {
-		out = make([]byte, len(in)*4)
-	} else {
-		out = out[:len(in)*4]
-	}
-	for i := 0; i < len(in); i++ {
-		binary.LittleEndian.PutUint32(out[i*4:][:4], in[i])
-	}
-	return out
-}
-
 func Memset(x []byte, y byte) {
 	for i := 0; i < len(x); i++ {
 		x[i] = y

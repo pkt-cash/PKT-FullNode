@@ -11,7 +11,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,52 +22,67 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
+	"github.com/pkt-cash/pktd/btcjson"
 )
+
+var Err er.ErrorType = er.NewErrorType("rpcclient.Err")
 
 var (
 	// ErrInvalidAuth is an error to describe the condition where the client
 	// is either unable to authenticate or the specified endpoint is
 	// incorrect.
-	ErrInvalidAuth = errors.New("authentication failure")
+	ErrInvalidAuth = Err.CodeWithDetail("ErrInvalidAuth",
+		"authentication failure")
 
 	// ErrInvalidEndpoint is an error to describe the condition where the
 	// websocket handshake failed with the specified endpoint.
-	ErrInvalidEndpoint = errors.New("the endpoint either does not support " +
-		"websockets or does not exist")
+	ErrInvalidEndpoint = Err.CodeWithDetail("ErrInvalidEndpoint",
+		"the endpoint either does not support websockets or does not exist")
 
 	// ErrClientNotConnected is an error to describe the condition where a
 	// websocket client has been created, but the connection was never
 	// established.  This condition differs from ErrClientDisconnect, which
 	// represents an established connection that was lost.
-	ErrClientNotConnected = errors.New("the client was never connected")
+	ErrClientNotConnected = Err.CodeWithDetail("ErrClientNotConnected",
+		"the client was never connected")
 
 	// ErrClientDisconnect is an error to describe the condition where the
 	// client has been disconnected from the RPC server.  When the
 	// DisableAutoReconnect option is not set, any outstanding futures
 	// when a client disconnect occurs will return this error as will
 	// any new requests.
-	ErrClientDisconnect = errors.New("the client has been disconnected")
+	ErrClientDisconnect = Err.CodeWithDetail("ErrClientDisconnect",
+		"the client has been disconnected")
 
 	// ErrClientShutdown is an error to describe the condition where the
 	// client is either already shutdown, or in the process of shutting
 	// down.  Any outstanding futures when a client shutdown occurs will
 	// return this error as will any new requests.
-	ErrClientShutdown = errors.New("the client has been shutdown")
+	ErrClientShutdown = Err.CodeWithDetail("ErrClientShutdown",
+		"the client has been shutdown")
 
 	// ErrNotWebsocketClient is an error to describe the condition of
 	// calling a Client method intended for a websocket client when the
 	// client has been configured to run in HTTP POST mode instead.
-	ErrNotWebsocketClient = errors.New("client is not configured for " +
-		"websockets")
+	ErrNotWebsocketClient = Err.CodeWithDetail("ErrNotWebsocketClient",
+		"client is not configured for websockets")
 
 	// ErrClientAlreadyConnected is an error to describe the condition where
 	// a new client connection cannot be established due to a websocket
 	// client having already connected to the RPC server.
-	ErrClientAlreadyConnected = errors.New("websocket client has already " +
-		"connected")
+	ErrClientAlreadyConnected = Err.CodeWithDetail("ErrClientAlreadyConnected",
+		"websocket client has already connected")
+
+	// ErrWebsocketsRequired is an error to describe the condition where the
+	// caller is trying to use a websocket-only feature, such as requesting
+	// notifications or other websocket requests when the client is
+	// configured to run in HTTP POST mode.
+	ErrWebsocketsRequired = Err.CodeWithDetail("ErrWebsocketsRequired",
+		"a websocket connection is required to use this feature")
 )
 
 const (
@@ -176,7 +190,7 @@ func (c *Client) NextID() uint64 {
 // and the request is not added.
 //
 // This function is safe for concurrent access.
-func (c *Client) addRequest(jReq *jsonRequest) error {
+func (c *Client) addRequest(jReq *jsonRequest) er.R {
 	c.requestLock.Lock()
 	defer c.requestLock.Unlock()
 
@@ -188,7 +202,7 @@ func (c *Client) addRequest(jReq *jsonRequest) error {
 	// ErrClientShutdown).
 	select {
 	case <-c.shutdown:
-		return ErrClientShutdown
+		return ErrClientShutdown.Default()
 	default:
 	}
 
@@ -282,8 +296,8 @@ type (
 	// rawResponse is a partially-unmarshaled JSON-RPC response.  For this
 	// to be valid (according to JSON-RPC 1.0 spec), ID may not be nil.
 	rawResponse struct {
-		Result json.RawMessage   `json:"result"`
-		Error  *btcjson.RPCError `json:"error"`
+		Result json.RawMessage `json:"result"`
+		Error  *btcjson.RPCErr `json:"error"`
 	}
 )
 
@@ -291,16 +305,21 @@ type (
 // error object was non-null.
 type response struct {
 	result []byte
-	err    error
+	err    er.R
 }
 
 // result checks whether the unmarshaled response contains a non-nil error,
 // returning an unmarshaled btcjson.RPCError (or an unmarshaling error) if so.
 // If the response is not an error, the raw bytes of the request are
 // returned for further unmashaling into specific result types.
-func (r rawResponse) result() (result []byte, err error) {
+func (r rawResponse) result() (result []byte, err er.R) {
 	if r.Error != nil {
-		return nil, r.Error
+		// Ideally we would include the stack here but it's too much effort
+		errCode := btcjson.Err.NumberToCode(r.Error.Code)
+		if errCode != nil {
+			return nil, errCode.New(r.Error.Message, nil)
+		}
+		return nil, er.New(r.Error.Message)
 	}
 	return r.Result, nil
 }
@@ -312,7 +331,7 @@ func (c *Client) handleMessage(msg []byte) {
 	var in inMessage
 	in.rawResponse = new(rawResponse)
 	in.rawNotification = new(rawNotification)
-	err := json.Unmarshal(msg, &in)
+	err := er.E(json.Unmarshal(msg, &in))
 	if err != nil {
 		log.Warnf("Remote server sent invalid message: %v", err)
 		return
@@ -409,12 +428,12 @@ out:
 		default:
 		}
 
-		_, msg, err := c.wsConn.ReadMessage()
-		if err != nil {
+		_, msg, errr := c.wsConn.ReadMessage()
+		if errr != nil {
 			// Log the error if it's not due to disconnecting.
-			if c.shouldLogReadError(err) {
+			if c.shouldLogReadError(errr) {
 				log.Errorf("Websocket receive error from "+
-					"%s: %v", c.config.Host, err)
+					"%s: %v", c.config.Host, errr)
 			}
 			break out
 		}
@@ -487,7 +506,7 @@ func (c *Client) sendMessage(marshalledJSON []byte) {
 // reregisterNtfns creates and sends commands needed to re-establish the current
 // notification state associated with the client.  It should only be called on
 // on reconnect by the resendRequests function.
-func (c *Client) reregisterNtfns() error {
+func (c *Client) reregisterNtfns() er.R {
 	// Nothing to do if the caller is not interested in notifications.
 	if c.ntfnHandlers == nil {
 		return nil
@@ -692,29 +711,29 @@ out:
 func (c *Client) handleSendPostMessage(details *sendPostDetails) {
 	jReq := details.jsonRequest
 	log.Tracef("Sending command [%s] with id %d", jReq.method, jReq.id)
-	httpResponse, err := c.httpClient.Do(details.httpRequest)
-	if err != nil {
-		jReq.responseChan <- &response{err: err}
+	httpResponse, errr := c.httpClient.Do(details.httpRequest)
+	if errr != nil {
+		jReq.responseChan <- &response{err: er.E(errr)}
 		return
 	}
 
 	// Read the raw bytes and close the response.
-	respBytes, err := ioutil.ReadAll(httpResponse.Body)
+	respBytes, errr := ioutil.ReadAll(httpResponse.Body)
 	httpResponse.Body.Close()
-	if err != nil {
-		err = fmt.Errorf("error reading json reply: %v", err)
+	if errr != nil {
+		err := er.Errorf("error reading json reply: %v", errr)
 		jReq.responseChan <- &response{err: err}
 		return
 	}
 
 	// Try to unmarshal the response as a regular JSON-RPC response.
 	var resp rawResponse
-	err = json.Unmarshal(respBytes, &resp)
+	err := er.E(json.Unmarshal(respBytes, &resp))
 	if err != nil {
 		// When the response itself isn't a valid JSON-RPC response
 		// return an error which includes the HTTP status code and raw
 		// response bytes.
-		err = fmt.Errorf("status code: %d, response: %q",
+		err = er.Errorf("status code: %d, response: %q",
 			httpResponse.StatusCode, string(respBytes))
 		jReq.responseChan <- &response{err: err}
 		return
@@ -750,7 +769,7 @@ cleanup:
 		case details := <-c.sendPostChan:
 			details.jsonRequest.responseChan <- &response{
 				result: nil,
-				err:    ErrClientShutdown,
+				err:    ErrClientShutdown.Default(),
 			}
 
 		default:
@@ -769,7 +788,7 @@ func (c *Client) sendPostRequest(httpReq *http.Request, jReq *jsonRequest) {
 	// Don't send the message if shutting down.
 	select {
 	case <-c.shutdown:
-		jReq.responseChan <- &response{result: nil, err: ErrClientShutdown}
+		jReq.responseChan <- &response{result: nil, err: ErrClientShutdown.Default()}
 	default:
 	}
 
@@ -782,7 +801,7 @@ func (c *Client) sendPostRequest(httpReq *http.Request, jReq *jsonRequest) {
 // newFutureError returns a new future result channel that already has the
 // passed error waitin on the channel with the reply set to nil.  This is useful
 // to easily return errors from the various Async functions.
-func newFutureError(err error) chan *response {
+func newFutureError(err er.R) chan *response {
 	responseChan := make(chan *response, 1)
 	responseChan <- &response{err: err}
 	return responseChan
@@ -792,7 +811,7 @@ func newFutureError(err error) chan *response {
 // reply or any errors.  The examined errors include an error in the
 // futureResult and the error in the reply from the server.  This will block
 // until the result is available on the passed channel.
-func receiveFuture(f chan *response) ([]byte, error) {
+func receiveFuture(f chan *response) ([]byte, er.R) {
 	// Wait for a response on the returned channel.
 	r := <-f
 	return r.result, r.err
@@ -813,7 +832,7 @@ func (c *Client) sendPost(jReq *jsonRequest) {
 	bodyReader := bytes.NewReader(jReq.marshalledJSON)
 	httpReq, err := http.NewRequest("POST", url, bodyReader)
 	if err != nil {
-		jReq.responseChan <- &response{result: nil, err: err}
+		jReq.responseChan <- &response{result: nil, err: er.E(err)}
 		return
 	}
 	httpReq.Close = true
@@ -844,7 +863,7 @@ func (c *Client) sendRequest(jReq *jsonRequest) {
 	select {
 	case <-c.connEstablished:
 	default:
-		jReq.responseChan <- &response{err: ErrClientNotConnected}
+		jReq.responseChan <- &response{err: ErrClientNotConnected.Default()}
 		return
 	}
 
@@ -890,15 +909,6 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 	c.sendRequest(jReq)
 
 	return responseChan
-}
-
-// sendCmdAndWait sends the passed command to the associated server, waits
-// for the reply, and returns the result from it.  It will return the error
-// field in the reply if there is one.
-func (c *Client) sendCmdAndWait(cmd interface{}) (interface{}, error) {
-	// Marshal the command to JSON-RPC, send it to the connected server, and
-	// wait for a response on the returned channel.
-	return receiveFuture(c.sendCmd(cmd))
 }
 
 // Disconnected returns whether or not the server is disconnected.  If a
@@ -981,7 +991,7 @@ func (c *Client) Disconnect() {
 			req := e.Value.(*jsonRequest)
 			req.responseChan <- &response{
 				result: nil,
-				err:    ErrClientDisconnect,
+				err:    ErrClientDisconnect.Default(),
 			}
 		}
 		c.removeAllRequests()
@@ -1009,7 +1019,7 @@ func (c *Client) Shutdown() {
 		req := e.Value.(*jsonRequest)
 		req.responseChan <- &response{
 			result: nil,
-			err:    ErrClientShutdown,
+			err:    ErrClientShutdown.Default(),
 		}
 	}
 	c.removeAllRequests()
@@ -1115,13 +1125,13 @@ type ConnConfig struct {
 
 // newHTTPClient returns a new http client that is configured according to the
 // proxy and TLS settings in the associated connection configuration.
-func newHTTPClient(config *ConnConfig) (*http.Client, error) {
+func newHTTPClient(config *ConnConfig) (*http.Client, er.R) {
 	// Set proxy function if there is a proxy configured.
 	var proxyFunc func(*http.Request) (*url.URL, error)
 	if config.Proxy != "" {
-		proxyURL, err := url.Parse(config.Proxy)
-		if err != nil {
-			return nil, err
+		proxyURL, errr := url.Parse(config.Proxy)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		proxyFunc = http.ProxyURL(proxyURL)
 	}
@@ -1150,7 +1160,7 @@ func newHTTPClient(config *ConnConfig) (*http.Client, error) {
 
 // dial opens a websocket connection using the passed connection configuration
 // details.
-func dial(config *ConnConfig) (*websocket.Conn, error) {
+func dial(config *ConnConfig) (*websocket.Conn, er.R) {
 	// Setup TLS if not disabled.
 	var tlsConfig *tls.Config
 	var scheme = "ws"
@@ -1189,28 +1199,28 @@ func dial(config *ConnConfig) (*websocket.Conn, error) {
 
 	// Dial the connection.
 	url := fmt.Sprintf("%s://%s/%s", scheme, config.Host, config.Endpoint)
-	wsConn, resp, err := dialer.Dial(url, requestHeader)
-	if err != nil {
-		if err != websocket.ErrBadHandshake || resp == nil {
-			return nil, err
+	wsConn, resp, errr := dialer.Dial(url, requestHeader)
+	if errr != nil {
+		if errr != websocket.ErrBadHandshake || resp == nil {
+			return nil, er.E(errr)
 		}
 
 		// Detect HTTP authentication error status codes.
 		if resp.StatusCode == http.StatusUnauthorized ||
 			resp.StatusCode == http.StatusForbidden {
-			return nil, ErrInvalidAuth
+			return nil, ErrInvalidAuth.Default()
 		}
 
 		// The connection was authenticated and the status response was
 		// ok, but the websocket handshake still failed, so the endpoint
 		// is invalid in some way.
 		if resp.StatusCode == http.StatusOK {
-			return nil, ErrInvalidEndpoint
+			return nil, ErrInvalidEndpoint.Default()
 		}
 
 		// Return the status text from the server if none of the special
 		// cases above apply.
-		return nil, errors.New(resp.Status)
+		return nil, er.New(resp.Status)
 	}
 	return wsConn, nil
 }
@@ -1219,7 +1229,7 @@ func dial(config *ConnConfig) (*websocket.Conn, error) {
 // details.  The notification handlers parameter may be nil if you are not
 // interested in receiving notifications and will be ignored if the
 // configuration is set to run in HTTP POST mode.
-func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error) {
+func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, er.R) {
 	// Either open a websocket connection or create an HTTP client depending
 	// on the HTTP POST mode.  Also, set the notification handlers to nil
 	// when running in HTTP POST mode.
@@ -1231,14 +1241,14 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 		ntfnHandlers = nil
 		start = true
 
-		var err error
+		var err er.R
 		httpClient, err = newHTTPClient(config)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		if !config.DisableConnectOnNew {
-			var err error
+			var err er.R
 			wsConn, err = dial(config)
 			if err != nil {
 				return nil, err
@@ -1287,20 +1297,20 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 // This method will error if the client is not configured for websockets, if the
 // connection has already been established, or if none of the connection
 // attempts were successful.
-func (c *Client) Connect(tries int) error {
+func (c *Client) Connect(tries int) er.R {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
 	if c.config.HTTPPostMode {
-		return ErrNotWebsocketClient
+		return ErrNotWebsocketClient.Default()
 	}
 	if c.wsConn != nil {
-		return ErrClientAlreadyConnected
+		return ErrClientAlreadyConnected.Default()
 	}
 
 	// Begin connection attempts.  Increase the backoff after each failed
 	// attempt, up to a maximum of one minute.
-	var err error
+	var err er.R
 	var backoff time.Duration
 	for i := 0; tries == 0 || i < tries; i++ {
 		var wsConn *websocket.Conn

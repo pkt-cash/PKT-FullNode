@@ -7,8 +7,9 @@
 package limits
 
 import (
-	"fmt"
 	"syscall"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -18,10 +19,10 @@ const (
 
 // SetLimits raises some process limits to values which allow pktd and
 // associated utilities to run.
-func SetLimits() error {
+func SetLimits() er.R {
 	var rLimit syscall.Rlimit
 
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	err := er.E(syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit))
 	if err != nil {
 		return err
 	}
@@ -29,20 +30,18 @@ func SetLimits() error {
 		return nil
 	}
 	if rLimit.Max < fileLimitMin {
-		err = fmt.Errorf("need at least %v file descriptors",
-			fileLimitMin)
-		return err
+		return er.Errorf("need at least %v file descriptors", fileLimitMin)
 	}
 	if rLimit.Max < fileLimitWant {
 		rLimit.Cur = rLimit.Max
 	} else {
 		rLimit.Cur = fileLimitWant
 	}
-	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	err = er.E(syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit))
 	if err != nil {
 		// try min value
 		rLimit.Cur = fileLimitMin
-		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		err = er.E(syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit))
 		if err != nil {
 			return err
 		}

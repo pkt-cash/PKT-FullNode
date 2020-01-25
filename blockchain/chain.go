@@ -12,7 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
@@ -194,7 +197,7 @@ type BlockChain struct {
 // be like part of the main chain, on a side chain, or in the orphan pool.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) HaveBlock(hash *chainhash.Hash) (bool, error) {
+func (b *BlockChain) HaveBlock(hash *chainhash.Hash) (bool, er.R) {
 	exists, err := b.blockExists(hash)
 	if err != nil {
 		return false, err
@@ -351,7 +354,7 @@ type SequenceLock struct {
 // the candidate transaction to be included in a block.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, error) {
+func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, er.R) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -362,7 +365,7 @@ func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint, m
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, error) {
+func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, er.R) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
 	// at any given height or time. This value is returned as the relative
@@ -409,7 +412,7 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView 
 				"transaction %s:%d either does not exist or "+
 				"has already been spent", txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
-			return sequenceLock, ruleError(ErrMissingTxOut, str)
+			return sequenceLock, ruleerror.ErrMissingTxOut.New(str, nil)
 		}
 
 		// If the input height is set to the mempool height, then we
@@ -562,7 +565,7 @@ func (b *BlockChain) getReorganizeNodes(node *blockNode) (*list.List, *list.List
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
-	view *UtxoViewpoint, stxos []SpentTxOut, newEs *ElectionState) error {
+	view *UtxoViewpoint, stxos []SpentTxOut, newEs *ElectionState) er.R {
 
 	// Make sure it's extending the end of the best chain.
 	prevHash := &block.MsgBlock().Header.PrevBlock
@@ -611,7 +614,7 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
 		curTotalTxns+numTxns, node.CalcPastMedianTime(), newEs)
 
 	// Atomically insert info into the database.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx database.Tx) er.R {
 		// Update best block state.
 		err := dbPutBestState(dbTx, state, node.workSum)
 		if err != nil {
@@ -692,7 +695,7 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view *UtxoViewpoint) error {
+func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view *UtxoViewpoint) er.R {
 	// Make sure the node being disconnected is the end of the best chain.
 	if !node.hash.IsEqual(&b.bestChain.Tip().hash) {
 		return AssertError("disconnectBlock must be called with the " +
@@ -704,8 +707,8 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	prevNode := node.parent
 	var prevBlock *btcutil.Block
 	var prevEs *ElectionState
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		prevBlock, err = dbFetchBlockByNode(dbTx, prevNode)
 		if err != nil {
 			return err
@@ -735,7 +738,7 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	state := newBestState(prevNode, blockSize, blockWeight, numTxns,
 		newTotalTxns, prevNode.CalcPastMedianTime(), prevEs)
 
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx database.Tx) er.R {
 		// Update best block state.
 		err := dbPutBestState(dbTx, state, node.workSum)
 		if err != nil {
@@ -834,7 +837,7 @@ func countSpentOutputs(block *btcutil.Block) int {
 // This function may modify node statuses in the block index without flushing.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error {
+func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) er.R {
 	// Nothing to do if no reorganize nodes were provided.
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
 		return nil
@@ -885,8 +888,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(*blockNode)
 		var block *btcutil.Block
-		err := b.db.View(func(dbTx database.Tx) error {
-			var err error
+		err := b.db.View(func(dbTx database.Tx) er.R {
+			var err er.R
 			block, err = dbFetchBlockByNode(dbTx, n)
 			return err
 		})
@@ -909,7 +912,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// Load all of the spent txos for the block from the spend
 		// journal.
 		var stxos []SpentTxOut
-		err = b.db.View(func(dbTx database.Tx) error {
+		err = b.db.View(func(dbTx database.Tx) er.R {
 			stxos, err = dbFetchSpendJournalEntry(dbTx, block)
 			return err
 		})
@@ -952,8 +955,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		n := e.Value.(*blockNode)
 
 		var block *btcutil.Block
-		err := b.db.View(func(dbTx database.Tx) error {
-			var err error
+		err := b.db.View(func(dbTx database.Tx) er.R {
+			var err er.R
 			block, err = dbFetchBlockByNode(dbTx, n)
 			return err
 		})
@@ -991,7 +994,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// descendants as having an invalid ancestor.
 		_, err = b.checkConnectBlock(n, block, view, nil)
 		if err != nil {
-			if _, ok := err.(RuleError); ok {
+			if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(n, statusValidateFailed)
 				for de := e.Next(); de != nil; de = de.Next() {
 					dn := de.Value.(*blockNode)
@@ -1102,7 +1105,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 //    This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, flags BehaviorFlags) (bool, error) {
+func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, flags BehaviorFlags) (bool, er.R) {
 	fastAdd := flags&BFFastAdd == BFFastAdd
 
 	flushIndexState := func() {
@@ -1134,11 +1137,11 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 		view.SetBestHash(parentHash)
 		stxos := make([]SpentTxOut, 0, countSpentOutputs(block))
 		if !fastAdd {
-			var err error
+			var err er.R
 			nextEs, err = b.checkConnectBlock(node, block, view, &stxos)
 			if err == nil {
 				b.index.SetStatusFlags(node, statusValid)
-			} else if _, ok := err.(RuleError); ok {
+			} else if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(node, statusValidateFailed)
 			} else {
 				return false, err
@@ -1176,7 +1179,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the
 			// index state to disk before returning with the error.
-			if _, ok := err.(RuleError); ok {
+			if ruleerror.Err.Is(err) {
 				b.index.SetStatusFlags(
 					node, statusValidateFailed,
 				)
@@ -1297,11 +1300,10 @@ func (b *BlockChain) BestSnapshot() *BestState {
 // HeaderByHash returns the block header identified by the given hash or an
 // error if it doesn't exist. Note that this will return headers from both the
 // main and side chains.
-func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (wire.BlockHeader, error) {
+func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (wire.BlockHeader, er.R) {
 	node := b.index.LookupNode(hash)
 	if node == nil {
-		err := fmt.Errorf("block %s is not known", hash)
-		return wire.BlockHeader{}, err
+		return wire.BlockHeader{}, er.Errorf("block %s is not known", hash)
 	}
 
 	return node.Header(), nil
@@ -1336,7 +1338,7 @@ func (b *BlockChain) BlockLocatorFromHash(hash *chainhash.Hash) BlockLocator {
 // main (best) chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) LatestBlockLocator() (BlockLocator, error) {
+func (b *BlockChain) LatestBlockLocator() (BlockLocator, er.R) {
 	b.chainLock.RLock()
 	locator := b.bestChain.BlockLocator(nil)
 	b.chainLock.RUnlock()
@@ -1347,7 +1349,7 @@ func (b *BlockChain) LatestBlockLocator() (BlockLocator, error) {
 // main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockHeightByHash(hash *chainhash.Hash) (int32, error) {
+func (b *BlockChain) BlockHeightByHash(hash *chainhash.Hash) (int32, er.R) {
 	node := b.index.LookupNode(hash)
 	if node == nil || !b.bestChain.Contains(node) {
 		str := fmt.Sprintf("block %s is not in the main chain", hash)
@@ -1361,7 +1363,7 @@ func (b *BlockChain) BlockHeightByHash(hash *chainhash.Hash) (int32, error) {
 // main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, error) {
+func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, er.R) {
 	node := b.bestChain.NodeByHeight(blockHeight)
 	if node == nil {
 		str := fmt.Sprintf("no block at height %d exists", blockHeight)
@@ -1377,14 +1379,14 @@ func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, erro
 // height.  The end height will be limited to the current main chain height.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash, error) {
+func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash, er.R) {
 	// Ensure requested heights are sane.
 	if startHeight < 0 {
-		return nil, fmt.Errorf("start height of fetch range must not "+
+		return nil, er.Errorf("start height of fetch range must not "+
 			"be less than zero - got %d", startHeight)
 	}
 	if endHeight < startHeight {
-		return nil, fmt.Errorf("end height of fetch range must not "+
+		return nil, er.Errorf("end height of fetch range must not "+
 			"be less than the start height - got start %d, end %d",
 			startHeight, endHeight)
 	}
@@ -1427,28 +1429,28 @@ func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) HeightToHashRange(startHeight int32,
-	endHash *chainhash.Hash, maxResults int) ([]chainhash.Hash, error) {
+	endHash *chainhash.Hash, maxResults int) ([]chainhash.Hash, er.R) {
 
 	endNode := b.index.LookupNode(endHash)
 	if endNode == nil {
-		return nil, fmt.Errorf("no known block header with hash %v", endHash)
+		return nil, er.Errorf("no known block header with hash %v", endHash)
 	}
 	if !b.index.NodeStatus(endNode).KnownValid() {
-		return nil, fmt.Errorf("block %v is not yet validated", endHash)
+		return nil, er.Errorf("block %v is not yet validated", endHash)
 	}
 	endHeight := endNode.height
 
 	if startHeight < 0 {
-		return nil, fmt.Errorf("start height (%d) is below 0", startHeight)
+		return nil, er.Errorf("start height (%d) is below 0", startHeight)
 	}
 	if startHeight > endHeight {
-		return nil, fmt.Errorf("start height (%d) is past end height (%d)",
+		return nil, er.Errorf("start height (%d) is past end height (%d)",
 			startHeight, endHeight)
 	}
 
 	resultsLength := int(endHeight - startHeight + 1)
 	if resultsLength > maxResults {
-		return nil, fmt.Errorf("number of results (%d) would exceed max (%d)",
+		return nil, er.Errorf("number of results (%d) would exceed max (%d)",
 			resultsLength, maxResults)
 	}
 
@@ -1467,14 +1469,14 @@ func (b *BlockChain) HeightToHashRange(startHeight int32,
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int,
-) ([]chainhash.Hash, error) {
+) ([]chainhash.Hash, er.R) {
 
 	endNode := b.index.LookupNode(endHash)
 	if endNode == nil {
-		return nil, fmt.Errorf("no known block header with hash %v", endHash)
+		return nil, er.Errorf("no known block header with hash %v", endHash)
 	}
 	if !b.index.NodeStatus(endNode).KnownValid() {
-		return nil, fmt.Errorf("block %v is not yet validated", endHash)
+		return nil, er.Errorf("block %v is not yet validated", endHash)
 	}
 	endHeight := endNode.height
 
@@ -1663,19 +1665,19 @@ type IndexManager interface {
 	// channel parameter specifies a channel the caller can close to signal
 	// that the process should be interrupted.  It can be nil if that
 	// behavior is not desired.
-	Init(*BlockChain, <-chan struct{}) error
+	Init(*BlockChain, <-chan struct{}) er.R
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the previous output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *btcutil.Block, []SpentTxOut) error
+	ConnectBlock(database.Tx, *btcutil.Block, []SpentTxOut) er.R
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block.
-	DisconnectBlock(database.Tx, *btcutil.Block, []SpentTxOut) error
+	DisconnectBlock(database.Tx, *btcutil.Block, []SpentTxOut) er.R
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -1743,7 +1745,7 @@ type Config struct {
 }
 
 // New returns a BlockChain instance using the provided configuration details.
-func New(config *Config) (*BlockChain, error) {
+func New(config *Config) (*BlockChain, er.R) {
 	// Enforce required config fields.
 	if config.DB == nil {
 		return nil, AssertError("blockchain.New database is nil")

@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
@@ -18,7 +19,7 @@ import (
 // mockRemotePeer creates a basic inbound peer listening on the simnet port for
 // use with Example_peerConnection.  It does not return until the listner is
 // active.
-func mockRemotePeer() error {
+func mockRemotePeer() er.R {
 	// Configure peer to act as a simnet node that offers no services.
 	peerCfg := &peer.Config{
 		UserAgentName:    "peer",  // User agent name to advertise.
@@ -30,7 +31,7 @@ func mockRemotePeer() error {
 	// Accept connections on the simnet port.
 	listener, err := net.Listen("tcp", "127.0.0.1:18555")
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 	go func() {
 		conn, err := listener.Accept()
@@ -89,8 +90,8 @@ func Example_newOutboundPeer() {
 	}
 
 	// Establish the connection to the peer address and mark it connected.
-	conn, err := net.Dial("tcp", p.Addr())
-	if err != nil {
+	conn, errr := net.Dial("tcp", p.Addr())
+	if errr != nil {
 		fmt.Printf("net.Dial: error %v\n", err)
 		return
 	}

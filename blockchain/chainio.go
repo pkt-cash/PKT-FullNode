@@ -14,7 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
@@ -80,41 +82,18 @@ var (
 
 // errNotInMainChain signifies that a block hash or height that is not in the
 // main chain was requested.
-type errNotInMainChain string
+var errNotInMainChain0 = er.GenericErrorType.Code("blockchain.errNotInMainChain")
 
-// Error implements the error interface.
-func (e errNotInMainChain) Error() string {
-	return string(e)
-}
-
-// isNotInMainChainErr returns whether or not the passed error is an
-// errNotInMainChain error.
-func isNotInMainChainErr(err error) bool {
-	_, ok := err.(errNotInMainChain)
-	return ok
+func errNotInMainChain(str string) er.R {
+	return errNotInMainChain0.New(str, nil)
 }
 
 // errDeserialize signifies that a problem was encountered when deserializing
 // data.
-type errDeserialize string
+var errDeserialize0 *er.ErrorCode = er.GenericErrorType.Code("errDeserialize")
 
-// Error implements the error interface.
-func (e errDeserialize) Error() string {
-	return string(e)
-}
-
-// isDeserializeErr returns whether or not the passed error is an errDeserialize
-// error.
-func isDeserializeErr(err error) bool {
-	_, ok := err.(errDeserialize)
-	return ok
-}
-
-// isDbBucketNotFoundErr returns whether or not the passed error is a
-// database.Error with an error code of database.ErrBucketNotFound.
-func isDbBucketNotFoundErr(err error) bool {
-	dbErr, ok := err.(database.Error)
-	return ok && dbErr.ErrorCode == database.ErrBucketNotFound
+func errDeserialize(s string) er.R {
+	return errDeserialize0.New(s, nil)
 }
 
 // dbFetchVersion fetches an individual version with the given key from the
@@ -132,7 +111,7 @@ func dbFetchVersion(dbTx database.Tx, key []byte) uint32 {
 // dbPutVersion uses an existing database transaction to update the provided
 // key in the metadata bucket to the given version.  It is primarily used to
 // track versions on entities such as buckets.
-func dbPutVersion(dbTx database.Tx, key []byte, version uint32) error {
+func dbPutVersion(dbTx database.Tx, key []byte, version uint32) er.R {
 	var serialized [4]byte
 	byteOrder.PutUint32(serialized[:], version)
 	return dbTx.Metadata().Put(key, serialized[:])
@@ -143,7 +122,7 @@ func dbPutVersion(dbTx database.Tx, key []byte, version uint32) error {
 // it doesn't exist, it adds the entry with the provided default version and
 // returns that.  This is useful during upgrades to automatically handle loading
 // and adding version keys as necessary.
-func dbFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32) (uint32, error) {
+func dbFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32) (uint32, er.R) {
 	version := dbFetchVersion(dbTx, key)
 	if version == 0 {
 		version = defaultVersion
@@ -167,13 +146,10 @@ func serializeElectionState(state ElectionState) []byte {
 	return serializedData[:]
 }
 
-func deserializeElectionState(serialized []byte) (ElectionState, error) {
+func deserializeElectionState(serialized []byte) (ElectionState, er.R) {
 	if len(serialized) < 8 {
 		d := fmt.Sprintf("corrupt election state [%v]", hex.EncodeToString(serialized))
-		return ElectionState{}, database.Error{
-			ErrorCode:   database.ErrCorruption,
-			Description: d,
-		}
+		return ElectionState{}, database.ErrCorruption.New(d, nil)
 	}
 	state := ElectionState{}
 	state.Disapproval = int64(byteOrder.Uint64(serialized[0:8]))
@@ -181,13 +157,13 @@ func deserializeElectionState(serialized []byte) (ElectionState, error) {
 	return state, nil
 }
 
-func dbPutElectionState(dbTx database.Tx, node *blockNode, newEs *ElectionState) error {
+func dbPutElectionState(dbTx database.Tx, node *blockNode, newEs *ElectionState) er.R {
 	electionBucket := dbTx.Metadata().Bucket(electionStateBucketName)
 	serialized := serializeElectionState(*newEs)
 	return electionBucket.Put(node.hash[:], serialized)
 }
 
-func dbFetchElectionStateByNode(dbTx database.Tx, node *blockNode) (*ElectionState, error) {
+func dbFetchElectionStateByNode(dbTx database.Tx, node *blockNode) (*ElectionState, er.R) {
 	electionBucket := dbTx.Metadata().Bucket(electionStateBucketName)
 	serialized := electionBucket.Get(node.hash[:])
 	es, err := deserializeElectionState(serialized)
@@ -306,13 +282,13 @@ type SpentTxOut struct {
 // main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) FetchSpendJournal(targetBlock *btcutil.Block) ([]SpentTxOut, error) {
+func (b *BlockChain) FetchSpendJournal(targetBlock *btcutil.Block) ([]SpentTxOut, er.R) {
 	b.chainLock.RLock()
 	defer b.chainLock.RUnlock()
 
 	var spendEntries []SpentTxOut
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 
 		spendEntries, err = dbFetchSpendJournalEntry(dbTx, targetBlock)
 		return err
@@ -371,7 +347,7 @@ func putSpentTxOut(target []byte, stxo *SpentTxOut) int {
 // decodeSpentTxOut decodes the passed serialized stxo entry, possibly followed
 // by other data, into the passed stxo struct.  It returns the number of bytes
 // read.
-func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
+func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, er.R) {
 	// Ensure there are bytes to decode.
 	if len(serialized) == 0 {
 		return 0, errDeserialize("no serialized bytes")
@@ -421,7 +397,7 @@ func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 // Since the serialization format is not self describing, as noted in the
 // format comments, this function also requires the transactions that spend the
 // txouts.
-func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]SpentTxOut, error) {
+func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]SpentTxOut, er.R) {
 	// Calculate the total number of stxos.
 	var numStxos int
 	for _, tx := range txns {
@@ -500,7 +476,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 // NOTE: Legacy entries will not have the coinbase flag or height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
-func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTxOut, error) {
+func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTxOut, er.R) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(spendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -509,13 +485,9 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTx
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
-		if isDeserializeErr(err) {
-			return nil, database.Error{
-				ErrorCode: database.ErrCorruption,
-				Description: fmt.Sprintf("corrupt spend "+
-					"information for %v: %v", block.Hash(),
-					err),
-			}
+		if errDeserialize0.Is(err) {
+			return nil, database.ErrCorruption.New(fmt.Sprintf(
+				"corrupt spend information for %v", block.Hash()), err)
 		}
 
 		return nil, err
@@ -528,7 +500,7 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTx
 // spend journal entry for the given block hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos []SpentTxOut) error {
+func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos []SpentTxOut) er.R {
 	spendBucket := dbTx.Metadata().Bucket(spendJournalBucketName)
 	serialized := serializeSpendJournalEntry(stxos)
 	return spendBucket.Put(blockHash[:], serialized)
@@ -536,7 +508,7 @@ func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos [
 
 // dbRemoveSpendJournalEntry uses an existing database transaction to remove the
 // spend journal entry for the passed block hash.
-func dbRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) error {
+func dbRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) er.R {
 	spendBucket := dbTx.Metadata().Bucket(spendJournalBucketName)
 	return spendBucket.Delete(blockHash[:])
 }
@@ -658,7 +630,7 @@ func recycleOutpointKey(key *[]byte) {
 
 // utxoEntryHeaderCode returns the calculated header code to be used when
 // serializing the provided utxo entry.
-func utxoEntryHeaderCode(entry *UtxoEntry) (uint64, error) {
+func utxoEntryHeaderCode(entry *UtxoEntry) (uint64, er.R) {
 	if entry.IsSpent() {
 		return 0, AssertError("attempt to serialize spent utxo header")
 	}
@@ -676,7 +648,7 @@ func utxoEntryHeaderCode(entry *UtxoEntry) (uint64, error) {
 
 // serializeUtxoEntry returns the entry serialized to a format that is suitable
 // for long-term storage.  The format is described in detail above.
-func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
+func serializeUtxoEntry(entry *UtxoEntry) ([]byte, er.R) {
 	// Spent outputs have no serialization.
 	if entry.IsSpent() {
 		return nil, nil
@@ -705,7 +677,7 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 // deserializeUtxoEntry decodes a utxo entry from the passed serialized byte
 // slice into a new UtxoEntry using a format that is suitable for long-term
 // storage.  The format is described in detail above.
-func deserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
+func deserializeUtxoEntry(serialized []byte) (*UtxoEntry, er.R) {
 	// Deserialize the header code.
 	code, offset := deserializeVLQ(serialized)
 	if offset >= len(serialized) {
@@ -745,7 +717,7 @@ func deserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 //
 // When there are no entries for the provided hash, nil will be returned for the
 // both the entry and the error.
-func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry, error) {
+func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry, er.R) {
 	// Attempt to find an entry by seeking for the hash along with a zero
 	// index.  Due to the fact the keys are serialized as <hash><index>,
 	// where the index uses an MSB encoding, if there are any entries for
@@ -777,7 +749,7 @@ func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry,
 //
 // When there is no entry for the provided output, nil will be returned for both
 // the entry and the error.
-func dbFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, error) {
+func dbFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, er.R) {
 	// Fetch the unspent transaction output information for the passed
 	// transaction output.  Return now when there is no entry.
 	key := outpointKey(outpoint)
@@ -800,12 +772,9 @@ func dbFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
-		if isDeserializeErr(err) {
-			return nil, database.Error{
-				ErrorCode: database.ErrCorruption,
-				Description: fmt.Sprintf("corrupt utxo entry "+
-					"for %v: %v", outpoint, err),
-			}
+		if errDeserialize0.Is(err) {
+			return nil, database.ErrCorruption.New(
+				fmt.Sprintf("corrupt utxo entry for %v", outpoint), err)
 		}
 
 		return nil, err
@@ -818,7 +787,7 @@ func dbFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 // in the database based on the provided utxo view contents and state.  In
 // particular, only the entries that have been marked as modified are written
 // to the database.
-func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
+func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) er.R {
 	utxoBucket := dbTx.Metadata().Bucket(utxoSetBucketName)
 	for outpoint, entry := range view.entries {
 		// No need to update the database if the entry was not modified.
@@ -878,7 +847,7 @@ func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 // dbPutBlockIndex uses an existing database transaction to update or add the
 // block index entries for the hash to height and height to hash mappings for
 // the provided values.
-func dbPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
+func dbPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) er.R {
 	// Serialize the height for use in the index entries.
 	var serializedHeight [4]byte
 	byteOrder.PutUint32(serializedHeight[:], uint32(height))
@@ -898,7 +867,7 @@ func dbPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error
 // dbRemoveBlockIndex uses an existing database transaction remove block index
 // entries from the hash to height and height to hash mappings for the provided
 // values.
-func dbRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
+func dbRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) er.R {
 	// Remove the block hash to height mapping.
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(hashIndexBucketName)
@@ -915,7 +884,7 @@ func dbRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) er
 
 // dbFetchHeightByHash uses an existing database transaction to retrieve the
 // height for the provided hash from the index.
-func dbFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) {
+func dbFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, er.R) {
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(hashIndexBucketName)
 	serializedHeight := hashIndex.Get(hash[:])
@@ -925,25 +894,6 @@ func dbFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) 
 	}
 
 	return int32(byteOrder.Uint32(serializedHeight)), nil
-}
-
-// dbFetchHashByHeight uses an existing database transaction to retrieve the
-// hash for the provided height from the index.
-func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error) {
-	var serializedHeight [4]byte
-	byteOrder.PutUint32(serializedHeight[:], uint32(height))
-
-	meta := dbTx.Metadata()
-	heightIndex := meta.Bucket(heightIndexBucketName)
-	hashBytes := heightIndex.Get(serializedHeight[:])
-	if hashBytes == nil {
-		str := fmt.Sprintf("no block at height %d exists", height)
-		return nil, errNotInMainChain(str)
-	}
-
-	var hash chainhash.Hash
-	copy(hash[:], hashBytes)
-	return &hash, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -998,14 +948,11 @@ func serializeBestChainState(state bestChainState) []byte {
 // state.  This is data stored in the chain state bucket and is updated after
 // every block is connected or disconnected form the main chain.
 // block.
-func deserializeBestChainState(serializedData []byte) (bestChainState, error) {
+func deserializeBestChainState(serializedData []byte) (bestChainState, er.R) {
 	// Ensure the serialized data has enough bytes to properly deserialize
 	// the hash, height, total transactions, and work sum length.
 	if len(serializedData) < chainhash.HashSize+16 {
-		return bestChainState{}, database.Error{
-			ErrorCode:   database.ErrCorruption,
-			Description: "corrupt best chain state",
-		}
+		return bestChainState{}, database.ErrCorruption.New("corrupt best chain state", nil)
 	}
 
 	state := bestChainState{}
@@ -1021,10 +968,7 @@ func deserializeBestChainState(serializedData []byte) (bestChainState, error) {
 	// Ensure the serialized data has enough bytes to deserialize the work
 	// sum.
 	if uint32(len(serializedData[offset:])) < workSumBytesLen {
-		return bestChainState{}, database.Error{
-			ErrorCode:   database.ErrCorruption,
-			Description: "corrupt best chain state",
-		}
+		return bestChainState{}, database.ErrCorruption.New("corrupt best chain state", nil)
 	}
 	workSumBytes := serializedData[offset : offset+workSumBytesLen]
 	state.workSum = new(big.Int).SetBytes(workSumBytes)
@@ -1034,7 +978,7 @@ func deserializeBestChainState(serializedData []byte) (bestChainState, error) {
 
 // dbPutBestState uses an existing database transaction to update the best chain
 // state with the given parameters.
-func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
+func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) er.R {
 	// Serialize the current best chain state.
 	serializedData := serializeBestChainState(bestChainState{
 		hash:      snapshot.Hash,
@@ -1050,7 +994,7 @@ func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 // createChainState initializes both the database and the chain state to the
 // genesis block.  This includes creating the necessary buckets and inserting
 // the genesis block, so it must only be called on an uninitialized database.
-func (b *BlockChain) createChainState() error {
+func (b *BlockChain) createChainState() er.R {
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := btcutil.NewBlock(b.chainParams.GenesisBlock)
 	genesisBlock.SetHeight(0)
@@ -1078,7 +1022,7 @@ func (b *BlockChain) createChainState() error {
 
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) er.R {
 		meta := dbTx.Metadata()
 
 		// Create the bucket that houses the block index data.
@@ -1165,11 +1109,11 @@ func (b *BlockChain) createChainState() error {
 // initChainState attempts to load and initialize the chain state from the
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
-func (b *BlockChain) initChainState() error {
+func (b *BlockChain) initChainState() er.R {
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
 	var initialized, hasBlockIndex bool
-	err := b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx database.Tx) er.R {
 		initialized = dbTx.Metadata().Get(chainStateKeyName) != nil
 		hasBlockIndex = dbTx.Metadata().Bucket(blockIndexBucketName) != nil
 		return nil
@@ -1192,7 +1136,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	// Attempt to load the chain state from the database.
-	err = b.db.View(func(dbTx database.Tx) error {
+	err = b.db.View(func(dbTx database.Tx) er.R {
 		// Fetch the stored chain state from the database metadata.
 		// When it doesn't exist, it means the database hasn't been
 		// initialized for use with chain yet, so break out now to allow
@@ -1330,7 +1274,7 @@ func (b *BlockChain) initChainState() error {
 
 // deserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, error) {
+func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, er.R) {
 	buffer := bytes.NewReader(blockRow)
 
 	var header wire.BlockHeader
@@ -1339,46 +1283,18 @@ func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, error
 		return nil, statusNone, err
 	}
 
-	statusByte, err := buffer.ReadByte()
-	if err != nil {
-		return nil, statusNone, err
+	statusByte, errr := buffer.ReadByte()
+	if errr != nil {
+		return nil, statusNone, er.E(errr)
 	}
 
 	return &header, blockStatus(statusByte), nil
 }
 
-// dbFetchHeaderByHash uses an existing database transaction to retrieve the
-// block header for the provided hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*wire.BlockHeader, error) {
-	headerBytes, err := dbTx.FetchBlockHeader(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	var header wire.BlockHeader
-	err = header.Deserialize(bytes.NewReader(headerBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	return &header, nil
-}
-
-// dbFetchHeaderByHeight uses an existing database transaction to retrieve the
-// block header for the provided height.
-func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (*wire.BlockHeader, error) {
-	hash, err := dbFetchHashByHeight(dbTx, height)
-	if err != nil {
-		return nil, err
-	}
-
-	return dbFetchHeaderByHash(dbTx, hash)
-}
-
 // dbFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a btcutil.Block
 // with the height set.
-func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, error) {
+func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, er.R) {
 	// Load the raw block bytes from the database.
 	blockBytes, err := dbTx.FetchBlock(&node.hash)
 	if err != nil {
@@ -1397,7 +1313,7 @@ func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, erro
 
 // dbStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
+func dbStoreBlockNode(dbTx database.Tx, node *blockNode) er.R {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, blockHdrSize+1))
 	header := node.Header()
@@ -1405,9 +1321,9 @@ func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
 	if err != nil {
 		return err
 	}
-	err = w.WriteByte(byte(node.status))
-	if err != nil {
-		return err
+	errr := w.WriteByte(byte(node.status))
+	if errr != nil {
+		return er.E(errr)
 	}
 	value := w.Bytes()
 
@@ -1419,7 +1335,7 @@ func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
 
 // dbStoreBlock stores the provided block in the database if it is not already
 // there. The full block data is written to ffldb.
-func dbStoreBlock(dbTx database.Tx, block *btcutil.Block) error {
+func dbStoreBlock(dbTx database.Tx, block *btcutil.Block) er.R {
 	hasBlock, err := dbTx.HasBlock(block.Hash())
 	if err != nil {
 		return err
@@ -1443,7 +1359,7 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 // BlockByHeight returns the block at the given height in the main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
+func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, er.R) {
 	// Lookup the block height in the best chain.
 	node := b.bestChain.NodeByHeight(blockHeight)
 	if node == nil {
@@ -1453,8 +1369,8 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
 
 	// Load the block from the database and return it.
 	var block *btcutil.Block
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		block, err = dbFetchBlockByNode(dbTx, node)
 		return err
 	})
@@ -1465,7 +1381,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
 // the appropriate chain height set.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, error) {
+func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, er.R) {
 	// Lookup the block hash in block index and ensure it is in the best
 	// chain.
 	node := b.index.LookupNode(hash)
@@ -1476,8 +1392,8 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, error) {
 
 	// Load the block from the database and return it.
 	var block *btcutil.Block
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
+	err := b.db.View(func(dbTx database.Tx) er.R {
+		var err er.R
 		block, err = dbFetchBlockByNode(dbTx, node)
 		return err
 	})

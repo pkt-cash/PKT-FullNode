@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // genTestTx creates a random transaction for uses within test cases.
-func genTestTx() (*wire.MsgTx, error) {
+func genTestTx() (*wire.MsgTx, er.R) {
 	tx := wire.NewMsgTx(2)
 	tx.Version = rand.Int31()
 
@@ -28,7 +30,7 @@ func genTestTx() (*wire.MsgTx, error) {
 		}
 		_, err := rand.Read(randTxIn.PreviousOutPoint.Hash[:])
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		tx.TxIn = append(tx.TxIn, &randTxIn)
@@ -41,7 +43,7 @@ func genTestTx() (*wire.MsgTx, error) {
 			PkScript: make([]byte, rand.Intn(30)),
 		}
 		if _, err := rand.Read(randTxOut.PkScript); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		tx.TxOut = append(tx.TxOut, &randTxOut)
 	}
@@ -56,11 +58,12 @@ func genTestTx() (*wire.MsgTx, error) {
 func TestHashCacheAddContainsHashes(t *testing.T) {
 	t.Parallel()
 
-	rand.Seed(time.Now().Unix())
+	seed := time.Now().Unix()
+	rand.Seed(seed)
 
 	cache := NewHashCache(10)
 
-	var err error
+	var err er.R
 
 	// First, we'll generate 10 random transactions for use within our
 	// tests.
@@ -148,7 +151,7 @@ func TestHashCachePurge(t *testing.T) {
 
 	cache := NewHashCache(10)
 
-	var err error
+	var err er.R
 
 	// First we'll start by inserting numTxns transactions into the hash cache.
 	const numTxns = 10

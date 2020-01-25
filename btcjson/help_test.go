@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
@@ -172,6 +174,7 @@ func TestHelpReflectInternals(t *testing.T) {
 			name: "array of struct indent level 0",
 			reflectType: func() reflect.Type {
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field int
 				}
 				return reflect.TypeOf([]s{})
@@ -191,6 +194,7 @@ func TestHelpReflectInternals(t *testing.T) {
 			name: "array of struct indent level 1",
 			reflectType: func() reflect.Type {
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field int
 				}
 				return reflect.TypeOf([]s{})
@@ -308,6 +312,7 @@ func TestResultStructHelp(t *testing.T) {
 			name: "struct with primitive field",
 			reflectType: func() reflect.Type {
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field int
 				}
 				return reflect.TypeOf(s{})
@@ -332,6 +337,7 @@ func TestResultStructHelp(t *testing.T) {
 			name: "struct with array of primitive field",
 			reflectType: func() reflect.Type {
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field []int
 				}
 				return reflect.TypeOf(s{})
@@ -343,10 +349,12 @@ func TestResultStructHelp(t *testing.T) {
 		{
 			name: "struct with sub-struct field",
 			reflectType: func() reflect.Type {
+				//lint:ignore U1001 this field must be present for the test
 				type s2 struct {
 					subField int
 				}
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field s2
 				}
 				return reflect.TypeOf(s{})
@@ -361,10 +369,12 @@ func TestResultStructHelp(t *testing.T) {
 		{
 			name: "struct with sub-struct field pointer",
 			reflectType: func() reflect.Type {
+				//lint:ignore U1001 this field must be present for the test
 				type s2 struct {
 					subField int
 				}
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field *s2
 				}
 				return reflect.TypeOf(s{})
@@ -379,10 +389,12 @@ func TestResultStructHelp(t *testing.T) {
 		{
 			name: "struct with array of structs field",
 			reflectType: func() reflect.Type {
+				//lint:ignore U1001 this field must be present for the test
 				type s2 struct {
 					subField int
 				}
 				type s struct {
+					//lint:ignore U1001 this field must be present for the test
 					field []s2
 				}
 				return reflect.TypeOf(s{})
@@ -667,30 +679,30 @@ func TestGenerateHelpErrors(t *testing.T) {
 		name        string
 		method      string
 		resultTypes []interface{}
-		err         btcjson.Error
+		err         er.R
 	}{
 		{
 			name:   "unregistered command",
 			method: "boguscommand",
-			err:    btcjson.Error{ErrorCode: btcjson.ErrUnregisteredMethod},
+			err:    btcjson.ErrUnregisteredMethod.Default(),
 		},
 		{
 			name:        "non-pointer result type",
 			method:      "help",
 			resultTypes: []interface{}{0},
-			err:         btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err:         btcjson.ErrInvalidType.Default(),
 		},
 		{
 			name:        "invalid result type",
 			method:      "help",
 			resultTypes: []interface{}{(*complex64)(nil)},
-			err:         btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
+			err:         btcjson.ErrInvalidType.Default(),
 		},
 		{
 			name:        "missing description",
 			method:      "help",
 			resultTypes: []interface{}{(*string)(nil), nil},
-			err:         btcjson.Error{ErrorCode: btcjson.ErrMissingDescription},
+			err:         btcjson.ErrMissingDescription.Default(),
 		},
 	}
 
@@ -698,16 +710,9 @@ func TestGenerateHelpErrors(t *testing.T) {
 	for i, test := range tests {
 		_, err := btcjson.GenerateHelp(test.method, nil,
 			test.resultTypes...)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("Test #%d (%s) wrong error - got %T (%v), "+
 				"want %T", i, test.name, err, err, test.err)
-			continue
-		}
-		gotErrorCode := err.(btcjson.Error).ErrorCode
-		if gotErrorCode != test.err.ErrorCode {
-			t.Errorf("Test #%d (%s) mismatched error code - got "+
-				"%v (%v), want %v", i, test.name, gotErrorCode,
-				err, test.err.ErrorCode)
 			continue
 		}
 	}

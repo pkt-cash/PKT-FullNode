@@ -9,12 +9,15 @@ package indexers
 
 import (
 	"encoding/binary"
-	"errors"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/btcutil"
 )
+
+var Err er.ErrorType = er.NewErrorType("indexers.Err")
 
 var (
 	// byteOrder is the preferred byte order used for serializing numeric
@@ -23,7 +26,11 @@ var (
 
 	// errInterruptRequested indicates that an operation was cancelled due
 	// to a user-requested interrupt.
-	errInterruptRequested = errors.New("interrupt requested")
+	errInterruptRequested = Err.Code("errInterruptRequested")
+
+	// errDeserialize signifies that a problem was encountered when deserializing
+	// data.
+	errDeserialize0 = Err.Code("errDeserialize")
 )
 
 // NeedsInputser provides a generic interface for an indexer to specify the it
@@ -43,50 +50,34 @@ type Indexer interface {
 
 	// Create is invoked when the indexer manager determines the index needs
 	// to be created for the first time.
-	Create(dbTx database.Tx) error
+	Create(dbTx database.Tx) er.R
 
 	// Init is invoked when the index manager is first initializing the
 	// index.  This differs from the Create method in that it is called on
 	// every load, including the case the index was just created.
-	Init() error
+	Init() er.R
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the pevious output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) error
+	ConnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) er.R
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block
-	DisconnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) error
+	DisconnectBlock(database.Tx, *btcutil.Block, []blockchain.SpentTxOut) er.R
 }
 
-// AssertError identifies an error that indicates an internal code consistency
-// issue and should be treated as a critical and unrecoverable error.
-type AssertError string
-
-// Error returns the assertion error as a huma-readable string and satisfies
-// the error interface.
-func (e AssertError) Error() string {
-	return "assertion failed: " + string(e)
-}
-
-// errDeserialize signifies that a problem was encountered when deserializing
-// data.
-type errDeserialize string
-
-// Error implements the error interface.
-func (e errDeserialize) Error() string {
-	return string(e)
+func errDeserialize(s string) er.R {
+	return errDeserialize0.New(s, nil)
 }
 
 // isDeserializeErr returns whether or not the passed error is an errDeserialize
 // error.
-func isDeserializeErr(err error) bool {
-	_, ok := err.(errDeserialize)
-	return ok
+func isDeserializeErr(err er.R) bool {
+	return errDeserialize0.Is(err)
 }
 
 // internalBucket is an abstraction over a database bucket.  It is used to make
@@ -94,8 +85,8 @@ func isDeserializeErr(err error) bool {
 // implement these functions instead of everything a database.Bucket supports.
 type internalBucket interface {
 	Get(key []byte) []byte
-	Put(key []byte, value []byte) error
-	Delete(key []byte) error
+	Put(key []byte, value []byte) er.R
+	Delete(key []byte) er.R
 }
 
 // interruptRequested returns true when the provided channel has been closed.

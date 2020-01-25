@@ -9,7 +9,6 @@ package peer
 import (
 	"bytes"
 	"container/list"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
@@ -209,13 +210,13 @@ type MessageListeners struct {
 	// useful for circumstances such as keeping track of server-wide byte
 	// counts or working with custom message types for which the peer does
 	// not directly provide a callback.
-	OnRead func(p *Peer, bytesRead int, msg wire.Message, err error)
+	OnRead func(p *Peer, bytesRead int, msg wire.Message, err er.R)
 
 	// OnWrite is invoked when we write a bitcoin message to a peer.  It
 	// consists of the number of bytes written, the message, and whether or
 	// not an error in the write occurred.  This can be useful for
 	// circumstances such as keeping track of server-wide byte counts.
-	OnWrite func(p *Peer, bytesWritten int, msg wire.Message, err error)
+	OnWrite func(p *Peer, bytesWritten int, msg wire.Message, err er.R)
 }
 
 // Config is the struct to hold configuration options useful to Peer.
@@ -290,7 +291,7 @@ func minUint32(a, b uint32) uint32 {
 // newNetAddress attempts to extract the IP address and port from the passed
 // net.Addr interface and create a bitcoin NetAddress structure using that
 // information.
-func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, error) {
+func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
 	// addr will be a net.TCPAddr when not using a proxy.
 	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
 		ip := tcpAddr.IP
@@ -315,12 +316,12 @@ func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, 
 	// address string as a last resort.
 	host, portStr, err := net.SplitHostPort(addr.String())
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	ip := net.ParseIP(host)
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	na := wire.NewNetAddressIPPort(ip, uint16(port), services)
 	return na, nil
@@ -384,15 +385,12 @@ type StatsSnap struct {
 
 // HashFunc is a function which returns a block hash, height and error
 // It is used as a callback to get newest block details.
-type HashFunc func() (hash *chainhash.Hash, height int32, err error)
-
-// AddrFunc is a func which takes an address and returns a related address.
-type AddrFunc func(remoteAddr *wire.NetAddress) *wire.NetAddress
+type HashFunc func() (hash *chainhash.Hash, height int32, err er.R)
 
 // HostToNetAddrFunc is a func which takes a host, port, services and returns
 // the netaddress.
 type HostToNetAddrFunc func(host string, port uint16,
-	services wire.ServiceFlag) (*wire.NetAddress, error)
+	services wire.ServiceFlag) (*wire.NetAddress, er.R)
 
 // NOTE: The overall data flow of a peer is split into 3 goroutines.  Inbound
 // messages are read via the inHandler goroutine and generally dispatched to
@@ -749,17 +747,6 @@ func (p *Peer) BytesReceived() uint64 {
 	return atomic.LoadUint64(&p.bytesReceived)
 }
 
-// TimeConnected returns the time at which the peer connected.
-//
-// This function is safe for concurrent access.
-func (p *Peer) TimeConnected() time.Time {
-	p.statsMtx.RLock()
-	timeConnected := p.timeConnected
-	p.statsMtx.RUnlock()
-
-	return timeConnected
-}
-
 // TimeOffset returns the number of seconds the local time was offset from the
 // time the peer reported during the initial negotiation phase.  Negative values
 // indicate the remote peer's time is before the local time.
@@ -817,7 +804,7 @@ func (p *Peer) IsWitnessEnabled() bool {
 // message will be sent if there are no entries in the provided addresses slice.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, error) {
+func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er.R) {
 	addressCount := len(addresses)
 
 	// Nothing to send.
@@ -849,7 +836,7 @@ func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er
 // and stop hash.  It will ignore back-to-back duplicate requests.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) error {
+func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) er.R {
 	// Extract the begin hash from the block locator, if one was specified,
 	// to use for filtering duplicate getblocks requests.
 	var beginHash *chainhash.Hash
@@ -893,7 +880,7 @@ func (p *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *chain
 // and stop hash.  It will ignore back-to-back duplicate requests.
 //
 // This function is safe for concurrent access.
-func (p *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) error {
+func (p *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *chainhash.Hash) er.R {
 	// Extract the begin hash from the block locator, if one was specified,
 	// to use for filtering duplicate getheaders requests.
 	var beginHash *chainhash.Hash
@@ -1006,7 +993,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 }
 
 // readMessage reads the next bitcoin message from the peer with logging.
-func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, error) {
+func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, er.R) {
 	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.conn,
 		p.ProtocolVersion(), p.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&p.bytesReceived, uint64(n))
@@ -1039,7 +1026,7 @@ func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte,
 }
 
 // writeMessage sends a bitcoin message to the peer with logging.
-func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
+func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 	// Don't do anything if we're disconnecting.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
 		return nil
@@ -1064,7 +1051,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
 		_, err := wire.WriteMessageWithEncodingN(&buf, msg, p.ProtocolVersion(),
 			p.cfg.ChainParams.Net, enc)
 		if err != nil {
-			return err.Error()
+			return err.String()
 		}
 		return spew.Sdump(buf.Bytes())
 	}))
@@ -1082,21 +1069,21 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
 // isAllowedReadError returns whether or not the passed error is allowed without
 // disconnecting the peer.  In particular, regression tests need to be allowed
 // to send malformed messages without the peer being disconnected.
-func (p *Peer) isAllowedReadError(err error) bool {
+func (p *Peer) isAllowedReadError(err er.R) bool {
 	// Only allow read errors in regression test mode.
 	if p.cfg.ChainParams.Net != wire.TestNet {
 		return false
 	}
 
 	// Don't allow the error if it's not specifically a malformed message error.
-	if _, ok := err.(*wire.MessageError); !ok {
+	if !wire.MessageError.Is(err) {
 		return false
 	}
 
 	// Don't allow the error if it's not coming from localhost or the
 	// hostname can't be determined for some reason.
-	host, _, err := net.SplitHostPort(p.addr)
-	if err != nil {
+	host, _, errr := net.SplitHostPort(p.addr)
+	if errr != nil {
 		return false
 	}
 
@@ -1111,7 +1098,7 @@ func (p *Peer) isAllowedReadError(err error) bool {
 // shouldHandleReadError returns whether or not the passed error, which is
 // expected to have come from reading from the remote peer in the inHandler,
 // should be logged and responded to with a reject message.
-func (p *Peer) shouldHandleReadError(err error) bool {
+func (p *Peer) shouldHandleReadError(err er.R) bool {
 	// No logging or reject message when the peer is being forcibly
 	// disconnected.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
@@ -1120,10 +1107,10 @@ func (p *Peer) shouldHandleReadError(err error) bool {
 
 	// No logging or reject message when the remote peer has been
 	// disconnected.
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return false
 	}
-	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+	if opErr, ok := er.Wrapped(err).(*net.OpError); ok && !opErr.Temporary() {
 		return false
 	}
 
@@ -1355,7 +1342,7 @@ out:
 			// remote peer has not disconnected.
 			if p.shouldHandleReadError(err) {
 				errMsg := fmt.Sprintf("Can't read message from %s: %v", p, err)
-				if err != io.ErrUnexpectedEOF {
+				if er.Wrapped(err) != io.ErrUnexpectedEOF {
 					log.Errorf(errMsg)
 				}
 
@@ -1697,17 +1684,17 @@ cleanup:
 // shouldLogWriteError returns whether or not the passed error, which is
 // expected to have come from writing to the remote peer in the outHandler,
 // should be logged.
-func (p *Peer) shouldLogWriteError(err error) bool {
+func (p *Peer) shouldLogWriteError(err er.R) bool {
 	// No logging when the peer is being forcibly disconnected.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
 		return false
 	}
 
 	// No logging when the remote peer has been disconnected.
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return false
 	}
-	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+	if opErr, ok := er.Wrapped(err).(*net.OpError); ok && !opErr.Temporary() {
 		return false
 	}
 
@@ -1887,7 +1874,7 @@ func (p *Peer) Disconnect() {
 // readRemoteVersionMsg waits for the next message to arrive from the remote
 // peer.  If the next message is not a version message or the version is not
 // acceptable then return an error.
-func (p *Peer) readRemoteVersionMsg() error {
+func (p *Peer) readRemoteVersionMsg() er.R {
 	// Read their version message.
 	remoteMsg, _, err := p.readMessage(wire.LatestEncoding)
 	if err != nil {
@@ -1902,12 +1889,12 @@ func (p *Peer) readRemoteVersionMsg() error {
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
 			reason)
 		_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return er.New(reason)
 	}
 
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
-		return errors.New("disconnecting peer connected to self")
+		return er.New("disconnecting peer connected to self")
 	}
 
 	// Negotiate the protocol version and set the services to what the remote
@@ -1956,7 +1943,7 @@ func (p *Peer) readRemoteVersionMsg() error {
 		rejectMsg := p.cfg.Listeners.OnVersion(p, msg)
 		if rejectMsg != nil {
 			_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-			return errors.New(rejectMsg.Reason)
+			return er.New(rejectMsg.Reason)
 		}
 	}
 
@@ -1975,7 +1962,7 @@ func (p *Peer) readRemoteVersionMsg() error {
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectObsolete,
 			reason)
 		_ = p.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return er.New(reason)
 	}
 
 	return nil
@@ -1983,10 +1970,10 @@ func (p *Peer) readRemoteVersionMsg() error {
 
 // localVersionMsg creates a version message that can be used to send to the
 // remote peer.
-func (p *Peer) localVersionMsg() (*wire.MsgVersion, error) {
+func (p *Peer) localVersionMsg() (*wire.MsgVersion, er.R) {
 	var blockNum int32
 	if p.cfg.NewestBlock != nil {
-		var err error
+		var err er.R
 		_, blockNum, err = p.cfg.NewestBlock()
 		if err != nil {
 			return nil, err
@@ -2044,7 +2031,7 @@ func (p *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 }
 
 // writeLocalVersionMsg writes our version message to the remote peer.
-func (p *Peer) writeLocalVersionMsg() error {
+func (p *Peer) writeLocalVersionMsg() er.R {
 	localVerMsg, err := p.localVersionMsg()
 	if err != nil {
 		return err
@@ -2056,7 +2043,7 @@ func (p *Peer) writeLocalVersionMsg() error {
 // negotiateInboundProtocol waits to receive a version message from the peer
 // then sends our version message. If the events do not occur in that order then
 // it returns an error.
-func (p *Peer) negotiateInboundProtocol() error {
+func (p *Peer) negotiateInboundProtocol() er.R {
 	if err := p.readRemoteVersionMsg(); err != nil {
 		return err
 	}
@@ -2067,7 +2054,7 @@ func (p *Peer) negotiateInboundProtocol() error {
 // negotiateOutboundProtocol sends our version message then waits to receive a
 // version message from the peer.  If the events do not occur in that order then
 // it returns an error.
-func (p *Peer) negotiateOutboundProtocol() error {
+func (p *Peer) negotiateOutboundProtocol() er.R {
 	if err := p.writeLocalVersionMsg(); err != nil {
 		return err
 	}
@@ -2076,10 +2063,10 @@ func (p *Peer) negotiateOutboundProtocol() error {
 }
 
 // start begins processing input and output messages.
-func (p *Peer) start() error {
+func (p *Peer) start() er.R {
 	log.Tracef("Starting peer %s", p)
 
-	negotiateErr := make(chan error, 1)
+	negotiateErr := make(chan er.R, 1)
 	go func() {
 		if p.inbound {
 			negotiateErr <- p.negotiateInboundProtocol()
@@ -2097,7 +2084,7 @@ func (p *Peer) start() error {
 		}
 	case <-time.After(negotiateTimeout):
 		p.Disconnect()
-		return errors.New("protocol negotiation timeout")
+		return er.New("protocol negotiation timeout")
 	}
 	log.Debugf("Connected to %s", p.Addr())
 
@@ -2204,18 +2191,18 @@ func NewInboundPeer(cfg *Config) *Peer {
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string) (*Peer, error) {
+func NewOutboundPeer(cfg *Config, addr string) (*Peer, er.R) {
 	p := newPeerBase(cfg, false)
 	p.addr = addr
 
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if cfg.HostToNetAddress != nil {

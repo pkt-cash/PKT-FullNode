@@ -10,6 +10,8 @@ import (
 	"encoding/binary"
 	"io/ioutil"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 //go:generate go run -tags gensecp256k1 genprecomps.go
@@ -20,7 +22,7 @@ import (
 // and be performed much faster than it is with hard-coding the final in-memory
 // data structure.  At the same time, it is quite fast to generate the in-memory
 // data structure at init time with this approach versus computing the table.
-func loadS256BytePoints() error {
+func loadS256BytePoints() er.R {
 	// There will be no byte points to load when generating them.
 	bp := secp256k1BytePoints
 	if len(bp) == 0 {
@@ -30,13 +32,13 @@ func loadS256BytePoints() error {
 	// Decompress the pre-computed table used to accelerate scalar base
 	// multiplication.
 	decoder := base64.NewDecoder(base64.StdEncoding, strings.NewReader(bp))
-	r, err := zlib.NewReader(decoder)
-	if err != nil {
-		return err
+	r, errr := zlib.NewReader(decoder)
+	if errr != nil {
+		return er.E(errr)
 	}
-	serialized, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	serialized, errr := ioutil.ReadAll(r)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Deserialize the precomputed byte points and set the curve to them.

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -39,13 +40,6 @@ const (
 	// NOTE: This must be defined last in order to avoid influencing iota.
 	statusNone blockStatus = 0
 )
-
-// HaveData returns whether the full block data is stored in the database. This
-// will return false for a block node where only the header is downloaded or
-// kept.
-func (status blockStatus) HaveData() bool {
-	return status&statusDataStored != 0
-}
 
 // KnownValid returns whether the block is known to be valid. This will return
 // false for a valid block that has not been fully validated yet.
@@ -190,10 +184,12 @@ func (node *blockNode) CalcPastMedianTime() time.Time {
 	timestamps := make([]int64, medianTimeBlocks)
 	numNodes := 0
 	iterNode := node
+	if iterNode == nil {
+		panic("CalcPastMedianTime() called on nil")
+	}
 	for i := 0; i < medianTimeBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.timestamp
 		numNodes++
-
 		iterNode = iterNode.parent
 	}
 
@@ -310,27 +306,16 @@ func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockStatus) {
 	bi.Unlock()
 }
 
-// UnsetStatusFlags flips the provided status flags on the block node to off,
-// regardless of whether they were on or off previously.
-//
-// This function is safe for concurrent access.
-func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockStatus) {
-	bi.Lock()
-	node.status &^= flags
-	bi.dirty[node] = struct{}{}
-	bi.Unlock()
-}
-
 // flushToDB writes all dirty block nodes to the database. If all writes
 // succeed, this clears the dirty set.
-func (bi *blockIndex) flushToDB() error {
+func (bi *blockIndex) flushToDB() er.R {
 	bi.Lock()
 	if len(bi.dirty) == 0 {
 		bi.Unlock()
 		return nil
 	}
 
-	err := bi.db.Update(func(dbTx database.Tx) error {
+	err := bi.db.Update(func(dbTx database.Tx) er.R {
 		for node := range bi.dirty {
 			err := dbStoreBlockNode(dbTx, node)
 			if err != nil {

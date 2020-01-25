@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -157,7 +159,7 @@ func (vm *Engine) isBranchExecuting() bool {
 // executeOpcode peforms execution on the passed opcode.  It takes into account
 // whether or not it is hidden by conditionals, but some rules still must be
 // tested in this case.
-func (vm *Engine) executeOpcode(pop *parsedOpcode) error {
+func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 	// Disabled opcodes are fail on program counter.
 	if pop.isDisabled() {
 		str := fmt.Sprintf("attempt to execute disabled opcode %s",
@@ -196,7 +198,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) error {
 	// Ensure all executed data push opcodes use the minimal encoding when
 	// the minimal data verification flag is set.
 	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() &&
-		pop.opcode.value >= 0 && pop.opcode.value <= OP_PUSHDATA4 {
+		pop.opcode.value <= OP_PUSHDATA4 {
 
 		if err := pop.checkMinimalDataPush(); err != nil {
 			return err
@@ -217,7 +219,7 @@ func (vm *Engine) disasm(scriptIdx int, scriptOff int) string {
 
 // validPC returns an error if the current script position is valid for
 // execution, nil otherwise.
-func (vm *Engine) validPC() error {
+func (vm *Engine) validPC() er.R {
 	if vm.scriptIdx >= len(vm.scripts) {
 		str := fmt.Sprintf("past input scripts %v:%v %v:xxxx",
 			vm.scriptIdx, vm.scriptOff, len(vm.scripts))
@@ -234,7 +236,7 @@ func (vm *Engine) validPC() error {
 
 // curPC returns either the current script and offset, or an error if the
 // position isn't valid.
-func (vm *Engine) curPC() (script int, off int, err error) {
+func (vm *Engine) curPC() (script int, off int, err er.R) {
 	err = vm.validPC()
 	if err != nil {
 		return 0, 0, err
@@ -251,7 +253,7 @@ func (vm *Engine) isWitnessVersionActive(version uint) bool {
 
 // verifyWitnessProgram validates the stored witness program using the passed
 // witness as input.
-func (vm *Engine) verifyWitnessProgram(witness [][]byte) error {
+func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 	if vm.isWitnessVersionActive(0) {
 		switch len(vm.witnessProgram) {
 		case payToWitnessPubKeyHashDataSize: // P2WKH
@@ -360,7 +362,7 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) error {
 
 // DisasmPC returns the string for the disassembly of the opcode that will be
 // next to execute when Step() is called.
-func (vm *Engine) DisasmPC() (string, error) {
+func (vm *Engine) DisasmPC() (string, er.R) {
 	scriptIdx, scriptOff, err := vm.curPC()
 	if err != nil {
 		return "", err
@@ -371,7 +373,7 @@ func (vm *Engine) DisasmPC() (string, error) {
 // DisasmScript returns the disassembly string for the script at the requested
 // offset index.  Index 0 is the signature script and 1 is the public key
 // script.
-func (vm *Engine) DisasmScript(idx int) (string, error) {
+func (vm *Engine) DisasmScript(idx int) (string, er.R) {
 	if idx >= len(vm.scripts) {
 		str := fmt.Sprintf("script index %d >= total scripts %d", idx,
 			len(vm.scripts))
@@ -388,7 +390,7 @@ func (vm *Engine) DisasmScript(idx int) (string, error) {
 // CheckErrorCondition returns nil if the running script has ended and was
 // successful, leaving a a true boolean on the stack.  An error otherwise,
 // including if the script has not finished.
-func (vm *Engine) CheckErrorCondition(finalScript bool) error {
+func (vm *Engine) CheckErrorCondition(finalScript bool) er.R {
 	// Check execution is actually done.  When pc is past the end of script
 	// array there are no more scripts to run.
 	if vm.scriptIdx < len(vm.scripts) {
@@ -439,7 +441,7 @@ func (vm *Engine) CheckErrorCondition(finalScript bool) error {
 //
 // The result of calling Step or any other method is undefined if an error is
 // returned.
-func (vm *Engine) Step() (done bool, err error) {
+func (vm *Engine) Step() (done bool, err er.R) {
 	// Verify that it is pointing to a valid script address.
 	err = vm.validPC()
 	if err != nil {
@@ -527,7 +529,7 @@ func (vm *Engine) Step() (done bool, err error) {
 
 // Execute will execute all scripts in the script engine and return either nil
 // for successful validation or an error if one occurred.
-func (vm *Engine) Execute() (err error) {
+func (vm *Engine) Execute() (err er.R) {
 	done := false
 	for !done {
 		log.Tracef("%v", newLogClosure(func() string {
@@ -567,7 +569,7 @@ func (vm *Engine) subScript() []parsedOpcode {
 
 // checkHashTypeEncoding returns whether or not the passed hashtype adheres to
 // the strict encoding requirements if enabled.
-func (vm *Engine) checkHashTypeEncoding(hashType SigHashType) error {
+func (vm *Engine) checkHashTypeEncoding(hashType SigHashType) er.R {
 	if !vm.hasFlag(ScriptVerifyStrictEncoding) {
 		return nil
 	}
@@ -582,7 +584,7 @@ func (vm *Engine) checkHashTypeEncoding(hashType SigHashType) error {
 
 // checkPubKeyEncoding returns whether or not the passed public key adheres to
 // the strict encoding requirements if enabled.
-func (vm *Engine) checkPubKeyEncoding(pubKey []byte) error {
+func (vm *Engine) checkPubKeyEncoding(pubKey []byte) er.R {
 	if vm.hasFlag(ScriptVerifyWitnessPubKeyType) &&
 		vm.isWitnessVersionActive(0) && !btcec.IsCompressedPubKey(pubKey) {
 
@@ -608,7 +610,7 @@ func (vm *Engine) checkPubKeyEncoding(pubKey []byte) error {
 
 // checkSignatureEncoding returns whether or not the passed signature adheres to
 // the strict encoding requirements if enabled.
-func (vm *Engine) checkSignatureEncoding(sig []byte) error {
+func (vm *Engine) checkSignatureEncoding(sig []byte) er.R {
 	if !vm.hasFlag(ScriptVerifyDERSignatures) &&
 		!vm.hasFlag(ScriptVerifyLowS) &&
 		!vm.hasFlag(ScriptVerifyStrictEncoding) {
@@ -837,23 +839,11 @@ func (vm *Engine) SetStack(data [][]byte) {
 	setStack(&vm.dstack, data)
 }
 
-// GetAltStack returns the contents of the alternate stack as an array where the
-// last item in the array is the top of the stack.
-func (vm *Engine) GetAltStack() [][]byte {
-	return getStack(&vm.astack)
-}
-
-// SetAltStack sets the contents of the alternate stack to the contents of the
-// provided array where the last item in the array will be the top of the stack.
-func (vm *Engine) SetAltStack(data [][]byte) {
-	setStack(&vm.astack, data)
-}
-
 // NewEngine returns a new script engine for the provided public key script,
 // transaction, and input index.  The flags modify the behavior of the script
 // engine according to the description provided by each flag.
 func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags,
-	sigCache *SigCache, hashCache *TxSigHashes, inputAmount int64) (*Engine, error) {
+	sigCache *SigCache, hashCache *TxSigHashes, inputAmount int64) (*Engine, er.R) {
 
 	// The provided transaction input index must refer to a valid input.
 	if txIdx < 0 || txIdx >= len(tx.TxIn) {
@@ -909,7 +899,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 				"allowed size %d", len(scr), MaxScriptSize)
 			return nil, scriptError(ErrScriptTooBig, str)
 		}
-		var err error
+		var err er.R
 		vm.scripts[i], err = parseScript(scr)
 		if err != nil {
 			return nil, err
@@ -979,7 +969,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 		}
 
 		if witProgram != nil {
-			var err error
+			var err er.R
 			vm.witnessVersion, vm.witnessProgram, err = ExtractWitnessProgramInfo(witProgram)
 			if err != nil {
 				return nil, err

@@ -5,13 +5,13 @@
 package connmgr
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"net"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 func init() {
@@ -61,7 +61,7 @@ func (c mockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 // mockDialer mocks the net.Dial interface by returning a mock connection to
 // the given address.
-func mockDialer(addr net.Addr) (net.Conn, error) {
+func mockDialer(addr net.Addr) (net.Conn, er.R) {
 	r, w := io.Pipe()
 	c := &mockConn{rAddr: addr}
 	c.Reader = r
@@ -90,7 +90,7 @@ func TestStartStop(t *testing.T) {
 	disconnected := make(chan *ConnReq)
 	cmgr, err := New(&Config{
 		TargetOutbound: 1,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -189,7 +189,7 @@ func TestTargetOutbound(t *testing.T) {
 	cmgr, err := New(&Config{
 		TargetOutbound: targetOutbound,
 		Dial:           mockDialer,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -308,12 +308,12 @@ func TestMaxRetryDuration(t *testing.T) {
 	time.AfterFunc(5*time.Millisecond, func() {
 		close(networkUp)
 	})
-	timedDialer := func(addr net.Addr) (net.Conn, error) {
+	timedDialer := func(addr net.Addr) (net.Conn, er.R) {
 		select {
 		case <-networkUp:
 			return mockDialer(addr)
 		default:
-			return nil, errors.New("network down")
+			return nil, er.New("network down")
 		}
 	}
 
@@ -353,15 +353,15 @@ func TestMaxRetryDuration(t *testing.T) {
 // failure gracefully.
 func TestNetworkFailure(t *testing.T) {
 	var dials uint32
-	errDialer := func(net net.Addr) (net.Conn, error) {
+	errDialer := func(net net.Addr) (net.Conn, er.R) {
 		atomic.AddUint32(&dials, 1)
-		return nil, errors.New("network down")
+		return nil, er.New("network down")
 	}
 	cmgr, err := New(&Config{
 		TargetOutbound: 5,
 		RetryDuration:  5 * time.Millisecond,
 		Dial:           errDialer,
-		GetNewAddress: func() (net.Addr, error) {
+		GetNewAddress: func() (net.Addr, er.R) {
 			return &net.TCPAddr{
 				IP:   net.ParseIP("127.0.0.1"),
 				Port: 18555,
@@ -392,10 +392,10 @@ func TestNetworkFailure(t *testing.T) {
 // the failure.
 func TestStopFailed(t *testing.T) {
 	done := make(chan struct{}, 1)
-	waitDialer := func(addr net.Addr) (net.Conn, error) {
+	waitDialer := func(addr net.Addr) (net.Conn, er.R) {
 		done <- struct{}{}
 		time.Sleep(time.Millisecond)
-		return nil, errors.New("network down")
+		return nil, er.New("network down")
 	}
 	cmgr, err := New(&Config{
 		Dial: waitDialer,
@@ -428,9 +428,9 @@ func TestRemovePendingConnection(t *testing.T) {
 	// Create a ConnMgr instance with an instance of a dialer that'll never
 	// succeed.
 	wait := make(chan struct{})
-	indefiniteDialer := func(addr net.Addr) (net.Conn, error) {
+	indefiniteDialer := func(addr net.Addr) (net.Conn, er.R) {
 		<-wait
-		return nil, fmt.Errorf("error")
+		return nil, er.Errorf("error")
 	}
 	cmgr, err := New(&Config{
 		Dial: indefiniteDialer,
@@ -483,14 +483,14 @@ func TestCancelIgnoreDelayedConnection(t *testing.T) {
 	// connect chan is signaled, the dial attempt immediately after will
 	// succeed in returning a connection.
 	connect := make(chan struct{})
-	failingDialer := func(addr net.Addr) (net.Conn, error) {
+	failingDialer := func(addr net.Addr) (net.Conn, er.R) {
 		select {
 		case <-connect:
 			return mockDialer(addr)
 		default:
 		}
 
-		return nil, fmt.Errorf("error")
+		return nil, er.Errorf("error")
 	}
 
 	connected := make(chan *ConnReq)
@@ -568,7 +568,7 @@ func (m *mockListener) Accept() (net.Conn, error) {
 	for conn := range m.provideConn {
 		return conn, nil
 	}
-	return nil, errors.New("network connection closed")
+	return nil, er.Native(er.New("network connection closed"))
 }
 
 // Close closes the mock listener which will cause any blocked Accept

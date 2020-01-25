@@ -6,13 +6,14 @@ package mempool
 
 import (
 	"bytes"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // newTestFeeEstimator creates a feeEstimator with some different parameters
@@ -373,7 +374,7 @@ func (eft *estimateFeeTester) checkSaveAndRestore(
 	save := eft.ef.Save()
 
 	// Save and restore database.
-	var err error
+	var err er.R
 	eft.ef, err = RestoreFeeEstimator(save)
 	if err != nil {
 		eft.t.Fatalf("Could not restore database: %s", err)

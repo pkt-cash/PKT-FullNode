@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"testing"
 
@@ -23,14 +24,14 @@ func TestWalletSvrWsNtfns(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		newNtfn      func() (interface{}, error)
+		newNtfn      func() (interface{}, er.R)
 		staticNtfn   func() interface{}
 		marshalled   string
 		unmarshalled interface{}
 	}{
 		{
 			name: "accountbalance",
-			newNtfn: func() (interface{}, error) {
+			newNtfn: func() (interface{}, er.R) {
 				return btcjson.NewCmd("accountbalance", "acct", 1.25, true)
 			},
 			staticNtfn: func() interface{} {
@@ -45,7 +46,7 @@ func TestWalletSvrWsNtfns(t *testing.T) {
 		},
 		{
 			name: "pktdconnected",
-			newNtfn: func() (interface{}, error) {
+			newNtfn: func() (interface{}, er.R) {
 				return btcjson.NewCmd("pktdconnected", true)
 			},
 			staticNtfn: func() interface{} {
@@ -58,7 +59,7 @@ func TestWalletSvrWsNtfns(t *testing.T) {
 		},
 		{
 			name: "walletlockstate",
-			newNtfn: func() (interface{}, error) {
+			newNtfn: func() (interface{}, er.R) {
 				return btcjson.NewCmd("walletlockstate", true)
 			},
 			staticNtfn: func() interface{} {
@@ -71,7 +72,7 @@ func TestWalletSvrWsNtfns(t *testing.T) {
 		},
 		{
 			name: "newtx",
-			newNtfn: func() (interface{}, error) {
+			newNtfn: func() (interface{}, er.R) {
 				return btcjson.NewCmd("newtx", "acct", `{"account":"acct","address":"1Address","category":"send","amount":1.5,"bip125-replaceable":"unknown","fee":0.0001,"confirmations":1,"trusted":true,"txid":"456","walletconflicts":[],"time":12345678,"timereceived":12345876,"vout":789,"otheraccount":"otheracct"}`)
 			},
 			staticNtfn: func() interface{} {

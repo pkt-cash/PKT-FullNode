@@ -9,15 +9,16 @@ package rpctest
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 func testSendOutputs(r *Harness, t *testing.T) {
@@ -565,7 +566,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	var err error
+	var err er.R
 	mainHarness, err = New(&chaincfg.SimNetParams, nil, nil)
 	if err != nil {
 		fmt.Println("unable to create main harness: ", err)

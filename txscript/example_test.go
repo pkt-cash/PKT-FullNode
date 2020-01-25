@@ -8,12 +8,14 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // This example demonstrates creating a script which pays to a bitcoin address.
@@ -56,9 +58,9 @@ func ExamplePayToAddrScript() {
 func ExampleExtractPkScriptAddrs() {
 	// Start with a standard pay-to-pubkey-hash script.
 	scriptHex := "76a914128004ff2fcaf13b2b91eb654b1dc2b674f7ec6188ac"
-	script, err := hex.DecodeString(scriptHex)
-	if err != nil {
-		fmt.Println(err)
+	script, errr := hex.DecodeString(scriptHex)
+	if errr != nil {
+		fmt.Println(errr)
 		return
 	}
 
@@ -83,10 +85,10 @@ func ExampleExtractPkScriptAddrs() {
 func ExampleSignTxOutput() {
 	// Ordinarily the private key would come from whatever storage mechanism
 	// is being used, but for this example just hard code it.
-	privKeyBytes, err := hex.DecodeString("22a47fa09a223f2aa079edf85a7c2" +
+	privKeyBytes, errr := hex.DecodeString("22a47fa09a223f2aa079edf85a7c2" +
 		"d4f8720ee63e502ee2869afab7de234b80c")
-	if err != nil {
-		fmt.Println(err)
+	if errr != nil {
+		fmt.Println(errr)
 		return
 	}
 	privKey, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBytes)
@@ -130,7 +132,7 @@ func ExampleSignTxOutput() {
 	redeemTx.AddTxOut(txOut)
 
 	// Sign the redeeming transaction.
-	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
+	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, er.R) {
 		// Ordinarily this function would involve looking up the private
 		// key for the provided address, but since the only thing being
 		// signed in this example uses the address associated with the

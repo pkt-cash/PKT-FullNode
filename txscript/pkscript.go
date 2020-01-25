@@ -3,13 +3,13 @@ package txscript
 import (
 	"crypto/sha256"
 	"errors"
-	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -74,18 +74,18 @@ type PkScript struct {
 // ParsePkScript parses an output script into the PkScript struct.
 // ErrUnsupportedScriptType is returned when attempting to parse an unsupported
 // script type.
-func ParsePkScript(pkScript []byte) (PkScript, error) {
+func ParsePkScript(pkScript []byte) (PkScript, er.R) {
 	var outputScript PkScript
 	scriptClass, _, _, err := ExtractPkScriptAddrs(
 		pkScript, &chaincfg.MainNetParams,
 	)
 	if err != nil {
-		return outputScript, fmt.Errorf("unable to parse script type: "+
+		return outputScript, er.Errorf("unable to parse script type: "+
 			"%v", err)
 	}
 
 	if !isSupportedScriptType(scriptClass) {
-		return outputScript, ErrUnsupportedScriptType
+		return outputScript, er.E(ErrUnsupportedScriptType)
 	}
 
 	outputScript.class = scriptClass
@@ -141,10 +141,10 @@ func (s PkScript) Script() []byte {
 }
 
 // Address encodes the script into an address for the given chain.
-func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, error) {
+func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, er.R) {
 	_, addrs, _, err := ExtractPkScriptAddrs(s.Script(), chainParams)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse address: %v", err)
+		return nil, er.Errorf("unable to parse address: %v", err)
 	}
 
 	return addrs[0], nil
@@ -160,25 +160,25 @@ func (s PkScript) String() string {
 // input's signature script or witness.
 //
 // NOTE: Only P2PKH, P2SH, P2WSH, and P2WPKH redeem scripts are supported.
-func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, error) {
+func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, er.R) {
 	switch {
 	case len(sigScript) > 0:
 		return computeNonWitnessPkScript(sigScript)
 	case len(witness) > 0:
 		return computeWitnessPkScript(witness)
 	default:
-		return PkScript{}, ErrUnsupportedScriptType
+		return PkScript{}, er.E(ErrUnsupportedScriptType)
 	}
 }
 
 // computeNonWitnessPkScript computes the script of an output by looking at the
 // spending input's signature script.
-func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
+func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 	switch {
 	// Since we only support P2PKH and P2SH scripts as the only non-witness
 	// script types, we should expect to see a push only script.
 	case !IsPushOnlyScript(sigScript):
-		return PkScript{}, ErrUnsupportedScriptType
+		return PkScript{}, er.E(ErrUnsupportedScriptType)
 
 	// If a signature script is provided with a length long enough to
 	// represent a P2PKH script, then we'll attempt to parse the compressed
@@ -191,7 +191,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
 		// a P2PKH redeem script.
 		pubKey := sigScript[len(sigScript)-compressedPubKeyLen:]
 		if btcec.IsCompressedPubKey(pubKey) {
-			pubKeyHash := hash160(pubKey)
+			pubKeyHash := btcutil.Hash160(pubKey)
 			script, err := payToPubKeyHashScript(pubKeyHash)
 			if err != nil {
 				return PkScript{}, err
@@ -217,7 +217,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
 		}
 		redeemScript := parsedOpcodes[len(parsedOpcodes)-1].data
 
-		scriptHash := hash160(redeemScript)
+		scriptHash := btcutil.Hash160(redeemScript)
 		script, err := payToScriptHashScript(scriptHash)
 		if err != nil {
 			return PkScript{}, err
@@ -231,7 +231,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
 
 // computeWitnessPkScript computes the script of an output by looking at the
 // spending input's witness.
-func computeWitnessPkScript(witness wire.TxWitness) (PkScript, error) {
+func computeWitnessPkScript(witness wire.TxWitness) (PkScript, er.R) {
 	// We'll use the last item of the witness stack to determine the proper
 	// witness type.
 	lastWitnessItem := witness[len(witness)-1]
@@ -241,7 +241,7 @@ func computeWitnessPkScript(witness wire.TxWitness) (PkScript, error) {
 	// If the witness stack has a size of 2 and its last item is a
 	// compressed public key, then this is a P2WPKH witness.
 	case len(witness) == 2 && len(lastWitnessItem) == compressedPubKeyLen:
-		pubKeyHash := hash160(lastWitnessItem)
+		pubKeyHash := btcutil.Hash160(lastWitnessItem)
 		script, err := payToWitnessPubKeyHashScript(pubKeyHash)
 		if err != nil {
 			return pkScript, err
@@ -263,17 +263,4 @@ func computeWitnessPkScript(witness wire.TxWitness) (PkScript, error) {
 	}
 
 	return pkScript, nil
-}
-
-// hash160 returns the RIPEMD160 hash of the SHA-256 HASH of the given data.
-func hash160(data []byte) []byte {
-	h := sha256.Sum256(data)
-	return ripemd160h(h[:])
-}
-
-// ripemd160h returns the RIPEMD160 hash of the given data.
-func ripemd160h(data []byte) []byte {
-	h := ripemd160.New()
-	h.Write(data)
-	return h.Sum(nil)
 }

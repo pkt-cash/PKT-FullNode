@@ -5,18 +5,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/btcsuite/go-socks/socks"
+	"github.com/pkt-cash/pktd/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the
 // proxy and TLS settings in the associated connection configuration.
-func newHTTPClient(cfg *config) (*http.Client, error) {
+func newHTTPClient(cfg *config) (*http.Client, er.R) {
 	// Configure proxy if needed.
 	var dial func(network, addr string) (net.Conn, error)
 	if cfg.Proxy != "" {
@@ -39,7 +40,7 @@ func newHTTPClient(cfg *config) (*http.Client, error) {
 	if !cfg.NoTLS && cfg.RPCCert != "" {
 		pem, err := ioutil.ReadFile(cfg.RPCCert)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		pool := x509.NewCertPool()
@@ -65,7 +66,7 @@ func newHTTPClient(cfg *config) (*http.Client, error) {
 // to the server described in the passed config struct.  It also attempts to
 // unmarshal the response as a JSON-RPC response and returns either the result
 // field or the error field depending on whether or not there is an error.
-func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
+func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.R) {
 	// Generate a request to the configured RPC server.
 	protocol := "http"
 	if !cfg.NoTLS {
@@ -73,9 +74,9 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 	}
 	url := protocol + "://" + cfg.RPCServer
 	bodyReader := bytes.NewReader(marshalledJSON)
-	httpRequest, err := http.NewRequest("POST", url, bodyReader)
-	if err != nil {
-		return nil, err
+	httpRequest, errr := http.NewRequest("POST", url, bodyReader)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	httpRequest.Close = true
 	httpRequest.Header.Set("Content-Type", "application/json")
@@ -89,16 +90,16 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpResponse, err := httpClient.Do(httpRequest)
-	if err != nil {
-		return nil, err
+	httpResponse, errr := httpClient.Do(httpRequest)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Read the raw bytes and close the response.
-	respBytes, err := ioutil.ReadAll(httpResponse.Body)
+	respBytes, errr := ioutil.ReadAll(httpResponse.Body)
 	httpResponse.Body.Close()
-	if err != nil {
-		err = fmt.Errorf("error reading json reply: %v", err)
+	if errr != nil {
+		err = er.Errorf("error reading json reply: %v", errr)
 		return nil, err
 	}
 
@@ -109,20 +110,17 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 		// than showing nothing in case the target server has a poor
 		// implementation.
 		if len(respBytes) == 0 {
-			return nil, fmt.Errorf("%d %s", httpResponse.StatusCode,
+			return nil, er.Errorf("%d %s", httpResponse.StatusCode,
 				http.StatusText(httpResponse.StatusCode))
 		}
-		return nil, fmt.Errorf("%s", respBytes)
+		return nil, er.Errorf("%s", respBytes)
 	}
 
 	// Unmarshal the response.
 	var resp btcjson.Response
-	if err := json.Unmarshal(respBytes, &resp); err != nil {
+	if err := er.E(json.Unmarshal(respBytes, &resp)); err != nil {
 		return nil, err
 	}
 
-	if resp.Error != nil {
-		return nil, resp.Error
-	}
-	return resp.Result, nil
+	return &resp, nil
 }

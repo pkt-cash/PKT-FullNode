@@ -6,14 +6,8 @@
 // anywhere in the project, do not import anything which is part of pktd.
 package globalcfg
 
-import "time"
-
-const (
-	// SatoshiPerBitcoin is the number of satoshi in one bitcoin (1 BTC).
-	satoshiPerBitcoin = 1e8
-
-	// MaxSatoshi is the maximum transaction amount allowed in satoshi.
-	maxSatoshi = 21e6 * satoshiPerBitcoin
+import (
+	"time"
 )
 
 // ProofOfWork means the type of proof of work used on the chain
@@ -28,14 +22,22 @@ const (
 	PowPacketCrypt
 )
 
+type CoinAmount struct {
+	Name       string
+	ProperName string
+	Units      int64
+	Zeros      int
+}
+
 // Config is the global config which is accessible anywhere in the app
 type Config struct {
 	ProofOfWorkAlgorithm ProofOfWork
 	HasNetworkSteward    bool
-	MaxSatoshi           int64
-	SatoshiPerBitcoin    int64
-	MaxTimeOffsetSeconds time.Duration
+	MaxUnits             int64
+	UnitsPerCoin         int64
+	MaxTimeOffset        time.Duration
 	MedianTimeBlocks     int
+	Amounts              []CoinAmount
 }
 
 var gConf Config
@@ -46,73 +48,117 @@ func BitcoinDefaults() Config {
 	return Config{
 		ProofOfWorkAlgorithm: PowSha256,
 		HasNetworkSteward:    false,
-		MaxSatoshi:           maxSatoshi,
-		SatoshiPerBitcoin:    satoshiPerBitcoin,
-		MaxTimeOffsetSeconds: 2 * 60 * 60,
+		MaxUnits:             21e6 * 1e8,
+		UnitsPerCoin:         1e8,
+		MaxTimeOffset:        2 * 60 * 60,
 		MedianTimeBlocks:     11,
+		Amounts: []CoinAmount{
+			{Name: "BTC", Units: 1e8, Zeros: 8},
+			{Name: "MBTC", Units: 1e14, Zeros: 14},
+			{Name: "kBTC", Units: 1e11, Zeros: 11},
+			{Name: "mBTC", Units: 1e5, Zeros: 5},
+			{Name: "μBTC", Units: 1e2, Zeros: 2},
+			{Name: "uBTC", Units: 1e2, Zeros: 2, ProperName: "μBTC"},
+			{Name: "Satoshi", Units: 1, Zeros: 0},
+			{Name: "satoshi", Units: 1, Zeros: 0, ProperName: "Satoshi"},
+		},
+	}
+}
+
+func PktDefaults() Config {
+	return Config{
+		ProofOfWorkAlgorithm: PowPacketCrypt,
+		HasNetworkSteward:    true,
+		UnitsPerCoin:         0x40000000,
+		MaxUnits:             0x40000000 * 6000000000,
+		Amounts: []CoinAmount{
+			{Name: "PKT", Units: int64(1) << 30, Zeros: 9},
+			{Name: "MPKT", Units: int64(1) << 30 * 1e6, Zeros: 12},
+			{Name: "kPKT", Units: int64(1) << 30 * 1e3, Zeros: 15},
+
+			{Name: "Pibit", Units: int64(1) << 50, Zeros: 15},
+			{Name: "Tibit", Units: int64(1) << 40, Zeros: 12},
+			{Name: "Gibit", Units: int64(1) << 30, Zeros: 9},
+			{Name: "Mibit", Units: int64(1) << 20, Zeros: 6},
+			{Name: "Kibit", Units: int64(1) << 10, Zeros: 3},
+			{Name: "bit", Units: int64(1), Zeros: 0},
+		},
+		// Just over 10x bitcoin, but using an odd number because CalcPastMedianTime()
+		// algorithm depends on the number being odd
+		MedianTimeBlocks: 111,
+
+		// 1/10th that of bitcoin, because blocks come at a 10x rate
+		MaxTimeOffset: 60 * 12,
 	}
 }
 
 // SelectConfig is used to register the blockchain parameters with globalcfg
-func SelectConfig(conf Config) bool {
+func SelectConfig(conf Config) {
 	if registered {
-		return false
+		panic("globalcfg already selected")
 	}
 	registered = true
 	gConf = conf
-	return true
 }
 
-// RemoveConfig deletes the config, used in tests
-func RemoveConfig() bool {
+func checkRegistered() {
 	if !registered {
-		return false
+		panic("globalcfg requested but not yet registered")
 	}
-	registered = false
-	gConf = Config{}
-	return true
 }
 
-// GetMaxTimeOffsetSeconds is the maximum number of seconds a block time
+// GetMaxTimeOffset is the maximum number of seconds a block time
 // is allowed to be ahead of the current time.
-func GetMaxTimeOffsetSeconds() time.Duration {
-	return gConf.MaxTimeOffsetSeconds
+func GetMaxTimeOffset() time.Duration {
+	checkRegistered()
+	return gConf.MaxTimeOffset
 }
 
 // GetMedianTimeBlocks provides the number of previous blocks which should be
 // used to calculate the median time used to validate block timestamps.
 func GetMedianTimeBlocks() int {
+	checkRegistered()
 	return gConf.MedianTimeBlocks
 }
 
 // GetProofOfWorkAlgorithm tells whether the chain in use uses a custom proof
 // of work algorithm or the normal sha256 proof of work.
 func GetProofOfWorkAlgorithm() ProofOfWork {
+	checkRegistered()
 	return gConf.ProofOfWorkAlgorithm
 }
 
 // IsPacketCryptAllowedVersion tells whether the specified version of PacketCrypt proof is allowed.
 func IsPacketCryptAllowedVersion(version int, blockHeight int32) bool {
+	checkRegistered()
 	return version <= 1 || blockHeight >= 113949
 }
 
 // HasNetworkSteward returns true for blockchains which require a network steward fee
 func HasNetworkSteward() bool {
+	checkRegistered()
 	return gConf.HasNetworkSteward
 }
 
 // SatoshiPerBitcoin returns the number of atomic units per "coin"
 func SatoshiPerBitcoin() int64 {
-	if gConf.SatoshiPerBitcoin == 0 {
-		return satoshiPerBitcoin
-	}
-	return gConf.SatoshiPerBitcoin
+	checkRegistered()
+	return gConf.UnitsPerCoin
 }
 
-// MaxSatoshi returns the maximum number of atomic units of currency
-func MaxSatoshi() int64 {
-	if gConf.MaxSatoshi == 0 {
-		return maxSatoshi
-	}
-	return gConf.MaxSatoshi
+// MaxUnitsU64 returns the maximum number of atomic units of currency
+func MaxUnitsI64() int64 {
+	checkRegistered()
+	return gConf.MaxUnits
+}
+
+// UnitsPerCoinI64 returns the maximum number of atomic units per "coin"
+func UnitsPerCoinI64() int64 {
+	checkRegistered()
+	return gConf.UnitsPerCoin
+}
+
+func AmountUnits() []CoinAmount {
+	checkRegistered()
+	return gConf.Amounts
 }

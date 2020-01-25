@@ -7,8 +7,6 @@ package mempool
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -16,9 +14,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/mining"
-	"github.com/pkt-cash/btcutil"
 )
 
 // TODO incorporate Alex Morcos' modifications to Gavin's initial model
@@ -73,17 +73,6 @@ func (rate SatoshiPerByte) ToBtcPerKb() BtcPerKilobyte {
 	return BtcPerKilobyte(float64(rate) * bytePerKb * btcPerSatoshi)
 }
 
-// Fee returns the fee for a transaction of a given size for
-// the given fee rate.
-func (rate SatoshiPerByte) Fee(size uint32) btcutil.Amount {
-	// If our rate is the error value, return that.
-	if rate == SatoshiPerByte(-1) {
-		return btcutil.Amount(-1)
-	}
-
-	return btcutil.Amount(float64(rate) * float64(size))
-}
-
 // NewSatoshiPerByte creates a SatoshiPerByte from an Amount and a
 // size in bytes.
 func NewSatoshiPerByte(fee btcutil.Amount, size uint32) SatoshiPerByte {
@@ -114,7 +103,7 @@ func (o *observedTransaction) Serialize(w io.Writer) {
 	binary.Write(w, binary.BigEndian, o.mined)
 }
 
-func deserializeObservedTransaction(r io.Reader) (*observedTransaction, error) {
+func deserializeObservedTransaction(r io.Reader) (*observedTransaction, er.R) {
 	ot := observedTransaction{}
 
 	// The first 32 bytes should be a hash.
@@ -220,7 +209,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 }
 
 // RegisterBlock informs the fee estimator of a new block to take into account.
-func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
+func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) er.R {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -229,7 +218,7 @@ func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
 
 	height := block.Height()
 	if height != ef.lastKnownHeight+1 && ef.lastKnownHeight != mining.UnminedHeight {
-		return fmt.Errorf("intermediate block not recorded; current height is %d; new height is %d",
+		return er.Errorf("intermediate block not recorded; current height is %d; new height is %d",
 			ef.lastKnownHeight, height)
 	}
 
@@ -270,7 +259,7 @@ func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
 		// but return an error if it does.
 		if o.mined != mining.UnminedHeight {
 			log.Error("Estimate fee: transaction ", hash.String(), " has already been mined")
-			return errors.New("Transaction has already been mined")
+			return er.New("Transaction has already been mined")
 		}
 
 		// This shouldn't happen but check just in case to avoid
@@ -343,7 +332,7 @@ func (ef *FeeEstimator) LastKnownHeight() int32 {
 // deleted if they have been observed too long ago. That means the result
 // of Rollback won't always be exactly the same as if the last block had not
 // happened, but it should be close enough.
-func (ef *FeeEstimator) Rollback(hash *chainhash.Hash) error {
+func (ef *FeeEstimator) Rollback(hash *chainhash.Hash) er.R {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -356,7 +345,7 @@ func (ef *FeeEstimator) Rollback(hash *chainhash.Hash) error {
 	}
 
 	if n > len(ef.dropped) {
-		return errors.New("no such block was recently registered")
+		return er.New("no such block was recently registered")
 	}
 
 	for i := 0; i < n; i++ {
@@ -399,7 +388,7 @@ func (ef *FeeEstimator) rollback() {
 		for {
 			if counter >= len(bin) {
 				// Panic, as we have entered an unrecoverable invalid state.
-				panic(errors.New("illegal state: cannot rollback dropped transaction"))
+				panic(er.New("illegal state: cannot rollback dropped transaction"))
 			}
 
 			prev := bin[counter]
@@ -546,22 +535,22 @@ func (ef *FeeEstimator) estimates() []SatoshiPerByte {
 
 // EstimateFee estimates the fee per byte to have a tx confirmed a given
 // number of blocks from now.
-func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
+func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, er.R) {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
 	// If the number of registered blocks is below the minimum, return
 	// an error.
 	if ef.numBlocksRegistered < ef.minRegisteredBlocks {
-		return -1, errors.New("not enough blocks have been observed")
+		return -1, er.New("not enough blocks have been observed")
 	}
 
 	if numBlocks == 0 {
-		return -1, errors.New("cannot confirm transaction in zero blocks")
+		return -1, er.New("cannot confirm transaction in zero blocks")
 	}
 
 	if numBlocks > estimateFeeDepth {
-		return -1, fmt.Errorf(
+		return -1, er.Errorf(
 			"can only estimate fees for up to %d blocks from now",
 			estimateFeeBinSize)
 	}
@@ -580,7 +569,7 @@ func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
 // start fee estimation over.
 const estimateFeeSaveVersion = 1
 
-func deserializeRegisteredBlock(r io.Reader, txs map[uint32]*observedTransaction) (*registeredBlock, error) {
+func deserializeRegisteredBlock(r io.Reader, txs map[uint32]*observedTransaction) (*registeredBlock, er.R) {
 	var lenTransactions uint32
 
 	rb := &registeredBlock{}
@@ -677,17 +666,17 @@ func (ef *FeeEstimator) Save() FeeEstimatorState {
 
 // RestoreFeeEstimator takes a FeeEstimatorState that was previously
 // returned by Save and restores it to a FeeEstimator
-func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, error) {
+func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, er.R) {
 	r := bytes.NewReader([]byte(data))
 
 	// Check version
 	var version uint32
-	err := binary.Read(r, binary.BigEndian, &version)
-	if err != nil {
-		return nil, err
+	errr := binary.Read(r, binary.BigEndian, &version)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	if version != estimateFeeSaveVersion {
-		return nil, fmt.Errorf("Incorrect version: expected %d found %d", estimateFeeSaveVersion, version)
+		return nil, er.Errorf("Incorrect version: expected %d found %d", estimateFeeSaveVersion, version)
 	}
 
 	ef := &FeeEstimator{
@@ -727,7 +716,7 @@ func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, error) {
 			var exists bool
 			bin[j], exists = observed[index]
 			if !exists {
-				return nil, fmt.Errorf("Invalid transaction reference %d", index)
+				return nil, er.Errorf("Invalid transaction reference %d", index)
 			}
 		}
 		ef.bin[i] = bin
@@ -738,7 +727,7 @@ func RestoreFeeEstimator(data FeeEstimatorState) (*FeeEstimator, error) {
 	binary.Read(r, binary.BigEndian, &numDropped)
 	ef.dropped = make([]*registeredBlock, numDropped)
 	for i := uint32(0); i < numDropped; i++ {
-		var err error
+		var err er.R
 		ef.dropped[int(i)], err = deserializeRegisteredBlock(r, observed)
 		if err != nil {
 			return nil, err

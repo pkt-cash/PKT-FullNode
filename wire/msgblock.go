@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
@@ -49,7 +51,7 @@ type MsgBlock struct {
 }
 
 // AddTransaction adds a transaction to the message.
-func (msg *MsgBlock) AddTransaction(tx *MsgTx) error {
+func (msg *MsgBlock) AddTransaction(tx *MsgTx) er.R {
 	msg.Transactions = append(msg.Transactions, tx)
 	return nil
 
@@ -64,14 +66,15 @@ func (msg *MsgBlock) ClearTransactions() {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
-func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	err := readBlockHeader(r, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt ||
-		enc&PacketCryptEncoding == PacketCryptEncoding {
+	if enc&NoPacketCryptEncoding == NoPacketCryptEncoding {
+	} else if enc&PacketCryptEncoding == PacketCryptEncoding ||
+		globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
 		if msg.Pcp == nil {
 			msg.Pcp = &PacketCryptProof{}
 		}
@@ -116,7 +119,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 // all.  As of the time this comment was written, the encoded block is the same
 // in both instances, but there is a distinct difference and separating the two
 // allows the API to be flexible enough to deal with changes.
-func (msg *MsgBlock) Deserialize(r io.Reader) error {
+func (msg *MsgBlock) Deserialize(r io.Reader) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of BtcDecode.
@@ -128,18 +131,11 @@ func (msg *MsgBlock) Deserialize(r io.Reader) error {
 	return msg.BtcDecode(r, 0, WitnessEncoding)
 }
 
-// DeserializeNoWitness decodes a block from r into the receiver similar to
-// Deserialize, however DeserializeWitness strips all (if any) witness data
-// from the transactions within the block before encoding them.
-func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) error {
-	return msg.BtcDecode(r, 0, BaseEncoding)
-}
-
 // DeserializeTxLoc decodes r in the same manner Deserialize does, but it takes
 // a byte buffer instead of a generic reader and returns a slice containing the
 // start and length of each transaction within the raw data that is being
 // deserialized.
-func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
+func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, er.R) {
 	fullLen := r.Len()
 
 	// At the current time, there is no difference between the wire encoding
@@ -193,17 +189,18 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // This is part of the Message interface implementation.
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
-func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 
 	err := writeBlockHeader(w, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt &&
-		enc&NoPacketCryptEncoding != NoPacketCryptEncoding {
+	if enc&NoPacketCryptEncoding == NoPacketCryptEncoding {
+	} else if enc&PacketCryptEncoding == PacketCryptEncoding ||
+		globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowPacketCrypt {
 		if msg.Pcp == nil {
-			return fmt.Errorf("proof of work is not defined")
+			return er.Errorf("proof of work is not defined")
 		}
 		if err = msg.Pcp.BtcEncode(w, pver, enc); err != nil {
 			return err
@@ -234,7 +231,7 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 // time this comment was written, the encoded block is the same in both
 // instances, but there is a distinct difference and separating the two allows
 // the API to be flexible enough to deal with changes.
-func (msg *MsgBlock) Serialize(w io.Writer) error {
+func (msg *MsgBlock) Serialize(w io.Writer) er.R {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of BtcEncode.
@@ -243,15 +240,6 @@ func (msg *MsgBlock) Serialize(w io.Writer) error {
 	// each of the transactions should be serialized using the witness
 	// serialization structure defined in BIP0141.
 	return msg.BtcEncode(w, 0, WitnessEncoding)
-}
-
-// SerializeNoWitness encodes a block to w using an identical format to
-// Serialize, with all (if any) witness data stripped from all transactions.
-// This method is provided in additon to the regular Serialize, in order to
-// allow one to selectively encode transaction witness data to non-upgraded
-// peers which are unaware of the new encoding.
-func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
-	return msg.BtcEncode(w, 0, BaseEncoding)
 }
 
 // SerializeSize returns the number of bytes it would take to serialize the
@@ -315,7 +303,7 @@ func (msg *MsgBlock) BlockHash() chainhash.Hash {
 }
 
 // TxHashes returns a slice of hashes of all of transactions in this block.
-func (msg *MsgBlock) TxHashes() ([]chainhash.Hash, error) {
+func (msg *MsgBlock) TxHashes() ([]chainhash.Hash, er.R) {
 	hashList := make([]chainhash.Hash, 0, len(msg.Transactions))
 	for _, tx := range msg.Transactions {
 		hashList = append(hashList, tx.TxHash())

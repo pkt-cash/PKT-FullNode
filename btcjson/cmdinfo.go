@@ -6,6 +6,7 @@ package btcjson
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
 )
@@ -13,7 +14,7 @@ import (
 // CmdMethod returns the method for the passed command.  The provided command
 // type must be a registered type.  All commands provided by this package are
 // registered by default.
-func CmdMethod(cmd interface{}) (string, error) {
+func CmdMethod(cmd interface{}) (string, er.R) {
 	// Look up the cmd type and error out if not registered.
 	rt := reflect.TypeOf(cmd)
 	registerLock.RLock()
@@ -30,7 +31,7 @@ func CmdMethod(cmd interface{}) (string, error) {
 // MethodUsageFlags returns the usage flags for the passed command method.  The
 // provided method must be associated with a registered type.  All commands
 // provided by this package are registered by default.
-func MethodUsageFlags(method string) (UsageFlag, error) {
+func MethodUsageFlags(method string) (UsageFlag, er.R) {
 	// Look up details about the provided method and error out if not
 	// registered.
 	registerLock.RLock()
@@ -221,7 +222,7 @@ func methodUsageText(rtp reflect.Type, defaults map[int]reflect.Value, method st
 // MethodUsageText returns a one-line usage string for the provided method.  The
 // provided method must be associated with a registered type.  All commands
 // provided by this package are registered by default.
-func MethodUsageText(method string) (string, error) {
+func MethodUsageText(method string) (string, er.R) {
 	// Look up details about the provided method and error out if not
 	// registered.
 	registerLock.RLock()

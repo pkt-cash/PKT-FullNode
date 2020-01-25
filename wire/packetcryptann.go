@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 )
 
@@ -66,10 +68,10 @@ func (p *PacketCryptAnn) GetWorkTarget() uint32 {
 	return binary.LittleEndian.Uint32(p.Header[8:12])
 }
 
-// GetContentType provides the uint32 content type ID
-func (p *PacketCryptAnn) GetContentType() uint32 {
-	return binary.LittleEndian.Uint32(p.Header[16:20])
-}
+// // GetContentType provides the uint32 content type ID
+// func (p *PacketCryptAnn) GetContentType() uint32 {
+// 	return binary.LittleEndian.Uint32(p.Header[16:20])
+// }
 
 // GetContentLength provides the length of the announcement content
 func (p *PacketCryptAnn) GetContentLength() uint32 {
@@ -95,13 +97,13 @@ func (p *PacketCryptAnn) HasSigningKey() bool {
 }
 
 // BtcDecode decodes an announcement from a reader
-func (p *PacketCryptAnn) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (p *PacketCryptAnn) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	_, err := io.ReadFull(r, p.Header[:])
-	return err
+	return er.E(err)
 }
 
 // BtcEncode encodes an announcement to a writer
-func (p *PacketCryptAnn) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (p *PacketCryptAnn) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	_, err := w.Write(p.Header[:])
-	return err
+	return er.E(err)
 }

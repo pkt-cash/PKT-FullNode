@@ -12,6 +12,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -71,11 +73,11 @@ func (l binaryFreeList) Return(buf []byte) {
 
 // Uint8 reads a single byte from the provided reader using a buffer from the
 // free list and returns it as a uint8.
-func (l binaryFreeList) Uint8(r io.Reader) (uint8, error) {
+func (l binaryFreeList) Uint8(r io.Reader) (uint8, er.R) {
 	buf := l.Borrow()[:1]
-	if _, err := io.ReadFull(r, buf); err != nil {
+	if _, errr := io.ReadFull(r, buf); errr != nil {
 		l.Return(buf)
-		return 0, err
+		return 0, er.E(errr)
 	}
 	rv := buf[0]
 	l.Return(buf)
@@ -85,11 +87,11 @@ func (l binaryFreeList) Uint8(r io.Reader) (uint8, error) {
 // Uint16 reads two bytes from the provided reader using a buffer from the
 // free list, converts it to a number using the provided byte order, and returns
 // the resulting uint16.
-func (l binaryFreeList) Uint16(r io.Reader, byteOrder binary.ByteOrder) (uint16, error) {
+func (l binaryFreeList) Uint16(r io.Reader, byteOrder binary.ByteOrder) (uint16, er.R) {
 	buf := l.Borrow()[:2]
-	if _, err := io.ReadFull(r, buf); err != nil {
+	if _, errr := io.ReadFull(r, buf); errr != nil {
 		l.Return(buf)
-		return 0, err
+		return 0, er.E(errr)
 	}
 	rv := byteOrder.Uint16(buf)
 	l.Return(buf)
@@ -99,11 +101,11 @@ func (l binaryFreeList) Uint16(r io.Reader, byteOrder binary.ByteOrder) (uint16,
 // Uint32 reads four bytes from the provided reader using a buffer from the
 // free list, converts it to a number using the provided byte order, and returns
 // the resulting uint32.
-func (l binaryFreeList) Uint32(r io.Reader, byteOrder binary.ByteOrder) (uint32, error) {
+func (l binaryFreeList) Uint32(r io.Reader, byteOrder binary.ByteOrder) (uint32, er.R) {
 	buf := l.Borrow()[:4]
-	if _, err := io.ReadFull(r, buf); err != nil {
+	if _, errr := io.ReadFull(r, buf); errr != nil {
 		l.Return(buf)
-		return 0, err
+		return 0, er.E(errr)
 	}
 	rv := byteOrder.Uint32(buf)
 	l.Return(buf)
@@ -113,11 +115,11 @@ func (l binaryFreeList) Uint32(r io.Reader, byteOrder binary.ByteOrder) (uint32,
 // Uint64 reads eight bytes from the provided reader using a buffer from the
 // free list, converts it to a number using the provided byte order, and returns
 // the resulting uint64.
-func (l binaryFreeList) Uint64(r io.Reader, byteOrder binary.ByteOrder) (uint64, error) {
+func (l binaryFreeList) Uint64(r io.Reader, byteOrder binary.ByteOrder) (uint64, er.R) {
 	buf := l.Borrow()[:8]
-	if _, err := io.ReadFull(r, buf); err != nil {
+	if _, errr := io.ReadFull(r, buf); errr != nil {
 		l.Return(buf)
-		return 0, err
+		return 0, er.E(errr)
 	}
 	rv := byteOrder.Uint64(buf)
 	l.Return(buf)
@@ -126,45 +128,45 @@ func (l binaryFreeList) Uint64(r io.Reader, byteOrder binary.ByteOrder) (uint64,
 
 // PutUint8 copies the provided uint8 into a buffer from the free list and
 // writes the resulting byte to the given writer.
-func (l binaryFreeList) PutUint8(w io.Writer, val uint8) error {
+func (l binaryFreeList) PutUint8(w io.Writer, val uint8) er.R {
 	buf := l.Borrow()[:1]
 	buf[0] = val
-	_, err := w.Write(buf)
+	_, errr := w.Write(buf)
 	l.Return(buf)
-	return err
+	return er.E(errr)
 }
 
 // PutUint16 serializes the provided uint16 using the given byte order into a
 // buffer from the free list and writes the resulting two bytes to the given
 // writer.
-func (l binaryFreeList) PutUint16(w io.Writer, byteOrder binary.ByteOrder, val uint16) error {
+func (l binaryFreeList) PutUint16(w io.Writer, byteOrder binary.ByteOrder, val uint16) er.R {
 	buf := l.Borrow()[:2]
 	byteOrder.PutUint16(buf, val)
-	_, err := w.Write(buf)
+	_, errr := w.Write(buf)
 	l.Return(buf)
-	return err
+	return er.E(errr)
 }
 
 // PutUint32 serializes the provided uint32 using the given byte order into a
 // buffer from the free list and writes the resulting four bytes to the given
 // writer.
-func (l binaryFreeList) PutUint32(w io.Writer, byteOrder binary.ByteOrder, val uint32) error {
+func (l binaryFreeList) PutUint32(w io.Writer, byteOrder binary.ByteOrder, val uint32) er.R {
 	buf := l.Borrow()[:4]
 	byteOrder.PutUint32(buf, val)
-	_, err := w.Write(buf)
+	_, errr := w.Write(buf)
 	l.Return(buf)
-	return err
+	return er.E(errr)
 }
 
 // PutUint64 serializes the provided uint64 using the given byte order into a
 // buffer from the free list and writes the resulting eight bytes to the given
 // writer.
-func (l binaryFreeList) PutUint64(w io.Writer, byteOrder binary.ByteOrder, val uint64) error {
+func (l binaryFreeList) PutUint64(w io.Writer, byteOrder binary.ByteOrder, val uint64) er.R {
 	buf := l.Borrow()[:8]
 	byteOrder.PutUint64(buf, val)
-	_, err := w.Write(buf)
+	_, errr := w.Write(buf)
 	l.Return(buf)
-	return err
+	return er.E(errr)
 }
 
 // binarySerializer provides a free list of buffers to use for serializing and
@@ -188,7 +190,7 @@ type int64Time time.Time
 
 // readElement reads the next sequence of bytes from r using little endian
 // depending on the concrete type of element pointed to.
-func readElement(r io.Reader, element interface{}) error {
+func readElement(r io.Reader, element interface{}) er.R {
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -256,32 +258,32 @@ func readElement(r io.Reader, element interface{}) error {
 
 	// Message header checksum.
 	case *[4]byte:
-		_, err := io.ReadFull(r, e[:])
-		if err != nil {
-			return err
+		_, errr := io.ReadFull(r, e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	// Message header command.
 	case *[CommandSize]uint8:
-		_, err := io.ReadFull(r, e[:])
-		if err != nil {
-			return err
+		_, errr := io.ReadFull(r, e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	// IP address.
 	case *[16]byte:
-		_, err := io.ReadFull(r, e[:])
-		if err != nil {
-			return err
+		_, errr := io.ReadFull(r, e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	case *chainhash.Hash:
-		_, err := io.ReadFull(r, e[:])
-		if err != nil {
-			return err
+		_, errr := io.ReadFull(r, e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
@@ -328,12 +330,12 @@ func readElement(r io.Reader, element interface{}) error {
 
 	// Fall back to the slower binary.Read if a fast path was not available
 	// above.
-	return binary.Read(r, littleEndian, element)
+	return er.E(binary.Read(r, littleEndian, element))
 }
 
 // readElements reads multiple items from r.  It is equivalent to multiple
 // calls to readElement.
-func readElements(r io.Reader, elements ...interface{}) error {
+func readElements(r io.Reader, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := readElement(r, element)
 		if err != nil {
@@ -344,7 +346,7 @@ func readElements(r io.Reader, elements ...interface{}) error {
 }
 
 // writeElement writes the little endian representation of element to w.
-func writeElement(w io.Writer, element interface{}) error {
+func writeElement(w io.Writer, element interface{}) er.R {
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -377,7 +379,7 @@ func writeElement(w io.Writer, element interface{}) error {
 		return nil
 
 	case bool:
-		var err error
+		var err er.R
 		if e {
 			err = binarySerializer.PutUint8(w, 0x01)
 		} else {
@@ -390,32 +392,32 @@ func writeElement(w io.Writer, element interface{}) error {
 
 	// Message header checksum.
 	case [4]byte:
-		_, err := w.Write(e[:])
-		if err != nil {
-			return err
+		_, errr := w.Write(e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	// Message header command.
 	case [CommandSize]uint8:
-		_, err := w.Write(e[:])
-		if err != nil {
-			return err
+		_, errr := w.Write(e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	// IP address.
 	case [16]byte:
-		_, err := w.Write(e[:])
-		if err != nil {
-			return err
+		_, errr := w.Write(e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
 	case *chainhash.Hash:
-		_, err := w.Write(e[:])
-		if err != nil {
-			return err
+		_, errr := w.Write(e[:])
+		if errr != nil {
+			return er.E(errr)
 		}
 		return nil
 
@@ -457,12 +459,12 @@ func writeElement(w io.Writer, element interface{}) error {
 
 	// Fall back to the slower binary.Write if a fast path was not available
 	// above.
-	return binary.Write(w, littleEndian, element)
+	return er.E(binary.Write(w, littleEndian, element))
 }
 
 // writeElements writes multiple items to w.  It is equivalent to multiple
 // calls to writeElement.
-func writeElements(w io.Writer, elements ...interface{}) error {
+func writeElements(w io.Writer, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := writeElement(w, element)
 		if err != nil {
@@ -473,7 +475,7 @@ func writeElements(w io.Writer, elements ...interface{}) error {
 }
 
 // ReadVarInt reads a variable length integer from r and returns it as a uint64.
-func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
+func ReadVarInt(r io.Reader, pver uint32) (uint64, er.R) {
 	discriminant, err := binarySerializer.Uint8(r)
 	if err != nil {
 		return 0, err
@@ -535,7 +537,7 @@ func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
 
 // WriteVarInt serializes val to w using a variable number of bytes depending
 // on its value.
-func WriteVarInt(w io.Writer, pver uint32, val uint64) error {
+func WriteVarInt(w io.Writer, pver uint32, val uint64) er.R {
 	if val < 0xfd {
 		return binarySerializer.PutUint8(w, uint8(val))
 	}
@@ -592,7 +594,7 @@ func VarIntSerializeSize(val uint64) int {
 // string itself.  An error is returned if the length is greater than the
 // maximum block payload size since it helps protect against memory exhaustion
 // attacks and forced panics through malformed messages.
-func ReadVarString(r io.Reader, pver uint32) (string, error) {
+func ReadVarString(r io.Reader, pver uint32) (string, er.R) {
 	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return "", err
@@ -608,9 +610,9 @@ func ReadVarString(r io.Reader, pver uint32) (string, error) {
 	}
 
 	buf := make([]byte, count)
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
-		return "", err
+	_, errr := io.ReadFull(r, buf)
+	if errr != nil {
+		return "", er.E(errr)
 	}
 	return string(buf), nil
 }
@@ -618,13 +620,13 @@ func ReadVarString(r io.Reader, pver uint32) (string, error) {
 // WriteVarString serializes str to w as a variable length integer containing
 // the length of the string followed by the bytes that represent the string
 // itself.
-func WriteVarString(w io.Writer, pver uint32, str string) error {
+func WriteVarString(w io.Writer, pver uint32, str string) er.R {
 	err := WriteVarInt(w, pver, uint64(len(str)))
 	if err != nil {
 		return err
 	}
-	_, err = w.Write([]byte(str))
-	return err
+	_, errr := w.Write([]byte(str))
+	return er.E(errr)
 }
 
 // ReadVarBytes reads a variable length byte array.  A byte array is encoded
@@ -635,7 +637,7 @@ func WriteVarString(w io.Writer, pver uint32, str string) error {
 // parameter is only used for the error message so it provides more context in
 // the error.
 func ReadVarBytes(r io.Reader, pver uint32, maxAllowed uint32,
-	fieldName string) ([]byte, error) {
+	fieldName string) ([]byte, er.R) {
 
 	count, err := ReadVarInt(r, pver)
 	if err != nil {
@@ -652,30 +654,30 @@ func ReadVarBytes(r io.Reader, pver uint32, maxAllowed uint32,
 	}
 
 	b := make([]byte, count)
-	_, err = io.ReadFull(r, b)
-	if err != nil {
-		return nil, err
+	_, errr := io.ReadFull(r, b)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	return b, nil
 }
 
 // WriteVarBytes serializes a variable length byte array to w as a varInt
 // containing the number of bytes, followed by the bytes themselves.
-func WriteVarBytes(w io.Writer, pver uint32, bytes []byte) error {
+func WriteVarBytes(w io.Writer, pver uint32, bytes []byte) er.R {
 	slen := uint64(len(bytes))
 	err := WriteVarInt(w, pver, slen)
 	if err != nil {
 		return err
 	}
 
-	_, err = w.Write(bytes)
-	return err
+	_, errr := w.Write(bytes)
+	return er.E(errr)
 }
 
 // randomUint64 returns a cryptographically random uint64 value.  This
 // unexported version takes a reader primarily to ensure the error paths
 // can be properly tested by passing a fake reader in the tests.
-func randomUint64(r io.Reader) (uint64, error) {
+func randomUint64(r io.Reader) (uint64, er.R) {
 	rv, err := binarySerializer.Uint64(r, bigEndian)
 	if err != nil {
 		return 0, err
@@ -684,6 +686,6 @@ func randomUint64(r io.Reader) (uint64, error) {
 }
 
 // RandomUint64 returns a cryptographically random uint64 value.
-func RandomUint64() (uint64, error) {
+func RandomUint64() (uint64, er.R) {
 	return randomUint64(rand.Reader)
 }

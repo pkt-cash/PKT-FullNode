@@ -7,6 +7,8 @@ package txscript
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -20,12 +22,7 @@ const (
 
 // ErrScriptNotCanonical identifies a non-canonical script.  The caller can use
 // a type assertion to detect this error type.
-type ErrScriptNotCanonical string
-
-// Error implements the error interface.
-func (e ErrScriptNotCanonical) Error() string {
-	return string(e)
-}
+var ErrScriptNotCanonical = Err.Code("ErrScriptNotCanonical")
 
 // ScriptBuilder provides a facility for building custom scripts.  It allows
 // you to push opcodes, ints, and data while respecting canonical encoding.  In
@@ -49,7 +46,7 @@ func (e ErrScriptNotCanonical) Error() string {
 // 	fmt.Printf("Final multi-sig script: %x\n", script)
 type ScriptBuilder struct {
 	script []byte
-	err    error
+	err    er.R
 }
 
 // AddOp pushes the passed opcode to the end of the script.  The script will not
@@ -65,7 +62,7 @@ func (b *ScriptBuilder) AddOp(opcode byte) *ScriptBuilder {
 	if len(b.script)+1 > MaxScriptSize {
 		str := fmt.Sprintf("adding an opcode would exceed the maximum "+
 			"allowed canonical script length of %d", MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -86,7 +83,7 @@ func (b *ScriptBuilder) AddOps(opcodes []byte) *ScriptBuilder {
 	if len(b.script)+len(opcodes) > MaxScriptSize {
 		str := fmt.Sprintf("adding opcodes would exceed the maximum "+
 			"allowed canonical script length of %d", MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -202,7 +199,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 		str := fmt.Sprintf("adding %d bytes of data would exceed the "+
 			"maximum allowed canonical script length of %d",
 			dataSize, MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -213,7 +210,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 		str := fmt.Sprintf("adding a data element of %d bytes would "+
 			"exceed the maximum allowed script element size of %d",
 			dataLen, MaxScriptElementSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -234,7 +231,7 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 		str := fmt.Sprintf("adding an integer would exceed the "+
 			"maximum allow canonical script length of %d",
 			MaxScriptSize)
-		b.err = ErrScriptNotCanonical(str)
+		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -261,7 +258,7 @@ func (b *ScriptBuilder) Reset() *ScriptBuilder {
 // Script returns the currently built script.  When any errors occurred while
 // building the script, the script will be returned up the point of the first
 // error along with the error.
-func (b *ScriptBuilder) Script() ([]byte, error) {
+func (b *ScriptBuilder) Script() ([]byte, er.R) {
 	return b.script, b.err
 }
 

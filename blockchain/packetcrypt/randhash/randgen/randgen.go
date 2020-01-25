@@ -6,7 +6,8 @@ package randgen
 
 import (
 	"encoding/binary"
-	"errors"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/opcodes"
@@ -97,7 +98,7 @@ func _getVar(ctx *randGen, dbl bool) int {
 			}
 		}
 		// end of the line, this is tested after because first frame should always have 4 vars.
-		if 0 == bof {
+		if bof == 0 {
 			break
 		}
 		// walk up to a higher scope
@@ -121,8 +122,8 @@ func _getVar(ctx *randGen, dbl bool) int {
 		if (!dbl || (j > bof+1)) && cointoss(ctx, util.Conf_RandGen_VAR_REUSE_LIKELYHOOD) {
 			//printf("reuse\n");
 			return j
-		} else if 0 == (ctx.vars[j] & 1) {
-			if !dbl || 0 == (ctx.vars[j-1]&1) {
+		} else if (ctx.vars[j] & 1) == 0 {
+			if !dbl || (ctx.vars[j-1]&1) == 0 {
 				return j
 			}
 		}
@@ -325,7 +326,7 @@ func body(ctx *randGen, budget *int, createScope bool) int {
 		if util.Conf_RandGen_SHOULD_BRANCH(randu32(ctx), len(ctx.insns)) && !branch(ctx, budget) {
 			goto out
 		}
-		if util.Conf_RandGen_SHOULD_LOOP(randu32(ctx)) && 0 == loop(ctx, budget) {
+		if util.Conf_RandGen_SHOULD_LOOP(randu32(ctx)) && loop(ctx, budget) == 0 {
 			goto out
 		}
 	}
@@ -336,7 +337,7 @@ out:
 	return 0
 }
 
-func Generate(seed []byte) ([]uint32, error) {
+func Generate(seed []byte) ([]uint32, er.R) {
 	budget := util.Conf_RandGen_INITIAL_BUDGET
 	ctx := randGen{}
 	copy(ctx.randseed[:], seed[:32])
@@ -347,9 +348,9 @@ func Generate(seed []byte) ([]uint32, error) {
 	loop(&ctx, &budget)
 
 	if len(ctx.insns) < util.Conf_RandGen_MIN_INSNS {
-		return nil, errors.New("insn count < Conf_RandGen_MIN_INSNS")
+		return nil, er.New("insn count < Conf_RandGen_MIN_INSNS")
 	} else if len(ctx.insns) > util.Conf_RandGen_MAX_INSNS {
-		return nil, errors.New("insn count > Conf_RandGen_MAX_INSNS")
+		return nil, er.New("insn count > Conf_RandGen_MAX_INSNS")
 	}
 
 	return ctx.insns, nil

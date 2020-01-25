@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // maxFailedAttempts is the maximum number of successive failed connection
@@ -138,10 +140,10 @@ type Config struct {
 
 	// GetNewAddress is a way to get an address to make a network connection
 	// to.  If nil, no new connections will be made automatically.
-	GetNewAddress func() (net.Addr, error)
+	GetNewAddress func() (net.Addr, er.R)
 
 	// Dial connects to the address on the named network. It cannot be nil.
-	Dial func(net.Addr) (net.Conn, error)
+	Dial func(net.Addr) (net.Conn, er.R)
 }
 
 // registerPending is used to register a pending connection attempt. By
@@ -168,7 +170,7 @@ type handleDisconnected struct {
 // handleFailed is used to remove a pending connection.
 type handleFailed struct {
 	c   *ConnReq
-	err error
+	err er.R
 }
 
 // ConnManager provides a manager to handle network connections.
@@ -557,9 +559,9 @@ func (cm *ConnManager) Stop() {
 
 // New returns a new connection manager.
 // Use Start to start connecting to the network.
-func New(cfg *Config) (*ConnManager, error) {
+func New(cfg *Config) (*ConnManager, er.R) {
 	if cfg.Dial == nil {
-		return nil, ErrDialNil
+		return nil, er.E(ErrDialNil)
 	}
 	// Default to sane values
 	if cfg.RetryDuration <= 0 {

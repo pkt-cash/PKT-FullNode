@@ -9,14 +9,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/wire"
@@ -24,7 +25,7 @@ import (
 
 // scriptTestName returns a descriptive test name for the given reference script
 // test data.
-func scriptTestName(test []interface{}) (string, error) {
+func scriptTestName(test []interface{}) (string, er.R) {
 	// Account for any optional leading witness data.
 	var witnessOffset int
 	if _, ok := test[0].([]interface{}); ok {
@@ -35,7 +36,7 @@ func scriptTestName(test []interface{}) (string, error) {
 	// consist of at least a signature script, public key script, flags,
 	// and expected error.  Finally, it may optionally contain a comment.
 	if len(test) < witnessOffset+4 || len(test) > witnessOffset+5 {
-		return "", fmt.Errorf("invalid test length %d", len(test))
+		return "", er.Errorf("invalid test length %d", len(test))
 	}
 
 	// Use the comment for the test name if one is specified, otherwise,
@@ -52,21 +53,22 @@ func scriptTestName(test []interface{}) (string, error) {
 }
 
 // parse hex string into a []byte.
-func parseHex(tok string) ([]byte, error) {
+func parseHex(tok string) ([]byte, er.R) {
 	if !strings.HasPrefix(tok, "0x") {
-		return nil, errors.New("not a hex number")
+		return nil, er.New("not a hex number")
 	}
-	return hex.DecodeString(tok[2:])
+	x, e := hex.DecodeString(tok[2:])
+	return x, er.E(e)
 }
 
 // parseWitnessStack parses a json array of witness items encoded as hex into a
 // slice of witness elements.
-func parseWitnessStack(elements []interface{}) ([][]byte, error) {
+func parseWitnessStack(elements []interface{}) ([][]byte, er.R) {
 	witness := make([][]byte, len(elements))
 	for i, e := range elements {
 		witElement, err := hex.DecodeString(e.(string))
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		witness[i] = witElement
@@ -90,7 +92,7 @@ var shortFormOps map[string]byte
 //     0x14 is OP_DATA_20)
 //   - Single quoted strings are pushed as data
 //   - Anything else is an error
-func parseShortForm(script string) ([]byte, error) {
+func parseShortForm(script string) ([]byte, er.R) {
 	// Only create the short form opcode map once.
 	if shortFormOps == nil {
 		ops := make(map[string]byte)
@@ -143,7 +145,7 @@ func parseShortForm(script string) ([]byte, error) {
 		} else if opcode, ok := shortFormOps[tok]; ok {
 			builder.AddOp(opcode)
 		} else {
-			return nil, fmt.Errorf("bad token %q", tok)
+			return nil, er.Errorf("bad token %q", tok)
 		}
 
 	}
@@ -152,7 +154,7 @@ func parseShortForm(script string) ([]byte, error) {
 
 // parseScriptFlags parses the provided flags string from the format used in the
 // reference tests into ScriptFlags suitable for use in the script engine.
-func parseScriptFlags(flagStr string) (ScriptFlags, error) {
+func parseScriptFlags(flagStr string) (ScriptFlags, er.R) {
 	var flags ScriptFlags
 
 	sFlags := strings.Split(flagStr, ",")
@@ -195,7 +197,7 @@ func parseScriptFlags(flagStr string) (ScriptFlags, error) {
 		case "WITNESS_PUBKEYTYPE":
 			flags |= ScriptVerifyWitnessPubKeyType
 		default:
-			return flags, fmt.Errorf("invalid flag: %s", flag)
+			return flags, er.Errorf("invalid flag: %s", flag)
 		}
 	}
 	return flags, nil
@@ -204,16 +206,16 @@ func parseScriptFlags(flagStr string) (ScriptFlags, error) {
 // parseExpectedResult parses the provided expected result string into allowed
 // script error codes.  An error is returned if the expected result string is
 // not supported.
-func parseExpectedResult(expected string) ([]ErrorCode, error) {
+func parseExpectedResult(expected string) ([]*er.ErrorCode, er.R) {
 	switch expected {
 	case "OK":
 		return nil, nil
 	case "UNKNOWN_ERROR":
-		return []ErrorCode{ErrNumberTooBig, ErrMinimalData}, nil
+		return []*er.ErrorCode{ErrNumberTooBig, ErrMinimalData}, nil
 	case "PUBKEYTYPE":
-		return []ErrorCode{ErrPubKeyType}, nil
+		return []*er.ErrorCode{ErrPubKeyType}, nil
 	case "SIG_DER":
-		return []ErrorCode{ErrSigTooShort, ErrSigTooLong,
+		return []*er.ErrorCode{ErrSigTooShort, ErrSigTooLong,
 			ErrSigInvalidSeqID, ErrSigInvalidDataLen, ErrSigMissingSTypeID,
 			ErrSigMissingSLen, ErrSigInvalidSLen,
 			ErrSigInvalidRIntID, ErrSigZeroRLen, ErrSigNegativeR,
@@ -221,75 +223,75 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 			ErrSigZeroSLen, ErrSigNegativeS, ErrSigTooMuchSPadding,
 			ErrInvalidSigHashType}, nil
 	case "EVAL_FALSE":
-		return []ErrorCode{ErrEvalFalse, ErrEmptyStack}, nil
+		return []*er.ErrorCode{ErrEvalFalse, ErrEmptyStack}, nil
 	case "EQUALVERIFY":
-		return []ErrorCode{ErrEqualVerify}, nil
+		return []*er.ErrorCode{ErrEqualVerify}, nil
 	case "NULLFAIL":
-		return []ErrorCode{ErrNullFail}, nil
+		return []*er.ErrorCode{ErrNullFail}, nil
 	case "SIG_HIGH_S":
-		return []ErrorCode{ErrSigHighS}, nil
+		return []*er.ErrorCode{ErrSigHighS}, nil
 	case "SIG_HASHTYPE":
-		return []ErrorCode{ErrInvalidSigHashType}, nil
+		return []*er.ErrorCode{ErrInvalidSigHashType}, nil
 	case "SIG_NULLDUMMY":
-		return []ErrorCode{ErrSigNullDummy}, nil
+		return []*er.ErrorCode{ErrSigNullDummy}, nil
 	case "SIG_PUSHONLY":
-		return []ErrorCode{ErrNotPushOnly}, nil
+		return []*er.ErrorCode{ErrNotPushOnly}, nil
 	case "CLEANSTACK":
-		return []ErrorCode{ErrCleanStack}, nil
+		return []*er.ErrorCode{ErrCleanStack}, nil
 	case "BAD_OPCODE":
-		return []ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
+		return []*er.ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
 	case "UNBALANCED_CONDITIONAL":
-		return []ErrorCode{ErrUnbalancedConditional,
+		return []*er.ErrorCode{ErrUnbalancedConditional,
 			ErrInvalidStackOperation}, nil
 	case "OP_RETURN":
-		return []ErrorCode{ErrEarlyReturn}, nil
+		return []*er.ErrorCode{ErrEarlyReturn}, nil
 	case "VERIFY":
-		return []ErrorCode{ErrVerify}, nil
+		return []*er.ErrorCode{ErrVerify}, nil
 	case "INVALID_STACK_OPERATION", "INVALID_ALTSTACK_OPERATION":
-		return []ErrorCode{ErrInvalidStackOperation}, nil
+		return []*er.ErrorCode{ErrInvalidStackOperation}, nil
 	case "DISABLED_OPCODE":
-		return []ErrorCode{ErrDisabledOpcode}, nil
+		return []*er.ErrorCode{ErrDisabledOpcode}, nil
 	case "DISCOURAGE_UPGRADABLE_NOPS":
-		return []ErrorCode{ErrDiscourageUpgradableNOPs}, nil
+		return []*er.ErrorCode{ErrDiscourageUpgradableNOPs}, nil
 	case "PUSH_SIZE":
-		return []ErrorCode{ErrElementTooBig}, nil
+		return []*er.ErrorCode{ErrElementTooBig}, nil
 	case "OP_COUNT":
-		return []ErrorCode{ErrTooManyOperations}, nil
+		return []*er.ErrorCode{ErrTooManyOperations}, nil
 	case "STACK_SIZE":
-		return []ErrorCode{ErrStackOverflow}, nil
+		return []*er.ErrorCode{ErrStackOverflow}, nil
 	case "SCRIPT_SIZE":
-		return []ErrorCode{ErrScriptTooBig}, nil
+		return []*er.ErrorCode{ErrScriptTooBig}, nil
 	case "PUBKEY_COUNT":
-		return []ErrorCode{ErrInvalidPubKeyCount}, nil
+		return []*er.ErrorCode{ErrInvalidPubKeyCount}, nil
 	case "SIG_COUNT":
-		return []ErrorCode{ErrInvalidSignatureCount}, nil
+		return []*er.ErrorCode{ErrInvalidSignatureCount}, nil
 	case "MINIMALDATA":
-		return []ErrorCode{ErrMinimalData}, nil
+		return []*er.ErrorCode{ErrMinimalData}, nil
 	case "NEGATIVE_LOCKTIME":
-		return []ErrorCode{ErrNegativeLockTime}, nil
+		return []*er.ErrorCode{ErrNegativeLockTime}, nil
 	case "UNSATISFIED_LOCKTIME":
-		return []ErrorCode{ErrUnsatisfiedLockTime}, nil
+		return []*er.ErrorCode{ErrUnsatisfiedLockTime}, nil
 	case "MINIMALIF":
-		return []ErrorCode{ErrMinimalIf}, nil
+		return []*er.ErrorCode{ErrMinimalIf}, nil
 	case "DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM":
-		return []ErrorCode{ErrDiscourageUpgradableWitnessProgram}, nil
+		return []*er.ErrorCode{ErrDiscourageUpgradableWitnessProgram}, nil
 	case "WITNESS_PROGRAM_WRONG_LENGTH":
-		return []ErrorCode{ErrWitnessProgramWrongLength}, nil
+		return []*er.ErrorCode{ErrWitnessProgramWrongLength}, nil
 	case "WITNESS_PROGRAM_WITNESS_EMPTY":
-		return []ErrorCode{ErrWitnessProgramEmpty}, nil
+		return []*er.ErrorCode{ErrWitnessProgramEmpty}, nil
 	case "WITNESS_PROGRAM_MISMATCH":
-		return []ErrorCode{ErrWitnessProgramMismatch}, nil
+		return []*er.ErrorCode{ErrWitnessProgramMismatch}, nil
 	case "WITNESS_MALLEATED":
-		return []ErrorCode{ErrWitnessMalleated}, nil
+		return []*er.ErrorCode{ErrWitnessMalleated}, nil
 	case "WITNESS_MALLEATED_P2SH":
-		return []ErrorCode{ErrWitnessMalleatedP2SH}, nil
+		return []*er.ErrorCode{ErrWitnessMalleatedP2SH}, nil
 	case "WITNESS_UNEXPECTED":
-		return []ErrorCode{ErrWitnessUnexpected}, nil
+		return []*er.ErrorCode{ErrWitnessUnexpected}, nil
 	case "WITNESS_PUBKEYTYPE":
-		return []ErrorCode{ErrWitnessPubKeyType}, nil
+		return []*er.ErrorCode{ErrWitnessPubKeyType}, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized expected result in test data: %v",
+	return nil, er.Errorf("unrecognized expected result in test data: %v",
 		expected)
 }
 
@@ -463,17 +465,12 @@ func testScripts(t *testing.T, tests [][]interface{}, useSigCache bool) {
 		// the execution matches it.
 		success := false
 		for _, code := range allowedErrorCodes {
-			if IsErrorCode(err, code) {
+			if code.Is(err) {
 				success = true
 				break
 			}
 		}
 		if !success {
-			if serr, ok := err.(Error); ok {
-				t.Errorf("%s: want error codes %v, got %v", name,
-					allowedErrorCodes, serr.ErrorCode)
-				continue
-			}
 			t.Errorf("%s: want error codes %v, got err: %v (%T)",
 				name, allowedErrorCodes, err, err)
 			continue
@@ -548,9 +545,9 @@ testloop:
 			t.Errorf("bad test (arg 2 not string) %d: %v", i, test)
 			continue
 		}
-		serializedTx, err := hex.DecodeString(serializedhex)
-		if err != nil {
-			t.Errorf("bad test (arg 2 not hex %v) %d: %v", err, i,
+		serializedTx, errr := hex.DecodeString(serializedhex)
+		if errr != nil {
+			t.Errorf("bad test (arg 2 not hex %v) %d: %v", errr, i,
 				test)
 			continue
 		}
@@ -703,9 +700,9 @@ testloop:
 			t.Errorf("bad test (arg 2 not string) %d: %v", i, test)
 			continue
 		}
-		serializedTx, err := hex.DecodeString(serializedhex)
-		if err != nil {
-			t.Errorf("bad test (arg 2 not hex %v) %d: %v", err, i,
+		serializedTx, errr := hex.DecodeString(serializedhex)
+		if errr != nil {
+			t.Errorf("bad test (arg 2 not hex %v) %d: %v", errr, i,
 				test)
 			continue
 		}

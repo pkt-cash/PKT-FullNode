@@ -74,7 +74,7 @@ func (s *SigCache) Add(sigHash chainhash.Hash, sig *btcec.Signature, pubKey *btc
 	s.Lock()
 	defer s.Unlock()
 
-	if s.maxEntries <= 0 {
+	if s.maxEntries == 0 {
 		return
 	}
 

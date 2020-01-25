@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 // TestCalcMinRequiredTxRelayFee tests the calcMinRequiredTxRelayFee API.
@@ -48,8 +49,8 @@ func TestCalcMinRequiredTxRelayFee(t *testing.T) {
 		{
 			"max standard tx size with max satoshi relay fee",
 			maxStandardTxWeight / 4,
-			btcutil.MaxSatoshi,
-			btcutil.MaxSatoshi,
+			btcutil.MaxUnits(),
+			int64(btcutil.MaxUnits()),
 		},
 		{
 			"1500 bytes with 5000 relay fee",
@@ -247,8 +248,8 @@ func TestDust(t *testing.T) {
 		{
 			// Maximum allowed value is never dust.
 			"max satoshi amount is never dust",
-			wire.TxOut{Value: btcutil.MaxSatoshi, PkScript: pkScript},
-			btcutil.MaxSatoshi,
+			wire.TxOut{Value: int64(btcutil.MaxUnits()), PkScript: pkScript},
+			btcutil.MaxUnits(),
 			false,
 		},
 		{
@@ -488,24 +489,24 @@ func TestCheckTransactionStandard(t *testing.T) {
 		}
 
 		// Ensure error type is a TxRuleError inside of a RuleError.
-		rerr, ok := err.(RuleError)
-		if !ok {
+		if !ruleerror.Err.Is(err) {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
 				"error type - got %T", test.name, err)
 			continue
 		}
-		txrerr, ok := rerr.Err.(TxRuleError)
-		if !ok {
+		code := ruleerror.Err.Decode(err)
+		if !ruleerror.IsTxRuleErrorCode(code) {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
-				"error type - got %T", test.name, rerr.Err)
+				"error type - got %T", test.name, err)
 			continue
 		}
 
 		// Ensure the reject code is the expected one.
-		if txrerr.RejectCode != test.code {
+		rejCode, _, _ := ruleerror.ExtractRejectCode(err)
+		if rejCode != test.code {
 			t.Errorf("checkTransactionStandard (%s): unexpected "+
 				"error code - got %v, want %v", test.name,
-				txrerr.RejectCode, test.code)
+				rejCode, test.code)
 			continue
 		}
 	}

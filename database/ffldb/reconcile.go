@@ -6,6 +6,7 @@ package ffldb
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"hash/crc32"
 
 	"github.com/pkt-cash/pktd/database"
@@ -30,7 +31,7 @@ func serializeWriteRow(curBlockFileNum, curFileOffset uint32) []byte {
 
 // deserializeWriteRow deserializes the write cursor location stored in the
 // metadata.  Returns ErrCorruption if the checksum of the entry doesn't match.
-func deserializeWriteRow(writeRow []byte) (uint32, uint32, error) {
+func deserializeWriteRow(writeRow []byte) (uint32, uint32, er.R) {
 	// Ensure the checksum matches.  The checksum is at the end.
 	gotChecksum := crc32.Checksum(writeRow[:8], castagnoli)
 	wantChecksumBytes := writeRow[8:12]
@@ -49,7 +50,7 @@ func deserializeWriteRow(writeRow []byte) (uint32, uint32, error) {
 
 // reconcileDB reconciles the metadata with the flat block files on disk.  It
 // will also initialize the underlying database if the create flag is set.
-func reconcileDB(pdb *db, create bool) (database.DB, error) {
+func reconcileDB(pdb *db, create bool) (database.DB, er.R) {
 	// Perform initial internal bucket and value creation during database
 	// creation.
 	if create {
@@ -60,14 +61,14 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 
 	// Load the current write cursor position from the metadata.
 	var curFileNum, curOffset uint32
-	err := pdb.View(func(tx database.Tx) error {
+	err := pdb.View(func(tx database.Tx) er.R {
 		writeRow := tx.Metadata().Get(writeLocKeyName)
 		if writeRow == nil {
 			str := "write cursor does not exist"
 			return makeDbErr(database.ErrCorruption, str, nil)
 		}
 
-		var err error
+		var err er.R
 		curFileNum, curOffset, err = deserializeWriteRow(writeRow)
 		return err
 	})

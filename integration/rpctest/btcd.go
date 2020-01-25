@@ -5,11 +5,12 @@
 package rpctest
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -29,7 +30,7 @@ var (
 // generated binary is used for subsequent test harnesses. The executable file
 // is not cleaned up, but since it lives at a static path in a temp directory,
 // it is not a big deal.
-func pktdExecutablePath() (string, error) {
+func pktdExecutablePath() (string, er.R) {
 	compileMtx.Lock()
 	defer compileMtx.Unlock()
 
@@ -51,9 +52,9 @@ func pktdExecutablePath() (string, error) {
 	cmd := exec.Command(
 		"go", "build", "-o", outputPath, "github.com/pkt-cash/pktd",
 	)
-	err = cmd.Run()
+	err = er.E(cmd.Run())
 	if err != nil {
-		return "", fmt.Errorf("Failed to build pktd: %v", err)
+		return "", er.Errorf("Failed to build pktd: %v", err)
 	}
 
 	// Save executable path so future calls do not recompile.

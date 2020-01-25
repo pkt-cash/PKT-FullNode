@@ -9,6 +9,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"math/big"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // PrivateKey wraps an ecdsa.PrivateKey as a convenience mainly for signing
@@ -36,10 +38,10 @@ func PrivKeyFromBytes(curve elliptic.Curve, pk []byte) (*PrivateKey,
 
 // NewPrivateKey is a wrapper for ecdsa.GenerateKey that returns a PrivateKey
 // instead of the normal ecdsa.PrivateKey.
-func NewPrivateKey(curve elliptic.Curve) (*PrivateKey, error) {
-	key, err := ecdsa.GenerateKey(curve, rand.Reader)
-	if err != nil {
-		return nil, err
+func NewPrivateKey(curve elliptic.Curve) (*PrivateKey, er.R) {
+	key, errr := ecdsa.GenerateKey(curve, rand.Reader)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	return (*PrivateKey)(key), nil
 }
@@ -58,7 +60,7 @@ func (p *PrivateKey) ToECDSA() *ecdsa.PrivateKey {
 // of hashing a larger message) using the private key. Produced signature
 // is deterministic (same message and same key yield the same signature) and canonical
 // in accordance with RFC6979 and BIP0062.
-func (p *PrivateKey) Sign(hash []byte) (*Signature, error) {
+func (p *PrivateKey) Sign(hash []byte) (*Signature, er.R) {
 	return signRFC6979(p, hash)
 }
 

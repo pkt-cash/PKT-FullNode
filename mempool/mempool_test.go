@@ -6,19 +6,21 @@ package mempool
 
 import (
 	"encoding/hex"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
+
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
 )
 
 // fakeChain is used by the pool harness to provide generated test utxos and
@@ -37,7 +39,7 @@ type fakeChain struct {
 // view can be examined for duplicate transactions.
 //
 // This function is safe for concurrent access however the returned view is NOT.
-func (s *fakeChain) FetchUtxoView(tx *btcutil.Tx) (*blockchain.UtxoViewpoint, error) {
+func (s *fakeChain) FetchUtxoView(tx *btcutil.Tx) (*blockchain.UtxoViewpoint, er.R) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -98,7 +100,7 @@ func (s *fakeChain) SetMedianTimePast(mtp time.Time) {
 // CalcSequenceLock returns the current sequence lock for the passed
 // transaction associated with the fake chain instance.
 func (s *fakeChain) CalcSequenceLock(tx *btcutil.Tx,
-	view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
+	view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, er.R) {
 
 	return &blockchain.SequenceLock{
 		Seconds:     -1,
@@ -146,7 +148,7 @@ type poolHarness struct {
 // address associated with the harness.  It automatically uses a standard
 // signature script that starts with the block height that is required by
 // version 2 blocks.
-func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*btcutil.Tx, error) {
+func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*btcutil.Tx, er.R) {
 	// Create standard coinbase script.
 	extraNonce := int64(0)
 	coinbaseScript, err := txscript.NewScriptBuilder().
@@ -189,7 +191,7 @@ func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*b
 // with the harness and all inputs are assumed to do the same.
 func (p *poolHarness) CreateSignedTx(inputs []spendableOutput,
 	numOutputs uint32, fee btcutil.Amount,
-	signalsReplacement bool) (*btcutil.Tx, error) {
+	signalsReplacement bool) (*btcutil.Tx, er.R) {
 
 	// Calculate the total input amount and split it amongst the requested
 	// number of outputs.
@@ -243,7 +245,7 @@ func (p *poolHarness) CreateSignedTx(inputs []spendableOutput,
 // transaction spends the entire amount from the previous one) with the first
 // one spending the provided outpoint.  Each transaction spends the entire
 // amount of the previous one and as such does not include any fees.
-func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32) ([]*btcutil.Tx, error) {
+func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32) ([]*btcutil.Tx, er.R) {
 	txChain := make([]*btcutil.Tx, 0, numTxns)
 	prevOutPoint := firstOutput.outPoint
 	spendableAmount := firstOutput.amount
@@ -284,12 +286,12 @@ func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32)
 // for testing.  Also, the fake chain is populated with the returned spendable
 // outputs so the caller can easily create new valid transactions which build
 // off of it.
-func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutput, error) {
+func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutput, er.R) {
 	// Use a hard coded key pair for deterministic results.
-	keyBytes, err := hex.DecodeString("700868df1838811ffbdf918fb482c1f7e" +
+	keyBytes, errr := hex.DecodeString("700868df1838811ffbdf918fb482c1f7e" +
 		"ad62db4b97bd7012c23e726485e577d")
-	if err != nil {
-		return nil, nil, err
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	signKey, signPub := btcec.PrivKeyFromBytes(btcec.S256(), keyBytes)
 
@@ -543,13 +545,12 @@ func TestOrphanReject(t *testing.T) {
 			t.Fatalf("ProcessTransaction: did not fail on orphan "+
 				"%v when allow orphans flag is false", tx.Hash())
 		}
-		expectedErr := RuleError{}
-		if reflect.TypeOf(err) != reflect.TypeOf(expectedErr) {
+		if !ruleerror.Err.Is(err) {
 			t.Fatalf("ProcessTransaction: wrong error got: <%T> %v, "+
-				"want: <%T>", err, err, expectedErr)
+				"want: <%T>", err, err, ruleerror.Err)
 		}
-		code, extracted := extractRejectCode(err)
-		if !extracted {
+		code, _, found := ruleerror.ExtractRejectCode(err)
+		if !found {
 			t.Fatalf("ProcessTransaction: failed to extract reject "+
 				"code from error %q", err)
 		}
@@ -1457,7 +1458,7 @@ func TestAncestorsDescendants(t *testing.T) {
 func TestRBF(t *testing.T) {
 	t.Parallel()
 
-	const defaultFee = btcutil.SatoshiPerBitcoin
+	defaultFee := btcutil.UnitsPerCoin()
 
 	testCases := []struct {
 		name  string
@@ -1789,7 +1790,7 @@ func TestRBF(t *testing.T) {
 					testCase.err)
 			}
 			if testCase.err != "" && err != nil {
-				if !strings.Contains(err.Error(), testCase.err) {
+				if !strings.Contains(err.String(), testCase.err) {
 					ctx.t.Fatalf("expected error: %v\n"+
 						"got: %v", testCase.err, err)
 				}

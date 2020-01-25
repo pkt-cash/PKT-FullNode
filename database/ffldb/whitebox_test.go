@@ -17,12 +17,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/btcsuite/goleveldb/leveldb"
+	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
-	"github.com/btcsuite/goleveldb/leveldb"
-	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
 )
 
 var (
@@ -34,17 +36,18 @@ var (
 	blockDataFile = filepath.Join("..", "testdata", "blocks1-256.bz2")
 
 	// errSubTestFail is used to signal that a sub test returned false.
-	errSubTestFail = fmt.Errorf("sub test failure")
+	errSubTestFail = er.GenericErrorType.CodeWithDetail("errSubTestFail",
+		"sub test failure")
 )
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcutil.Block, er.R) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {
 		t.Errorf("failed to open file %v, err %v", dataFile, err)
-		return nil, err
+		return nil, er.E(err)
 	}
 	defer func() {
 		if err := fi.Close(); err != nil {
@@ -70,12 +73,12 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcu
 		if err != nil {
 			t.Errorf("Failed to load network type for block %d: %v",
 				height, err)
-			return nil, err
+			return nil, er.E(err)
 		}
 		if net != uint32(network) {
 			t.Errorf("Block doesn't match network: %v expects %v",
 				net, network)
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		var blockLen uint32
@@ -83,7 +86,7 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcu
 		if err != nil {
 			t.Errorf("Failed to load block size for block %d: %v",
 				height, err)
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Read the block.
@@ -91,38 +94,21 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcu
 		_, err = io.ReadFull(dr, blockBytes)
 		if err != nil {
 			t.Errorf("Failed to load block %d: %v", height, err)
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// Deserialize and store the block.
-		block, err := btcutil.NewBlockFromBytes(blockBytes)
-		if err != nil {
-			t.Errorf("Failed to parse block %v: %v", height, err)
-			return nil, err
+		{
+			block, err := btcutil.NewBlockFromBytes(blockBytes)
+			if err != nil {
+				t.Errorf("Failed to parse block %v: %v", height, err)
+				return nil, err
+			}
+			blocks = append(blocks, block)
 		}
-		blocks = append(blocks, block)
 	}
 
 	return blocks, nil
-}
-
-// checkDbError ensures the passed error is a database.Error with an error code
-// that matches the passed  error code.
-func checkDbError(t *testing.T, testName string, gotErr error, wantErrCode database.ErrorCode) bool {
-	dbErr, ok := gotErr.(database.Error)
-	if !ok {
-		t.Errorf("%s: unexpected error type - got %T, want %T",
-			testName, gotErr, database.Error{})
-		return false
-	}
-	if dbErr.ErrorCode != wantErrCode {
-		t.Errorf("%s: unexpected error code - got %s (%s), want %s",
-			testName, dbErr.ErrorCode, dbErr.Description,
-			wantErrCode)
-		return false
-	}
-
-	return true
 }
 
 // testContext is used to store context information about a running test which
@@ -142,7 +128,7 @@ func TestConvertErr(t *testing.T) {
 
 	tests := []struct {
 		err         error
-		wantErrCode database.ErrorCode
+		wantErrCode *er.ErrorCode
 	}{
 		{&ldberrors.ErrCorrupted{}, database.ErrCorruption},
 		{leveldb.ErrClosed, database.ErrDbNotOpen},
@@ -152,9 +138,9 @@ func TestConvertErr(t *testing.T) {
 
 	for i, test := range tests {
 		gotErr := convertErr("test", test.err)
-		if gotErr.ErrorCode != test.wantErrCode {
+		if !test.wantErrCode.Is(gotErr) {
 			t.Errorf("convertErr #%d unexpected error - got %v, "+
-				"want %v", i, gotErr.ErrorCode, test.wantErrCode)
+				"want %v", i, gotErr, test.wantErrCode)
 			continue
 		}
 	}
@@ -168,9 +154,9 @@ func TestCornerCases(t *testing.T) {
 	// Create a file at the datapase path to force the open below to fail.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-errors")
 	_ = os.RemoveAll(dbPath)
-	fi, err := os.Create(dbPath)
-	if err != nil {
-		t.Errorf("os.Create: unexpected error: %v", err)
+	fi, errr := os.Create(dbPath)
+	if errr != nil {
+		t.Errorf("os.Create: unexpected error: %v", errr)
 		return
 	}
 	fi.Close()
@@ -180,7 +166,7 @@ func TestCornerCases(t *testing.T) {
 	testName := "openDB: fail due to file at target location"
 	wantErrCode := database.ErrDriverSpecific
 	idb, err := openDB(dbPath, blockDataNet, true)
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		if err == nil {
 			idb.Close()
 		}
@@ -209,7 +195,7 @@ func TestCornerCases(t *testing.T) {
 	}
 	store := idb.(*db).store
 	_, err = store.writeBlock([]byte{0x00})
-	if !checkDbError(t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(t, testName, err, database.ErrDriverSpecific) {
 		return
 	}
 	_ = os.RemoveAll(filePath)
@@ -223,7 +209,7 @@ func TestCornerCases(t *testing.T) {
 	testName = "initDB: reinitialization"
 	wantErrCode = database.ErrDbNotOpen
 	err = initDB(ldb)
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 
@@ -231,20 +217,20 @@ func TestCornerCases(t *testing.T) {
 	// properly.
 	testName = "View: underlying leveldb error"
 	wantErrCode = database.ErrDbNotOpen
-	err = idb.View(func(tx database.Tx) error {
+	err = idb.View(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 
 	// Ensure the Update handles errors in the underlying leveldb database
 	// properly.
 	testName = "Update: underlying leveldb error"
-	err = idb.Update(func(tx database.Tx) error {
+	err = idb.Update(func(tx database.Tx) er.R {
 		return nil
 	})
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !util.CheckError(t, testName, err, wantErrCode) {
 		return
 	}
 }
@@ -253,7 +239,7 @@ func TestCornerCases(t *testing.T) {
 // test context including all metadata and the mock files.
 func resetDatabase(tc *testContext) bool {
 	// Reset the metadata.
-	err := tc.db.Update(func(tx database.Tx) error {
+	err := tc.db.Update(func(tx database.Tx) er.R {
 		// Remove all the keys using a cursor while also generating a
 		// list of buckets.  It's not safe to remove keys during ForEach
 		// iteration nor is it safe to remove buckets during cursor
@@ -320,7 +306,7 @@ func testWriteFailures(tc *testContext) bool {
 	}
 	store.writeCursor.Unlock()
 	err := tc.db.(*db).cache.flush()
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	store.writeCursor.Lock()
@@ -360,13 +346,13 @@ func testWriteFailures(tc *testContext) bool {
 		// file that fails the write fails when the transaction is
 		// committed, not when the block is stored.
 		tc.maxFileSizes = map[uint32]int64{test.fileNum: test.maxSize}
-		err := tc.db.Update(func(tx database.Tx) error {
+		err := tc.db.Update(func(tx database.Tx) er.R {
 			for i, block := range tc.blocks {
 				err := tx.StoreBlock(block)
 				if err != nil {
 					tc.t.Errorf("StoreBlock (%d): unexpected "+
 						"error: %v", i, err)
-					return errSubTestFail
+					return errSubTestFail.Default()
 				}
 			}
 
@@ -375,7 +361,7 @@ func testWriteFailures(tc *testContext) bool {
 		testName := fmt.Sprintf("Force update commit failure - test "+
 			"%d, fileNum %d, maxsize %d", i, test.fileNum,
 			test.maxSize)
-		if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+		if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 			tc.t.Errorf("%v", err)
 			return false
 		}
@@ -413,27 +399,27 @@ func testBlockFileErrors(tc *testContext) bool {
 	store := tc.db.(*db).store
 	testName := "blockFile invalid file open"
 	_, err := store.blockFile(^uint32(0))
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "openFile invalid file open"
 	_, err = store.openFile(^uint32(0))
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
 	// Insert the first block into the mock file.
-	err = tc.db.Update(func(tx database.Tx) error {
+	err = tc.db.Update(func(tx database.Tx) er.R {
 		err := tx.StoreBlock(tc.blocks[0])
 		if err != nil {
 			tc.t.Errorf("StoreBlock: unexpected error: %v", err)
-			return errSubTestFail
+			return errSubTestFail.Default()
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if !errSubTestFail.Is(err) {
 			tc.t.Errorf("Update: unexpected error: %v", err)
 		}
 		return false
@@ -448,12 +434,12 @@ func testBlockFileErrors(tc *testContext) bool {
 		blockLen:     80,
 	}
 	_, err = store.readBlock(block0Hash, invalidLoc)
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "readBlockRegion invalid file number"
 	_, err = store.readBlockRegion(invalidLoc, 0, 80)
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !util.CheckError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
@@ -464,12 +450,12 @@ func testBlockFileErrors(tc *testContext) bool {
 
 	// Ensure failures in FetchBlock and FetchBlockRegion(s) since the
 	// underlying file they need to read from has been closed.
-	err = tc.db.View(func(tx database.Tx) error {
+	err = tc.db.View(func(tx database.Tx) er.R {
 		testName = "FetchBlock closed file"
 		wantErrCode := database.ErrDriverSpecific
 		_, err := tx.FetchBlock(block0Hash)
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
-			return errSubTestFail
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
+			return errSubTestFail.Default()
 		}
 
 		testName = "FetchBlockRegion closed file"
@@ -481,20 +467,20 @@ func testBlockFileErrors(tc *testContext) bool {
 			},
 		}
 		_, err = tx.FetchBlockRegion(&regions[0])
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
-			return errSubTestFail
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
+			return errSubTestFail.Default()
 		}
 
 		testName = "FetchBlockRegions closed file"
 		_, err = tx.FetchBlockRegions(regions)
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
-			return errSubTestFail
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
+			return errSubTestFail.Default()
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if !errSubTestFail.Is(err) {
 			tc.t.Errorf("View: unexpected error: %v", err)
 		}
 		return false
@@ -511,17 +497,17 @@ func testCorruption(tc *testContext) bool {
 	}
 
 	// Insert the first block into the mock file.
-	err := tc.db.Update(func(tx database.Tx) error {
+	err := tc.db.Update(func(tx database.Tx) er.R {
 		err := tx.StoreBlock(tc.blocks[0])
 		if err != nil {
 			tc.t.Errorf("StoreBlock: unexpected error: %v", err)
-			return errSubTestFail
+			return errSubTestFail.Default()
 		}
 
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if !errSubTestFail.Is(err) {
 			tc.t.Errorf("Update: unexpected error: %v", err)
 		}
 		return false
@@ -534,7 +520,7 @@ func testCorruption(tc *testContext) bool {
 	tests := []struct {
 		offset      uint32
 		fixChecksum bool
-		wantErrCode database.ErrorCode
+		wantErrCode *er.ErrorCode
 	}{
 		// One of the network bytes.  The checksum needs to be fixed so
 		// the invalid network is detected.
@@ -556,7 +542,7 @@ func testCorruption(tc *testContext) bool {
 		// Random checksum byte.
 		{uint32(len(block0Bytes)) + 10, false, database.ErrCorruption},
 	}
-	err = tc.db.View(func(tx database.Tx) error {
+	err = tc.db.View(func(tx database.Tx) er.R {
 		data := tc.files[0].file.(*mockFile).data
 		for i, test := range tests {
 			// Corrupt the byte at the offset by a single bit.
@@ -575,8 +561,8 @@ func testCorruption(tc *testContext) bool {
 			testName := fmt.Sprintf("FetchBlock (test #%d): "+
 				"corruption", i)
 			_, err := tx.FetchBlock(block0Hash)
-			if !checkDbError(tc.t, testName, err, test.wantErrCode) {
-				return errSubTestFail
+			if !util.CheckError(tc.t, testName, err, test.wantErrCode) {
+				return errSubTestFail.Default()
 			}
 
 			// Reset the corrupted data back to the original.
@@ -589,7 +575,7 @@ func testCorruption(tc *testContext) bool {
 		return nil
 	})
 	if err != nil {
-		if err != errSubTestFail {
+		if !errSubTestFail.Is(err) {
 			tc.t.Errorf("View: unexpected error: %v", err)
 		}
 		return false
@@ -627,7 +613,7 @@ func TestFailureScenarios(t *testing.T) {
 	// various file-related errors.
 	store := idb.(*db).store
 	store.maxBlockFileSize = 1024 // 1KiB
-	store.openWriteFileFunc = func(fileNum uint32) (filer, error) {
+	store.openWriteFileFunc = func(fileNum uint32) (filer, er.R) {
 		if file, ok := tc.files[fileNum]; ok {
 			// "Reopen" the file.
 			file.Lock()
@@ -649,7 +635,7 @@ func TestFailureScenarios(t *testing.T) {
 		tc.files[fileNum] = &lockableFile{file: file}
 		return file, nil
 	}
-	store.openFileFunc = func(fileNum uint32) (*lockableFile, error) {
+	store.openFileFunc = func(fileNum uint32) (*lockableFile, er.R) {
 		// Force error when trying to open max file num.
 		if fileNum == ^uint32(0) {
 			return nil, makeDbErr(database.ErrDriverSpecific,
@@ -669,7 +655,7 @@ func TestFailureScenarios(t *testing.T) {
 		tc.files[fileNum] = file
 		return file, nil
 	}
-	store.deleteFileFunc = func(fileNum uint32) error {
+	store.deleteFileFunc = func(fileNum uint32) er.R {
 		if file, ok := tc.files[fileNum]; ok {
 			file.Lock()
 			file.file.Close()

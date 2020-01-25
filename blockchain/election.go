@@ -8,13 +8,15 @@ import (
 	"bytes"
 	"encoding/hex"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"
 )
 
 func electionIsVoteAgainst(pkScript, networkSteward []byte) bool {
 	_, va := txscript.ElectionGetVotesForAgainst(pkScript)
-	return va != nil && bytes.Compare(va, networkSteward) == 0
+	return va != nil && bytes.Equal(va, networkSteward)
 }
 
 type ElectionState struct {
@@ -69,7 +71,7 @@ func (e *election) castBallot(pkScript []byte, value int64) {
 // that in order to make sure that it's valid for the chain state in question.
 //
 // This function is safe for concurrent access
-func (b *BlockChain) electionProcessBlock(view *UtxoViewpoint, blockHeight int32) (*ElectionState, error) {
+func (b *BlockChain) electionProcessBlock(view *UtxoViewpoint, blockHeight int32) (*ElectionState, er.R) {
 	// first easy
 	b.stateLock.RLock()
 	tipState := b.stateSnapshot.Elect
@@ -103,9 +105,9 @@ func (b *BlockChain) electionProcessBlock(view *UtxoViewpoint, blockHeight int32
 	// go to the database and walk the entire utxo set, then come back and update
 	// the results based on the utxo viewpoint
 	elect := make(election)
-	err := b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx database.Tx) er.R {
 		utxoBucket := dbTx.Metadata().Bucket(utxoSetBucketName)
-		return utxoBucket.ForEach(func(outPt, utxoBytes []byte) error {
+		return utxoBucket.ForEach(func(outPt, utxoBytes []byte) er.R {
 			utxo, err := deserializeUtxoEntry(utxoBytes)
 			if err != nil {
 				return err

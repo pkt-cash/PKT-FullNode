@@ -6,14 +6,17 @@ package blockchain
 
 import (
 	"math"
-	"reflect"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/btcutil"
+	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
 // TestSequenceLocksActive tests the SequenceLockActive function to ensure it
@@ -179,17 +182,13 @@ func TestCheckSerializedHeight(t *testing.T) {
 	coinbaseTx.AddTxIn(wire.NewTxIn(coinbaseOutpoint, nil, nil))
 
 	// Expected rule errors.
-	missingHeightError := RuleError{
-		ErrorCode: ErrMissingCoinbaseHeight,
-	}
-	badHeightError := RuleError{
-		ErrorCode: ErrBadCoinbaseHeight,
-	}
+	missingHeightError := ruleerror.ErrMissingCoinbaseHeight.Default()
+	badHeightError := ruleerror.ErrBadCoinbaseHeight.Default()
 
 	tests := []struct {
 		sigScript  []byte // Serialized data
 		wantHeight int32  // Expected height
-		err        error  // Expected error type
+		err        er.R   // Expected error type
 	}{
 		// No serialized height length.
 		{[]byte{}, 0, missingHeightError},
@@ -216,20 +215,10 @@ func TestCheckSerializedHeight(t *testing.T) {
 		tx := btcutil.NewTx(msgTx)
 
 		err := checkSerializedHeight(tx, test.wantHeight)
-		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
+		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("checkSerializedHeight #%d wrong error type "+
 				"got: %v <%T>, want: %T", i, err, err, test.err)
 			continue
-		}
-
-		if rerr, ok := err.(RuleError); ok {
-			trerr := test.err.(RuleError)
-			if rerr.ErrorCode != trerr.ErrorCode {
-				t.Errorf("checkSerializedHeight #%d wrong "+
-					"error code got: %v, want: %v", i,
-					rerr.ErrorCode, trerr.ErrorCode)
-				continue
-			}
 		}
 	}
 }
@@ -484,4 +473,9 @@ var Block100000 = wire.MsgBlock{
 			LockTime: 0,
 		},
 	},
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(chaincfg.MainNetParams.GlobalConf)
+	os.Exit(m.Run())
 }

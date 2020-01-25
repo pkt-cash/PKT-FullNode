@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -20,16 +22,8 @@ import (
 type AddNodeSubCmd string
 
 const (
-	// ANAdd indicates the specified host should be added as a persistent
-	// peer.
-	ANAdd AddNodeSubCmd = "add"
-
 	// ANRemove indicates the specified peer should be removed.
 	ANRemove AddNodeSubCmd = "remove"
-
-	// ANOneTry indicates the specified host should try to connect once,
-	// but it should not be made persistent.
-	ANOneTry AddNodeSubCmd = "onetry"
 )
 
 // AddNodeCmd defines the addnode JSON-RPC command.
@@ -222,7 +216,7 @@ type TemplateRequest struct {
 
 // convertTemplateRequestField potentially converts the provided value as
 // needed.
-func convertTemplateRequestField(fieldName string, iface interface{}) (interface{}, error) {
+func convertTemplateRequestField(fieldName string, iface interface{}) (interface{}, er.R) {
 	switch val := iface.(type) {
 	case nil:
 		return nil, nil
@@ -247,20 +241,20 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 
 	request := (*templateRequest)(t)
 	if err := json.Unmarshal(data, &request); err != nil {
-		return err
+		return er.Native(er.E(err))
 	}
 
 	// The SigOpLimit field can only be nil, bool, or int64.
 	val, err := convertTemplateRequestField("sigoplimit", request.SigOpLimit)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 	request.SigOpLimit = val
 
 	// The SizeLimit field can only be nil, bool, or int64.
 	val, err = convertTemplateRequestField("sizelimit", request.SizeLimit)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 	request.SizeLimit = val
 
@@ -444,12 +438,6 @@ type GetMiningPayoutsResult map[string]float64
 // GetNetworkStewardCmd defines the getnetworksteward JSON-RPC command.
 type GetNetworkStewardCmd struct{}
 
-// NewGetNetworkStewardCmd returns a new instance which can be used to issue a getnetworksteward
-// JSON-RPC command.
-func NewGetNetworkStewardCmd() *GetNetworkStewardCmd {
-	return &GetNetworkStewardCmd{}
-}
-
 // GetPeerInfoCmd defines the getpeerinfo JSON-RPC command.
 type GetPeerInfoCmd struct{}
 
@@ -460,10 +448,6 @@ func NewGetPeerInfoCmd() *GetPeerInfoCmd {
 }
 
 type GetRawBlockTemplateCmd struct{}
-
-func NewGetRawBlockTemplateCmd() *GetRawBlockTemplateCmd {
-	return &GetRawBlockTemplateCmd{}
-}
 
 type CheckPcShareCmdStructure struct {
 	ShareTarget  uint32   `json:"sharetarget"`

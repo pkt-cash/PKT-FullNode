@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 )
 
@@ -32,7 +33,7 @@ type MsgInv struct {
 }
 
 // AddInvVect adds an inventory vector to the message.
-func (msg *MsgInv) AddInvVect(iv *InvVect) error {
+func (msg *MsgInv) AddInvVect(iv *InvVect) er.R {
 	if len(msg.InvList)+1 > MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [max %v]",
 			MaxInvPerMsg)
@@ -45,7 +46,7 @@ func (msg *MsgInv) AddInvVect(iv *InvVect) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
@@ -75,7 +76,7 @@ func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) erro
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgInv) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgInv) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	// Limit to max inventory vectors per message.
 	count := len(msg.InvList)
 	if count > MaxInvPerMsg {

@@ -35,13 +35,14 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // NAT is an interface representing a NAT traversal options for example UPNP or
@@ -49,13 +50,13 @@ import (
 // access to services.
 type NAT interface {
 	// Get the external address from outside the NAT.
-	GetExternalAddress() (addr net.IP, err error)
+	GetExternalAddress() (addr net.IP, err er.R)
 	// Add a port mapping for protocol ("udp" or "tcp") from external port to
 	// internal port with description lasting for timeout.
-	AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error)
+	AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err er.R)
 	// Remove a previously added port mapping from external port to
 	// internal port.
-	DeletePortMapping(protocol string, externalPort, internalPort int) (err error)
+	DeletePortMapping(protocol string, externalPort, internalPort int) (err er.R)
 }
 
 type upnpNAT struct {
@@ -65,21 +66,21 @@ type upnpNAT struct {
 
 // Discover searches the local network for a UPnP router returning a NAT
 // for the network if so, nil if not.
-func Discover() (nat NAT, err error) {
-	ssdp, err := net.ResolveUDPAddr("udp4", "239.255.255.250:1900")
-	if err != nil {
-		return
+func Discover() (NAT, er.R) {
+	ssdp, errr := net.ResolveUDPAddr("udp4", "239.255.255.250:1900")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
-	conn, err := net.ListenPacket("udp4", ":0")
-	if err != nil {
-		return
+	conn, errr := net.ListenPacket("udp4", ":0")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	socket := conn.(*net.UDPConn)
 	defer socket.Close()
 
-	err = socket.SetDeadline(time.Now().Add(3 * time.Second))
-	if err != nil {
-		return
+	errr = socket.SetDeadline(time.Now().Add(3 * time.Second))
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	st := "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n"
@@ -92,13 +93,13 @@ func Discover() (nat NAT, err error) {
 	message := buf.Bytes()
 	answerBytes := make([]byte, 1024)
 	for i := 0; i < 3; i++ {
-		_, err = socket.WriteToUDP(message, ssdp)
-		if err != nil {
-			return
+		_, errr = socket.WriteToUDP(message, ssdp)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		var n int
-		n, _, err = socket.ReadFromUDP(answerBytes)
-		if err != nil {
+		n, _, errr = socket.ReadFromUDP(answerBytes)
+		if errr != nil {
 			continue
 			// socket.Close()
 			// return
@@ -121,20 +122,19 @@ func Discover() (nat NAT, err error) {
 		}
 		locURL := loc[0:endIndex]
 		var serviceURL string
-		serviceURL, err = getServiceURL(locURL)
+		serviceURL, err := getServiceURL(locURL)
 		if err != nil {
-			return
+			return nil, err
 		}
 		var ourIP string
 		ourIP, err = getOurIP()
 		if err != nil {
-			return
+			return nil, err
 		}
-		nat = &upnpNAT{serviceURL: serviceURL, ourIP: ourIP}
-		return
+		nat := &upnpNAT{serviceURL: serviceURL, ourIP: ourIP}
+		return nat, nil
 	}
-	err = errors.New("UPnP port discovery failed")
-	return
+	return nil, er.New("UPnP port discovery failed")
 }
 
 // service represents the Service type in an UPnP xml description.
@@ -212,49 +212,54 @@ func getChildService(d *device, serviceType string) *service {
 }
 
 // getOurIP returns a best guess at what the local IP is.
-func getOurIP() (ip string, err error) {
-	hostname, err := os.Hostname()
-	if err != nil {
+func getOurIP() (ip string, err er.R) {
+	hostname, errr := os.Hostname()
+	if errr != nil {
+		err = er.E(errr)
 		return
 	}
-	return net.LookupCNAME(hostname)
+	ip, errr = net.LookupCNAME(hostname)
+	err = er.E(errr)
+	return
 }
 
 // getServiceURL parses the xml description at the given root url to find the
 // url for the WANIPConnection service to be used for port forwarding.
-func getServiceURL(rootURL string) (url string, err error) {
-	r, err := http.Get(rootURL)
-	if err != nil {
+func getServiceURL(rootURL string) (url string, err er.R) {
+	r, errr := http.Get(rootURL)
+	if errr != nil {
+		err = er.E(errr)
 		return
 	}
 	defer r.Body.Close()
 	if r.StatusCode >= 400 {
-		err = errors.New(string(r.StatusCode))
+		err = er.New(string(r.StatusCode))
 		return
 	}
 	var root root
-	err = xml.NewDecoder(r.Body).Decode(&root)
-	if err != nil {
+	errr = xml.NewDecoder(r.Body).Decode(&root)
+	if errr != nil {
+		err = er.E(errr)
 		return
 	}
 	a := &root.Device
 	if a.DeviceType != "urn:schemas-upnp-org:device:InternetGatewayDevice:1" {
-		err = errors.New("no InternetGatewayDevice")
+		err = er.New("no InternetGatewayDevice")
 		return
 	}
 	b := getChildDevice(a, "urn:schemas-upnp-org:device:WANDevice:1")
 	if b == nil {
-		err = errors.New("no WANDevice")
+		err = er.New("no WANDevice")
 		return
 	}
 	c := getChildDevice(b, "urn:schemas-upnp-org:device:WANConnectionDevice:1")
 	if c == nil {
-		err = errors.New("no WANConnectionDevice")
+		err = er.New("no WANConnectionDevice")
 		return
 	}
 	d := getChildService(c, "urn:schemas-upnp-org:service:WANIPConnection:1")
 	if d == nil {
-		err = errors.New("no WANIPConnection")
+		err = er.New("no WANIPConnection")
 		return
 	}
 	url = combineURL(rootURL, d.ControlURL)
@@ -287,14 +292,14 @@ type soapEnvelope struct {
 // soapRequests performs a soap request with the given parameters and returns
 // the xml replied stripped of the soap headers. in the case that the request is
 // unsuccessful the an error is returned.
-func soapRequest(url, function, message string) (replyXML []byte, err error) {
+func soapRequest(url, function, message string) (replyXML []byte, err er.R) {
 	fullMessage := "<?xml version=\"1.0\" ?>" +
 		"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\r\n" +
 		"<s:Body>" + message + "</s:Body></s:Envelope>"
 
-	req, err := http.NewRequest("POST", url, strings.NewReader(fullMessage))
-	if err != nil {
-		return nil, err
+	req, errr := http.NewRequest("POST", url, strings.NewReader(fullMessage))
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	req.Header.Set("Content-Type", "text/xml ; charset=\"utf-8\"")
 	req.Header.Set("User-Agent", "Darwin/10.0.0, UPnP/1.0, MiniUPnPc/1.3")
@@ -304,9 +309,9 @@ func soapRequest(url, function, message string) (replyXML []byte, err error) {
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
 
-	r, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+	r, errr := http.DefaultClient.Do(req)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	if r.Body != nil {
 		defer r.Body.Close()
@@ -314,14 +319,14 @@ func soapRequest(url, function, message string) (replyXML []byte, err error) {
 
 	if r.StatusCode >= 400 {
 		// log.Stderr(function, r.StatusCode)
-		err = errors.New("Error " + strconv.Itoa(r.StatusCode) + " for " + function)
+		err = er.New("Error " + strconv.Itoa(r.StatusCode) + " for " + function)
 		r = nil
 		return
 	}
 	var reply soapEnvelope
-	err = xml.NewDecoder(r.Body).Decode(&reply)
-	if err != nil {
-		return nil, err
+	errr = xml.NewDecoder(r.Body).Decode(&reply)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	return reply.Body.Data, nil
 }
@@ -335,7 +340,7 @@ type getExternalIPAddressResponse struct {
 
 // GetExternalAddress implements the NAT interface by fetching the external IP
 // from the UPnP router.
-func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) {
+func (n *upnpNAT) GetExternalAddress() (addr net.IP, err er.R) {
 	message := "<u:GetExternalIPAddress xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\"/>\r\n"
 	response, err := soapRequest(n.serviceURL, "GetExternalIPAddress", message)
 	if err != nil {
@@ -343,21 +348,21 @@ func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) {
 	}
 
 	var reply getExternalIPAddressResponse
-	err = xml.Unmarshal(response, &reply)
-	if err != nil {
-		return nil, err
+	errr := xml.Unmarshal(response, &reply)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	addr = net.ParseIP(reply.ExternalIPAddress)
 	if addr == nil {
-		return nil, errors.New("unable to parse ip address")
+		return nil, er.New("unable to parse ip address")
 	}
 	return addr, nil
 }
 
 // AddPortMapping implements the NAT interface by setting up a port forwarding
 // from the UPnP router to the local machine with the given ports and protocol.
-func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error) {
+func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err er.R) {
 	// A single concatenation would break ARM compilation.
 	message := "<u:AddPortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">\r\n" +
 		"<NewRemoteHost></NewRemoteHost><NewExternalPort>" + strconv.Itoa(externalPort)
@@ -385,7 +390,7 @@ func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int
 
 // DeletePortMapping implements the NAT interface by removing up a port forwarding
 // from the UPnP router to the local machine with the given ports and.
-func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort int) (err error) {
+func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort int) (err er.R) {
 
 	message := "<u:DeletePortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">\r\n" +
 		"<NewRemoteHost></NewRemoteHost><NewExternalPort>" + strconv.Itoa(externalPort) +

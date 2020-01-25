@@ -7,6 +7,7 @@ package indexers
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
 
 	"github.com/pkt-cash/pktd/wire"
@@ -42,7 +43,7 @@ func (b *addrIndexBucket) Get(key []byte) []byte {
 // Put stores the provided key/value pair to the mock address index bucket.
 //
 // This is part of the internalBucket interface.
-func (b *addrIndexBucket) Put(key []byte, value []byte) error {
+func (b *addrIndexBucket) Put(key []byte, value []byte) er.R {
 	var levelKey [levelKeySize]byte
 	copy(levelKey[:], key)
 	b.levels[levelKey] = value
@@ -52,7 +53,7 @@ func (b *addrIndexBucket) Put(key []byte, value []byte) error {
 // Delete removes the provided key from the mock address index bucket.
 //
 // This is part of the internalBucket interface.
-func (b *addrIndexBucket) Delete(key []byte) error {
+func (b *addrIndexBucket) Delete(key []byte) er.R {
 	var levelKey [levelKeySize]byte
 	copy(levelKey[:], key)
 	delete(b.levels, levelKey)
@@ -98,7 +99,7 @@ func (b *addrIndexBucket) printLevels(addrKey [addrKeySize]byte) string {
 // sanityCheck ensures that all data stored in the bucket for the given address
 // adheres to the level-based rules described by the address index
 // documentation.
-func (b *addrIndexBucket) sanityCheck(addrKey [addrKeySize]byte, expectedTotal int) error {
+func (b *addrIndexBucket) sanityCheck(addrKey [addrKeySize]byte, expectedTotal int) er.R {
 	// Find the highest level for the key.
 	highestLevel := uint8(0)
 	for k := range b.levels {
@@ -127,17 +128,17 @@ func (b *addrIndexBucket) sanityCheck(addrKey [addrKeySize]byte, expectedTotal i
 			if (highestLevel != 0 && numEntries == 0) ||
 				numEntries > maxEntries {
 
-				return fmt.Errorf("level %d has %d entries",
+				return er.Errorf("level %d has %d entries",
 					level, numEntries)
 			}
 		} else if numEntries != maxEntries && numEntries != maxEntries/2 {
-			return fmt.Errorf("level %d has %d entries", level,
+			return er.Errorf("level %d has %d entries", level,
 				numEntries)
 		}
 		maxEntries *= 2
 	}
 	if totalEntries != expectedTotal {
-		return fmt.Errorf("expected %d entries - got %d", expectedTotal,
+		return er.Errorf("expected %d entries - got %d", expectedTotal,
 			totalEntries)
 	}
 
@@ -151,7 +152,7 @@ func (b *addrIndexBucket) sanityCheck(addrKey [addrKeySize]byte, expectedTotal i
 			start := i * txEntrySize
 			num := byteOrder.Uint32(data[start:])
 			if num != expectedNum {
-				return fmt.Errorf("level %d offset %d does "+
+				return er.Errorf("level %d offset %d does "+
 					"not contain the expected number of "+
 					"%d - got %d", level, i, num,
 					expectedNum)

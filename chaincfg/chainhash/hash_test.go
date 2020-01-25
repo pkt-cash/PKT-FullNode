@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // mainNetGenesisHash is the hash of the first block in the block chain for the
@@ -114,7 +116,7 @@ func TestNewHashFromStr(t *testing.T) {
 	tests := []struct {
 		in   string
 		want Hash
-		err  error
+		err  er.R
 	}{
 		// Genesis hash.
 		{
@@ -165,14 +167,14 @@ func TestNewHashFromStr(t *testing.T) {
 		{
 			"01234567890123456789012345678901234567890123456789012345678912345",
 			Hash{},
-			ErrHashStrSize,
+			er.E(ErrHashStrSize),
 		},
 
 		// Hash string that is contains non-hex chars.
 		{
 			"abcdefg",
 			Hash{},
-			hex.InvalidByteError('g'),
+			er.E(hex.InvalidByteError('g')),
 		},
 	}
 
@@ -181,7 +183,7 @@ func TestNewHashFromStr(t *testing.T) {
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		result, err := NewHashFromStr(test.in)
-		if err != test.err {
+		if !er.Equals(err, test.err) {
 			t.Errorf(unexpectedErrStr, i, err, test.err)
 			continue
 		} else if err != nil {

@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -35,45 +37,45 @@ var (
 	// provided is not recognized.
 	ErrTorUnrecognizedAuthMethod = errors.New("invalid proxy authentication method")
 
-	torStatusErrors = map[byte]error{
-		torSucceeded:         errors.New("tor succeeded"),
-		torGeneralError:      errors.New("tor general error"),
-		torNotAllowed:        errors.New("tor not allowed"),
-		torNetUnreachable:    errors.New("tor network is unreachable"),
-		torHostUnreachable:   errors.New("tor host is unreachable"),
-		torConnectionRefused: errors.New("tor connection refused"),
-		torTTLExpired:        errors.New("tor TTL expired"),
-		torCmdNotSupported:   errors.New("tor command not supported"),
-		torAddrNotSupported:  errors.New("tor address type not supported"),
+	torStatusErrors = map[byte]er.R{
+		torSucceeded:         er.New("tor succeeded"),
+		torGeneralError:      er.New("tor general error"),
+		torNotAllowed:        er.New("tor not allowed"),
+		torNetUnreachable:    er.New("tor network is unreachable"),
+		torHostUnreachable:   er.New("tor host is unreachable"),
+		torConnectionRefused: er.New("tor connection refused"),
+		torTTLExpired:        er.New("tor TTL expired"),
+		torCmdNotSupported:   er.New("tor command not supported"),
+		torAddrNotSupported:  er.New("tor address type not supported"),
 	}
 )
 
 // TorLookupIP uses Tor to resolve DNS via the SOCKS extension they provide for
 // resolution over the Tor network. Tor itself doesn't support ipv6 so this
 // doesn't either.
-func TorLookupIP(host, proxy string) ([]net.IP, error) {
+func TorLookupIP(host, proxy string) ([]net.IP, er.R) {
 	conn, err := net.Dial("tcp", proxy)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	defer conn.Close()
 
 	buf := []byte{'\x05', '\x01', '\x00'}
 	_, err = conn.Write(buf)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	buf = make([]byte, 2)
 	_, err = conn.Read(buf)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if buf[0] != '\x05' {
-		return nil, ErrTorInvalidProxyResponse
+		return nil, er.E(ErrTorInvalidProxyResponse)
 	}
 	if buf[1] != '\x00' {
-		return nil, ErrTorUnrecognizedAuthMethod
+		return nil, er.E(ErrTorUnrecognizedAuthMethod)
 	}
 
 	buf = make([]byte, 7+len(host))
@@ -87,24 +89,24 @@ func TorLookupIP(host, proxy string) ([]net.IP, error) {
 
 	_, err = conn.Write(buf)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	buf = make([]byte, 4)
 	_, err = conn.Read(buf)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if buf[0] != 5 {
-		return nil, ErrTorInvalidProxyResponse
+		return nil, er.E(ErrTorInvalidProxyResponse)
 	}
 	if buf[1] != 0 {
 		if int(buf[1]) >= len(torStatusErrors) {
-			return nil, ErrTorInvalidProxyResponse
+			return nil, er.E(ErrTorInvalidProxyResponse)
 		} else if err := torStatusErrors[buf[1]]; err != nil {
 			return nil, err
 		}
-		return nil, ErrTorInvalidProxyResponse
+		return nil, er.E(ErrTorInvalidProxyResponse)
 	}
 	if buf[3] != 1 {
 		err := torStatusErrors[torGeneralError]
@@ -114,10 +116,10 @@ func TorLookupIP(host, proxy string) ([]net.IP, error) {
 	buf = make([]byte, 4)
 	bytes, err := conn.Read(buf)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if bytes != 4 {
-		return nil, ErrTorInvalidAddressResponse
+		return nil, er.E(ErrTorInvalidAddressResponse)
 	}
 
 	r := binary.BigEndian.Uint32(buf)

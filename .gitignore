@@ -34,6 +34,9 @@ _testmain.go
 *.exe
 /pktd
 /btcctl
+/wallet
+/pktd.test
+/wallettool
 
 # IDE
 .vscode
