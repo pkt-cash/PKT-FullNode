@@ -1,5 +1,6 @@
 #!/bin/sh
 die() { echo $1; exit 1; }
+export GO111MODULE=on
 echo "Building pktd"
 go build || die "failed to build pktd"
 echo "Building wallet"
