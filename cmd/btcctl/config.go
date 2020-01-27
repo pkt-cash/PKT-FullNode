@@ -220,7 +220,7 @@ func loadConfig() (*config, []string, er.R) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show options", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", version())
+		fmt.Println(appName, "version", pktconfig.Version())
 		os.Exit(0)
 	}
 
