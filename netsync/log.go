@@ -4,16 +4,16 @@
 
 package netsync
 
-import "github.com/btcsuite/btclog"
+import "github.com/pkt-cash/pktd/pktlog"
 
 // log is a logger that is initialized with no output filters.  This
 // means the package will not perform any logging by default until the caller
 // requests it.
-var log btclog.Logger
+var log pktlog.Logger
 
 // UseLogger uses a specified Logger to output package logging info.
 // This should be used in preference to SetLogWriter if the caller is also
-// using btclog.
-func UseLogger(logger btclog.Logger) {
+// using pktlog.
+func UseLogger(logger pktlog.Logger) {
 	log = logger
 }

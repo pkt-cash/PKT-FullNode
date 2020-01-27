@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // headerProgressLogger provides periodic logging for other services in order
@@ -16,7 +16,7 @@ type headerProgressLogger struct {
 
 	entityType string
 
-	subsystemLogger btclog.Logger
+	subsystemLogger pktlog.Logger
 	progressAction  string
 	sync.Mutex
 }
@@ -26,7 +26,7 @@ type headerProgressLogger struct {
 //  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
 //  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
 func newBlockProgressLogger(progressMessage string,
-	entityType string, logger btclog.Logger) *headerProgressLogger {
+	entityType string, logger pktlog.Logger) *headerProgressLogger {
 
 	return &headerProgressLogger{
 		entityType:       entityType,

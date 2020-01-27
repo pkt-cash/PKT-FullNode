@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
 )
 
-var log = btclog.Disabled
+var log = pktlog.Disabled
 
 const (
 	dbType = "ffldb"
@@ -66,7 +66,7 @@ func createDBDriver(args ...interface{}) (database.DB, er.R) {
 
 // useLogger is the callback provided during driver registration that sets the
 // current logger to the provided one.
-func useLogger(logger btclog.Logger) {
+func useLogger(logger pktlog.Logger) {
 	log = logger
 }
 

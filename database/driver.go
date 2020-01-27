@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // Driver defines a structure for backend drivers to use when they registered
@@ -30,7 +30,7 @@ type Driver struct {
 	Open func(args ...interface{}) (DB, er.R)
 
 	// UseLogger uses a specified Logger to output package logging info.
-	UseLogger func(logger btclog.Logger)
+	UseLogger func(logger pktlog.Logger)
 }
 
 // driverList holds all of the registered database backends.
