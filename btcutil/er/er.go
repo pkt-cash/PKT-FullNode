@@ -3,13 +3,10 @@ package er
 import (
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"runtime/debug"
 	"strings"
 )
-
-var stacktraceDisabled = []string{"No stack, ENABLE_STACKTRACE not set"}
 
 // GenericErrorType is for packages with only one or two error codes
 // which don't make sense having their own error type
@@ -234,11 +231,7 @@ func (e err) HasStack() bool {
 
 func (e err) Stack() []string {
 	if e.stack == nil {
-		if e.bstack != nil {
-			e.stack = strings.Split(string(e.bstack), "\n")
-		} else {
-			e.stack = stacktraceDisabled
-		}
+		e.stack = strings.Split(string(e.bstack), "\n")
 	}
 	return e.stack
 }
@@ -276,9 +269,6 @@ func (e err) Native() error {
 //////
 
 func captureStack() []byte {
-	if os.Getenv("ENABLE_STACKTRACE") == "" {
-		return nil
-	}
 	return debug.Stack()
 }
 
