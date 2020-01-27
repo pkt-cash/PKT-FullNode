@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -113,7 +115,11 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.
 			return nil, er.Errorf("%d %s", httpResponse.StatusCode,
 				http.StatusText(httpResponse.StatusCode))
 		}
-		return nil, er.Errorf("%s", respBytes)
+		additionalMessage := ""
+		if _, err := os.Stat(defaultConfigFile); httpResponse.StatusCode == 401 && err == nil {
+			additionalMessage = fmt.Sprintf(" (Try deleting %s)", defaultConfigFile)
+		}
+		return nil, er.Errorf("%s%s", respBytes, additionalMessage)
 	}
 
 	// Unmarshal the response.

@@ -15,13 +15,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-
 	flags "github.com/jessevdk/go-flags"
+
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktconfig"
 	"github.com/pkt-cash/pktd/pktwallet/internal/cfgutil"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
 	"github.com/pkt-cash/pktd/pktwallet/netparams"
@@ -42,6 +43,7 @@ const (
 
 var (
 	pktdDefaultCAFile  = filepath.Join(btcutil.AppDataDir("pktd", false), "rpc.cert")
+	pktdDefaultConf    = filepath.Join(btcutil.AppDataDir("pktd", false), "pktd.conf")
 	defaultAppDataDir  = btcutil.AppDataDir("pktwallet", false)
 	defaultConfigFile  = filepath.Join(defaultAppDataDir, defaultConfigFilename)
 	defaultRPCKeyFile  = filepath.Join(defaultAppDataDir, "rpc.key")
@@ -102,8 +104,13 @@ type config struct {
 	LegacyRPCListeners     []string                `long:"rpclisten" description:"Listen for legacy RPC connections on this interface/port (default port: 8332, testnet: 18332, simnet: 18554)"`
 	LegacyRPCMaxClients    int64                   `long:"rpcmaxclients" description:"Max number of legacy RPC clients for standard connections"`
 	LegacyRPCMaxWebsockets int64                   `long:"rpcmaxwebsockets" description:"Max number of legacy RPC websocket connections"`
-	Username               string                  `short:"u" long:"username" description:"Username for legacy RPC and pktd authentication (if pktdusername is unset)"`
-	Password               string                  `short:"P" long:"password" default-mask:"-" description:"Password for legacy RPC and pktd authentication (if pktdpassword is unset)"`
+	Username               string                  `short:"u" long:"rpcuser" description:"Username for legacy RPC and pktd authentication (if pktdusername is unset)"`
+	Password               string                  `short:"P" long:"rpcpass" default-mask:"-" description:"Password for legacy RPC and pktd authentication (if pktdpassword is unset)"`
+
+	// These exist because btcwallet took it upon themselves to specify a username and password differently from btcd
+	// in case any of these are existing in the wild, they'll be accepted.
+	OldUsername string `long:"username" hidden:"true"`
+	OldPassword string `long:"password" hidden:"true"`
 
 	// EXPERIMENTAL RPC server options
 	//
@@ -319,14 +326,33 @@ func loadConfig() (*config, []string, er.R) {
 			configFilePath = filepath.Join(appDataDir, defaultConfigFilename)
 		}
 	}
-	errr = flags.NewIniParser(parser).ParseFile(configFilePath)
-	if errr != nil {
+
+	// Attempt to grab the user/pass from pktd.conf
+	if userpass, err := pktconfig.ReadUserPass(pktdDefaultConf); err != nil {
+		if _, ok := errr.(*os.PathError); !ok {
+			fmt.Fprintln(os.Stderr, err)
+			parser.WriteHelp(os.Stderr)
+			return nil, nil, er.E(errr)
+		}
+		// file doesn't exist, whatever
+	} else {
+		cfg.BtcdUsername = userpass[0]
+		cfg.BtcdPassword = userpass[1]
+	}
+
+	if errr := flags.NewIniParser(parser).ParseFile(configFilePath); errr != nil {
 		if _, ok := errr.(*os.PathError); !ok {
 			fmt.Fprintln(os.Stderr, errr)
 			parser.WriteHelp(os.Stderr)
 			return nil, nil, er.E(errr)
 		}
-		configFileError = er.E(errr)
+		// log file is missing, lets create one
+		fmt.Fprintln(os.Stderr, configFilePath+" does not exist, creating it from default")
+		if configFileError = pktconfig.CreateDefaultConfigFile(
+			configFilePath, pktconfig.PktwalletSampleConfig); configFileError != nil {
+		} else {
+			configFileError = er.E(flags.NewIniParser(parser).ParseFile(configFilePath))
+		}
 	}
 
 	// Parse command line options again to ensure they take precedence.
@@ -670,6 +696,13 @@ func loadConfig() (*config, []string, er.R) {
 	cfg.CAFile.Value = cleanAndExpandPath(cfg.CAFile.Value)
 	cfg.RPCCert.Value = cleanAndExpandPath(cfg.RPCCert.Value)
 	cfg.RPCKey.Value = cleanAndExpandPath(cfg.RPCKey.Value)
+
+	if cfg.Username == "" {
+		cfg.Username = cfg.OldUsername
+	}
+	if cfg.Password == "" {
+		cfg.Password = cfg.OldPassword
+	}
 
 	// If the pktd username or password are unset, use the same auth as for
 	// the client.  The two settings were previously shared for pktd and

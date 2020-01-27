@@ -1,18 +1,14 @@
+package pktconfig
+
+const PktwalletSampleConfig = `
 [Application Options]
 
 ; ------------------------------------------------------------------------------
-; Bitcoin wallet settings
+; PKT wallet settings
 ; ------------------------------------------------------------------------------
 
-; Use testnet (cannot be used with simnet=1).
-; testnet=0
-
-; Use simnet (cannot be used with testnet=1).
-; simnet=0
-
 ; The directory to open and save wallet, transaction, and unspent transaction
-; output files.  Two directories, `mainnet` and `testnet` are used in this
-; directory for mainnet and testnet wallets, respectively.
+; output files.
 ; appdata=~/.pktwallet
 
 
@@ -71,16 +67,6 @@
 ; rpclisten=0.0.0.0:8337    ; all ipv4 interfaces on non-standard port 8337
 ; rpclisten=[::]:8337       ; all ipv6 interfaces on non-standard port 8337
 
-; Legacy (Bitcoin Core-compatible) RPC listener addresses.  Addresses without a
-; port specified use the same default port as the new server.  Listeners cannot
-; be shared between both RPC servers.
-;
-; Adding any legacy RPC listen addresses disable all default rpclisten options.
-; If both servers must run, all listen addresses must be manually specified for
-; each.
-; legacyrpclisten=
-
-
 
 ; ------------------------------------------------------------------------------
 ; RPC settings (both client and server)
@@ -88,8 +74,8 @@
 
 ; Username and password to authenticate to pktd a RPC server and authenticate
 ; new client connections
-; username=
-; password=
+; rpcuser=
+; rpcpass=
 
 ; Alternative username and password for pktd.  If set, these will be used
 ; instead of the username and password set above for authentication to a
@@ -110,3 +96,4 @@
 ; be disabled if this option is not specified.  The profile information can be
 ; accessed at http://localhost:<profileport>/debug/pprof once running.
 ; profile=6062
+`

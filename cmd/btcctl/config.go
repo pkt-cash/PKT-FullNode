@@ -6,14 +6,13 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig"
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -232,19 +231,19 @@ func loadConfig() (*config, []string, er.R) {
 		os.Exit(0)
 	}
 
-	if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-		// Use config file for RPC server to create default btcctl config
-		var serverConfigPath string
-		if preCfg.Wallet {
-			serverConfigPath = filepath.Join(pktwalletHomeDir, "pktwallet.conf")
-		} else {
-			serverConfigPath = filepath.Join(pktdHomeDir, "pktd.conf")
-		}
+	// Use config file for RPC server to create default btcctl config
+	var serverConfigPath string
+	if preCfg.Wallet {
+		serverConfigPath = filepath.Join(pktwalletHomeDir, "pktwallet.conf")
+	} else {
+		serverConfigPath = filepath.Join(pktdHomeDir, "pktd.conf")
+	}
 
-		err := createDefaultConfigFile(preCfg.ConfigFile, serverConfigPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating a default config file: %v\n", err)
-		}
+	if userpass, err := pktconfig.ReadUserPass(serverConfigPath); err != nil {
+		return nil, nil, err
+	} else {
+		cfg.RPCUser = userpass[0]
+		cfg.RPCPassword = userpass[1]
 	}
 
 	// Load additional config from file.
@@ -299,73 +298,4 @@ func loadConfig() (*config, []string, er.R) {
 		cfg.SimNet, cfg.BtcMainNet, cfg.PktTest, cfg.Wallet)
 
 	return &cfg, remainingArgs, nil
-}
-
-// createDefaultConfig creates a basic config file at the given destination path.
-// For this it tries to read the config file for the RPC server (either pktd or
-// pktwallet), and extract the RPC user and password from it.
-func createDefaultConfigFile(destinationPath, serverConfigPath string) er.R {
-	// Read the RPC server config
-	serverConfigFile, err := os.Open(serverConfigPath)
-	if err != nil {
-		return er.E(err)
-	}
-	defer serverConfigFile.Close()
-	content, err := ioutil.ReadAll(serverConfigFile)
-	if err != nil {
-		return er.E(err)
-	}
-
-	// Extract the rpcuser
-	rpcUserRegexp, err := regexp.Compile(`(?m)^\s*rpcuser=([^\s]+)`)
-	if err != nil {
-		return er.E(err)
-	}
-	userSubmatches := rpcUserRegexp.FindSubmatch(content)
-	if userSubmatches == nil {
-		// No user found, nothing to do
-		return nil
-	}
-
-	// Extract the rpcpass
-	rpcPassRegexp, err := regexp.Compile(`(?m)^\s*rpcpass=([^\s]+)`)
-	if err != nil {
-		return er.E(err)
-	}
-	passSubmatches := rpcPassRegexp.FindSubmatch(content)
-	if passSubmatches == nil {
-		// No password found, nothing to do
-		return nil
-	}
-
-	// Extract the notls
-	noTLSRegexp, err := regexp.Compile(`(?m)^\s*notls=(0|1)(?:\s|$)`)
-	if err != nil {
-		return er.E(err)
-	}
-	noTLSSubmatches := noTLSRegexp.FindSubmatch(content)
-
-	// Create the destination directory if it does not exists
-	err = os.MkdirAll(filepath.Dir(destinationPath), 0700)
-	if err != nil {
-		return er.E(err)
-	}
-
-	// Create the destination file and write the rpcuser and rpcpass to it
-	dest, err := os.OpenFile(destinationPath,
-		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return er.E(err)
-	}
-	defer dest.Close()
-
-	destString := fmt.Sprintf("rpcuser=%s\nrpcpass=%s\n",
-		string(userSubmatches[1]), string(passSubmatches[1]))
-	if noTLSSubmatches != nil {
-		destString += fmt.Sprintf("notls=%s\n", noTLSSubmatches[1])
-	}
-
-	dest.WriteString(destString)
-
-	return nil
 }

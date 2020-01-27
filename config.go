@@ -6,11 +6,7 @@
 package main
 
 import (
-	"bufio"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -33,6 +29,7 @@ import (
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/pktconfig"
 )
 
 const (
@@ -63,7 +60,6 @@ const (
 	defaultMaxOrphanTransactions = 100
 	defaultMaxOrphanTxSize       = 100000
 	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-pktd.conf"
 	defaultTxIndex               = false
 	defaultAddrIndex             = false
 )
@@ -483,7 +479,7 @@ func loadConfig() (*config, []string, er.R) {
 		defaultConfigFile {
 
 		if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-			err := createDefaultConfigFile(preCfg.ConfigFile)
+			err := pktconfig.CreateDefaultConfigFile(preCfg.ConfigFile, pktconfig.PktdSampleConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating a "+
 					"default config file: %v\n", err)
@@ -1122,73 +1118,6 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	return &cfg, remainingArgs, nil
-}
-
-// createDefaultConfig copies the file sample-pktd.conf to the given destination path,
-// and populates it with some randomly generated RPC username and password.
-func createDefaultConfigFile(destinationPath string) er.R {
-	// Create the destination directory if it does not exists
-	errr := os.MkdirAll(filepath.Dir(destinationPath), 0700)
-	if errr != nil {
-		return er.E(errr)
-	}
-
-	// We assume sample config file path is same as binary
-	path, errr := filepath.Abs(filepath.Dir(os.Args[0]))
-	if errr != nil {
-		return er.E(errr)
-	}
-	sampleConfigPath := filepath.Join(path, sampleConfigFilename)
-
-	// We generate a random user and password
-	randomBytes := make([]byte, 20)
-	_, errr = rand.Read(randomBytes)
-	if errr != nil {
-		return er.E(errr)
-	}
-	generatedRPCUser := base64.StdEncoding.EncodeToString(randomBytes)
-
-	_, errr = rand.Read(randomBytes)
-	if errr != nil {
-		return er.E(errr)
-	}
-	generatedRPCPass := base64.StdEncoding.EncodeToString(randomBytes)
-
-	src, errr := os.Open(sampleConfigPath)
-	if errr != nil {
-		return er.E(errr)
-	}
-	defer src.Close()
-
-	dest, errr := os.OpenFile(destinationPath,
-		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if errr != nil {
-		return er.E(errr)
-	}
-	defer dest.Close()
-
-	// We copy every line from the sample config file to the destination,
-	// only replacing the two lines for rpcuser and rpcpass
-	reader := bufio.NewReader(src)
-	for errr != io.EOF {
-		var line string
-		line, errr = reader.ReadString('\n')
-		if errr != nil && errr != io.EOF {
-			return er.E(errr)
-		}
-
-		if strings.Contains(line, "rpcuser=") {
-			line = "rpcuser=" + generatedRPCUser + "\n"
-		} else if strings.Contains(line, "rpcpass=") {
-			line = "rpcpass=" + generatedRPCPass + "\n"
-		}
-
-		if _, errr := dest.WriteString(line); errr != nil {
-			return er.E(errr)
-		}
-	}
-
-	return nil
 }
 
 // pktdDial connects to the address on the named network using the appropriate

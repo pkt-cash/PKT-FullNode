@@ -1,3 +1,6 @@
+package pktconfig
+
+const PktdSampleConfig = `
 [Application Options]
 
 ; ------------------------------------------------------------------------------
@@ -352,3 +355,4 @@
 ; be disabled if this option is not specified.  The profile information can be
 ; accessed at http://localhost:<profileport>/debug/pprof once running.
 ; profile=6061
+`
