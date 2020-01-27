@@ -9,6 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig"
 
 	"github.com/btcsuite/websocket"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -123,6 +125,12 @@ func NewServer(opts *Options, walletLoader *wallet.Loader, listeners []net.Liste
 				log.Warnf("Unauthorized client connection attempt")
 				jsonAuthFail(w)
 				return
+			}
+			if r.Header.Get("User-Agent") == "Go-http-client/1.1" {
+				if r.Header.Get("X-Pkt-RPC-Version") != fmt.Sprintf("%d", pktconfig.AppMajorVersion) {
+					http.Error(w, "Wrong RPC version, please upgrade btcctl", http.StatusBadRequest)
+					return
+				}
 			}
 			server.wg.Add(1)
 			server.postClientRPC(w, r)

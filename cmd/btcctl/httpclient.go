@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -82,6 +83,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.
 	}
 	httpRequest.Close = true
 	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("X-Pkt-RPC-Version", fmt.Sprintf("%d", pktconfig.AppMajorVersion))
 
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)

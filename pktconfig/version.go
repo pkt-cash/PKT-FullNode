@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package pktconfig
 
 import (
 	"bytes"
@@ -16,13 +16,23 @@ const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 // These constants define the application version and follow the semantic
 // versioning 2.0.0 spec (http://semver.org/).
 const (
-	appMajor uint = 0
-	appMinor uint = 2
-	appPatch uint = 0
+	AppMajorVersion uint = 0
+	AppMinorVersion uint = 3
+	AppPatchVersion uint = 0
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
 	// per the semantic versioning spec.
 	appPreRelease = "beta"
+)
+
+var (
+	// userAgentName is the user agent name and is used to help identify
+	// ourselves to other bitcoin peers.
+	userAgentName = "pktd"
+
+	// userAgentVersion is the user agent version and is used to help
+	// identify ourselves to other bitcoin peers.
+	userAgentVersion = fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -32,9 +42,9 @@ var appBuild string
 
 // version returns the application version as a properly formed string per the
 // semantic versioning 2.0.0 spec (http://semver.org/).
-func version() string {
+func Version() string {
 	// Start with the major, minor, and patch versions.
-	version := fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
+	version := fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
 
 	// Append pre-release version if there is one.  The hyphen called for
 	// by the semantic versioning spec is automatically appended and should
@@ -55,6 +65,14 @@ func version() string {
 	}
 
 	return version
+}
+
+func UserAgentName() string {
+	return userAgentName
+}
+
+func UserAgentVersion() string {
+	return userAgentVersion
 }
 
 // normalizeVerString returns the passed string stripped of all characters which

@@ -37,6 +37,7 @@ import (
 	"github.com/pkt-cash/pktd/mining/cpuminer"
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/pktconfig"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -58,16 +59,6 @@ const (
 	// retries when connecting to persistent peers.  It is adjusted by the
 	// number of retries such that there is a retry backoff.
 	connectionRetryInterval = time.Second * 5
-)
-
-var (
-	// userAgentName is the user agent name and is used to help identify
-	// ourselves to other bitcoin peers.
-	userAgentName = "pktd"
-
-	// userAgentVersion is the user agent version and is used to help
-	// identify ourselves to other bitcoin peers.
-	userAgentVersion = fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
 )
 
 // onionAddr implements the net.Addr interface and represents a tor address.
@@ -1993,8 +1984,8 @@ func newPeerConfig(sp *serverPeer) *peer.Config {
 		NewestBlock:       sp.newestBlock,
 		HostToNetAddress:  sp.server.addrManager.HostToNetAddress,
 		Proxy:             cfg.Proxy,
-		UserAgentName:     userAgentName,
-		UserAgentVersion:  userAgentVersion,
+		UserAgentName:     pktconfig.UserAgentName(),
+		UserAgentVersion:  pktconfig.UserAgentVersion(),
 		UserAgentComments: cfg.UserAgentComments,
 		ChainParams:       sp.server.chainParams,
 		Services:          sp.server.services,

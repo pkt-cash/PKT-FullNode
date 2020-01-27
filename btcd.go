@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
+	"github.com/pkt-cash/pktd/pktconfig"
 )
 
 const (
@@ -62,7 +63,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 	defer pktdLog.Info("Shutdown complete")
 
 	// Show version at startup.
-	pktdLog.Infof("Version %s", version())
+	pktdLog.Infof("Version %s", pktconfig.Version())
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
