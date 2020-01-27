@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -571,7 +570,7 @@ func TestRecoverCompact(t *testing.T) {
 		pub, _, err := RecoverCompact(S256(), sig, msg)
 
 		// Verify that returned error matches as expected.
-		if !reflect.DeepEqual(test.err, err) {
+		if (err == nil) != (test.err == nil) || (err != nil && test.err.Message() != err.Message()) {
 			t.Errorf("unexpected error returned from pubkey "+
 				"recovery #%d: wanted %v, got %v",
 				i, test.err, err)

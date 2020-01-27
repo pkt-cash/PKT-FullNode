@@ -47,7 +47,7 @@ func ExampleNewAmount() {
 
 	amountNaN, err := btcutil.NewAmount(math.NaN())
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Message())
 		return
 	}
 	fmt.Println(amountNaN) //Output 4

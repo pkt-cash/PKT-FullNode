@@ -710,7 +710,7 @@ func TestResolveFilterMismatchFromBlock(t *testing.T) {
 				case testCase.expectedErr == nil:
 					t.Fatalf("Expected no error, got %v", err)
 
-				case err.String() != testCase.expectedErr.String():
+				case err.Message() != testCase.expectedErr.Message():
 					t.Fatalf("Expected error %v, got %v",
 						testCase.expectedErr, err)
 				}

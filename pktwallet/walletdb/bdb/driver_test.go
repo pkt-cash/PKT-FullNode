@@ -34,7 +34,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// parameters returns the expected error.
 	wantErr = er.Errorf("invalid arguments to %s.Open -- expected "+
 		"database path", dbType)
-	if _, err := walletdb.Open(dbType, 1, 2, 3); err.String() != wantErr.String() {
+	if _, err := walletdb.Open(dbType, 1, 2, 3); err.Message() != wantErr.Message() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -44,7 +44,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the first parameter returns the expected error.
 	wantErr = er.Errorf("first argument to %s.Open is invalid -- "+
 		"expected database path string", dbType)
-	if _, err := walletdb.Open(dbType, 1); err.String() != wantErr.String() {
+	if _, err := walletdb.Open(dbType, 1); err.Message() != wantErr.Message() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -54,7 +54,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// parameters returns the expected error.
 	wantErr = er.Errorf("invalid arguments to %s.Create -- expected "+
 		"database path", dbType)
-	if _, err := walletdb.Create(dbType, 1, 2, 3); err.String() != wantErr.String() {
+	if _, err := walletdb.Create(dbType, 1, 2, 3); err.Message() != wantErr.Message() {
 		t.Errorf("Create: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return
@@ -64,7 +64,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the first parameter returns the expected error.
 	wantErr = er.Errorf("first argument to %s.Create is invalid -- "+
 		"expected database path string", dbType)
-	if _, err := walletdb.Create(dbType, 1); err.String() != wantErr.String() {
+	if _, err := walletdb.Create(dbType, 1); err.Message() != wantErr.Message() {
 		t.Errorf("Create: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
 		return

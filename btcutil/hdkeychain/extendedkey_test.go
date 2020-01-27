@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"math"
-	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -620,7 +619,7 @@ func TestExtendedKeyAPI(t *testing.T) {
 		}
 
 		privKey, err := key.ECPrivKey()
-		if !reflect.DeepEqual(err, test.privKeyErr) {
+		if !er.Equals(err, test.privKeyErr) {
 			t.Errorf("ECPrivKey #%d (%s): mismatched error: want "+
 				"%v, got %v", i, test.name, test.privKeyErr, err)
 			continue
@@ -871,7 +870,7 @@ func TestErrors(t *testing.T) {
 
 	for i, test := range tests {
 		extKey, err := NewKeyFromString(test.key)
-		if !reflect.DeepEqual(err, test.err) {
+		if (err == nil) != (test.err == nil) || (err != nil && err.Message() != test.err.Message()) {
 			t.Errorf("NewKeyFromString #%d (%s): mismatched error "+
 				"-- got: %v, want: %v", i, test.name, err,
 				test.err)
@@ -880,7 +879,7 @@ func TestErrors(t *testing.T) {
 
 		if test.neuter {
 			_, err := extKey.Neuter()
-			if !reflect.DeepEqual(err, test.neuterErr) {
+			if !er.Equals(err, test.neuterErr) {
 				t.Errorf("Neuter #%d (%s): mismatched error "+
 					"-- got: %v, want: %v", i, test.name,
 					err, test.neuterErr)

@@ -62,7 +62,7 @@ func ExampleBlockChain_ProcessBlock() {
 	isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
 		blockchain.BFNone)
 	if err != nil {
-		fmt.Printf("Failed to process block: %v\n", err)
+		fmt.Printf("Failed to process block: %v\n", err.Message())
 		return
 	}
 	fmt.Printf("Block accepted. Is it on the main chain?: %v", isMainChain)
