@@ -668,7 +668,7 @@ var PktMainNetParams = Params{
 	},
 
 	// Mempool parameters
-	RelayNonStdTxs: true,
+	RelayNonStdTxs: false,
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
