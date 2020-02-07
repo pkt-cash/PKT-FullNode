@@ -27,7 +27,8 @@ import (
 // Maximum number of inputs which will be included in a transaction
 const MaxInputsPerTx = 8000
 
-// Maximum number of legacy (non-segwit) inputs which can be included in a transaction
+// Maximum number of inputs which can be included in a transaction if there is
+// at least one legacy non-segwit input
 const MaxInputsPerTxLegacy = 500
 
 // byAmount defines the methods needed to satisify sort.Interface to
@@ -350,7 +351,7 @@ func (w *Wallet) findEligibleOutputs(
 			ha.legCount++
 		}
 		if (needAmount > 0 && ha.amount >= needAmount) ||
-			ha.count > MaxInputsPerTx || ha.legCount > MaxInputsPerTxLegacy {
+			ha.count > MaxInputsPerTx || (ha.legCount > 0 && ha.count > MaxInputsPerTxLegacy) {
 			winningAddr = output.PkScript
 			return er.LoopBreak
 		}

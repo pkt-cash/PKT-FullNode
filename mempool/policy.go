@@ -55,6 +55,13 @@ const (
 	// in a multi-signature transaction output script for it to be
 	// considered standard.
 	maxStandardMultiSigKeys = 3
+
+	// maxStandardLegacyInputs is the maximum number of transaction inputs
+	// which will be allowed before the transaction is considered non-standard.
+	// Hashing of the transaction in order to validate legacy (non-segwit)
+	// inputs requires O(n**2) time because the transaction must be serialized
+	// separately for each input.
+	maxStandardLegacyInputs = 500
 )
 
 // calcMinRequiredTxRelayFee returns the minimum transaction fee required for a
@@ -308,6 +315,7 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 		return txRuleError(wire.RejectNonstandard, str)
 	}
 
+	hasLegacyInputs := false
 	for i, txIn := range msgTx.TxIn {
 		// Each transaction input signature script must not exceed the
 		// maximum size allowed for a standard transaction.  See
@@ -328,6 +336,15 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 				"script is not push only", i)
 			return txRuleError(wire.RejectNonstandard, str)
 		}
+
+		hasLegacyInputs = hasLegacyInputs || len(txIn.Witness) == 0
+	}
+
+	if hasLegacyInputs && len(msgTx.TxIn) > maxStandardLegacyInputs {
+		return txRuleError(wire.RejectNonstandard,
+			fmt.Sprintf("transaction has legacy inputs and has %d inputs which is "+
+				"more than the limit (%d) for transactions with legacy inputs",
+				len(msgTx.TxIn), maxStandardLegacyInputs))
 	}
 
 	// None of the output public key scripts can be a non-standard script or
