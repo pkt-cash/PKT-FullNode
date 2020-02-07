@@ -87,6 +87,11 @@ func (t ScriptClass) String() string {
 	return scriptClassToName[t]
 }
 
+// IsSegwit returns true if the script is a known segwit type.
+func (t ScriptClass) IsSegwit() bool {
+	return t == WitnessV0PubKeyHashTy || t == WitnessV0ScriptHashTy
+}
+
 // isPubkey returns true if the script passed is a pay-to-pubkey transaction,
 // false otherwise.
 func isPubkey(pops []parsedOpcode) bool {

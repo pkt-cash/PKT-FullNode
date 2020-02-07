@@ -25,7 +25,10 @@ import (
 )
 
 // Maximum number of inputs which will be included in a transaction
-const MaxInputsPerTx = 4500
+const MaxInputsPerTx = 8000
+
+// Maximum number of legacy (non-segwit) inputs which can be included in a transaction
+const MaxInputsPerTxLegacy = 500
 
 // byAmount defines the methods needed to satisify sort.Interface to
 // sort credits by their output amount.
@@ -245,23 +248,33 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	return tx, nil
 }
 
-func addrMatch(w *Wallet, script []byte, fromAddresses *[]btcutil.Address) bool {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.chainParams)
-	if err != nil || len(addrs) != 1 {
-		// Can't use this address, lets continue
-		return false
-	}
-	for _, addr := range *fromAddresses {
-		if bytes.Equal(addrs[0].ScriptAddress(), addr.ScriptAddress()) {
-			return true
+func addrMatch(
+	w *Wallet,
+	script []byte,
+	fromAddresses *[]btcutil.Address,
+) (bool, txscript.ScriptClass) {
+	sc, addrs, _, _ := txscript.ExtractPkScriptAddrs(script, w.chainParams)
+	if fromAddresses != nil {
+		for _, extractedAddr := range addrs {
+			for _, addr := range *fromAddresses {
+				if bytes.Equal(extractedAddr.ScriptAddress(), addr.ScriptAddress()) {
+					return true, sc
+				}
+			}
 		}
 	}
-	return false
+	return false, sc
 }
 
 type amountCount struct {
+	// Amount of coins
 	amount btcutil.Amount
-	count  int
+
+	// Number of segwit inputs collected
+	count int
+
+	// Number of legacy inputs collected
+	legCount int
 }
 
 func (w *Wallet) findEligibleOutputs(
@@ -284,7 +297,8 @@ func (w *Wallet) findEligibleOutputs(
 		// This is inherently expensive to filter at this level and ideally it would be moved into
 		// the database by storing address->credit mappings directly, but after each transaction
 		// is loaded, it's not much more effort to also extract the addresses each time.
-		if fromAddresses != nil && !addrMatch(w, output.PkScript, fromAddresses) {
+		match, sc := addrMatch(w, output.PkScript, fromAddresses)
+		if fromAddresses != nil && !match {
 			return nil
 		}
 
@@ -331,8 +345,12 @@ func (w *Wallet) findEligibleOutputs(
 			haveAmounts[str] = ha
 		}
 		ha.amount += output.Amount
-		ha.count += 1
-		if (needAmount > 0 && ha.amount >= needAmount) || ha.count > MaxInputsPerTx {
+		ha.count++
+		if !sc.IsSegwit() {
+			ha.legCount++
+		}
+		if (needAmount > 0 && ha.amount >= needAmount) ||
+			ha.count > MaxInputsPerTx || ha.legCount > MaxInputsPerTxLegacy {
 			winningAddr = output.PkScript
 			return er.LoopBreak
 		}
