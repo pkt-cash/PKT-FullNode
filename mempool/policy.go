@@ -6,6 +6,7 @@ package mempool
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -181,6 +182,8 @@ func checkPkScriptStandard(pkScript []byte, scriptClass txscript.ScriptClass) er
 	return nil
 }
 
+var bigThousand = big.NewInt(1000)
+
 // isDust returns whether or not the passed transaction output amount is
 // considered dust or not based on the passed minimum transaction relay fee.
 // Dust is defined in terms of the minimum transaction relay fee.  In
@@ -274,7 +277,10 @@ func isDust(txOut *wire.TxOut, minRelayTxFee btcutil.Amount) bool {
 	//
 	// The following is equivalent to (value/totalSize) * (1/3) * 1000
 	// without needing to do floating point math.
-	return (uint64(txOut.Value)*2)/uint64(totalSize)*(1000/6) < uint64(minRelayTxFee)
+	v := big.NewInt(txOut.Value)
+	v.Mul(v, bigThousand)
+	v.Div(v, big.NewInt(3*int64(totalSize)))
+	return v.Cmp(big.NewInt(int64(minRelayTxFee))) < 0
 }
 
 // checkTransactionStandard performs a series of checks on a transaction to

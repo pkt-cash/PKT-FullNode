@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
@@ -253,11 +254,11 @@ func TestDust(t *testing.T) {
 			false,
 		},
 		{
-			// Maximum int64 value causes overflow.
-			"maximum int64 value",
-			wire.TxOut{Value: 1<<63 - 1, PkScript: pkScript},
-			1<<63 - 1,
-			true,
+			// Maximum allowed value is never dust.
+			"max PKT amount is never dust",
+			wire.TxOut{Value: globalcfg.PktDefaults().MaxUnits, PkScript: pkScript},
+			btcutil.Amount(globalcfg.PktDefaults().MaxUnits),
+			false,
 		},
 		{
 			// Unspendable pkScript due to an invalid public key
