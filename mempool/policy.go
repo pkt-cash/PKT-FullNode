@@ -274,7 +274,7 @@ func isDust(txOut *wire.TxOut, minRelayTxFee btcutil.Amount) bool {
 	//
 	// The following is equivalent to (value/totalSize) * (1/3) * 1000
 	// without needing to do floating point math.
-	return txOut.Value*1000/(3*int64(totalSize)) < int64(minRelayTxFee)
+	return (uint64(txOut.Value)*2)/uint64(totalSize)*(1000/6) < uint64(minRelayTxFee)
 }
 
 // checkTransactionStandard performs a series of checks on a transaction to
