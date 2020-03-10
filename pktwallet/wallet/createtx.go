@@ -9,9 +9,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"sort"
 	"strings"
 
+	"github.com/emirpasic/gods/trees/redblacktree"
+	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -31,23 +32,7 @@ const MaxInputsPerTx = 8000
 // at least one legacy non-segwit input
 const MaxInputsPerTxLegacy = 500
 
-// byAmount defines the methods needed to satisify sort.Interface to
-// sort credits by their output amount.
-// type byAmount []wtxmgr.Credit
-// func (s byAmount) Len() int           { return len(s) }
-// func (s byAmount) Less(i, j int) bool { return s[i].Amount < s[j].Amount }
-// func (s byAmount) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
-type byAge []wtxmgr.Credit
-
-func (s byAge) Len() int           { return len(s) }
-func (s byAge) Less(i, j int) bool { return s[i].Height < s[j].Height }
-func (s byAge) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
-func makeInputSource(eligible []wtxmgr.Credit) txauthor.InputSource {
-	// Sort outputs by age, oldest first
-	sort.Sort(byAge(eligible))
-
+func makeInputSource(eligible []*wtxmgr.Credit) txauthor.InputSource {
 	// Current inputs and their total value.  These are closed over by the
 	// returned input source and reused across multiple calls.
 	currentTotal := btcutil.Amount(0)
@@ -59,7 +44,7 @@ func makeInputSource(eligible []wtxmgr.Credit) txauthor.InputSource {
 		[]btcutil.Amount, [][]byte, er.R) {
 
 		for currentTotal < target && len(eligible) != 0 {
-			nextCredit := &eligible[0]
+			nextCredit := eligible[0]
 			eligible = eligible[1:]
 			nextInput := wire.NewTxIn(&nextCredit.OutPoint, nil, nil)
 			currentTotal += nextCredit.Amount
@@ -154,7 +139,8 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		needAmount = 0
 	}
 	eligible, err := w.findEligibleOutputs(
-		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs, txr.InputMinHeight)
+		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs,
+		txr.InputMinHeight, txr.InputComparator)
 	if err != nil {
 		return nil, err
 	}
@@ -271,11 +257,76 @@ type amountCount struct {
 	// Amount of coins
 	amount btcutil.Amount
 
-	// Number of segwit inputs collected
-	count int
+	isSegwit bool
 
-	// Number of legacy inputs collected
-	legCount int
+	credits *redblacktree.Tree
+}
+
+func (a *amountCount) overLimit() bool {
+	count := a.credits.Size()
+	if count < MaxInputsPerTxLegacy {
+	} else if a.isSegwit && count < MaxInputsPerTx {
+	} else {
+		return true
+	}
+	return false
+}
+
+// NilComparator compares by txid/index in order to make the red-black tree functions
+func NilComparator(a, b interface{}) int {
+	s1 := a.(*wtxmgr.Credit)
+	s2 := b.(*wtxmgr.Credit)
+	utils.Int64Comparator(int64(s1.Amount), int64(s2.Amount))
+	txidCmp := bytes.Compare(s1.Hash[:], s2.Hash[:])
+	if txidCmp != 0 {
+		return txidCmp
+	}
+	return utils.UInt32Comparator(s1.Index, s2.Index)
+}
+
+// PreferOldest prefers oldest outputs first
+func PreferOldest(a, b interface{}) int {
+	s1 := a.(*wtxmgr.Credit)
+	s2 := b.(*wtxmgr.Credit)
+	if s1.Height < s2.Height {
+		return -1
+	} else if s1.Height > s2.Height {
+		return 1
+	} else {
+		return NilComparator(s1, s2)
+	}
+}
+
+// PreferNewest prefers newest outputs first
+// func PreferNewest(a, b interface{}) int {
+// 	return -PreferOldest(a, b)
+// }
+
+// PreferBiggest prefers biggest (coin value) outputs first
+func PreferBiggest(a, b interface{}) int {
+	s1 := a.(*wtxmgr.Credit)
+	s2 := b.(*wtxmgr.Credit)
+	if s1.Amount < s2.Amount {
+		return 1
+	} else if s1.Amount > s2.Amount {
+		return -1
+	} else {
+		return NilComparator(s1, s2)
+	}
+}
+
+// PreferSmallest prefers smallest (coin value) outputs first (spend the dust)
+// func PreferSmallest(a, b interface{}) int {
+// 	return -PreferBiggest(a, b)
+// }
+
+func convertResult(ac *amountCount) []*wtxmgr.Credit {
+	ifaces := ac.credits.Keys()
+	out := make([]*wtxmgr.Credit, len(ifaces))
+	for i := range ifaces {
+		out[i] = ifaces[i].(*wtxmgr.Credit)
+	}
+	return out
 }
 
 func (w *Wallet) findEligibleOutputs(
@@ -285,13 +336,13 @@ func (w *Wallet) findEligibleOutputs(
 	minconf int32,
 	bs *waddrmgr.BlockStamp,
 	inputMinHeight int,
-) ([]wtxmgr.Credit, er.R) {
+	inputComparator utils.Comparator,
+) ([]*wtxmgr.Credit, er.R) {
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
 	haveAmounts := make(map[string]*amountCount)
-	var winningAddr []byte
+	var winner *amountCount
 
-	eligible := make([]wtxmgr.Credit, 0, 50)
 	if err := w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
 
 		// Verify that the output is coming from one of the addresses which we accept to spend from
@@ -336,46 +387,108 @@ func (w *Wallet) findEligibleOutputs(
 			return nil
 		}
 
-		eligible = append(eligible, *output)
-
 		str := hex.EncodeToString(output.PkScript)
 		ha := haveAmounts[str]
 		if ha == nil {
 			haa := amountCount{}
+			if inputComparator == nil {
+				// If the user does not specify a comparator, we use the preferBiggest
+				// comparator to prefer high value outputs over less valuable outputs.
+				//
+				// Without this, there would be a risk that the wallet collected a bunch
+				// of dust and then - using arbitrary ordering - could not remove the dust
+				// inputs to ever make the transaction small enough, despite having large
+				// spendable outputs.
+				//
+				// This does NOT cause the default behavior of the wallet to prefer large
+				// outputs over small, because with no explicit comparator, we short circuit
+				// as soon as we have enough money to make the transaction.
+				haa.credits = redblacktree.NewWith(PreferBiggest)
+			} else {
+				haa.credits = redblacktree.NewWith(inputComparator)
+			}
+			haa.isSegwit = sc.IsSegwit()
 			ha = &haa
 			haveAmounts[str] = ha
 		}
+		ha.credits.Put(output, nil)
 		ha.amount += output.Amount
-		ha.count++
-		if !sc.IsSegwit() {
-			ha.legCount++
+		if needAmount == 0 {
+			// We're sweeping the wallet
+		} else if ha.amount < needAmount {
+			// We need more coins
+		} else {
+			worst := ha.credits.Right().Key.(*wtxmgr.Credit)
+			if ha.amount-worst.Amount >= needAmount {
+				// Our amount is still fine even if we drop the worst credit
+				// so we'll drop it and continue traversing to find the best outputs
+				ha.credits.Remove(worst)
+				ha.amount -= worst.Amount
+			}
+
+			// If we have no explicit sorting specified then we can short-circuit
+			// and avoid table-scanning the whole db
+			if inputComparator == nil {
+				winner = ha
+				return er.LoopBreak
+			}
 		}
-		if (needAmount > 0 && ha.amount >= needAmount) ||
-			ha.count > MaxInputsPerTx || (ha.legCount > 0 && ha.count > MaxInputsPerTxLegacy) {
-			winningAddr = output.PkScript
+
+		if !ha.overLimit() {
+			// We don't have too many inputs
+		} else if needAmount == 0 && inputComparator == nil {
+			// We're sweeping the wallet with no ordering specified
+			// This means we should just short-circuit with a winner
+			winner = ha
 			return er.LoopBreak
+		} else {
+			// Too many inputs, we will remove the worst
+			worst := ha.credits.Right().Key.(*wtxmgr.Credit)
+			ha.credits.Remove(worst)
+			ha.amount -= worst.Amount
 		}
 		return nil
 	}); err != nil && !er.IsLoopBreak(err) {
 		return nil, err
 	}
 
-	// Lastly, we select one address from the elligable group (if possible) so as not
-	// to mix addresses when it is not necessary to do so.
-	if len(winningAddr) > 0 {
-		n := 0
-		for _, x := range eligible {
-			if bytes.Equal(x.PkScript, winningAddr) {
-				eligible[n] = x
-				n++
-			}
-		}
-		eligible = eligible[:n]
-	} else if len(eligible) > MaxInputsPerTx {
-		eligible = eligible[:MaxInputsPerTx]
+	if winner != nil {
+		// Easy path, we got enough in one address to win, we'll just return those
+		return convertResult(winner), nil
 	}
 
-	return eligible, nil
+	// We don't have an easy answer with just one address, we need to get creative.
+	// We will create a new tree using the preferBiggest in order to try to to get
+	// a subset of inputs which fits inside of the required count
+	outAc := amountCount{
+		isSegwit: true,
+		credits:  redblacktree.NewWith(PreferBiggest),
+	}
+	for _, ac := range haveAmounts {
+		it := ac.credits.Iterator()
+		for i := 0; it.Next(); i++ {
+			outAc.credits.Put(it.Key(), nil)
+		}
+		outAc.isSegwit = outAc.isSegwit && ac.isSegwit
+
+		wasOver := false
+		for outAc.overLimit() {
+			// Too many inputs, we will remove the worst
+			worst := outAc.credits.Right().Key.(*wtxmgr.Credit)
+			outAc.credits.Remove(worst)
+			outAc.amount -= worst.Amount
+			wasOver = true
+		}
+		if needAmount == 0 && !wasOver {
+			// if we were never over the limit and we're sweeping multiple addresses,
+			// lets go around and get another address
+		} else if outAc.amount > needAmount {
+			// We have enough money to make the tx
+			break
+		}
+	}
+
+	return convertResult(&outAc), nil
 }
 
 // validateMsgTx verifies transaction input scripts for tx.  All previous output

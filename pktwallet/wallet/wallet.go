@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 
@@ -1140,13 +1141,14 @@ func logFilterBlocksResp(block wtxmgr.BlockMeta,
 
 type (
 	CreateTxReq struct {
-		InputAddresses *[]btcutil.Address
-		Outputs        []*wire.TxOut
-		Minconf        int32
-		FeeSatPerKB    btcutil.Amount
-		DryRun         bool
-		ChangeAddress  *btcutil.Address
-		InputMinHeight int
+		InputAddresses  *[]btcutil.Address
+		Outputs         []*wire.TxOut
+		Minconf         int32
+		FeeSatPerKB     btcutil.Amount
+		DryRun          bool
+		ChangeAddress   *btcutil.Address
+		InputMinHeight  int
+		InputComparator utils.Comparator
 	}
 	createTxRequest struct {
 		req  CreateTxReq

@@ -1101,6 +1101,14 @@ func sendOutputs(
 		DryRun:         dryRun,
 		InputMinHeight: inputMinHeight,
 	}
+	if inputMinHeight > 0 {
+		// TODO(cjd): Ideally we would expose the comparator choice to the
+		// API consumer, but this is an API break. When we're using inputMinHeight
+		// it's normally because we're trying to do multiple createtransaction
+		// requests without double-spending, so it's important to prefer oldest
+		// in this case.
+		req.InputComparator = wallet.PreferOldest
+	}
 	var err er.R
 	req.Outputs, err = makeOutputs(amounts, vote, w.ChainParams())
 	if err != nil {
