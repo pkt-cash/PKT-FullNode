@@ -26,11 +26,11 @@ import (
 )
 
 // Maximum number of inputs which will be included in a transaction
-const MaxInputsPerTx = 8000
+const MaxInputsPerTx = 1460
 
 // Maximum number of inputs which can be included in a transaction if there is
 // at least one legacy non-segwit input
-const MaxInputsPerTxLegacy = 500
+const MaxInputsPerTxLegacy = 670
 
 func makeInputSource(eligible []*wtxmgr.Credit) txauthor.InputSource {
 	// Current inputs and their total value.  These are closed over by the
