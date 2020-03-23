@@ -183,7 +183,7 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 
 	// We can now apply the migration and expect it not to fail.
 	applyMigration(
-		t, beforeMigration, afterMigration, dropTransactionHistory,
+		t, beforeMigration, afterMigration, DropTransactionHistory,
 		false,
 	)
 }
