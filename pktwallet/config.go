@@ -328,7 +328,10 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	// Attempt to grab the user/pass from pktd.conf
-	if userpass, err := pktconfig.ReadUserPass(pktdDefaultConf); err != nil {
+	if preCfg.Username != "" && preCfg.Password != "" {
+		// They specified a user/pass on the command line, we probably
+		// want to use this one for the BtcdUsername and BtcdPassword
+	} else if userpass, err := pktconfig.ReadUserPass(pktdDefaultConf); err != nil {
 		if _, ok := errr.(*os.PathError); !ok {
 			fmt.Fprintln(os.Stderr, err)
 			parser.WriteHelp(os.Stderr)
