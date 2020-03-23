@@ -17,7 +17,7 @@ var versions = []migration.Version{
 	},
 	{
 		Number:    2,
-		Migration: dropTransactionHistory,
+		Migration: DropTransactionHistory,
 	},
 }
 
@@ -87,9 +87,9 @@ func (m *MigrationManager) Versions() []migration.Version {
 	return versions
 }
 
-// dropTransactionHistory is a migration that attempts to recreate the
+// DropTransactionHistory is a migration that attempts to recreate the
 // transaction store with a clean state.
-func dropTransactionHistory(ns walletdb.ReadWriteBucket) er.R {
+func DropTransactionHistory(ns walletdb.ReadWriteBucket) er.R {
 	log.Info("Dropping wallet transaction history")
 
 	// To drop the store's transaction history, we'll need to remove all of

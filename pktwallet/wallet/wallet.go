@@ -2917,7 +2917,11 @@ func (w *Wallet) ResyncChain() er.R {
 	}
 	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		return w.Manager.SetSyncedTo(ns, &genesis)
+		if err := w.Manager.SetSyncedTo(ns, &genesis); err != nil {
+			return err
+		}
+		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return wtxmgr.DropTransactionHistory(txNs)
 	}); err != nil {
 		return err
 	}
