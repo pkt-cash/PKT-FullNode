@@ -65,6 +65,8 @@ type GetAddressBalancesCmd struct {
 	MinConf *int `jsonrpcdefault:"1"`
 }
 
+type ResyncCmd struct{}
+
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {
 	NumBlocks int64
@@ -82,6 +84,8 @@ func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
 type GetBalanceCmd struct {
 	MinConf *int `jsonrpcdefault:"1"`
 }
+
+type GetNetworkStewardVoteCmd struct{}
 
 // GetNewAddressCmd defines the getnewaddress JSON-RPC command.
 type GetNewAddressCmd struct {
@@ -429,11 +433,11 @@ func init() {
 	MustRegisterCmd("createmultisig", (*CreateMultisigCmd)(nil), flags)
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("getaddressbalances", (*GetAddressBalancesCmd)(nil), flags)
-	MustRegisterCmd("resync", (*struct{})(nil), flags)
+	MustRegisterCmd("resync", (*ResyncCmd)(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
-	MustRegisterCmd("getnetworkstewardvote", (*struct{})(nil), flags)
+	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)
 	MustRegisterCmd("getreceivedbyaddress", (*GetReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("gettransaction", (*GetTransactionCmd)(nil), flags)

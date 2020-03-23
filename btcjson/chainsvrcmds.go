@@ -393,6 +393,9 @@ func NewGetMiningInfoCmd() *GetMiningInfoCmd {
 	return &GetMiningInfoCmd{}
 }
 
+// GetMiningPayoutsCmd defines the getminingpayouts JSON-RPC command.
+type GetMiningPayoutsCmd struct{}
+
 // GetNetworkInfoCmd defines the getnetworkinfo JSON-RPC command.
 type GetNetworkInfoCmd struct{}
 
@@ -830,7 +833,7 @@ func init() {
 	MustRegisterCmd("getmempoolentry", (*GetMempoolEntryCmd)(nil), flags)
 	MustRegisterCmd("getmempoolinfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("getmininginfo", (*GetMiningInfoCmd)(nil), flags)
-	MustRegisterCmd("getminingpayouts", (*struct{})(nil), flags)
+	MustRegisterCmd("getminingpayouts", (*GetMiningPayoutsCmd)(nil), flags)
 	MustRegisterCmd("getnetworkinfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("getnettotals", (*GetNetTotalsCmd)(nil), flags)
 	MustRegisterCmd("getnetworksteward", (*GetNetworkStewardCmd)(nil), flags)

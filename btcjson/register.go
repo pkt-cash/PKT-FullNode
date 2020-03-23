@@ -185,6 +185,12 @@ func RegisterCmd(method string, cmd interface{}, flags UsageFlag) er.R {
 		return makeError(ErrInvalidType, str)
 	}
 
+	if meth, ok := concreteTypeToMethod[rtp]; ok {
+		return makeError(ErrInvalidType,
+			fmt.Sprintf("No two methods can have the same argument types but "+
+				"[%s] and [%s] do", method, meth))
+	}
+
 	// Enumerate the struct fields to validate them and gather parameter
 	// information.
 	numFields := rt.NumField()
