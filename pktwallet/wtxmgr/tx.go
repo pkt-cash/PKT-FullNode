@@ -302,7 +302,7 @@ func (s *Store) RemoveUnminedTx(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R
 	// As we already have a tx record, we can directly call the
 	// removeConflict method. This will do the job of recursively removing
 	// this unmined transaction, and any transactions that depend on it.
-	return s.removeConflict(ns, rec)
+	return removeConflict(ns, rec)
 }
 
 // insertMinedTx inserts a new transaction record for a mined transaction into
@@ -447,20 +447,213 @@ func (s *Store) Rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 	return s.rollback(ns, height)
 }
 
+func rollbackTransaction(
+	ns walletdb.ReadWriteBucket,
+	txHash *chainhash.Hash,
+	block *Block,
+) (coins btcutil.Amount, err er.R) {
+	coins = btcutil.Amount(0)
+
+	recKey := keyTxRecord(txHash, block)
+	recVal := existsRawTxRecord(ns, recKey)
+	var rec TxRecord
+	if err = readRawTxRecord(txHash, recVal, &rec); err != nil {
+		return
+	}
+
+	if err = deleteTxRecord(ns, txHash, block); err != nil {
+		return
+	}
+
+	// Handle coinbase transactions specially since they are
+	// not moved to the unconfirmed store.  A coinbase cannot
+	// contain any debits, but all credits should be removed
+	// and the mined balance decremented.
+	if blockchain.IsCoinBaseTx(&rec.MsgTx) {
+		op := wire.OutPoint{Hash: rec.Hash}
+		for i, output := range rec.MsgTx.TxOut {
+			k, v := existsCredit(ns, &rec.Hash,
+				uint32(i), block)
+			if v == nil {
+				continue
+			}
+			op.Index = uint32(i)
+
+			// Delete the unspents from this coinbase
+			unspentKey, credKey := existsUnspent(ns, &op)
+			if credKey != nil {
+				coins -= btcutil.Amount(output.Value)
+				if err = deleteRawUnspent(ns, unspentKey); err != nil {
+					return
+				}
+			}
+
+			// Delete any credits, spent or otherwise
+			if err = deleteRawCredit(ns, k); err != nil {
+				return
+			}
+
+			// If there are any mined transactions which spent this one, well
+			// then lets just assume that pktd does its job and those blocks are
+			// going to be properly rolled back. But if there *unmined* transactions
+			// in the mempool which spent these outputs, then we'd better clear them
+			// out because otherwise we will just keep broadcasting them forever.
+			opKey := canonicalOutPoint(&op.Hash, op.Index)
+			unminedSpendTxHashKeys := fetchUnminedInputSpendTxHashes(ns, opKey)
+			for _, unminedSpendTxHashKey := range unminedSpendTxHashKeys {
+				unminedVal := existsRawUnmined(ns, unminedSpendTxHashKey[:])
+
+				// If the spending transaction spends multiple outputs
+				// from the same transaction, we'll find duplicate
+				// entries within the store, so it's possible we're
+				// unable to find it if the conflicts have already been
+				// removed in a previous iteration.
+				if unminedVal == nil {
+					continue
+				}
+
+				var unminedRec TxRecord
+				unminedRec.Hash = unminedSpendTxHashKey
+				err = readRawTxRecord(&unminedRec.Hash, unminedVal, &unminedRec)
+				if err != nil {
+					return
+				}
+
+				log.Debugf("Transaction %v spends a removed coinbase "+
+					"output -- removing as well", unminedRec.Hash)
+				err = removeConflict(ns, &unminedRec)
+				if err != nil {
+					return
+				}
+			}
+		}
+
+		return
+	}
+
+	if err = putRawUnmined(ns, txHash[:], recVal); err != nil {
+		return
+	}
+
+	// For each debit recorded for this transaction, mark
+	// the credit it spends as unspent (as long as it still
+	// exists) and delete the debit.  The previous output is
+	// recorded in the unconfirmed store for every previous
+	// output, not just debits.
+	for i, input := range rec.MsgTx.TxIn {
+		prevOut := &input.PreviousOutPoint
+		prevOutKey := canonicalOutPoint(&prevOut.Hash,
+			prevOut.Index)
+		if err = putRawUnminedInput(ns, prevOutKey, rec.Hash[:]); err != nil {
+			return
+		}
+
+		// If this input is a debit, remove the debit
+		// record and mark the credit that it spent as
+		// unspent, incrementing the mined balance.
+		var debKey, credKey []byte
+		if debKey, credKey, err = existsDebit(ns, &rec.Hash, uint32(i), block); err != nil {
+			return
+		}
+		if debKey == nil {
+			continue
+		}
+
+		// unspendRawCredit does not error in case the
+		// no credit exists for this key, but this
+		// behavior is correct.  Since blocks are
+		// removed in increasing order, this credit
+		// may have already been removed from a
+		// previously removed transaction record in
+		// this rollback.
+		var amt btcutil.Amount
+		if amt, err = unspendRawCredit(ns, credKey); err != nil {
+			return
+		}
+		if err = deleteRawDebit(ns, debKey); err != nil {
+			return
+		}
+
+		// If the credit was previously removed in the
+		// rollback, the credit amount is zero.  Only
+		// mark the previously spent credit as unspent
+		// if it still exists.
+		if amt == 0 {
+			continue
+		}
+		var unspentVal []byte
+		if unspentVal, err = fetchRawCreditUnspentValue(credKey); err != nil {
+			return
+		}
+		coins += amt
+		if err = putRawUnspent(ns, prevOutKey, unspentVal); err != nil {
+			return
+		}
+	}
+
+	// For each detached non-coinbase credit, move the
+	// credit output to unmined.  If the credit is marked
+	// unspent, it is removed from the utxo set and the
+	// mined balance is decremented.
+	//
+	// TODO: use a credit iterator
+	for i, output := range rec.MsgTx.TxOut {
+		k, v := existsCredit(ns, &rec.Hash, uint32(i), block)
+		if v == nil {
+			continue
+		}
+
+		var amt btcutil.Amount
+		var change bool
+		if amt, change, err = fetchRawCreditAmountChange(v); err != nil {
+			return
+		}
+		outPointKey := canonicalOutPoint(&rec.Hash, uint32(i))
+		unminedCredVal := valueUnminedCredit(amt, change)
+		if err = putRawUnminedCredit(ns, outPointKey, unminedCredVal); err != nil {
+			return
+		}
+
+		if err = deleteRawCredit(ns, k); err != nil {
+			return
+		}
+
+		credKey := existsRawUnspent(ns, outPointKey)
+		if credKey != nil {
+			coins -= btcutil.Amount(output.Value)
+			if err = deleteRawUnspent(ns, outPointKey); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+// RollbackTransaction kills off a transaction in case it is invalid or burned
+// or the block is orphaned. The results are:
+// coins: the amount to *add* to the balance
+// err: any error which might occur
+func RollbackTransaction(
+	ns walletdb.ReadWriteBucket,
+	txHash *chainhash.Hash,
+	block *Block,
+) er.R {
+	if minedBalance, err := fetchMinedBalance(ns); err != nil {
+		return err
+	} else if coins, err := rollbackTransaction(ns, txHash, block); err != nil {
+		return err
+	} else if err := putMinedBalance(ns, minedBalance+coins); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 	minedBalance, err := fetchMinedBalance(ns)
 	if err != nil {
 		return err
 	}
 
-	// Keep track of all credits that were removed from coinbase
-	// transactions.  After detaching all blocks, if any transaction record
-	// exists in unmined that spends these outputs, remove them and their
-	// spend chains.
-	//
-	// It is necessary to keep these in memory and fix the unmined
-	// transactions later since blocks are removed in increasing order.
-	var coinBaseCredits []wire.OutPoint
 	var heightsToRemove []int32
 
 	it := makeReverseBlockIterator(ns)
@@ -477,157 +670,11 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]
-
-			recKey := keyTxRecord(txHash, &b.Block)
-			recVal := existsRawTxRecord(ns, recKey)
-			var rec TxRecord
-			err = readRawTxRecord(txHash, recVal, &rec)
+			coins, err := rollbackTransaction(ns, txHash, &b.Block)
 			if err != nil {
 				return err
 			}
-
-			err = deleteTxRecord(ns, txHash, &b.Block)
-			if err != nil {
-				return err
-			}
-
-			// Handle coinbase transactions specially since they are
-			// not moved to the unconfirmed store.  A coinbase cannot
-			// contain any debits, but all credits should be removed
-			// and the mined balance decremented.
-			if blockchain.IsCoinBaseTx(&rec.MsgTx) {
-				op := wire.OutPoint{Hash: rec.Hash}
-				for i, output := range rec.MsgTx.TxOut {
-					k, v := existsCredit(ns, &rec.Hash,
-						uint32(i), &b.Block)
-					if v == nil {
-						continue
-					}
-					op.Index = uint32(i)
-
-					coinBaseCredits = append(coinBaseCredits, op)
-
-					unspentKey, credKey := existsUnspent(ns, &op)
-					if credKey != nil {
-						minedBalance -= btcutil.Amount(output.Value)
-						err = deleteRawUnspent(ns, unspentKey)
-						if err != nil {
-							return err
-						}
-					}
-					err = deleteRawCredit(ns, k)
-					if err != nil {
-						return err
-					}
-				}
-
-				continue
-			}
-
-			err = putRawUnmined(ns, txHash[:], recVal)
-			if err != nil {
-				return err
-			}
-
-			// For each debit recorded for this transaction, mark
-			// the credit it spends as unspent (as long as it still
-			// exists) and delete the debit.  The previous output is
-			// recorded in the unconfirmed store for every previous
-			// output, not just debits.
-			for i, input := range rec.MsgTx.TxIn {
-				prevOut := &input.PreviousOutPoint
-				prevOutKey := canonicalOutPoint(&prevOut.Hash,
-					prevOut.Index)
-				err = putRawUnminedInput(ns, prevOutKey, rec.Hash[:])
-				if err != nil {
-					return err
-				}
-
-				// If this input is a debit, remove the debit
-				// record and mark the credit that it spent as
-				// unspent, incrementing the mined balance.
-				debKey, credKey, err := existsDebit(ns,
-					&rec.Hash, uint32(i), &b.Block)
-				if err != nil {
-					return err
-				}
-				if debKey == nil {
-					continue
-				}
-
-				// unspendRawCredit does not error in case the
-				// no credit exists for this key, but this
-				// behavior is correct.  Since blocks are
-				// removed in increasing order, this credit
-				// may have already been removed from a
-				// previously removed transaction record in
-				// this rollback.
-				var amt btcutil.Amount
-				amt, err = unspendRawCredit(ns, credKey)
-				if err != nil {
-					return err
-				}
-				err = deleteRawDebit(ns, debKey)
-				if err != nil {
-					return err
-				}
-
-				// If the credit was previously removed in the
-				// rollback, the credit amount is zero.  Only
-				// mark the previously spent credit as unspent
-				// if it still exists.
-				if amt == 0 {
-					continue
-				}
-				unspentVal, err := fetchRawCreditUnspentValue(credKey)
-				if err != nil {
-					return err
-				}
-				minedBalance += amt
-				err = putRawUnspent(ns, prevOutKey, unspentVal)
-				if err != nil {
-					return err
-				}
-			}
-
-			// For each detached non-coinbase credit, move the
-			// credit output to unmined.  If the credit is marked
-			// unspent, it is removed from the utxo set and the
-			// mined balance is decremented.
-			//
-			// TODO: use a credit iterator
-			for i, output := range rec.MsgTx.TxOut {
-				k, v := existsCredit(ns, &rec.Hash, uint32(i),
-					&b.Block)
-				if v == nil {
-					continue
-				}
-
-				amt, change, err := fetchRawCreditAmountChange(v)
-				if err != nil {
-					return err
-				}
-				outPointKey := canonicalOutPoint(&rec.Hash, uint32(i))
-				unminedCredVal := valueUnminedCredit(amt, change)
-				err = putRawUnminedCredit(ns, outPointKey, unminedCredVal)
-				if err != nil {
-					return err
-				}
-
-				err = deleteRawCredit(ns, k)
-				if err != nil {
-					return err
-				}
-
-				credKey := existsRawUnspent(ns, outPointKey)
-				if credKey != nil {
-					minedBalance -= btcutil.Amount(output.Value)
-					err = deleteRawUnspent(ns, outPointKey)
-					if err != nil {
-						return err
-					}
-				}
-			}
+			minedBalance += coins
 		}
 
 		// reposition cursor before deleting this k/v pair and advancing to the
@@ -650,37 +697,6 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 		err = deleteBlockRecord(ns, h)
 		if err != nil {
 			return err
-		}
-	}
-
-	for _, op := range coinBaseCredits {
-		opKey := canonicalOutPoint(&op.Hash, op.Index)
-		unminedSpendTxHashKeys := fetchUnminedInputSpendTxHashes(ns, opKey)
-		for _, unminedSpendTxHashKey := range unminedSpendTxHashKeys {
-			unminedVal := existsRawUnmined(ns, unminedSpendTxHashKey[:])
-
-			// If the spending transaction spends multiple outputs
-			// from the same transaction, we'll find duplicate
-			// entries within the store, so it's possible we're
-			// unable to find it if the conflicts have already been
-			// removed in a previous iteration.
-			if unminedVal == nil {
-				continue
-			}
-
-			var unminedRec TxRecord
-			unminedRec.Hash = unminedSpendTxHashKey
-			err = readRawTxRecord(&unminedRec.Hash, unminedVal, &unminedRec)
-			if err != nil {
-				return err
-			}
-
-			log.Debugf("Transaction %v spends a removed coinbase "+
-				"output -- removing as well", unminedRec.Hash)
-			err = s.removeConflict(ns, &unminedRec)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

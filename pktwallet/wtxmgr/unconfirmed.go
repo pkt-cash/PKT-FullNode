@@ -102,7 +102,7 @@ func (s *Store) removeDoubleSpends(ns walletdb.ReadWriteBucket, rec *TxRecord) e
 			log.Debugf("Removing double spending transaction %v",
 				doubleSpend.Hash)
 
-			if err := s.removeConflict(ns, &doubleSpend); err != nil {
+			if err := removeConflict(ns, &doubleSpend); err != nil {
 				return err
 			}
 		}
@@ -115,7 +115,7 @@ func (s *Store) removeDoubleSpends(ns walletdb.ReadWriteBucket, rec *TxRecord) e
 // deriving from it from the store.  This is designed to remove transactions
 // that would otherwise result in double spend conflicts if left in the store,
 // and to remove transactions that spend coinbase transactions on reorgs.
-func (s *Store) removeConflict(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R {
+func removeConflict(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R {
 	// For each potential credit for this record, each spender (if any) must
 	// be recursively removed as well.  Once the spenders are removed, the
 	// credit is deleted.
@@ -142,7 +142,7 @@ func (s *Store) removeConflict(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R 
 
 			log.Debugf("Transaction %v is part of a removed conflict "+
 				"chain -- removing as well", spender.Hash)
-			if err := s.removeConflict(ns, &spender); err != nil {
+			if err := removeConflict(ns, &spender); err != nil {
 				return err
 			}
 		}

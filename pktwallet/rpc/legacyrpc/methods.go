@@ -107,6 +107,7 @@ var rpcHandlers = map[string]struct {
 	"addp2shscript":         {handler: addP2shScript},
 	"createtransaction":     {handlerWithChain: createTransaction},
 	"resync":                {handlerWithChain: resync},
+	"vacuum":                {handlerWithChain: vacuum},
 	"getaddressbalances":    {handler: getAddressBalances},
 	// This was an extension but the reference implementation added it as
 	// well, but with a different API (no account parameter).  It's listed
@@ -1258,8 +1259,11 @@ func createTransaction(icmd interface{}, w *wallet.Wallet, chainClient *chain.RP
 }
 
 func resync(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
-	w.ResyncChain()
-	return nil, nil
+	return nil, w.ResyncChain()
+}
+
+func vacuum(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (interface{}, er.R) {
+	return nil, w.VacuumDb()
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction

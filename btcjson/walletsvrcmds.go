@@ -67,6 +67,8 @@ type GetAddressBalancesCmd struct {
 
 type ResyncCmd struct{}
 
+type VacuumCmd struct{}
+
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {
 	NumBlocks int64
@@ -434,6 +436,7 @@ func init() {
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("getaddressbalances", (*GetAddressBalancesCmd)(nil), flags)
 	MustRegisterCmd("resync", (*ResyncCmd)(nil), flags)
+	MustRegisterCmd("vacuum", (*VacuumCmd)(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)

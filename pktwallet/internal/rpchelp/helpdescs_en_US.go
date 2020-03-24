@@ -56,6 +56,8 @@ var helpDescsEnUS = map[string]string{
 	// ResyncCmd help
 	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
 
+	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
+
 	// CreateMultisigCmd help.
 	"createmultisig--synopsis": "Generate a multisig address and redeem script.",
 	"createmultisig-keys":      "Pubkeys and/or pay-to-pubkey-hash addresses to partially control the multisig address",

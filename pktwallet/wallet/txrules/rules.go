@@ -7,7 +7,10 @@
 package txrules
 
 import (
+	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -58,6 +61,18 @@ func IsDustOutput(output *wire.TxOut, relayFeePerKb btcutil.Amount) bool {
 
 	return IsDustAmount(btcutil.Amount(output.Value), len(output.PkScript),
 		relayFeePerKb)
+}
+
+func IsBurned(output *wtxmgr.Credit, chainParams *chaincfg.Params, currentHeight int32) bool {
+	if !output.FromCoinBase {
+	} else if !chainParams.GlobalConf.HasNetworkSteward {
+	} else if currentHeight-129600 < output.Height {
+	} else if int64(output.Amount) != blockchain.PktCalcNetworkStewardPayout(
+		blockchain.CalcBlockSubsidy(output.Height, chainParams)) {
+	} else {
+		return true
+	}
+	return false
 }
 
 // CheckOutput performs simple consensus and policy tests on a transaction

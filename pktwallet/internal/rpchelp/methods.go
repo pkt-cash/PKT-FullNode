@@ -29,6 +29,7 @@ var Methods = []struct {
 	{"setnetworkstewardvote", []interface{}{(*btcjson.SetNetworkStewardVoteResult)(nil)}},
 	{"getnetworkstewardvote", []interface{}{(*btcjson.GetNetworkStewardVoteResult)(nil)}},
 	{"resync", nil},
+	{"vacuum", nil},
 	{"addp2shscript", returnsString},
 	{"dumpprivkey", returnsString},
 	{"getbalance", append(returnsNumber, returnsNumber[0])},

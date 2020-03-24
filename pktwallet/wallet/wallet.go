@@ -2928,6 +2928,33 @@ func (w *Wallet) ResyncChain() er.R {
 	return w.recovery(chainClient, &genesis)
 }
 
+func (w *Wallet) VacuumDb() er.R {
+	if chainClient, err := w.requireChainClient(); err != nil {
+		return err
+	} else if bs, err := chainClient.BlockStamp(); err != nil {
+		return err
+	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		if err := w.TxStore.ForEachUnspentOutput(txNs, func(output *wtxmgr.Credit) er.R {
+			if txrules.IsBurned(output, w.chainParams, bs.Height) {
+				log.Debugf("Removing transaction [%s] which has burned",
+					output.OutPoint.Hash.String())
+				err := wtxmgr.RollbackTransaction(txNs, &output.OutPoint.Hash, &output.Block)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Open loads an already-created wallet from the passed database and namespaces.
 func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	params *chaincfg.Params, recoveryWindow uint32) (*Wallet, er.R) {

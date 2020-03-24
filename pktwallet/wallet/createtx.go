@@ -13,12 +13,12 @@ import (
 
 	"github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/txscript"
@@ -362,22 +362,16 @@ func (w *Wallet) findEligibleOutputs(
 		}
 
 		if output.Height < int32(inputMinHeight) {
-			log.Debugf("Skipping output %s at height %d because it is below minimum %d\n",
+			log.Debugf("Skipping output %s at height %d because it is below minimum %d",
 				output.String(), output.Height, inputMinHeight)
 			return nil
 		}
 
 		if output.FromCoinBase {
-			target := int32(w.chainParams.CoinbaseMaturity)
-			if !confirmed(target, output.Height, bs.Height) {
+			if !confirmed(int32(w.chainParams.CoinbaseMaturity), output.Height, bs.Height) {
 				return nil
-			}
-			if !w.chainParams.GlobalConf.HasNetworkSteward {
-			} else if bs.Height-129600+1440 < output.Height {
-			} else if int64(output.Amount) != blockchain.PktCalcNetworkStewardPayout(
-				blockchain.CalcBlockSubsidy(output.Height, w.chainParams)) {
-			} else {
-				log.Debugf("Skipping burned output at height %d\n", output.Height)
+			} else if txrules.IsBurned(output, w.chainParams, bs.Height) {
+				log.Debugf("Skipping burned output at height %d", output.Height)
 				return nil
 			}
 		}
