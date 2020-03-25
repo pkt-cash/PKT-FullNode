@@ -420,7 +420,7 @@ func loadConfig() (*config, []string, er.R) {
 		DbType:               defaultDbType,
 		RPCKey:               defaultRPCKeyFile,
 		RPCCert:              defaultRPCCertFile,
-		MinRelayTxFee:        float64(mempool.DefaultMinRelayTxFee) / 1e8,
+		MinRelayTxFee:        -1, // this gets configured later
 		FreeTxRelayLimit:     defaultFreeTxRelayLimit,
 		TrickleInterval:      defaultTrickleInterval,
 		BlockMinSize:         defaultBlockMinSize,
@@ -776,15 +776,20 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	// Validate the the minrelaytxfee.
-	mrf, err := globalcfg.NewAmount(cfg.MinRelayTxFee)
-	if err != nil {
-		str := "%s: invalid minrelaytxfee: %v"
-		err := er.Errorf(str, funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+	if cfg.MinRelayTxFee >= 0 {
+		mrf, err := globalcfg.NewAmount(cfg.MinRelayTxFee)
+		if err != nil {
+			str := "%s: invalid minrelaytxfee: %v"
+			err := er.Errorf(str, funcName, err)
+			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, usageMessage)
+			return nil, nil, err
+		}
+		cfg.minRelayTxFee = btcutil.Amount(mrf)
+	} else {
+		cfg.minRelayTxFee = mempool.DefaultMinRelayTxFee
+		cfg.MinRelayTxFee = btcutil.Amount(cfg.minRelayTxFee).ToBTC()
 	}
-	cfg.minRelayTxFee = btcutil.Amount(mrf)
 
 	// Limit the max block size to a sane value.
 	if cfg.BlockMaxSize < blockMaxSizeMin || cfg.BlockMaxSize >
@@ -977,6 +982,7 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	// Check the checkpoints for syntax errors.
+	var err er.R
 	cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
 	if err != nil {
 		str := "%s: Error parsing checkpoints: %v"
