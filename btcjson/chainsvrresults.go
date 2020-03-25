@@ -353,8 +353,9 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 
 // PrevOut represents previous output for an input Vin.
 type PrevOut struct {
-	Addresses []string `json:"addresses,omitempty"`
-	Value     float64  `json:"value"`
+	Addresses  []string `json:"addresses,omitempty"`
+	ValueCoins float64  `json:"value"`
+	Svalue     string   `json:"svalue"`
 }
 
 // VinPrevOut is like Vin except it includes PrevOut.  It is used by searchrawtransaction
@@ -433,7 +434,8 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 // Vout models parts of the tx data.  It is defined separately since both
 // getrawtransaction and decoderawtransaction use the same structure.
 type Vout struct {
-	Value        float64            `json:"value"`
+	ValueCoins   float64            `json:"value"`
+	Svalue       string             `json:"svalue"`
 	N            uint32             `json:"n"`
 	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
 }
@@ -505,11 +507,14 @@ type SearchRawTransactionsResult struct {
 
 // TxRawDecodeResult models the data from the decoderawtransaction command.
 type TxRawDecodeResult struct {
-	Txid     string `json:"txid"`
-	Version  int32  `json:"version"`
-	Locktime uint32 `json:"locktime"`
-	Vin      []Vin  `json:"vin"`
-	Vout     []Vout `json:"vout"`
+	Txid     string       `json:"txid"`
+	Version  int32        `json:"version"`
+	Locktime uint32       `json:"locktime"`
+	Sfee     string       `json:"sfee"`
+	Size     int32        `json:"size"`
+	Vsize    int32        `json:"vsize"`
+	Vin      []VinPrevOut `json:"vin"`
+	Vout     []Vout       `json:"vout"`
 }
 
 // ValidateAddressChainResult models the data returned by the chain server

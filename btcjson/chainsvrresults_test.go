@@ -61,12 +61,13 @@ func TestChainSvrCustomResults(t *testing.T) {
 					Hex: "00",
 				},
 				PrevOut: &btcjson.PrevOut{
-					Addresses: []string{"addr1"},
-					Value:     0,
+					Addresses:  []string{"addr1"},
+					ValueCoins: 0,
+					Svalue:     "0",
 				},
 				Sequence: 4294967295,
 			},
-			expected: `{"txid":"123","vout":1,"scriptSig":{"asm":"0","hex":"00"},"prevOut":{"addresses":["addr1"],"value":0},"sequence":4294967295}`,
+			expected: `{"txid":"123","vout":1,"scriptSig":{"asm":"0","hex":"00"},"prevOut":{"addresses":["addr1"],"value":0,"svalue":"0"},"sequence":4294967295}`,
 		},
 	}
 

@@ -71,7 +71,8 @@ func NewCreateRawTransactionCmd(inputs []TransactionInput, amounts map[string]fl
 
 // DecodeRawTransactionCmd defines the decoderawtransaction JSON-RPC command.
 type DecodeRawTransactionCmd struct {
-	HexTx string
+	HexTx    string
+	VinExtra *bool
 }
 
 // NewDecodeRawTransactionCmd returns a new instance which can be used to issue

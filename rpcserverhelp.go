@@ -72,6 +72,7 @@ var helpDescsEnUS = map[string]string{
 	// PrevOut help.
 	"prevout-addresses": "previous output addresses",
 	"prevout-value":     "previous output value",
+	"prevout-svalue":    "previous output value in atomic units, string containing base 10 number",
 
 	// VinPrevOut help.
 	"vinprevout-coinbase":    "The hex-encoded bytes of the signature script (coinbase txns only)",
@@ -98,7 +99,8 @@ var helpDescsEnUS = map[string]string{
 	"scriptpubkeyresult-addresses": "The bitcoin addresses associated with this script",
 
 	// Vout help.
-	"vout-value":        "The amount in BTC",
+	"vout-value":        "The amount in coins",
+	"vout-svalue":       "previous output value in atomic units, string containing base 10 number",
 	"vout-n":            "The index of this transaction output",
 	"vout-scriptPubKey": "The public key script used to pay coins as a JSON object",
 
@@ -108,10 +110,14 @@ var helpDescsEnUS = map[string]string{
 	"txrawdecoderesult-locktime": "The transaction lock time",
 	"txrawdecoderesult-vin":      "The transaction inputs as JSON objects",
 	"txrawdecoderesult-vout":     "The transaction outputs as JSON objects",
+	"txrawdecoderesult-vsize":    "The virtual size of the transaction, offering a discount for segwit data",
+	"txrawdecoderesult-size":     "The full size of the transaction, including segwit data",
+	"txrawdecoderesult-sfee":     "Number of atomic units of fees, base 10 string",
 
 	// DecodeRawTransactionCmd help.
 	"decoderawtransaction--synopsis": "Returns a JSON object representing the provided serialized, hex-encoded transaction.",
 	"decoderawtransaction-hextx":     "Serialized, hex-encoded transaction",
+	"decoderawtransaction-vinextra":  "Include extra information about inputs to transaction, uses the blockchain to check amounts and addresses which were paid to.",
 
 	// DecodeScriptResult help.
 	"decodescriptresult-asm":       "Disassembly of the script",

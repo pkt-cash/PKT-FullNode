@@ -719,7 +719,8 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 
 		var vout btcjson.Vout
 		vout.N = uint32(i)
-		vout.Value = btcutil.Amount(v.Value).ToBTC()
+		vout.ValueCoins = btcutil.Amount(v.Value).ToBTC()
+		vout.Svalue = strconv.FormatInt(v.Value, 10)
 		vout.ScriptPubKey.Addresses = encodedAddrs
 		vout.ScriptPubKey.Asm = disbuf
 		vout.ScriptPubKey.Hex = hex.EncodeToString(v.PkScript)
@@ -786,13 +787,49 @@ func handleDecodeRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 			btcjson.ErrRPCDeserialization, "TX decode failed", err)
 	}
 
+	xtra := false
+	if c.VinExtra != nil && *c.VinExtra {
+		xtra = true
+	}
+
+	vin, err := createVinListPrevOut(s, &mtx, s.cfg.ChainParams, xtra, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	sfee := "unknown"
+	if xtra {
+		failed := false
+		fee := int64(0)
+		for _, input := range vin {
+			if input.PrevOut == nil {
+				failed = true
+				break
+			}
+			n, errr := strconv.ParseInt(input.PrevOut.Svalue, 10, 64)
+			if errr != nil {
+				return nil, er.E(errr)
+			}
+			fee += n
+		}
+		for _, out := range mtx.TxOut {
+			fee -= out.Value
+		}
+		if !failed {
+			sfee = strconv.FormatInt(fee, 10)
+		}
+	}
+
 	// Create and return the result.
 	txReply := btcjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
 		Locktime: mtx.LockTime,
-		Vin:      createVinList(&mtx),
+		Size:     int32(mtx.SerializeSize()),
+		Vsize:    int32(mempool.GetTxVirtualSize(btcutil.NewTx(&mtx))),
+		Vin:      vin,
 		Vout:     createVoutList(&mtx, s.cfg.ChainParams, nil),
+		Sfee:     sfee,
 	}
 	return txReply, nil
 }
@@ -2733,6 +2770,19 @@ func handleGetRawMempool(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 	return hashStrings, nil
 }
 
+func (s *rpcServer) TxIndex() (*indexers.TxIndex, er.R) {
+	if s.cfg.TxIndexOrNil == nil {
+		return nil, btcjson.NewRPCError(
+			btcjson.ErrRPCNoTxInfo,
+			"The transaction index must be "+
+				"enabled to query the blockchain "+
+				"(specify --txindex)",
+			nil,
+		)
+	}
+	return s.cfg.TxIndexOrNil, nil
+}
+
 // handleGetRawTransaction implements the getrawtransaction command.
 func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	c := cmd.(*btcjson.GetRawTransactionCmd)
@@ -2755,18 +2805,13 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 	var blkHeight int32
 	tx, err := s.cfg.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
-		if s.cfg.TxIndex == nil {
-			return nil, btcjson.NewRPCError(
-				btcjson.ErrRPCNoTxInfo,
-				"The transaction index must be "+
-					"enabled to query the blockchain "+
-					"(specify --txindex)",
-				nil,
-			)
+		txi, err := s.TxIndex()
+		if err != nil {
+			return nil, err
 		}
 
 		// Look up the location of the transaction.
-		blockRegion, err := s.cfg.TxIndex.TxBlockRegion(txHash)
+		blockRegion, err := txi.TxBlockRegion(txHash)
 		if err != nil {
 			context := "Failed to retrieve transaction location"
 			return nil, internalRPCError(err, context)
@@ -3050,7 +3095,11 @@ func fetchInputTxos(s *rpcServer, tx *wire.MsgTx) (map[wire.OutPoint]wire.TxOut,
 		}
 
 		// Look up the location of the transaction.
-		blockRegion, err := s.cfg.TxIndex.TxBlockRegion(&origin.Hash)
+		txi, err := s.TxIndex()
+		if err != nil {
+			return nil, err
+		}
+		blockRegion, err := txi.TxBlockRegion(&origin.Hash)
 		if err != nil {
 			context := "Failed to retrieve transaction location"
 			return nil, internalRPCError(err, context)
@@ -3203,8 +3252,9 @@ func createVinListPrevOut(s *rpcServer, mtx *wire.MsgTx, chainParams *chaincfg.P
 		if vinExtra {
 			vinListEntry := &vinList[len(vinList)-1]
 			vinListEntry.PrevOut = &btcjson.PrevOut{
-				Addresses: encodedAddrs,
-				Value:     btcutil.Amount(originTxOut.Value).ToBTC(),
+				Addresses:  encodedAddrs,
+				ValueCoins: btcutil.Amount(originTxOut.Value).ToBTC(),
+				Svalue:     strconv.FormatInt(originTxOut.Value, 10),
 			}
 		}
 	}
@@ -3251,18 +3301,6 @@ func handleSearchRawTransactions(s *rpcServer, cmd interface{}, closeChan <-chan
 	vinExtra := false
 	if c.VinExtra != nil {
 		vinExtra = *c.VinExtra != 0
-	}
-
-	// Including the extra previous output information requires the
-	// transaction index.  Currently the address index relies on the
-	// transaction index, so this check is redundant, but it's better to be
-	// safe in case the address index is ever changed to not rely on it.
-	if vinExtra && s.cfg.TxIndex == nil {
-		return nil, btcjson.NewRPCError(
-			btcjson.ErrRPCMisc,
-			"Transaction index must be enabled (--txindex)",
-			nil,
-		)
 	}
 
 	// Attempt to decode the supplied address.
@@ -4477,9 +4515,9 @@ type rpcserverConfig struct {
 
 	// These fields define any optional indexes the RPC server can make use
 	// of to provide additional data when queried.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
+	TxIndexOrNil *indexers.TxIndex
+	AddrIndex    *indexers.AddrIndex
+	CfIndex      *indexers.CfIndex
 
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
