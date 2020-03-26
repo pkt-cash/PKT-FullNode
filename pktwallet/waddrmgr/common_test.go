@@ -40,6 +40,8 @@ var (
 		P: 1,
 	}
 
+	failingScrypt = &ScryptOptions{alwaysFail: true}
+
 	// waddrmgrNamespaceKey is the namespace key for the waddrmgr package.
 	waddrmgrNamespaceKey = []byte("waddrmgrNamespace")
 

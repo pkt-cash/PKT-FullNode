@@ -43,13 +43,6 @@ func (c *failingCryptoKey) Decrypt(in []byte) ([]byte, er.R) {
 	return nil, er.New("failed to decrypt")
 }
 
-// failingSecretKeyGen is a SecretKeyGenerator that always returns
-// snacl.ErrDecryptFailed.
-func failingSecretKeyGen(passphrase *[]byte,
-	config *ScryptOptions) (*snacl.SecretKey, er.R) {
-	return nil, snacl.ErrDecryptFailed.Default()
-}
-
 // testContext is used to store context information about a running test which
 // is passed into helper functions.  The useSpends field indicates whether or
 // not the spend data should be empty or figure it out based on the specific
@@ -1107,11 +1100,10 @@ func testChangePassphrase(tc *testContext) bool {
 	// that intentionally errors.
 	testName := "ChangePassphrase (public) with invalid new secret key"
 
-	oldKeyGen := SetSecretKeyGen(failingSecretKeyGen)
 	err := walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		return tc.rootManager.ChangePassphrase(
-			ns, pubPassphrase, pubPassphrase2, false, fastScrypt,
+			ns, pubPassphrase, pubPassphrase2, false, failingScrypt,
 		)
 	})
 	if !util.CheckError(tc.t, testName, err, ErrCrypto) {
@@ -1120,7 +1112,6 @@ func testChangePassphrase(tc *testContext) bool {
 
 	// Attempt to change public passphrase with invalid old passphrase.
 	testName = "ChangePassphrase (public) with invalid old passphrase"
-	SetSecretKeyGen(oldKeyGen)
 	err = walletdb.Update(tc.db, func(tx walletdb.ReadWriteTx) er.R {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		return tc.rootManager.ChangePassphrase(

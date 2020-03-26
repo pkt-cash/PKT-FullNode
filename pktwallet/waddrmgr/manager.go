@@ -98,7 +98,8 @@ func isReservedAccountNum(acct uint32) bool {
 // ScryptOptions is used to hold the scrypt parameters needed when deriving new
 // passphrase keys.
 type ScryptOptions struct {
-	N, R, P int
+	N, R, P    int
+	alwaysFail bool
 }
 
 // OpenCallbacks houses caller-provided callbacks that may be called when
@@ -175,45 +176,12 @@ type unlockDeriveInfo struct {
 	index       uint32
 }
 
-// SecretKeyGenerator is the function signature of a method that can generate
-// secret keys for the address manager.
-type SecretKeyGenerator func(
-	passphrase *[]byte, config *ScryptOptions) (*snacl.SecretKey, er.R)
-
-// defaultNewSecretKey returns a new secret key.  See newSecretKey.
-func defaultNewSecretKey(passphrase *[]byte,
-	config *ScryptOptions) (*snacl.SecretKey, er.R) {
-	return snacl.NewSecretKey(passphrase, config.N, config.R, config.P)
-}
-
-var (
-	// secretKeyGen is the inner method that is executed when calling
-	// newSecretKey.
-	secretKeyGen = defaultNewSecretKey
-
-	// secretKeyGenMtx protects access to secretKeyGen, so that it can be
-	// replaced in testing.
-	secretKeyGenMtx sync.RWMutex
-)
-
-// SetSecretKeyGen replaces the existing secret key generator, and returns the
-// previous generator.
-func SetSecretKeyGen(keyGen SecretKeyGenerator) SecretKeyGenerator {
-	secretKeyGenMtx.Lock()
-	oldKeyGen := secretKeyGen
-	secretKeyGen = keyGen
-	secretKeyGenMtx.Unlock()
-
-	return oldKeyGen
-}
-
 // newSecretKey generates a new secret key using the active secretKeyGen.
-func newSecretKey(passphrase *[]byte,
-	config *ScryptOptions) (*snacl.SecretKey, er.R) {
-
-	secretKeyGenMtx.RLock()
-	defer secretKeyGenMtx.RUnlock()
-	return secretKeyGen(passphrase, config)
+func newSecretKey(passphrase *[]byte, config *ScryptOptions) (*snacl.SecretKey, er.R) {
+	if config.alwaysFail {
+		return nil, snacl.ErrDecryptFailed.Default()
+	}
+	return snacl.NewSecretKey(passphrase, config.N, config.R, config.P)
 }
 
 // EncryptorDecryptor provides an abstraction on top of snacl.CryptoKey so that
