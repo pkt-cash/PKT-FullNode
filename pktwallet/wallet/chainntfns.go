@@ -6,6 +6,7 @@ package wallet
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -77,8 +78,9 @@ func (w *Wallet) handleChainNotifications() {
 			return nil
 		})
 		if err != nil {
-			log.Errorf("Failed to update address manager "+
-				"sync state for height %d: %v", height, err)
+			err.AddMessage(fmt.Sprintf("Failed to update address manager "+
+				"sync state for height %d", height))
+			log.Errorf(err.Message())
 		}
 
 		log.Info("Done catching up block hashes")
@@ -108,15 +110,14 @@ func (w *Wallet) handleChainNotifications() {
 					chainClient, birthdayStore,
 				)
 				if err != nil && !waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
-					panic(er.Errorf("Unable to sanity "+
-						"check wallet birthday block: %v",
-						err))
+					err.AddMessage("Unable to sanity check wallet birthday block")
+					panic(err.Message())
 				}
 
 				err = w.syncWithChain(birthdayBlock)
 				if err != nil && !w.ShuttingDown() {
-					panic(er.Errorf("Unable to synchronize "+
-						"wallet to chain: %v", err))
+					err.AddMessage("Unable to synchronize wallet to chain")
+					panic(err.Message())
 				}
 			case chain.BlockConnected:
 				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
@@ -187,9 +188,9 @@ func (w *Wallet) handleChainNotifications() {
 					continue
 				}
 
-				log.Errorf("Unable to process chain backend "+
-					"%v notification: %v", notificationName,
-					err)
+				err.AddMessage(fmt.Sprintf("Unable to process chain backend "+
+					"%v notification", notificationName))
+				log.Errorf(err.Message())
 			}
 		case <-w.quit:
 			return
