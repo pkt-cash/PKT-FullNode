@@ -2545,7 +2545,7 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, er.R) {
 		lastBlock, lastBlockHash, err = scanBlockChunks(
 			wsc, cmd, &lookups, minBlock, maxBlock, chain,
 		)
-		if err != nil {
+		if lastBlock == nil {
 			return nil, err
 		}
 	} else {
