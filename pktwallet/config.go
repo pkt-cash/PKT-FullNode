@@ -37,8 +37,6 @@ const (
 	defaultLogFilename      = "pktwallet.log"
 	defaultRPCMaxClients    = 10
 	defaultRPCMaxWebsockets = 25
-
-	walletDbName = "wallet.db"
 )
 
 var (
@@ -58,6 +56,7 @@ type config struct {
 	Create        bool                    `long:"create" description:"Create the wallet if it does not exist"`
 	CreateTemp    bool                    `long:"createtemp" description:"Create a temporary simulation wallet (pass=password) in the data directory indicated; must call with --datadir"`
 	AppDataDir    *cfgutil.ExplicitString `short:"A" long:"appdata" description:"Application data directory for wallet config, databases and logs"`
+	Wallet        string                  `short:"w" long:"wallet" description:"Wallet file name or path, if a simple word such as 'personal' then pktwallet will look for wallet_personal.db, if prefixed with a / then pktwallet will consider it an absolute path."`
 	TestNet3      bool                    `long:"testnet" description:"Use the test Bitcoin network (version 3) (default mainnet)"`
 	PktTestNet    bool                    `long:"pkttest" description:"Use the test pkt.cash test network"`
 	BtcMainNet    bool                    `long:"btc" description:"Use the test bitcoin main network"`
@@ -271,6 +270,7 @@ func loadConfig() (*config, []string, er.R) {
 	// Default config.
 	cfg := config{
 		DebugLevel:             defaultLogLevel,
+		Wallet:                 "wallet.db",
 		ConfigFile:             cfgutil.NewExplicitString(defaultConfigFile),
 		AppDataDir:             cfgutil.NewExplicitString(defaultAppDataDir),
 		LogDir:                 defaultLogDir,
@@ -469,7 +469,7 @@ func loadConfig() (*config, []string, er.R) {
 
 	// Ensure the wallet exists or create it when the create flag is set.
 	netDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	dbPath := filepath.Join(netDir, walletDbName)
+	dbPath := wallet.WalletDbPath(netDir, cfg.Wallet)
 
 	if cfg.CreateTemp && cfg.Create {
 		err := er.Errorf("The flags --create and --createtemp can not " +

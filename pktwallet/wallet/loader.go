@@ -5,8 +5,10 @@
 package wallet
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,10 +18,6 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/internal/prompt"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-)
-
-const (
-	walletDbName = "wallet.db"
 )
 
 var Err er.ErrorType = er.NewErrorType("wallet.Err")
@@ -52,6 +50,7 @@ type Loader struct {
 	callbacks      []func(*Wallet)
 	chainParams    *chaincfg.Params
 	dbDirPath      string
+	walletName     string
 	recoveryWindow uint32
 	wallet         *Wallet
 	db             walletdb.DB
@@ -61,11 +60,12 @@ type Loader struct {
 // NewLoader constructs a Loader with an optional recovery window. If the
 // recovery window is non-zero, the wallet will attempt to recovery addresses
 // starting from the last SyncedTo height.
-func NewLoader(chainParams *chaincfg.Params, dbDirPath string,
+func NewLoader(chainParams *chaincfg.Params, dbDirPath, walletName string,
 	recoveryWindow uint32) *Loader {
 
 	return &Loader{
 		chainParams:    chainParams,
+		walletName:     walletName,
 		dbDirPath:      dbDirPath,
 		recoveryWindow: recoveryWindow,
 	}
@@ -98,6 +98,19 @@ func (l *Loader) RunAfterLoad(fn func(*Wallet)) {
 	}
 }
 
+func WalletDbPath(netDir, walletName string) string {
+	if strings.HasSuffix(walletName, ".db") {
+		if strings.HasPrefix(walletName, "/") {
+			// absolute path
+			return walletName
+		} else {
+			return filepath.Join(netDir, walletName)
+		}
+	} else {
+		return filepath.Join(netDir, fmt.Sprintf("wallet_%s.db", walletName))
+	}
+}
+
 // CreateNewWallet creates a new wallet using the provided public and private
 // passphrases.  The seed is optional.  If non-nil, addresses are derived from
 // this seed.  If nil, a secure random seed is generated.
@@ -111,7 +124,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 		return nil, ErrLoaded.Default()
 	}
 
-	dbPath := filepath.Join(l.dbDirPath, walletDbName)
+	dbPath := WalletDbPath(l.dbDirPath, l.walletName)
 	exists, err := fileExists(dbPath)
 	if err != nil {
 		return nil, err
@@ -171,7 +184,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 	}
 
 	// Open the database using the boltdb backend.
-	dbPath := filepath.Join(l.dbDirPath, walletDbName)
+	dbPath := WalletDbPath(l.dbDirPath, l.walletName)
 	db, err := walletdb.Open("bdb", dbPath)
 	if err != nil {
 		log.Errorf("Failed to open database: %v", err)

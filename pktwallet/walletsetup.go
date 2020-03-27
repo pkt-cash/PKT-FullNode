@@ -104,7 +104,7 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *wallet.Wallet) er.
 // provided path.
 func createWallet(cfg *config) er.R {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, 250)
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time
@@ -218,7 +218,7 @@ func createSimulationWallet(cfg *config) er.R {
 	netDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
 
 	// Create the wallet.
-	dbPath := filepath.Join(netDir, walletDbName)
+	dbPath := wallet.WalletDbPath(netDir, cfg.Wallet)
 	fmt.Println("Creating the wallet...")
 
 	// Create the wallet database backed by bolt db.
