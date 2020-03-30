@@ -17,7 +17,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -2848,8 +2847,8 @@ func (w *Wallet) publishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
 			log.Warnf("Unable to remove invalid transaction %v: %v",
 				tx.TxHash(), dbErr)
 		} else {
-			log.Infof("Removed invalid transaction: %v",
-				spew.Sdump(tx))
+			// This thing creates enormous noise
+			//log.Infof("Removed invalid transaction: %v", spew.Sdump(tx))
 		}
 
 		return nil, err

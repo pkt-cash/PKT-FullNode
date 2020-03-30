@@ -32,6 +32,15 @@ const MaxInputsPerTx = 1460
 // at least one legacy non-segwit input
 const MaxInputsPerTxLegacy = 499
 
+var InsufficientFundsError = er.GenericErrorType.CodeWithDetail("InsufficientFundsError",
+	"insufficient funds available to construct transaction")
+
+var TooManyInputsError = er.GenericErrorType.CodeWithDetail("TooManyInputsError",
+	"unable to construct transaction because there are too many inputs, you may need to fold coins")
+
+var UnconfirmedCoinsError = er.GenericErrorType.CodeWithDetail("UnconfirmedCoinsError",
+	"unable to construct transaction, there are coins but they are not yet confirmed")
+
 func makeInputSource(eligible []*wtxmgr.Credit) txauthor.InputSource {
 	// Current inputs and their total value.  These are closed over by the
 	// returned input source and reused across multiple calls.
@@ -138,7 +147,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	if sweepOutput != nil {
 		needAmount = 0
 	}
-	eligible, err := w.findEligibleOutputs(
+	eligibleOuts, err := w.findEligibleOutputs(
 		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs,
 		txr.InputMinHeight, txr.InputComparator)
 	if err != nil {
@@ -154,10 +163,11 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		}
 		addrStr = strings.Join(addrs, ", ")
 	}
-	log.Debugf("Found [%d] eligable inputs from addresses including [%s]",
-		len(eligible), addrStr)
+	log.Debugf("Found [%d] eligable inputs from addresses [%s], excluded [%d] (unconfirmed) "+
+		"and [%d] (too many inputs for tx)",
+		len(eligibleOuts.credits), addrStr, eligibleOuts.unconfirmedCount, eligibleOuts.unusedCount)
 
-	inputSource := makeInputSource(eligible)
+	inputSource := makeInputSource(eligibleOuts.credits)
 	changeSource := func() ([]byte, er.R) {
 		// Derive the change output script.  As a hack to allow
 		// spending from the imported account, change addresses are
@@ -167,7 +177,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		if txr.ChangeAddress != nil {
 			changeAddr = *txr.ChangeAddress
 		} else {
-			for _, c := range eligible {
+			for _, c := range eligibleOuts.credits {
 				_, addrs, _, _ := txscript.ExtractPkScriptAddrs(c.PkScript, w.chainParams)
 				if len(addrs) == 1 {
 					changeAddr = addrs[0]
@@ -182,10 +192,27 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		}
 		return txscript.PayToAddrScript(changeAddr)
 	}
-	tx, err = txauthor.NewUnsignedTransaction(txr.Outputs, txr.FeeSatPerKB,
-		inputSource, changeSource)
+	tx, err = txauthor.NewUnsignedTransaction(txr.Outputs, txr.FeeSatPerKB, inputSource, changeSource)
 	if err != nil {
-		return nil, err
+		if !txauthor.ImpossibleTxError.Is(err) {
+			return nil, err
+		} else if eligibleOuts.unusedCount > 0 {
+			return nil, TooManyInputsError.New(
+				fmt.Sprintf("additional [%d] transactions containing [%f] coins",
+					eligibleOuts.unusedCount, eligibleOuts.unusedAmt.ToBTC()), err)
+		} else if eligibleOuts.unconfirmedCount > 0 {
+			return nil, UnconfirmedCoinsError.New(
+				fmt.Sprintf("there are [%f] coins available in [%d] unconfirmed transactions, "+
+					"to spend from these you need to specify minconf=0",
+					eligibleOuts.unconfirmedAmt.ToBTC(), eligibleOuts.unconfirmedCount), err)
+		} else {
+			if txr.InputAddresses != nil {
+				return nil, InsufficientFundsError.New(
+					fmt.Sprintf("address(es) [%s] do not have enough balance", addrStr), err)
+			} else {
+				return nil, InsufficientFundsError.New("wallet does not have enough balance", err)
+			}
+		}
 	}
 
 	// Randomize change position, if change exists, before signing.  This
@@ -329,6 +356,14 @@ func convertResult(ac *amountCount) []*wtxmgr.Credit {
 	return out
 }
 
+type eligibleOutputs struct {
+	credits          []*wtxmgr.Credit
+	unconfirmedCount int
+	unconfirmedAmt   btcutil.Amount
+	unusedCount      int
+	unusedAmt        btcutil.Amount
+}
+
 func (w *Wallet) findEligibleOutputs(
 	dbtx walletdb.ReadTx,
 	needAmount btcutil.Amount,
@@ -337,7 +372,12 @@ func (w *Wallet) findEligibleOutputs(
 	bs *waddrmgr.BlockStamp,
 	inputMinHeight int,
 	inputComparator utils.Comparator,
-) ([]*wtxmgr.Credit, er.R) {
+) (eligibleOutputs, er.R) {
+	out := eligibleOutputs{}
+	chainClient, err := w.requireChainClient()
+	if err != nil {
+		return out, err
+	}
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
 	haveAmounts := make(map[string]*amountCount)
@@ -354,14 +394,18 @@ func (w *Wallet) findEligibleOutputs(
 			return nil
 		}
 
-		// Only include this output if it meets the required number of
-		// confirmations.  Coinbase transactions must have have reached
-		// maturity before their outputs may be spent.
-		if !confirmed(minconf, output.Height, bs.Height) {
-			return nil
+		if minconf > 0 {
+			// Only include this output if it meets the required number of
+			// confirmations.  Coinbase transactions must have have reached
+			// maturity before their outputs may be spent.
+			if !confirmed(minconf, output.Height, bs.Height) {
+				out.unconfirmedCount++
+				out.unconfirmedAmt += output.Amount
+				return nil
+			}
 		}
 
-		if output.Height < int32(inputMinHeight) {
+		if output.Height >= 0 && output.Height < int32(inputMinHeight) {
 			log.Debugf("Skipping output %s at height %d because it is below minimum %d",
 				output.String(), output.Height, inputMinHeight)
 			return nil
@@ -378,6 +422,16 @@ func (w *Wallet) findEligibleOutputs(
 
 		// Locked unspent outputs are skipped.
 		if w.LockedOutpoint(output.OutPoint) {
+			return nil
+		}
+
+		// If there is an unspent which references a block header which doesn't
+		// actually exist we've got some trouble. Lets make sure before we try to
+		// spend it.
+		if output.Height < 0 {
+		} else if _, err := chainClient.GetBlockHeader(&output.Block.Hash); err != nil {
+			log.Debugf("Input [%s] references block hash [%s] which is not in chain, skipping",
+				output.OutPoint.String(), output.Block.Hash)
 			return nil
 		}
 
@@ -418,6 +472,8 @@ func (w *Wallet) findEligibleOutputs(
 				// so we'll drop it and continue traversing to find the best outputs
 				ha.credits.Remove(worst)
 				ha.amount -= worst.Amount
+				out.unusedAmt += worst.Amount
+				out.unusedCount++
 			}
 
 			// If we have no explicit sorting specified then we can short-circuit
@@ -440,15 +496,24 @@ func (w *Wallet) findEligibleOutputs(
 			worst := ha.credits.Right().Key.(*wtxmgr.Credit)
 			ha.credits.Remove(worst)
 			ha.amount -= worst.Amount
+			out.unusedAmt += worst.Amount
+			out.unusedCount++
 		}
 		return nil
 	}); err != nil && !er.IsLoopBreak(err) {
-		return nil, err
+		return out, err
 	}
 
 	if winner != nil {
 		// Easy path, we got enough in one address to win, we'll just return those
-		return convertResult(winner), nil
+		for _, ac := range haveAmounts {
+			if ac != winner {
+				out.unusedAmt += ac.amount
+				out.unusedCount += ac.credits.Size()
+			}
+		}
+		out.credits = convertResult(winner)
+		return out, nil
 	}
 
 	// We don't have an easy answer with just one address, we need to get creative.
@@ -458,7 +523,13 @@ func (w *Wallet) findEligibleOutputs(
 		isSegwit: true,
 		credits:  redblacktree.NewWith(PreferBiggest),
 	}
+	done := false
 	for _, ac := range haveAmounts {
+		if done {
+			out.unusedAmt += ac.amount
+			out.unusedCount += ac.credits.Size()
+			continue
+		}
 		it := ac.credits.Iterator()
 		for i := 0; it.Next(); i++ {
 			outAc.credits.Put(it.Key(), nil)
@@ -471,6 +542,8 @@ func (w *Wallet) findEligibleOutputs(
 			worst := outAc.credits.Right().Key.(*wtxmgr.Credit)
 			outAc.credits.Remove(worst)
 			outAc.amount -= worst.Amount
+			out.unusedAmt += worst.Amount
+			out.unusedCount++
 			wasOver = true
 		}
 		if needAmount == 0 && !wasOver {
@@ -478,11 +551,13 @@ func (w *Wallet) findEligibleOutputs(
 			// lets go around and get another address
 		} else if outAc.amount > needAmount {
 			// We have enough money to make the tx
-			break
+			// We'll just iterate over the other entries to make unusedAmt and unusedCount correct
+			done = true
 		}
 	}
 
-	return convertResult(&outAc), nil
+	out.credits = convertResult(&outAc)
+	return out, nil
 }
 
 // validateMsgTx verifies transaction input scripts for tx.  All previous output
