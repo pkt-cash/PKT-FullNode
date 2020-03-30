@@ -56,6 +56,7 @@ type GetBlockVerboseResult struct {
 	PcAnnBits       string        `json:"packetcryptannbits,omitempty"`
 	PcAnnDifficulty *float64      `json:"packetcryptanndifficulty,omitempty"`
 	PcBlkDifficulty *float64      `json:"packetcryptblkdifficulty,omitempty"`
+	BlockReward     string        `json:"sblockreward"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig
@@ -259,7 +260,8 @@ type ScriptPubKeyResult struct {
 type GetTxOutResult struct {
 	BestBlock     string             `json:"bestblock"`
 	Confirmations int64              `json:"confirmations"`
-	Value         float64            `json:"value"`
+	ValueCoins    float64            `json:"value"`
+	Svalue        string             `json:"svalue"`
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
 }
@@ -353,9 +355,9 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 
 // PrevOut represents previous output for an input Vin.
 type PrevOut struct {
-	Addresses  []string `json:"addresses,omitempty"`
-	ValueCoins float64  `json:"value"`
-	Svalue     string   `json:"svalue"`
+	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
+	ValueCoins   float64            `json:"value"`
+	Svalue       string             `json:"svalue"`
 }
 
 // VinPrevOut is like Vin except it includes PrevOut.  It is used by searchrawtransaction
@@ -472,29 +474,11 @@ type InfoChainResult struct {
 
 // TxRawResult models the data from the getrawtransaction command.
 type TxRawResult struct {
-	Hex           string `json:"hex"`
-	Txid          string `json:"txid"`
-	Hash          string `json:"hash,omitempty"`
-	Size          int32  `json:"size,omitempty"`
-	Vsize         int32  `json:"vsize,omitempty"`
-	Version       int32  `json:"version"`
-	LockTime      uint32 `json:"locktime"`
-	Vin           []Vin  `json:"vin"`
-	Vout          []Vout `json:"vout"`
-	BlockHash     string `json:"blockhash,omitempty"`
-	Confirmations uint64 `json:"confirmations,omitempty"`
-	Time          int64  `json:"time,omitempty"`
-	Blocktime     int64  `json:"blocktime,omitempty"`
-}
-
-// SearchRawTransactionsResult models the data from the searchrawtransaction
-// command.
-type SearchRawTransactionsResult struct {
-	Hex           string       `json:"hex,omitempty"`
+	Hex           string       `json:"hex"`
 	Txid          string       `json:"txid"`
-	Hash          string       `json:"hash"`
-	Size          string       `json:"size"`
-	Vsize         string       `json:"vsize"`
+	Hash          string       `json:"hash,omitempty"`
+	Size          int32        `json:"size,omitempty"`
+	Vsize         int32        `json:"vsize,omitempty"`
 	Version       int32        `json:"version"`
 	LockTime      uint32       `json:"locktime"`
 	Vin           []VinPrevOut `json:"vin"`

@@ -70,9 +70,9 @@ var helpDescsEnUS = map[string]string{
 	"scriptsig-hex": "Hex-encoded bytes of the script",
 
 	// PrevOut help.
-	"prevout-addresses": "previous output addresses",
-	"prevout-value":     "previous output value",
-	"prevout-svalue":    "previous output value in atomic units, string containing base 10 number",
+	"prevout-scriptPubKey": "The decoded script and addresses which were paid to",
+	"prevout-value":        "previous output value",
+	"prevout-svalue":       "previous output value in atomic units, string containing base 10 number",
 
 	// VinPrevOut help.
 	"vinprevout-coinbase":    "The hex-encoded bytes of the signature script (coinbase txns only)",
@@ -264,6 +264,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-packetcryptannbits":       "The bits which represent minimum announcement difficulty",
 	"getblockverboseresult-packetcryptanncount":      "The number of announcements which the winning miner was using",
 	"getblockverboseresult-packetcryptversion":       "The version of the PacketCrypt proof",
+	"getblockverboseresult-sblockreward":             "The amount of atomic units of coins in this block height block reward",
 
 	// GetBlockCountCmd help.
 	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
@@ -555,7 +556,8 @@ var helpDescsEnUS = map[string]string{
 	// GetTxOutResult help.
 	"gettxoutresult-bestblock":     "The block hash that contains the transaction output",
 	"gettxoutresult-confirmations": "The number of confirmations",
-	"gettxoutresult-value":         "The transaction amount in BTC",
+	"gettxoutresult-value":         "The transaction amount in coins",
+	"gettxoutresult-svalue":        "The transaction amount in atomic units (base10 string)",
 	"gettxoutresult-scriptPubKey":  "The public key script used to pay coins as a JSON object",
 	"gettxoutresult-version":       "The transaction version",
 	"gettxoutresult-coinbase":      "Whether or not the transaction is a coinbase",
@@ -776,7 +778,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"node":                   nil,
 	"help":                   {(*string)(nil), (*string)(nil)},
 	"ping":                   nil,
-	"searchrawtransactions":  {(*string)(nil), (*[]btcjson.SearchRawTransactionsResult)(nil)},
+	"searchrawtransactions":  {(*string)(nil), (*[]btcjson.TxRawResult)(nil)},
 	"sendrawtransaction":     {(*string)(nil)},
 	"setgenerate":            nil,
 	"stop":                   {(*string)(nil)},
