@@ -659,6 +659,13 @@ func CheckBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	return checkBlockSanity(block, powLimit, timeSource, BFNone)
 }
 
+func ExtractBlockHeight(msg *wire.MsgBlock) (int32, er.R) {
+	if len(msg.Transactions) < 1 {
+		return -1, er.New("Unable to extract height, no transactions")
+	}
+	return ExtractCoinbaseHeight(btcutil.NewTx(msg.Transactions[0]))
+}
+
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.

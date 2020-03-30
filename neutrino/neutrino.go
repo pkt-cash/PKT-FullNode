@@ -908,6 +908,10 @@ func (s *ChainService) IsBanned(addr string) bool {
 	return banStatus.Banned
 }
 
+func (s *ChainService) BanStore() banman.Store {
+	return s.banStore
+}
+
 // AddPeer adds a new peer that has already been connected to the server.
 func (s *ChainService) AddPeer(sp *ServerPeer) {
 	select {

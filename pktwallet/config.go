@@ -81,7 +81,7 @@ type config struct {
 	ProxyPass        string                  `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
 
 	// SPV client options
-	UseSPV       bool          `long:"usespv" description:"Enables the experimental use of SPV rather than RPC for chain synchronization"`
+	UseSPV       bool          `long:"usespv" description:"Enables the experimental use of SPV rather than RPC for chain synchronization, WARNING: does not verify PacketCrypt proofs, unsafe for PKT chain"`
 	AddPeers     []string      `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
 	ConnectPeers []string      `long:"connect" description:"Connect only to the specified peers at startup"`
 	MaxPeers     int           `long:"maxpeers" description:"Max number of inbound and outbound peers"`
@@ -96,6 +96,7 @@ type config struct {
 	//
 	// Usernames can also be used for the consensus RPC client, so they
 	// aren't considered legacy.
+	UseRPC                 bool                    `long:"userpc" description:"Use an RPC connection to pktd rather than using neutrino, the default behavior is to connect to a single local pktd instance using neutrino, UseSPV will make neutrino connect to multiple nodes"`
 	RPCCert                *cfgutil.ExplicitString `long:"rpccert" description:"File containing the certificate file"`
 	RPCKey                 *cfgutil.ExplicitString `long:"rpckey" description:"File containing the certificate key"`
 	OneTimeTLSKey          bool                    `long:"onetimetlskey" description:"Generate a new TLS certpair at startup, but only write the certificate to disk"`
@@ -282,6 +283,7 @@ func loadConfig() (*config, []string, er.R) {
 		LegacyRPCMaxWebsockets: defaultRPCMaxWebsockets,
 		DataDir:                cfgutil.NewExplicitString(defaultAppDataDir),
 		UseSPV:                 false,
+		UseRPC:                 false,
 		AddPeers:               []string{},
 		ConnectPeers:           []string{},
 		MaxPeers:               neutrino.MaxPeers,
@@ -555,7 +557,7 @@ func loadConfig() (*config, []string, er.R) {
 		"::1":       {},
 	}
 
-	if cfg.UseSPV {
+	if !cfg.UseRPC {
 		neutrino.MaxPeers = cfg.MaxPeers
 		neutrino.BanDuration = cfg.BanDuration
 		neutrino.BanThreshold = cfg.BanThreshold

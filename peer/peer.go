@@ -226,11 +226,11 @@ type Config struct {
 	// peer will report a block height of 0, however it is good practice for
 	// peers to specify this so their currently best known is accurately
 	// reported.
-	NewestBlock HashFunc
+	NewestBlock HashFunc `json:"-"`
 
 	// HostToNetAddress returns the netaddress for the given host. This can be
 	// nil in  which case the host will be parsed as an IP address.
-	HostToNetAddress HostToNetAddrFunc
+	HostToNetAddress HostToNetAddrFunc `json:"-"`
 
 	// Proxy indicates a proxy is being used for connections.  The only
 	// effect this has is to prevent leaking the tor proxy address, so it
@@ -254,7 +254,7 @@ type Config struct {
 	// ChainParams identifies which chain parameters the peer is associated
 	// with.  It is highly recommended to specify this field, however it can
 	// be omitted in which case the test network will be used.
-	ChainParams *chaincfg.Params
+	ChainParams *chaincfg.Params `json:"-"`
 
 	// Services specifies which services to advertise as supported by the
 	// local peer.  This field can be omitted in which case it will be 0
@@ -272,7 +272,7 @@ type Config struct {
 
 	// Listeners houses callback functions to be invoked on receiving peer
 	// messages.
-	Listeners MessageListeners
+	Listeners MessageListeners `json:"-"`
 
 	// TrickleInterval is the duration of the ticker which trickles down the
 	// inventory to a peer.
@@ -427,7 +427,7 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
-	conn net.Conn
+	conn net.Conn `json:"-"`
 
 	// These fields are set at creation time and never modified, so they are
 	// safe to read from concurrently without a mutex.
@@ -435,7 +435,7 @@ type Peer struct {
 	cfg     Config
 	inbound bool
 
-	flagsMtx             sync.Mutex // protects the peer flags below
+	flagsMtx             sync.Mutex `json:"-"` // protects the peer flags below
 	na                   *wire.NetAddress
 	id                   int32
 	userAgent            string
@@ -450,16 +450,16 @@ type Peer struct {
 	wireEncoding wire.MessageEncoding
 
 	knownInventory     *mruInventoryMap
-	prevGetBlocksMtx   sync.Mutex
+	prevGetBlocksMtx   sync.Mutex `json:"-"`
 	prevGetBlocksBegin *chainhash.Hash
 	prevGetBlocksStop  *chainhash.Hash
-	prevGetHdrsMtx     sync.Mutex
+	prevGetHdrsMtx     sync.Mutex `json:"-"`
 	prevGetHdrsBegin   *chainhash.Hash
 	prevGetHdrsStop    *chainhash.Hash
 
 	// These fields keep track of statistics for the peer and are protected
 	// by the statsMtx mutex.
-	statsMtx           sync.RWMutex
+	statsMtx           sync.RWMutex `json:"-"`
 	timeOffset         int64
 	timeConnected      time.Time
 	startingHeight     int32
@@ -478,6 +478,81 @@ type Peer struct {
 	queueQuit     chan struct{}
 	outQuit       chan struct{}
 	quit          chan struct{}
+}
+
+type PeerDesc struct {
+	// The following variables must only be used atomically.
+	BytesReceived uint64
+	BytesSent     uint64
+	LastRecv      time.Time
+	LastSend      time.Time
+	Connected     bool
+
+	Addr    string
+	Cfg     Config
+	Inbound bool
+
+	Na                   *wire.NetAddress
+	Id                   int32
+	UserAgent            string
+	Services             wire.ServiceFlag
+	VersionKnown         bool
+	AdvertisedProtoVer   uint32 // protocol version advertised by remote
+	ProtocolVersion      uint32 // negotiated protocol version
+	SendHeadersPreferred bool   // peer sent a sendheaders message
+	VerAckReceived       bool
+	WitnessEnabled       bool
+
+	WireEncoding wire.MessageEncoding
+
+	TimeOffset         int64
+	TimeConnected      time.Time
+	StartingHeight     int32
+	LastBlock          int32
+	LastAnnouncedBlock *chainhash.Hash
+	LastPingNonce      uint64    // Set to nonce if we have a pending ping.
+	LastPingTime       time.Time // Time we sent last ping.
+	LastPingMicros     int64     // Time for last ping to return.
+}
+
+func (p *Peer) Describe() PeerDesc {
+	pd := PeerDesc{}
+	pd.BytesReceived = p.BytesReceived()
+	pd.BytesSent = p.BytesSent()
+	pd.LastRecv = p.LastRecv()
+	pd.LastSend = p.LastSend()
+	pd.Connected = p.Connected()
+
+	pd.Addr = p.addr
+	pd.Cfg = p.cfg
+	pd.Inbound = p.Inbound()
+
+	p.flagsMtx.Lock()
+	pd.Na = p.na
+	pd.Id = p.id
+	pd.UserAgent = p.userAgent
+	pd.Services = p.services
+	pd.VersionKnown = p.versionKnown
+	pd.AdvertisedProtoVer = p.advertisedProtoVer
+	pd.ProtocolVersion = p.protocolVersion
+	pd.SendHeadersPreferred = p.sendHeadersPreferred
+	pd.VerAckReceived = p.verAckReceived
+	pd.WitnessEnabled = p.witnessEnabled
+	pd.WireEncoding = p.wireEncoding
+	p.flagsMtx.Unlock()
+
+	p.statsMtx.RLock()
+	pd.TimeOffset = p.timeOffset
+	pd.TimeConnected = p.timeConnected
+	pd.StartingHeight = p.startingHeight
+	pd.LastBlock = p.lastBlock
+	pd.LastAnnouncedBlock = p.lastAnnouncedBlock
+	pd.LastPingNonce = p.lastPingNonce
+	pd.LastPingTime = p.lastPingTime
+	pd.LastPingMicros = p.lastPingMicros
+	p.statsMtx.RUnlock()
+
+	return pd
 }
 
 // String returns the peer's address and directionality as a human-readable

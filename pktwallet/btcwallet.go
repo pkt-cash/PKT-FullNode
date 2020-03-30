@@ -156,7 +156,7 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 			err         er.R
 		)
 
-		if cfg.UseSPV {
+		if !cfg.UseRPC {
 			var (
 				chainService *neutrino.ChainService
 				spvdb        walletdb.DB
@@ -169,12 +169,16 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 				log.Errorf("Unable to create Neutrino DB: %s", err)
 				continue
 			}
+			cp := cfg.ConnectPeers
+			if len(cfg.ConnectPeers) == 0 && !cfg.UseSPV {
+				cp = []string{"localhost"}
+			}
 			chainService, err = neutrino.NewChainService(
 				neutrino.Config{
 					DataDir:      netDir,
 					Database:     spvdb,
 					ChainParams:  *activeNet.Params,
-					ConnectPeers: cfg.ConnectPeers,
+					ConnectPeers: cp,
 					AddPeers:     cfg.AddPeers,
 				})
 			if err != nil {

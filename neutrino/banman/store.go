@@ -3,6 +3,7 @@ package banman
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"net"
 	"time"
 
@@ -69,6 +70,8 @@ type Store interface {
 
 	// Status returns the ban status for a given IP network.
 	Status(*net.IPNet) (Status, er.R)
+
+	ForEachBannedAddr(f func(*net.IPNet, Reason, time.Time) er.R) er.R
 }
 
 // NewStore returns a Store backed by a database.
@@ -194,8 +197,52 @@ func (s *banStore) Status(ipNet *net.IPNet) (Status, er.R) {
 	return banStatus, nil
 }
 
+func (s *banStore) ForEachBannedAddr(f func(*net.IPNet, Reason, time.Time) er.R) er.R {
+	return walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) er.R {
+		banStore := tx.ReadWriteBucket(banStoreBucket)
+		if banStore == nil {
+			return ErrCorruptedStore.New("banStore is nil", nil)
+		}
+		banIndex := banStore.NestedReadWriteBucket(banBucket)
+		if banIndex == nil {
+			return ErrCorruptedStore.New("banIndex is nil", nil)
+		}
+		reasonIndex := banStore.NestedReadWriteBucket(reasonBucket)
+		if reasonIndex == nil {
+			return ErrCorruptedStore.New("reasonIndex is nil", nil)
+		}
+
+		var toRemove [][]byte
+		if err := banIndex.ForEach(func(addrBytes, et []byte) er.R {
+			banExpiration := time.Unix(int64(byteOrder.Uint64(et)), 0)
+			reason := Reason(reasonIndex.Get(addrBytes)[0])
+			if addr, err := decodeIPNet(bytes.NewBuffer(addrBytes)); err != nil {
+				return er.Errorf("unable to decode %s: %v", hex.EncodeToString(addrBytes), err)
+			} else if !time.Now().Before(banExpiration) {
+				toRemove = append(toRemove, addrBytes)
+			} else if err := f(addr, reason, banExpiration); err != nil {
+				return err
+			}
+			return nil
+		}); err != nil {
+			// Don't try to sweep the expired bans if there's an error because
+			// something might have gone seriously wrong and we'd better not go
+			// fiddling in the database.
+			return err
+		}
+		// If the IP network's ban duration has expired, we can remove
+		// its entry from the store.
+		for _, addrBytes := range toRemove {
+			if err := removeBannedIPNet(banIndex, reasonIndex, addrBytes); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // fetchStatus retrieves the ban status of the given IP network.
-func fetchStatus(banIndex, reasonIndex walletdb.ReadWriteBucket,
+func fetchStatus(banIndex, reasonIndex walletdb.ReadBucket,
 	ipNetKey []byte) Status {
 
 	v := banIndex.Get(ipNetKey)

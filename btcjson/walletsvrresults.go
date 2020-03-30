@@ -5,6 +5,12 @@
 
 package btcjson
 
+import (
+	"time"
+
+	"github.com/pkt-cash/pktd/peer"
+)
+
 // GetTransactionDetailsResult models the details data from the gettransaction command.
 //
 // This models the "short" version of the ListTransactionsResult type, which
@@ -55,6 +61,31 @@ type InfoWalletResult struct {
 	PaytxFee        float64 `json:"paytxfee"`
 	RelayFee        float64 `json:"relayfee"`
 	Errors          string  `json:"errors"`
+}
+
+type NeutrinoBan struct {
+	Addr    string
+	Reason  string
+	EndTime string `json:"endtime"`
+}
+
+type NeutrinoInfo struct {
+	Peers []peer.PeerDesc
+	Bans  []NeutrinoBan
+}
+
+type WalletInfoResult struct {
+	CurrentBlockHash      string
+	CurrentHeight         int32
+	CurrentBlockTimestamp time.Time
+	IsSyncing             bool
+	Backend               string
+	Balance               float64
+	Sbalance              string
+	WalletVersion         int32
+
+	RPCInfo      *InfoWalletResult
+	NeutrinoInfo *NeutrinoInfo
 }
 
 // ListTransactionsResult models the data from the listtransactions command.
