@@ -712,7 +712,7 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 		return nil
 	}
 
-	log.Infof("Attempting to fetch set of un-checkpointed filters "+
+	log.Debugf("Attempting to fetch set of un-checkpointed filters "+
 		"at height=%v, hash=%v", blockHeight, blockHeader.BlockHash())
 
 	// Query all peers for the responses.
@@ -2636,8 +2636,18 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 		}
 	} else {
 		if time.Since(timeLastLogged) > time.Second*5 {
-			log.Warn("PacketCryptProofs are not being checked, this is not secure " +
-				"unless it is only connected to a trusted pktd instance")
+			peers := b.server.Peers()
+			insecure := false
+			for _, p := range peers {
+				if !p.persistent {
+					insecure = true
+				}
+
+			}
+			if insecure {
+				log.Warn("PacketCryptProofs are not being checked, this is not secure " +
+					"unless it is only connected to a trusted pktd instance")
+			}
 			timeLastLogged = time.Now()
 		}
 	}

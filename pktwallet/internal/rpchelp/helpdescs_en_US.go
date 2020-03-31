@@ -55,8 +55,16 @@ var helpDescsEnUS = map[string]string{
 
 	// ResyncCmd help
 	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
+	"resync-dropdb":    "Clean most of the data out of the wallet transaction store before resyncing",
 
 	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
+	"vacuum-maxworkms": "The maximum number of database rows to visit, useful for performing background vacuum operations in pages",
+	"vacuum-beginkey":  "The key of the first item to vacuum, use the result endkey in order to perform vacuum in pages",
+
+	"vacuumdbres-endkey":       "The database key of the last entry visited, can be passed to startKey argument to vacuum the database in sections",
+	"vacuumdbres-orphaned":     "The number of orphaned transactions which were cleared out by the vacuum operation",
+	"vacuumdbres-burned":       "The number of burned coins which were cleared out by the vacuum operation",
+	"vacuumdbres-visitedutxos": "The number of outputs which were visited when vacuuming",
 
 	// CreateMultisigCmd help.
 	"createmultisig--synopsis": "Generate a multisig address and redeem script.",

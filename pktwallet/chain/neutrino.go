@@ -209,8 +209,7 @@ func (s *NeutrinoClient) FilterBlocks(
 			continue
 		}
 
-		log.Infof("Fetching block height=%d hash=%v",
-			blk.Height, blk.Hash)
+		log.Debugf("Fetching block height=%d hash=%v", blk.Height, blk.Hash)
 
 		// TODO(conner): can optimize bandwidth by only fetching
 		// stripped blocks
@@ -254,38 +253,38 @@ func buildFilterBlocksWatchList(req *FilterBlocksRequest) ([][]byte, er.R) {
 	// the set of outpoints currently being watched.
 	watchListSize := len(req.ExternalAddrs) +
 		len(req.InternalAddrs) +
+		len(req.ImportedAddrs) +
 		len(req.WatchedOutPoints)
 
 	watchList := make([][]byte, 0, watchListSize)
 
+	var err er.R
+	add := func(a btcutil.Address) {
+		if err != nil {
+			return
+		}
+		p2shAddr, e := txscript.PayToAddrScript(a)
+		if err != nil {
+			err = e
+			return
+		}
+		watchList = append(watchList, p2shAddr)
+	}
+
 	for _, addr := range req.ExternalAddrs {
-		p2shAddr, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		watchList = append(watchList, p2shAddr)
+		add(addr)
 	}
-
 	for _, addr := range req.InternalAddrs {
-		p2shAddr, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		watchList = append(watchList, p2shAddr)
+		add(addr)
 	}
-
+	for _, addr := range req.ImportedAddrs {
+		add(addr)
+	}
 	for _, addr := range req.WatchedOutPoints {
-		addr, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		watchList = append(watchList, addr)
+		add(addr)
 	}
 
-	return watchList, nil
+	return watchList, err
 }
 
 // pollCFilter attempts to fetch a CFilter from the neutrino client. This is
@@ -722,7 +721,7 @@ out:
 			}
 
 		case err := <-rescanErr:
-			if err != nil {
+			if err != nil && !neutrino.ErrRescanExit.Is(err) {
 				log.Errorf("Neutrino rescan ended with error: %s", err)
 			}
 

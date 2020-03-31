@@ -407,6 +407,11 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		return nil, err
 	}
 
+	walletStats := btcjson.WalletStats{}
+	w.ReadStats(func(ws *btcjson.WalletStats) {
+		walletStats = *ws
+	})
+
 	out := btcjson.WalletInfoResult{
 		CurrentBlockHash:      bs.Hash.String(),
 		CurrentHeight:         bs.Height,
@@ -416,6 +421,7 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		Balance:               bal.ToBTC(),
 		Sbalance:              strconv.FormatInt(int64(bal), 10),
 		WalletVersion:         int32(waddrmgr.LatestMgrVersion),
+		WalletStats:           &walletStats,
 	}
 
 	if rpc, ok := chainClient.(*chain.RPCClient); ok {
@@ -1283,11 +1289,21 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 }
 
 func resync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	return nil, w.ResyncChain()
+	cmd := icmd.(*btcjson.ResyncCmd)
+	return nil, w.ResyncChain(cmd.DropDb != nil && *cmd.DropDb)
 }
 
 func vacuum(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	return nil, w.VacuumDb()
+	cmd := icmd.(*btcjson.VacuumCmd)
+	bk := ""
+	mc := time.Duration(0)
+	if cmd.BeginKey != nil {
+		bk = *cmd.BeginKey
+	}
+	if cmd.MaxWorkMs != nil {
+		mc = time.Duration(*cmd.MaxWorkMs) * time.Millisecond
+	}
+	return w.VacuumDb(bk, mc)
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction

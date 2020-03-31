@@ -65,9 +65,14 @@ type GetAddressBalancesCmd struct {
 	MinConf *int `jsonrpcdefault:"1"`
 }
 
-type ResyncCmd struct{}
+type ResyncCmd struct {
+	DropDb *bool
+}
 
-type VacuumCmd struct{}
+type VacuumCmd struct {
+	MaxWorkMs *uint64
+	BeginKey  *string
+}
 
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {

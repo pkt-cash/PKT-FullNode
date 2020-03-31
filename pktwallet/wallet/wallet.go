@@ -16,6 +16,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/pktlog"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
@@ -63,6 +64,18 @@ var (
 	waddrmgrNamespaceKey = []byte("waddrmgr")
 	wtxmgrNamespaceKey   = []byte("wtxmgr")
 )
+
+func (w *Wallet) UpdateStats(f func(ws *btcjson.WalletStats)) {
+	w.wsLock.Lock()
+	defer w.wsLock.Unlock()
+	f(&w.ws)
+}
+
+func (w *Wallet) ReadStats(f func(ws *btcjson.WalletStats)) {
+	w.wsLock.RLock()
+	defer w.wsLock.RUnlock()
+	f(&w.ws)
+}
 
 // Wallet is a structure containing all the components for a
 // complete wallet.  It contains the Armory-style key store
@@ -112,6 +125,9 @@ type Wallet struct {
 	started bool
 	quit    chan struct{}
 	quitMu  sync.Mutex
+
+	wsLock sync.RWMutex
+	ws     btcjson.WalletStats
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -614,11 +630,35 @@ func locateBirthdayBlock(chainClient chainConn,
 // recovery attempts to recover any unspent outputs that pay to any of our
 // addresses starting from our birthday, or the wallet's tip (if higher), which
 // would indicate resuming a recovery after a restart.
-func (w *Wallet) recovery(chainClient chain.Interface,
-	birthdayBlock *waddrmgr.BlockStamp) er.R {
+func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.BlockStamp) er.R {
 
-	log.Infof("RECOVERY MODE ENABLED -- rescanning for used addresses "+
-		"with recovery_window=%d", w.recoveryWindow)
+	// Fetch the best height from the backend to determine when we should
+	// stop.
+	_, bestHeight, err := chainClient.GetBestBlock()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Rescanning for used addresses from [%d] to [%d] ([%d] blocks)",
+		birthdayBlock.Height, bestHeight, bestHeight-birthdayBlock.Height)
+
+	startTime := time.Now()
+	w.UpdateStats(func(ws *btcjson.WalletStats) {
+		ws.Syncing = true
+		ws.SyncStarted = &startTime
+		ws.SyncCurrentBlock = birthdayBlock.Height
+		ws.SyncFrom = birthdayBlock.Height
+		ws.SyncTo = bestHeight
+		ws.SyncRemainingTime = nil
+	})
+	defer w.UpdateStats(func(ws *btcjson.WalletStats) {
+		ws.Syncing = false
+		ws.SyncStarted = nil
+		ws.SyncCurrentBlock = -1
+		ws.SyncFrom = -1
+		ws.SyncTo = -1
+		ws.SyncRemainingTime = nil
+	})
 
 	// We'll initialize the recovery manager with a default batch size of
 	// 2000.
@@ -642,13 +682,6 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 		addrMgrNS := tx.ReadBucket(waddrmgrNamespaceKey)
 		return recoveryMgr.Resurrect(addrMgrNS, scopedMgrs, credits)
 	})
-	if err != nil {
-		return err
-	}
-
-	// Fetch the best height from the backend to determine when we should
-	// stop.
-	_, bestHeight, err := chainClient.GetBestBlock()
 	if err != nil {
 		return err
 	}
@@ -711,10 +744,24 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 				return err
 			}
 
+			timeToGo := time.Duration(0)
+			w.UpdateStats(func(ws *btcjson.WalletStats) {
+				if ws.SyncStarted != nil {
+					startTime := *ws.SyncStarted
+					timeSpent := time.Since(startTime)
+					blocksSynced := height - ws.SyncFrom
+					blocksToGo := ws.SyncTo - height
+					timePerBlock := timeSpent / time.Duration(blocksSynced)
+					timeToGo = timePerBlock * time.Duration(blocksToGo)
+					ws.SyncRemainingTime = &timeToGo
+				}
+				ws.SyncCurrentBlock = height
+			})
+
 			if len(recoveryBatch) > 0 {
-				log.Infof("Recovered addresses from blocks "+
-					"%d-%d", recoveryBatch[0].Height,
-					recoveryBatch[len(recoveryBatch)-1].Height)
+				log.Infof("Recovered addresses from blocks [%d-%d] "+
+					"Expected remaining time [%v]", recoveryBatch[0].Height,
+					recoveryBatch[len(recoveryBatch)-1].Height, timeToGo)
 			}
 
 			// Clear the batch of all processed blocks to reuse the
@@ -1109,13 +1156,18 @@ func extendFoundAddresses(ns walletdb.ReadWriteBucket,
 func logFilterBlocksResp(block wtxmgr.BlockMeta,
 	resp *chain.FilterBlocksResponse) {
 
+	if log.Level() < pktlog.LevelDebug {
+		// Nothing here runs unless debug level logging
+		return
+	}
+
 	// Log the number of external addresses found in this block.
 	var nFoundExternal int
 	for _, indexes := range resp.FoundExternalAddrs {
 		nFoundExternal += len(indexes)
 	}
 	if nFoundExternal > 0 {
-		log.Infof("Recovered %d external addrs at height=%d hash=%v",
+		log.Debugf("Recovered %d external addrs at height=%d hash=%v",
 			nFoundExternal, block.Height, block.Hash)
 	}
 
@@ -1125,14 +1177,14 @@ func logFilterBlocksResp(block wtxmgr.BlockMeta,
 		nFoundInternal += len(indexes)
 	}
 	if nFoundInternal > 0 {
-		log.Infof("Recovered %d internal addrs at height=%d hash=%v",
+		log.Debugf("Recovered %d internal addrs at height=%d hash=%v",
 			nFoundInternal, block.Height, block.Hash)
 	}
 
 	// Log the number of outpoints found in this block.
 	nFoundOutPoints := len(resp.FoundOutPoints)
 	if nFoundOutPoints > 0 {
-		log.Infof("Found %d spends from watched outpoints at "+
+		log.Debugf("Found %d spends from watched outpoints at "+
 			"height=%d hash=%v",
 			nFoundOutPoints, block.Height, block.Hash)
 	}
@@ -1450,7 +1502,7 @@ func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]*
 		// Get current block.  The block height used for calculating
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
-		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
+		return w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(_ []byte, output *wtxmgr.Credit) er.R {
 			if _, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams); err != nil {
 				return err
 			} else if len(addrs) > 0 {
@@ -1490,7 +1542,7 @@ func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balan
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
 
-		return w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
+		return w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(_ []byte, output *wtxmgr.Credit) er.R {
 			var outputAcct uint32
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(
 				output.PkScript, w.chainParams)
@@ -2905,7 +2957,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 }
 
 // ResyncChain re-synchronizes the wallet from the very first block
-func (w *Wallet) ResyncChain() er.R {
+func (w *Wallet) ResyncChain(dropDb bool) er.R {
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return err
@@ -2919,39 +2971,71 @@ func (w *Wallet) ResyncChain() er.R {
 		if err := w.Manager.SetSyncedTo(ns, &genesis); err != nil {
 			return err
 		}
-		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-		return wtxmgr.DropTransactionHistory(txNs)
+
+		if dropDb {
+			txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+			if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}); err != nil {
 		return err
 	}
 	return w.recovery(chainClient, &genesis)
 }
 
-func (w *Wallet) VacuumDb() er.R {
-	if chainClient, err := w.requireChainClient(); err != nil {
-		return err
+// zero duration means it will continue vacuuming until it is done, no matter how long.
+func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.VacuumDbRes, er.R) {
+	deadline := time.Now().Add(maxTime)
+	stats := btcjson.VacuumDbRes{}
+	if sk, errr := hex.DecodeString(startKey); errr != nil {
+		return nil, er.E(errr)
+	} else if chainClient, err := w.requireChainClient(); err != nil {
+		return nil, err
 	} else if bs, err := chainClient.BlockStamp(); err != nil {
-		return err
+		return nil, err
 	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-		if err := w.TxStore.ForEachUnspentOutput(txNs, func(output *wtxmgr.Credit) er.R {
-			if txrules.IsBurned(output, w.chainParams, bs.Height) {
-				log.Debugf("Removing transaction [%s] which has burned",
-					output.OutPoint.Hash.String())
-				err := wtxmgr.RollbackTransaction(txNs, &output.OutPoint.Hash, &output.Block)
-				if err != nil {
-					return err
-				}
+		var badOutputs []wtxmgr.Credit
+		i := 0
+		if err := w.TxStore.ForEachUnspentOutput(txNs, sk, func(k []byte, op *wtxmgr.Credit) er.R {
+			if maxTime > 0 && time.Now().After(deadline) {
+				stats.EndKey = hex.EncodeToString(k)
+				return er.LoopBreak
+			}
+			i++
+			if txrules.IsBurned(op, w.chainParams, bs.Height) {
+				log.Debugf("Removing tx [%s] which has burned",
+					op.OutPoint.Hash.String())
+				badOutputs = append(badOutputs, *op)
+				stats.Burned++
+				return nil
+			}
+			if op.Height < 0 {
+			} else if _, err := chainClient.GetBlockHeader(&op.Block.Hash); err != nil {
+				log.Debugf("Removing tx [%s] because it references orphan block [%s]",
+					op.OutPoint.Hash.String(), op.Block.Hash)
+				badOutputs = append(badOutputs, *op)
+				stats.Orphaned++
+				return nil
 			}
 			return nil
-		}); err != nil {
+		}); err != nil && !er.IsLoopBreak(err) {
 			return err
+		}
+		stats.VisitedUtxos = i
+		for _, op := range badOutputs {
+			if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
+				return err
+			}
 		}
 		return nil
 	}); err != nil {
-		return err
+		return &stats, err
 	}
-	return nil
+	return &stats, nil
 }
 
 // Open loads an already-created wallet from the passed database and namespaces.

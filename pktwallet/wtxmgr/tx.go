@@ -7,6 +7,7 @@ package wtxmgr
 
 import (
 	"bytes"
+	"encoding/hex"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -195,6 +196,18 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			continue
 		}
 
+		var prevPkScript []byte
+		{
+			k := extractRawCreditTxRecordKey(credKey)
+			v := existsRawTxRecord(ns, k)
+			prevPk, err := fetchRawTxRecordPkScript(k, v, spender.index)
+			if err != nil {
+				log.Warn("Error decoding address spent from")
+			} else {
+				prevPkScript = prevPk
+			}
+		}
+
 		// If this output is relevant to us, we'll mark the it as spent
 		// and remove its amount from the store.
 		spender.index = uint32(i)
@@ -211,6 +224,8 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 		if err := deleteRawUnspent(ns, unspentKey); err != nil {
 			return err
 		}
+		log.Info("Spent [%s] from address [%s] in tx [%s]",
+			amt.String(), hex.EncodeToString(prevPkScript), rec.Hash.String())
 
 		newMinedBalance -= amt
 	}
@@ -705,11 +720,22 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 
 // ForEachUnspentOutput runs the visitor over each unspent output (in undefined order)
 // Any error type other than wtxmgr.Err or er.LoopBreak will be wrapped as wtxmgr.ErrDatabase
-func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Credit) er.R) er.R {
-
+//
+// beginKey can be used to skip entries for pagination, however beware there is no guarantee
+// of never receiving duplicate entries in different pages. In particular, all unconfirmed
+// outputs will be received after the final confirmed output with no regard for what you specify
+// as the beginKey.
+func (s *Store) ForEachUnspentOutput(
+	ns walletdb.ReadBucket,
+	beginKey []byte,
+	visitor func(key []byte, c *Credit) er.R,
+) er.R {
 	var op wire.OutPoint
 	var block Block
-	if err := ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) er.R {
+	bu := ns.NestedReadBucket(bucketUnspent)
+	var lastKey []byte
+	if err := bu.ForEachBeginningWith(beginKey, func(k, v []byte) er.R {
+		lastKey = k
 		err := readCanonicalOutPoint(k, &op)
 		if err != nil {
 			return err
@@ -747,7 +773,7 @@ func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Cre
 			Received:     rec.Received,
 			FromCoinBase: blockchain.IsCoinBaseTx(&rec.MsgTx),
 		}
-		return visitor(&cred)
+		return visitor(k, &cred)
 	}); err != nil {
 		if er.IsLoopBreak(err) || Err.Is(err) {
 			return err
@@ -755,6 +781,10 @@ func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Cre
 		return storeError(ErrDatabase, "failed iterating unspent bucket", err)
 	}
 
+	// There's no easy way to do ForEachBeginningWith because these entries
+	// will appear out of order with the main unspents, but the amount of unconfirmed
+	// credits will tend to be small anyway so we might as well just send them all
+	// if the iterator gets to this stage.
 	if err := ns.NestedReadBucket(bucketUnminedCredits).ForEach(func(k, v []byte) er.R {
 		if existsRawUnminedInput(ns, k) != nil {
 			// Output is spent by an unmined transaction.
@@ -787,7 +817,9 @@ func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Cre
 			Received:     rec.Received,
 			FromCoinBase: blockchain.IsCoinBaseTx(&rec.MsgTx),
 		}
-		return visitor(&cred)
+		// Use the final key to come from the main search loop so that further calls
+		// will arrive here as quickly as possible.
+		return visitor(lastKey, &cred)
 	}); err != nil {
 		if er.IsLoopBreak(err) || Err.Is(err) {
 			return err
@@ -802,7 +834,7 @@ func (s *Store) ForEachUnspentOutput(ns walletdb.ReadBucket, visitor func(c *Cre
 // The order is undefined.
 func (s *Store) GetUnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
 	var unspent []Credit
-	err := s.ForEachUnspentOutput(ns, func(c *Credit) er.R {
+	err := s.ForEachUnspentOutput(ns, nil, func(_ []byte, c *Credit) er.R {
 		unspent = append(unspent, *c)
 		return nil
 	})

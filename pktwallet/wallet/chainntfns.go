@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -299,11 +300,7 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
-				// TODO: Credits should be added with the
-				// account they belong to, so wtxmgr is able to
-				// track per-account balances.
-				err = w.TxStore.AddCredit(txmgrNs, rec, block, uint32(i),
-					ma.Internal())
+				err = w.TxStore.AddCredit(txmgrNs, rec, block, uint32(i), ma.Internal())
 				if err != nil {
 					return err
 				}
@@ -311,7 +308,9 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 				if err != nil {
 					return err
 				}
-				log.Debugf("Marked address %v used", addr)
+				txOutAmt := btcutil.Amount(rec.MsgTx.TxOut[i].Value)
+				log.Infof("Got paid! [%s] --> [%s] in tx [%s]",
+					txOutAmt.String(), addr.String(), rec.Hash)
 				continue
 			}
 

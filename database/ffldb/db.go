@@ -772,6 +772,51 @@ func (b *bucket) Cursor() database.Cursor {
 	return c
 }
 
+// ForEachBeginningWith invokes the passed function with every key/value pair
+// in the bucket whose key is greater than or equal to the passed argument beginKey.
+// This does not include nested buckets or the key/value pairs within those
+// nested buckets.
+//
+// WARNING: It is not safe to mutate data while iterating with this method.
+// Doing so may cause the underlying cursor to be invalidated and return
+// unexpected keys and/or values.
+//
+// Returns the following errors as required by the interface contract:
+//   - ErrTxClosed if the transaction has already been closed
+//
+// NOTE: The values returned by this function are only valid during a
+// transaction.  Attempting to access them after a transaction has ended will
+// likely result in an access violation.
+//
+// This function is part of the database.Bucket interface implementation.
+func (b *bucket) ForEachBeginningWith(beginKey []byte, fn func(k, v []byte) er.R) er.R {
+	// Ensure transaction state is valid.
+	if err := b.tx.checkClosed(); err != nil {
+		return err
+	}
+
+	// Invoke the callback for each cursor item.  Return the error returned
+	// from the callback when it is non-nil.
+	c := newCursor(b, b.id[:], ctKeys)
+	defer cursorFinalizer(c)
+
+	var ok bool
+	if len(beginKey) > 0 {
+		// We don't really care if the key exists or not, if it doesn't
+		// then the caller will find out soon enough when
+		ok = c.Seek(beginKey)
+	} else {
+		ok = c.First()
+	}
+	for ; ok; ok = c.Next() {
+		if err := fn(c.Key(), c.Value()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ForEach invokes the passed function with every key/value pair in the bucket.
 // This does not include nested buckets or the key/value pairs within those
 // nested buckets.
@@ -789,23 +834,7 @@ func (b *bucket) Cursor() database.Cursor {
 //
 // This function is part of the database.Bucket interface implementation.
 func (b *bucket) ForEach(fn func(k, v []byte) er.R) er.R {
-	// Ensure transaction state is valid.
-	if err := b.tx.checkClosed(); err != nil {
-		return err
-	}
-
-	// Invoke the callback for each cursor item.  Return the error returned
-	// from the callback when it is non-nil.
-	c := newCursor(b, b.id[:], ctKeys)
-	defer cursorFinalizer(c)
-	for ok := c.First(); ok; ok = c.Next() {
-		err := fn(c.Key(), c.Value())
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return b.ForEachBeginningWith(nil, fn)
 }
 
 // ForEachBucket invokes the passed function with the key of every nested bucket

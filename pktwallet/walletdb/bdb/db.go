@@ -180,6 +180,27 @@ func (b *bucket) DeleteNestedBucket(key []byte) er.R {
 	return convertErr((*bbolt.Bucket)(b).DeleteBucket(key))
 }
 
+func (b *bucket) ForEachBeginningWith(beginKey []byte, fn func(k, v []byte) er.R) er.R {
+	bb := (*bbolt.Bucket)(b)
+	tx := bb.Tx()
+	if tx == nil || tx.DB() == nil {
+		return walletdb.ErrTxClosed.Default()
+	}
+	c := bb.Cursor()
+	var k, v []byte
+	if len(beginKey) > 0 {
+		k, v = c.Seek(beginKey)
+	} else {
+		k, v = c.First()
+	}
+	for ; k != nil; k, v = c.Next() {
+		if err := fn(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ForEach invokes the passed function with every key/value pair in the bucket.
 // This includes nested buckets, in which case the value is nil, but it does not
 // include the key/value pairs within those nested buckets.
@@ -190,9 +211,7 @@ func (b *bucket) DeleteNestedBucket(key []byte) er.R {
 //
 // This function is part of the walletdb.ReadBucket interface implementation.
 func (b *bucket) ForEach(fn func(k, v []byte) er.R) er.R {
-	return convertErr((*bbolt.Bucket)(b).ForEach(func(k, v []byte) error {
-		return er.Native(fn(k, v))
-	}))
+	return b.ForEachBeginningWith(nil, fn)
 }
 
 // Put saves the specified key/value pair to the bucket.  Keys that do not

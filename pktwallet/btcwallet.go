@@ -13,7 +13,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"time"
 
+	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/neutrino"
@@ -34,6 +36,47 @@ func main() {
 	// Work around defer not working after os.Exit.
 	if err := walletMain(); err != nil {
 		os.Exit(1)
+	}
+}
+
+func goAutoVacuum(cfg *config, w *wallet.Wallet) {
+	for {
+		// Don't try to vacuum until the chain connection comes up
+		if w.ChainClient() != nil {
+			break
+		}
+		time.Sleep(time.Duration(1) * time.Second)
+	}
+	for {
+		w.UpdateStats(func(ws *btcjson.WalletStats) {
+			ws.AutoVacuuming = true
+		})
+		startKey := ""
+		totals := btcjson.VacuumDbRes{}
+		for {
+			res, err := w.VacuumDb(startKey,
+				time.Duration(cfg.AutoVacuumMs)*time.Millisecond)
+			if err != nil {
+				log.Warnf("Error while vacuuming database [%s]", err.Message())
+				break
+			}
+			totals.Burned += res.Burned
+			totals.Orphaned += res.Orphaned
+			totals.VisitedUtxos += res.VisitedUtxos
+			startKey = res.EndKey
+			if startKey == "" {
+				// completed a vacuum cycle
+				break
+			}
+			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
+		}
+		log.Debugf("Autovacuum complete [%d] burned [%d] orphaned [%d] visited utxos",
+			totals.Burned, totals.Orphaned, totals.VisitedUtxos)
+		w.UpdateStats(func(ws *btcjson.WalletStats) {
+			ws.AutoVacuuming = false
+			ws.TimeOfLastAutoVacuum = time.Now()
+		})
+		time.Sleep(time.Duration(cfg.AutoVacuumSleepSec) * time.Second)
 	}
 }
 
@@ -91,6 +134,10 @@ func walletMain() er.R {
 	loader.RunAfterLoad(func(w *wallet.Wallet) {
 		startWalletRPCServices(w, rpcs, legacyRPCServer)
 	})
+
+	if cfg.AutoVacuum {
+		loader.RunAfterLoad(func(w *wallet.Wallet) { go goAutoVacuum(cfg, w) })
+	}
 
 	if !cfg.NoInitialLoad {
 		// Load the wallet database.  It must have been created already

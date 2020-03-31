@@ -383,7 +383,7 @@ func (w *Wallet) findEligibleOutputs(
 	haveAmounts := make(map[string]*amountCount)
 	var winner *amountCount
 
-	if err := w.TxStore.ForEachUnspentOutput(txmgrNs, func(output *wtxmgr.Credit) er.R {
+	if err := w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(_ []byte, output *wtxmgr.Credit) er.R {
 
 		// Verify that the output is coming from one of the addresses which we accept to spend from
 		// This is inherently expensive to filter at this level and ideally it would be moved into

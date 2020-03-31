@@ -74,6 +74,19 @@ type NeutrinoInfo struct {
 	Bans  []NeutrinoBan
 }
 
+type WalletStats struct {
+	AutoVacuuming        bool
+	TimeOfLastAutoVacuum time.Time
+
+	// If we're currently in a resync
+	Syncing           bool
+	SyncStarted       *time.Time
+	SyncRemainingTime *time.Duration
+	SyncCurrentBlock  int32
+	SyncFrom          int32
+	SyncTo            int32
+}
+
 type WalletInfoResult struct {
 	CurrentBlockHash      string
 	CurrentHeight         int32
@@ -83,6 +96,7 @@ type WalletInfoResult struct {
 	Balance               float64
 	Sbalance              string
 	WalletVersion         int32
+	WalletStats           *WalletStats
 
 	RPCInfo      *InfoWalletResult
 	NeutrinoInfo *NeutrinoInfo
@@ -198,4 +212,11 @@ type GetAddressBalancesResult struct {
 	Total          float64 `json:"total"`
 	Spendable      float64 `json:"spendable"`
 	ImmatureReward float64 `json:"immaturereward"`
+}
+
+type VacuumDbRes struct {
+	Burned       int
+	Orphaned     int
+	VisitedUtxos int
+	EndKey       string
 }

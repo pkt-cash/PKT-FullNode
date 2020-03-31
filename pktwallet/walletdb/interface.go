@@ -69,6 +69,7 @@ type ReadBucket interface {
 	// results in undefined behavior.  This constraint prevents additional
 	// data copies and allows support for memory-mapped database
 	// implementations.
+	ForEachBeginningWith([]byte, func(k, v []byte) er.R) er.R
 	ForEach(func(k, v []byte) er.R) er.R
 
 	// Get returns the value for the given key.  Returns nil if the key does
