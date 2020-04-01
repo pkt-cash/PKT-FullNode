@@ -44,7 +44,7 @@ import (
 	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/mining/cpuminer"
 	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/pktconfig"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
@@ -333,7 +333,7 @@ func handleUnimplemented(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 func handleAskWallet(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	return nil, btcjson.NewRPCError(
 		btcjson.ErrRPCNoWallet,
-		"This implementation does not implement wallet commands",
+		"This RPC requires --wallet",
 		nil,
 	)
 }
@@ -2431,9 +2431,9 @@ func handleGetInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (in
 	best := s.cfg.Chain.BestSnapshot()
 	ret := &btcjson.InfoChainResult{
 		Version: int32(
-			1000000*pktconfig.AppMajorVersion +
-				10000*pktconfig.AppMinorVersion +
-				100*pktconfig.AppPatchVersion),
+			1000000*version.AppMajorVersion +
+				10000*version.AppMinorVersion +
+				100*version.AppPatchVersion),
 		ProtocolVersion: int32(maxProtocolVersion),
 		Blocks:          best.Height,
 		TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),

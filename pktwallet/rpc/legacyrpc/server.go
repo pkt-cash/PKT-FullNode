@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktconfig"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 
 	"github.com/btcsuite/websocket"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -127,7 +127,7 @@ func NewServer(opts *Options, walletLoader *wallet.Loader, listeners []net.Liste
 				return
 			}
 			if r.Header.Get("User-Agent") == "Go-http-client/1.1" {
-				if r.Header.Get("X-Pkt-RPC-Version") != fmt.Sprintf("%d", pktconfig.AppMajorVersion) {
+				if r.Header.Get("X-Pkt-RPC-Version") != fmt.Sprintf("%d", version.AppMajorVersion) {
 					http.Error(w, "Wrong RPC version, please upgrade btcctl", http.StatusBadRequest)
 					return
 				}

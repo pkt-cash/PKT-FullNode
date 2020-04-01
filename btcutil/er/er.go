@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"runtime/debug"
 	"strings"
+
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 // GenericErrorType is for packages with only one or two error codes
@@ -55,7 +58,7 @@ func (c *ErrorCode) Is(err R) bool {
 	return false
 }
 
-func (c *ErrorCode) New(info string, err R) R {
+func (c *ErrorCode) new(info string, err R, bstack []byte) R {
 	var messages []string
 	if info == "" {
 		messages = []string{c.Detail}
@@ -63,7 +66,10 @@ func (c *ErrorCode) New(info string, err R) R {
 		messages = []string{c.Detail, info}
 	}
 	if err == nil {
-		err = New("")
+		if bstack == nil {
+			bstack = captureStack()
+		}
+		err = new("", bstack)
 	} else if te, ok := err.(typedErr); ok {
 		if te.code == c {
 			if info != "" {
@@ -77,6 +83,14 @@ func (c *ErrorCode) New(info string, err R) R {
 		errType:  c.Type,
 		code:     c,
 		err:      err,
+	}
+}
+
+func (c *ErrorCode) New(info string, err R) R {
+	if err == nil {
+		return c.new(info, nil, captureStack())
+	} else {
+		return c.new(info, err, nil)
 	}
 }
 
@@ -130,7 +144,7 @@ func (e *ErrorType) newErrorCode(
 }
 
 func (c *ErrorCode) Default() R {
-	return c.New("", nil)
+	return c.new("", nil, captureStack())
 }
 
 func (e *ErrorType) Code(info string) *ErrorCode {
@@ -174,10 +188,11 @@ func (te typedErr) Stack() []string {
 }
 
 func (te typedErr) String() string {
+	s := ""
 	if te.err.HasStack() {
-		return fmt.Sprintf("%s\n%s", te.Message(), strings.Join(te.err.Stack(), "\n"))
+		s = "\n\n" + strings.Join(te.err.Stack(), "\n") + "\n"
 	}
-	return te.Message()
+	return version.Version() + " " + te.Message() + s
 }
 
 func (te typedErr) Wrapped0() error {
@@ -229,9 +244,33 @@ func (e err) HasStack() bool {
 	return e.bstack != nil
 }
 
+var argumentsRegex = regexp.MustCompile(`\([0-9a-fx, \.]*\)$`)
+var prefixRegex = regexp.MustCompile(`^.*/pkt-cash/pktd/`)
+var goFileRegex = regexp.MustCompile(`\.go:[0-9]+ `)
+
 func (e err) Stack() []string {
 	if e.stack == nil {
-		e.stack = strings.Split(string(e.bstack), "\n")
+		s := strings.Split(string(e.bstack), "\n")
+		// First 5 lines are noise
+		// goroutine 1 [running]:
+		// runtime/debug.Stack(0x10df124, 0xc00007cf70, 0xc0000180c0)
+		//         /usr/local/go/src/runtime/debug/stack.go:24 +0x9d
+		// github.com/pkt-cash/pktd/btcutil/er.captureStack(...)
+		//         /Users/user/wrk/pkt-cash/pktd/btcutil/er/er.go:283
+		s = s[5:]
+		var stack []string
+		fun := ""
+		for i := range s {
+			x := argumentsRegex.ReplaceAllString(s[i], "()")
+			x = prefixRegex.ReplaceAllString(x, "")
+			x = "  " + strings.TrimSpace(x)
+			if !goFileRegex.MatchString(x) {
+				fun = x
+			} else {
+				stack = append(stack, x+"\t"+fun)
+			}
+		}
+		e.stack = stack
 	}
 	return e.stack
 }
@@ -252,10 +291,11 @@ func (e err) Message() string {
 }
 
 func (e err) String() string {
+	s := ""
 	if e.bstack != nil {
-		return fmt.Sprintf("%s\n%s", e.Message(), strings.Join(e.Stack(), "\n"))
+		s = "\n\n" + strings.Join(e.Stack(), "\n") + "\n"
 	}
-	return e.Message()
+	return version.Version() + " " + e.Message() + s
 }
 
 func (e err) Wrapped0() error {
@@ -286,11 +326,15 @@ func Native(err R) error {
 	return err.Native()
 }
 
-func New(s string) R {
+func new(s string, bstack []byte) R {
 	return err{
 		e:      errors.New(s),
-		bstack: captureStack(),
+		bstack: bstack,
 	}
+}
+
+func New(s string) R {
+	return new(s, captureStack())
 }
 
 func Errorf(format string, a ...interface{}) R {

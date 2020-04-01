@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 const (
@@ -47,6 +48,7 @@ func usage(errorMessage string) {
 }
 
 func main() {
+	version.SetUserAgentName("btcctl")
 	cfg, args, err := loadConfig()
 	if err != nil {
 		os.Exit(1)
@@ -143,8 +145,13 @@ func main() {
 
 	if result.Error != nil {
 		fmt.Fprintln(os.Stderr, result.Error.Message)
-		for _, line := range result.Error.Stack {
-			fmt.Fprintln(os.Stderr, line)
+		if strings.Contains(result.Error.Message, "ErrWrongPassphrase") {
+		} else if strings.Contains(result.Error.Message, "ErrRPCNoWallet") {
+		} else {
+			fmt.Fprintln(os.Stderr, "")
+			for _, line := range result.Error.Stack {
+				fmt.Fprintln(os.Stderr, line)
+			}
 		}
 		return
 	}

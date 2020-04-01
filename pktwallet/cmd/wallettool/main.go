@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
@@ -34,6 +35,7 @@ var opts = struct {
 }
 
 func main() {
+	version.SetUserAgentName("wallettool")
 	os.Exit(mainInt())
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
@@ -64,6 +65,7 @@ func no(s string) bool {
 }
 
 func main() {
+	version.SetUserAgentName("dropwtxmgr")
 	os.Exit(mainInt())
 }
 

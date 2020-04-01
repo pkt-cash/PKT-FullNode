@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	version.SetUserAgentName("genprecomps")
 	fi, err := os.Create("secp256k1.go")
 	if err != nil {
 		log.Fatal(err)

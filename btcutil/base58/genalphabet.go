@@ -50,6 +50,7 @@ func write(w io.Writer, b []byte) {
 }
 
 func main() {
+	version.SetUserAgentName("genalphabet")
 	fi, err := os.Create("alphabet.go")
 	if err != nil {
 		log.Fatal(err)

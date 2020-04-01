@@ -81,7 +81,7 @@ func (w *Wallet) handleChainNotifications() {
 		if err != nil {
 			err.AddMessage(fmt.Sprintf("Failed to update address manager "+
 				"sync state for height %d", height))
-			log.Errorf(err.Message())
+			log.Errorf(err.String())
 		}
 
 		log.Info("Done catching up block hashes")
@@ -112,13 +112,13 @@ func (w *Wallet) handleChainNotifications() {
 				)
 				if err != nil && !waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
 					err.AddMessage("Unable to sanity check wallet birthday block")
-					panic(err.Message())
+					panic(err.String())
 				}
 
 				err = w.syncWithChain(birthdayBlock)
 				if err != nil && !w.ShuttingDown() {
 					err.AddMessage("Unable to synchronize wallet to chain")
-					panic(err.Message())
+					panic(err.String())
 				}
 			case chain.BlockConnected:
 				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
@@ -191,7 +191,7 @@ func (w *Wallet) handleChainNotifications() {
 
 				err.AddMessage(fmt.Sprintf("Unable to process chain backend "+
 					"%v notification", notificationName))
-				log.Errorf(err.Message())
+				log.Errorf(err.String())
 			}
 		case <-w.quit:
 			return

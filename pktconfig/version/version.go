@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package version
 
 import (
 	"bytes"
@@ -16,13 +16,23 @@ const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 // These constants define the application version and follow the semantic
 // versioning 2.0.0 spec (http://semver.org/).
 const (
-	appMajor uint = 0
-	appMinor uint = 7
-	appPatch uint = 0
+	AppMajorVersion uint = 1
+	AppMinorVersion uint = 0
+	AppPatchVersion uint = 0
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
 	// per the semantic versioning spec.
-	appPreRelease = "alpha"
+	appPreRelease = "beta"
+)
+
+var (
+	// userAgentName is the user agent name and is used to help identify
+	// ourselves to other bitcoin peers.
+	userAgentName = "unknown"
+
+	// userAgentVersion is the user agent version and is used to help
+	// identify ourselves to other bitcoin peers.
+	userAgentVersion = fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -30,11 +40,19 @@ const (
 // contain characters from semanticAlphabet per the semantic versioning spec.
 var appBuild string
 
+func SetUserAgentName(ua string) {
+	if userAgentName != "unknown" {
+		panic("setting useragent to [" + ua +
+			"] failed, useragent was already set to [" + userAgentName + "]")
+	}
+	userAgentName = ua
+}
+
 // version returns the application version as a properly formed string per the
 // semantic versioning 2.0.0 spec (http://semver.org/).
-func version() string {
-	// Start with the major, minor, and path versions.
-	version := fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
+func Version() string {
+	// Start with the major, minor, and patch versions.
+	version := fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
 
 	// Append pre-release version if there is one.  The hyphen called for
 	// by the semantic versioning spec is automatically appended and should
@@ -49,12 +67,20 @@ func version() string {
 	// by the semantic versioning spec is automatically appended and should
 	// not be contained in the build metadata string.  The build metadata
 	// string is not appended if it contains invalid characters.
-	build := normalizeVerString(appBuild)
-	if build != "" {
-		version = fmt.Sprintf("%s+%s", version, build)
+	//build := normalizeVerString(appBuild)
+	if appBuild != "" {
+		version = fmt.Sprintf("%s+%s", version, appBuild)
 	}
 
 	return version
+}
+
+func UserAgentName() string {
+	return userAgentName
+}
+
+func UserAgentVersion() string {
+	return userAgentVersion
 }
 
 // normalizeVerString returns the passed string stripped of all characters which
@@ -62,15 +88,10 @@ func version() string {
 // version and build metadata strings.  In particular they MUST only contain
 // characters in semanticAlphabet.
 func normalizeVerString(str string) string {
-	result := bytes.Buffer{}
+	var result bytes.Buffer
 	for _, r := range str {
 		if strings.ContainsRune(semanticAlphabet, r) {
-			_, err := result.WriteRune(r)
-			// Writing to a bytes.Buffer panics on OOM, and all
-			// errors are unexpected.
-			if err != nil {
-				panic(err)
-			}
+			result.WriteRune(r)
 		}
 	}
 	return result.String()

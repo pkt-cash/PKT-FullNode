@@ -17,6 +17,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -30,6 +31,8 @@ var (
 )
 
 func main() {
+	version.SetUserAgentName("pktwallet")
+
 	// Use all processor cores.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -57,7 +60,7 @@ func goAutoVacuum(cfg *config, w *wallet.Wallet) {
 			res, err := w.VacuumDb(startKey,
 				time.Duration(cfg.AutoVacuumMs)*time.Millisecond)
 			if err != nil {
-				log.Warnf("Error while vacuuming database [%s]", err.Message())
+				log.Warnf("Error while vacuuming database [%s]", err.String())
 				break
 			}
 			totals.Burned += res.Burned
@@ -100,7 +103,7 @@ func walletMain() er.R {
 	}()
 
 	// Show version at startup.
-	log.Infof("Version %s", version())
+	log.Infof("Version %s", version.Version())
 
 	if cfg.Profile != "" {
 		go func() {

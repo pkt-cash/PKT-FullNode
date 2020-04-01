@@ -37,7 +37,7 @@ import (
 	"github.com/pkt-cash/pktd/mining/cpuminer"
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/pktconfig"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -1984,8 +1984,8 @@ func newPeerConfig(sp *serverPeer) *peer.Config {
 		NewestBlock:       sp.newestBlock,
 		HostToNetAddress:  sp.server.addrManager.HostToNetAddress,
 		Proxy:             cfg.Proxy,
-		UserAgentName:     pktconfig.UserAgentName(),
-		UserAgentVersion:  pktconfig.UserAgentVersion(),
+		UserAgentName:     version.UserAgentName(),
+		UserAgentVersion:  version.UserAgentVersion(),
 		UserAgentComments: cfg.UserAgentComments,
 		ChainParams:       sp.server.chainParams,
 		Services:          sp.server.services,

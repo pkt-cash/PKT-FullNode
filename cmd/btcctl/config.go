@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -220,7 +221,7 @@ func loadConfig() (*config, []string, er.R) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show options", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", pktconfig.Version())
+		fmt.Println(appName, "version", version.Version())
 		os.Exit(0)
 	}
 

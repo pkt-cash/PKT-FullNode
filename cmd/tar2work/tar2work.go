@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 func usage() {
@@ -13,6 +14,7 @@ func usage() {
 }
 
 func main() {
+	version.SetUserAgentName("tar2work")
 	if len(os.Args) < 2 {
 		usage()
 		return

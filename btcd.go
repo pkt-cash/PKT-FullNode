@@ -19,7 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
-	"github.com/pkt-cash/pktd/pktconfig"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 const (
@@ -63,7 +63,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 	defer pktdLog.Info("Shutdown complete")
 
 	// Show version at startup.
-	pktdLog.Infof("Version %s", pktconfig.Version())
+	pktdLog.Infof("Version %s", version.Version())
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
@@ -297,6 +297,8 @@ func loadBlockDB() (database.DB, er.R) {
 }
 
 func main() {
+	version.SetUserAgentName("pktd")
+
 	// Use all processor cores.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 

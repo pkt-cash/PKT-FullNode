@@ -14,6 +14,7 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 type config struct {
@@ -25,6 +26,7 @@ type config struct {
 }
 
 func main() {
+	version.SetUserAgentName("gencerts")
 	cfg := config{
 		Years:        10,
 		Organization: "gencerts",
