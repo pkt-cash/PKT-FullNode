@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -398,10 +397,6 @@ func getBlockCount(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 // information about the current state of pktwallet.
 // exist.
 func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (interface{}, er.R) {
-	bal, err := w.CalculateBalance(1)
-	if err != nil {
-		return nil, err
-	}
 	bs, err := chainClient.BlockStamp()
 	if err != nil {
 		return nil, err
@@ -418,8 +413,6 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		CurrentBlockTimestamp: bs.Timestamp,
 		IsSyncing:             !chainClient.IsCurrent(),
 		Backend:               chainClient.BackEnd(),
-		Balance:               bal.ToBTC(),
-		Sbalance:              strconv.FormatInt(int64(bal), 10),
 		WalletVersion:         int32(waddrmgr.LatestMgrVersion),
 		WalletStats:           &walletStats,
 	}

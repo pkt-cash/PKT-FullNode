@@ -79,12 +79,15 @@ type WalletStats struct {
 	TimeOfLastAutoVacuum time.Time
 
 	// If we're currently in a resync
-	Syncing           bool
-	SyncStarted       *time.Time
-	SyncRemainingTime *time.Duration
-	SyncCurrentBlock  int32
-	SyncFrom          int32
-	SyncTo            int32
+	Syncing              bool
+	SyncStarted          *time.Time
+	SyncRemainingSeconds int64
+	SyncCurrentBlock     int32
+	SyncFrom             int32
+	SyncTo               int32
+
+	// General info
+	BirthdayBlock int32
 }
 
 type WalletInfoResult struct {
@@ -93,8 +96,6 @@ type WalletInfoResult struct {
 	CurrentBlockTimestamp time.Time
 	IsSyncing             bool
 	Backend               string
-	Balance               float64
-	Sbalance              string
 	WalletVersion         int32
 	WalletStats           *WalletStats
 

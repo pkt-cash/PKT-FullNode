@@ -224,8 +224,8 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 		if err := deleteRawUnspent(ns, unspentKey); err != nil {
 			return err
 		}
-		log.Info("Spent [%s] from address [%s] in tx [%s]",
-			amt.String(), hex.EncodeToString(prevPkScript), rec.Hash.String())
+		log.Info("Spent [%s] from address [%s] in tx [%s] height [%d]",
+			amt.String(), hex.EncodeToString(prevPkScript), rec.Hash.String(), block.Height)
 
 		newMinedBalance -= amt
 	}

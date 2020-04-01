@@ -50,7 +50,7 @@ const (
 	// recoveryBatchSize is the default number of blocks that will be
 	// scanned successively by the recovery manager, in the event that the
 	// wallet is started in recovery mode.
-	recoveryBatchSize = 2000
+	recoveryBatchSize = 200
 )
 
 var (
@@ -409,6 +409,10 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 		}
 	}
 
+	w.UpdateStats(func(ws *btcjson.WalletStats) {
+		ws.BirthdayBlock = birthdayStamp.Height
+	})
+
 	// If the wallet requested an on-chain recovery of its funds, we'll do
 	// so now.
 	if w.recoveryWindow > 0 {
@@ -639,27 +643,6 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 		return err
 	}
 
-	log.Infof("Rescanning for used addresses from [%d] to [%d] ([%d] blocks)",
-		birthdayBlock.Height, bestHeight, bestHeight-birthdayBlock.Height)
-
-	startTime := time.Now()
-	w.UpdateStats(func(ws *btcjson.WalletStats) {
-		ws.Syncing = true
-		ws.SyncStarted = &startTime
-		ws.SyncCurrentBlock = birthdayBlock.Height
-		ws.SyncFrom = birthdayBlock.Height
-		ws.SyncTo = bestHeight
-		ws.SyncRemainingTime = nil
-	})
-	defer w.UpdateStats(func(ws *btcjson.WalletStats) {
-		ws.Syncing = false
-		ws.SyncStarted = nil
-		ws.SyncCurrentBlock = -1
-		ws.SyncFrom = -1
-		ws.SyncTo = -1
-		ws.SyncRemainingTime = nil
-	})
-
 	// We'll initialize the recovery manager with a default batch size of
 	// 2000.
 	recoveryMgr := NewRecoveryManager(
@@ -697,6 +680,28 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 	// will be of bestHeight after completing the recovery process.
 	var blocks []*waddrmgr.BlockStamp
 	startHeight := w.Manager.SyncedTo().Height + 1
+
+	log.Infof("Rescanning for used addresses from [%d] to [%d] ([%d] blocks)",
+		startHeight, bestHeight, bestHeight-startHeight)
+
+	startTime := time.Now()
+	w.UpdateStats(func(ws *btcjson.WalletStats) {
+		ws.Syncing = true
+		ws.SyncStarted = &startTime
+		ws.SyncCurrentBlock = startHeight
+		ws.SyncFrom = startHeight
+		ws.SyncTo = bestHeight
+		ws.SyncRemainingSeconds = -1
+	})
+	defer w.UpdateStats(func(ws *btcjson.WalletStats) {
+		ws.Syncing = false
+		ws.SyncStarted = nil
+		ws.SyncCurrentBlock = -1
+		ws.SyncFrom = -1
+		ws.SyncTo = -1
+		ws.SyncRemainingSeconds = -1
+	})
+
 	for height := startHeight; height <= bestHeight; height++ {
 		hash, err := chainClient.GetBlockHash(int64(height))
 		if err != nil {
@@ -753,7 +758,7 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 					blocksToGo := ws.SyncTo - height
 					timePerBlock := timeSpent / time.Duration(blocksSynced)
 					timeToGo = timePerBlock * time.Duration(blocksToGo)
-					ws.SyncRemainingTime = &timeToGo
+					ws.SyncRemainingSeconds = int64(timeToGo.Seconds())
 				}
 				ws.SyncCurrentBlock = height
 			})
