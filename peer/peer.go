@@ -464,10 +464,10 @@ type Peer struct {
 	timeConnected      time.Time
 	startingHeight     int32
 	lastBlock          int32
-	lastAnnouncedBlock *chainhash.Hash
-	lastPingNonce      uint64    // Set to nonce if we have a pending ping.
-	lastPingTime       time.Time // Time we sent last ping.
-	lastPingMicros     int64     // Time for last ping to return.
+	lastAnnouncedBlock *chainhash.Hash `json:"-"`
+	lastPingNonce      uint64          // Set to nonce if we have a pending ping.
+	lastPingTime       time.Time       // Time we sent last ping.
+	lastPingMicros     int64           // Time for last ping to return.
 
 	stallControl  chan stallControlMsg
 	outputQueue   chan outMsg
