@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 var (

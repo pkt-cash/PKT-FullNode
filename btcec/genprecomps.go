@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 func main() {
