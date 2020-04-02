@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 // RPCErrorCode represents an error code to be used as a part of an RPCError
@@ -120,7 +121,7 @@ func SerializeError(err er.R) *RPCErr {
 	}
 	return &RPCErr{
 		Code:    codeNum,
-		Message: err.Message(),
+		Message: version.Version() + " " + err.Message(),
 		Stack:   st,
 	}
 

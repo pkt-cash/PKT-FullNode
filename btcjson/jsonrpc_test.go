@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 // TestIsValidIDType ensures the IsValidIDType function behaves as expected.
@@ -77,7 +78,8 @@ func TestMarshalResponse(t *testing.T) {
 			jsonErr: func() er.R {
 				return btcjson.NewRPCError(btcjson.ErrRPCBlockNotFound, "123 not found", nil)
 			}(),
-			expected: []byte(`{"result":null,"error":{"code":-5,"message":"ErrRPCBlockNotFound(-5):`),
+			expected: []byte(`{"result":null,"error":{"code":-5,"message":"` +
+				version.Version() + ` ErrRPCBlockNotFound(-5):`),
 		},
 	}
 
