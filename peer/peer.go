@@ -427,7 +427,7 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
-	conn net.Conn `json:"-"`
+	conn net.Conn
 
 	// These fields are set at creation time and never modified, so they are
 	// safe to read from concurrently without a mutex.
@@ -435,7 +435,7 @@ type Peer struct {
 	cfg     Config
 	inbound bool
 
-	flagsMtx             sync.Mutex `json:"-"` // protects the peer flags below
+	flagsMtx             sync.Mutex // protects the peer flags below
 	na                   *wire.NetAddress
 	id                   int32
 	userAgent            string
@@ -450,24 +450,24 @@ type Peer struct {
 	wireEncoding wire.MessageEncoding
 
 	knownInventory     *mruInventoryMap
-	prevGetBlocksMtx   sync.Mutex `json:"-"`
+	prevGetBlocksMtx   sync.Mutex
 	prevGetBlocksBegin *chainhash.Hash
 	prevGetBlocksStop  *chainhash.Hash
-	prevGetHdrsMtx     sync.Mutex `json:"-"`
+	prevGetHdrsMtx     sync.Mutex
 	prevGetHdrsBegin   *chainhash.Hash
 	prevGetHdrsStop    *chainhash.Hash
 
 	// These fields keep track of statistics for the peer and are protected
 	// by the statsMtx mutex.
-	statsMtx           sync.RWMutex `json:"-"`
+	statsMtx           sync.RWMutex
 	timeOffset         int64
 	timeConnected      time.Time
 	startingHeight     int32
 	lastBlock          int32
-	lastAnnouncedBlock *chainhash.Hash `json:"-"`
-	lastPingNonce      uint64          // Set to nonce if we have a pending ping.
-	lastPingTime       time.Time       // Time we sent last ping.
-	lastPingMicros     int64           // Time for last ping to return.
+	lastAnnouncedBlock *chainhash.Hash
+	lastPingNonce      uint64    // Set to nonce if we have a pending ping.
+	lastPingTime       time.Time // Time we sent last ping.
+	lastPingMicros     int64     // Time for last ping to return.
 
 	stallControl  chan stallControlMsg
 	outputQueue   chan outMsg
@@ -509,10 +509,10 @@ type PeerDesc struct {
 	TimeConnected      time.Time
 	StartingHeight     int32
 	LastBlock          int32
-	LastAnnouncedBlock *chainhash.Hash
-	LastPingNonce      uint64    // Set to nonce if we have a pending ping.
-	LastPingTime       time.Time // Time we sent last ping.
-	LastPingMicros     int64     // Time for last ping to return.
+	LastAnnouncedBlock *chainhash.Hash `json:"-"`
+	LastPingNonce      uint64          // Set to nonce if we have a pending ping.
+	LastPingTime       time.Time       // Time we sent last ping.
+	LastPingMicros     int64           // Time for last ping to return.
 }
 
 func (p *Peer) Describe() PeerDesc {
