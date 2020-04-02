@@ -1499,7 +1499,10 @@ type Balances struct {
 	ImmatureReward btcutil.Amount
 }
 
-func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]*Balances, er.R) {
+func (w *Wallet) CalculateAddressBalances(
+	confirms int32,
+	showZeroBalances bool,
+) (map[btcutil.Address]*Balances, er.R) {
 	bals := make(map[btcutil.Address]*Balances)
 	bals0 := make(map[string]*Balances)
 	return bals, walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
@@ -1507,6 +1510,18 @@ func (w *Wallet) CalculateAddressBalances(confirms int32) (map[btcutil.Address]*
 		// Get current block.  The block height used for calculating
 		// the number of tx confirmations.
 		syncBlock := w.Manager.SyncedTo()
+		if showZeroBalances {
+			addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+			if err := w.Manager.ForEachActiveAddress(addrmgrNs, func(addr btcutil.Address) er.R {
+				_bal := Balances{}
+				bal := &_bal
+				bals0[string(addr.ScriptAddress())] = bal
+				bals[addr] = bal
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
 		return w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(_ []byte, output *wtxmgr.Credit) er.R {
 			if _, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams); err != nil {
 				return err

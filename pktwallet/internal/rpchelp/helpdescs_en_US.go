@@ -36,6 +36,7 @@ var helpDescsEnUS = map[string]string{
 	// GetAddressBalancesCmd help.
 	"getaddressbalances--synopsis":            "Get balances for each address",
 	"getaddressbalances-minconf":              "Minimum number of confirmations for coins to be considered received",
+	"getaddressbalances-showzerobalance":      "If true then addresses which have been created but carry zero balance will be included",
 	"getaddressbalancesresult-immaturereward": "Mined coins which have not yet matured",
 	"getaddressbalancesresult-spendable":      "Balance which is currently spendable",
 	"getaddressbalancesresult-total":          "Total balance",

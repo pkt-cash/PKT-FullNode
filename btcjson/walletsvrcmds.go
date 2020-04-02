@@ -62,7 +62,8 @@ func NewDumpPrivKeyCmd(address string) *DumpPrivKeyCmd {
 
 // GetAddressBalances defines the getaddressbalances JSON-RPC command.
 type GetAddressBalancesCmd struct {
-	MinConf *int `jsonrpcdefault:"1"`
+	MinConf         *int `jsonrpcdefault:"1"`
+	ShowZeroBalance *bool
 }
 
 type ResyncCmd struct {

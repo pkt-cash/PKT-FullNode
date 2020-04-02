@@ -340,7 +340,8 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 
 func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetAddressBalancesCmd)
-	if bals, err := w.CalculateAddressBalances(int32(*cmd.MinConf)); err != nil {
+	szb := cmd.ShowZeroBalance != nil && *cmd.ShowZeroBalance == true
+	if bals, err := w.CalculateAddressBalances(int32(*cmd.MinConf), szb); err != nil {
 		return nil, err
 	} else {
 		results := make([]btcjson.GetAddressBalancesResult, 0, len(bals))
