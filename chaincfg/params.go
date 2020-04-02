@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
@@ -114,7 +115,7 @@ type Params struct {
 	Name string
 
 	// Net defines the magic bytes used to identify the network.
-	Net wire.BitcoinNet
+	Net protocol.BitcoinNet
 
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string
@@ -233,7 +234,7 @@ type Params struct {
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
 	Name:        "mainnet",
-	Net:         wire.MainNet,
+	Net:         protocol.MainNet,
 	DefaultPort: "8333",
 	DNSSeeds: []DNSSeed{
 		{"seed.bitcoin.sipa.be", true},
@@ -343,7 +344,7 @@ var MainNetParams = Params{
 // 3), this network is sometimes simply called "testnet".
 var RegressionNetParams = Params{
 	Name:        "regtest",
-	Net:         wire.TestNet,
+	Net:         protocol.TestNet,
 	DefaultPort: "18444",
 	DNSSeeds:    []DNSSeed{},
 
@@ -418,7 +419,7 @@ var RegressionNetParams = Params{
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
 	Name:        "testnet3",
-	Net:         wire.TestNet3,
+	Net:         protocol.TestNet3,
 	DefaultPort: "18333",
 	DNSSeeds: []DNSSeed{
 		{"testnet-seed.bitcoin.jonasschnelli.ch", true},
@@ -515,7 +516,7 @@ var TestNet3Params = Params{
 // network is sometimes simply called "testnet".
 var PktTestNetParams = Params{
 	Name:        "pkttest",
-	Net:         wire.PktTestNet,
+	Net:         protocol.PktTestNet,
 	DefaultPort: "64512",
 	DNSSeeds: []DNSSeed{
 		{"testseed.cjd.li", false},
@@ -599,7 +600,7 @@ var PktTestNetParams = Params{
 // PktMainNetParams defines the network parameters for the pkt.cash network.
 var PktMainNetParams = Params{
 	Name:        "pkt",
-	Net:         wire.PktMainNet,
+	Net:         protocol.PktMainNet,
 	DefaultPort: "64764",
 	DNSSeeds: []DNSSeed{
 		{"seed.cjd.li", false},
@@ -701,7 +702,7 @@ var PktMainNetParams = Params{
 // just turn into another public testnet.
 var SimNetParams = Params{
 	Name:        "simnet",
-	Net:         wire.SimNet,
+	Net:         protocol.SimNet,
 	DefaultPort: "18555",
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
@@ -788,7 +789,7 @@ var (
 )
 
 var (
-	registeredNets       = make(map[wire.BitcoinNet]struct{})
+	registeredNets       = make(map[protocol.BitcoinNet]struct{})
 	pubKeyHashAddrIDs    = make(map[byte]struct{})
 	scriptHashAddrIDs    = make(map[byte]struct{})
 	bech32SegwitPrefixes = make(map[string]struct{})

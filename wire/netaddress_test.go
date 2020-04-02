@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -37,24 +38,24 @@ func TestNetAddress(t *testing.T) {
 		t.Errorf("NetNetAddress: wrong services - got %v, want %v",
 			na.Services, 0)
 	}
-	if na.HasService(SFNodeNetwork) {
+	if na.HasService(protocol.SFNodeNetwork) {
 		t.Errorf("HasService: SFNodeNetwork service is set")
 	}
 
 	// Ensure adding the full service node flag works.
-	na.AddService(SFNodeNetwork)
-	if na.Services != SFNodeNetwork {
+	na.AddService(protocol.SFNodeNetwork)
+	if na.Services != protocol.SFNodeNetwork {
 		t.Errorf("AddService: wrong services - got %v, want %v",
-			na.Services, SFNodeNetwork)
+			na.Services, protocol.SFNodeNetwork)
 	}
-	if !na.HasService(SFNodeNetwork) {
+	if !na.HasService(protocol.SFNodeNetwork) {
 		t.Errorf("HasService: SFNodeNetwork service not set")
 	}
 
 	// Ensure max payload is expected value for latest protocol version.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	wantPayload := uint32(30)
-	maxPayload := maxNetAddressPayload(ProtocolVersion)
+	maxPayload := maxNetAddressPayload(protocol.ProtocolVersion)
 	if maxPayload != wantPayload {
 		t.Errorf("maxNetAddressPayload: wrong max payload length for "+
 			"protocol version %d - got %v, want %v", pver,
@@ -63,7 +64,7 @@ func TestNetAddress(t *testing.T) {
 
 	// Protocol version before NetAddressTimeVersion when timestamp was
 	// added.  Ensure max payload is expected value for it.
-	pver = NetAddressTimeVersion - 1
+	pver = protocol.NetAddressTimeVersion - 1
 	wantPayload = 26
 	maxPayload = maxNetAddressPayload(pver)
 	if maxPayload != wantPayload {
@@ -79,7 +80,7 @@ func TestNetAddressWire(t *testing.T) {
 	// baseNetAddr is used in the various tests as a baseline NetAddress.
 	baseNetAddr := NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	}
@@ -119,7 +120,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddrNoTS,
 			false,
 			baseNetAddrNoTSEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Latest protocol version with ts flag.
@@ -128,7 +129,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddr,
 			true,
 			baseNetAddrEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Protocol version NetAddressTimeVersion without ts flag.
@@ -137,7 +138,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddrNoTS,
 			false,
 			baseNetAddrNoTSEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 		},
 
 		// Protocol version NetAddressTimeVersion with ts flag.
@@ -146,7 +147,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddr,
 			true,
 			baseNetAddrEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 		},
 
 		// Protocol version NetAddressTimeVersion-1 without ts flag.
@@ -155,7 +156,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddrNoTS,
 			false,
 			baseNetAddrNoTSEncoded,
-			NetAddressTimeVersion - 1,
+			protocol.NetAddressTimeVersion - 1,
 		},
 
 		// Protocol version NetAddressTimeVersion-1 with timestamp.
@@ -167,7 +168,7 @@ func TestNetAddressWire(t *testing.T) {
 			baseNetAddrNoTS,
 			true,
 			baseNetAddrNoTSEncoded,
-			NetAddressTimeVersion - 1,
+			protocol.NetAddressTimeVersion - 1,
 		},
 	}
 
@@ -205,13 +206,13 @@ func TestNetAddressWire(t *testing.T) {
 // TestNetAddressWireErrors performs negative tests against wire encode and
 // decode NetAddress to confirm error paths work correctly.
 func TestNetAddressWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	pverNAT := NetAddressTimeVersion - 1
+	pver := protocol.ProtocolVersion
+	pverNAT := protocol.NetAddressTimeVersion - 1
 
 	// baseNetAddr is used in the various tests as a baseline NetAddress.
 	baseNetAddr := NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	}

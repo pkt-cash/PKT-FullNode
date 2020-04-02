@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -22,7 +23,6 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
@@ -35,7 +35,7 @@ func networkDir(dataDir string, chainParams *chaincfg.Params) string {
 	// paramaters will likely be switched to being named "testnet3" in the
 	// future.  This is done to future proof that change, and an upgrade
 	// plan to move the testnet3 data directory can be worked out later.
-	if chainParams.Net == wire.TestNet3 {
+	if chainParams.Net == protocol.TestNet3 {
 		netname = "testnet"
 	}
 

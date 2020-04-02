@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // TestVerAck tests the MsgVerAck API.
 func TestVerAck(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Ensure the command is expected value.
 	wantCmd := "verack"
@@ -52,7 +53,7 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAck,
 			msgVerAckEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -61,7 +62,7 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAck,
 			msgVerAckEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -70,7 +71,7 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAck,
 			msgVerAckEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -79,7 +80,7 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAck,
 			msgVerAckEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -88,7 +89,7 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAck,
 			msgVerAckEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

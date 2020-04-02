@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -287,12 +288,12 @@ func readElement(r io.Reader, element interface{}) er.R {
 		}
 		return nil
 
-	case *ServiceFlag:
+	case *protocol.ServiceFlag:
 		rv, err := binarySerializer.Uint64(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = ServiceFlag(rv)
+		*e = protocol.ServiceFlag(rv)
 		return nil
 
 	case *InvType:
@@ -303,12 +304,12 @@ func readElement(r io.Reader, element interface{}) er.R {
 		*e = InvType(rv)
 		return nil
 
-	case *BitcoinNet:
+	case *protocol.BitcoinNet:
 		rv, err := binarySerializer.Uint32(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = BitcoinNet(rv)
+		*e = protocol.BitcoinNet(rv)
 		return nil
 
 	case *BloomUpdateType:
@@ -421,7 +422,7 @@ func writeElement(w io.Writer, element interface{}) er.R {
 		}
 		return nil
 
-	case ServiceFlag:
+	case protocol.ServiceFlag:
 		err := binarySerializer.PutUint64(w, littleEndian, uint64(e))
 		if err != nil {
 			return err
@@ -435,7 +436,7 @@ func writeElement(w io.Writer, element interface{}) er.R {
 		}
 		return nil
 
-	case BitcoinNet:
+	case protocol.BitcoinNet:
 		err := binarySerializer.PutUint32(w, littleEndian, uint32(e))
 		if err != nil {
 			return err

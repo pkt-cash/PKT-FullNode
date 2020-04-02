@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -46,7 +47,7 @@ func TestRejectCodeStringer(t *testing.T) {
 
 // TestRejectLatest tests the MsgPong API against the latest protocol version.
 func TestRejectLatest(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	enc := BaseEncoding
 
 	// Create reject message data.
@@ -125,7 +126,7 @@ func TestRejectLatest(t *testing.T) {
 // before the version which introduced it (RejectVersion).
 func TestRejectBeforeAdded(t *testing.T) {
 	// Use the protocol version just prior to RejectVersion.
-	pver := RejectVersion - 1
+	pver := protocol.RejectVersion - 1
 	enc := BaseEncoding
 
 	// Create reject message data.
@@ -195,14 +196,14 @@ func TestRejectCrossProtocol(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, ProtocolVersion, BaseEncoding)
+	err := msg.BtcEncode(&buf, protocol.ProtocolVersion, BaseEncoding)
 	if err != nil {
 		t.Errorf("encode of MsgReject failed %v err <%v>", msg, err)
 	}
 
 	// Decode with old protocol version.
 	readMsg := MsgReject{}
-	err = readMsg.BtcDecode(&buf, RejectVersion-1, BaseEncoding)
+	err = readMsg.BtcDecode(&buf, protocol.RejectVersion-1, BaseEncoding)
 	if err == nil {
 		t.Errorf("encode of MsgReject succeeded when it shouldn't "+
 			"have %v", msg)
@@ -248,7 +249,7 @@ func TestRejectWire(t *testing.T) {
 				0x74, 0x65, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69,
 				0x6f, 0x6e, // "duplicate version"
 			},
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 		// Latest protocol version rejected command block (has hash).
@@ -269,7 +270,7 @@ func TestRejectWire(t *testing.T) {
 				0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c,
 				0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, // mainNetGenesisHash
 			},
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 	}
@@ -308,8 +309,8 @@ func TestRejectWire(t *testing.T) {
 // TestRejectWireErrors performs negative tests against wire encode and decode
 // of MsgReject to confirm error paths work correctly.
 func TestRejectWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	pverNoReject := RejectVersion - 1
+	pver := protocol.ProtocolVersion
+	pverNoReject := protocol.RejectVersion - 1
 	wireErr := MessageError.Default()
 
 	baseReject := NewMsgReject("block", RejectDuplicate, "duplicate block")

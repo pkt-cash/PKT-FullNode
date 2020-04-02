@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // conn mocks a network connection by implementing the net.Conn interface.  It
@@ -96,7 +97,7 @@ func pipe(c1, c2 *conn) (*conn, *conn) {
 // peerStats holds the expected peer stats used for testing peer.
 type peerStats struct {
 	wantUserAgent       string
-	wantServices        wire.ServiceFlag
+	wantServices        protocol.ServiceFlag
 	wantProtocolVersion uint32
 	wantConnected       bool
 	wantVersionKnown    bool
@@ -235,7 +236,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
-		ProtocolVersion:   wire.RejectVersion, // Configure with older version
+		ProtocolVersion:   protocol.RejectVersion, // Configure with older version
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -245,14 +246,14 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
-		Services:          wire.SFNodeNetwork | wire.SFNodeWitness,
+		Services:          protocol.SFNodeNetwork | protocol.SFNodeWitness,
 		TrickleInterval:   time.Second * 10,
 	}
 
 	wantStats1 := peerStats{
 		wantUserAgent:       wire.DefaultUserAgent + "peer:1.0(comment)/",
 		wantServices:        0,
-		wantProtocolVersion: wire.RejectVersion,
+		wantProtocolVersion: protocol.RejectVersion,
 		wantConnected:       true,
 		wantVersionKnown:    true,
 		wantVerAckReceived:  true,
@@ -266,8 +267,8 @@ func TestPeerConnection(t *testing.T) {
 	}
 	wantStats2 := peerStats{
 		wantUserAgent:       wire.DefaultUserAgent + "peer:1.0(comment)/",
-		wantServices:        wire.SFNodeNetwork | wire.SFNodeWitness,
-		wantProtocolVersion: wire.RejectVersion,
+		wantServices:        protocol.SFNodeNetwork | protocol.SFNodeWitness,
+		wantProtocolVersion: protocol.RejectVersion,
 		wantConnected:       true,
 		wantVersionKnown:    true,
 		wantVerAckReceived:  true,
@@ -450,7 +451,7 @@ func TestPeerListeners(t *testing.T) {
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
-		Services:          wire.SFNodeBloom,
+		Services:          protocol.SFNodeBloom,
 		TrickleInterval:   time.Second * 10,
 	}
 	inConn, outConn := pipe(
@@ -711,7 +712,7 @@ func TestOutboundPeer(t *testing.T) {
 
 	// Test regression
 	peerCfg.ChainParams = &chaincfg.RegressionNetParams
-	peerCfg.Services = wire.SFNodeBloom
+	peerCfg.Services = protocol.SFNodeBloom
 	r2, w2 := io.Pipe()
 	c2 := &conn{raddr: "10.0.0.1:8333", Writer: w2, Reader: r2}
 	p2, err := peer.NewOutboundPeer(peerCfg, "10.0.0.1:8333")
@@ -769,12 +770,12 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 	localNA := wire.NewNetAddressIPPort(
 		net.ParseIP("10.0.0.1"),
 		uint16(8333),
-		wire.SFNodeNetwork,
+		protocol.SFNodeNetwork,
 	)
 	remoteNA := wire.NewNetAddressIPPort(
 		net.ParseIP("10.0.0.2"),
 		uint16(8333),
-		wire.SFNodeNetwork,
+		protocol.SFNodeNetwork,
 	)
 	localConn, remoteConn := pipe(
 		&conn{laddr: "10.0.0.1:8333", raddr: "10.0.0.2:8333"},

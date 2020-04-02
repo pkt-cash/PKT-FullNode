@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // TestBlockHeader tests the BlockHeader API.
@@ -90,7 +91,7 @@ func TestBlockHeaderWire(t *testing.T) {
 			baseBlockHdr,
 			baseBlockHdr,
 			baseBlockHdrEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -99,7 +100,7 @@ func TestBlockHeaderWire(t *testing.T) {
 			baseBlockHdr,
 			baseBlockHdr,
 			baseBlockHdrEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -108,7 +109,7 @@ func TestBlockHeaderWire(t *testing.T) {
 			baseBlockHdr,
 			baseBlockHdr,
 			baseBlockHdrEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -117,7 +118,7 @@ func TestBlockHeaderWire(t *testing.T) {
 			baseBlockHdr,
 			baseBlockHdr,
 			baseBlockHdrEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -126,7 +127,7 @@ func TestBlockHeaderWire(t *testing.T) {
 			baseBlockHdr,
 			baseBlockHdr,
 			baseBlockHdrEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

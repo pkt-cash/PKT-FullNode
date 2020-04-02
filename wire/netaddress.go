@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
@@ -20,7 +21,7 @@ func maxNetAddressPayload(pver uint32) uint32 {
 	plen := uint32(26)
 
 	// NetAddressTimeVersion added a timestamp field.
-	if pver >= NetAddressTimeVersion {
+	if pver >= protocol.NetAddressTimeVersion {
 		// Timestamp 4 bytes.
 		plen += 4
 	}
@@ -38,7 +39,7 @@ type NetAddress struct {
 	Timestamp time.Time
 
 	// Bitfield which identifies the services supported by the address.
-	Services ServiceFlag
+	Services protocol.ServiceFlag
 
 	// IP address of the peer.
 	IP net.IP
@@ -49,19 +50,19 @@ type NetAddress struct {
 }
 
 // HasService returns whether the specified service is supported by the address.
-func (na *NetAddress) HasService(service ServiceFlag) bool {
+func (na *NetAddress) HasService(service protocol.ServiceFlag) bool {
 	return na.Services&service == service
 }
 
 // AddService adds service as a supported service by the peer generating the
 // message.
-func (na *NetAddress) AddService(service ServiceFlag) {
+func (na *NetAddress) AddService(service protocol.ServiceFlag) {
 	na.Services |= service
 }
 
 // NewNetAddressIPPort returns a new NetAddress using the provided IP, port, and
 // supported services with defaults for the remaining fields.
-func NewNetAddressIPPort(ip net.IP, port uint16, services ServiceFlag) *NetAddress {
+func NewNetAddressIPPort(ip net.IP, port uint16, services protocol.ServiceFlag) *NetAddress {
 	return NewNetAddressTimestamp(time.Now(), services, ip, port)
 }
 
@@ -69,7 +70,7 @@ func NewNetAddressIPPort(ip net.IP, port uint16, services ServiceFlag) *NetAddre
 // timestamp, IP, port, and supported services. The timestamp is rounded to
 // single second precision.
 func NewNetAddressTimestamp(
-	timestamp time.Time, services ServiceFlag, ip net.IP, port uint16) *NetAddress {
+	timestamp time.Time, services protocol.ServiceFlag, ip net.IP, port uint16) *NetAddress {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	na := NetAddress{
@@ -83,7 +84,7 @@ func NewNetAddressTimestamp(
 
 // NewNetAddress returns a new NetAddress using the provided TCP address and
 // supported services with defaults for the remaining fields.
-func NewNetAddress(addr *net.TCPAddr, services ServiceFlag) *NetAddress {
+func NewNetAddress(addr *net.TCPAddr, services protocol.ServiceFlag) *NetAddress {
 	return NewNetAddressIPPort(addr.IP, uint16(addr.Port), services)
 }
 
@@ -96,7 +97,7 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) er.R {
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// protocol version >= NetAddressTimeVersion
-	if ts && pver >= NetAddressTimeVersion {
+	if ts && pver >= protocol.NetAddressTimeVersion {
 		err := readElement(r, (*uint32Time)(&na.Timestamp))
 		if err != nil {
 			return err
@@ -129,7 +130,7 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) er.R {
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.
-	if ts && pver >= NetAddressTimeVersion {
+	if ts && pver >= protocol.NetAddressTimeVersion {
 		err := writeElement(w, uint32(na.Timestamp.Unix()))
 		if err != nil {
 			return err

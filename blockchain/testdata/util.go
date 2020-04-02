@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/wire"
@@ -30,7 +31,7 @@ import (
 // in the format bitcoind writes) from disk and returns them as an array of
 // btcutil.Block.  This is largely borrowed from the test code in pktdb.
 func LoadBlocks(filename string) ([]*btcutil.Block, er.R) {
-	var network = wire.MainNet
+	var network = protocol.MainNet
 	var dr io.Reader
 	var fi io.ReadCloser
 
@@ -115,7 +116,7 @@ func OutputBlock(mb *wire.MsgBlock, name string) er.R {
 	}
 	defer fi.Close()
 	var header [8]byte
-	binary.LittleEndian.PutUint32(header[:4], uint32(wire.MainNet))
+	binary.LittleEndian.PutUint32(header[:4], uint32(protocol.MainNet))
 	binary.LittleEndian.PutUint32(header[4:], uint32(len(b)))
 	fi.Write(header[:])
 	fi.Write(b)

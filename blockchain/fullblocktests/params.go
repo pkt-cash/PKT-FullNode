@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a
@@ -94,7 +95,7 @@ var (
 // allow them to change out from under the tests potentially invalidating them.
 var regressionNetParams = &chaincfg.Params{
 	Name:        "regtest",
-	Net:         wire.TestNet,
+	Net:         protocol.TestNet,
 	DefaultPort: "18444",
 
 	// Chain parameters

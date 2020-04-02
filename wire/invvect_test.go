@@ -11,6 +11,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // TestInvVectStringer tests the stringized output for inventory vector types.
@@ -121,7 +122,7 @@ func TestInvVectWire(t *testing.T) {
 			errInvVect,
 			errInvVect,
 			errInvVectEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Latest protocol version tx inventory vector.
@@ -129,7 +130,7 @@ func TestInvVectWire(t *testing.T) {
 			txInvVect,
 			txInvVect,
 			txInvVectEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Latest protocol version block inventory vector.
@@ -137,7 +138,7 @@ func TestInvVectWire(t *testing.T) {
 			blockInvVect,
 			blockInvVect,
 			blockInvVectEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Protocol version BIP0035Version error inventory vector.
@@ -145,7 +146,7 @@ func TestInvVectWire(t *testing.T) {
 			errInvVect,
 			errInvVect,
 			errInvVectEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 		},
 
 		// Protocol version BIP0035Version tx inventory vector.
@@ -153,7 +154,7 @@ func TestInvVectWire(t *testing.T) {
 			txInvVect,
 			txInvVect,
 			txInvVectEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 		},
 
 		// Protocol version BIP0035Version block inventory vector.
@@ -161,7 +162,7 @@ func TestInvVectWire(t *testing.T) {
 			blockInvVect,
 			blockInvVect,
 			blockInvVectEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 		},
 
 		// Protocol version BIP0031Version error inventory vector.
@@ -169,7 +170,7 @@ func TestInvVectWire(t *testing.T) {
 			errInvVect,
 			errInvVect,
 			errInvVectEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 		},
 
 		// Protocol version BIP0031Version tx inventory vector.
@@ -177,7 +178,7 @@ func TestInvVectWire(t *testing.T) {
 			txInvVect,
 			txInvVect,
 			txInvVectEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 		},
 
 		// Protocol version BIP0031Version block inventory vector.
@@ -185,7 +186,7 @@ func TestInvVectWire(t *testing.T) {
 			blockInvVect,
 			blockInvVect,
 			blockInvVectEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 		},
 
 		// Protocol version NetAddressTimeVersion error inventory vector.
@@ -193,7 +194,7 @@ func TestInvVectWire(t *testing.T) {
 			errInvVect,
 			errInvVect,
 			errInvVectEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 		},
 
 		// Protocol version NetAddressTimeVersion tx inventory vector.
@@ -201,7 +202,7 @@ func TestInvVectWire(t *testing.T) {
 			txInvVect,
 			txInvVect,
 			txInvVectEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 		},
 
 		// Protocol version NetAddressTimeVersion block inventory vector.
@@ -209,7 +210,7 @@ func TestInvVectWire(t *testing.T) {
 			blockInvVect,
 			blockInvVect,
 			blockInvVectEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 		},
 
 		// Protocol version MultipleAddressVersion error inventory vector.
@@ -217,7 +218,7 @@ func TestInvVectWire(t *testing.T) {
 			errInvVect,
 			errInvVect,
 			errInvVectEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 		},
 
 		// Protocol version MultipleAddressVersion tx inventory vector.
@@ -225,7 +226,7 @@ func TestInvVectWire(t *testing.T) {
 			txInvVect,
 			txInvVect,
 			txInvVectEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 		},
 
 		// Protocol version MultipleAddressVersion block inventory vector.
@@ -233,7 +234,7 @@ func TestInvVectWire(t *testing.T) {
 			blockInvVect,
 			blockInvVect,
 			blockInvVectEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 		},
 	}
 

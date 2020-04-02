@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -34,7 +35,7 @@ var (
 	maxPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = protocol.MainNet
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.
@@ -45,7 +46,7 @@ var (
 // a slice of them.
 //
 // NOTE: copied from btcsuite/btcd/database/ffldb/interface_test.go
-func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
+func loadBlocks(t *testing.T, dataFile string, network protocol.BitcoinNet) (
 	[]*btcutil.Block, er.R) {
 	// Open the file that contains the blocks for reading.
 	fi, errr := os.Open(dataFile)

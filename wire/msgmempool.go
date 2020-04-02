@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // MsgMemPool implements the Message interface and represents a bitcoin mempool
@@ -21,7 +23,7 @@ type MsgMemPool struct{}
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgMemPool) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0035Version {
+	if pver < protocol.BIP0035Version {
 		str := fmt.Sprintf("mempool message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgMemPool.BtcDecode", str)
@@ -33,7 +35,7 @@ func (msg *MsgMemPool) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgMemPool) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0035Version {
+	if pver < protocol.BIP0035Version {
 		str := fmt.Sprintf("mempool message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgMemPool.BtcEncode", str)

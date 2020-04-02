@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -18,7 +19,7 @@ import (
 
 // TestGetData tests the MsgGetData API.
 func TestGetData(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Ensure the command is expected value.
 	wantCmd := "getdata"
@@ -126,7 +127,7 @@ func TestGetDataWire(t *testing.T) {
 			NoInv,
 			NoInv,
 			NoInvEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -135,7 +136,7 @@ func TestGetDataWire(t *testing.T) {
 			MultiInv,
 			MultiInv,
 			MultiInvEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -144,7 +145,7 @@ func TestGetDataWire(t *testing.T) {
 			NoInv,
 			NoInv,
 			NoInvEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -153,7 +154,7 @@ func TestGetDataWire(t *testing.T) {
 			MultiInv,
 			MultiInv,
 			MultiInvEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -162,7 +163,7 @@ func TestGetDataWire(t *testing.T) {
 			NoInv,
 			NoInv,
 			NoInvEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -171,7 +172,7 @@ func TestGetDataWire(t *testing.T) {
 			MultiInv,
 			MultiInv,
 			MultiInvEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -180,7 +181,7 @@ func TestGetDataWire(t *testing.T) {
 			NoInv,
 			NoInv,
 			NoInvEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -189,7 +190,7 @@ func TestGetDataWire(t *testing.T) {
 			MultiInv,
 			MultiInv,
 			MultiInvEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -198,7 +199,7 @@ func TestGetDataWire(t *testing.T) {
 			NoInv,
 			NoInv,
 			NoInvEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 
@@ -207,7 +208,7 @@ func TestGetDataWire(t *testing.T) {
 			MultiInv,
 			MultiInv,
 			MultiInvEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}
@@ -246,7 +247,7 @@ func TestGetDataWire(t *testing.T) {
 // TestGetDataWireErrors performs negative tests against wire encode and decode
 // of MsgGetData to confirm error paths work correctly.
 func TestGetDataWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	wireErr := MessageError.Default()
 
 	// Block 203707 hash.

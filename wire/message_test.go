@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -21,7 +22,7 @@ import (
 
 // makeHeader is a convenience function to make a message header in the form of
 // a byte slice.  It is used to force errors when reading messages.
-func makeHeader(btcnet BitcoinNet, command string,
+func makeHeader(btcnet protocol.BitcoinNet, command string,
 	payloadLen uint32, checksum uint32) []byte {
 
 	// The length of a bitcoin message header is 24 bytes.
@@ -37,16 +38,16 @@ func makeHeader(btcnet BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Create the various types of messages to test.
 
 	// MsgVersion.
 	addrYou := &net.TCPAddr{IP: net.ParseIP("192.168.0.1"), Port: 8333}
-	you := NewNetAddress(addrYou, SFNodeNetwork)
+	you := NewNetAddress(addrYou, protocol.SFNodeNetwork)
 	you.Timestamp = time.Time{} // Version message has zero value timestamp.
 	addrMe := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8333}
-	me := NewNetAddress(addrMe, SFNodeNetwork)
+	me := NewNetAddress(addrMe, protocol.SFNodeNetwork)
 	me.Timestamp = time.Time{} // Version message has zero value timestamp.
 	msgVersion := NewMsgVersion(me, you, 123123, 0)
 
@@ -80,39 +81,39 @@ func TestMessage(t *testing.T) {
 	msgCFCheckpt := NewMsgCFCheckpt(GCSFilterRegular, &chainhash.Hash{}, 0)
 
 	tests := []struct {
-		in     Message    // Value to encode
-		out    Message    // Expected decoded value
-		pver   uint32     // Protocol version for wire encoding
-		btcnet BitcoinNet // Network to use for wire encoding
-		bytes  int        // Expected num bytes read/written
+		in     Message             // Value to encode
+		out    Message             // Expected decoded value
+		pver   uint32              // Protocol version for wire encoding
+		btcnet protocol.BitcoinNet // Network to use for wire encoding
+		bytes  int                 // Expected num bytes read/written
 	}{
-		{msgVersion, msgVersion, pver, MainNet, 125},
-		{msgVerack, msgVerack, pver, MainNet, 24},
-		{msgGetAddr, msgGetAddr, pver, MainNet, 24},
-		{msgAddr, msgAddr, pver, MainNet, 25},
-		{msgGetBlocks, msgGetBlocks, pver, MainNet, 61},
-		{msgBlock, msgBlock, pver, MainNet, 239},
-		{msgInv, msgInv, pver, MainNet, 25},
-		{msgGetData, msgGetData, pver, MainNet, 25},
-		{msgNotFound, msgNotFound, pver, MainNet, 25},
-		{msgTx, msgTx, pver, MainNet, 34},
-		{msgPing, msgPing, pver, MainNet, 32},
-		{msgPong, msgPong, pver, MainNet, 32},
-		{msgGetHeaders, msgGetHeaders, pver, MainNet, 61},
-		{msgHeaders, msgHeaders, pver, MainNet, 25},
-		{msgAlert, msgAlert, pver, MainNet, 42},
-		{msgMemPool, msgMemPool, pver, MainNet, 24},
-		{msgFilterAdd, msgFilterAdd, pver, MainNet, 26},
-		{msgFilterClear, msgFilterClear, pver, MainNet, 24},
-		{msgFilterLoad, msgFilterLoad, pver, MainNet, 35},
-		{msgMerkleBlock, msgMerkleBlock, pver, MainNet, 110},
-		{msgReject, msgReject, pver, MainNet, 79},
-		{msgGetCFilters, msgGetCFilters, pver, MainNet, 61},
-		{msgGetCFHeaders, msgGetCFHeaders, pver, MainNet, 61},
-		{msgGetCFCheckpt, msgGetCFCheckpt, pver, MainNet, 57},
-		{msgCFilter, msgCFilter, pver, MainNet, 65},
-		{msgCFHeaders, msgCFHeaders, pver, MainNet, 90},
-		{msgCFCheckpt, msgCFCheckpt, pver, MainNet, 58},
+		{msgVersion, msgVersion, pver, protocol.MainNet, 125},
+		{msgVerack, msgVerack, pver, protocol.MainNet, 24},
+		{msgGetAddr, msgGetAddr, pver, protocol.MainNet, 24},
+		{msgAddr, msgAddr, pver, protocol.MainNet, 25},
+		{msgGetBlocks, msgGetBlocks, pver, protocol.MainNet, 61},
+		{msgBlock, msgBlock, pver, protocol.MainNet, 239},
+		{msgInv, msgInv, pver, protocol.MainNet, 25},
+		{msgGetData, msgGetData, pver, protocol.MainNet, 25},
+		{msgNotFound, msgNotFound, pver, protocol.MainNet, 25},
+		{msgTx, msgTx, pver, protocol.MainNet, 34},
+		{msgPing, msgPing, pver, protocol.MainNet, 32},
+		{msgPong, msgPong, pver, protocol.MainNet, 32},
+		{msgGetHeaders, msgGetHeaders, pver, protocol.MainNet, 61},
+		{msgHeaders, msgHeaders, pver, protocol.MainNet, 25},
+		{msgAlert, msgAlert, pver, protocol.MainNet, 42},
+		{msgMemPool, msgMemPool, pver, protocol.MainNet, 24},
+		{msgFilterAdd, msgFilterAdd, pver, protocol.MainNet, 26},
+		{msgFilterClear, msgFilterClear, pver, protocol.MainNet, 24},
+		{msgFilterLoad, msgFilterLoad, pver, protocol.MainNet, 35},
+		{msgMerkleBlock, msgMerkleBlock, pver, protocol.MainNet, 110},
+		{msgReject, msgReject, pver, protocol.MainNet, 79},
+		{msgGetCFilters, msgGetCFilters, pver, protocol.MainNet, 61},
+		{msgGetCFHeaders, msgGetCFHeaders, pver, protocol.MainNet, 61},
+		{msgGetCFCheckpt, msgGetCFCheckpt, pver, protocol.MainNet, 57},
+		{msgCFilter, msgCFilter, pver, protocol.MainNet, 65},
+		{msgCFHeaders, msgCFHeaders, pver, protocol.MainNet, 90},
+		{msgCFCheckpt, msgCFCheckpt, pver, protocol.MainNet, 58},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -183,8 +184,8 @@ func TestMessage(t *testing.T) {
 // TestReadMessageWireErrors performs negative tests against wire decoding into
 // concrete messages to confirm error paths work correctly.
 func TestReadMessageWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	btcnet := MainNet
+	pver := protocol.ProtocolVersion
+	btcnet := protocol.MainNet
 
 	// Ensure message errors are as expected with no function specified.
 	msg := "something bad happened"
@@ -204,7 +205,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	}
 
 	// Wire encoded bytes for main and testnet3 networks magic identifiers.
-	testNet3Bytes := makeHeader(TestNet3, "", 0, 0)
+	testNet3Bytes := makeHeader(protocol.TestNet3, "", 0, 0)
 
 	// Wire encoded bytes for a message that exceeds max overall message
 	// length.
@@ -244,12 +245,12 @@ func TestReadMessageWireErrors(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		buf     []byte     // Wire encoding
-		pver    uint32     // Protocol version for wire encoding
-		btcnet  BitcoinNet // Bitcoin network for wire encoding
-		max     int        // Max size of fixed buffer to induce errors
-		readErr er.R       // Expected read error
-		bytes   int        // Expected num bytes read
+		buf     []byte              // Wire encoding
+		pver    uint32              // Protocol version for wire encoding
+		btcnet  protocol.BitcoinNet // Bitcoin network for wire encoding
+		max     int                 // Max size of fixed buffer to induce errors
+		readErr er.R                // Expected read error
+		bytes   int                 // Expected num bytes read
 	}{
 		// Latest protocol version with intentional read errors.
 
@@ -387,8 +388,8 @@ func TestReadMessageWireErrors(t *testing.T) {
 // TestWriteMessageWireErrors performs negative tests against wire encoding from
 // concrete messages to confirm error paths work correctly.
 func TestWriteMessageWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	btcnet := MainNet
+	pver := protocol.ProtocolVersion
+	btcnet := protocol.MainNet
 	wireErr := MessageError.Default()
 
 	// Fake message with a command that is too long.
@@ -411,12 +412,12 @@ func TestWriteMessageWireErrors(t *testing.T) {
 	bogusMsg := &fakeMessage{command: "bogus", payload: bogusPayload}
 
 	tests := []struct {
-		msg    Message    // Message to encode
-		pver   uint32     // Protocol version for wire encoding
-		btcnet BitcoinNet // Bitcoin network for wire encoding
-		max    int        // Max size of fixed buffer to induce errors
-		err    er.R       // Expected error
-		bytes  int        // Expected num bytes written
+		msg    Message             // Message to encode
+		pver   uint32              // Protocol version for wire encoding
+		btcnet protocol.BitcoinNet // Bitcoin network for wire encoding
+		max    int                 // Max size of fixed buffer to induce errors
+		err    er.R                // Expected error
+		bytes  int                 // Expected num bytes written
 	}{
 		// Command too long.
 		{badCommandMsg, pver, btcnet, 0, wireErr, 0},

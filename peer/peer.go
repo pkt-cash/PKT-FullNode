@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
@@ -30,7 +31,7 @@ import (
 
 const (
 	// MaxProtocolVersion is the max protocol version the peer supports.
-	MaxProtocolVersion = wire.FeeFilterVersion
+	MaxProtocolVersion = protocol.FeeFilterVersion
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
@@ -38,7 +39,7 @@ const (
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
-	MinAcceptableProtocolVersion = wire.MultipleAddressVersion
+	MinAcceptableProtocolVersion = protocol.MultipleAddressVersion
 
 	// outputBufferSize is the number of elements the output channels use.
 	outputBufferSize = 50
@@ -259,7 +260,7 @@ type Config struct {
 	// Services specifies which services to advertise as supported by the
 	// local peer.  This field can be omitted in which case it will be 0
 	// and therefore advertise no supported services.
-	Services wire.ServiceFlag
+	Services protocol.ServiceFlag
 
 	// ProtocolVersion specifies the maximum protocol version to use and
 	// advertise.  This field can be omitted in which case
@@ -291,7 +292,7 @@ func minUint32(a, b uint32) uint32 {
 // newNetAddress attempts to extract the IP address and port from the passed
 // net.Addr interface and create a bitcoin NetAddress structure using that
 // information.
-func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
+func newNetAddress(addr net.Addr, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
 	// addr will be a net.TCPAddr when not using a proxy.
 	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
 		ip := tcpAddr.IP
@@ -366,7 +367,7 @@ type stallControlMsg struct {
 type StatsSnap struct {
 	ID             int32
 	Addr           string
-	Services       wire.ServiceFlag
+	Services       protocol.ServiceFlag
 	LastSend       time.Time
 	LastRecv       time.Time
 	BytesSent      uint64
@@ -390,7 +391,7 @@ type HashFunc func() (hash *chainhash.Hash, height int32, err er.R)
 // HostToNetAddrFunc is a func which takes a host, port, services and returns
 // the netaddress.
 type HostToNetAddrFunc func(host string, port uint16,
-	services wire.ServiceFlag) (*wire.NetAddress, er.R)
+	services protocol.ServiceFlag) (*wire.NetAddress, er.R)
 
 // NOTE: The overall data flow of a peer is split into 3 goroutines.  Inbound
 // messages are read via the inHandler goroutine and generally dispatched to
@@ -439,7 +440,7 @@ type Peer struct {
 	na                   *wire.NetAddress
 	id                   int32
 	userAgent            string
-	services             wire.ServiceFlag
+	services             protocol.ServiceFlag
 	versionKnown         bool
 	advertisedProtoVer   uint32 // protocol version advertised by remote
 	protocolVersion      uint32 // negotiated protocol version
@@ -495,7 +496,7 @@ type PeerDesc struct {
 	Na                   *wire.NetAddress
 	Id                   int32
 	UserAgent            string
-	Services             wire.ServiceFlag
+	Services             protocol.ServiceFlag
 	VersionKnown         bool
 	AdvertisedProtoVer   uint32 // protocol version advertised by remote
 	ProtocolVersion      uint32 // negotiated protocol version
@@ -674,7 +675,7 @@ func (p *Peer) Inbound() bool {
 // Services returns the services flag of the remote peer.
 //
 // This function is safe for concurrent access.
-func (p *Peer) Services() wire.ServiceFlag {
+func (p *Peer) Services() protocol.ServiceFlag {
 	p.flagsMtx.Lock()
 	services := p.services
 	p.flagsMtx.Unlock()
@@ -1005,7 +1006,7 @@ func (p *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *chai
 func (p *Peer) PushRejectMsg(command string, code wire.RejectCode, reason string, hash *chainhash.Hash, wait bool) {
 	// Don't bother sending the reject message if the protocol version
 	// is too low.
-	if p.VersionKnown() && p.ProtocolVersion() < wire.RejectVersion {
+	if p.VersionKnown() && p.ProtocolVersion() < protocol.RejectVersion {
 		return
 	}
 
@@ -1038,7 +1039,7 @@ func (p *Peer) PushRejectMsg(command string, code wire.RejectCode, reason string
 // is considered a successful ping.
 func (p *Peer) handlePingMsg(msg *wire.MsgPing) {
 	// Only reply with pong if the message is from a new enough client.
-	if p.ProtocolVersion() > wire.BIP0031Version {
+	if p.ProtocolVersion() > protocol.BIP0031Version {
 		// Include nonce from ping so pong can be identified.
 		p.QueueMessage(wire.NewMsgPong(msg.Nonce), nil)
 	}
@@ -1056,7 +1057,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 	// and overlapping pings will be ignored. It is unlikely to occur
 	// without large usage of the ping rpc call since we ping infrequently
 	// enough that if they overlap we would have timed out the peer.
-	if p.ProtocolVersion() > wire.BIP0031Version {
+	if p.ProtocolVersion() > protocol.BIP0031Version {
 		p.statsMtx.Lock()
 		if p.lastPingNonce != 0 && msg.Nonce == p.lastPingNonce {
 			p.lastPingMicros = time.Since(p.lastPingTime).Nanoseconds()
@@ -1146,7 +1147,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 // to send malformed messages without the peer being disconnected.
 func (p *Peer) isAllowedReadError(err er.R) bool {
 	// Only allow read errors in regression test mode.
-	if p.cfg.ChainParams.Net != wire.TestNet {
+	if p.cfg.ChainParams.Net != protocol.TestNet {
 		return false
 	}
 
@@ -1788,7 +1789,7 @@ out:
 			case *wire.MsgPing:
 				// Only expects a pong message in later protocol
 				// versions.  Also set up statistics.
-				if p.ProtocolVersion() > wire.BIP0031Version {
+				if p.ProtocolVersion() > protocol.BIP0031Version {
 					p.statsMtx.Lock()
 					p.lastPingNonce = m.Nonce
 					p.lastPingTime = time.Now()
@@ -1999,7 +2000,7 @@ func (p *Peer) readRemoteVersionMsg() er.R {
 
 	// Determine if the peer would like to receive witness data with
 	// transactions, or not.
-	if p.services&wire.SFNodeWitness == wire.SFNodeWitness {
+	if p.services&protocol.SFNodeWitness == protocol.SFNodeWitness {
 		p.witnessEnabled = true
 	}
 	p.flagsMtx.Unlock()
@@ -2009,7 +2010,7 @@ func (p *Peer) readRemoteVersionMsg() er.R {
 	// protocol. If so, then we'll switch to a decoding mode which is
 	// prepared for the new transaction format introduced as part of
 	// BIP0144.
-	if p.services&wire.SFNodeWitness == wire.SFNodeWitness {
+	if p.services&protocol.SFNodeWitness == protocol.SFNodeWitness {
 		p.wireEncoding = wire.WitnessEncoding
 	}
 

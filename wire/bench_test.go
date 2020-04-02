@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
@@ -382,7 +383,7 @@ func BenchmarkWriteBlockHeader(b *testing.B) {
 // decode a getheaders message with the maximum number of block locator hashes.
 func BenchmarkDecodeGetHeaders(b *testing.B) {
 	// Create a message with the maximum number of block locators.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgGetHeaders
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
@@ -412,7 +413,7 @@ func BenchmarkDecodeGetHeaders(b *testing.B) {
 // decode a headers message with the maximum number of headers.
 func BenchmarkDecodeHeaders(b *testing.B) {
 	// Create a message with the maximum number of headers.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgHeaders
 	for i := 0; i < MaxBlockHeadersPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
@@ -442,7 +443,7 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 // decode a getblocks message with the maximum number of block locator hashes.
 func BenchmarkDecodeGetBlocks(b *testing.B) {
 	// Create a message with the maximum number of block locators.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgGetBlocks
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
@@ -472,11 +473,11 @@ func BenchmarkDecodeGetBlocks(b *testing.B) {
 // addr message with the maximum number of addresses.
 func BenchmarkDecodeAddr(b *testing.B) {
 	// Create a message with the maximum number of addresses.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	ip := net.ParseIP("127.0.0.1")
 	ma := NewMsgAddr()
 	for port := uint16(0); port < MaxAddrPerMsg; port++ {
-		ma.AddAddress(NewNetAddressIPPort(ip, port, SFNodeNetwork))
+		ma.AddAddress(NewNetAddressIPPort(ip, port, protocol.SFNodeNetwork))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -499,7 +500,7 @@ func BenchmarkDecodeAddr(b *testing.B) {
 // message with the maximum number of entries.
 func BenchmarkDecodeInv(b *testing.B) {
 	// Create a message with the maximum number of entries.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgInv
 	for i := 0; i < MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
@@ -529,7 +530,7 @@ func BenchmarkDecodeInv(b *testing.B) {
 // a notfound message with the maximum number of entries.
 func BenchmarkDecodeNotFound(b *testing.B) {
 	// Create a message with the maximum number of entries.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgNotFound
 	for i := 0; i < MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
@@ -559,7 +560,7 @@ func BenchmarkDecodeNotFound(b *testing.B) {
 // decode a reasonably sized merkleblock message.
 func BenchmarkDecodeMerkleBlock(b *testing.B) {
 	// Create a message with random data.
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	var m MsgMerkleBlock
 	hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", 10000))
 	if err != nil {

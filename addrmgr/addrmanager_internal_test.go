@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // randAddr generates a *wire.NetAddress backed by a random IPv4/IPv6 address.
@@ -31,7 +32,7 @@ func randAddr(t *testing.T) *wire.NetAddress {
 	}
 
 	return &wire.NetAddress{
-		Services: wire.ServiceFlag(rand.Uint64()),
+		Services: protocol.ServiceFlag(rand.Uint64()),
 		IP:       ip,
 		Port:     uint16(rand.Uint32()),
 	}
@@ -172,9 +173,9 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 			t.Fatalf("expected to find address %v", addrStr)
 		}
 
-		if addr.Services != wire.SFNodeNetwork {
+		if addr.Services != protocol.SFNodeNetwork {
 			t.Fatalf("expected address services to be %v, got %v",
-				wire.SFNodeNetwork, addr.Services)
+				protocol.SFNodeNetwork, addr.Services)
 		}
 
 		addrMgr.SetServices(addr, expectedAddr.Services)

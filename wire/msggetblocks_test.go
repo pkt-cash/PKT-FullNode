@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -18,7 +19,7 @@ import (
 
 // TestGetBlocks tests the MsgGetBlocks API.
 func TestGetBlocks(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Block 99500 hash.
 	hashStr := "000000000002e7ad7b9eef9479e4aabc65cb831269cc20d2632c13684406dee0"
@@ -155,7 +156,7 @@ func TestGetBlocksWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -164,7 +165,7 @@ func TestGetBlocksWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -173,7 +174,7 @@ func TestGetBlocksWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -182,7 +183,7 @@ func TestGetBlocksWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -191,7 +192,7 @@ func TestGetBlocksWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -200,7 +201,7 @@ func TestGetBlocksWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -209,7 +210,7 @@ func TestGetBlocksWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -218,7 +219,7 @@ func TestGetBlocksWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -227,7 +228,7 @@ func TestGetBlocksWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 
@@ -236,7 +237,7 @@ func TestGetBlocksWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

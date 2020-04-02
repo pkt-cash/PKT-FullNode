@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -19,7 +20,7 @@ import (
 
 // TestBlock tests the MsgBlock API.
 func TestBlock(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Block 1 header.
 	prevHash := &blockOne.Header.PrevBlock
@@ -125,7 +126,7 @@ func TestBlockWire(t *testing.T) {
 			&blockOne,
 			blockOneBytes,
 			blockOneTxLocs,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -135,7 +136,7 @@ func TestBlockWire(t *testing.T) {
 			&blockOne,
 			blockOneBytes,
 			blockOneTxLocs,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -145,7 +146,7 @@ func TestBlockWire(t *testing.T) {
 			&blockOne,
 			blockOneBytes,
 			blockOneTxLocs,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -155,7 +156,7 @@ func TestBlockWire(t *testing.T) {
 			&blockOne,
 			blockOneBytes,
 			blockOneTxLocs,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -165,7 +166,7 @@ func TestBlockWire(t *testing.T) {
 			&blockOne,
 			blockOneBytes,
 			blockOneTxLocs,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 		// TODO(roasbeef): add case for witnessy block

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // KnownAddress tracks information about a known network address that is used
@@ -34,7 +35,7 @@ func (ka *KnownAddress) LastAttempt() time.Time {
 }
 
 // Services returns the services supported by the peer with the known address.
-func (ka *KnownAddress) Services() wire.ServiceFlag {
+func (ka *KnownAddress) Services() protocol.ServiceFlag {
 	return ka.na.Services
 }
 

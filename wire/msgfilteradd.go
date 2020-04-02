@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 const (
@@ -29,7 +31,7 @@ type MsgFilterAdd struct {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterAdd) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0037Version {
+	if pver < protocol.BIP0037Version {
 		str := fmt.Sprintf("filteradd message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgFilterAdd.BtcDecode", str)
@@ -44,7 +46,7 @@ func (msg *MsgFilterAdd) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterAdd) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0037Version {
+	if pver < protocol.BIP0037Version {
 		str := fmt.Sprintf("filteradd message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgFilterAdd.BtcEncode", str)

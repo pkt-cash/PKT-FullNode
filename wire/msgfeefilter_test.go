@@ -12,13 +12,14 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 // TestFeeFilterLatest tests the MsgFeeFilter API against the latest protocol version.
 func TestFeeFilterLatest(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	minfee := rand.Int63()
 	msg := NewMsgFeeFilter(minfee)
@@ -77,7 +78,7 @@ func TestFeeFilterWire(t *testing.T) {
 			MsgFeeFilter{MinFee: 123123}, // 0x1e0f3
 			MsgFeeFilter{MinFee: 123123}, // 0x1e0f3
 			[]byte{0xf3, 0xe0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00},
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 		},
 
 		// Protocol version FeeFilterVersion
@@ -85,7 +86,7 @@ func TestFeeFilterWire(t *testing.T) {
 			MsgFeeFilter{MinFee: 456456}, // 0x6f708
 			MsgFeeFilter{MinFee: 456456}, // 0x6f708
 			[]byte{0x08, 0xf7, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00},
-			FeeFilterVersion,
+			protocol.FeeFilterVersion,
 		},
 	}
 
@@ -123,8 +124,8 @@ func TestFeeFilterWire(t *testing.T) {
 // TestFeeFilterWireErrors performs negative tests against wire encode and decode
 // of MsgFeeFilter to confirm error paths work correctly.
 func TestFeeFilterWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	pverNoFeeFilter := FeeFilterVersion - 1
+	pver := protocol.ProtocolVersion
+	pverNoFeeFilter := protocol.FeeFilterVersion - 1
 	wireErr := MessageError.Default()
 
 	baseFeeFilter := NewMsgFeeFilter(123123) // 0x1e0f3

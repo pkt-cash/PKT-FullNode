@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // TestGetAddr tests the MsgGetAddr API.
 func TestGetAddr(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Ensure the command is expected value.
 	wantCmd := "getaddr"
@@ -53,7 +54,7 @@ func TestGetAddrWire(t *testing.T) {
 			msgGetAddr,
 			msgGetAddr,
 			msgGetAddrEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -62,7 +63,7 @@ func TestGetAddrWire(t *testing.T) {
 			msgGetAddr,
 			msgGetAddr,
 			msgGetAddrEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -71,7 +72,7 @@ func TestGetAddrWire(t *testing.T) {
 			msgGetAddr,
 			msgGetAddr,
 			msgGetAddrEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -80,7 +81,7 @@ func TestGetAddrWire(t *testing.T) {
 			msgGetAddr,
 			msgGetAddr,
 			msgGetAddrEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -89,7 +90,7 @@ func TestGetAddrWire(t *testing.T) {
 			msgGetAddr,
 			msgGetAddr,
 			msgGetAddrEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

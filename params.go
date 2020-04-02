@@ -7,7 +7,7 @@ package main
 
 import (
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // activeNetParams is a pointer to the parameters specific to the
@@ -82,7 +82,7 @@ var simNetParams = params{
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {
-	case wire.TestNet3:
+	case protocol.TestNet3:
 		return "testnet"
 	default:
 		return chainParams.Name

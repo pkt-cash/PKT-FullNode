@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -384,7 +385,7 @@ func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
 				"soft-fork state: %v", err)
 		}
 		nodeServices := peer.Services()
-		if nodeServices&wire.SFNodeNetwork != wire.SFNodeNetwork ||
+		if nodeServices&protocol.SFNodeNetwork != protocol.SFNodeNetwork ||
 			(segwitActive && !peer.IsWitnessEnabled()) {
 			return false
 		}

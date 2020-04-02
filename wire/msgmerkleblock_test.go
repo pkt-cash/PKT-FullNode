@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -20,7 +21,7 @@ import (
 
 // TestMerkleBlock tests the MsgMerkleBlock API.
 func TestMerkleBlock(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	enc := BaseEncoding
 
 	// Block 1 header.
@@ -126,7 +127,7 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, ProtocolVersion, BaseEncoding)
+	err := msg.BtcEncode(&buf, protocol.ProtocolVersion, BaseEncoding)
 	if err != nil {
 		t.Errorf("encode of NewMsgFilterLoad failed %v err <%v>", msg,
 			err)
@@ -134,7 +135,7 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 
 	// Decode with old protocol version.
 	var readmsg MsgFilterLoad
-	err = readmsg.BtcDecode(&buf, BIP0031Version, BaseEncoding)
+	err = readmsg.BtcDecode(&buf, protocol.BIP0031Version, BaseEncoding)
 	if err == nil {
 		t.Errorf("decode of MsgFilterLoad succeeded when it shouldn't have %v",
 			msg)
@@ -154,13 +155,13 @@ func TestMerkleBlockWire(t *testing.T) {
 		// Latest protocol version.
 		{
 			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
-			ProtocolVersion, BaseEncoding,
+			protocol.ProtocolVersion, BaseEncoding,
 		},
 
 		// Protocol version BIP0037Version.
 		{
 			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
-			BIP0037Version, BaseEncoding,
+			protocol.BIP0037Version, BaseEncoding,
 		},
 	}
 
@@ -202,7 +203,7 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	// because the test data is using bytes encoded with that protocol
 	// version.
 	pver := uint32(70001)
-	pverNoMerkleBlock := BIP0037Version - 1
+	pverNoMerkleBlock := protocol.BIP0037Version - 1
 	wireErr := MessageError.Default()
 
 	tests := []struct {

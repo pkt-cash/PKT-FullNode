@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/wire"
@@ -94,7 +95,7 @@ func addNaTests() {
 
 func addNaTest(ip string, port uint16, want string) {
 	nip := net.ParseIP(ip)
-	na := *wire.NewNetAddressIPPort(nip, port, wire.SFNodeNetwork)
+	na := *wire.NewNetAddressIPPort(nip, port, protocol.SFNodeNetwork)
 	test := naTest{na, want}
 	naTests = append(naTests, test)
 }
@@ -263,7 +264,7 @@ func TestNeedMoreAddresses(t *testing.T) {
 	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.%d.173.147:8333", i/128+60, i%128+60)
-		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
+		addrs[i], err = n.DeserializeNetAddress(s, protocol.SFNodeNetwork)
 		if err != nil {
 			t.Errorf("Failed to turn %s into an address: %v", s, err)
 		}
@@ -291,7 +292,7 @@ func TestGood(t *testing.T) {
 	var err er.R
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.173.147.%d:8333", i/64+60, i%64+60)
-		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
+		addrs[i], err = n.DeserializeNetAddress(s, protocol.SFNodeNetwork)
 		if err != nil {
 			t.Errorf("Failed to turn %s into an address: %v", s, err)
 		}

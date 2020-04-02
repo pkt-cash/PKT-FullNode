@@ -7,10 +7,12 @@ package wire
 import (
 	"bytes"
 	"testing"
+
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 func TestMemPool(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	enc := BaseEncoding
 
 	// Ensure the command is expected value.
@@ -39,7 +41,7 @@ func TestMemPool(t *testing.T) {
 
 	// Older protocol versions should fail encode since message didn't
 	// exist yet.
-	oldPver := BIP0035Version - 1
+	oldPver := protocol.BIP0035Version - 1
 	err = msg.BtcEncode(&buf, oldPver, enc)
 	if err == nil {
 		s := "encode of MsgMemPool passed for old protocol version %v err <%v>"

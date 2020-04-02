@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // BloomUpdateType specifies how the filter is updated when a match is found
@@ -53,7 +55,7 @@ type MsgFilterLoad struct {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterLoad) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0037Version {
+	if pver < protocol.BIP0037Version {
 		str := fmt.Sprintf("filterload message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgFilterLoad.BtcDecode", str)
@@ -83,7 +85,7 @@ func (msg *MsgFilterLoad) BtcDecode(r io.Reader, pver uint32, enc MessageEncodin
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterLoad) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
-	if pver < BIP0037Version {
+	if pver < protocol.BIP0037Version {
 		str := fmt.Sprintf("filterload message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgFilterLoad.BtcEncode", str)

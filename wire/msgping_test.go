@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 // TestPing tests the MsgPing API against the latest protocol version.
 func TestPing(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Ensure we get the same nonce back out.
 	nonce, err := RandomUint64()
@@ -51,7 +52,7 @@ func TestPing(t *testing.T) {
 // BIP0031Version.
 func TestPingBIP0031(t *testing.T) {
 	// Use the protocol version just prior to BIP0031Version changes.
-	pver := BIP0031Version
+	pver := protocol.BIP0031Version
 	enc := BaseEncoding
 
 	nonce, err := RandomUint64()
@@ -109,14 +110,14 @@ func TestPingCrossProtocol(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err = msg.BtcEncode(&buf, ProtocolVersion, BaseEncoding)
+	err = msg.BtcEncode(&buf, protocol.ProtocolVersion, BaseEncoding)
 	if err != nil {
 		t.Errorf("encode of MsgPing failed %v err <%v>", msg, err)
 	}
 
 	// Decode with old protocol version.
 	readmsg := NewMsgPing(0)
-	err = readmsg.BtcDecode(&buf, BIP0031Version, BaseEncoding)
+	err = readmsg.BtcDecode(&buf, protocol.BIP0031Version, BaseEncoding)
 	if err != nil {
 		t.Errorf("decode of MsgPing failed [%v] err <%v>", buf, err)
 	}
@@ -143,7 +144,7 @@ func TestPingWire(t *testing.T) {
 			MsgPing{Nonce: 123123}, // 0x1e0f3
 			MsgPing{Nonce: 123123}, // 0x1e0f3
 			[]byte{0xf3, 0xe0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00},
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -152,7 +153,7 @@ func TestPingWire(t *testing.T) {
 			MsgPing{Nonce: 456456}, // 0x6f708
 			MsgPing{Nonce: 456456}, // 0x6f708
 			[]byte{0x08, 0xf7, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00},
-			BIP0031Version + 1,
+			protocol.BIP0031Version + 1,
 			BaseEncoding,
 		},
 
@@ -161,7 +162,7 @@ func TestPingWire(t *testing.T) {
 			MsgPing{Nonce: 789789}, // 0xc0d1d
 			MsgPing{Nonce: 0},      // No nonce for pver
 			[]byte{},               // No nonce for pver
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 	}
@@ -200,7 +201,7 @@ func TestPingWire(t *testing.T) {
 // TestPingWireErrors performs negative tests against wire encode and decode
 // of MsgPing to confirm error paths work correctly.
 func TestPingWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		in       *MsgPing        // Value to encode

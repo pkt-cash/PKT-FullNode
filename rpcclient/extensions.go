@@ -11,7 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // FutureGetBestBlockResult is a future promise to deliver the result of a
@@ -68,7 +68,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, er.R) {
+func (r FutureGetCurrentNetResult) Receive() (protocol.BitcoinNet, er.R) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -81,7 +81,7 @@ func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, er.R) {
 		return 0, er.E(errr)
 	}
 
-	return wire.BitcoinNet(net), nil
+	return protocol.BitcoinNet(net), nil
 }
 
 // GetCurrentNetAsync returns an instance of a type that can be used to get the
@@ -99,6 +99,6 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // GetCurrentNet returns the network the server is running on.
 //
 // NOTE: This is a pktd extension.
-func (c *Client) GetCurrentNet() (wire.BitcoinNet, er.R) {
+func (c *Client) GetCurrentNet() (protocol.BitcoinNet, er.R) {
 	return c.GetCurrentNetAsync().Receive()
 }

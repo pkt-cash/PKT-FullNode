@@ -7,10 +7,12 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a
@@ -32,7 +34,7 @@ type MsgVersion struct {
 	ProtocolVersion int32
 
 	// Bitfield which identifies the enabled services.
-	Services ServiceFlag
+	Services protocol.ServiceFlag
 
 	// Time the message was generated.  This is encoded as an int64 on the wire.
 	Timestamp time.Time
@@ -60,13 +62,13 @@ type MsgVersion struct {
 
 // HasService returns whether the specified service is supported by the peer
 // that generated the message.
-func (msg *MsgVersion) HasService(service ServiceFlag) bool {
+func (msg *MsgVersion) HasService(service protocol.ServiceFlag) bool {
 	return msg.Services&service == service
 }
 
 // AddService adds service as a supported service by the peer generating the
 // message.
-func (msg *MsgVersion) AddService(service ServiceFlag) {
+func (msg *MsgVersion) AddService(service protocol.ServiceFlag) {
 	msg.Services |= service
 }
 
@@ -190,7 +192,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	// There was no relay transactions field before BIP0037Version.  Also,
 	// the wire encoding for the field is true when transactions should be
 	// relayed, so reverse it from the DisableRelayTx field.
-	if pver >= BIP0037Version {
+	if pver >= protocol.BIP0037Version {
 		err = writeElement(w, !msg.DisableRelayTx)
 		if err != nil {
 			return err
@@ -227,7 +229,7 @@ func NewMsgVersion(me *NetAddress, you *NetAddress, nonce uint64,
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &MsgVersion{
-		ProtocolVersion: int32(ProtocolVersion),
+		ProtocolVersion: int32(protocol.ProtocolVersion),
 		Services:        0,
 		Timestamp:       time.Unix(time.Now().Unix(), 0),
 		AddrYou:         *you,

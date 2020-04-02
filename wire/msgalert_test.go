@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 // TestMsgAlert tests the MsgAlert API.
 func TestMsgAlert(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	encoding := BaseEncoding
 	serializedpayload := []byte("some message")
 	signature := []byte("some sig")
@@ -108,7 +109,7 @@ func TestMsgAlertWire(t *testing.T) {
 			baseMsgAlert,
 			baseMsgAlert,
 			baseMsgAlertEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -117,7 +118,7 @@ func TestMsgAlertWire(t *testing.T) {
 			baseMsgAlert,
 			baseMsgAlert,
 			baseMsgAlertEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -126,7 +127,7 @@ func TestMsgAlertWire(t *testing.T) {
 			baseMsgAlert,
 			baseMsgAlert,
 			baseMsgAlertEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -135,7 +136,7 @@ func TestMsgAlertWire(t *testing.T) {
 			baseMsgAlert,
 			baseMsgAlert,
 			baseMsgAlertEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -144,7 +145,7 @@ func TestMsgAlertWire(t *testing.T) {
 			baseMsgAlert,
 			baseMsgAlert,
 			baseMsgAlertEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}
@@ -183,7 +184,7 @@ func TestMsgAlertWire(t *testing.T) {
 // TestMsgAlertWireErrors performs negative tests against wire encode and decode
 // of MsgAlert to confirm error paths work correctly.
 func TestMsgAlertWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	encoding := BaseEncoding
 
 	baseMsgAlert := NewMsgAlert([]byte("some payload"), []byte("somesig"))
@@ -270,7 +271,7 @@ func TestMsgAlertWireErrors(t *testing.T) {
 // TestAlert tests serialization and deserialization
 // of the payload to Alert
 func TestAlert(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	alert := NewAlert(
 		1, 1337093712, 1368628812, 1015,
 		1013, []int32{1014}, 0, 40599, []string{"/Satoshi:0.7.2/"}, 5000, "",
@@ -356,7 +357,7 @@ func TestAlert(t *testing.T) {
 // TestAlertErrors performs negative tests against payload serialization,
 // deserialization of Alert to confirm error paths work correctly.
 func TestAlertErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	baseAlert := NewAlert(
 		1, 1337093712, 1368628812, 1015,

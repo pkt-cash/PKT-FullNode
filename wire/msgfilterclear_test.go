@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -17,7 +18,7 @@ import (
 // TestFilterCLearLatest tests the MsgFilterClear API against the latest
 // protocol version.
 func TestFilterClearLatest(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	msg := NewMsgFilterClear()
 
@@ -45,14 +46,14 @@ func TestFilterClearCrossProtocol(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, ProtocolVersion, LatestEncoding)
+	err := msg.BtcEncode(&buf, protocol.ProtocolVersion, LatestEncoding)
 	if err != nil {
 		t.Errorf("encode of MsgFilterClear failed %v err <%v>", msg, err)
 	}
 
 	// Decode with old protocol version.
 	var readmsg MsgFilterClear
-	err = readmsg.BtcDecode(&buf, BIP0031Version, LatestEncoding)
+	err = readmsg.BtcDecode(&buf, protocol.BIP0031Version, LatestEncoding)
 	if err == nil {
 		t.Errorf("decode of MsgFilterClear succeeded when it "+
 			"shouldn't have %v", msg)
@@ -77,7 +78,7 @@ func TestFilterClearWire(t *testing.T) {
 			msgFilterClear,
 			msgFilterClear,
 			msgFilterClearEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -86,7 +87,7 @@ func TestFilterClearWire(t *testing.T) {
 			msgFilterClear,
 			msgFilterClear,
 			msgFilterClearEncoded,
-			BIP0037Version + 1,
+			protocol.BIP0037Version + 1,
 			BaseEncoding,
 		},
 
@@ -95,7 +96,7 @@ func TestFilterClearWire(t *testing.T) {
 			msgFilterClear,
 			msgFilterClear,
 			msgFilterClearEncoded,
-			BIP0037Version,
+			protocol.BIP0037Version,
 			BaseEncoding,
 		},
 	}
@@ -134,7 +135,7 @@ func TestFilterClearWire(t *testing.T) {
 // TestFilterClearWireErrors performs negative tests against wire encode and
 // decode of MsgFilterClear to confirm error paths work correctly.
 func TestFilterClearWireErrors(t *testing.T) {
-	pverNoFilterClear := BIP0037Version - 1
+	pverNoFilterClear := protocol.BIP0037Version - 1
 	wireErr := MessageError.Default()
 
 	baseFilterClear := NewMsgFilterClear()

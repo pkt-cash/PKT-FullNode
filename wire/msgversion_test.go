@@ -14,20 +14,21 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 // TestVersion tests the MsgVersion API.
 func TestVersion(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Create version message data.
 	lastBlock := int32(234234)
 	tcpAddrMe := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8333}
-	me := NewNetAddress(tcpAddrMe, SFNodeNetwork)
+	me := NewNetAddress(tcpAddrMe, protocol.SFNodeNetwork)
 	tcpAddrYou := &net.TCPAddr{IP: net.ParseIP("192.168.0.1"), Port: 8333}
-	you := NewNetAddress(tcpAddrYou, SFNodeNetwork)
+	you := NewNetAddress(tcpAddrYou, protocol.SFNodeNetwork)
 	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: error generating nonce: %v", err)
@@ -93,7 +94,7 @@ func TestVersion(t *testing.T) {
 			msg.Services, 0)
 
 	}
-	if msg.HasService(SFNodeNetwork) {
+	if msg.HasService(protocol.SFNodeNetwork) {
 		t.Errorf("HasService: SFNodeNetwork service is set")
 	}
 
@@ -118,12 +119,12 @@ func TestVersion(t *testing.T) {
 	}
 
 	// Ensure adding the full service node flag works.
-	msg.AddService(SFNodeNetwork)
-	if msg.Services != SFNodeNetwork {
+	msg.AddService(protocol.SFNodeNetwork)
+	if msg.Services != protocol.SFNodeNetwork {
 		t.Errorf("AddService: wrong services - got %v, want %v",
-			msg.Services, SFNodeNetwork)
+			msg.Services, protocol.SFNodeNetwork)
 	}
-	if !msg.HasService(SFNodeNetwork) {
+	if !msg.HasService(protocol.SFNodeNetwork) {
 		t.Errorf("HasService: SFNodeNetwork service not set")
 	}
 }
@@ -152,7 +153,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersionBIP0037,
 			baseVersionBIP0037,
 			baseVersionBIP0037Encoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -162,7 +163,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersionBIP0037,
 			baseVersionBIP0037,
 			baseVersionBIP0037Encoded,
-			BIP0037Version,
+			protocol.BIP0037Version,
 			BaseEncoding,
 		},
 
@@ -172,7 +173,7 @@ func TestVersionWire(t *testing.T) {
 			verRelayTxFalse,
 			verRelayTxFalse,
 			verRelayTxFalseEncoded,
-			BIP0037Version,
+			protocol.BIP0037Version,
 			BaseEncoding,
 		},
 
@@ -181,7 +182,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersion,
 			baseVersion,
 			baseVersionEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -190,7 +191,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersion,
 			baseVersion,
 			baseVersionEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -199,7 +200,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersion,
 			baseVersion,
 			baseVersionEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -208,7 +209,7 @@ func TestVersionWire(t *testing.T) {
 			baseVersion,
 			baseVersion,
 			baseVersionEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}
@@ -317,7 +318,7 @@ func TestVersionWireErrors(t *testing.T) {
 		// it's optional.
 		{
 			baseVersionBIP0037, baseVersionBIP0037Encoded,
-			BIP0037Version, BaseEncoding, 101, er.E(io.ErrShortWrite), nil,
+			protocol.BIP0037Version, BaseEncoding, 101, er.E(io.ErrShortWrite), nil,
 		},
 		// Force error due to user agent too big
 		{exceedUAVer, exceedUAVerEncoded, pver, BaseEncoding, newLen, wireErr, wireErr},
@@ -353,11 +354,11 @@ func TestVersionOptionalFields(t *testing.T) {
 	// required versions and all other values set to their default values.
 	onlyRequiredVersion := MsgVersion{
 		ProtocolVersion: 60002,
-		Services:        SFNodeNetwork,
+		Services:        protocol.SFNodeNetwork,
 		Timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST)
 		AddrYou: NetAddress{
 			Timestamp: time.Time{}, // Zero value -- no timestamp in version
-			Services:  SFNodeNetwork,
+			Services:  protocol.SFNodeNetwork,
 			IP:        net.ParseIP("192.168.0.1"),
 			Port:      8333,
 		},
@@ -370,7 +371,7 @@ func TestVersionOptionalFields(t *testing.T) {
 	addrMeVersion := onlyRequiredVersion
 	addrMeVersion.AddrMe = NetAddress{
 		Timestamp: time.Time{}, // Zero value -- no timestamp in version
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	}
@@ -407,31 +408,31 @@ func TestVersionOptionalFields(t *testing.T) {
 		{
 			&onlyRequiredVersion,
 			onlyRequiredVersionEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 		{
 			&addrMeVersion,
 			addrMeVersionEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 		{
 			&nonceVersion,
 			nonceVersionEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 		{
 			&uaVersion,
 			uaVersionEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 		{
 			&lastBlockVersion,
 			lastBlockVersionEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 	}
@@ -456,17 +457,17 @@ func TestVersionOptionalFields(t *testing.T) {
 // baseVersion is used in the various tests as a baseline MsgVersion.
 var baseVersion = &MsgVersion{
 	ProtocolVersion: 60002,
-	Services:        SFNodeNetwork,
+	Services:        protocol.SFNodeNetwork,
 	Timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST)
 	AddrYou: NetAddress{
 		Timestamp: time.Time{}, // Zero value -- no timestamp in version
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("192.168.0.1"),
 		Port:      8333,
 	},
 	AddrMe: NetAddress{
 		Timestamp: time.Time{}, // Zero value -- no timestamp in version
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	},
@@ -501,17 +502,17 @@ var baseVersionEncoded = []byte{
 // BIP0037.
 var baseVersionBIP0037 = &MsgVersion{
 	ProtocolVersion: 70001,
-	Services:        SFNodeNetwork,
+	Services:        protocol.SFNodeNetwork,
 	Timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST)
 	AddrYou: NetAddress{
 		Timestamp: time.Time{}, // Zero value -- no timestamp in version
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("192.168.0.1"),
 		Port:      8333,
 	},
 	AddrMe: NetAddress{
 		Timestamp: time.Time{}, // Zero value -- no timestamp in version
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	},

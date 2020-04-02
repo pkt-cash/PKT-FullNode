@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -19,7 +20,7 @@ import (
 
 // TestTx tests the MsgTx API.
 func TestTx(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Block 100000 hash.
 	hashStr := "3ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
@@ -285,7 +286,7 @@ func TestTxWire(t *testing.T) {
 		{
 			noTx,
 			noTx, noTxEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -294,7 +295,7 @@ func TestTxWire(t *testing.T) {
 			multiTx,
 			multiTx,
 			multiTxEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -303,7 +304,7 @@ func TestTxWire(t *testing.T) {
 			noTx,
 			noTx,
 			noTxEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -312,7 +313,7 @@ func TestTxWire(t *testing.T) {
 			multiTx,
 			multiTx,
 			multiTxEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -321,7 +322,7 @@ func TestTxWire(t *testing.T) {
 			noTx,
 			noTx,
 			noTxEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -330,7 +331,7 @@ func TestTxWire(t *testing.T) {
 			multiTx,
 			multiTx,
 			multiTxEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -339,7 +340,7 @@ func TestTxWire(t *testing.T) {
 			noTx,
 			noTx,
 			noTxEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -348,7 +349,7 @@ func TestTxWire(t *testing.T) {
 			multiTx,
 			multiTx,
 			multiTxEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -357,7 +358,7 @@ func TestTxWire(t *testing.T) {
 			noTx,
 			noTx,
 			noTxEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 
@@ -366,7 +367,7 @@ func TestTxWire(t *testing.T) {
 			multiTx,
 			multiTx,
 			multiTxEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

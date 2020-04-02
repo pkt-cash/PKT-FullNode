@@ -13,13 +13,14 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 // TestAddr tests the MsgAddr API.
 func TestAddr(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// Ensure the command is expected value.
 	wantCmd := "addr"
@@ -41,7 +42,7 @@ func TestAddr(t *testing.T) {
 
 	// Ensure NetAddresses are added properly.
 	tcpAddr := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8333}
-	na := NewNetAddress(tcpAddr, SFNodeNetwork)
+	na := NewNetAddress(tcpAddr, protocol.SFNodeNetwork)
 	err := msg.AddAddress(na)
 	if err != nil {
 		t.Errorf("AddAddress: %v", err)
@@ -77,7 +78,7 @@ func TestAddr(t *testing.T) {
 	// Ensure max payload is expected value for protocol versions before
 	// timestamp was added to NetAddress.
 	// Num addresses (varInt) + max allowed addresses.
-	pver = NetAddressTimeVersion - 1
+	pver = protocol.NetAddressTimeVersion - 1
 	wantPayload = uint32(26009)
 	maxPayload = msg.MaxPayloadLength(pver)
 	if maxPayload != wantPayload {
@@ -89,7 +90,7 @@ func TestAddr(t *testing.T) {
 	// Ensure max payload is expected value for protocol versions before
 	// multiple addresses were allowed.
 	// Num addresses (varInt) + a single net addresses.
-	pver = MultipleAddressVersion - 1
+	pver = protocol.MultipleAddressVersion - 1
 	wantPayload = uint32(35)
 	maxPayload = msg.MaxPayloadLength(pver)
 	if maxPayload != wantPayload {
@@ -105,13 +106,13 @@ func TestAddrWire(t *testing.T) {
 	// A couple of NetAddresses to use for testing.
 	na := &NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	}
 	na2 := &NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("192.168.0.1"),
 		Port:      8334,
 	}
@@ -152,7 +153,7 @@ func TestAddrWire(t *testing.T) {
 			noAddr,
 			noAddr,
 			noAddrEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -161,7 +162,7 @@ func TestAddrWire(t *testing.T) {
 			multiAddr,
 			multiAddr,
 			multiAddrEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -170,7 +171,7 @@ func TestAddrWire(t *testing.T) {
 			noAddr,
 			noAddr,
 			noAddrEncoded,
-			MultipleAddressVersion - 1,
+			protocol.MultipleAddressVersion - 1,
 			BaseEncoding,
 		},
 	}
@@ -209,20 +210,20 @@ func TestAddrWire(t *testing.T) {
 // TestAddrWireErrors performs negative tests against wire encode and decode
 // of MsgAddr to confirm error paths work correctly.
 func TestAddrWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	pverMA := MultipleAddressVersion
+	pver := protocol.ProtocolVersion
+	pverMA := protocol.MultipleAddressVersion
 	wireErr := MessageError.Default()
 
 	// A couple of NetAddresses to use for testing.
 	na := &NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("127.0.0.1"),
 		Port:      8333,
 	}
 	na2 := &NetAddress{
 		Timestamp: time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
-		Services:  SFNodeNetwork,
+		Services:  protocol.SFNodeNetwork,
 		IP:        net.ParseIP("192.168.0.1"),
 		Port:      8334,
 	}

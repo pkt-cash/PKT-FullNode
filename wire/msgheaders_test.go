@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -108,7 +109,7 @@ func TestHeadersWire(t *testing.T) {
 			noHeaders,
 			noHeaders,
 			noHeadersEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -117,7 +118,7 @@ func TestHeadersWire(t *testing.T) {
 			oneHeader,
 			oneHeader,
 			oneHeaderEncoded,
-			ProtocolVersion,
+			protocol.ProtocolVersion,
 			BaseEncoding,
 		},
 
@@ -126,7 +127,7 @@ func TestHeadersWire(t *testing.T) {
 			noHeaders,
 			noHeaders,
 			noHeadersEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -135,7 +136,7 @@ func TestHeadersWire(t *testing.T) {
 			oneHeader,
 			oneHeader,
 			oneHeaderEncoded,
-			BIP0035Version,
+			protocol.BIP0035Version,
 			BaseEncoding,
 		},
 
@@ -144,7 +145,7 @@ func TestHeadersWire(t *testing.T) {
 			noHeaders,
 			noHeaders,
 			noHeadersEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 
@@ -153,7 +154,7 @@ func TestHeadersWire(t *testing.T) {
 			oneHeader,
 			oneHeader,
 			oneHeaderEncoded,
-			BIP0031Version,
+			protocol.BIP0031Version,
 			BaseEncoding,
 		},
 		// Protocol version NetAddressTimeVersion with no headers.
@@ -161,7 +162,7 @@ func TestHeadersWire(t *testing.T) {
 			noHeaders,
 			noHeaders,
 			noHeadersEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -170,7 +171,7 @@ func TestHeadersWire(t *testing.T) {
 			oneHeader,
 			oneHeader,
 			oneHeaderEncoded,
-			NetAddressTimeVersion,
+			protocol.NetAddressTimeVersion,
 			BaseEncoding,
 		},
 
@@ -179,7 +180,7 @@ func TestHeadersWire(t *testing.T) {
 			noHeaders,
 			noHeaders,
 			noHeadersEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 
@@ -188,7 +189,7 @@ func TestHeadersWire(t *testing.T) {
 			oneHeader,
 			oneHeader,
 			oneHeaderEncoded,
-			MultipleAddressVersion,
+			protocol.MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}
@@ -227,7 +228,7 @@ func TestHeadersWire(t *testing.T) {
 // TestHeadersWireErrors performs negative tests against wire encode and decode
 // of MsgHeaders to confirm error paths work correctly.
 func TestHeadersWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 	wireErr := MessageError.Default()
 
 	hash := mainNetGenesisHash

@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 // This example demonstrates creating a new database.
@@ -33,7 +33,7 @@ func ExampleCreate() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "examplecreate")
-	db, err := database.Create("ffldb", dbPath, wire.MainNet)
+	db, err := database.Create("ffldb", dbPath, protocol.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -59,7 +59,7 @@ func Example_basicUsage() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleusage")
-	db, err := database.Create("ffldb", dbPath, wire.MainNet)
+	db, err := database.Create("ffldb", dbPath, protocol.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -125,7 +125,7 @@ func Example_blockStorageAndRetrieval() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleblkstorage")
-	db, err := database.Create("ffldb", dbPath, wire.MainNet)
+	db, err := database.Create("ffldb", dbPath, protocol.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -15,6 +15,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // mainNetGenesisHash is the hash of the first block in the block chain for the
@@ -119,7 +120,7 @@ func TestElementWire(t *testing.T) {
 			},
 		},
 		{
-			ServiceFlag(SFNodeNetwork),
+			protocol.ServiceFlag(protocol.SFNodeNetwork),
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		},
 		{
@@ -127,7 +128,7 @@ func TestElementWire(t *testing.T) {
 			[]byte{0x01, 0x00, 0x00, 0x00},
 		},
 		{
-			BitcoinNet(MainNet),
+			protocol.BitcoinNet(protocol.MainNet),
 			[]byte{0xf9, 0xbe, 0xb4, 0xd9},
 		},
 		// Type not supported by the "fast" path and requires reflection.
@@ -212,9 +213,9 @@ func TestElementWireErrors(t *testing.T) {
 			}),
 			0, io.ErrShortWrite, io.EOF,
 		},
-		{ServiceFlag(SFNodeNetwork), 0, io.ErrShortWrite, io.EOF},
+		{protocol.ServiceFlag(protocol.SFNodeNetwork), 0, io.ErrShortWrite, io.EOF},
 		{InvType(InvTypeTx), 0, io.ErrShortWrite, io.EOF},
-		{BitcoinNet(MainNet), 0, io.ErrShortWrite, io.EOF},
+		{protocol.BitcoinNet(protocol.MainNet), 0, io.ErrShortWrite, io.EOF},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -245,7 +246,7 @@ func TestElementWireErrors(t *testing.T) {
 
 // TestVarIntWire tests wire encode and decode for variable length integers.
 func TestVarIntWire(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		in   uint64 // Value to encode
@@ -313,7 +314,7 @@ func TestVarIntWire(t *testing.T) {
 // TestVarIntWireErrors performs negative tests against wire encode and decode
 // of variable length integers to confirm error paths work correctly.
 func TestVarIntWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		in       uint64 // Value to encode
@@ -358,7 +359,7 @@ func TestVarIntWireErrors(t *testing.T) {
 // TestVarIntNonCanonical ensures variable length integers that are not encoded
 // canonically return the expected error.
 func TestVarIntNonCanonical(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		name string // Test name for easier identification
@@ -448,7 +449,7 @@ func TestVarIntSerializeSize(t *testing.T) {
 
 // TestVarStringWire tests wire encode and decode for variable length strings.
 func TestVarStringWire(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// str256 is a string that takes a 2-byte varint to encode.
 	str256 := strings.Repeat("test", 64)
@@ -501,7 +502,7 @@ func TestVarStringWire(t *testing.T) {
 // TestVarStringWireErrors performs negative tests against wire encode and
 // decode of variable length strings to confirm error paths work correctly.
 func TestVarStringWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// str256 is a string that takes a 2-byte varint to encode.
 	str256 := strings.Repeat("test", 64)
@@ -550,7 +551,7 @@ func TestVarStringWireErrors(t *testing.T) {
 // length are handled properly.  This could otherwise potentially be used as an
 // attack vector.
 func TestVarStringOverflowErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		buf  []byte // Wire encoding
@@ -579,7 +580,7 @@ func TestVarStringOverflowErrors(t *testing.T) {
 
 // TestVarBytesWire tests wire encode and decode for variable length byte array.
 func TestVarBytesWire(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// bytes256 is a byte array that takes a 2-byte varint to encode.
 	bytes256 := bytes.Repeat([]byte{0x01}, 256)
@@ -632,7 +633,7 @@ func TestVarBytesWire(t *testing.T) {
 // TestVarBytesWireErrors performs negative tests against wire encode and
 // decode of variable length byte arrays to confirm error paths work correctly.
 func TestVarBytesWireErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	// bytes256 is a byte array that takes a 2-byte varint to encode.
 	bytes256 := bytes.Repeat([]byte{0x01}, 256)
@@ -682,7 +683,7 @@ func TestVarBytesWireErrors(t *testing.T) {
 // length are handled properly.  This could otherwise potentially be used as an
 // attack vector.
 func TestVarBytesOverflowErrors(t *testing.T) {
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	tests := []struct {
 		buf  []byte // Wire encoding

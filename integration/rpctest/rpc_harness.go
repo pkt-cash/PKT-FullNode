@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 const (
@@ -101,13 +102,13 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	// Add a flag for the appropriate network type based on the provided
 	// chain params.
 	switch activeNet.Net {
-	case wire.MainNet:
+	case protocol.MainNet:
 		// No extra flags since mainnet is the default
-	case wire.TestNet3:
+	case protocol.TestNet3:
 		extraArgs = append(extraArgs, "--testnet")
-	case wire.TestNet:
+	case protocol.TestNet:
 		extraArgs = append(extraArgs, "--regtest")
-	case wire.SimNet:
+	case protocol.SimNet:
 		extraArgs = append(extraArgs, "--simnet")
 	default:
 		return nil, er.Errorf("rpctest.New must be called with one " +

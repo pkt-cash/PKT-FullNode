@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 func TestMerkleBlock3(t *testing.T) {
@@ -60,7 +61,7 @@ func TestMerkleBlock3(t *testing.T) {
 	}
 
 	got := bytes.NewBuffer(nil)
-	err = mBlock.BtcEncode(got, wire.ProtocolVersion, wire.LatestEncoding)
+	err = mBlock.BtcEncode(got, protocol.ProtocolVersion, wire.LatestEncoding)
 	if err != nil {
 		t.Errorf("TestMerkleBlock3 BtcEncode failed: %v", err)
 		return

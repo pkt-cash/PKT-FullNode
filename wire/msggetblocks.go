@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -133,7 +135,7 @@ func (msg *MsgGetBlocks) MaxPayloadLength(pver uint32) uint32 {
 // fields.
 func NewMsgGetBlocks(hashStop *chainhash.Hash) *MsgGetBlocks {
 	return &MsgGetBlocks{
-		ProtocolVersion:    ProtocolVersion,
+		ProtocolVersion:    protocol.ProtocolVersion,
 		BlockLocatorHashes: make([]*chainhash.Hash, 0, MaxBlockLocatorsPerMsg),
 		HashStop:           *hashStop,
 	}

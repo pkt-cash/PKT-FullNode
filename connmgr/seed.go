@@ -6,11 +6,13 @@ package connmgr
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	mrand "math/rand"
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/wire"
@@ -31,12 +33,12 @@ type OnSeed func(addrs []*wire.NetAddress)
 type LookupFunc func(string) ([]net.IP, er.R)
 
 // SeedFromDNS uses DNS seeding to populate the address manager with peers.
-func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
+func SeedFromDNS(chainParams *chaincfg.Params, reqServices protocol.ServiceFlag,
 	lookupFn LookupFunc, seedFn OnSeed) {
 
 	for _, dnsseed := range chainParams.DNSSeeds {
 		var host string
-		if !dnsseed.HasFiltering || reqServices == wire.SFNodeNetwork {
+		if !dnsseed.HasFiltering || reqServices == protocol.SFNodeNetwork {
 			host = dnsseed.Host
 		} else {
 			host = fmt.Sprintf("x%x.%s", uint64(reqServices), dnsseed.Host)

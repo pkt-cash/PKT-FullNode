@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -57,8 +58,8 @@ type serializedKnownAddress struct {
 	TimeStamp   int64
 	LastAttempt int64
 	LastSuccess int64
-	Services    wire.ServiceFlag
-	SrcServices wire.ServiceFlag
+	Services    protocol.ServiceFlag
+	SrcServices protocol.ServiceFlag
 	// no refcount or tried, that is available from context.
 }
 
@@ -477,7 +478,7 @@ func (a *AddrManager) deserializePeers(filePath string) er.R {
 		// aware of the service bits associated with this address, so
 		// we'll assign a default of SFNodeNetwork to it.
 		if sam.Version == 1 {
-			v.Services = wire.SFNodeNetwork
+			v.Services = protocol.SFNodeNetwork
 		}
 		var err er.R
 		ka.na, err = a.DeserializeNetAddress(v.Addr, v.Services)
@@ -490,7 +491,7 @@ func (a *AddrManager) deserializePeers(filePath string) er.R {
 		// aware of the service bits associated with the source address,
 		// so we'll assign a default of SFNodeNetwork to it.
 		if sam.Version == 1 {
-			v.SrcServices = wire.SFNodeNetwork
+			v.SrcServices = protocol.SFNodeNetwork
 		}
 		ka.srcAddr, err = a.DeserializeNetAddress(v.Src, v.SrcServices)
 		if err != nil {
@@ -551,7 +552,7 @@ func (a *AddrManager) deserializePeers(filePath string) er.R {
 
 // DeserializeNetAddress converts a given address string to a *wire.NetAddress.
 func (a *AddrManager) DeserializeNetAddress(addr string,
-	services wire.ServiceFlag) (*wire.NetAddress, er.R) {
+	services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
 
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -723,7 +724,7 @@ func (a *AddrManager) reset() {
 // HostToNetAddress returns a netaddress given a host address.  If the address
 // is a Tor .onion address this will be taken care of.  Else if the host is
 // not an IP address it will be resolved (via Tor if required).
-func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, er.R) {
+func (a *AddrManager) HostToNetAddress(host string, port uint16, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
 	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
@@ -977,7 +978,7 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 }
 
 // SetServices sets the services for the giiven address to the provided value.
-func (a *AddrManager) SetServices(addr *wire.NetAddress, services wire.ServiceFlag) {
+func (a *AddrManager) SetServices(addr *wire.NetAddress, services protocol.ServiceFlag) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -1131,7 +1132,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 		} else {
 			ip = net.IPv4zero
 		}
-		services := wire.SFNodeNetwork | wire.SFNodeWitness | wire.SFNodeBloom
+		services := protocol.SFNodeNetwork | protocol.SFNodeWitness | protocol.SFNodeBloom
 		bestAddress = wire.NewNetAddressIPPort(ip, 0, services)
 	}
 

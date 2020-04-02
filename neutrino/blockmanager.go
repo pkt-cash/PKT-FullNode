@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -1939,7 +1940,7 @@ func (b *blockManager) SyncPeer() *ServerPeer {
 // syncing from.
 func (b *blockManager) isSyncCandidate(sp *ServerPeer) bool {
 	// The peer is not a candidate for sync if it's not a full node.
-	return sp.Services()&wire.SFNodeNetwork == wire.SFNodeNetwork
+	return sp.Services()&protocol.SFNodeNetwork == protocol.SFNodeNetwork
 }
 
 // findNextHeaderCheckpoint returns the next checkpoint after the passed height.

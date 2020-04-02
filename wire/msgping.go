@@ -5,8 +5,10 @@
 package wire
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // MsgPing implements the Message interface and represents a bitcoin ping
@@ -32,7 +34,7 @@ func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
+	if pver > protocol.BIP0031Version {
 		err := readElement(r, &msg.Nonce)
 		if err != nil {
 			return err
@@ -48,7 +50,7 @@ func (msg *MsgPing) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
+	if pver > protocol.BIP0031Version {
 		err := writeElement(w, msg.Nonce)
 		if err != nil {
 			return err
@@ -71,7 +73,7 @@ func (msg *MsgPing) MaxPayloadLength(pver uint32) uint32 {
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
+	if pver > protocol.BIP0031Version {
 		// Nonce 8 bytes.
 		plen += 8
 	}

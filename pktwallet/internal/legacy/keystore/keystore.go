@@ -21,13 +21,13 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -435,12 +435,12 @@ func (net *netParams) ReadFrom(r io.Reader) (int64, error) {
 		return n64, er.Native(er.E(err))
 	}
 
-	switch wire.BitcoinNet(binary.LittleEndian.Uint32(uint32Bytes)) {
-	case wire.MainNet:
+	switch protocol.BitcoinNet(binary.LittleEndian.Uint32(uint32Bytes)) {
+	case protocol.MainNet:
 		*net = (netParams)(chaincfg.MainNetParams)
-	case wire.TestNet3:
+	case protocol.TestNet3:
 		*net = (netParams)(chaincfg.TestNet3Params)
-	case wire.SimNet:
+	case protocol.SimNet:
 		*net = (netParams)(chaincfg.SimNetParams)
 	default:
 		return n64, er.Native(er.New("unknown network"))

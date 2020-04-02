@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // MsgPong implements the Message interface and represents a bitcoin pong
@@ -26,7 +28,7 @@ type MsgPong struct {
 func (msg *MsgPong) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
 	// NOTE: <= is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver <= BIP0031Version {
+	if pver <= protocol.BIP0031Version {
 		str := fmt.Sprintf("pong message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgPong.BtcDecode", str)
@@ -40,7 +42,7 @@ func (msg *MsgPong) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.
 func (msg *MsgPong) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
 	// NOTE: <= is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver <= BIP0031Version {
+	if pver <= protocol.BIP0031Version {
 		str := fmt.Sprintf("pong message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgPong.BtcEncode", str)
@@ -62,7 +64,7 @@ func (msg *MsgPong) MaxPayloadLength(pver uint32) uint32 {
 	// The pong message did not exist for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
+	if pver > protocol.BIP0031Version {
 		// Nonce 8 bytes.
 		plen += 8
 	}

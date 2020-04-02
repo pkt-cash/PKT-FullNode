@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -50,11 +51,11 @@ var (
 	UserAgentVersion = "0.0.4-beta"
 
 	// Services describes the services that are supported by the server.
-	Services = wire.SFNodeWitness | wire.SFNodeCF
+	Services = protocol.SFNodeWitness | protocol.SFNodeCF
 
 	// RequiredServices describes the services that are required to be
 	// supported by outbound peers.
-	RequiredServices = wire.SFNodeNetwork | wire.SFNodeWitness | wire.SFNodeCF
+	RequiredServices = protocol.SFNodeNetwork | protocol.SFNodeWitness | protocol.SFNodeCF
 
 	// BanThreshold is the maximum ban score before a peer is banned.
 	BanThreshold = uint32(100)
@@ -198,7 +199,7 @@ func (sp *ServerPeer) addKnownAddresses(addresses []*wire.NetAddress) {
 // pushSendHeadersMsg sends a sendheaders message to the connected peer.
 func (sp *ServerPeer) pushSendHeadersMsg() er.R {
 	if sp.VersionKnown() {
-		if sp.ProtocolVersion() > wire.SendHeadersVersion {
+		if sp.ProtocolVersion() > protocol.SendHeadersVersion {
 			sp.QueueMessage(wire.NewMsgSendHeaders(), nil)
 		}
 	}
@@ -224,8 +225,8 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	// service bits required to service us. If not, then we'll disconnect
 	// so we can find compatible peers.
 	peerServices := sp.Services()
-	if peerServices&wire.SFNodeWitness != wire.SFNodeWitness ||
-		peerServices&wire.SFNodeCF != wire.SFNodeCF {
+	if peerServices&protocol.SFNodeWitness != protocol.SFNodeWitness ||
+		peerServices&protocol.SFNodeCF != protocol.SFNodeCF {
 
 		peerAddr := sp.Addr()
 		err := sp.server.BanPeer(peerAddr, banman.NoCompactFilters)
@@ -255,7 +256,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// more and the peer has a protocol version new enough to
 		// include a timestamp with addresses.
 		hasTimestamp := sp.ProtocolVersion() >=
-			wire.NetAddressTimeVersion
+			protocol.NetAddressTimeVersion
 		if addrManager.NeedMoreAddresses() && hasTimestamp {
 			sp.QueueMessage(wire.NewMsgGetAddr(), nil)
 		}
@@ -295,7 +296,7 @@ func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
 		if invVect.Type == wire.InvTypeTx {
 			log.Tracef("Ignoring tx %s in inv from %v -- "+
 				"SPV mode", invVect.Hash, sp)
-			if sp.ProtocolVersion() >= wire.BIP0037Version {
+			if sp.ProtocolVersion() >= protocol.BIP0037Version {
 				log.Infof("Peer %v is announcing "+
 					"transactions -- disconnecting", sp)
 				sp.Disconnect()
@@ -357,7 +358,7 @@ func (sp *ServerPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	}
 
 	// Ignore old style addresses which don't include a timestamp.
-	if sp.ProtocolVersion() < wire.NetAddressTimeVersion {
+	if sp.ProtocolVersion() < protocol.NetAddressTimeVersion {
 		return
 	}
 
@@ -547,7 +548,7 @@ type ChainService struct {
 	wg                   sync.WaitGroup
 	quit                 chan struct{}
 	timeSource           blockchain.MedianTimeSource
-	services             wire.ServiceFlag
+	services             protocol.ServiceFlag
 	utxoScanner          *UtxoScanner
 	broadcaster          *pushtx.Broadcaster
 	banStore             banman.Store
@@ -1300,7 +1301,7 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 		UserAgentVersion: sp.server.userAgentVersion,
 		ChainParams:      &sp.server.chainParams,
 		Services:         sp.server.services,
-		ProtocolVersion:  wire.FeeFilterVersion,
+		ProtocolVersion:  protocol.FeeFilterVersion,
 		DisableRelayTx:   true,
 	}
 }

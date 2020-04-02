@@ -10,13 +10,14 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // TestFilterAddLatest tests the MsgFilterAdd API against the latest protocol
 // version.
 func TestFilterAddLatest(t *testing.T) {
 	enc := BaseEncoding
-	pver := ProtocolVersion
+	pver := protocol.ProtocolVersion
 
 	data := []byte{0x01, 0x02}
 	msg := NewMsgFilterAdd(data)
@@ -63,14 +64,14 @@ func TestFilterAddCrossProtocol(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, ProtocolVersion, LatestEncoding)
+	err := msg.BtcEncode(&buf, protocol.ProtocolVersion, LatestEncoding)
 	if err != nil {
 		t.Errorf("encode of MsgFilterAdd failed %v err <%v>", msg, err)
 	}
 
 	// Decode with old protocol version.
 	var readmsg MsgFilterAdd
-	err = readmsg.BtcDecode(&buf, BIP0031Version, LatestEncoding)
+	err = readmsg.BtcDecode(&buf, protocol.BIP0031Version, LatestEncoding)
 	if err == nil {
 		t.Errorf("decode of MsgFilterAdd succeeded when it shouldn't "+
 			"have %v", msg)
@@ -91,7 +92,7 @@ func TestFilterAddMaxDataSize(t *testing.T) {
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, ProtocolVersion, LatestEncoding)
+	err := msg.BtcEncode(&buf, protocol.ProtocolVersion, LatestEncoding)
 	if err == nil {
 		t.Errorf("encode of MsgFilterAdd succeeded when it shouldn't "+
 			"have %v", msg)
@@ -99,7 +100,7 @@ func TestFilterAddMaxDataSize(t *testing.T) {
 
 	// Decode with latest protocol version.
 	readbuf := bytes.NewReader(data)
-	err = msg.BtcDecode(readbuf, ProtocolVersion, LatestEncoding)
+	err = msg.BtcDecode(readbuf, protocol.ProtocolVersion, LatestEncoding)
 	if err == nil {
 		t.Errorf("decode of MsgFilterAdd succeeded when it shouldn't "+
 			"have %v", msg)
@@ -109,8 +110,8 @@ func TestFilterAddMaxDataSize(t *testing.T) {
 // TestFilterAddWireErrors performs negative tests against wire encode and decode
 // of MsgFilterAdd to confirm error paths work correctly.
 func TestFilterAddWireErrors(t *testing.T) {
-	pver := ProtocolVersion
-	pverNoFilterAdd := BIP0037Version - 1
+	pver := protocol.ProtocolVersion
+	pverNoFilterAdd := protocol.BIP0037Version - 1
 	wireErr := MessageError.Default()
 
 	baseData := []byte{0x01, 0x02, 0x03, 0x04}

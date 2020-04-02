@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -76,7 +77,7 @@ type MsgReject struct {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
-	if pver < RejectVersion {
+	if pver < protocol.RejectVersion {
 		str := fmt.Sprintf("reject message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgReject.BtcDecode", str)
@@ -118,7 +119,7 @@ func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
-	if pver < RejectVersion {
+	if pver < protocol.RejectVersion {
 		str := fmt.Sprintf("reject message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgReject.BtcEncode", str)
@@ -167,7 +168,7 @@ func (msg *MsgReject) MaxPayloadLength(pver uint32) uint32 {
 	plen := uint32(0)
 	// The reject message did not exist before protocol version
 	// RejectVersion.
-	if pver >= RejectVersion {
+	if pver >= protocol.RejectVersion {
 		// Unfortunately the bitcoin protocol does not enforce a sane
 		// limit on the length of the reason, so the max payload is the
 		// overall maximum message payload.

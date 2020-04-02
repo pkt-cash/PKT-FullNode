@@ -40,17 +40,18 @@ import (
 	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 const (
 	// defaultServices describes the default services that are supported by
 	// the server.
-	defaultServices = wire.SFNodeNetwork | wire.SFNodeBloom |
-		wire.SFNodeWitness | wire.SFNodeCF
+	defaultServices = protocol.SFNodeNetwork | protocol.SFNodeBloom |
+		protocol.SFNodeWitness | protocol.SFNodeCF
 
 	// defaultRequiredServices describes the default services that are
 	// required to be supported by outbound peers.
-	defaultRequiredServices = wire.SFNodeNetwork
+	defaultRequiredServices = protocol.SFNodeNetwork
 
 	// defaultTargetOutbound is the default number of outbound peers to target.
 	defaultTargetOutbound = 8
@@ -216,7 +217,7 @@ type server struct {
 	nat                  NAT
 	db                   database.DB
 	timeSource           blockchain.MedianTimeSource
-	services             wire.ServiceFlag
+	services             protocol.ServiceFlag
 
 	// The following fields are used for optional indexes.  They will be nil
 	// if the associated index is not enabled.  These fields are set during
@@ -383,7 +384,7 @@ func (sp *serverPeer) addBanScore(persistent, transient uint32, reason string) {
 
 // hasServices returns whether or not the provided advertised service flags have
 // all of the provided desired service flags set.
-func hasServices(advertised, desired wire.ServiceFlag) bool {
+func hasServices(advertised, desired protocol.ServiceFlag) bool {
 	return advertised&desired == desired
 }
 
@@ -415,7 +416,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	}
 
 	// Reject outbound peers that are not full nodes.
-	wantServices := wire.SFNodeNetwork
+	wantServices := protocol.SFNodeNetwork
 	if !isInbound && !hasServices(msg.Services, wantServices) {
 		missingServices := wantServices & ^msg.Services
 		srvrLog.Debugf("Rejecting peer %s with services %v due to not "+
@@ -465,7 +466,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// Request known addresses if the server address manager needs
 		// more and the peer has a protocol version new enough to
 		// include a timestamp with addresses.
-		hasTimestamp := sp.ProtocolVersion() >= wire.NetAddressTimeVersion
+		hasTimestamp := sp.ProtocolVersion() >= protocol.NetAddressTimeVersion
 		if addrManager.NeedMoreAddresses() && hasTimestamp {
 			sp.QueueMessage(wire.NewMsgGetAddr(), nil)
 		}
@@ -497,7 +498,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 	// Only allow mempool requests if the server has bloom filtering
 	// enabled.
-	if sp.server.services&wire.SFNodeBloom != wire.SFNodeBloom {
+	if sp.server.services&protocol.SFNodeBloom != protocol.SFNodeBloom {
 		peerLog.Debugf("peer %v sent mempool request with bloom "+
 			"filtering disabled -- disconnecting", sp)
 		sp.Disconnect()
@@ -608,7 +609,7 @@ func (sp *serverPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 		if invVect.Type == wire.InvTypeTx {
 			peerLog.Tracef("Ignoring tx %v in inv from %v -- "+
 				"blocksonly enabled", invVect.Hash, sp)
-			if sp.ProtocolVersion() >= wire.BIP0037Version {
+			if sp.ProtocolVersion() >= protocol.BIP0037Version {
 				peerLog.Infof("Peer %v is announcing "+
 					"transactions -- disconnecting", sp)
 				sp.Disconnect()
@@ -1111,7 +1112,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 // version  that is high enough to observe the bloom filter service support bit,
 // it will be banned since it is intentionally violating the protocol.
 func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
-	if sp.server.services&wire.SFNodeBloom != wire.SFNodeBloom {
+	if sp.server.services&protocol.SFNodeBloom != protocol.SFNodeBloom {
 		// Ban the peer if the protocol version is high enough that the
 		// peer is knowingly violating the protocol and banning is
 		// enabled.
@@ -1120,7 +1121,7 @@ func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
 		// whether or not banning is enabled, it is checked here as well
 		// to ensure the violation is logged and the peer is
 		// disconnected regardless.
-		if sp.ProtocolVersion() >= wire.BIP0111Version &&
+		if sp.ProtocolVersion() >= protocol.BIP0111Version &&
 			!cfg.DisableBanning {
 
 			// Disconnect the peer regardless of whether it was
@@ -1264,7 +1265,7 @@ func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	}
 
 	// Ignore old style addresses which don't include a timestamp.
-	if sp.ProtocolVersion() < wire.NetAddressTimeVersion {
+	if sp.ProtocolVersion() < protocol.NetAddressTimeVersion {
 		return
 	}
 
@@ -2549,10 +2550,10 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 
 	services := defaultServices
 	if cfg.NoPeerBloomFilters {
-		services &^= wire.SFNodeBloom
+		services &^= protocol.SFNodeBloom
 	}
 	if cfg.NoCFilters {
-		services &^= wire.SFNodeCF
+		services &^= protocol.SFNodeCF
 	}
 
 	amgr := addrmgr.New(cfg.DataDir, pktdLookup)
@@ -2882,7 +2883,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 // initListeners initializes the configured net listeners and adds any bound
 // addresses to the address manager. Returns the listeners and a NAT interface,
 // which is non-nil if UPnP is in use.
-func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wire.ServiceFlag) ([]net.Listener, NAT, er.R) {
+func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services protocol.ServiceFlag) ([]net.Listener, NAT, er.R) {
 	// Listen for TCP connections at the configured addresses
 	netAddrs, err := parseListeners(listenAddrs)
 	if err != nil {
@@ -3007,7 +3008,7 @@ func addrStringToNetAddr(addr string) (net.Addr, er.R) {
 
 // addLocalAddress adds an address that this node is listening on to the
 // address manager so that it may be relayed to peers.
-func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) er.R {
+func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services protocol.ServiceFlag) er.R {
 	host, portStr, errr := net.SplitHostPort(addr)
 	if errr != nil {
 		return er.E(errr)

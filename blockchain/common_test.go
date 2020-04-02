@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/blockchain/testdata"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -34,7 +35,7 @@ const (
 	testDbRoot = "testdbs"
 
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = protocol.MainNet
 )
 
 // filesExists returns whether or not the named file or directory exists.
