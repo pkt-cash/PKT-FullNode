@@ -41,6 +41,7 @@ var helpDescsEnUS = map[string]string{
 	"getaddressbalancesresult-spendable":      "Balance which is currently spendable",
 	"getaddressbalancesresult-total":          "Total balance",
 	"getaddressbalancesresult-address":        "The address which has this balance",
+	"getaddressbalancesresult-outputcount":    "The number of transaction outputs which make up the balance",
 
 	// SetNetworkStewardCmd help.
 	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",

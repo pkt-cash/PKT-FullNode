@@ -213,6 +213,7 @@ type GetAddressBalancesResult struct {
 	Total          float64 `json:"total"`
 	Spendable      float64 `json:"spendable"`
 	ImmatureReward float64 `json:"immaturereward"`
+	OutputCount    int32   `json:"outputcount"`
 }
 
 type VacuumDbRes struct {

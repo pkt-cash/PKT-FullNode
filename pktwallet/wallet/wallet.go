@@ -1497,6 +1497,7 @@ type Balances struct {
 	Total          btcutil.Amount
 	Spendable      btcutil.Amount
 	ImmatureReward btcutil.Amount
+	OutputCount    int32
 }
 
 func (w *Wallet) CalculateAddressBalances(
@@ -1534,6 +1535,7 @@ func (w *Wallet) CalculateAddressBalances(
 					bals[addrs[0]] = bal
 				}
 				bal.Total += output.Amount
+				bal.OutputCount++
 				if output.FromCoinBase && !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					output.Height, syncBlock.Height) {
 					bal.ImmatureReward += output.Amount

@@ -351,6 +351,7 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 				Spendable:      bal.Spendable.ToBTC(),
 				Total:          bal.Total.ToBTC(),
 				ImmatureReward: bal.ImmatureReward.ToBTC(),
+				OutputCount:    bal.OutputCount,
 			})
 		}
 		return results, nil
