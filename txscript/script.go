@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
@@ -17,34 +16,6 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-)
-
-// Bip16Activation is the timestamp where BIP0016 is valid to use in the
-// blockchain.  To be used to determine if BIP0016 should be called for or not.
-// This timestamp corresponds to Sun Apr 1 00:00:00 UTC 2012.
-var Bip16Activation = time.Unix(1333238400, 0)
-
-// SigHashType represents hash type bits at the end of a signature.
-type SigHashType uint32
-
-// Hash type bits from the end of a signature.
-const (
-	SigHashOld          SigHashType = 0x0
-	SigHashAll          SigHashType = 0x1
-	SigHashNone         SigHashType = 0x2
-	SigHashSingle       SigHashType = 0x3
-	SigHashAnyOneCanPay SigHashType = 0x80
-
-	// sigHashMask defines the number of bits of the hash type which is used
-	// to identify which outputs are signed.
-	sigHashMask = 0x1f
-)
-
-// These are the constants specified for maximums in individual scripts.
-const (
-	MaxOpsPerScript       = 201 // Max number of non-push operations.
-	MaxPubKeysPerMultiSig = 20  // Multisig can't have more sigs than this.
-	MaxScriptElementSize  = 520 // Max bytes pushable to the stack.
 )
 
 // isSmallInt returns whether or not the opcode is considered a small integer,
