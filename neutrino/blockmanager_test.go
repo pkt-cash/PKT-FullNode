@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
@@ -131,7 +132,7 @@ func generateHeaders(genesisBlockHeader *wire.BlockHeader,
 	// part of the CFHeaders response, so we also keep track of
 	// them.
 	genesisFilter, err := builder.BuildBasicFilter(
-		chaincfg.SimNetParams.GenesisBlock, nil,
+		genesis.Block(chaincfg.SimNetParams.GenesisHash), nil,
 	)
 	if err != nil {
 		return nil, er.Errorf("unable to build genesis filter: %v",

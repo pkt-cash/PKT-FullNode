@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -147,7 +148,7 @@ func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	if prevBlock == nil {
 		prevHash = net.GenesisHash
 		blockHeight = 1
-		prevBlockTime = net.GenesisBlock.Header.Timestamp.Add(time.Minute)
+		prevBlockTime = genesis.Block(net.GenesisHash).Header.Timestamp.Add(time.Minute)
 	} else {
 		prevHash = prevBlock.Hash()
 		blockHeight = prevBlock.Height() + 1

@@ -99,7 +99,6 @@ var regressionNetParams = &chaincfg.Params{
 	DefaultPort: "18444",
 
 	// Chain parameters
-	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              newHashFromStr("5bec7567af40504e0994db3b573c186fffcc4edefe096ff2e58d00523bd7e8a6"),
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,

@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -129,9 +128,6 @@ type Params struct {
 
 	// The network network steward sig hash as of the first block
 	InitialNetworkSteward []byte
-
-	// GenesisBlock defines the first block of the chain.
-	GenesisBlock *wire.MsgBlock
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
@@ -247,8 +243,7 @@ var MainNetParams = Params{
 
 	// Chain parameters
 	GlobalConf:               globalcfg.BitcoinDefaults(),
-	GenesisBlock:             &genesisBlock,
-	GenesisHash:              &genesisHash,
+	GenesisHash:              newHashFromStr("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"),
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            227931, // 000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8
@@ -350,8 +345,7 @@ var RegressionNetParams = Params{
 
 	// Chain parameters
 	GlobalConf:               globalcfg.BitcoinDefaults(),
-	GenesisBlock:             &regTestGenesisBlock,
-	GenesisHash:              &regTestGenesisHash,
+	GenesisHash:              newHashFromStr("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"),
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,
 	CoinbaseMaturity:         100,
@@ -430,8 +424,7 @@ var TestNet3Params = Params{
 
 	// Chain parameters
 	GlobalConf:               globalcfg.BitcoinDefaults(),
-	GenesisBlock:             &testNet3GenesisBlock,
-	GenesisHash:              &testNet3GenesisHash,
+	GenesisHash:              newHashFromStr("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"),
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            21111,  // 0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8
@@ -533,8 +526,7 @@ var PktTestNetParams = Params{
 		0xbb, 0xbc, 0x06, 0x22, 0x65, 0xf6, 0x7e, 0x30,
 		0x8f, 0x2b,
 	},
-	GenesisBlock:             &pktTestNetGenesisBlock,
-	GenesisHash:              &pktTestNetGenesisHash,
+	GenesisHash:              newHashFromStr("0bdc1712a46194e552cf417ab0439c2d4f456c35cf63a0a406964c6f93432d85"),
 	PowLimitBits:             0x1f0fffff,
 	BIP0034Height:            0,
 	BIP0065Height:            0,
@@ -617,8 +609,7 @@ var PktMainNetParams = Params{
 		0xbb, 0xbc, 0x06, 0x22, 0x65, 0xf6, 0x7e, 0x30,
 		0x8f, 0x2b,
 	},
-	GenesisBlock:             &pktTestNetGenesisBlock,
-	GenesisHash:              &pktTestNetGenesisHash,
+	GenesisHash:              newHashFromStr("0bdc1712a46194e552cf417ab0439c2d4f456c35cf63a0a406964c6f93432d85"),
 	PowLimitBits:             0x1f0fffff,
 	BIP0034Height:            0,
 	BIP0065Height:            0,
@@ -708,8 +699,7 @@ var SimNetParams = Params{
 
 	// Chain parameters
 	GlobalConf:               globalcfg.BitcoinDefaults(),
-	GenesisBlock:             &simNetGenesisBlock,
-	GenesisHash:              &simNetGenesisHash,
+	GenesisHash:              newHashFromStr("683e86bd5c6d110d91b94b97137ba6bfe02dbbdb8e3dff722a669b5d69d77af6"),
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,
 	BIP0034Height:            0, // Always active on simnet

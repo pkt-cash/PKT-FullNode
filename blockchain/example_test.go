@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 )
@@ -58,7 +59,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// Process a block.  For this example, we are going to intentionally
 	// cause an error by trying to process the genesis block which already
 	// exists.
-	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesisBlock := btcutil.NewBlock(genesis.Block(chaincfg.MainNetParams.GenesisHash))
 	isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
 		blockchain.BFNone)
 	if err != nil {

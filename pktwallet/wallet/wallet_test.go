@@ -3,6 +3,8 @@ package wallet
 import (
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 )
 
 // TestLocateBirthdayBlock ensures we can properly map a block in the chain to a
@@ -21,7 +23,7 @@ func TestLocateBirthdayBlock(t *testing.T) {
 		blockInterval = birthdayBlockDelta + 1
 	)
 
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := genesis.Block(chainParams.GenesisHash).Header.Timestamp
 
 	testCases := []struct {
 		name           string
@@ -63,7 +65,7 @@ func TestLocateBirthdayBlock(t *testing.T) {
 	for _, testCase := range testCases {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			chainConn := createMockChainConn(
-				chainParams.GenesisBlock, numBlocks, blockInterval,
+				genesis.Block(chainParams.GenesisHash), numBlocks, blockInterval,
 			)
 			birthdayBlock, err := locateBirthdayBlock(
 				chainConn, testCase.birthday,

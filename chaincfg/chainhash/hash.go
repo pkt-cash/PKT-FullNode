@@ -94,6 +94,14 @@ func NewHashFromStr(hash string) (*Hash, er.R) {
 	return ret, nil
 }
 
+func MustNewHashFromStr(hash string) *Hash {
+	out, err := NewHashFromStr(hash)
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
 // Decode decodes the byte-reversed hexadecimal string encoding of a Hash to a
 // destination.
 func Decode(dst *Hash, src string) er.R {

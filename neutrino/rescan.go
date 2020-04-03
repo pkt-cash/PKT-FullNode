@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
@@ -320,7 +321,7 @@ func rescan(chain ChainSource, options ...RescanOption) er.R {
 				curHeader = *header
 				curStamp.Hash = curHeader.BlockHash()
 			} else {
-				curHeader = chain.ChainParams().GenesisBlock.Header
+				curHeader = genesis.Block(chain.ChainParams().GenesisHash).Header
 				curStamp.Hash = *chain.ChainParams().GenesisHash
 				curStamp.Height = 0
 			}

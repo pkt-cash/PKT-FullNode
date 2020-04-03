@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -91,7 +92,7 @@ func TestMigrationPopulateBirthdayBlock(t *testing.T) {
 		// block corresponds to the 7th block (out of 11) in the chain.
 		// To do this, we'll need to set our birthday timestamp to the
 		// estimated timestamp of a block that's 6 blocks after genesis.
-		genesisTimestamp := chaincfg.MainNetParams.GenesisBlock.Header.Timestamp
+		genesisTimestamp := genesis.Block(chaincfg.MainNetParams.GenesisHash).Header.Timestamp
 		delta := time.Hour
 		expectedHeight = int32(delta.Seconds() / 600)
 		birthday := genesisTimestamp.Add(delta)
@@ -174,7 +175,7 @@ func TestMigrationPopulateBirthdayBlockEstimateTooFar(t *testing.T) {
 		// database's point of view, a days worth of blocks will be
 		// subtracted from the estimate, which should give us a valid
 		// block height.
-		genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+		genesisTimestamp := genesis.Block(chainParams.GenesisHash).Header.Timestamp
 		delta := numBlocks * 10 * time.Minute
 		expectedHeight = numBlocks - 144
 

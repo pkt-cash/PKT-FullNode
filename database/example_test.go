@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -137,7 +138,7 @@ func Example_blockStorageAndRetrieval() {
 	// read-write transaction and store a genesis block in the database as
 	// and example.
 	err = db.Update(func(tx database.Tx) er.R {
-		genesisBlock := chaincfg.MainNetParams.GenesisBlock
+		genesisBlock := genesis.Block(chaincfg.MainNetParams.GenesisHash)
 		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
 	})
 	if err != nil {

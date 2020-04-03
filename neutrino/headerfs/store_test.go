@@ -16,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -48,7 +49,7 @@ func createTestBlockHeaderStore() (func(), walletdb.DB, string,
 
 func createTestBlockHeaderChain(numHeaders uint32) []BlockHeader {
 	blockHeaders := make([]BlockHeader, numHeaders)
-	prevHeader := &chaincfg.SimNetParams.GenesisBlock.Header
+	prevHeader := &genesis.Block(chaincfg.SimNetParams.GenesisHash).Header
 	for i := uint32(1); i <= numHeaders; i++ {
 		bitcoinHeader := &wire.BlockHeader{
 			Bits:      uint32(rand.Int31()),

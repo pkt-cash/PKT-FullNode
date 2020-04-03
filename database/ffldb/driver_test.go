@@ -12,12 +12,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/database/ffldb"
-	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // dbType is the database type name for this driver.
@@ -173,7 +174,7 @@ func TestPersistence(t *testing.T) {
 		"b1key2": "foo2",
 		"b1key3": "foo3",
 	}
-	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesisBlock := btcutil.NewBlock(genesis.Block(chaincfg.MainNetParams.GenesisHash))
 	genesisHash := chaincfg.MainNetParams.GenesisHash
 	err = db.Update(func(tx database.Tx) er.R {
 		metadataBucket := tx.Metadata()

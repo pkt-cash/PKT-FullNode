@@ -201,7 +201,7 @@ type testGenerator struct {
 // genesis block as the tip.
 func makeTestGenerator(params *chaincfg.Params) (testGenerator, er.R) {
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), []byte{0x01})
-	genesis := params.GenesisBlock
+	genesis := &regTestGenesisBlock
 	genesisHash := genesis.BlockHash()
 	return testGenerator{
 		params:       params,
@@ -806,7 +806,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 			case er.R:
 				err = rt
 			default:
-				err = er.New("Unknown panic")
+				err = er.Errorf("Unknown panic [%v]", r)
 			}
 		}
 	}()

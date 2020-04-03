@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/txscript"
@@ -223,7 +224,7 @@ func (b *BlockChain) TstSetCoinbaseMaturity(maturity uint16) {
 func newFakeChain(params *chaincfg.Params) *BlockChain {
 	// Create a genesis block node and block index index populated with it
 	// for use when creating the fake chain below.
-	node := newBlockNode(&params.GenesisBlock.Header, nil)
+	node := newBlockNode(&genesis.Block(params.GenesisHash).Header, nil)
 	index := newBlockIndex(nil, params)
 	index.AddNode(node)
 

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -308,19 +309,19 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) er.R {
 	switch *genesisHash {
 	case *chaincfg.MainNetParams.GenesisHash:
 		genesisTimestamp =
-			chaincfg.MainNetParams.GenesisBlock.Header.Timestamp
+			genesis.Block(chaincfg.MainNetParams.GenesisHash).Header.Timestamp
 
 	case *chaincfg.TestNet3Params.GenesisHash:
 		genesisTimestamp =
-			chaincfg.TestNet3Params.GenesisBlock.Header.Timestamp
+			genesis.Block(chaincfg.TestNet3Params.GenesisHash).Header.Timestamp
 
 	case *chaincfg.RegressionNetParams.GenesisHash:
 		genesisTimestamp =
-			chaincfg.RegressionNetParams.GenesisBlock.Header.Timestamp
+			genesis.Block(chaincfg.RegressionNetParams.GenesisHash).Header.Timestamp
 
 	case *chaincfg.SimNetParams.GenesisHash:
 		genesisTimestamp =
-			chaincfg.SimNetParams.GenesisBlock.Header.Timestamp
+			genesis.Block(chaincfg.SimNetParams.GenesisHash).Header.Timestamp
 
 	default:
 		return er.Errorf("unknown genesis hash %v", genesisHash)

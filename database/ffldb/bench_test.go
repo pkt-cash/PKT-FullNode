@@ -5,10 +5,12 @@
 package ffldb
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -29,7 +31,7 @@ func BenchmarkBlockHeader(b *testing.B) {
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) er.R {
-		block := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		block := btcutil.NewBlock(genesis.Block(chaincfg.MainNetParams.GenesisHash))
 		return tx.StoreBlock(block)
 	})
 	if err != nil {
@@ -70,7 +72,7 @@ func BenchmarkBlock(b *testing.B) {
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) er.R {
-		block := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		block := btcutil.NewBlock(genesis.Block(chaincfg.MainNetParams.GenesisHash))
 		return tx.StoreBlock(block)
 	})
 	if err != nil {

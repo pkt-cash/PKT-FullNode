@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/wire"
@@ -166,7 +167,7 @@ func TestBirthdaySanityCheckVerifiedBirthdayBlock(t *testing.T) {
 
 	const chainTip = 5000
 	chainConn := createMockChainConn(
-		chainParams.GenesisBlock, chainTip, defaultBlockInterval,
+		genesis.Block(chainParams.GenesisHash), chainTip, defaultBlockInterval,
 	)
 	expectedBirthdayBlock := waddrmgr.BlockStamp{Height: 1337}
 
@@ -208,12 +209,12 @@ func TestBirthdaySanityCheckLowerEstimate(t *testing.T) {
 
 	// We'll start by defining our birthday timestamp to be around the
 	// timestamp of the 1337th block.
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := genesis.Block(chainParams.GenesisHash).Header.Timestamp
 	birthday := genesisTimestamp.Add(1337 * defaultBlockInterval)
 
 	// We'll establish a connection to a mock chain of 5000 blocks.
 	chainConn := createMockChainConn(
-		chainParams.GenesisBlock, 5000, defaultBlockInterval,
+		genesis.Block(chainParams.GenesisHash), 5000, defaultBlockInterval,
 	)
 
 	// Our birthday store will reflect that our birthday block is currently
@@ -261,12 +262,12 @@ func TestBirthdaySanityCheckHigherEstimate(t *testing.T) {
 
 	// We'll start by defining our birthday timestamp to be around the
 	// timestamp of the 1337th block.
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := genesis.Block(chainParams.GenesisHash).Header.Timestamp
 	birthday := genesisTimestamp.Add(1337 * defaultBlockInterval)
 
 	// We'll establish a connection to a mock chain of 5000 blocks.
 	chainConn := createMockChainConn(
-		chainParams.GenesisBlock, 5000, defaultBlockInterval,
+		genesis.Block(chainParams.GenesisHash), 5000, defaultBlockInterval,
 	)
 
 	// Our birthday store will reflect that our birthday block is currently

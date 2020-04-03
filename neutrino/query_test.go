@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/neutrino/cache"
 	"github.com/pkt-cash/pktd/neutrino/cache/lru"
 	"github.com/pkt-cash/pktd/neutrino/filterdb"
@@ -65,7 +66,7 @@ func loadBlocks(t *testing.T, dataFile string, network protocol.BitcoinNet) (
 
 	// Set the first block as the genesis block.
 	blocks := make([]*btcutil.Block, 0, 256)
-	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesis := btcutil.NewBlock(genesis.Block(chaincfg.MainNetParams.GenesisHash))
 	blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.

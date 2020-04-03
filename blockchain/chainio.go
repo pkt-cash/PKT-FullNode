@@ -18,6 +18,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -996,7 +997,7 @@ func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) er.
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() er.R {
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := btcutil.NewBlock(b.chainParams.GenesisBlock)
+	genesisBlock := btcutil.NewBlock(genesis.Block(b.chainParams.GenesisHash))
 	genesisBlock.SetHeight(0)
 	mBlock := genesisBlock.MsgBlock()
 	header := &mBlock.Header

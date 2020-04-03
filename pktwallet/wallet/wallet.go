@@ -25,6 +25,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
@@ -2306,7 +2307,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 		bs = &waddrmgr.BlockStamp{
 			Hash:      *w.chainParams.GenesisHash,
 			Height:    0,
-			Timestamp: w.chainParams.GenesisBlock.Header.Timestamp,
+			Timestamp: genesis.Block(w.chainParams.GenesisHash).Header.Timestamp,
 		}
 	} else if bs.Timestamp.IsZero() {
 		// Only update the new birthday time from default value if we

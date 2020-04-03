@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -79,7 +80,7 @@ func New(db walletdb.DB, params chaincfg.Params) (*FilterStore, er.R) {
 		// If the main bucket doesn't already exist, then we'll need to
 		// create the sub-buckets, and also initialize them with the
 		// genesis filters.
-		genesisBlock := params.GenesisBlock
+		genesisBlock := genesis.Block(params.GenesisHash)
 		genesisHash := params.GenesisHash
 
 		// First we'll create the bucket for the regular filters.

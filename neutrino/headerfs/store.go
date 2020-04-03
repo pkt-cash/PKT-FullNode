@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
@@ -169,7 +170,7 @@ func NewBlockHeaderStore(filePath string, db walletdb.DB,
 	// written the initial genesis header to disk, so we'll do so now.
 	if fileInfo.Size() == 0 {
 		genesisHeader := BlockHeader{
-			BlockHeader: &netParams.GenesisBlock.Header,
+			BlockHeader: &genesis.Block(netParams.GenesisHash).Header,
 			Height:      0,
 		}
 		if err := bhs.WriteHeaders(genesisHeader); err != nil {
@@ -615,7 +616,7 @@ func NewFilterHeaderStore(filePath string, db walletdb.DB,
 		switch filterType {
 		case RegularFilter:
 			basicFilter, err := builder.BuildBasicFilter(
-				netParams.GenesisBlock, nil,
+				genesis.Block(netParams.GenesisHash), nil,
 			)
 			if err != nil {
 				return nil, err
@@ -623,7 +624,7 @@ func NewFilterHeaderStore(filePath string, db walletdb.DB,
 
 			genesisFilterHash, err = builder.MakeHeaderForFilter(
 				basicFilter,
-				netParams.GenesisBlock.Header.PrevBlock,
+				genesis.Block(netParams.GenesisHash).Header.PrevBlock,
 			)
 			if err != nil {
 				return nil, err
