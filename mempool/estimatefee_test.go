@@ -6,9 +6,10 @@ package mempool
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math/rand"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

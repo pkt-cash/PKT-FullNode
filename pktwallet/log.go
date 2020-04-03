@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/jrick/logrotate/rotator"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"

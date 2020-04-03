@@ -8,10 +8,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/pktwallet/internal/rpchelp"

@@ -7,8 +7,9 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MsgAlert contains a payload and a signature:

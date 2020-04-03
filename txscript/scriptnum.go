@@ -6,7 +6,9 @@ package txscript
 
 import (
 	"fmt"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
 const (
@@ -68,7 +70,7 @@ func checkMinimalDataEncoding(v []byte) er.R {
 		if len(v) == 1 || v[len(v)-2]&0x80 == 0 {
 			str := fmt.Sprintf("numeric value encoded as %x is "+
 				"not minimally encoded", v)
-			return scriptError(ErrMinimalData, str)
+			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	}
 
@@ -190,7 +192,7 @@ func makeScriptNum(v []byte, requireMinimal bool, scriptNumLen int) (scriptNum, 
 		str := fmt.Sprintf("numeric value encoded as %x is %d bytes "+
 			"which exceeds the max allowed of %d", v, len(v),
 			scriptNumLen)
-		return 0, scriptError(ErrNumberTooBig, str)
+		return 0, txscripterr.ScriptError(txscripterr.ErrNumberTooBig, str)
 	}
 
 	// Enforce minimal encoded if requested.

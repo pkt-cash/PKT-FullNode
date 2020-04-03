@@ -9,11 +9,12 @@ package integration
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"

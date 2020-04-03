@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -281,7 +282,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 
 	// Can't have a signature script that doesn't just push data.
 	if !isPushOnly(sigPops) {
-		return nil, scriptError(ErrNotPushOnly,
+		return nil, txscripterr.ScriptError(txscripterr.ErrNotPushOnly,
 			"signature script is not push only")
 	}
 
@@ -384,7 +385,7 @@ func CalcMultiSigStats(script []byte) (int, int, er.R) {
 	//  OP_1 PUBKEY OP_1 OP_CHECKMULTISIG
 	if len(pops) < 4 {
 		str := fmt.Sprintf("script %x is not a multisig script", script)
-		return 0, 0, scriptError(ErrNotMultisigScript, str)
+		return 0, 0, txscripterr.ScriptError(txscripterr.ErrNotMultisigScript, str)
 	}
 
 	numSigs := asSmallInt(pops[0].opcode)
@@ -463,7 +464,7 @@ func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
 // and/or voteAgainst are non-null and if the address type is non-segwit.
 func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) ([]byte, er.R) {
 	if util.IsNil(addr) {
-		return nil, scriptError(ErrUnsupportedAddress,
+		return nil, txscripterr.ScriptError(txscripterr.ErrUnsupportedAddress,
 			"unable to generate payment script for nil address")
 	}
 
@@ -489,7 +490,7 @@ func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) 
 
 	str := fmt.Sprintf("unable to generate payment script for unsupported "+
 		"address type %T", addr)
-	return nil, scriptError(ErrUnsupportedAddress, str)
+	return nil, txscripterr.ScriptError(txscripterr.ErrUnsupportedAddress, str)
 }
 
 // PayToAddrScript creates a new script to pay a transaction output to the
@@ -531,7 +532,7 @@ func NullDataScript(data []byte) ([]byte, er.R) {
 	if len(data) > MaxDataCarrierSize {
 		str := fmt.Sprintf("data size %d is larger than max "+
 			"allowed size %d", len(data), MaxDataCarrierSize)
-		return nil, scriptError(ErrTooMuchNullData, str)
+		return nil, txscripterr.ScriptError(txscripterr.ErrTooMuchNullData, str)
 	}
 
 	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
@@ -546,7 +547,7 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
 			"keys available", nrequired, len(pubkeys))
-		return nil, scriptError(ErrTooManyRequiredSigs, str)
+		return nil, txscripterr.ScriptError(txscripterr.ErrTooManyRequiredSigs, str)
 	}
 
 	builder := NewScriptBuilder().AddInt64(int64(nrequired))

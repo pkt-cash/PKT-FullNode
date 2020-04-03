@@ -9,10 +9,11 @@ package rpctest
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"

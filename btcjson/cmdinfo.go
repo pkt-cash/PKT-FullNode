@@ -6,9 +6,10 @@ package btcjson
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"reflect"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // CmdMethod returns the method for the passed command.  The provided command

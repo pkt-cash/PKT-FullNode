@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/jrick/logrotate/rotator"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -24,6 +23,7 @@ import (
 	"github.com/pkt-cash/pktd/mining/cpuminer"
 	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript"
 )
 

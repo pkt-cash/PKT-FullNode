@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
 // TestOpcodeDisabled tests the opcodeDisabled function manually because all
@@ -25,9 +27,9 @@ func TestOpcodeDisabled(t *testing.T) {
 	for _, opcodeVal := range tests {
 		pop := parsedOpcode{opcode: &opcodeArray[opcodeVal], data: nil}
 		err := opcodeDisabled(&pop, nil)
-		if !ErrDisabledOpcode.Is(err) {
+		if !txscripterr.ErrDisabledOpcode.Is(err) {
 			t.Errorf("opcodeDisabled: unexpected error - got %v, "+
-				"want %v", err, ErrDisabledOpcode)
+				"want %v", err, txscripterr.ErrDisabledOpcode)
 			continue
 		}
 	}

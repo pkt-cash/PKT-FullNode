@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )

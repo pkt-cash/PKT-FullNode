@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -251,7 +252,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, e
 				str := fmt.Sprintf("opcode %s requires %d "+
 					"bytes, but script only has %d remaining",
 					op.name, op.length, len(script[i:]))
-				return retScript, scriptError(ErrMalformedPush,
+				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
 
@@ -268,7 +269,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, e
 				str := fmt.Sprintf("opcode %s requires %d "+
 					"bytes, but script only has %d remaining",
 					op.name, -op.length, len(script[off:]))
-				return retScript, scriptError(ErrMalformedPush,
+				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
 
@@ -287,7 +288,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, e
 			default:
 				str := fmt.Sprintf("invalid opcode length %d",
 					op.length)
-				return retScript, scriptError(ErrMalformedPush,
+				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
 
@@ -300,7 +301,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, e
 				str := fmt.Sprintf("opcode %s pushes %d bytes, "+
 					"but script only has %d remaining",
 					op.name, int(l), len(script[off:]))
-				return retScript, scriptError(ErrMalformedPush,
+				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
 

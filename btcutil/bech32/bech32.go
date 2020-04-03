@@ -6,8 +6,9 @@ package bech32
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"

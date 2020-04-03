@@ -1,12 +1,12 @@
 package neutrino
 
 import (
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/addrmgr"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript"
 )
 

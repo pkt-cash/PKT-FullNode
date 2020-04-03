@@ -6,8 +6,9 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in

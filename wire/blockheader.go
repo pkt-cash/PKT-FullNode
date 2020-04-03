@@ -6,9 +6,10 @@ package wire
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )

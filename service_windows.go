@@ -6,10 +6,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/btcsuite/winsvc/eventlog"
 	"github.com/btcsuite/winsvc/mgr"

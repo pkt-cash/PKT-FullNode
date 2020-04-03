@@ -7,10 +7,11 @@ package pktconfig
 import (
 	"crypto/rand"
 	"encoding/base64"
-	flags "github.com/jessevdk/go-flags"
 	"os"
 	"path/filepath"
 	"strings"
+
+	flags "github.com/jessevdk/go-flags"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
@@ -59,8 +60,8 @@ func CreateDefaultConfigFile(destinationPath, sampleFile string) er.R {
 }
 
 type userpass struct {
-	Username string `long:"rpcuser"`
-	Password string `long:"rpcpass"`
+	Username    string `long:"rpcuser"`
+	Password    string `long:"rpcpass"`
 	OldUsername string `long:"username"`
 	OldPassword string `long:"password"`
 }

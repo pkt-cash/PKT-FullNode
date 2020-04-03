@@ -6,8 +6,9 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MsgGetData implements the Message interface and represents a bitcoin

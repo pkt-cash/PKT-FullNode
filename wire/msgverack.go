@@ -5,8 +5,9 @@
 package wire
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MsgVerAck defines a bitcoin verack message which is used for a peer to

@@ -7,8 +7,9 @@ package indexers
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/wire"
 )

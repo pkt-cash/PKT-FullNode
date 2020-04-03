@@ -3,9 +3,9 @@
 package headerfs
 
 import (
-	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // singleTruncate truncates a single header from the end of the header file.

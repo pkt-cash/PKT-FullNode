@@ -6,8 +6,9 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // defaultInvListAlloc is the default size used for the backing array for an

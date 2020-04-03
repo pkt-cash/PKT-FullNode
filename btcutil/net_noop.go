@@ -7,8 +7,9 @@
 package btcutil
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // interfaceAddrs returns a list of the system's network interface addresses.

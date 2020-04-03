@@ -4,6 +4,8 @@
 
 package limits
 
+import "github.com/pkt-cash/pktd/btcutil/er"
+
 // SetLimits is a no-op on Windows since it's not required there.
 func SetLimits() er.R {
 	return nil

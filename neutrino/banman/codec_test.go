@@ -2,10 +2,11 @@ package banman
 
 import (
 	"bytes"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // TestIPNetSerialization ensures that we can serialize different supported IP

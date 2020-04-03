@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -211,84 +212,84 @@ func parseExpectedResult(expected string) ([]*er.ErrorCode, er.R) {
 	case "OK":
 		return nil, nil
 	case "UNKNOWN_ERROR":
-		return []*er.ErrorCode{ErrNumberTooBig, ErrMinimalData}, nil
+		return []*er.ErrorCode{txscripterr.ErrNumberTooBig, txscripterr.ErrMinimalData}, nil
 	case "PUBKEYTYPE":
-		return []*er.ErrorCode{ErrPubKeyType}, nil
+		return []*er.ErrorCode{txscripterr.ErrPubKeyType}, nil
 	case "SIG_DER":
-		return []*er.ErrorCode{ErrSigTooShort, ErrSigTooLong,
-			ErrSigInvalidSeqID, ErrSigInvalidDataLen, ErrSigMissingSTypeID,
-			ErrSigMissingSLen, ErrSigInvalidSLen,
-			ErrSigInvalidRIntID, ErrSigZeroRLen, ErrSigNegativeR,
-			ErrSigTooMuchRPadding, ErrSigInvalidSIntID,
-			ErrSigZeroSLen, ErrSigNegativeS, ErrSigTooMuchSPadding,
-			ErrInvalidSigHashType}, nil
+		return []*er.ErrorCode{txscripterr.ErrSigTooShort, txscripterr.ErrSigTooLong,
+			txscripterr.ErrSigInvalidSeqID, txscripterr.ErrSigInvalidDataLen, txscripterr.ErrSigMissingSTypeID,
+			txscripterr.ErrSigMissingSLen, txscripterr.ErrSigInvalidSLen,
+			txscripterr.ErrSigInvalidRIntID, txscripterr.ErrSigZeroRLen, txscripterr.ErrSigNegativeR,
+			txscripterr.ErrSigTooMuchRPadding, txscripterr.ErrSigInvalidSIntID,
+			txscripterr.ErrSigZeroSLen, txscripterr.ErrSigNegativeS, txscripterr.ErrSigTooMuchSPadding,
+			txscripterr.ErrInvalidSigHashType}, nil
 	case "EVAL_FALSE":
-		return []*er.ErrorCode{ErrEvalFalse, ErrEmptyStack}, nil
+		return []*er.ErrorCode{txscripterr.ErrEvalFalse, txscripterr.ErrEmptyStack}, nil
 	case "EQUALVERIFY":
-		return []*er.ErrorCode{ErrEqualVerify}, nil
+		return []*er.ErrorCode{txscripterr.ErrEqualVerify}, nil
 	case "NULLFAIL":
-		return []*er.ErrorCode{ErrNullFail}, nil
+		return []*er.ErrorCode{txscripterr.ErrNullFail}, nil
 	case "SIG_HIGH_S":
-		return []*er.ErrorCode{ErrSigHighS}, nil
+		return []*er.ErrorCode{txscripterr.ErrSigHighS}, nil
 	case "SIG_HASHTYPE":
-		return []*er.ErrorCode{ErrInvalidSigHashType}, nil
+		return []*er.ErrorCode{txscripterr.ErrInvalidSigHashType}, nil
 	case "SIG_NULLDUMMY":
-		return []*er.ErrorCode{ErrSigNullDummy}, nil
+		return []*er.ErrorCode{txscripterr.ErrSigNullDummy}, nil
 	case "SIG_PUSHONLY":
-		return []*er.ErrorCode{ErrNotPushOnly}, nil
+		return []*er.ErrorCode{txscripterr.ErrNotPushOnly}, nil
 	case "CLEANSTACK":
-		return []*er.ErrorCode{ErrCleanStack}, nil
+		return []*er.ErrorCode{txscripterr.ErrCleanStack}, nil
 	case "BAD_OPCODE":
-		return []*er.ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
+		return []*er.ErrorCode{txscripterr.ErrReservedOpcode, txscripterr.ErrMalformedPush}, nil
 	case "UNBALANCED_CONDITIONAL":
-		return []*er.ErrorCode{ErrUnbalancedConditional,
-			ErrInvalidStackOperation}, nil
+		return []*er.ErrorCode{txscripterr.ErrUnbalancedConditional,
+			txscripterr.ErrInvalidStackOperation}, nil
 	case "OP_RETURN":
-		return []*er.ErrorCode{ErrEarlyReturn}, nil
+		return []*er.ErrorCode{txscripterr.ErrEarlyReturn}, nil
 	case "VERIFY":
-		return []*er.ErrorCode{ErrVerify}, nil
+		return []*er.ErrorCode{txscripterr.ErrVerify}, nil
 	case "INVALID_STACK_OPERATION", "INVALID_ALTSTACK_OPERATION":
-		return []*er.ErrorCode{ErrInvalidStackOperation}, nil
+		return []*er.ErrorCode{txscripterr.ErrInvalidStackOperation}, nil
 	case "DISABLED_OPCODE":
-		return []*er.ErrorCode{ErrDisabledOpcode}, nil
+		return []*er.ErrorCode{txscripterr.ErrDisabledOpcode}, nil
 	case "DISCOURAGE_UPGRADABLE_NOPS":
-		return []*er.ErrorCode{ErrDiscourageUpgradableNOPs}, nil
+		return []*er.ErrorCode{txscripterr.ErrDiscourageUpgradableNOPs}, nil
 	case "PUSH_SIZE":
-		return []*er.ErrorCode{ErrElementTooBig}, nil
+		return []*er.ErrorCode{txscripterr.ErrElementTooBig}, nil
 	case "OP_COUNT":
-		return []*er.ErrorCode{ErrTooManyOperations}, nil
+		return []*er.ErrorCode{txscripterr.ErrTooManyOperations}, nil
 	case "STACK_SIZE":
-		return []*er.ErrorCode{ErrStackOverflow}, nil
+		return []*er.ErrorCode{txscripterr.ErrStackOverflow}, nil
 	case "SCRIPT_SIZE":
-		return []*er.ErrorCode{ErrScriptTooBig}, nil
+		return []*er.ErrorCode{txscripterr.ErrScriptTooBig}, nil
 	case "PUBKEY_COUNT":
-		return []*er.ErrorCode{ErrInvalidPubKeyCount}, nil
+		return []*er.ErrorCode{txscripterr.ErrInvalidPubKeyCount}, nil
 	case "SIG_COUNT":
-		return []*er.ErrorCode{ErrInvalidSignatureCount}, nil
+		return []*er.ErrorCode{txscripterr.ErrInvalidSignatureCount}, nil
 	case "MINIMALDATA":
-		return []*er.ErrorCode{ErrMinimalData}, nil
+		return []*er.ErrorCode{txscripterr.ErrMinimalData}, nil
 	case "NEGATIVE_LOCKTIME":
-		return []*er.ErrorCode{ErrNegativeLockTime}, nil
+		return []*er.ErrorCode{txscripterr.ErrNegativeLockTime}, nil
 	case "UNSATISFIED_LOCKTIME":
-		return []*er.ErrorCode{ErrUnsatisfiedLockTime}, nil
+		return []*er.ErrorCode{txscripterr.ErrUnsatisfiedLockTime}, nil
 	case "MINIMALIF":
-		return []*er.ErrorCode{ErrMinimalIf}, nil
+		return []*er.ErrorCode{txscripterr.ErrMinimalIf}, nil
 	case "DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM":
-		return []*er.ErrorCode{ErrDiscourageUpgradableWitnessProgram}, nil
+		return []*er.ErrorCode{txscripterr.ErrDiscourageUpgradableWitnessProgram}, nil
 	case "WITNESS_PROGRAM_WRONG_LENGTH":
-		return []*er.ErrorCode{ErrWitnessProgramWrongLength}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessProgramWrongLength}, nil
 	case "WITNESS_PROGRAM_WITNESS_EMPTY":
-		return []*er.ErrorCode{ErrWitnessProgramEmpty}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessProgramEmpty}, nil
 	case "WITNESS_PROGRAM_MISMATCH":
-		return []*er.ErrorCode{ErrWitnessProgramMismatch}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessProgramMismatch}, nil
 	case "WITNESS_MALLEATED":
-		return []*er.ErrorCode{ErrWitnessMalleated}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessMalleated}, nil
 	case "WITNESS_MALLEATED_P2SH":
-		return []*er.ErrorCode{ErrWitnessMalleatedP2SH}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessMalleatedP2SH}, nil
 	case "WITNESS_UNEXPECTED":
-		return []*er.ErrorCode{ErrWitnessUnexpected}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessUnexpected}, nil
 	case "WITNESS_PUBKEYTYPE":
-		return []*er.ErrorCode{ErrWitnessPubKeyType}, nil
+		return []*er.ErrorCode{txscripterr.ErrWitnessPubKeyType}, nil
 	}
 
 	return nil, er.Errorf("unrecognized expected result in test data: %v",

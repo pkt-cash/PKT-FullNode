@@ -5,8 +5,9 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"sync/atomic"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"

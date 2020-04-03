@@ -7,8 +7,10 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
 // hexToBytes converts the passed hex string into bytes and will panic if there
@@ -94,8 +96,8 @@ func TestMakeScriptNum(t *testing.T) {
 
 	// Errors used in the tests below defined here for convenience and to
 	// keep the horizontal test size shorter.
-	errNumTooBig := scriptError(ErrNumberTooBig, "")
-	errMinimalData := scriptError(ErrMinimalData, "")
+	errNumTooBig := txscripterr.ScriptError(txscripterr.ErrNumberTooBig, "")
+	errMinimalData := txscripterr.ScriptError(txscripterr.ErrMinimalData, "")
 
 	tests := []struct {
 		serialized      []byte

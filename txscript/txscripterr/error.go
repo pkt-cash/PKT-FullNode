@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package txscript
+package txscripterr
 
 import (
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -339,7 +339,7 @@ var (
 	ErrWitnessPubKeyType = Err.Code("ErrWitnessPubKeyType")
 )
 
-// scriptError creates an Error given a set of arguments.
-func scriptError(c *er.ErrorCode, desc string) er.R {
+// ScriptError creates an Error given a set of arguments.
+func ScriptError(c *er.ErrorCode, desc string) er.R {
 	return c.New(desc, nil)
 }

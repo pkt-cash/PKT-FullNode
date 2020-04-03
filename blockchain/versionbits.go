@@ -5,8 +5,9 @@
 package blockchain
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"math"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 )

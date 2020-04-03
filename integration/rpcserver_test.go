@@ -10,10 +10,11 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"os"
 	"runtime/debug"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/integration/rpctest"

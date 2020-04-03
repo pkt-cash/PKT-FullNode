@@ -6,8 +6,9 @@ package wire
 
 import (
 	"fmt"
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MsgNotFound defines a bitcoin notfound message which is sent in response to

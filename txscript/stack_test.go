@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
 // tstCheckScriptError ensures the type of the two passed errors are of the
@@ -18,7 +19,7 @@ import (
 func tstCheckScriptError(gotErr, wantErr er.R) er.R {
 
 	// Ensure the want error type is a script error.
-	if wantErr != nil && !Err.Is(wantErr) {
+	if wantErr != nil && !txscripterr.Err.Is(wantErr) {
 		return er.Errorf("unexpected test error type %T", wantErr)
 	}
 
@@ -58,7 +59,7 @@ func TestStack(t *testing.T) {
 				_, err := s.PeekByteArray(5)
 				return err
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -68,7 +69,7 @@ func TestStack(t *testing.T) {
 				_, err := s.PeekInt(5)
 				return err
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -78,7 +79,7 @@ func TestStack(t *testing.T) {
 				_, err := s.PeekBool(5)
 				return err
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -124,7 +125,7 @@ func TestStack(t *testing.T) {
 				}
 				return nil
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -168,7 +169,7 @@ func TestStack(t *testing.T) {
 				_, err := s.PopBool()
 				return err
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -390,7 +391,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.DupN(0)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -399,7 +400,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.DupN(-1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -408,7 +409,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.DupN(2)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -539,7 +540,7 @@ func TestStack(t *testing.T) {
 				// bite off more than we can chew
 				return s.NipN(3)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			[][]byte{{2}, {3}},
 		},
 		{
@@ -557,7 +558,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.Tuck()
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -566,7 +567,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.Tuck()
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -611,7 +612,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.DropN(5)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -620,7 +621,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.DropN(0)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -647,7 +648,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.RotN(1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -656,7 +657,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.RotN(0)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -683,7 +684,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.SwapN(1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -692,7 +693,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.SwapN(0)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -719,7 +720,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.OverN(1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -728,7 +729,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.OverN(0)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -755,7 +756,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.PickN(1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -782,7 +783,7 @@ func TestStack(t *testing.T) {
 			func(s *stack) er.R {
 				return s.RollN(1)
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 		{
@@ -885,7 +886,7 @@ func TestStack(t *testing.T) {
 				_, err := s.PopInt()
 				return err
 			},
-			scriptError(ErrInvalidStackOperation, ""),
+			txscripterr.ScriptError(txscripterr.ErrInvalidStackOperation, ""),
 			nil,
 		},
 	}

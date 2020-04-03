@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 
 // ErrScriptNotCanonical identifies a non-canonical script.  The caller can use
 // a type assertion to detect this error type.
-var ErrScriptNotCanonical = Err.Code("ErrScriptNotCanonical")
+var ErrScriptNotCanonical = txscripterr.Err.Code("ErrScriptNotCanonical")
 
 // ScriptBuilder provides a facility for building custom scripts.  It allows
 // you to push opcodes, ints, and data while respecting canonical encoding.  In

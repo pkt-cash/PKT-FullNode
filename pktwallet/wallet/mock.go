@@ -1,8 +1,9 @@
 package wallet
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"

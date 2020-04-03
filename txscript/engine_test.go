@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/txscript/txscripterr"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -126,7 +127,7 @@ func TestCheckErrorCondition(t *testing.T) {
 		}
 
 		err = vm.CheckErrorCondition(false)
-		if !ErrScriptUnfinished.Is(err) {
+		if !txscripterr.ErrScriptUnfinished.Is(err) {
 			t.Fatalf("got unexepected error %v on %dth iteration",
 				err, i)
 		}
@@ -188,7 +189,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 
 	for i, test := range tests {
 		_, err := NewEngine(pkScript, tx, 0, test, nil, nil, -1)
-		if !ErrInvalidFlags.Is(err) {
+		if !txscripterr.ErrInvalidFlags.Is(err) {
 			t.Fatalf("TestInvalidFlagCombinations #%d unexpected "+
 				"error: %v", i, err)
 		}

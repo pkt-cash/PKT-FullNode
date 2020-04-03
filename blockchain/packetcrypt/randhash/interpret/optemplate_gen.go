@@ -431,7 +431,9 @@ func POPCNT8(a uint32) uint32 {
 }
 func clz8(a uint8) uint8      { return uint8(bits.LeadingZeros8(a)) }
 func CLZ8_16(a uint16) uint16 { return (uint16(clz8(uint8(a>>8))) << 8) | uint16(clz8(uint8(a))) }
-func CLZ8(a uint32) uint32    { return (uint32(CLZ8_16(uint16(a>>16))) << 16) | uint32(CLZ8_16(uint16(a))) }
+func CLZ8(a uint32) uint32 {
+	return (uint32(CLZ8_16(uint16(a>>16))) << 16) | uint32(CLZ8_16(uint16(a)))
+}
 
 // func bswap8(a uint8) uint8      { return a }
 // func BSWAP8_16(a uint16) uint16 { return (uint16(bswap8(uint8(a>>8))) << 8) | uint16(bswap8(uint8(a))) }
@@ -440,7 +442,9 @@ func CLZ8(a uint32) uint32    { return (uint32(CLZ8_16(uint16(a>>16))) << 16) | 
 // }
 func ctz8(a uint8) uint8      { return uint8(bits.TrailingZeros8(a)) }
 func CTZ8_16(a uint16) uint16 { return (uint16(ctz8(uint8(a>>8))) << 8) | uint16(ctz8(uint8(a))) }
-func CTZ8(a uint32) uint32    { return (uint32(CTZ8_16(uint16(a>>16))) << 16) | uint32(CTZ8_16(uint16(a))) }
+func CTZ8(a uint32) uint32 {
+	return (uint32(CTZ8_16(uint16(a>>16))) << 16) | uint32(CTZ8_16(uint16(a)))
+}
 
 func popcnt16(a uint16) uint16 { return uint16(bits.OnesCount16(a)) }
 func POPCNT16(a uint32) uint32 {

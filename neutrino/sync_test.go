@@ -15,7 +15,6 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -25,6 +24,7 @@ import (
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/neutrino/banman"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
