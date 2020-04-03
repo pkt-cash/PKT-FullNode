@@ -48,7 +48,7 @@ const (
 
 // isSmallInt returns whether or not the opcode is considered a small integer,
 // which is an OP_0, or OP_1 through OP_16.
-func isSmallInt(op *opcode) bool {
+func isSmallInt(op *opcodeT) bool {
 	if op.value == OP_0 || (op.value >= OP_1 && op.value <= OP_16) {
 		return true
 	}
@@ -231,7 +231,7 @@ func IsPushOnlyScript(script []byte) bool {
 // parseScriptTemplate is the same as parseScript but allows the passing of the
 // template list for testing purposes.  When there are parse errors, it returns
 // the list of parsed opcodes up to the point of failure along with the error.
-func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, er.R) {
+func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, er.R) {
 	retScript := make([]parsedOpcode, 0, len(script))
 	for i := 0; i < len(script); {
 		instr := script[i]
@@ -712,7 +712,7 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 
 // asSmallInt returns the passed opcode, which must be true according to
 // isSmallInt(), as an integer.
-func asSmallInt(op *opcode) int {
+func asSmallInt(op *opcodeT) int {
 	if op.value == OP_0 {
 		return 0
 	}

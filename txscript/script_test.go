@@ -21,7 +21,7 @@ func TestParseOpcode(t *testing.T) {
 	// Deep copy the array and make one of the opcodes invalid by setting it
 	// to the wrong length.
 	fakeArray := opcodeArray
-	fakeArray[OP_PUSHDATA4] = opcode{value: OP_PUSHDATA4,
+	fakeArray[OP_PUSHDATA4] = opcodeT{value: OP_PUSHDATA4,
 		name: "OP_PUSHDATA4", length: -8, opfunc: opcodePushData}
 
 	// This script would be fine if -8 was a valid length.
