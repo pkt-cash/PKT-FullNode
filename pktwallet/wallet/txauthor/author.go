@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -104,7 +105,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 		scr[0] = opcode.OP_PUBKEYHASH
 		copy(scr[1:], tx.PrevScripts[i])
 
-		scr, err := txscript.NewScriptBuilder().
+		scr, err := scriptbuilder.NewScriptBuilder().
 			AddOp(opcode.OP_INVALIDOPCODE).AddOp(opcode.OP_0).AddData(scr).Script()
 		if err != nil {
 			return err
@@ -447,7 +448,7 @@ func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 	if err != nil {
 		return err
 	}
-	bldr := txscript.NewScriptBuilder()
+	bldr := scriptbuilder.NewScriptBuilder()
 	bldr.AddData(witnessProgram)
 	sigScript, err := bldr.Script()
 	if err != nil {

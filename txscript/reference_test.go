@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -125,7 +126,7 @@ func parseShortForm(script string) ([]byte, er.R) {
 	script = strings.Replace(script, "\n", " ", -1)
 	script = strings.Replace(script, "\t", " ", -1)
 	tokens := strings.Split(script, " ")
-	builder := NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	for _, tok := range tokens {
 		if len(tok) == 0 {
@@ -139,8 +140,8 @@ func parseShortForm(script string) ([]byte, er.R) {
 			// Concatenate the bytes manually since the test code
 			// intentionally creates scripts that are too large and
 			// would cause the builder to error otherwise.
-			if builder.err == nil {
-				builder.script = append(builder.script, bts...)
+			if builder.ErrInt == nil {
+				builder.ScriptInt = append(builder.ScriptInt, bts...)
 			}
 		} else if len(tok) >= 2 &&
 			tok[0] == '\'' && tok[len(tok)-1] == '\'' {

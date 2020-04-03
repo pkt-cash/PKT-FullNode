@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package txscript
+package scriptbuilder
 
 import (
 	"encoding/binary"
@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	// defaultScriptAlloc is the default size used for the backing array
+	// DefaultScriptAlloc is the default size used for the backing array
 	// for a script being built by the ScriptBuilder.  The array will
 	// dynamically grow as needed, but this figure is intended to provide
 	// enough space for vast majority of scripts without needing to grow the
 	// backing array multiple times.
-	defaultScriptAlloc = 500
+	DefaultScriptAlloc = 500
 )
 
 // ErrScriptNotCanonical identifies a non-canonical script.  The caller can use
@@ -49,28 +49,28 @@ var ErrScriptNotCanonical = txscripterr.Err.Code("ErrScriptNotCanonical")
 // 	}
 // 	fmt.Printf("Final multi-sig script: %x\n", script)
 type ScriptBuilder struct {
-	script []byte
-	err    er.R
+	ScriptInt []byte
+	ErrInt    er.R
 }
 
 // AddOp pushes the passed opcode to the end of the script.  The script will not
 // be modified if pushing the opcode would cause the script to exceed the
 // maximum allowed script engine size.
 func (b *ScriptBuilder) AddOp(opcode byte) *ScriptBuilder {
-	if b.err != nil {
+	if b.ErrInt != nil {
 		return b
 	}
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+1 > params.MaxScriptSize {
+	if len(b.ScriptInt)+1 > params.MaxScriptSize {
 		str := fmt.Sprintf("adding an opcode would exceed the maximum "+
 			"allowed canonical script length of %d", params.MaxScriptSize)
-		b.err = ErrScriptNotCanonical.New(str, nil)
+		b.ErrInt = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
-	b.script = append(b.script, opcode)
+	b.ScriptInt = append(b.ScriptInt, opcode)
 	return b
 }
 
@@ -78,26 +78,26 @@ func (b *ScriptBuilder) AddOp(opcode byte) *ScriptBuilder {
 // not be modified if pushing the opcodes would cause the script to exceed the
 // maximum allowed script engine size.
 func (b *ScriptBuilder) AddOps(opcodes []byte) *ScriptBuilder {
-	if b.err != nil {
+	if b.ErrInt != nil {
 		return b
 	}
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+len(opcodes) > params.MaxScriptSize {
+	if len(b.ScriptInt)+len(opcodes) > params.MaxScriptSize {
 		str := fmt.Sprintf("adding opcodes would exceed the maximum "+
 			"allowed canonical script length of %d", params.MaxScriptSize)
-		b.err = ErrScriptNotCanonical.New(str, nil)
+		b.ErrInt = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
-	b.script = append(b.script, opcodes...)
+	b.ScriptInt = append(b.ScriptInt, opcodes...)
 	return b
 }
 
-// canonicalDataSize returns the number of bytes the canonical encoding of the
+// CanonicalDataSize returns the number of bytes the canonical encoding of the
 // data will take.
-func canonicalDataSize(data []byte) int {
+func CanonicalDataSize(data []byte) int {
 	dataLen := len(data)
 
 	// When the data consists of a single number that can be represented
@@ -133,13 +133,13 @@ func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 	// by one of the "small integer" opcodes, use that opcode instead of
 	// a data push opcode followed by the number.
 	if dataLen == 0 || dataLen == 1 && data[0] == 0 {
-		b.script = append(b.script, opcode.OP_0)
+		b.ScriptInt = append(b.ScriptInt, opcode.OP_0)
 		return b
 	} else if dataLen == 1 && data[0] <= 16 {
-		b.script = append(b.script, (opcode.OP_1-1)+data[0])
+		b.ScriptInt = append(b.ScriptInt, (opcode.OP_1-1)+data[0])
 		return b
 	} else if dataLen == 1 && data[0] == 0x81 {
-		b.script = append(b.script, byte(opcode.OP_1NEGATE))
+		b.ScriptInt = append(b.ScriptInt, byte(opcode.OP_1NEGATE))
 		return b
 	}
 
@@ -148,23 +148,23 @@ func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 	// Otherwise, choose the smallest possible OP_PUSHDATA# opcode that
 	// can represent the length of the data.
 	if dataLen < opcode.OP_PUSHDATA1 {
-		b.script = append(b.script, byte((opcode.OP_DATA_1-1)+dataLen))
+		b.ScriptInt = append(b.ScriptInt, byte((opcode.OP_DATA_1-1)+dataLen))
 	} else if dataLen <= 0xff {
-		b.script = append(b.script, opcode.OP_PUSHDATA1, byte(dataLen))
+		b.ScriptInt = append(b.ScriptInt, opcode.OP_PUSHDATA1, byte(dataLen))
 	} else if dataLen <= 0xffff {
 		buf := make([]byte, 2)
 		binary.LittleEndian.PutUint16(buf, uint16(dataLen))
-		b.script = append(b.script, opcode.OP_PUSHDATA2)
-		b.script = append(b.script, buf...)
+		b.ScriptInt = append(b.ScriptInt, opcode.OP_PUSHDATA2)
+		b.ScriptInt = append(b.ScriptInt, buf...)
 	} else {
 		buf := make([]byte, 4)
 		binary.LittleEndian.PutUint32(buf, uint32(dataLen))
-		b.script = append(b.script, opcode.OP_PUSHDATA4)
-		b.script = append(b.script, buf...)
+		b.ScriptInt = append(b.ScriptInt, opcode.OP_PUSHDATA4)
+		b.ScriptInt = append(b.ScriptInt, buf...)
 	}
 
 	// Append the actual data.
-	b.script = append(b.script, data...)
+	b.ScriptInt = append(b.ScriptInt, data...)
 
 	return b
 }
@@ -177,7 +177,7 @@ func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 //
 // Use AddData instead.
 func (b *ScriptBuilder) AddFullData(data []byte) *ScriptBuilder {
-	if b.err != nil {
+	if b.ErrInt != nil {
 		return b
 	}
 
@@ -192,18 +192,18 @@ func (b *ScriptBuilder) AddFullData(data []byte) *ScriptBuilder {
 // modified if pushing the data would cause the script to exceed the maximum
 // allowed script engine size.
 func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
-	if b.err != nil {
+	if b.ErrInt != nil {
 		return b
 	}
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	dataSize := canonicalDataSize(data)
-	if len(b.script)+dataSize > params.MaxScriptSize {
+	dataSize := CanonicalDataSize(data)
+	if len(b.ScriptInt)+dataSize > params.MaxScriptSize {
 		str := fmt.Sprintf("adding %d bytes of data would exceed the "+
 			"maximum allowed canonical script length of %d",
 			dataSize, params.MaxScriptSize)
-		b.err = ErrScriptNotCanonical.New(str, nil)
+		b.ErrInt = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -214,7 +214,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 		str := fmt.Sprintf("adding a data element of %d bytes would "+
 			"exceed the maximum allowed script element size of %d",
 			dataLen, params.MaxScriptElementSize)
-		b.err = ErrScriptNotCanonical.New(str, nil)
+		b.ErrInt = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
@@ -225,27 +225,27 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 // not be modified if pushing the data would cause the script to exceed the
 // maximum allowed script engine size.
 func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
-	if b.err != nil {
+	if b.ErrInt != nil {
 		return b
 	}
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+1 > params.MaxScriptSize {
+	if len(b.ScriptInt)+1 > params.MaxScriptSize {
 		str := fmt.Sprintf("adding an integer would exceed the "+
 			"maximum allow canonical script length of %d",
 			params.MaxScriptSize)
-		b.err = ErrScriptNotCanonical.New(str, nil)
+		b.ErrInt = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
 
 	// Fast path for small integers and OP_1NEGATE.
 	if val == 0 {
-		b.script = append(b.script, opcode.OP_0)
+		b.ScriptInt = append(b.ScriptInt, opcode.OP_0)
 		return b
 	}
 	if val == -1 || (val >= 1 && val <= 16) {
-		b.script = append(b.script, byte((opcode.OP_1-1)+val))
+		b.ScriptInt = append(b.ScriptInt, byte((opcode.OP_1-1)+val))
 		return b
 	}
 
@@ -254,8 +254,8 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 
 // Reset resets the script so it has no content.
 func (b *ScriptBuilder) Reset() *ScriptBuilder {
-	b.script = b.script[0:0]
-	b.err = nil
+	b.ScriptInt = b.ScriptInt[0:0]
+	b.ErrInt = nil
 	return b
 }
 
@@ -263,13 +263,13 @@ func (b *ScriptBuilder) Reset() *ScriptBuilder {
 // building the script, the script will be returned up the point of the first
 // error along with the error.
 func (b *ScriptBuilder) Script() ([]byte, er.R) {
-	return b.script, b.err
+	return b.ScriptInt, b.ErrInt
 }
 
 // NewScriptBuilder returns a new instance of a script builder.  See
 // ScriptBuilder for details.
 func NewScriptBuilder() *ScriptBuilder {
 	return &ScriptBuilder{
-		script: make([]byte, 0, defaultScriptAlloc),
+		ScriptInt: make([]byte, 0, DefaultScriptAlloc),
 	}
 }

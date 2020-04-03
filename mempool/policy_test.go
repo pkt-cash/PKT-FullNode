@@ -16,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
@@ -112,26 +113,26 @@ func TestCheckPkScriptStandard(t *testing.T) {
 
 	tests := []struct {
 		name       string // test description.
-		script     *txscript.ScriptBuilder
+		script     *scriptbuilder.ScriptBuilder
 		isStandard bool
 	}{
 		{
 			"key1 and key2",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			true,
 		},
 		{
 			"key1 or key2",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			true,
 		},
 		{
 			"escrow",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddData(pubKeys[2]).
 				AddOp(opcode.OP_3).AddOp(opcode.OP_CHECKMULTISIG),
@@ -139,7 +140,7 @@ func TestCheckPkScriptStandard(t *testing.T) {
 		},
 		{
 			"one of four",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddData(pubKeys[2]).AddData(pubKeys[3]).
 				AddOp(opcode.OP_4).AddOp(opcode.OP_CHECKMULTISIG),
@@ -147,42 +148,42 @@ func TestCheckPkScriptStandard(t *testing.T) {
 		},
 		{
 			"malformed1",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_3).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_3).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed2",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_3).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed3",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_0).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_0).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed4",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_0).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed5",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed6",
-			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
+			scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]),
 			false,
 		},

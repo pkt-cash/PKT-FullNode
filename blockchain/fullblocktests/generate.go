@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -221,7 +222,7 @@ func makeTestGenerator(params *chaincfg.Params) (testGenerator, er.R) {
 // redeem script.
 func payToScriptHashScript(redeemScript []byte) []byte {
 	redeemScriptHash := btcutil.Hash160(redeemScript)
-	script, err := txscript.NewScriptBuilder().
+	script, err := scriptbuilder.NewScriptBuilder().
 		AddOp(opcode.OP_HASH160).AddData(redeemScriptHash).
 		AddOp(opcode.OP_EQUAL).Script()
 	if err != nil {
@@ -233,7 +234,7 @@ func payToScriptHashScript(redeemScript []byte) []byte {
 // pushDataScript returns a script with the provided items individually pushed
 // to the stack.
 func pushDataScript(items ...[]byte) []byte {
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 	for _, item := range items {
 		builder.AddData(item)
 	}
@@ -248,14 +249,14 @@ func pushDataScript(items ...[]byte) []byte {
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks.
 func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, er.R) {
-	return txscript.NewScriptBuilder().AddInt64(int64(blockHeight)).
+	return scriptbuilder.NewScriptBuilder().AddInt64(int64(blockHeight)).
 		AddInt64(int64(extraNonce)).Script()
 }
 
 // opReturnScript returns a provably-pruneable OP_RETURN script with the
 // provided data.
 func opReturnScript(data []byte) []byte {
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 	script, err := builder.AddOp(opcode.OP_RETURN).AddData(data).Script()
 	if err != nil {
 		panic(err)

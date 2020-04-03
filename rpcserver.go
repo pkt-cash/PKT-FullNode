@@ -46,6 +46,7 @@ import (
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
@@ -93,9 +94,9 @@ var (
 	// overhead of creating a new object on every invocation for constant
 	// data.
 	gbtCoinbaseAux = &btcjson.GetBlockTemplateResultAux{
-		Flags: hex.EncodeToString(builderScript(txscript.
-			NewScriptBuilder().
-			AddData([]byte(mining.CoinbaseFlags)))),
+		Flags: hex.EncodeToString(builderScript(
+			scriptbuilder.NewScriptBuilder().
+				AddData([]byte(mining.CoinbaseFlags)))),
 	}
 
 	// gbtCapabilities describes additional capabilities returned with a
@@ -260,7 +261,7 @@ var rpcLimited = map[string]struct{}{
 // built with the script builder.   Any errors are converted to a panic since it
 // is only, and must only, be used with hard-coded, and therefore, known good,
 // scripts.
-func builderScript(builder *txscript.ScriptBuilder) []byte {
+func builderScript(builder *scriptbuilder.ScriptBuilder) []byte {
 	script, err := builder.Script()
 	if err != nil {
 		panic(err)

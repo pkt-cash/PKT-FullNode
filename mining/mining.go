@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -246,7 +247,7 @@ func mergeUtxoView(viewA *blockchain.UtxoViewpoint, viewB *blockchain.UtxoViewpo
 // it starts with the block height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
 func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, er.R) {
-	return txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
+	return scriptbuilder.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
 		AddInt64(int64(extraNonce)).AddData([]byte(CoinbaseFlags)).
 		Script()
 }
@@ -311,7 +312,7 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 		}
 	} else {
 		var err er.R
-		scriptBuilder := txscript.NewScriptBuilder()
+		scriptBuilder := scriptbuilder.NewScriptBuilder()
 		pkScript, err := scriptBuilder.AddOp(opcode.OP_TRUE).Script()
 		if err != nil {
 			return nil, err

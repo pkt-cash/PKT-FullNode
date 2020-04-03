@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -397,8 +398,8 @@ func CalcMultiSigStats(script []byte) (int, int, er.R) {
 // payToPubKeyHashScriptBuilder creates a new script to pay a transaction
 // output to a 20-byte pubkey hash. It is expected that the input is a valid
 // hash.
-func payToPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
-	return NewScriptBuilder().AddOp(opcode.OP_DUP).AddOp(opcode.OP_HASH160).
+func payToPubKeyHashScriptBuilder(pubKeyHash []byte) *scriptbuilder.ScriptBuilder {
+	return scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_DUP).AddOp(opcode.OP_HASH160).
 		AddData(pubKeyHash).AddOp(opcode.OP_EQUALVERIFY).AddOp(opcode.OP_CHECKSIG)
 }
 func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
@@ -407,8 +408,8 @@ func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 
 // payToWitnessPubKeyHashScriptBuilder creates a new script to pay to a version 0
 // pubkey hash witness program. The passed hash is expected to be valid.
-func payToWitnessPubKeyHashScriptBuilder(pubKeyHash []byte) *ScriptBuilder {
-	return NewScriptBuilder().AddOp(opcode.OP_0).AddData(pubKeyHash)
+func payToWitnessPubKeyHashScriptBuilder(pubKeyHash []byte) *scriptbuilder.ScriptBuilder {
+	return scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_0).AddData(pubKeyHash)
 }
 func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 	return payToWitnessPubKeyHashScriptBuilder(pubKeyHash).Script()
@@ -416,8 +417,8 @@ func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, er.R) {
 
 // payToScriptHashScriptBuilder creates a new script to pay a transaction output to a
 // script hash. It is expected that the input is a valid hash.
-func payToScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
-	return NewScriptBuilder().AddOp(opcode.OP_HASH160).AddData(scriptHash).
+func payToScriptHashScriptBuilder(scriptHash []byte) *scriptbuilder.ScriptBuilder {
+	return scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_HASH160).AddData(scriptHash).
 		AddOp(opcode.OP_EQUAL)
 }
 func payToScriptHashScript(scriptHash []byte) ([]byte, er.R) {
@@ -426,8 +427,8 @@ func payToScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 
 // payToWitnessScriptHashScriptBuilder creates a new script to pay to a version 0
 // script hash witness program. The passed hash is expected to be valid.
-func payToWitnessScriptHashScriptBuilder(scriptHash []byte) *ScriptBuilder {
-	return NewScriptBuilder().AddOp(opcode.OP_0).AddData(scriptHash)
+func payToWitnessScriptHashScriptBuilder(scriptHash []byte) *scriptbuilder.ScriptBuilder {
+	return scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_0).AddData(scriptHash)
 }
 func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 	return payToWitnessScriptHashScriptBuilder(scriptHash).Script()
@@ -435,15 +436,15 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, er.R) {
 
 // payToPubKeyScriptBuilder creates a new script to pay a transaction output to a
 // public key. It is expected that the input is a valid pubkey.
-func payToPubKeyScriptBuilder(serializedPubKey []byte) *ScriptBuilder {
-	return NewScriptBuilder().AddData(serializedPubKey).
+func payToPubKeyScriptBuilder(serializedPubKey []byte) *scriptbuilder.ScriptBuilder {
+	return scriptbuilder.NewScriptBuilder().AddData(serializedPubKey).
 		AddOp(opcode.OP_CHECKSIG)
 }
 
 // appendVote adds a vote to the end of a ScriptBuilder if a voteFor and/or voteAgainst
 // is specified. If neither is specified then it will not alter the ScriptBuilder at
 // all. The result is the same ScriptBuilder which was passed in.
-func appendVote(sb *ScriptBuilder, voteFor, voteAgainst []byte) *ScriptBuilder {
+func appendVote(sb *scriptbuilder.ScriptBuilder, voteFor, voteAgainst []byte) *scriptbuilder.ScriptBuilder {
 	if voteFor == nil && voteAgainst == nil {
 		return sb
 	}
@@ -536,7 +537,7 @@ func NullDataScript(data []byte) ([]byte, er.R) {
 		return nil, txscripterr.ScriptError(txscripterr.ErrTooMuchNullData, str)
 	}
 
-	return NewScriptBuilder().AddOp(opcode.OP_RETURN).AddData(data).Script()
+	return scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_RETURN).AddData(data).Script()
 }
 
 // MultiSigScript returns a valid script for a multisignature redemption where
@@ -551,7 +552,7 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 		return nil, txscripterr.ScriptError(txscripterr.ErrTooManyRequiredSigs, str)
 	}
 
-	builder := NewScriptBuilder().AddInt64(int64(nrequired))
+	builder := scriptbuilder.NewScriptBuilder().AddInt64(int64(nrequired))
 	for _, key := range pubkeys {
 		builder.AddData(key.ScriptAddress())
 	}

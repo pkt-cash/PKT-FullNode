@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -90,7 +91,7 @@ func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
 // signature script of the coinbase transaction of a new block. In particular,
 // it starts with the block height that is required by version 2 blocks.
 func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, er.R) {
-	return txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
+	return scriptbuilder.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
 		AddInt64(int64(extraNonce)).Script()
 }
 

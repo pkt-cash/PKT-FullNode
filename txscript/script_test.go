@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/wire"
@@ -3751,7 +3752,7 @@ func TestHasCanonicalPush(t *testing.T) {
 	t.Parallel()
 
 	for i := 0; i < 65535; i++ {
-		script, err := NewScriptBuilder().AddInt64(int64(i)).Script()
+		script, err := scriptbuilder.NewScriptBuilder().AddInt64(int64(i)).Script()
 		if err != nil {
 			t.Errorf("Script: test #%d unexpected error: %v\n", i,
 				err)
@@ -3776,7 +3777,7 @@ func TestHasCanonicalPush(t *testing.T) {
 		}
 	}
 	for i := 0; i <= params.MaxScriptElementSize; i++ {
-		builder := NewScriptBuilder()
+		builder := scriptbuilder.NewScriptBuilder()
 		builder.AddData(bytes.Repeat([]byte{0x49}, i))
 		script, err := builder.Script()
 		if err != nil {

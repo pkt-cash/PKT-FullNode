@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -109,7 +110,7 @@ func SignatureScript(tx *wire.MsgTx, idx int, subscript []byte, hashType params.
 		pkData = pk.SerializeUncompressed()
 	}
 
-	return NewScriptBuilder().AddData(sig).AddData(pkData).Script()
+	return scriptbuilder.NewScriptBuilder().AddData(sig).AddData(pkData).Script()
 }
 
 func p2pkSignatureScript(tx *wire.MsgTx, idx int, subScript []byte, hashType params.SigHashType, privKey *btcec.PrivateKey) ([]byte, er.R) {
@@ -118,7 +119,7 @@ func p2pkSignatureScript(tx *wire.MsgTx, idx int, subScript []byte, hashType par
 		return nil, err
 	}
 
-	return NewScriptBuilder().AddData(sig).Script()
+	return scriptbuilder.NewScriptBuilder().AddData(sig).Script()
 }
 
 // signMultiSig signs as many of the outputs in the provided multisig script as
@@ -130,7 +131,7 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType params.Sig
 	// We start with a single OP_FALSE to work around the (now standard)
 	// but in the reference implementation that causes a spurious pop at
 	// the end of OP_CHECKMULTISIG.
-	builder := NewScriptBuilder().AddOp(opcode.OP_FALSE)
+	builder := scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_FALSE)
 	signed := 0
 	for _, addr := range addresses {
 		key, _, err := kdb.GetKey(addr)
@@ -257,7 +258,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 			class, addresses, nrequired, sigScript, prevScript)
 
 		// Reappend the script and return the result.
-		builder := NewScriptBuilder()
+		builder := scriptbuilder.NewScriptBuilder()
 		builder.AddOps(mergedScript)
 		builder.AddData(script)
 		finalScript, _ := builder.Script()
@@ -371,7 +372,7 @@ sigLoop:
 
 	// Extra opcode to handle the extra arg consumed (due to previous bugs
 	// in the reference implementation).
-	builder := NewScriptBuilder().AddOp(opcode.OP_FALSE)
+	builder := scriptbuilder.NewScriptBuilder().AddOp(opcode.OP_FALSE)
 	doneSigs := 0
 	// This assumes that addresses are in the same order as in the script.
 	for _, addr := range addresses {
@@ -450,7 +451,7 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		}
 
 		// Append the p2sh script as the last push in the script.
-		builder := NewScriptBuilder()
+		builder := scriptbuilder.NewScriptBuilder()
 		builder.AddOps(realSigScript)
 		builder.AddData(sigScript)
 

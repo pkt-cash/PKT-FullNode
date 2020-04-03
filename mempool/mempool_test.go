@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -152,7 +153,7 @@ type poolHarness struct {
 func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*btcutil.Tx, er.R) {
 	// Create standard coinbase script.
 	extraNonce := int64(0)
-	coinbaseScript, err := txscript.NewScriptBuilder().
+	coinbaseScript, err := scriptbuilder.NewScriptBuilder().
 		AddInt64(int64(blockHeight)).AddInt64(extraNonce).Script()
 	if err != nil {
 		return nil, err
