@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptnum"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
@@ -62,9 +63,9 @@ func (b *ScriptBuilder) AddOp(opcode byte) *ScriptBuilder {
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+1 > MaxScriptSize {
+	if len(b.script)+1 > params.MaxScriptSize {
 		str := fmt.Sprintf("adding an opcode would exceed the maximum "+
-			"allowed canonical script length of %d", MaxScriptSize)
+			"allowed canonical script length of %d", params.MaxScriptSize)
 		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
@@ -83,9 +84,9 @@ func (b *ScriptBuilder) AddOps(opcodes []byte) *ScriptBuilder {
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+len(opcodes) > MaxScriptSize {
+	if len(b.script)+len(opcodes) > params.MaxScriptSize {
 		str := fmt.Sprintf("adding opcodes would exceed the maximum "+
-			"allowed canonical script length of %d", MaxScriptSize)
+			"allowed canonical script length of %d", params.MaxScriptSize)
 		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
@@ -198,10 +199,10 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
 	dataSize := canonicalDataSize(data)
-	if len(b.script)+dataSize > MaxScriptSize {
+	if len(b.script)+dataSize > params.MaxScriptSize {
 		str := fmt.Sprintf("adding %d bytes of data would exceed the "+
 			"maximum allowed canonical script length of %d",
-			dataSize, MaxScriptSize)
+			dataSize, params.MaxScriptSize)
 		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
@@ -209,10 +210,10 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 	// Pushes larger than the max script element size would result in a
 	// script that is not canonical.
 	dataLen := len(data)
-	if dataLen > MaxScriptElementSize {
+	if dataLen > params.MaxScriptElementSize {
 		str := fmt.Sprintf("adding a data element of %d bytes would "+
 			"exceed the maximum allowed script element size of %d",
-			dataLen, MaxScriptElementSize)
+			dataLen, params.MaxScriptElementSize)
 		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}
@@ -230,10 +231,10 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 
 	// Pushes that would cause the script to exceed the largest allowed
 	// script size would result in a non-canonical script.
-	if len(b.script)+1 > MaxScriptSize {
+	if len(b.script)+1 > params.MaxScriptSize {
 		str := fmt.Sprintf("adding an integer would exceed the "+
 			"maximum allow canonical script length of %d",
-			MaxScriptSize)
+			params.MaxScriptSize)
 		b.err = ErrScriptNotCanonical.New(str, nil)
 		return b
 	}

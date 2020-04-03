@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/txscript/params"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
@@ -2670,7 +2671,7 @@ type SignatureError struct {
 // being unable to determine a previous output script to redeem.
 //
 // The transaction pointed to by tx is modified by this function.
-func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
+func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 	additionalPrevScripts map[wire.OutPoint][]byte,
 	additionalKeysByAddress map[string]*btcutil.WIF,
 	p2shRedeemScriptsByAddress map[string][]byte) ([]SignatureError, er.R) {
@@ -2754,8 +2755,8 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 			// SigHashSingle inputs can only be signed if there's a
 			// corresponding output. However this could be already signed,
 			// so we always verify the output.
-			if (hashType&txscript.SigHashSingle) !=
-				txscript.SigHashSingle || i < len(tx.TxOut) {
+			if (hashType&params.SigHashSingle) !=
+				params.SigHashSingle || i < len(tx.TxOut) {
 
 				script, err := txscript.SignTxOutput(w.ChainParams(),
 					tx, i, prevOutScript, hashType, getKey,

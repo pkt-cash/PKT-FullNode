@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/wire"
@@ -3774,7 +3775,7 @@ func TestHasCanonicalPush(t *testing.T) {
 			}
 		}
 	}
-	for i := 0; i <= MaxScriptElementSize; i++ {
+	for i := 0; i <= params.MaxScriptElementSize; i++ {
 		builder := NewScriptBuilder()
 		builder.AddData(bytes.Repeat([]byte{0x49}, i))
 		script, err := builder.Script()

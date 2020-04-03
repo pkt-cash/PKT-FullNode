@@ -17,6 +17,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -863,7 +864,7 @@ func TestCalcSignatureHash(t *testing.T) {
 			continue
 		}
 
-		hashType := SigHashType(testVecF64ToUint32(test[3].(float64)))
+		hashType := params.SigHashType(testVecF64ToUint32(test[3].(float64)))
 		hash := calcSignatureHash(parsedScript, hashType, &tx,
 			int(test[2].(float64)))
 

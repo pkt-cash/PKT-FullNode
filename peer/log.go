@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktlog"
-	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -70,7 +70,7 @@ func formatLockTime(lockTime uint32) string {
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the lockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	if lockTime < txscript.LockTimeThreshold {
+	if lockTime < params.LockTimeThreshold {
 		return fmt.Sprintf("height %d", lockTime)
 	}
 

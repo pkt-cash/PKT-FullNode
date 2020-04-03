@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/banman"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -1422,20 +1423,20 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient chain.In
 		return nil, errDeserialization("TX decode failed", err)
 	}
 
-	var hashType txscript.SigHashType
+	var hashType params.SigHashType
 	switch *cmd.Flags {
 	case "ALL":
-		hashType = txscript.SigHashAll
+		hashType = params.SigHashAll
 	case "NONE":
-		hashType = txscript.SigHashNone
+		hashType = params.SigHashNone
 	case "SINGLE":
-		hashType = txscript.SigHashSingle
+		hashType = params.SigHashSingle
 	case "ALL|ANYONECANPAY":
-		hashType = txscript.SigHashAll | txscript.SigHashAnyOneCanPay
+		hashType = params.SigHashAll | params.SigHashAnyOneCanPay
 	case "NONE|ANYONECANPAY":
-		hashType = txscript.SigHashNone | txscript.SigHashAnyOneCanPay
+		hashType = params.SigHashNone | params.SigHashAnyOneCanPay
 	case "SINGLE|ANYONECANPAY":
-		hashType = txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
+		hashType = params.SigHashSingle | params.SigHashAnyOneCanPay
 	default:
 		return nil, btcjson.ErrRPCInvalidParameter.New("Invalid sighash parameter", nil)
 	}

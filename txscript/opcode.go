@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptnum"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
@@ -901,7 +902,7 @@ func opcodeCheckLockTimeVerify(op *parsedOpcode, vm *Engine) er.R {
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	err = verifyLockTime(int64(vm.tx.LockTime), LockTimeThreshold,
+	err = verifyLockTime(int64(vm.tx.LockTime), params.LockTimeThreshold,
 		int64(lockTime))
 	if err != nil {
 		return err
@@ -1802,7 +1803,7 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) er.R {
 	// the data stack.  This is required because the more general script
 	// validation consensus rules do not have the new strict encoding
 	// requirements enabled by the flags.
-	hashType := SigHashType(fullSigBytes[len(fullSigBytes)-1])
+	hashType := params.SigHashType(fullSigBytes[len(fullSigBytes)-1])
 	sigBytes := fullSigBytes[:len(fullSigBytes)-1]
 	if err := vm.checkHashTypeEncoding(hashType); err != nil {
 		return err
@@ -1935,15 +1936,15 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) er.R {
 			numPubKeys)
 		return txscripterr.ScriptError(txscripterr.ErrInvalidPubKeyCount, str)
 	}
-	if numPubKeys > MaxPubKeysPerMultiSig {
+	if numPubKeys > params.MaxPubKeysPerMultiSig {
 		str := fmt.Sprintf("too many pubkeys: %d > %d",
-			numPubKeys, MaxPubKeysPerMultiSig)
+			numPubKeys, params.MaxPubKeysPerMultiSig)
 		return txscripterr.ScriptError(txscripterr.ErrInvalidPubKeyCount, str)
 	}
 	vm.numOps += numPubKeys
-	if vm.numOps > MaxOpsPerScript {
+	if vm.numOps > params.MaxOpsPerScript {
 		str := fmt.Sprintf("exceeded max operation limit of %d",
-			MaxOpsPerScript)
+			params.MaxOpsPerScript)
 		return txscripterr.ScriptError(txscripterr.ErrTooManyOperations, str)
 	}
 
@@ -2041,7 +2042,7 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) er.R {
 		}
 
 		// Split the signature into hash type and signature components.
-		hashType := SigHashType(rawSig[len(rawSig)-1])
+		hashType := params.SigHashType(rawSig[len(rawSig)-1])
 		signature := rawSig[:len(rawSig)-1]
 
 		// Only parse and check the signature encoding once.

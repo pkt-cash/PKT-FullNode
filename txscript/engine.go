@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -162,15 +163,15 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 	// Note that this includes OP_RESERVED which counts as a push operation.
 	if pop.opcode.value > opcode.OP_16 {
 		vm.numOps++
-		if vm.numOps > MaxOpsPerScript {
+		if vm.numOps > params.MaxOpsPerScript {
 			str := fmt.Sprintf("exceeded max operation limit of %d",
-				MaxOpsPerScript)
+				params.MaxOpsPerScript)
 			return txscripterr.ScriptError(txscripterr.ErrTooManyOperations, str)
 		}
 
-	} else if len(pop.data) > MaxScriptElementSize {
+	} else if len(pop.data) > params.MaxScriptElementSize {
 		str := fmt.Sprintf("element size %d exceeds max allowed size %d",
-			len(pop.data), MaxScriptElementSize)
+			len(pop.data), params.MaxScriptElementSize)
 		return txscripterr.ScriptError(txscripterr.ErrElementTooBig, str)
 	}
 
@@ -241,7 +242,7 @@ func (vm *Engine) isWitnessVersionActive(version uint) bool {
 func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 	if vm.isWitnessVersionActive(0) {
 		switch len(vm.witnessProgram) {
-		case payToWitnessPubKeyHashDataSize: // P2WKH
+		case params.PayToWitnessPubKeyHashDataSize: // P2WKH
 			// The witness stack should consist of exactly two
 			// items: the signature, and the pubkey.
 			if len(witness) != 2 {
@@ -267,7 +268,7 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 			vm.scripts = append(vm.scripts, pops)
 			vm.SetStack(witness)
 
-		case payToWitnessScriptHashDataSize: // P2WSH
+		case params.PayToWitnessScriptHashDataSize: // P2WSH
 			// Additionally, The witness stack MUST NOT be empty at
 			// this point.
 			if len(witness) == 0 {
@@ -279,10 +280,10 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 			// element in the passed stack. The size of the script
 			// MUST NOT exceed the max script size.
 			witnessScript := witness[len(witness)-1]
-			if len(witnessScript) > MaxScriptSize {
+			if len(witnessScript) > params.MaxScriptSize {
 				str := fmt.Sprintf("witnessScript size %d "+
 					"is larger than max allowed size %d",
-					len(witnessScript), MaxScriptSize)
+					len(witnessScript), params.MaxScriptSize)
 				return txscripterr.ScriptError(txscripterr.ErrScriptTooBig, str)
 			}
 
@@ -311,8 +312,8 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 		default:
 			errStr := fmt.Sprintf("length of witness program "+
 				"must either be %v or %v bytes, instead is %v bytes",
-				payToWitnessPubKeyHashDataSize,
-				payToWitnessScriptHashDataSize,
+				params.PayToWitnessPubKeyHashDataSize,
+				params.PayToWitnessScriptHashDataSize,
 				len(vm.witnessProgram))
 			return txscripterr.ScriptError(txscripterr.ErrWitnessProgramWrongLength, errStr)
 		}
@@ -333,10 +334,10 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 		// than the maximum bytes which are allowed to be pushed onto
 		// the stack.
 		for _, witElement := range vm.GetStack() {
-			if len(witElement) > MaxScriptElementSize {
+			if len(witElement) > params.MaxScriptElementSize {
 				str := fmt.Sprintf("element size %d exceeds "+
 					"max allowed size %d", len(witElement),
-					MaxScriptElementSize)
+					params.MaxScriptElementSize)
 				return txscripterr.ScriptError(txscripterr.ErrElementTooBig, str)
 			}
 		}
@@ -446,9 +447,9 @@ func (vm *Engine) Step() (done bool, err er.R) {
 	// The number of elements in the combination of the data and alt stacks
 	// must not exceed the maximum number of stack elements allowed.
 	combinedStackSize := vm.dstack.Depth() + vm.astack.Depth()
-	if combinedStackSize > MaxStackSize {
+	if combinedStackSize > params.MaxStackSize {
 		str := fmt.Sprintf("combined stack size %d > max allowed %d",
-			combinedStackSize, MaxStackSize)
+			combinedStackSize, params.MaxStackSize)
 		return false, txscripterr.ScriptError(txscripterr.ErrStackOverflow, str)
 	}
 
@@ -554,13 +555,13 @@ func (vm *Engine) subScript() []parsedOpcode {
 
 // checkHashTypeEncoding returns whether or not the passed hashtype adheres to
 // the strict encoding requirements if enabled.
-func (vm *Engine) checkHashTypeEncoding(hashType SigHashType) er.R {
+func (vm *Engine) checkHashTypeEncoding(hashType params.SigHashType) er.R {
 	if !vm.hasFlag(ScriptVerifyStrictEncoding) {
 		return nil
 	}
 
-	sigHashType := hashType & ^SigHashAnyOneCanPay
-	if sigHashType < SigHashAll || sigHashType > SigHashSingle {
+	sigHashType := hashType & ^params.SigHashAnyOneCanPay
+	if sigHashType < params.SigHashAll || sigHashType > params.SigHashSingle {
 		str := fmt.Sprintf("invalid hash type 0x%x", hashType)
 		return txscripterr.ScriptError(txscripterr.ErrInvalidSigHashType, str)
 	}
@@ -879,9 +880,9 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 	scripts := [][]byte{scriptSig, scriptPubKey}
 	vm.scripts = make([][]parsedOpcode, len(scripts))
 	for i, scr := range scripts {
-		if len(scr) > MaxScriptSize {
+		if len(scr) > params.MaxScriptSize {
 			str := fmt.Sprintf("script size %d is larger than max "+
-				"allowed size %d", len(scr), MaxScriptSize)
+				"allowed size %d", len(scr), params.MaxScriptSize)
 			return nil, txscripterr.ScriptError(txscripterr.ErrScriptTooBig, str)
 		}
 		var err er.R

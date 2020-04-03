@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -74,7 +75,7 @@ func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript
 }
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
-	hashType SigHashType, kdb KeyDB, sdb ScriptDB,
+	hashType params.SigHashType, kdb KeyDB, sdb ScriptDB,
 	previousScript []byte) er.R {
 
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
@@ -92,14 +93,14 @@ func TestSignTxOutput(t *testing.T) {
 	// make key
 	// make script based on key.
 	// sign with magic pixie dust.
-	hashTypes := []SigHashType{
-		SigHashOld, // no longer used but should act like all
-		SigHashAll,
-		SigHashNone,
-		SigHashSingle,
-		SigHashAll | SigHashAnyOneCanPay,
-		SigHashNone | SigHashAnyOneCanPay,
-		SigHashSingle | SigHashAnyOneCanPay,
+	hashTypes := []params.SigHashType{
+		params.SigHashOld, // no longer used but should act like all
+		params.SigHashAll,
+		params.SigHashNone,
+		params.SigHashSingle,
+		params.SigHashAll | params.SigHashAnyOneCanPay,
+		params.SigHashNone | params.SigHashAnyOneCanPay,
+		params.SigHashSingle | params.SigHashAnyOneCanPay,
 	}
 	inputAmounts := []int64{5, 10, 15}
 	tx := &wire.MsgTx{
@@ -1409,7 +1410,7 @@ type tstInput struct {
 type tstSigScript struct {
 	name               string
 	inputs             []tstInput
-	hashType           SigHashType
+	hashType           params.SigHashType
 	compress           bool
 	scriptAtWrongIndex bool
 }
@@ -1461,7 +1462,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1481,7 +1482,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1495,7 +1496,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           true,
 		scriptAtWrongIndex: false,
 	},
@@ -1515,7 +1516,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           true,
 		scriptAtWrongIndex: false,
 	},
@@ -1529,7 +1530,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashNone,
+		hashType:           params.SigHashNone,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1543,7 +1544,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashSingle,
+		hashType:           params.SigHashSingle,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1557,7 +1558,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAnyOneCanPay,
+		hashType:           params.SigHashAnyOneCanPay,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1585,7 +1586,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           true,
 		scriptAtWrongIndex: false,
 	},
@@ -1598,7 +1599,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           false,
 		scriptAtWrongIndex: false,
 	},
@@ -1618,7 +1619,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           false,
 		scriptAtWrongIndex: true,
 	},
@@ -1638,7 +1639,7 @@ var sigScriptTests = []tstSigScript{
 				indexOutOfRange:    false,
 			},
 		},
-		hashType:           SigHashAll,
+		hashType:           params.SigHashAll,
 		compress:           false,
 		scriptAtWrongIndex: true,
 	},

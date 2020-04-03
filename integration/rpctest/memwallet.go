@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -482,7 +483,7 @@ func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
 		}
 
 		sigScript, err := txscript.SignatureScript(tx, i, utxo.pkScript,
-			txscript.SigHashAll, privKey, true)
+			params.SigHashAll, privKey, true)
 		if err != nil {
 			return nil, err
 		}

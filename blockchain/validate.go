@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -142,7 +143,7 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
 	blockTimeOrHeight := int64(0)
-	if lockTime < txscript.LockTimeThreshold {
+	if lockTime < params.LockTimeThreshold {
 		blockTimeOrHeight = int64(blockHeight)
 	} else {
 		blockTimeOrHeight = blockTime.Unix()
@@ -1150,7 +1151,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block,
 	// "standard" type.  The rules for this BIP only apply to transactions
 	// after the timestamp defined by txscript.Bip16Activation.  See
 	// https://en.bitcoin.it/wiki/BIP_0016 for more details.
-	enforceBIP0016 := node.timestamp >= txscript.Bip16Activation.Unix()
+	enforceBIP0016 := node.timestamp >= params.Bip16Activation.Unix()
 
 	// Query for the Version Bits state for the segwit soft-fork
 	// deployment. If segwit is active, we'll switch over to enforcing all

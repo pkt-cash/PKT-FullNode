@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -445,7 +446,7 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
 func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
-	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
+	hashType params.SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
 
 	// As a sanity check, ensure the passed input index for the transaction
 	// is valid.
@@ -469,7 +470,7 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 
 	// If anyone can pay isn't active, then we can use the cached
 	// hashPrevOuts, otherwise we just write zeroes for the prev outs.
-	if hashType&SigHashAnyOneCanPay == 0 {
+	if hashType&params.SigHashAnyOneCanPay == 0 {
 		sigHash.Write(sigHashes.HashPrevOuts[:])
 	} else {
 		sigHash.Write(zeroHash[:])
@@ -478,9 +479,9 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	// If the sighash isn't anyone can pay, single, or none, the use the
 	// cached hash sequences, otherwise write all zeroes for the
 	// hashSequence.
-	if hashType&SigHashAnyOneCanPay == 0 &&
-		hashType&sigHashMask != SigHashSingle &&
-		hashType&sigHashMask != SigHashNone {
+	if hashType&params.SigHashAnyOneCanPay == 0 &&
+		hashType&params.SigHashMask != params.SigHashSingle &&
+		hashType&params.SigHashMask != params.SigHashNone {
 		sigHash.Write(sigHashes.HashSequence[:])
 	} else {
 		sigHash.Write(zeroHash[:])
@@ -526,10 +527,10 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	// re-use the pre-generated hashoutputs sighash fragment. Otherwise,
 	// we'll serialize and add only the target output index to the signature
 	// pre-image.
-	if hashType&SigHashSingle != SigHashSingle &&
-		hashType&SigHashNone != SigHashNone {
+	if hashType&params.SigHashSingle != params.SigHashSingle &&
+		hashType&params.SigHashNone != params.SigHashNone {
 		sigHash.Write(sigHashes.HashOutputs[:])
-	} else if hashType&sigHashMask == SigHashSingle && idx < len(tx.TxOut) {
+	} else if hashType&params.SigHashMask == params.SigHashSingle && idx < len(tx.TxOut) {
 		var b bytes.Buffer
 		wire.WriteTxOut(&b, 0, 0, tx.TxOut[idx])
 		sigHash.Write(chainhash.DoubleHashB(b.Bytes()))
@@ -580,7 +581,7 @@ func shallowCopyTx(tx *wire.MsgTx) wire.MsgTx {
 // CalcSignatureHash will, given a script and hash type for the current script
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
-func CalcSignatureHash(script []byte, hashType SigHashType, tx *wire.MsgTx, idx int) ([]byte, er.R) {
+func CalcSignatureHash(script []byte, hashType params.SigHashType, tx *wire.MsgTx, idx int) ([]byte, er.R) {
 	parsedScript, err := parseScript(script)
 	if err != nil {
 		return nil, er.Errorf("cannot parse output script: %v", err)
@@ -591,7 +592,7 @@ func CalcSignatureHash(script []byte, hashType SigHashType, tx *wire.MsgTx, idx 
 // calcSignatureHash will, given a script and hash type for the current script
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
-func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.MsgTx, idx int) []byte {
+func calcSignatureHash(script []parsedOpcode, hashType params.SigHashType, tx *wire.MsgTx, idx int) []byte {
 	// The SigHashSingle signature type signs only the corresponding input
 	// and output (the output with the same index number as the input).
 	//
@@ -612,7 +613,7 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 	// hash of 1.  This in turn presents an opportunity for attackers to
 	// cleverly construct transactions which can steal those coins provided
 	// they can reuse signatures.
-	if hashType&sigHashMask == SigHashSingle && idx >= len(tx.TxOut) {
+	if hashType&params.SigHashMask == params.SigHashSingle && idx >= len(tx.TxOut) {
 		var hash chainhash.Hash
 		hash[0] = 0x01
 		return hash[:]
@@ -635,8 +636,8 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 		}
 	}
 
-	switch hashType & sigHashMask {
-	case SigHashNone:
+	switch hashType & params.SigHashMask {
+	case params.SigHashNone:
 		txCopy.TxOut = txCopy.TxOut[0:0] // Empty slice.
 		for i := range txCopy.TxIn {
 			if i != idx {
@@ -644,7 +645,7 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 			}
 		}
 
-	case SigHashSingle:
+	case params.SigHashSingle:
 		// Resize output array to up to and including requested index.
 		txCopy.TxOut = txCopy.TxOut[:idx+1]
 
@@ -661,15 +662,15 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 			}
 		}
 
-	case SigHashOld:
+	case params.SigHashOld:
 		fallthrough
-	case SigHashAll:
+	case params.SigHashAll:
 		fallthrough
 	default:
 		// Consensus treats undefined hashtypes like normal SigHashAll
 		// for purposes of hash generation.
 	}
-	if hashType&SigHashAnyOneCanPay != 0 {
+	if hashType&params.SigHashAnyOneCanPay != 0 {
 		txCopy.TxIn = txCopy.TxIn[idx : idx+1]
 	}
 
@@ -716,7 +717,7 @@ func getSigOpCount(pops []parsedOpcode, precise bool) int {
 				pops[i-1].opcode.value <= opcode.OP_16 {
 				nSigs += asSmallInt(pops[i-1].opcode)
 			} else {
-				nSigs += MaxPubKeysPerMultiSig
+				nSigs += params.MaxPubKeysPerMultiSig
 			}
 		default:
 			// Not a sigop.
@@ -827,9 +828,9 @@ func getWitnessSigOps(pkScript []byte, witness wire.TxWitness) int {
 	switch witnessVersion {
 	case 0:
 		switch {
-		case len(witnessProgram) == payToWitnessPubKeyHashDataSize:
+		case len(witnessProgram) == params.PayToWitnessPubKeyHashDataSize:
 			return 1
-		case len(witnessProgram) == payToWitnessScriptHashDataSize &&
+		case len(witnessProgram) == params.PayToWitnessScriptHashDataSize &&
 			len(witness) > 0:
 
 			witnessScript := witness[len(witness)-1]

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -231,7 +232,7 @@ func (p *poolHarness) CreateSignedTx(inputs []spendableOutput,
 	// Sign the new transaction.
 	for i := range tx.TxIn {
 		sigScript, err := txscript.SignatureScript(tx, i, p.payScript,
-			txscript.SigHashAll, p.signKey, true)
+			params.SigHashAll, p.signKey, true)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +267,7 @@ func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32)
 
 		// Sign the new transaction.
 		sigScript, err := txscript.SignatureScript(tx, 0, p.payScript,
-			txscript.SigHashAll, p.signKey, true)
+			params.SigHashAll, p.signKey, true)
 		if err != nil {
 			return nil, err
 		}

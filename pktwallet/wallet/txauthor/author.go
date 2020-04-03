@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -340,7 +341,7 @@ func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []bt
 		default:
 			sigScript := inputs[i].SignatureScript
 			script, err := txscript.SignTxOutput(chainParams, tx, i,
-				pkScript, txscript.SigHashAll, secrets, secrets,
+				pkScript, params.SigHashAll, secrets, secrets,
 				sigScript)
 			if err != nil {
 				return err
@@ -394,7 +395,7 @@ func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
 		return err
 	}
 	witnessScript, err := txscript.WitnessSignature(tx, hashCache, idx,
-		inputValue, witnessProgram, txscript.SigHashAll, privKey, true)
+		inputValue, witnessProgram, params.SigHashAll, privKey, true)
 	if err != nil {
 		return err
 	}
@@ -457,7 +458,7 @@ func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 	// With the sigScript in place, we'll next generate the proper witness
 	// that'll allow us to spend the p2wkh output.
 	witnessScript, err := txscript.WitnessSignature(tx, hashCache, idx,
-		inputValue, witnessProgram, txscript.SigHashAll, privKey, compressed)
+		inputValue, witnessProgram, params.SigHashAll, privKey, compressed)
 	if err != nil {
 		return err
 	}

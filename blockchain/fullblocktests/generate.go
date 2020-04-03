@@ -19,6 +19,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -1339,7 +1340,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 			spend := makeSpendableOutForTx(b39.Transactions[i+2], 2)
 			tx := createSpendTx(&spend, lowFee)
 			sig, err := txscript.RawTxInSignature(tx, 0,
-				redeemScript, txscript.SigHashAll, g.privKey)
+				redeemScript, params.SigHashAll, g.privKey)
 			if err != nil {
 				panic(err)
 			}
@@ -1370,7 +1371,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err er.R) {
 			spend := makeSpendableOutForTx(b39.Transactions[i+2], 2)
 			tx := createSpendTx(&spend, lowFee)
 			sig, err := txscript.RawTxInSignature(tx, 0,
-				redeemScript, txscript.SigHashAll, g.privKey)
+				redeemScript, params.SigHashAll, g.privKey)
 			if err != nil {
 				panic(err)
 			}

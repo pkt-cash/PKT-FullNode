@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package txscript
+package params
 
 import "time"
 
@@ -23,13 +23,13 @@ const (
 	// MaxScriptSize is the maximum allowed length of a raw script.
 	MaxScriptSize = 10000
 
-	// payToWitnessPubKeyHashDataSize is the size of the witness program's
+	// PayToWitnessPubKeyHashDataSize is the size of the witness program's
 	// data push for a pay-to-witness-pub-key-hash output.
-	payToWitnessPubKeyHashDataSize = 20
+	PayToWitnessPubKeyHashDataSize = 20
 
-	// payToWitnessScriptHashDataSize is the size of the witness program's
+	// PayToWitnessScriptHashDataSize is the size of the witness program's
 	// data push for a pay-to-witness-script-hash output.
-	payToWitnessScriptHashDataSize = 32
+	PayToWitnessScriptHashDataSize = 32
 )
 
 // Bip16Activation is the timestamp where BIP0016 is valid to use in the
@@ -48,9 +48,9 @@ const (
 	SigHashSingle       SigHashType = 0x3
 	SigHashAnyOneCanPay SigHashType = 0x80
 
-	// sigHashMask defines the number of bits of the hash type which is used
+	// SigHashMask defines the number of bits of the hash type which is used
 	// to identify which outputs are signed.
-	sigHashMask = 0x1f
+	SigHashMask = 0x1f
 )
 
 // These are the constants specified for maximums in individual scripts.

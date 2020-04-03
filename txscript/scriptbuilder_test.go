@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 )
 
 // TestScriptBuilderAddOp tests that pushing opcodes to a script via the
@@ -293,7 +294,7 @@ func TestExceedMaxScriptSize(t *testing.T) {
 
 	// Start off by constructing a max size script.
 	builder := NewScriptBuilder()
-	builder.Reset().AddFullData(make([]byte, MaxScriptSize-3))
+	builder.Reset().AddFullData(make([]byte, params.MaxScriptSize-3))
 	origScript, err := builder.Script()
 	if err != nil {
 		t.Fatalf("Unexpected error for max size script: %v", err)
@@ -313,7 +314,7 @@ func TestExceedMaxScriptSize(t *testing.T) {
 
 	// Ensure adding an opcode that would exceed the maximum size of the
 	// script does not add the data.
-	builder.Reset().AddFullData(make([]byte, MaxScriptSize-3))
+	builder.Reset().AddFullData(make([]byte, params.MaxScriptSize-3))
 	script, err = builder.AddOp(opcode.OP_0).Script()
 	if !ErrScriptNotCanonical.Is(err) {
 		t.Fatalf("ScriptBuilder.AddOp unexpected modified script - "+
@@ -326,7 +327,7 @@ func TestExceedMaxScriptSize(t *testing.T) {
 
 	// Ensure adding an integer that would exceed the maximum size of the
 	// script does not add the data.
-	builder.Reset().AddFullData(make([]byte, MaxScriptSize-3))
+	builder.Reset().AddFullData(make([]byte, params.MaxScriptSize-3))
 	script, err = builder.AddInt64(0).Script()
 	if !ErrScriptNotCanonical.Is(err) {
 		t.Fatalf("ScriptBuilder.AddInt64 unexpected modified script - "+
@@ -347,7 +348,7 @@ func TestErroredScript(t *testing.T) {
 	// space left to add each data type without an error and force an
 	// initial error condition.
 	builder := NewScriptBuilder()
-	builder.Reset().AddFullData(make([]byte, MaxScriptSize-8))
+	builder.Reset().AddFullData(make([]byte, params.MaxScriptSize-8))
 	origScript, err := builder.Script()
 	if err != nil {
 		t.Fatalf("ScriptBuilder.AddFullData unexpected error: %v", err)
