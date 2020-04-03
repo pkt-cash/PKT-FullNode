@@ -12,15 +12,15 @@ import (
 )
 
 const (
-	MaxInt32_GOMV_UNIQUE_STRING = 1<<31 - 1
-	MinInt32_GOMV_UNIQUE_STRING = -1 << 31
+	MaxInt32 = 1<<31 - 1
+	MinInt32 = -1 << 31
 
-	// DefaultScriptNumLen_GOMV_UNIQUE_STRING is the default number of bytes
+	// DefaultScriptNumLen is the default number of bytes
 	// data being interpreted as an integer may be.
-	DefaultScriptNumLen_GOMV_UNIQUE_STRING = 4
+	DefaultScriptNumLen = 4
 )
 
-// ScriptNum_GOMV_UNIQUE_STRING represents a numeric value used in the scripting engine with
+// ScriptNum represents a numeric value used in the scripting engine with
 // special handling to deal with the subtle semantics required by consensus.
 //
 // All numbers are stored on the data and alternate stacks encoded as little
@@ -46,11 +46,11 @@ const (
 // number is out of range or not minimally encoded depending on parameters.
 // Since all numeric opcodes involve pulling data from the stack and
 // interpreting it as an integer, it provides the required behavior.
-type ScriptNum_GOMV_UNIQUE_STRING int64
+type ScriptNum int64
 
-// CheckMinimalDataEncoding_GOMV_UNIQUE_STRING returns whether or not the passed byte array adheres
+// CheckMinimalDataEncoding returns whether or not the passed byte array adheres
 // to the minimal encoding requirements.
-func CheckMinimalDataEncoding_GOMV_UNIQUE_STRING(v []byte) er.R {
+func CheckMinimalDataEncoding(v []byte) er.R {
 	if len(v) == 0 {
 		return nil
 	}
@@ -92,7 +92,7 @@ func CheckMinimalDataEncoding_GOMV_UNIQUE_STRING(v []byte) er.R {
 //    -32767 -> [0xff 0xff]
 //     32768 -> [0x00 0x80 0x00]
 //    -32768 -> [0x00 0x80 0x80]
-func (n ScriptNum_GOMV_UNIQUE_STRING) Bytes() []byte {
+func (n ScriptNum) Bytes() []byte {
 	// Zero encodes as an empty byte slice.
 	if n == 0 {
 		return nil
@@ -147,19 +147,19 @@ func (n ScriptNum_GOMV_UNIQUE_STRING) Bytes() []byte {
 // this function against the result of some arithmetic, which IS allowed to be
 // out of range before being reinterpreted as an integer, this will provide the
 // correct behavior.
-func (n ScriptNum_GOMV_UNIQUE_STRING) Int32() int32 {
-	if n > MaxInt32_GOMV_UNIQUE_STRING {
-		return MaxInt32_GOMV_UNIQUE_STRING
+func (n ScriptNum) Int32() int32 {
+	if n > MaxInt32 {
+		return MaxInt32
 	}
 
-	if n < MinInt32_GOMV_UNIQUE_STRING {
-		return MinInt32_GOMV_UNIQUE_STRING
+	if n < MinInt32 {
+		return MinInt32
 	}
 
 	return int32(n)
 }
 
-// MakeScriptNum_GOMV_UNIQUE_STRING interprets the passed serialized bytes as an encoded integer
+// MakeScriptNum interprets the passed serialized bytes as an encoded integer
 // and returns the result as a script number.
 //
 // Since the consensus rules dictate that serialized bytes interpreted as ints
@@ -185,7 +185,7 @@ func (n ScriptNum_GOMV_UNIQUE_STRING) Int32() int32 {
 // overflows.
 //
 // See the Bytes function documentation for example encodings.
-func MakeScriptNum_GOMV_UNIQUE_STRING(v []byte, requireMinimal bool, scriptNumLen int) (ScriptNum_GOMV_UNIQUE_STRING, er.R) {
+func MakeScriptNum(v []byte, requireMinimal bool, scriptNumLen int) (ScriptNum, er.R) {
 	// Interpreting data requires that it is not larger than
 	// the the passed scriptNumLen value.
 	if len(v) > scriptNumLen {
@@ -197,7 +197,7 @@ func MakeScriptNum_GOMV_UNIQUE_STRING(v []byte, requireMinimal bool, scriptNumLe
 
 	// Enforce minimal encoded if requested.
 	if requireMinimal {
-		if err := CheckMinimalDataEncoding_GOMV_UNIQUE_STRING(v); err != nil {
+		if err := CheckMinimalDataEncoding(v); err != nil {
 			return 0, err
 		}
 	}
@@ -221,8 +221,8 @@ func MakeScriptNum_GOMV_UNIQUE_STRING(v []byte, requireMinimal bool, scriptNumLe
 		// above, so uint8 is enough to cover the max possible shift
 		// value of 24.
 		result &= ^(int64(0x80) << uint8(8*(len(v)-1)))
-		return ScriptNum_GOMV_UNIQUE_STRING(-result), nil
+		return ScriptNum(-result), nil
 	}
 
-	return ScriptNum_GOMV_UNIQUE_STRING(result), nil
+	return ScriptNum(result), nil
 }

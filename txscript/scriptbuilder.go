@@ -248,7 +248,7 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 		return b
 	}
 
-	return b.AddData(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(val).Bytes())
+	return b.AddData(scriptnum.ScriptNum(val).Bytes())
 }
 
 // Reset resets the script so it has no content.

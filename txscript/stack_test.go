@@ -311,7 +311,7 @@ func TestStack(t *testing.T) {
 			"PushInt 0",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+				s.PushInt(scriptnum.ScriptNum(0))
 				return nil
 			},
 			nil,
@@ -321,7 +321,7 @@ func TestStack(t *testing.T) {
 			"PushInt 1",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+				s.PushInt(scriptnum.ScriptNum(1))
 				return nil
 			},
 			nil,
@@ -331,7 +331,7 @@ func TestStack(t *testing.T) {
 			"PushInt -1",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(-1))
+				s.PushInt(scriptnum.ScriptNum(-1))
 				return nil
 			},
 			nil,
@@ -341,7 +341,7 @@ func TestStack(t *testing.T) {
 			"PushInt two bytes",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(256))
+				s.PushInt(scriptnum.ScriptNum(256))
 				return nil
 			},
 			nil,
@@ -353,7 +353,7 @@ func TestStack(t *testing.T) {
 			nil,
 			func(s *stack) er.R {
 				// this will have the highbit set
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(128))
+				s.PushInt(scriptnum.ScriptNum(128))
 				return nil
 			},
 			nil,
@@ -475,7 +475,7 @@ func TestStack(t *testing.T) {
 			"PushInt PopBool",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+				s.PushInt(scriptnum.ScriptNum(1))
 				val, err := s.PopBool()
 				if err != nil {
 					return err
@@ -493,7 +493,7 @@ func TestStack(t *testing.T) {
 			"PushInt PopBool 2",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+				s.PushInt(scriptnum.ScriptNum(0))
 				val, err := s.PopBool()
 				if err != nil {
 					return err
@@ -863,7 +863,7 @@ func TestStack(t *testing.T) {
 			"pop int",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+				s.PushInt(scriptnum.ScriptNum(1))
 				// Peek int is otherwise pretty well tested,
 				// just check it works.
 				val, err := s.PopInt()

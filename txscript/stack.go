@@ -60,7 +60,7 @@ func (s *stack) PushByteArray(so []byte) {
 // it onto the top of the stack.
 //
 // Stack transformation: [... x1 x2] -> [... x1 x2 int]
-func (s *stack) PushInt(val scriptnum.ScriptNum_GOMV_UNIQUE_STRING) {
+func (s *stack) PushInt(val scriptnum.ScriptNum) {
 	s.PushByteArray(val.Bytes())
 }
 
@@ -84,13 +84,13 @@ func (s *stack) PopByteArray() ([]byte, er.R) {
 // consensus rules imposed on data interpreted as numbers.
 //
 // Stack transformation: [... x1 x2 x3] -> [... x1 x2]
-func (s *stack) PopInt() (scriptnum.ScriptNum_GOMV_UNIQUE_STRING, er.R) {
+func (s *stack) PopInt() (scriptnum.ScriptNum, er.R) {
 	so, err := s.PopByteArray()
 	if err != nil {
 		return 0, err
 	}
 
-	return scriptnum.MakeScriptNum_GOMV_UNIQUE_STRING(so, s.verifyMinimalData, scriptnum.DefaultScriptNumLen_GOMV_UNIQUE_STRING)
+	return scriptnum.MakeScriptNum(so, s.verifyMinimalData, scriptnum.DefaultScriptNumLen)
 }
 
 // PopBool pops the value off the top of the stack, converts it into a bool, and
@@ -121,13 +121,13 @@ func (s *stack) PeekByteArray(idx int32) ([]byte, er.R) {
 // PeekInt returns the Nth item on the stack as a script num without removing
 // it.  The act of converting to a script num enforces the consensus rules
 // imposed on data interpreted as numbers.
-func (s *stack) PeekInt(idx int32) (scriptnum.ScriptNum_GOMV_UNIQUE_STRING, er.R) {
+func (s *stack) PeekInt(idx int32) (scriptnum.ScriptNum, er.R) {
 	so, err := s.PeekByteArray(idx)
 	if err != nil {
 		return 0, err
 	}
 
-	return scriptnum.MakeScriptNum_GOMV_UNIQUE_STRING(so, s.verifyMinimalData, scriptnum.DefaultScriptNumLen_GOMV_UNIQUE_STRING)
+	return scriptnum.MakeScriptNum(so, s.verifyMinimalData, scriptnum.DefaultScriptNumLen)
 }
 
 // PeekBool returns the Nth item on the stack as a bool without removing it.

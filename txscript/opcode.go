@@ -624,7 +624,7 @@ func opcodePushData(op *parsedOpcode, vm *Engine) er.R {
 
 // opcode1Negate pushes -1, encoded as a number, to the data stack.
 func opcode1Negate(op *parsedOpcode, vm *Engine) er.R {
-	vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(-1))
+	vm.dstack.PushInt(scriptnum.ScriptNum(-1))
 	return nil
 }
 
@@ -634,7 +634,7 @@ func opcode1Negate(op *parsedOpcode, vm *Engine) er.R {
 func opcodeN(op *parsedOpcode, vm *Engine) er.R {
 	// The opcodes are all defined consecutively, so the numeric value is
 	// the difference.
-	vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING((op.opcode.value - (opcode.OP_1 - 1))))
+	vm.dstack.PushInt(scriptnum.ScriptNum((op.opcode.value - (opcode.OP_1 - 1))))
 	return nil
 }
 
@@ -884,7 +884,7 @@ func opcodeCheckLockTimeVerify(op *parsedOpcode, vm *Engine) er.R {
 	if err != nil {
 		return err
 	}
-	lockTime, err := scriptnum.MakeScriptNum_GOMV_UNIQUE_STRING(so, vm.dstack.verifyMinimalData, 5)
+	lockTime, err := scriptnum.MakeScriptNum(so, vm.dstack.verifyMinimalData, 5)
 	if err != nil {
 		return err
 	}
@@ -958,7 +958,7 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) er.R {
 	if err != nil {
 		return err
 	}
-	stackSequence, err := scriptnum.MakeScriptNum_GOMV_UNIQUE_STRING(so, vm.dstack.verifyMinimalData, 5)
+	stackSequence, err := scriptnum.MakeScriptNum(so, vm.dstack.verifyMinimalData, 5)
 	if err != nil {
 		return err
 	}
@@ -1104,7 +1104,7 @@ func opcodeIfDup(op *parsedOpcode, vm *Engine) er.R {
 // Example with 2 items: [x1 x2] -> [x1 x2 2]
 // Example with 3 items: [x1 x2 x3] -> [x1 x2 x3 3]
 func opcodeDepth(op *parsedOpcode, vm *Engine) er.R {
-	vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(vm.dstack.Depth()))
+	vm.dstack.PushInt(scriptnum.ScriptNum(vm.dstack.Depth()))
 	return nil
 }
 
@@ -1198,7 +1198,7 @@ func opcodeSize(op *parsedOpcode, vm *Engine) er.R {
 		return err
 	}
 
-	vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(len(so)))
+	vm.dstack.PushInt(scriptnum.ScriptNum(len(so)))
 	return nil
 }
 
@@ -1313,9 +1313,9 @@ func opcodeNot(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if m == 0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 	return nil
 }
@@ -1397,9 +1397,9 @@ func opcodeBoolAnd(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v0 != 0 && v1 != 0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1424,9 +1424,9 @@ func opcodeBoolOr(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v0 != 0 || v1 != 0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1449,9 +1449,9 @@ func opcodeNumEqual(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v0 == v1 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1490,9 +1490,9 @@ func opcodeNumNotEqual(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v0 != v1 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1515,9 +1515,9 @@ func opcodeLessThan(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v1 < v0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1540,9 +1540,9 @@ func opcodeGreaterThan(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v1 > v0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 	return nil
 }
@@ -1564,9 +1564,9 @@ func opcodeLessThanOrEqual(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v1 <= v0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 	return nil
 }
@@ -1588,9 +1588,9 @@ func opcodeGreaterThanOrEqual(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if v1 >= v0 {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 
 	return nil
@@ -1669,9 +1669,9 @@ func opcodeWithin(op *parsedOpcode, vm *Engine) er.R {
 	}
 
 	if x >= minVal && x < maxVal {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
+		vm.dstack.PushInt(scriptnum.ScriptNum(1))
 	} else {
-		vm.dstack.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
+		vm.dstack.PushInt(scriptnum.ScriptNum(0))
 	}
 	return nil
 }
