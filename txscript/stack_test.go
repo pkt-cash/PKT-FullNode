@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/scriptnum"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
@@ -310,7 +311,7 @@ func TestStack(t *testing.T) {
 			"PushInt 0",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(0))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
 				return nil
 			},
 			nil,
@@ -320,7 +321,7 @@ func TestStack(t *testing.T) {
 			"PushInt 1",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(1))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
 				return nil
 			},
 			nil,
@@ -330,7 +331,7 @@ func TestStack(t *testing.T) {
 			"PushInt -1",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(-1))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(-1))
 				return nil
 			},
 			nil,
@@ -340,7 +341,7 @@ func TestStack(t *testing.T) {
 			"PushInt two bytes",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(256))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(256))
 				return nil
 			},
 			nil,
@@ -352,7 +353,7 @@ func TestStack(t *testing.T) {
 			nil,
 			func(s *stack) er.R {
 				// this will have the highbit set
-				s.PushInt(scriptNum(128))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(128))
 				return nil
 			},
 			nil,
@@ -474,7 +475,7 @@ func TestStack(t *testing.T) {
 			"PushInt PopBool",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(1))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
 				val, err := s.PopBool()
 				if err != nil {
 					return err
@@ -492,7 +493,7 @@ func TestStack(t *testing.T) {
 			"PushInt PopBool 2",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(0))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(0))
 				val, err := s.PopBool()
 				if err != nil {
 					return err
@@ -862,7 +863,7 @@ func TestStack(t *testing.T) {
 			"pop int",
 			nil,
 			func(s *stack) er.R {
-				s.PushInt(scriptNum(1))
+				s.PushInt(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(1))
 				// Peek int is otherwise pretty well tested,
 				// just check it works.
 				val, err := s.PopInt()

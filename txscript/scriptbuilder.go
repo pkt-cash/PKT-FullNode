@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptnum"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
@@ -247,7 +248,7 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 		return b
 	}
 
-	return b.AddData(scriptNum(val).Bytes())
+	return b.AddData(scriptnum.ScriptNum_GOMV_UNIQUE_STRING(val).Bytes())
 }
 
 // Reset resets the script so it has no content.
