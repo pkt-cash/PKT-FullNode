@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -681,12 +682,12 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, er.R) {
 
 	// Detect the case when the block height is a small integer encoded with
 	// as single byte.
-	opcode := int(sigScript[0])
-	if opcode == txscript.OP_0 {
+	op := int(sigScript[0])
+	if op == opcode.OP_0 {
 		return 0, nil
 	}
-	if opcode >= txscript.OP_1 && opcode <= txscript.OP_16 {
-		return int32(opcode - (txscript.OP_1 - 1)), nil
+	if op >= opcode.OP_1 && op <= opcode.OP_16 {
+		return int32(op - (opcode.OP_1 - 1)), nil
 	}
 
 	// Otherwise, the opcode is the length of the following bytes which

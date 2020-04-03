@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
@@ -108,7 +109,7 @@ func canonicalDataSize(data []byte) int {
 		return 1
 	}
 
-	if dataLen < OP_PUSHDATA1 {
+	if dataLen < opcode.OP_PUSHDATA1 {
 		return 1 + dataLen
 	} else if dataLen <= 0xff {
 		return 2 + dataLen
@@ -130,13 +131,13 @@ func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 	// by one of the "small integer" opcodes, use that opcode instead of
 	// a data push opcode followed by the number.
 	if dataLen == 0 || dataLen == 1 && data[0] == 0 {
-		b.script = append(b.script, OP_0)
+		b.script = append(b.script, opcode.OP_0)
 		return b
 	} else if dataLen == 1 && data[0] <= 16 {
-		b.script = append(b.script, (OP_1-1)+data[0])
+		b.script = append(b.script, (opcode.OP_1-1)+data[0])
 		return b
 	} else if dataLen == 1 && data[0] == 0x81 {
-		b.script = append(b.script, byte(OP_1NEGATE))
+		b.script = append(b.script, byte(opcode.OP_1NEGATE))
 		return b
 	}
 
@@ -144,19 +145,19 @@ func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 	// enough so the data push instruction is only a single byte.
 	// Otherwise, choose the smallest possible OP_PUSHDATA# opcode that
 	// can represent the length of the data.
-	if dataLen < OP_PUSHDATA1 {
-		b.script = append(b.script, byte((OP_DATA_1-1)+dataLen))
+	if dataLen < opcode.OP_PUSHDATA1 {
+		b.script = append(b.script, byte((opcode.OP_DATA_1-1)+dataLen))
 	} else if dataLen <= 0xff {
-		b.script = append(b.script, OP_PUSHDATA1, byte(dataLen))
+		b.script = append(b.script, opcode.OP_PUSHDATA1, byte(dataLen))
 	} else if dataLen <= 0xffff {
 		buf := make([]byte, 2)
 		binary.LittleEndian.PutUint16(buf, uint16(dataLen))
-		b.script = append(b.script, OP_PUSHDATA2)
+		b.script = append(b.script, opcode.OP_PUSHDATA2)
 		b.script = append(b.script, buf...)
 	} else {
 		buf := make([]byte, 4)
 		binary.LittleEndian.PutUint32(buf, uint32(dataLen))
-		b.script = append(b.script, OP_PUSHDATA4)
+		b.script = append(b.script, opcode.OP_PUSHDATA4)
 		b.script = append(b.script, buf...)
 	}
 
@@ -238,11 +239,11 @@ func (b *ScriptBuilder) AddInt64(val int64) *ScriptBuilder {
 
 	// Fast path for small integers and OP_1NEGATE.
 	if val == 0 {
-		b.script = append(b.script, OP_0)
+		b.script = append(b.script, opcode.OP_0)
 		return b
 	}
 	if val == -1 || (val >= 1 && val <= 16) {
-		b.script = append(b.script, byte((OP_1-1)+val))
+		b.script = append(b.script, byte((opcode.OP_1-1)+val))
 		return b
 	}
 

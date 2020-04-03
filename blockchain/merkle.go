@@ -12,11 +12,11 @@ import (
 	"math/bits"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
 )
 
 const (
@@ -37,8 +37,8 @@ var (
 	// of a coinbase output to indicate that this output holds the witness
 	// commitment for a block.
 	WitnessMagicBytes = []byte{
-		txscript.OP_RETURN,
-		txscript.OP_DATA_36,
+		opcode.OP_RETURN,
+		opcode.OP_DATA_36,
 		0xaa,
 		0x21,
 		0xa9,

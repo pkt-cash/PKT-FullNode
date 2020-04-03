@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -105,7 +106,7 @@ func ExampleSignTxOutput() {
 	// contains a single output that pays to address in the amount of 1 BTC.
 	originTx := wire.NewMsgTx(wire.TxVersion)
 	prevOut := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
-	txIn := wire.NewTxIn(prevOut, []byte{txscript.OP_0, txscript.OP_0}, nil)
+	txIn := wire.NewTxIn(prevOut, []byte{opcode.OP_0, opcode.OP_0}, nil)
 	originTx.AddTxIn(txIn)
 	pkScript, err := txscript.PayToAddrScript(addr)
 	if err != nil {

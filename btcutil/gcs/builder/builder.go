@@ -12,7 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -320,7 +320,7 @@ func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filte
 			// In order to allow the filters to later be committed
 			// to within an OP_RETURN output, we ignore all
 			// OP_RETURNs to avoid a circular dependency.
-			if txOut.PkScript[0] == txscript.OP_RETURN {
+			if txOut.PkScript[0] == opcode.OP_RETURN {
 				continue
 			}
 

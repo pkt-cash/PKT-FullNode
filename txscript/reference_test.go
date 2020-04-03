@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -110,8 +111,8 @@ func parseShortForm(script string) ([]byte, er.R) {
 			// have the same value, so detect those by name and
 			// allow them.
 			if (opcodeName == "OP_FALSE" || opcodeName == "OP_TRUE") ||
-				(opcodeValue != OP_0 && (opcodeValue < OP_1 ||
-					opcodeValue > OP_16)) {
+				(opcodeValue != opcode.OP_0 && (opcodeValue < opcode.OP_1 ||
+					opcodeValue > opcode.OP_16)) {
 
 				ops[strings.TrimPrefix(opcodeName, "OP_")] = opcodeValue
 			}
@@ -304,7 +305,7 @@ func createSpendingTx(witness [][]byte, sigScript, pkScript []byte,
 	coinbaseTx := wire.NewMsgTx(wire.TxVersion)
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
-	txIn := wire.NewTxIn(outPoint, []byte{OP_0, OP_0}, nil)
+	txIn := wire.NewTxIn(outPoint, []byte{opcode.OP_0, opcode.OP_0}, nil)
 	txOut := wire.NewTxOut(outputValue, pkScript)
 	coinbaseTx.AddTxIn(txIn)
 	coinbaseTx.AddTxOut(txOut)

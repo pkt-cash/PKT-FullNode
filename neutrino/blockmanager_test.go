@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -716,7 +717,7 @@ func buildNonPushScriptFilter(block *wire.MsgBlock) (*gcs.Filter, er.R) {
 		for _, txOut := range tx.TxOut {
 			// The old version of BIP-158 skipped OP_RETURNs that
 			// had a push-only script.
-			if txOut.PkScript[0] == txscript.OP_RETURN &&
+			if txOut.PkScript[0] == opcode.OP_RETURN &&
 				txscript.IsPushOnlyScript(txOut.PkScript[1:]) {
 				continue
 			}

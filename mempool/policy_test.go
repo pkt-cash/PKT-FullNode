@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
@@ -116,72 +117,72 @@ func TestCheckPkScriptStandard(t *testing.T) {
 	}{
 		{
 			"key1 and key2",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_2).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_2).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			true,
 		},
 		{
 			"key1 or key2",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_1).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_2).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			true,
 		},
 		{
 			"escrow",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_2).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddData(pubKeys[2]).
-				AddOp(txscript.OP_3).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_3).AddOp(opcode.OP_CHECKMULTISIG),
 			true,
 		},
 		{
 			"one of four",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_1).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
 				AddData(pubKeys[2]).AddData(pubKeys[3]).
-				AddOp(txscript.OP_4).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_4).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed1",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_3).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_3).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_2).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed2",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_2).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_2).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_3).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_3).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed3",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_0).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_0).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_2).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_2).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed4",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_1).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_0).AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_0).AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed5",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_1).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]).
-				AddOp(txscript.OP_CHECKMULTISIG),
+				AddOp(opcode.OP_CHECKMULTISIG),
 			false,
 		},
 		{
 			"malformed6",
-			txscript.NewScriptBuilder().AddOp(txscript.OP_1).
+			txscript.NewScriptBuilder().AddOp(opcode.OP_1).
 				AddData(pubKeys[0]).AddData(pubKeys[1]),
 			false,
 		},
@@ -394,7 +395,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: dummyPrevOut,
 					SignatureScript: []byte{
-						txscript.OP_CHECKSIGVERIFY},
+						opcode.OP_CHECKSIGVERIFY},
 					Sequence: wire.MaxTxInSequenceNum,
 				}},
 				TxOut:    []*wire.TxOut{&dummyTxOut},
@@ -411,7 +412,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 				TxIn:    []*wire.TxIn{&dummyTxIn},
 				TxOut: []*wire.TxOut{{
 					Value:    100000000,
-					PkScript: []byte{txscript.OP_TRUE},
+					PkScript: []byte{opcode.OP_TRUE},
 				}},
 				LockTime: 0,
 			},
@@ -426,10 +427,10 @@ func TestCheckTransactionStandard(t *testing.T) {
 				TxIn:    []*wire.TxIn{&dummyTxIn},
 				TxOut: []*wire.TxOut{{
 					Value:    0,
-					PkScript: []byte{txscript.OP_RETURN},
+					PkScript: []byte{opcode.OP_RETURN},
 				}, {
 					Value:    0,
-					PkScript: []byte{txscript.OP_RETURN},
+					PkScript: []byte{opcode.OP_RETURN},
 				}},
 				LockTime: 0,
 			},
@@ -459,7 +460,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 				TxIn:    []*wire.TxIn{&dummyTxIn},
 				TxOut: []*wire.TxOut{{
 					Value:    0,
-					PkScript: []byte{txscript.OP_RETURN},
+					PkScript: []byte{opcode.OP_RETURN},
 				}},
 				LockTime: 0,
 			},

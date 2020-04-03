@@ -12,6 +12,7 @@ import (
 	"math/big"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -176,7 +177,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 	}
 
 	// Note that this includes OP_RESERVED which counts as a push operation.
-	if pop.opcode.value > OP_16 {
+	if pop.opcode.value > opcode.OP_16 {
 		vm.numOps++
 		if vm.numOps > MaxOpsPerScript {
 			str := fmt.Sprintf("exceeded max operation limit of %d",
@@ -199,7 +200,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 	// Ensure all executed data push opcodes use the minimal encoding when
 	// the minimal data verification flag is set.
 	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() &&
-		pop.opcode.value <= OP_PUSHDATA4 {
+		pop.opcode.value <= opcode.OP_PUSHDATA4 {
 
 		if err := pop.checkMinimalDataPush(); err != nil {
 			return err

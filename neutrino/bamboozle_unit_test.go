@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 
 	"github.com/pkt-cash/pktd/btcutil/gcs"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -14,7 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -100,8 +100,8 @@ var (
 		0x5b, 0x4c, 0x6f, 0x4d,
 	}
 	script4 = []byte{
-		0x6a,           // OP_RETURN
-		txscript.OP_IF, // We add a OP_IF to the script, as everything > OP_16 is considered non-push.
+		0x6a,         // OP_RETURN
+		opcode.OP_IF, // We add a OP_IF to the script, as everything > OP_16 is considered non-push.
 		0xaa, 0x21, 0xa9, 0xed, 0x26, 0xe6, 0xdd, 0xfa,
 		0x3c, 0xc5, 0x1e, 0x27, 0x61, 0xba, 0xf6, 0xea,
 		0xc4, 0x54, 0xea, 0x11, 0x6d, 0xa3, 0x8f, 0xfb,

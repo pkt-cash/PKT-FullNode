@@ -12,6 +12,7 @@ import (
 	"math"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -99,11 +100,11 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 
 		// 26ff0023fd<scr>
 		scr := make([]byte, len(tx.PrevScripts[i])+1)
-		scr[0] = txscript.OP_PUBKEYHASH
+		scr[0] = opcode.OP_PUBKEYHASH
 		copy(scr[1:], tx.PrevScripts[i])
 
 		scr, err := txscript.NewScriptBuilder().
-			AddOp(txscript.OP_INVALIDOPCODE).AddOp(txscript.OP_0).AddData(scr).Script()
+			AddOp(opcode.OP_INVALIDOPCODE).AddOp(opcode.OP_0).AddData(scr).Script()
 		if err != nil {
 			return err
 		}

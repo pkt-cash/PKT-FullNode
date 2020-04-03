@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -338,7 +339,7 @@ func TestExtractPkScriptAddrs(t *testing.T) {
 		},
 		{
 			name:    "script that does not parse",
-			script:  []byte{OP_DATA_45},
+			script:  []byte{opcode.OP_DATA_45},
 			addrs:   nil,
 			reqSigs: 0,
 			class:   NonStandardTy,

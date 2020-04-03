@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 )
 
 const dummyDir = ""
@@ -85,8 +86,8 @@ func TestBtcAddressSerializer(t *testing.T) {
 
 func TestScriptAddressSerializer(t *testing.T) {
 	fakeWallet := &Store{net: (*netParams)(tstNetParams)}
-	script := []byte{txscript.OP_TRUE, txscript.OP_DUP,
-		txscript.OP_DROP}
+	script := []byte{opcode.OP_TRUE, opcode.OP_DUP,
+		opcode.OP_DROP}
 	addr, err := newScriptAddress(fakeWallet, script, makeBS(0))
 	if err != nil {
 		t.Error(err)
@@ -865,8 +866,8 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	script := []byte{txscript.OP_TRUE, txscript.OP_DUP,
-		txscript.OP_DROP}
+	script := []byte{opcode.OP_TRUE, opcode.OP_DUP,
+		opcode.OP_DROP}
 	importHeight := int32(50)
 	stamp := makeBS(importHeight)
 	address, err := w.ImportScript(script, stamp)

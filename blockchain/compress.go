@@ -7,7 +7,7 @@ package blockchain
 import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 )
 
 // -----------------------------------------------------------------------------
@@ -176,11 +176,11 @@ const (
 // standard pay-to-pubkey-hash script along with the pubkey hash it is paying to
 // if it is.
 func isPubKeyHash(script []byte) (bool, []byte) {
-	if len(script) == 25 && script[0] == txscript.OP_DUP &&
-		script[1] == txscript.OP_HASH160 &&
-		script[2] == txscript.OP_DATA_20 &&
-		script[23] == txscript.OP_EQUALVERIFY &&
-		script[24] == txscript.OP_CHECKSIG {
+	if len(script) == 25 && script[0] == opcode.OP_DUP &&
+		script[1] == opcode.OP_HASH160 &&
+		script[2] == opcode.OP_DATA_20 &&
+		script[23] == opcode.OP_EQUALVERIFY &&
+		script[24] == opcode.OP_CHECKSIG {
 
 		return true, script[3:23]
 	}
@@ -192,9 +192,9 @@ func isPubKeyHash(script []byte) (bool, []byte) {
 // standard pay-to-script-hash script along with the script hash it is paying to
 // if it is.
 func isScriptHash(script []byte) (bool, []byte) {
-	if len(script) == 23 && script[0] == txscript.OP_HASH160 &&
-		script[1] == txscript.OP_DATA_20 &&
-		script[22] == txscript.OP_EQUAL {
+	if len(script) == 23 && script[0] == opcode.OP_HASH160 &&
+		script[1] == opcode.OP_DATA_20 &&
+		script[22] == opcode.OP_EQUAL {
 
 		return true, script[2:22]
 	}
@@ -213,8 +213,8 @@ func isScriptHash(script []byte) (bool, []byte) {
 // to a valid compressed or uncompressed pubkey.
 func isPubKey(script []byte) (bool, []byte) {
 	// Pay-to-compressed-pubkey script.
-	if len(script) == 35 && script[0] == txscript.OP_DATA_33 &&
-		script[34] == txscript.OP_CHECKSIG && (script[1] == 0x02 ||
+	if len(script) == 35 && script[0] == opcode.OP_DATA_33 &&
+		script[34] == opcode.OP_CHECKSIG && (script[1] == 0x02 ||
 		script[1] == 0x03) {
 
 		// Ensure the public key is valid.
@@ -226,8 +226,8 @@ func isPubKey(script []byte) (bool, []byte) {
 	}
 
 	// Pay-to-uncompressed-pubkey script.
-	if len(script) == 67 && script[0] == txscript.OP_DATA_65 &&
-		script[66] == txscript.OP_CHECKSIG && script[1] == 0x04 {
+	if len(script) == 67 && script[0] == opcode.OP_DATA_65 &&
+		script[66] == opcode.OP_CHECKSIG && script[1] == 0x04 {
 
 		// Ensure the public key is valid.
 		serializedPubKey := script[1:66]
@@ -362,32 +362,32 @@ func decompressScript(compressedPkScript []byte) []byte {
 	// <OP_DUP><OP_HASH160><20 byte hash><OP_EQUALVERIFY><OP_CHECKSIG>
 	case cstPayToPubKeyHash:
 		pkScript := make([]byte, 25)
-		pkScript[0] = txscript.OP_DUP
-		pkScript[1] = txscript.OP_HASH160
-		pkScript[2] = txscript.OP_DATA_20
+		pkScript[0] = opcode.OP_DUP
+		pkScript[1] = opcode.OP_HASH160
+		pkScript[2] = opcode.OP_DATA_20
 		copy(pkScript[3:], compressedPkScript[bytesRead:bytesRead+20])
-		pkScript[23] = txscript.OP_EQUALVERIFY
-		pkScript[24] = txscript.OP_CHECKSIG
+		pkScript[23] = opcode.OP_EQUALVERIFY
+		pkScript[24] = opcode.OP_CHECKSIG
 		return pkScript
 
 	// Pay-to-script-hash script.  The resulting script is:
 	// <OP_HASH160><20 byte script hash><OP_EQUAL>
 	case cstPayToScriptHash:
 		pkScript := make([]byte, 23)
-		pkScript[0] = txscript.OP_HASH160
-		pkScript[1] = txscript.OP_DATA_20
+		pkScript[0] = opcode.OP_HASH160
+		pkScript[1] = opcode.OP_DATA_20
 		copy(pkScript[2:], compressedPkScript[bytesRead:bytesRead+20])
-		pkScript[22] = txscript.OP_EQUAL
+		pkScript[22] = opcode.OP_EQUAL
 		return pkScript
 
 	// Pay-to-compressed-pubkey script.  The resulting script is:
 	// <OP_DATA_33><33 byte compressed pubkey><OP_CHECKSIG>
 	case cstPayToPubKeyComp2, cstPayToPubKeyComp3:
 		pkScript := make([]byte, 35)
-		pkScript[0] = txscript.OP_DATA_33
+		pkScript[0] = opcode.OP_DATA_33
 		pkScript[1] = byte(encodedScriptSize)
 		copy(pkScript[2:], compressedPkScript[bytesRead:bytesRead+32])
-		pkScript[34] = txscript.OP_CHECKSIG
+		pkScript[34] = opcode.OP_CHECKSIG
 		return pkScript
 
 	// Pay-to-uncompressed-pubkey script.  The resulting script is:
@@ -406,9 +406,9 @@ func decompressScript(compressedPkScript []byte) []byte {
 		}
 
 		pkScript := make([]byte, 67)
-		pkScript[0] = txscript.OP_DATA_65
+		pkScript[0] = opcode.OP_DATA_65
 		copy(pkScript[1:], key.SerializeUncompressed())
-		pkScript[66] = txscript.OP_CHECKSIG
+		pkScript[66] = opcode.OP_CHECKSIG
 		return pkScript
 	}
 

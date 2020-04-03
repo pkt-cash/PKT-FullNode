@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -173,7 +174,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 					}),
 					Index: 0,
 				},
-				SignatureScript: []uint8{OP_NOP},
+				SignatureScript: []uint8{opcode.OP_NOP},
 				Sequence:        4294967295,
 			},
 		},
@@ -185,7 +186,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 		},
 		LockTime: 0,
 	}
-	pkScript := []byte{OP_NOP}
+	pkScript := []byte{opcode.OP_NOP}
 
 	for i, test := range tests {
 		_, err := NewEngine(pkScript, tx, 0, test, nil, nil, -1)

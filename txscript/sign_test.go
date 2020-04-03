@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -1657,7 +1658,7 @@ nexttest:
 	for i := range sigScriptTests {
 		tx := wire.NewMsgTx(wire.TxVersion)
 
-		output := wire.NewTxOut(500, []byte{OP_RETURN})
+		output := wire.NewTxOut(500, []byte{opcode.OP_RETURN})
 		tx.AddTxOut(output)
 
 		for range sigScriptTests[i].inputs {

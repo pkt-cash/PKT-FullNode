@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
@@ -20,9 +21,9 @@ import (
 func TestOpcodeDisabled(t *testing.T) {
 	t.Parallel()
 
-	tests := []byte{OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT,
-		OP_AND, OP_OR, OP_2MUL, OP_2DIV, OP_MUL, OP_DIV, OP_MOD,
-		OP_LSHIFT, OP_RSHIFT,
+	tests := []byte{opcode.OP_CAT, opcode.OP_SUBSTR, opcode.OP_LEFT, opcode.OP_RIGHT, opcode.OP_INVERT,
+		opcode.OP_AND, opcode.OP_OR, opcode.OP_2MUL, opcode.OP_2DIV, opcode.OP_MUL, opcode.OP_DIV, opcode.OP_MOD,
+		opcode.OP_LSHIFT, opcode.OP_RSHIFT,
 	}
 	for _, opcodeVal := range tests {
 		pop := parsedOpcode{opcode: &opcodeArray[opcodeVal], data: nil}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/pkt-cash/pktd/neutrino/chainsync"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/neutrino/headerlist"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -1529,7 +1529,7 @@ peerVerification:
 				// We'll also skip any OP_RETURN scripts as
 				// well since we don't index these in order to
 				// avoid a circular dependency.
-				case txOut.PkScript[0] == txscript.OP_RETURN:
+				case txOut.PkScript[0] == opcode.OP_RETURN:
 					// Previous versions of the filters did
 					// include OP_RETURNs. To be able
 					// disconnect bad peers still serving

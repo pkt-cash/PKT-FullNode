@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -311,7 +312,7 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 	} else {
 		var err er.R
 		scriptBuilder := txscript.NewScriptBuilder()
-		pkScript, err := scriptBuilder.AddOp(txscript.OP_TRUE).Script()
+		pkScript, err := scriptBuilder.AddOp(opcode.OP_TRUE).Script()
 		if err != nil {
 			return nil, err
 		}
