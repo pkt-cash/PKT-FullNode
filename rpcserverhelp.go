@@ -73,6 +73,7 @@ var helpDescsEnUS = map[string]string{
 	"prevout-scriptPubKey": "The decoded script and addresses which were paid to",
 	"prevout-value":        "previous output value",
 	"prevout-svalue":       "previous output value in atomic units, string containing base 10 number",
+	"prevout-address":      "The address which this transaction is spending from",
 
 	// VinPrevOut help.
 	"vinprevout-coinbase":    "The hex-encoded bytes of the signature script (coinbase txns only)",
@@ -92,16 +93,22 @@ var helpDescsEnUS = map[string]string{
 	"vin-sequence":    "The script sequence number",
 
 	// ScriptPubKeyResult help.
-	"scriptpubkeyresult-asm":       "Disassembly of the script",
-	"scriptpubkeyresult-hex":       "Hex-encoded bytes of the script",
-	"scriptpubkeyresult-reqSigs":   "The number of required signatures",
-	"scriptpubkeyresult-type":      "The type of the script (e.g. 'pubkeyhash')",
-	"scriptpubkeyresult-addresses": "The bitcoin addresses associated with this script",
+	"scriptpubkeyresult-asm":                "Disassembly of the script",
+	"scriptpubkeyresult-hex":                "Hex-encoded bytes of the script",
+	"scriptpubkeyresult-reqSigs":            "The number of required signatures",
+	"scriptpubkeyresult-type":               "The type of the script (e.g. 'pubkeyhash')",
+	"scriptpubkeyresult-addresses":          "The bitcoin addresses associated with this script",
+	"scriptpubkeyresult-deprecationwarning": "A warning because this structure is deprecated where it is being used",
+
+	"vote-for":     "The network steward which this payment is voting for",
+	"vote-against": "The network steward address which this payment is voting against",
 
 	// Vout help.
 	"vout-value":        "The amount in coins",
 	"vout-svalue":       "previous output value in atomic units, string containing base 10 number",
 	"vout-n":            "The index of this transaction output",
+	"vout-address":      "The address paid to",
+	"vout-vote":         "A vote on network steward, if any exists",
 	"vout-scriptPubKey": "The public key script used to pay coins as a JSON object",
 
 	// TxRawDecodeResult help.
@@ -125,6 +132,7 @@ var helpDescsEnUS = map[string]string{
 	"decodescriptresult-type":      "The type of the script (e.g. 'pubkeyhash')",
 	"decodescriptresult-addresses": "The bitcoin addresses associated with this script",
 	"decodescriptresult-p2sh":      "The script hash for use in pay-to-script-hash transactions (only present if the provided redeem script is not already a pay-to-script-hash script)",
+	"decodescriptresult-vote":      "An optional vote structure which shows whether the script contains a vote for and/or against a network steward",
 
 	// DecodeScriptCmd help.
 	"decodescript--synopsis": "Returns a JSON object with information about the provided hex-encoded script.",
@@ -558,6 +566,8 @@ var helpDescsEnUS = map[string]string{
 	"gettxoutresult-confirmations": "The number of confirmations",
 	"gettxoutresult-value":         "The transaction amount in coins",
 	"gettxoutresult-svalue":        "The transaction amount in atomic units (base10 string)",
+	"gettxoutresult-address":       "The address which was paid to",
+	"gettxoutresult-vote":          "A vote on network steward, if any exists",
 	"gettxoutresult-scriptPubKey":  "The public key script used to pay coins as a JSON object",
 	"gettxoutresult-version":       "The transaction version",
 	"gettxoutresult-coinbase":      "Whether or not the transaction is a coinbase",

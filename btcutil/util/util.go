@@ -33,3 +33,11 @@ func Exists(path string) bool {
 	_, errr := os.Stat(path)
 	return !os.IsNotExist(errr)
 }
+
+func CloneBytes(b []byte) []byte {
+	out := make([]byte, len(b))
+	if copy(out, b) != len(b) {
+		panic("copy not length of bytes")
+	}
+	return out
+}

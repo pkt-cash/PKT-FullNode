@@ -66,6 +66,11 @@ type CreateMultiSigResult struct {
 	RedeemScript string `json:"redeemScript"`
 }
 
+type Vote struct {
+	For     string `json:"for,omitempty"`
+	Against string `json:"against,omitempty"`
+}
+
 // DecodeScriptResult models the data returned from the decodescript command.
 type DecodeScriptResult struct {
 	Asm       string   `json:"asm"`
@@ -73,6 +78,7 @@ type DecodeScriptResult struct {
 	Type      string   `json:"type"`
 	Addresses []string `json:"addresses,omitempty"`
 	P2sh      string   `json:"p2sh,omitempty"`
+	Vote      *Vote    `json:"vote,omitempty"`
 }
 
 // GetAddedNodeInfoResultAddr models the data of the addresses portion of the
@@ -248,12 +254,14 @@ type GetRawMempoolVerboseResult struct {
 
 // ScriptPubKeyResult models the scriptPubKey data of a tx script.  It is
 // defined separately since it is used by multiple commands.
+// DEPRECATED: Will be removed in favor of simply returning "address"
 type ScriptPubKeyResult struct {
-	Asm       string   `json:"asm"`
-	Hex       string   `json:"hex,omitempty"`
-	ReqSigs   int32    `json:"reqSigs,omitempty"`
-	Type      string   `json:"type"`
-	Addresses []string `json:"addresses,omitempty"`
+	Asm                string   `json:"asm"`
+	Hex                string   `json:"hex,omitempty"`
+	ReqSigs            int32    `json:"reqSigs,omitempty"`
+	Type               string   `json:"type"`
+	Addresses          []string `json:"addresses,omitempty"`
+	DeprecationWarning string   `json:"deprecationwarning,omitempty"`
 }
 
 // GetTxOutResult models the data from the gettxout command.
@@ -262,6 +270,8 @@ type GetTxOutResult struct {
 	Confirmations int64              `json:"confirmations"`
 	ValueCoins    float64            `json:"value"`
 	Svalue        string             `json:"svalue"`
+	Address       string             `json:"address"`
+	Vote          *Vote              `json:"vote,omitempty"`
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
 }
@@ -355,9 +365,9 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 
 // PrevOut represents previous output for an input Vin.
 type PrevOut struct {
-	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
-	ValueCoins   float64            `json:"value"`
-	Svalue       string             `json:"svalue"`
+	Address    string  `json:"address"`
+	ValueCoins float64 `json:"value"`
+	Svalue     string  `json:"svalue"`
 }
 
 // VinPrevOut is like Vin except it includes PrevOut.  It is used by searchrawtransaction
@@ -439,6 +449,8 @@ type Vout struct {
 	ValueCoins   float64            `json:"value"`
 	Svalue       string             `json:"svalue"`
 	N            uint32             `json:"n"`
+	Address      string             `json:"address"`
+	Vote         *Vote              `json:"vote,omitempty"`
 	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
 }
 

@@ -686,12 +686,16 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 		vout.N = uint32(i)
 		vout.ValueCoins = btcutil.Amount(v.Value).ToBTC()
 		vout.Svalue = strconv.FormatInt(v.Value, 10)
+		vout.Address = txscript.PkScriptToAddress(v.PkScript, chainParams).EncodeAddress()
 		vout.ScriptPubKey.Addresses = encodedAddrs
 		vout.ScriptPubKey.Asm = disbuf
 		vout.ScriptPubKey.Hex = hex.EncodeToString(v.PkScript)
 		vout.ScriptPubKey.Type = scriptClass.String()
 		vout.ScriptPubKey.ReqSigs = int32(reqSigs)
+		vout.ScriptPubKey.DeprecationWarning =
+			"scriptPubKey will soon be removed, please use address instead"
 
+		vote(&vout.Vote, v.PkScript, chainParams)
 		voutList = append(voutList, vout)
 	}
 
@@ -799,6 +803,21 @@ func handleDecodeRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 	return txReply, nil
 }
 
+func vote(voteOut **btcjson.Vote, script []byte, params *chaincfg.Params) {
+	voteFor, voteAgainst := txscript.ElectionGetVotesForAgainst(script)
+	if voteFor == nil && voteAgainst == nil {
+		return
+	}
+	v := btcjson.Vote{}
+	if voteFor != nil {
+		v.For = txscript.PkScriptToAddress(voteFor, params).EncodeAddress()
+	}
+	if voteAgainst != nil {
+		v.Against = txscript.PkScriptToAddress(voteAgainst, params).EncodeAddress()
+	}
+	*voteOut = &v
+}
+
 // handleDecodeScript handles decodescript commands.
 func handleDecodeScript(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	c := cmd.(*btcjson.DecodeScriptCmd)
@@ -841,6 +860,7 @@ func handleDecodeScript(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 		Type:      scriptClass.String(),
 		Addresses: addresses,
 	}
+	vote(&reply.Vote, script, s.cfg.ChainParams)
 	if scriptClass != txscript.ScriptHashTy {
 		reply.P2sh = p2sh.EncodeAddress()
 	}
@@ -2555,14 +2575,8 @@ func handleGetMiningPayouts(s *rpcServer, cmd interface{}, closeChan <-chan stru
 			// network steward payment
 			continue
 		}
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, s.cfg.ChainParams)
-		amt := btcutil.Amount(out.Value).ToBTC()
-		if err != nil || len(addrs) != 1 {
-			m[fmt.Sprintf("nonstandard[%s]%d", hex.EncodeToString(out.PkScript), len(out.PkScript))] = amt
-		} else {
-			sAddr := addrs[0].EncodeAddress()
-			m[sAddr] = amt
-		}
+		addr := txscript.PkScriptToAddress(out.PkScript, s.cfg.ChainParams)
+		m[addr.EncodeAddress()] = btcutil.Amount(out.Value).ToBTC()
 	}
 	return m, nil
 }
@@ -2952,9 +2966,11 @@ func handleGetTxOut(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		Confirmations: int64(confirmations),
 		ValueCoins:    btcutil.Amount(value).ToBTC(),
 		Svalue:        strconv.FormatInt(value, 10),
+		Address:       txscript.PkScriptToAddress(pkScript, s.cfg.ChainParams).EncodeAddress(),
 		ScriptPubKey:  scriptPubKey(pkScript, s.cfg.ChainParams),
 		Coinbase:      isCoinbase,
 	}
+	vote(&txOutReply.Vote, pkScript, s.cfg.ChainParams)
 	return txOutReply, nil
 }
 
@@ -2974,11 +2990,12 @@ func scriptPubKey(pkScript []byte, params *chaincfg.Params) btcjson.ScriptPubKey
 	}
 
 	return btcjson.ScriptPubKeyResult{
-		Asm:       disbuf,
-		Hex:       hex.EncodeToString(pkScript),
-		ReqSigs:   int32(reqSigs),
-		Type:      scriptClass.String(),
-		Addresses: addresses,
+		Asm:                disbuf,
+		Hex:                hex.EncodeToString(pkScript),
+		ReqSigs:            int32(reqSigs),
+		Type:               scriptClass.String(),
+		Addresses:          addresses,
+		DeprecationWarning: "scriptPubKey will soon be removed, please use address instead",
 	}
 }
 
@@ -3179,11 +3196,9 @@ func filterVinList(
 		if elem.PrevOut == nil {
 			continue
 		}
-		for _, addr := range elem.PrevOut.ScriptPubKey.Addresses {
-			if _, ok := filterAddrMap[addr]; ok {
-				out = append(out, elem)
-				break
-			}
+		if _, ok := filterAddrMap[elem.PrevOut.Address]; ok {
+			out = append(out, elem)
+			break
 		}
 	}
 	return out
@@ -3213,26 +3228,12 @@ func loadPrevOuts(
 			continue
 		}
 
-		// Ignore the error here since an error means the script
-		// couldn't parse and there is no additional information about
-		// it anyways.
-		_, addrs, _, _ := txscript.ExtractPkScriptAddrs(
-			originTxOut.PkScript, chainParams)
-
-		// Encode the addresses while checking if the address passes the
-		// filter when needed.
-		encodedAddrs := make([]string, len(addrs))
-		for j, addr := range addrs {
-			encodedAddr := addr.EncodeAddress()
-			encodedAddrs[j] = encodedAddr
-		}
-
 		// Update the entry with previous output information if
 		// requested.
 		list[i].PrevOut = &btcjson.PrevOut{
-			ScriptPubKey: scriptPubKey(originTxOut.PkScript, chainParams),
-			ValueCoins:   btcutil.Amount(originTxOut.Value).ToBTC(),
-			Svalue:       strconv.FormatInt(originTxOut.Value, 10),
+			Address:    txscript.PkScriptToAddress(originTxOut.PkScript, chainParams).EncodeAddress(),
+			ValueCoins: btcutil.Amount(originTxOut.Value).ToBTC(),
+			Svalue:     strconv.FormatInt(originTxOut.Value, 10),
 		}
 	}
 

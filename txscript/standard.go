@@ -689,3 +689,16 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 
 	return scriptClass, addrs, requiredSigs, nil
 }
+
+// PkScriptToAddress returns the address corrisponding to a script.
+// Because most multi-signature scripts are segwit and are thus able to be represented as
+// addresses, most scripts are able to be represented directly as addresses, but if there
+// is a script which is not directly parsable, this function will return "script:" followed
+// by a base-64 representation of the pkScript itself such that it can be decoded later.
+func PkScriptToAddress(pkScript []byte, chainParams *chaincfg.Params) btcutil.Address {
+	_, addrs, requiredSigs, err := ExtractPkScriptAddrs(pkScript, chainParams)
+	if err != nil || len(addrs) != 1 || requiredSigs != 1 {
+		return btcutil.NewAddressNonStandard(pkScript)
+	}
+	return addrs[0]
+}

@@ -6,11 +6,14 @@ package btcutil
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/base58"
@@ -134,6 +137,19 @@ type Address interface {
 // When the address does not encode the network, such as in the case of a raw
 // public key, the address will be associated with the passed defaultNet.
 func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, er.R) {
+	// Addresses begining with "script:" are non-standard or otherwise unrecognized
+	// address types.
+	if strings.HasPrefix(addr, "script:") {
+		b, errr := base64.StdEncoding.DecodeString(addr[7:])
+		if errr != nil {
+			err := er.E(errr)
+			err.AddMessage(fmt.Sprintf(
+				"Unable to decide non-standard address [%s]", addr))
+			return nil, err
+		}
+		return NewAddressNonStandard(b), nil
+	}
+
 	// Bech32 encoded segwit addresses start with a human-readable part
 	// (hrp) followed by '1'. For Bitcoin mainnet the hrp is "bc", and for
 	// testnet it is "tb". If the address string has a prefix that matches
@@ -668,4 +684,37 @@ func (a *AddressWitnessScriptHash) WitnessVersion() byte {
 // WitnessProgram returns the witness program of the AddressWitnessScriptHash.
 func (a *AddressWitnessScriptHash) WitnessProgram() []byte {
 	return a.witnessProgram[:]
+}
+
+// AddressNonStandard is an Address representation of a script of any type.
+// It it textually represented as "script:" followed by a base64 representation
+// of the pkScript itself.
+type AddressNonStandard struct {
+	pkScript []byte
+}
+
+var _ Address = (*AddressNonStandard)(nil)
+
+// NewAddressWitnessScriptHash returns a new AddressWitnessPubKeyHash.
+func NewAddressNonStandard(pkScript []byte) *AddressNonStandard {
+	return &AddressNonStandard{pkScript: util.CloneBytes(pkScript)}
+}
+
+func (a *AddressNonStandard) String() string {
+	return a.EncodeAddress()
+}
+
+func (a *AddressNonStandard) EncodeAddress() string {
+	return "script:" + base64.StdEncoding.EncodeToString(a.pkScript)
+}
+
+func (a *AddressNonStandard) ScriptAddress() []byte {
+	return a.pkScript
+}
+
+// Because this address is in fact a raw script, we cannot actually know if it is
+// for any particular network, so we return true always because it is always potentially
+// true.
+func (a *AddressNonStandard) IsForNet(*chaincfg.Params) bool {
+	return true
 }
