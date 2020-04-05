@@ -1159,8 +1159,21 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	}
 
 	params := s.cfg.ChainParams
-	blockHeader := &blk.MsgBlock().Header
 	blockReward := blockchain.CalcBlockSubsidy(blk.Height(), params)
+
+	ns := ""
+	if params.GlobalConf.HasNetworkSteward {
+		ns = "unknown"
+		coinbase := blk.MsgBlock().Transactions[0]
+		expectedTax := blockchain.PktCalcNetworkStewardPayout(blockReward)
+		for _, txout := range coinbase.TxOut {
+			if txout.Value == expectedTax {
+				ns = txscript.PkScriptToAddress(txout.PkScript, params).EncodeAddress()
+			}
+		}
+	}
+
+	blockHeader := &blk.MsgBlock().Header
 	blockReply := btcjson.GetBlockVerboseResult{
 		Hash:            c.Hash,
 		Version:         blockHeader.Version,
@@ -1183,6 +1196,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		PcAnnDifficulty: pcAnnDifficulty,
 		PcBlkDifficulty: pcBlkDifficulty,
 		BlockReward:     strconv.FormatInt(blockReward, 10),
+		NetworkSteward:  ns,
 	}
 
 	if c.VerboseTx == nil || !*c.VerboseTx {

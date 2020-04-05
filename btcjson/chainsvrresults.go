@@ -57,6 +57,7 @@ type GetBlockVerboseResult struct {
 	PcAnnDifficulty *float64      `json:"packetcryptanndifficulty,omitempty"`
 	PcBlkDifficulty *float64      `json:"packetcryptblkdifficulty,omitempty"`
 	BlockReward     string        `json:"sblockreward"`
+	NetworkSteward  string        `json:"networksteward,omitempty"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig

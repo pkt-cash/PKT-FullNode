@@ -273,6 +273,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-packetcryptanncount":      "The number of announcements which the winning miner was using",
 	"getblockverboseresult-packetcryptversion":       "The version of the PacketCrypt proof",
 	"getblockverboseresult-sblockreward":             "The amount of atomic units of coins in this block height block reward",
+	"getblockverboseresult-networksteward":           "The address of the current network steward, if using the PKT chain or one which has one",
 
 	// GetBlockCountCmd help.
 	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
