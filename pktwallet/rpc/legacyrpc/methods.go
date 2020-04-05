@@ -470,17 +470,22 @@ func decodeAddress(s string, params *chaincfg.Params) (btcutil.Address, er.R) {
 func setNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.SetNetworkStewardVoteCmd)
 	vote := waddrmgr.NetworkStewardVote{}
+	params := w.ChainParams()
 	if cmd.VoteFor == nil {
-	} else if vf, err := decodeHexStr(*cmd.VoteFor); err != nil {
+	} else if vf, err := btcutil.DecodeAddress(*cmd.VoteFor, params); err != nil {
+		return nil, err
+	} else if vfs, err := txscript.PayToAddrScript(vf); err != nil {
 		return nil, err
 	} else {
-		vote.VoteFor = vf
+		vote.VoteFor = vfs
 	}
 	if cmd.VoteAgainst == nil {
-	} else if va, err := decodeHexStr(*cmd.VoteAgainst); err != nil {
+	} else if va, err := btcutil.DecodeAddress(*cmd.VoteAgainst, params); err != nil {
+		return nil, err
+	} else if vas, err := txscript.PayToAddrScript(va); err != nil {
 		return nil, err
 	} else {
-		vote.VoteAgainst = va
+		vote.VoteAgainst = vas
 	}
 	result := &btcjson.SetNetworkStewardVoteResult{}
 	return result, w.PutNetworkStewardVote(waddrmgr.DefaultAccountNum, waddrmgr.KeyScopeBIP0044, &vote)
@@ -495,11 +500,12 @@ func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.
 	if vote == nil {
 		return result, nil
 	}
+	params := w.ChainParams()
 	if vote.VoteFor != nil {
-		result.VoteFor = hex.EncodeToString(vote.VoteFor)
+		result.VoteFor = txscript.PkScriptToAddress(vote.VoteFor, params).EncodeAddress()
 	}
 	if vote.VoteAgainst != nil {
-		result.VoteAgainst = hex.EncodeToString(vote.VoteAgainst)
+		result.VoteAgainst = txscript.PkScriptToAddress(vote.VoteAgainst, params).EncodeAddress()
 	}
 	return result, nil
 }

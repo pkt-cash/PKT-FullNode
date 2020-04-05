@@ -45,15 +45,13 @@ var helpDescsEnUS = map[string]string{
 
 	// SetNetworkStewardCmd help.
 	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",
-	"setnetworkstewardvote-voteagainst": "The script to vote against (if this is the current NS then this will cause a vote for an election)",
-	"setnetworkstewardvote-votefor":     "The script to vote for (in the event of an election, this is the address who should win)",
-	"setnetworkstewardvote-account":     "The account to configure voting for",
+	"setnetworkstewardvote-voteagainst": "The address to vote against (if this is the current NS then this will cause a vote for an election)",
+	"setnetworkstewardvote-votefor":     "The address to vote for (in the event of an election, this is the address who should win)",
 
 	// GetNetworkStewardCmd help.
 	"getnetworkstewardvote--synopsis":         "Find out how the wallet is currently configured to vote in a network steward election",
-	"getnetworkstewardvote-account":           "Which account to get the network steward vote information for",
-	"getnetworkstewardvoteresult-voteagainst": "The script which your wallet is currently voting against",
-	"getnetworkstewardvoteresult-votefor":     "The script which your wallet is currently voting for",
+	"getnetworkstewardvoteresult-voteagainst": "The address which your wallet is currently voting against",
+	"getnetworkstewardvoteresult-votefor":     "The address which your wallet is currently voting for",
 
 	// ResyncCmd help
 	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
