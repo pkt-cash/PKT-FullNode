@@ -461,6 +461,31 @@ func appendVote(sb *scriptbuilder.ScriptBuilder, voteFor, voteAgainst []byte) *s
 	return sb.AddOp(opcode.OP_VOTE)
 }
 
+func payToNonStandardScriptBuilder(pkScript, voteFor, voteAgainst []byte) ([]byte, er.R) {
+	pops, err := parseScript(pkScript)
+	if err != nil {
+		// There's an error parsing, lets not touch it
+		return pkScript, nil
+	}
+
+	pops = stripVote(pops)
+	scriptClass := typeOfScript(pops)
+	if scriptClass.IsSegwit() {
+		// It's not possible to append votes to a segwit script
+		return pkScript, nil
+	}
+
+	vf, va := ElectionGetVotesForAgainst(pkScript)
+	if vf != nil || va != nil {
+		// Respect first the vote which is in the address itself
+		return pkScript, nil
+	}
+
+	// Append our vote to the script address
+	sb := scriptbuilder.ScriptBuilder{ScriptInt: util.CloneBytes(pkScript)}
+	return appendVote(&sb, voteFor, voteAgainst).Script()
+}
+
 // PayToAddrScriptWithVote creates a new script to pay a transaction output to a the
 // specified address and adds a vote for the specified network steward, if voteFor
 // and/or voteAgainst are non-null and if the address type is non-segwit.
@@ -488,6 +513,9 @@ func PayToAddrScriptWithVote(addr btcutil.Address, voteFor, voteAgainst []byte) 
 
 	case *btcutil.AddressWitnessScriptHash:
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
+
+	case *btcutil.AddressNonStandard:
+		return payToNonStandardScriptBuilder(addr.ScriptAddress(), voteFor, voteAgainst)
 	}
 
 	str := fmt.Sprintf("unable to generate payment script for unsupported "+
