@@ -309,8 +309,12 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 					return err
 				}
 				txOutAmt := btcutil.Amount(rec.MsgTx.TxOut[i].Value)
-				log.Infof("Got paid! [%s] --> [%s] in tx [%s] height [%d]",
-					txOutAmt.String(), addr.String(), rec.Hash, block.Height)
+				height := ""
+				if block != nil {
+					height = fmt.Sprintf("height [%d]", block.Height)
+				}
+				log.Infof("Got paid! [%s] --> [%s] in tx [%s]%s",
+					txOutAmt.String(), addr.String(), rec.Hash, height)
 				continue
 			}
 
