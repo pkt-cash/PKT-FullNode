@@ -1281,12 +1281,16 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 
 	if cmd.ElectrumFormat != nil && *cmd.ElectrumFormat {
 		b := new(bytes.Buffer)
-		tx.ElectrumSerialize(b)
+		if err := tx.Tx.BtcEncode(b, 0, wire.ForceEptfEncoding); err != nil {
+			return nil, err
+		}
 		return hex.EncodeToString(b.Bytes()), nil
 	}
 
 	b := bytes.NewBuffer(make([]byte, 0, tx.Tx.SerializeSize()))
-	tx.Tx.Serialize(b)
+	if err := tx.Tx.Serialize(b); err != nil {
+		return nil, err
+	}
 	return hex.EncodeToString(b.Bytes()), nil
 }
 

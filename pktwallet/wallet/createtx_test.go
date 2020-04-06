@@ -165,16 +165,12 @@ func TestTxToOutputsDryRun(t *testing.T) {
 
 	// The two dry-run TXs should be invalid, since they don't have
 	// signatures.
-	err = validateMsgTx(
-		dryRunTx.Tx, dryRunTx.PrevScripts, dryRunTx.PrevInputValues,
-	)
+	err = validateMsgTx(dryRunTx.Tx)
 	if err == nil {
 		t.Fatalf("Expected tx to be invalid")
 	}
 
-	err = validateMsgTx(
-		dryRunTx2.Tx, dryRunTx2.PrevScripts, dryRunTx2.PrevInputValues,
-	)
+	err = validateMsgTx(dryRunTx2.Tx)
 	if err == nil {
 		t.Fatalf("Expected tx to be invalid")
 	}
@@ -197,7 +193,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 		t.Fatalf("expected 1 addresses, found %v", len(addresses))
 	}
 
-	err = validateMsgTx(tx.Tx, tx.PrevScripts, tx.PrevInputValues)
+	err = validateMsgTx(tx.Tx)
 	if err != nil {
 		t.Fatalf("Expected tx to be valid: %v", err)
 	}

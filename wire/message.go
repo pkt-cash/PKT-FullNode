@@ -82,6 +82,19 @@ const (
 	// NoPacketCryptEncoding indicates that we should avoid encoding of the
 	// PacketCrypt proof.
 	NoPacketCryptEncoding
+
+	// EptfEncoding indicates that we should encode using electrum partial
+	// transaction encoding, if Additional is present but incomplete then this
+	// will cause an error in encoding.
+	EptfEncoding
+	_ForceEptfEncoding
+)
+
+const (
+	// ForceEptfEncoding will cause a failure if there is missing additional
+	// data. If Additional missing or incomplete, then this will cause an error
+	// in encoding.
+	ForceEptfEncoding = EptfEncoding | _ForceEptfEncoding
 )
 
 // LatestEncoding is the most recently specified encoding for the Bitcoin wire

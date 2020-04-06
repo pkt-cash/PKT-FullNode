@@ -6,13 +6,10 @@
 package txauthor
 
 import (
-	"encoding/binary"
 	"fmt"
-	"io"
 	"math"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
@@ -31,8 +28,7 @@ import (
 // can not be satisified, this can be signaled by returning a total amount less
 // than the target or by returning a more detailed error implementing
 // InputSourceError.
-type InputSource func(target btcutil.Amount) (total btcutil.Amount, inputs []*wire.TxIn,
-	inputValues []btcutil.Amount, scripts [][]byte, err er.R)
+type InputSource func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []wire.TxInAdditional, er.R)
 
 // InputSourceError describes the failure to provide enough input value from
 // unspent transaction outputs to meet a target amount.  A typed error is used
@@ -47,110 +43,13 @@ var ImpossibleTxError = InputSourceError.Code("ImpossibleTxError")
 // AuthoredTx holds the state of a newly-created transaction and the change
 // output (if one was added).
 type AuthoredTx struct {
-	Tx              *wire.MsgTx
-	PrevScripts     [][]byte
-	PrevInputValues []btcutil.Amount
-	TotalInput      btcutil.Amount
-	ChangeIndex     int // negative if no change
+	Tx          *wire.MsgTx
+	TotalInput  btcutil.Amount
+	ChangeIndex int // negative if no change
 }
 
 // ChangeSource provides P2PKH change output scripts for transaction creation.
 type ChangeSource func() ([]byte, er.R)
-
-func write32(w io.Writer, x uint32) er.R {
-	var b [4]byte
-	binary.LittleEndian.PutUint32(b[:], x)
-	_, err := w.Write(b[:])
-	return er.E(err)
-}
-
-func write64(w io.Writer, x uint64) er.R {
-	var b [8]byte
-	binary.LittleEndian.PutUint64(b[:], x)
-	_, err := w.Write(b[:])
-	return er.E(err)
-}
-
-func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
-	// magic
-	if _, err := w.Write([]byte("EPTF\xff\x00")); err != nil {
-		return er.E(err)
-	}
-
-	// tx version
-	if err := write32(w, uint32(tx.Tx.Version)); err != nil {
-		return err
-	}
-
-	// segwit (always yes)
-	if _, err := w.Write([]byte("\x00\x01")); err != nil {
-		return er.E(err)
-	}
-
-	// input count
-	if err := wire.WriteVarInt(w, 0, uint64(len(tx.Tx.TxIn))); err != nil {
-		return err
-	}
-
-	for i, ti := range tx.Tx.TxIn {
-		if _, err := w.Write(ti.PreviousOutPoint.Hash[:]); err != nil {
-			return er.E(err)
-		}
-		if err := write32(w, uint32(ti.PreviousOutPoint.Index)); err != nil {
-			return err
-		}
-
-		// 26ff0023fd<scr>
-		scr := make([]byte, len(tx.PrevScripts[i])+1)
-		scr[0] = opcode.OP_PUBKEYHASH
-		copy(scr[1:], tx.PrevScripts[i])
-
-		scr, err := scriptbuilder.NewScriptBuilder().
-			AddOp(opcode.OP_INVALIDOPCODE).AddOp(opcode.OP_0).AddData(scr).Script()
-		if err != nil {
-			return err
-		}
-		if err := wire.WriteVarBytes(w, 0, scr); err != nil {
-			return err
-		}
-
-		if err := write32(w, ti.Sequence); err != nil {
-			return err
-		}
-	}
-
-	// output count
-	if err := wire.WriteVarInt(w, 0, uint64(len(tx.Tx.TxOut))); err != nil {
-		return err
-	}
-
-	for _, to := range tx.Tx.TxOut {
-		if err := wire.WriteTxOut(w, 0, 0, to); err != nil {
-			return err
-		}
-	}
-
-	for _, amt := range tx.PrevInputValues {
-		// trick segwit length which informs electrum that it's special data
-		if err := wire.WriteVarInt(w, 0, uint64(0xffffffff)); err != nil {
-			return err
-		}
-		// hint for electrum about the amount of the input
-		if err := write64(w, uint64(amt)); err != nil {
-			return err
-		}
-		// 2 byte version, 1 byte actual segwit length (zero)
-		if _, err := w.Write([]byte("\x00\x00\x00")); err != nil {
-			return er.E(err)
-		}
-	}
-
-	if err := write32(w, tx.Tx.LockTime); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // NewUnsignedTransaction creates an unsigned transaction paying to one or more
 // non-change outputs.  An appropriate transaction fee is included based on the
@@ -172,6 +71,7 @@ func (tx *AuthoredTx) ElectrumSerialize(w io.Writer) er.R {
 // InputSourceError is returned.
 //
 // BUGS: Fee estimation may be off when redeeming non-compressed P2PKH outputs.
+// TODO(cjd): Fee estimation will be off when redeeming segwit multisigs, we need the redeem script...
 func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 	fetchInputs InputSource, fetchChange ChangeSource) (*AuthoredTx, er.R) {
 
@@ -193,7 +93,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		if sweepTo != nil {
 			synthTargetAmount = btcutil.Amount(math.MaxInt64)
 		}
-		inputAmount, inputs, inputValues, scripts, err := fetchInputs(synthTargetAmount)
+		inputAmount, inputs, inputAdditionals, err := fetchInputs(synthTargetAmount)
 		if err != nil {
 			return nil, err
 		}
@@ -206,13 +106,13 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		// We count the types of inputs, which we'll use to estimate
 		// the vsize of the transaction.
 		var nested, p2wpkh, p2pkh int
-		for _, pkScript := range scripts {
+		for _, add := range inputAdditionals {
 			switch {
 			// If this is a p2sh output, we assume this is a
 			// nested P2WKH.
-			case txscript.IsPayToScriptHash(pkScript):
+			case txscript.IsPayToScriptHash(add.PkScript):
 				nested++
-			case txscript.IsPayToWitnessPubKeyHash(pkScript):
+			case txscript.IsPayToWitnessPubKeyHash(add.PkScript):
 				p2wpkh++
 			default:
 				p2pkh++
@@ -235,10 +135,11 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		}
 
 		unsignedTransaction := &wire.MsgTx{
-			Version:  wire.TxVersion,
-			TxIn:     inputs,
-			TxOut:    outputs,
-			LockTime: 0,
+			Version:    wire.TxVersion,
+			TxIn:       inputs,
+			TxOut:      outputs,
+			LockTime:   0,
+			Additional: inputAdditionals,
 		}
 		changeIndex := -1
 		changeAmount := inputAmount - targetAmount - maxRequiredFee
@@ -259,11 +160,9 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		}
 
 		return &AuthoredTx{
-			Tx:              unsignedTransaction,
-			PrevScripts:     scripts,
-			PrevInputValues: inputValues,
-			TotalInput:      inputAmount,
-			ChangeIndex:     changeIndex,
+			Tx:          unsignedTransaction,
+			TotalInput:  inputAmount,
+			ChangeIndex: changeIndex,
 		}, nil
 	}
 }
@@ -305,20 +204,27 @@ type SecretsSource interface {
 // are passed in prevPkScripts and the slice length must match the number of
 // inputs.  Private keys and redeem scripts are looked up using a SecretsSource
 // based on the previous output script.
-func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []btcutil.Amount,
-	secrets SecretsSource) er.R {
+func AddAllInputScripts(tx *wire.MsgTx, secrets SecretsSource) er.R {
 
 	inputs := tx.TxIn
 	hashCache := txscript.NewTxSigHashes(tx)
 	chainParams := secrets.ChainParams()
 
-	if len(inputs) != len(prevPkScripts) {
-		return er.New("tx.TxIn and prevPkScripts slices must " +
-			"have equal length")
+	if len(inputs) != len(tx.Additional) {
+		return er.New("tx.TxIn and tx.Additional slices must have equal length")
 	}
 
 	for i := range inputs {
-		pkScript := prevPkScripts[i]
+		pkScript := tx.Additional[i].PkScript
+		amt := tx.Additional[i].Value
+		if len(pkScript) == 0 {
+			if len(inputs[i].SignatureScript) > 0 {
+				// This input is already fully signed, we'll leave it alone
+				continue
+			}
+			return er.Errorf("Input number [%d] of transaction [%s] has no PkScript "+
+				"nor SignatureScript, cannot make transaction", i, tx.TxHash())
+		}
 
 		switch {
 		// If this is a p2sh output, who's script hash pre-image is a
@@ -327,14 +233,14 @@ func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, inputValues []bt
 		// script.
 		case txscript.IsPayToScriptHash(pkScript):
 			err := spendNestedWitnessPubKeyHash(inputs[i], pkScript,
-				int64(inputValues[i]), chainParams, secrets,
+				amt, chainParams, secrets,
 				tx, hashCache, i)
 			if err != nil {
 				return err
 			}
 		case txscript.IsPayToWitnessPubKeyHash(pkScript):
 			err := spendWitnessKeyHash(inputs[i], pkScript,
-				int64(inputValues[i]), chainParams, secrets,
+				amt, chainParams, secrets,
 				tx, hashCache, i)
 			if err != nil {
 				return err
@@ -473,5 +379,5 @@ func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 // for each input of an authored transaction.  Private keys and redeem scripts
 // are looked up using a SecretsSource based on the previous output script.
 func (tx *AuthoredTx) AddAllInputScripts(secrets SecretsSource) er.R {
-	return AddAllInputScripts(tx.Tx, tx.PrevScripts, tx.PrevInputValues, secrets)
+	return AddAllInputScripts(tx.Tx, secrets)
 }

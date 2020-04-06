@@ -448,8 +448,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 
 	// Spend the outputs we sent ourselves over two blocks.
 	inSrc := func(tx wire.MsgTx) func(target btcutil.Amount) (
-		total btcutil.Amount, inputs []*wire.TxIn,
-		inputValues []btcutil.Amount, scripts [][]byte, err er.R) {
+		btcutil.Amount, []*wire.TxIn, []wire.TxInAdditional, er.R) {
 		ourIndex := 1 << 30 // Should work on 32-bit systems
 		for i, txo := range tx.TxOut {
 			if bytes.Equal(txo.PkScript, script1) ||
@@ -458,8 +457,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 			}
 		}
 		return func(target btcutil.Amount) (total btcutil.Amount,
-			inputs []*wire.TxIn, inputValues []btcutil.Amount,
-			scripts [][]byte, err er.R) {
+			inputs []*wire.TxIn, inputAdditional []wire.TxInAdditional, err er.R) {
 			if ourIndex == 1<<30 {
 				err = er.Errorf("Couldn't find our address " +
 					"in the passed transaction's outputs.")
@@ -474,9 +472,12 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 					},
 				},
 			}
-			inputValues = []btcutil.Amount{
-				btcutil.Amount(tx.TxOut[ourIndex].Value)}
-			scripts = [][]byte{tx.TxOut[ourIndex].PkScript}
+			inputAdditional = []wire.TxInAdditional{
+				{
+					Value:    tx.TxOut[ourIndex].Value,
+					PkScript: tx.TxOut[ourIndex].PkScript,
+				},
+			}
 			err = nil
 			return
 		}

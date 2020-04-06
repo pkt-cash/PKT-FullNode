@@ -46,22 +46,21 @@ func makeInputSource(eligible []*wtxmgr.Credit) txauthor.InputSource {
 	// returned input source and reused across multiple calls.
 	currentTotal := btcutil.Amount(0)
 	currentInputs := make([]*wire.TxIn, 0, len(eligible))
-	currentScripts := make([][]byte, 0, len(eligible))
-	currentInputValues := make([]btcutil.Amount, 0, len(eligible))
+	currentAdditonal := make([]wire.TxInAdditional, 0, len(eligible))
 
-	return func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn,
-		[]btcutil.Amount, [][]byte, er.R) {
-
+	return func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []wire.TxInAdditional, er.R) {
 		for currentTotal < target && len(eligible) != 0 {
 			nextCredit := eligible[0]
 			eligible = eligible[1:]
 			nextInput := wire.NewTxIn(&nextCredit.OutPoint, nil, nil)
 			currentTotal += nextCredit.Amount
 			currentInputs = append(currentInputs, nextInput)
-			currentScripts = append(currentScripts, nextCredit.PkScript)
-			currentInputValues = append(currentInputValues, nextCredit.Amount)
+			currentAdditonal = append(currentAdditonal, wire.TxInAdditional{
+				PkScript: nextCredit.PkScript,
+				Value:    int64(nextCredit.Amount),
+			})
 		}
-		return currentTotal, currentInputs, currentInputValues, currentScripts, nil
+		return currentTotal, currentInputs, currentAdditonal, nil
 	}
 }
 
@@ -235,7 +234,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		return nil, err
 	}
 
-	err = validateMsgTx(tx.Tx, tx.PrevScripts, tx.PrevInputValues)
+	err = validateMsgTx(tx.Tx)
 	if err != nil {
 		return nil, err
 	}
@@ -563,17 +562,26 @@ func (w *Wallet) findEligibleOutputs(
 // validateMsgTx verifies transaction input scripts for tx.  All previous output
 // scripts from outputs redeemed by the transaction, in the same order they are
 // spent, must be passed in the prevScripts slice.
-func validateMsgTx(tx *wire.MsgTx, prevScripts [][]byte, inputValues []btcutil.Amount) er.R {
+func validateMsgTx(tx *wire.MsgTx) er.R {
 	hashCache := txscript.NewTxSigHashes(tx)
-	for i, prevScript := range prevScripts {
-		vm, err := txscript.NewEngine(prevScript, tx, i,
-			txscript.StandardVerifyFlags, nil, hashCache, int64(inputValues[i]))
+	if len(tx.Additional) != len(tx.TxIn) {
+		return er.Errorf("len(tx.Additional) = [%d] but len(tx.TxIn) = [%d], cannot validate tx",
+			len(tx.Additional), len(tx.TxIn))
+	}
+	for i, add := range tx.Additional {
+		if len(add.PkScript) == 0 {
+			return er.Errorf("Unable to valudate transaction, add.PkScript is empty")
+		}
+		vm, err := txscript.NewEngine(add.PkScript, tx, i,
+			txscript.StandardVerifyFlags, nil, hashCache, add.Value)
 		if err != nil {
-			return er.Errorf("cannot create script engine: %s", err)
+			err.AddMessage("cannot create script engine")
+			return err
 		}
 		err = vm.Execute()
 		if err != nil {
-			return er.Errorf("cannot validate transaction: %s", err)
+			err.AddMessage("cannot validate transaction")
+			return err
 		}
 	}
 	return nil

@@ -6,13 +6,15 @@ package wire
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 )
 
 const (
@@ -282,17 +284,29 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 	}
 }
 
+type TxInAdditional struct {
+	PkScript []byte
+	Value    int64
+}
+
 // MsgTx implements the Message interface and represents a bitcoin tx message.
 // It is used to deliver transaction information in response to a getdata
 // message (MsgGetData) for a given transaction.
 //
 // Use the AddTxIn and AddTxOut functions to build up the list of transaction
 // inputs and outputs.
+//
+// If a transaction is to be encoded using EPTF format, Additional must be a
+// slice of the same length as TxIn. However if there are inputs which are
+// already complete and signed, for those inputs Additional should have a nil
+// PkScript. Furthermore, for EPTF encoding, TxIn which have Additional info
+// must not have any SignatureScript value.
 type MsgTx struct {
-	Version  int32
-	TxIn     []*TxIn
-	TxOut    []*TxOut
-	LockTime uint32
+	Version    int32
+	TxIn       []*TxIn
+	TxOut      []*TxOut
+	LockTime   uint32
+	Additional []TxInAdditional
 }
 
 // AddTxIn adds a transaction input to the message.
@@ -676,13 +690,45 @@ func (msg *MsgTx) DeserializeNoWitness(r io.Reader) er.R {
 	return msg.BtcDecode(r, 0, BaseEncoding)
 }
 
+func write32(w io.Writer, x uint32) er.R {
+	var b [4]byte
+	binary.LittleEndian.PutUint32(b[:], x)
+	_, err := w.Write(b[:])
+	return er.E(err)
+}
+
+func write64(w io.Writer, x uint64) er.R {
+	var b [8]byte
+	binary.LittleEndian.PutUint64(b[:], x)
+	_, err := w.Write(b[:])
+	return er.E(err)
+}
+
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 // See Serialize for encoding transactions to be stored to disk, such as in a
 // database, as opposed to encoding transactions for the wire.
 func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R {
-	err := binarySerializer.PutUint32(w, littleEndian, uint32(msg.Version))
-	if err != nil {
+
+	eptf := false
+	if enc&EptfEncoding != 0 && len(msg.Additional) > 0 {
+		if len(msg.Additional) < len(msg.TxIn) {
+			return er.New("EptfEncoding was specified but transaction has incomplete input " +
+				"additional info")
+		}
+
+		// magic
+		if _, err := w.Write([]byte("EPTF\xff\x00")); err != nil {
+			return er.E(err)
+		}
+		eptf = true
+	} else if enc&ForceEptfEncoding != 0 {
+		return er.New("EptfEncoding was specified but transaction is missing input " +
+			"additional info")
+	}
+
+	// tx version
+	if err := write32(w, uint32(msg.Version)); err != nil {
 		return err
 	}
 
@@ -690,7 +736,7 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R 
 	// field for the MsgTx aren't 0x00, then this indicates the transaction
 	// is to be encoded using the new witness inclusionary structure
 	// defined in BIP0144.
-	doWitness := enc == WitnessEncoding && msg.HasWitness()
+	doWitness := (enc == WitnessEncoding && msg.HasWitness()) || eptf
 	if doWitness {
 		// After the txn's Version field, we include two additional
 		// bytes specific to the witness encoding. The first byte is an
@@ -704,28 +750,50 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R 
 		}
 	}
 
-	count := uint64(len(msg.TxIn))
-	err = WriteVarInt(w, pver, count)
-	if err != nil {
+	if err := WriteVarInt(w, pver, uint64(len(msg.TxIn))); err != nil {
 		return err
 	}
 
-	for _, ti := range msg.TxIn {
-		err = writeTxIn(w, pver, msg.Version, ti)
-		if err != nil {
+	for i, ti := range msg.TxIn {
+		if err := writeOutPoint(w, pver, msg.Version, &ti.PreviousOutPoint); err != nil {
+			return err
+		}
+
+		// We might have a mixture of completed inputs and incomplete inputs
+		// A completed input will have an ordinary SignatureScript but an incomplete
+		// input will have additional info / PkScript needed for being able to sign.
+		//
+		// In the event that we get an input with both SignatureScript and previous
+		// data, we'll preserve the SignatureScript because this input has been signed
+		// and we should not destroy the information.
+		if eptf && len(msg.Additional[i].PkScript) > 0 && len(ti.SignatureScript) == 0 {
+			// 26ff0023fd<scr>
+			scr := make([]byte, len(msg.Additional[i].PkScript)+1)
+			scr[0] = 0xfd
+			copy(scr[1:], msg.Additional[i].PkScript)
+
+			if scr, err := scriptbuilder.NewScriptBuilder().
+				AddOp(opcode.OP_INVALIDOPCODE).AddOp(opcode.OP_0).AddData(scr).Script(); err != nil {
+				return err
+			} else if err := WriteVarBytes(w, 0, scr); err != nil {
+				return err
+			}
+		} else if err := WriteVarBytes(w, pver, ti.SignatureScript); err != nil {
+			return err
+		}
+
+		if err := write32(w, ti.Sequence); err != nil {
 			return err
 		}
 	}
 
-	count = uint64(len(msg.TxOut))
-	err = WriteVarInt(w, pver, count)
-	if err != nil {
+	// output count
+	if err := WriteVarInt(w, 0, uint64(len(msg.TxOut))); err != nil {
 		return err
 	}
 
 	for _, to := range msg.TxOut {
-		err = WriteTxOut(w, pver, msg.Version, to)
-		if err != nil {
+		if err := WriteTxOut(w, 0, 0, to); err != nil {
 			return err
 		}
 	}
@@ -734,9 +802,12 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R 
 	// encoded is desired, then encode the witness for each of the inputs
 	// within the transaction.
 	if doWitness {
-		for _, ti := range msg.TxIn {
-			err = writeTxWitness(w, pver, msg.Version, ti.Witness)
-			if err != nil {
+		for i, ti := range msg.TxIn {
+			amt := int64(-1)
+			if eptf && len(msg.Additional[i].PkScript) > 0 {
+				amt = msg.Additional[i].Value
+			}
+			if err := writeTxWitness(w, pver, msg.Version, ti.Witness, amt); err != nil {
 				return err
 			}
 		}
@@ -969,22 +1040,6 @@ func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn) er.R {
 	return readElement(r, &ti.Sequence)
 }
 
-// writeTxIn encodes ti to the bitcoin protocol encoding for a transaction
-// input (TxIn) to w.
-func writeTxIn(w io.Writer, pver uint32, version int32, ti *TxIn) er.R {
-	err := writeOutPoint(w, pver, version, &ti.PreviousOutPoint)
-	if err != nil {
-		return err
-	}
-
-	err = WriteVarBytes(w, pver, ti.SignatureScript)
-	if err != nil {
-		return err
-	}
-
-	return binarySerializer.PutUint32(w, littleEndian, ti.Sequence)
-}
-
 // readTxOut reads the next sequence of bytes from r as a transaction output
 // (TxOut).
 func readTxOut(r io.Reader, pver uint32, version int32, to *TxOut) er.R {
@@ -1014,7 +1069,27 @@ func WriteTxOut(w io.Writer, pver uint32, version int32, to *TxOut) er.R {
 
 // writeTxWitness encodes the bitcoin protocol encoding for a transaction
 // input's witness into to w.
-func writeTxWitness(w io.Writer, pver uint32, version int32, wit [][]byte) er.R {
+func writeTxWitness(
+	w io.Writer,
+	pver uint32,
+	version int32,
+	wit [][]byte,
+	amt int64,
+) er.R {
+	if amt > -1 {
+		// trick segwit length which informs electrum that it's special data
+		if err := WriteVarInt(w, 0, uint64(0xffffffff)); err != nil {
+			return err
+		}
+		// hint for electrum about the amount of the input
+		if err := write64(w, uint64(amt)); err != nil {
+			return err
+		}
+		// 2 byte version
+		if _, err := w.Write([]byte("\x00\x00")); err != nil {
+			return er.E(err)
+		}
+	}
 	err := WriteVarInt(w, pver, uint64(len(wit)))
 	if err != nil {
 		return err

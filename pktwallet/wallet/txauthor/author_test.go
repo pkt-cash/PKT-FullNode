@@ -29,17 +29,19 @@ func makeInputSource(unspents []*wire.TxOut) InputSource {
 	// Return outputs in order.
 	currentTotal := btcutil.Amount(0)
 	currentInputs := make([]*wire.TxIn, 0, len(unspents))
-	currentInputValues := make([]btcutil.Amount, 0, len(unspents))
-	f := func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []btcutil.Amount, [][]byte, er.R) {
+	currentInputAdditional := make([]wire.TxInAdditional, 0, len(unspents))
+	f := func(target btcutil.Amount) (btcutil.Amount, []*wire.TxIn, []wire.TxInAdditional, er.R) {
 		for currentTotal < target && len(unspents) != 0 {
 			u := unspents[0]
 			unspents = unspents[1:]
 			nextInput := wire.NewTxIn(&wire.OutPoint{}, nil, nil)
 			currentTotal += btcutil.Amount(u.Value)
 			currentInputs = append(currentInputs, nextInput)
-			currentInputValues = append(currentInputValues, btcutil.Amount(u.Value))
+			currentInputAdditional = append(currentInputAdditional, wire.TxInAdditional{
+				Value: u.Value,
+			})
 		}
-		return currentTotal, currentInputs, currentInputValues, make([][]byte, len(currentInputs)), nil
+		return currentTotal, currentInputs, currentInputAdditional, nil
 	}
 	return InputSource(f)
 }
