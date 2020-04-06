@@ -550,6 +550,6 @@ var opcodeNames = [256]string{
 	OP_INVALIDOPCODE: "OP_INVALIDOPCODE",
 }
 
-func OpcodeNames(code byte) string {
+func OpcodeName(code byte) string {
 	return opcodeNames[code]
 }

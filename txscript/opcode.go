@@ -971,21 +971,21 @@ func (pop *parsedOpcode) checkMinimalDataPush() er.R {
 
 	if dataLen == 0 && op != opcode.OP_0 {
 		str := fmt.Sprintf("zero length data push is encoded with "+
-			"opcode %s instead of OP_0", opcode.OpcodeNames(pop.opcode.value))
+			"opcode %s instead of OP_0", opcode.OpcodeName(pop.opcode.value))
 		return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 	} else if dataLen == 1 && data[0] >= 1 && data[0] <= 16 {
 		if op != opcode.OP_1+data[0]-1 {
 			// Should have used OP_1 .. OP_16
 			str := fmt.Sprintf("data push of the value %d encoded "+
 				"with opcode %s instead of OP_%d", data[0],
-				opcode.OpcodeNames(pop.opcode.value), data[0])
+				opcode.OpcodeName(pop.opcode.value), data[0])
 			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	} else if dataLen == 1 && data[0] == 0x81 {
 		if op != opcode.OP_1NEGATE {
 			str := fmt.Sprintf("data push of the value -1 encoded "+
 				"with opcode %s instead of OP_1NEGATE",
-				opcode.OpcodeNames(pop.opcode.value))
+				opcode.OpcodeName(pop.opcode.value))
 			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	} else if dataLen <= 75 {
@@ -993,21 +993,21 @@ func (pop *parsedOpcode) checkMinimalDataPush() er.R {
 			// Should have used a direct push
 			str := fmt.Sprintf("data push of %d bytes encoded "+
 				"with opcode %s instead of OP_DATA_%d", dataLen,
-				opcode.OpcodeNames(pop.opcode.value), dataLen)
+				opcode.OpcodeName(pop.opcode.value), dataLen)
 			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	} else if dataLen <= 255 {
 		if op != opcode.OP_PUSHDATA1 {
 			str := fmt.Sprintf("data push of %d bytes encoded "+
 				"with opcode %s instead of OP_PUSHDATA1",
-				dataLen, opcode.OpcodeNames(pop.opcode.value))
+				dataLen, opcode.OpcodeName(pop.opcode.value))
 			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	} else if dataLen <= 65535 {
 		if op != opcode.OP_PUSHDATA2 {
 			str := fmt.Sprintf("data push of %d bytes encoded "+
 				"with opcode %s instead of OP_PUSHDATA2",
-				dataLen, opcode.OpcodeNames(pop.opcode.value))
+				dataLen, opcode.OpcodeName(pop.opcode.value))
 			return txscripterr.ScriptError(txscripterr.ErrMinimalData, str)
 		}
 	}
@@ -1022,7 +1022,7 @@ func (pop *parsedOpcode) print(oneline bool) string {
 	// with the raw value.  However, when not doing a one-line dissassembly,
 	// we prefer to show the actual opcode names.  Thus, only replace the
 	// opcodes in question when the oneline flag is set.
-	opcodeName := opcode.OpcodeNames(pop.opcode.value)
+	opcodeName := opcode.OpcodeName(pop.opcode.value)
 	if oneline {
 		if replName, ok := opcodeOnelineRepls[opcodeName]; ok {
 			opcodeName = replName
@@ -1071,7 +1071,7 @@ func (pop *parsedOpcode) bytes() ([]byte, er.R) {
 		if len(pop.data) != 0 {
 			str := fmt.Sprintf("internal consistency error - "+
 				"parsed opcode %s has data length %d when %d "+
-				"was expected", opcode.OpcodeNames(pop.opcode.value), len(pop.data),
+				"was expected", opcode.OpcodeName(pop.opcode.value), len(pop.data),
 				0)
 			return nil, txscripterr.ScriptError(txscripterr.ErrInternal, str)
 		}
@@ -1104,7 +1104,7 @@ func (pop *parsedOpcode) bytes() ([]byte, er.R) {
 	if len(retbytes) != nbytes {
 		str := fmt.Sprintf("internal consistency error - "+
 			"parsed opcode %s has data length %d when %d was "+
-			"expected", opcode.OpcodeNames(pop.opcode.value), len(retbytes), nbytes)
+			"expected", opcode.OpcodeName(pop.opcode.value), len(retbytes), nbytes)
 		return nil, txscripterr.ScriptError(txscripterr.ErrInternal, str)
 	}
 
@@ -1123,7 +1123,7 @@ func (pop *parsedOpcode) bytes() ([]byte, er.R) {
 // disabled opcode (even when they appear in a branch that is not executed).
 func opcodeDisabled(op *parsedOpcode, vm *Engine) er.R {
 	str := fmt.Sprintf("attempt to execute disabled opcode %s",
-		opcode.OpcodeNames(op.opcode.value))
+		opcode.OpcodeName(op.opcode.value))
 	return txscripterr.ScriptError(txscripterr.ErrDisabledOpcode, str)
 }
 
@@ -1131,7 +1131,7 @@ func opcodeDisabled(op *parsedOpcode, vm *Engine) er.R {
 // appropriate error indicating the opcode is reserved.
 func opcodeReserved(op *parsedOpcode, vm *Engine) er.R {
 	str := fmt.Sprintf("attempt to execute reserved opcode %s",
-		opcode.OpcodeNames(op.opcode.value))
+		opcode.OpcodeName(op.opcode.value))
 	return txscripterr.ScriptError(txscripterr.ErrReservedOpcode, str)
 }
 
@@ -1139,7 +1139,7 @@ func opcodeReserved(op *parsedOpcode, vm *Engine) er.R {
 // appropriate error indicating the opcode is invalid.
 func opcodeInvalid(op *parsedOpcode, vm *Engine) er.R {
 	str := fmt.Sprintf("attempt to execute invalid opcode %s",
-		opcode.OpcodeNames(op.opcode.value))
+		opcode.OpcodeName(op.opcode.value))
 	return txscripterr.ScriptError(txscripterr.ErrReservedOpcode, str)
 }
 
@@ -1306,7 +1306,7 @@ func opcodeNotIf(op *parsedOpcode, vm *Engine) er.R {
 func opcodeElse(op *parsedOpcode, vm *Engine) er.R {
 	if len(vm.condStack) == 0 {
 		str := fmt.Sprintf("encountered opcode %s with no matching "+
-			"opcode to begin conditional execution", opcode.OpcodeNames(op.opcode.value))
+			"opcode to begin conditional execution", opcode.OpcodeName(op.opcode.value))
 		return txscripterr.ScriptError(txscripterr.ErrUnbalancedConditional, str)
 	}
 
@@ -1332,7 +1332,7 @@ func opcodeElse(op *parsedOpcode, vm *Engine) er.R {
 func opcodeEndif(op *parsedOpcode, vm *Engine) er.R {
 	if len(vm.condStack) == 0 {
 		str := fmt.Sprintf("encountered opcode %s with no matching "+
-			"opcode to begin conditional execution", opcode.OpcodeNames(op.opcode.value))
+			"opcode to begin conditional execution", opcode.OpcodeName(op.opcode.value))
 		return txscripterr.ScriptError(txscripterr.ErrUnbalancedConditional, str)
 	}
 
@@ -1352,7 +1352,7 @@ func abstractVerify(op *parsedOpcode, vm *Engine, c *er.ErrorCode) er.R {
 	}
 
 	if !verified {
-		str := fmt.Sprintf("%s failed", opcode.OpcodeNames(op.opcode.value))
+		str := fmt.Sprintf("%s failed", opcode.OpcodeName(op.opcode.value))
 		return txscripterr.ScriptError(c, str)
 	}
 	return nil
@@ -2703,7 +2703,7 @@ func init() {
 	// "OP_NOP2" since they are aliases for "OP_0", "OP_1",
 	// and "OP_CHECKLOCKTIMEVERIFY" respectively.
 	for _, op := range opcodeArray {
-		OpcodeByName[opcode.OpcodeNames(op.value)] = op.value
+		OpcodeByName[opcode.OpcodeName(op.value)] = op.value
 	}
 	OpcodeByName["OP_FALSE"] = opcode.OP_FALSE
 	OpcodeByName["OP_TRUE"] = opcode.OP_TRUE
