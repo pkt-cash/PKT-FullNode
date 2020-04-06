@@ -191,7 +191,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 		}
 	}
 
-	return pop.opcode.opfunc(pop, vm)
+	return executeOp(pop, vm)
 }
 
 // disasm is a helper function to produce the output for DisasmPC and
