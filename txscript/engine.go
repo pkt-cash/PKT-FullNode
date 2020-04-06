@@ -149,14 +149,14 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 	// Disabled opcodes are fail on program counter.
 	if pop.isDisabled() {
 		str := fmt.Sprintf("attempt to execute disabled opcode %s",
-			pop.opcode.name)
+			opcode.OpcodeNames(pop.opcode.value))
 		return txscripterr.ScriptError(txscripterr.ErrDisabledOpcode, str)
 	}
 
 	// Always-illegal opcodes are fail on program counter.
 	if pop.alwaysIllegal() {
 		str := fmt.Sprintf("attempt to execute reserved opcode %s",
-			pop.opcode.name)
+			opcode.OpcodeNames(pop.opcode.value))
 		return txscripterr.ScriptError(txscripterr.ErrReservedOpcode, str)
 	}
 

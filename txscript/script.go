@@ -224,7 +224,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, 
 			if len(script[i:]) < op.length {
 				str := fmt.Sprintf("opcode %s requires %d "+
 					"bytes, but script only has %d remaining",
-					op.name, op.length, len(script[i:]))
+					opcode.OpcodeNames(op.value), op.length, len(script[i:]))
 				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
@@ -241,7 +241,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, 
 			if len(script[off:]) < -op.length {
 				str := fmt.Sprintf("opcode %s requires %d "+
 					"bytes, but script only has %d remaining",
-					op.name, -op.length, len(script[off:]))
+					opcode.OpcodeNames(op.value), -op.length, len(script[off:]))
 				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
@@ -273,7 +273,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, 
 			if int(l) > len(script[off:]) || int(l) < 0 {
 				str := fmt.Sprintf("opcode %s pushes %d bytes, "+
 					"but script only has %d remaining",
-					op.name, int(l), len(script[off:]))
+					opcode.OpcodeNames(op.value), int(l), len(script[off:]))
 				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
 					str)
 			}
