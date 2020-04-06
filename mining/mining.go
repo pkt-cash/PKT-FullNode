@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -260,14 +261,14 @@ func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 // address handling is useful.
 func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addrs map[btcutil.Address]float64, taxScript []byte) (*btcutil.Tx, er.R) {
 
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := wire.NewMsgTx(constants.TxVersion)
 	tx.AddTxIn(&wire.TxIn{
 		// Coinbase transactions have no inputs, so previous outpoint is
 		// zero hash and max index.
 		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{},
-			wire.MaxPrevOutIndex),
+			constants.MaxPrevOutIndex),
 		SignatureScript: coinbaseScript,
-		Sequence:        wire.MaxTxInSequenceNum,
+		Sequence:        constants.MaxTxInSequenceNum,
 	})
 	subsidy := blockchain.CalcBlockSubsidy(nextBlockHeight, params)
 	tax := blockchain.PktCalcNetworkStewardPayout(subsidy)

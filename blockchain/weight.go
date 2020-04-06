@@ -8,11 +8,11 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -41,7 +41,7 @@ const (
 
 	// MinTxOutputWeight is the minimum possible weight for a transaction
 	// output.
-	MinTxOutputWeight = WitnessScaleFactor * wire.MinTxOutPayload
+	MinTxOutputWeight = WitnessScaleFactor * constants.MinTxOutPayload
 
 	// MaxOutputsPerBlock is the maximum number of transaction outputs there
 	// can be in a block of max weight size.

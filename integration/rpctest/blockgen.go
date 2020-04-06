@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 // solveBlock attempts to find a nonce which makes the passed block header hash
@@ -107,14 +108,14 @@ func createCoinbaseTx(coinbaseScript []byte, nextBlockHeight int32,
 		return nil, err
 	}
 
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := wire.NewMsgTx(constants.TxVersion)
 	tx.AddTxIn(&wire.TxIn{
 		// Coinbase transactions have no inputs, so previous outpoint is
 		// zero hash and max index.
 		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{},
-			wire.MaxPrevOutIndex),
+			constants.MaxPrevOutIndex),
 		SignatureScript: coinbaseScript,
-		Sequence:        wire.MaxTxInSequenceNum,
+		Sequence:        constants.MaxTxInSequenceNum,
 	})
 	if len(mineTo) == 0 {
 		tx.AddTxOut(&wire.TxOut{

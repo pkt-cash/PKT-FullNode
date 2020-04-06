@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -159,14 +160,14 @@ func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*b
 		return nil, err
 	}
 
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := wire.NewMsgTx(constants.TxVersion)
 	tx.AddTxIn(&wire.TxIn{
 		// Coinbase transactions have no inputs, so previous outpoint is
 		// zero hash and max index.
 		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{},
-			wire.MaxPrevOutIndex),
+			constants.MaxPrevOutIndex),
 		SignatureScript: coinbaseScript,
-		Sequence:        wire.MaxTxInSequenceNum,
+		Sequence:        constants.MaxTxInSequenceNum,
 	})
 	totalInput := blockchain.CalcBlockSubsidy(blockHeight, p.chainParams)
 	amountPerOutput := totalInput / int64(numOutputs)
@@ -205,8 +206,8 @@ func (p *poolHarness) CreateSignedTx(inputs []spendableOutput,
 	amountPerOutput := int64(totalInput) / int64(numOutputs)
 	remainder := int64(totalInput) - amountPerOutput*int64(numOutputs)
 
-	tx := wire.NewMsgTx(wire.TxVersion)
-	sequence := wire.MaxTxInSequenceNum
+	tx := wire.NewMsgTx(constants.TxVersion)
+	sequence := constants.MaxTxInSequenceNum
 	if signalsReplacement {
 		sequence = MaxRBFSequence
 	}
@@ -255,11 +256,11 @@ func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32)
 		// Create the transaction using the previous transaction output
 		// and paying the full amount to the payment address associated
 		// with the harness.
-		tx := wire.NewMsgTx(wire.TxVersion)
+		tx := wire.NewMsgTx(constants.TxVersion)
 		tx.AddTxIn(&wire.TxIn{
 			PreviousOutPoint: prevOutPoint,
 			SignatureScript:  nil,
-			Sequence:         wire.MaxTxInSequenceNum,
+			Sequence:         constants.MaxTxInSequenceNum,
 		})
 		tx.AddTxOut(&wire.TxOut{
 			PkScript: p.payScript,

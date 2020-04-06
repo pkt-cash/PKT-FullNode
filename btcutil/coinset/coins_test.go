@@ -15,7 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/coinset"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 type TestCoin struct {
@@ -113,7 +113,7 @@ func TestCoinSet(t *testing.T) {
 		t.Error("Expected first coin")
 	}
 
-	mtx := coinset.NewMsgTxWithInputCoins(wire.TxVersion, cs)
+	mtx := coinset.NewMsgTxWithInputCoins(constants.TxVersion, cs)
 	if len(mtx.TxIn) != 1 {
 		t.Errorf("Expected only 1 TxIn, got %d", len(mtx.TxIn))
 	}

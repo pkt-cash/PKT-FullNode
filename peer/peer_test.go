@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
@@ -512,7 +513,7 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnTx",
-			wire.NewMsgTx(wire.TxVersion),
+			wire.NewMsgTx(constants.TxVersion),
 		},
 		{
 			"OnBlock",

@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 var (
@@ -449,7 +450,7 @@ func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
 	m.Lock()
 	defer m.Unlock()
 
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := wire.NewMsgTx(constants.TxVersion)
 
 	// Tally up the total amount to be sent in order to perform coin
 	// selection shortly below.

@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
@@ -293,7 +294,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 	dummyTxIn := wire.TxIn{
 		PreviousOutPoint: dummyPrevOut,
 		SignatureScript:  dummySigScript,
-		Sequence:         wire.MaxTxInSequenceNum,
+		Sequence:         constants.MaxTxInSequenceNum,
 	}
 	addrHash := [20]byte{0x01}
 	addr, err := btcutil.NewAddressPubKeyHash(addrHash[:],
@@ -331,7 +332,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 		{
 			name: "Transaction version too high",
 			tx: wire.MsgTx{
-				Version:  wire.TxVersion + 1,
+				Version:  constants.TxVersion + 1,
 				TxIn:     []*wire.TxIn{&dummyTxIn},
 				TxOut:    []*wire.TxOut{&dummyTxOut},
 				LockTime: 0,
@@ -380,7 +381,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 					PreviousOutPoint: dummyPrevOut,
 					SignatureScript: bytes.Repeat([]byte{0x00},
 						maxStandardSigScriptSize+1),
-					Sequence: wire.MaxTxInSequenceNum,
+					Sequence: constants.MaxTxInSequenceNum,
 				}},
 				TxOut:    []*wire.TxOut{&dummyTxOut},
 				LockTime: 0,
@@ -397,7 +398,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 					PreviousOutPoint: dummyPrevOut,
 					SignatureScript: []byte{
 						opcode.OP_CHECKSIGVERIFY},
-					Sequence: wire.MaxTxInSequenceNum,
+					Sequence: constants.MaxTxInSequenceNum,
 				}},
 				TxOut:    []*wire.TxOut{&dummyTxOut},
 				LockTime: 0,

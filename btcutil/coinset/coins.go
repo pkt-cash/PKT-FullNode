@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -136,7 +137,7 @@ func NewMsgTxWithInputCoins(txVersion int32, inputCoins Coins) *wire.MsgTx {
 				Index: coin.Index(),
 			},
 			SignatureScript: nil,
-			Sequence:        wire.MaxTxInSequenceNum,
+			Sequence:        constants.MaxTxInSequenceNum,
 		}
 	}
 	return msgTx

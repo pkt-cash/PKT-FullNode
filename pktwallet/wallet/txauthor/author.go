@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -135,7 +136,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 		}
 
 		unsignedTransaction := &wire.MsgTx{
-			Version:    wire.TxVersion,
+			Version:    constants.TxVersion,
 			TxIn:       inputs,
 			TxOut:      outputs,
 			LockTime:   0,

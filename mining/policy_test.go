@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a
@@ -66,7 +67,7 @@ func TestCalcPriority(t *testing.T) {
 		TxIn: []*wire.TxIn{{
 			PreviousOutPoint: wire.OutPoint{
 				Hash:  chainhash.Hash{},
-				Index: wire.MaxPrevOutIndex,
+				Index: constants.MaxPrevOutIndex,
 			},
 			SignatureScript: hexToBytes("04ffff001d0134"),
 			Sequence:        0xffffffff,

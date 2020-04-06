@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.
@@ -220,7 +221,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				Version: 2,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
-					Sequence:         wire.MaxTxInSequenceNum,
+					Sequence:         constants.MaxTxInSequenceNum,
 				}},
 			},
 			view: utxoView,
@@ -285,12 +286,12 @@ func TestCalcSequenceLock(t *testing.T) {
 				}, {
 					PreviousOutPoint: utxo,
 					Sequence: LockTimeToSequence(false, 5) |
-						wire.SequenceLockTimeDisabled,
+						constants.SequenceLockTimeDisabled,
 				}},
 			},
 			view: utxoView,
 			want: &SequenceLock{
-				Seconds:     medianTime + (5 << wire.SequenceLockTimeGranularity) - 1,
+				Seconds:     medianTime + (5 << constants.SequenceLockTimeGranularity) - 1,
 				BlockHeight: prevUtxoHeight + 3,
 			},
 		},
@@ -328,7 +329,7 @@ func TestCalcSequenceLock(t *testing.T) {
 			},
 			view: utxoView,
 			want: &SequenceLock{
-				Seconds:     medianTime + (10 << wire.SequenceLockTimeGranularity) - 1,
+				Seconds:     medianTime + (10 << constants.SequenceLockTimeGranularity) - 1,
 				BlockHeight: -1,
 			},
 		},
@@ -375,7 +376,7 @@ func TestCalcSequenceLock(t *testing.T) {
 			},
 			view: utxoView,
 			want: &SequenceLock{
-				Seconds:     medianTime + (13 << wire.SequenceLockTimeGranularity) - 1,
+				Seconds:     medianTime + (13 << constants.SequenceLockTimeGranularity) - 1,
 				BlockHeight: prevUtxoHeight + 8,
 			},
 		},

@@ -48,6 +48,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
@@ -503,7 +504,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 
 	// Validate the locktime, if given.
 	if c.LockTime != nil &&
-		(*c.LockTime < 0 || *c.LockTime > int64(wire.MaxTxInSequenceNum)) {
+		(*c.LockTime < 0 || *c.LockTime > int64(constants.MaxTxInSequenceNum)) {
 		return nil, btcjson.NewRPCError(
 			btcjson.ErrRPCInvalidParameter,
 			"Locktime out of range",
@@ -513,7 +514,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 
 	// Add all transaction inputs to a new transaction after performing
 	// some validity checks.
-	mtx := wire.NewMsgTx(wire.TxVersion)
+	mtx := wire.NewMsgTx(constants.TxVersion)
 	for _, input := range c.Inputs {
 		txHash, err := chainhash.NewHashFromStr(input.Txid)
 		if err != nil {
@@ -523,7 +524,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 		prevOut := wire.NewOutPoint(txHash, input.Vout)
 		txIn := wire.NewTxIn(prevOut, []byte{}, nil)
 		if c.LockTime != nil && *c.LockTime != 0 {
-			txIn.Sequence = wire.MaxTxInSequenceNum - 1
+			txIn.Sequence = constants.MaxTxInSequenceNum - 1
 		}
 		mtx.AddTxIn(txIn)
 	}

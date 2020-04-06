@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 const (
@@ -36,7 +37,7 @@ const (
 
 	// maxTxOutPerMessage is the maximum number of transactions outputs that
 	// a transaction which fits into a message could possibly have.
-	maxTxOutPerMessage = (MaxMessagePayload / MinTxOutPayload) + 1
+	maxTxOutPerMessage = (MaxMessagePayload / constants.MinTxOutPayload) + 1
 
 	// minTxPayload is the minimum payload size for a transaction.  Note
 	// that any realistically usable transaction must have at least one
@@ -200,7 +201,7 @@ func NewTxIn(prevOut *OutPoint, signatureScript []byte, witness [][]byte) *TxIn 
 		PreviousOutPoint: *prevOut,
 		SignatureScript:  signatureScript,
 		Witness:          witness,
-		Sequence:         MaxTxInSequenceNum,
+		Sequence:         constants.MaxTxInSequenceNum,
 	}
 }
 

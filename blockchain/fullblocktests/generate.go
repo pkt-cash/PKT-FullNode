@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -292,8 +293,8 @@ func (g *testGenerator) createCoinbaseTx(blockHeight int32) *wire.MsgTx {
 		// Coinbase transactions have no inputs, so previous outpoint is
 		// zero hash and max index.
 		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{},
-			wire.MaxPrevOutIndex),
-		Sequence:        wire.MaxTxInSequenceNum,
+			constants.MaxPrevOutIndex),
+		Sequence:        constants.MaxTxInSequenceNum,
 		SignatureScript: coinbaseScript,
 	})
 	tx.AddTxOut(&wire.TxOut{
@@ -444,7 +445,7 @@ func createSpendTx(spend *spendableOut, fee btcutil.Amount) *wire.MsgTx {
 	spendTx := wire.NewMsgTx(1)
 	spendTx.AddTxIn(&wire.TxIn{
 		PreviousOutPoint: spend.prevOut,
-		Sequence:         wire.MaxTxInSequenceNum,
+		Sequence:         constants.MaxTxInSequenceNum,
 		SignatureScript:  nil,
 	})
 	spendTx.AddTxOut(wire.NewTxOut(int64(spend.amount-fee),

@@ -18,10 +18,10 @@ import (
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptnum"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 )
 
 // An opcodeT defines the information related to a txscript opcodeT.  opfunc, if
@@ -922,7 +922,7 @@ func opcodeCheckLockTimeVerify(op *parsedOpcode, vm *Engine) er.R {
 	// NOTE: This implies that even if the transaction is not finalized due to
 	// another input being unlocked, the opcode execution will still fail when the
 	// input being used by the opcode is locked.
-	if vm.tx.TxIn[vm.txIdx].Sequence == wire.MaxTxInSequenceNum {
+	if vm.tx.TxIn[vm.txIdx].Sequence == constants.MaxTxInSequenceNum {
 		return txscripterr.ScriptError(txscripterr.ErrUnsatisfiedLockTime,
 			"transaction input is finalized")
 	}
@@ -977,7 +977,7 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) er.R {
 	// To provide for future soft-fork extensibility, if the
 	// operand has the disabled lock-time flag set,
 	// CHECKSEQUENCEVERIFY behaves as a NOP.
-	if sequence&int64(wire.SequenceLockTimeDisabled) != 0 {
+	if sequence&int64(constants.SequenceLockTimeDisabled) != 0 {
 		return nil
 	}
 
@@ -994,17 +994,17 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) er.R {
 	// number does not have this bit set prevents using this property
 	// to get around a CHECKSEQUENCEVERIFY check.
 	txSequence := int64(vm.tx.TxIn[vm.txIdx].Sequence)
-	if txSequence&int64(wire.SequenceLockTimeDisabled) != 0 {
+	if txSequence&int64(constants.SequenceLockTimeDisabled) != 0 {
 		str := fmt.Sprintf("transaction sequence has sequence "+
 			"locktime disabled bit set: 0x%x", txSequence)
 		return txscripterr.ScriptError(txscripterr.ErrUnsatisfiedLockTime, str)
 	}
 
 	// Mask off non-consensus bits before doing comparisons.
-	lockTimeMask := int64(wire.SequenceLockTimeIsSeconds |
-		wire.SequenceLockTimeMask)
+	lockTimeMask := int64(constants.SequenceLockTimeIsSeconds |
+		constants.SequenceLockTimeMask)
 	return verifyLockTime(txSequence&lockTimeMask,
-		wire.SequenceLockTimeIsSeconds, sequence&lockTimeMask)
+		constants.SequenceLockTimeIsSeconds, sequence&lockTimeMask)
 }
 
 // opcodeToAltStack removes the top item from the main data stack and pushes it

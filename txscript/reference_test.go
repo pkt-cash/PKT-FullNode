@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -304,7 +305,7 @@ func parseExpectedResult(expected string) ([]*er.ErrorCode, er.R) {
 func createSpendingTx(witness [][]byte, sigScript, pkScript []byte,
 	outputValue int64) *wire.MsgTx {
 
-	coinbaseTx := wire.NewMsgTx(wire.TxVersion)
+	coinbaseTx := wire.NewMsgTx(constants.TxVersion)
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
 	txIn := wire.NewTxIn(outPoint, []byte{opcode.OP_0, opcode.OP_0}, nil)
@@ -312,7 +313,7 @@ func createSpendingTx(witness [][]byte, sigScript, pkScript []byte,
 	coinbaseTx.AddTxIn(txIn)
 	coinbaseTx.AddTxOut(txOut)
 
-	spendingTx := wire.NewMsgTx(wire.TxVersion)
+	spendingTx := wire.NewMsgTx(constants.TxVersion)
 	coinbaseTxSha := coinbaseTx.TxHash()
 	outPoint = wire.NewOutPoint(&coinbaseTxSha, 0)
 	txIn = wire.NewTxIn(outPoint, sigScript, witness)

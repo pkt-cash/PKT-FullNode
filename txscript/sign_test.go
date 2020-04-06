@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 type addressToKey struct {
@@ -1657,7 +1658,7 @@ func TestSignatureScript(t *testing.T) {
 
 nexttest:
 	for i := range sigScriptTests {
-		tx := wire.NewMsgTx(wire.TxVersion)
+		tx := wire.NewMsgTx(constants.TxVersion)
 
 		output := wire.NewTxOut(500, []byte{opcode.OP_RETURN})
 		tx.AddTxOut(output)

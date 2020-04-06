@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -105,7 +106,7 @@ func ExampleSignTxOutput() {
 	// For this example, create a fake transaction that represents what
 	// would ordinarily be the real transaction that is being spent.  It
 	// contains a single output that pays to address in the amount of 1 BTC.
-	originTx := wire.NewMsgTx(wire.TxVersion)
+	originTx := wire.NewMsgTx(constants.TxVersion)
 	prevOut := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
 	txIn := wire.NewTxIn(prevOut, []byte{opcode.OP_0, opcode.OP_0}, nil)
 	originTx.AddTxIn(txIn)
@@ -119,7 +120,7 @@ func ExampleSignTxOutput() {
 	originTxHash := originTx.TxHash()
 
 	// Create the transaction to redeem the fake transaction.
-	redeemTx := wire.NewMsgTx(wire.TxVersion)
+	redeemTx := wire.NewMsgTx(constants.TxVersion)
 
 	// Add the input(s) the redeeming transaction will spend.  There is no
 	// signature script at this point since it hasn't been created or signed

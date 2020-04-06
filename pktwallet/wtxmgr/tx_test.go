@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 // Received transaction output for mainnet outpoint
@@ -115,7 +116,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 
 	// Create a "signed" (with invalid sigs) tx that spends output 0 of
 	// the double spend.
-	spendingTx := wire.NewMsgTx(wire.TxVersion)
+	spendingTx := wire.NewMsgTx(constants.TxVersion)
 	spendingTxIn := wire.NewTxIn(wire.NewOutPoint(TstDoubleSpendTx.Hash(), 0), []byte{0, 1, 2, 3, 4}, nil)
 	spendingTx.AddTxIn(spendingTxIn)
 	spendingTxOut1 := wire.NewTxOut(1e7, []byte{5, 6, 7, 8, 9})

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -427,14 +428,14 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView 
 		// mask in order to obtain the time lock delta required before
 		// this input can be spent.
 		sequenceNum := txIn.Sequence
-		relativeLock := int64(sequenceNum & wire.SequenceLockTimeMask)
+		relativeLock := int64(sequenceNum & constants.SequenceLockTimeMask)
 
 		switch {
 		// Relative time locks are disabled for this input, so we can
 		// skip any further calculation.
-		case sequenceNum&wire.SequenceLockTimeDisabled == wire.SequenceLockTimeDisabled:
+		case sequenceNum&constants.SequenceLockTimeDisabled == constants.SequenceLockTimeDisabled:
 			continue
-		case sequenceNum&wire.SequenceLockTimeIsSeconds == wire.SequenceLockTimeIsSeconds:
+		case sequenceNum&constants.SequenceLockTimeIsSeconds == constants.SequenceLockTimeIsSeconds:
 			// This input requires a relative time lock expressed
 			// in seconds before it can be spent.  Therefore, we
 			// need to query for the block prior to the one in
@@ -454,7 +455,7 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView 
 			// proper relative time-lock. We also subtract one from
 			// the relative lock to maintain the original lockTime
 			// semantics.
-			timeLockSeconds := (relativeLock << wire.SequenceLockTimeGranularity) - 1
+			timeLockSeconds := (relativeLock << constants.SequenceLockTimeGranularity) - 1
 			timeLock := medianTime.Unix() + timeLockSeconds
 			if timeLock > sequenceLock.Seconds {
 				sequenceLock.Seconds = timeLock
@@ -490,8 +491,8 @@ func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
 	// shift the locktime over by 9 since the time granularity is in
 	// 512-second intervals (2^9). This results in a max lock-time of
 	// 33,553,920 seconds, or 1.1 years.
-	return wire.SequenceLockTimeIsSeconds |
-		locktime>>wire.SequenceLockTimeGranularity
+	return constants.SequenceLockTimeIsSeconds |
+		locktime>>constants.SequenceLockTimeGranularity
 }
 
 // getReorganizeNodes finds the fork point between the main chain and the passed
