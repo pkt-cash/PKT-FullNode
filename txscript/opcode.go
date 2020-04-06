@@ -887,7 +887,7 @@ var opcodeOnelineRepls = map[string]string{
 // parsedOpcode represents an opcode that has been parsed and includes any
 // potential data associated with it.
 type parsedOpcode struct {
-	opcode *opcodeT
+	opcode opcodeT
 	data   []byte
 }
 

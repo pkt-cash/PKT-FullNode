@@ -26,7 +26,7 @@ func TestOpcodeDisabled(t *testing.T) {
 		opcode.OP_LSHIFT, opcode.OP_RSHIFT,
 	}
 	for _, opcodeVal := range tests {
-		pop := parsedOpcode{opcode: &opcodeArray[opcodeVal], data: nil}
+		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: nil}
 		err := opcodeDisabled(&pop, nil)
 		if !txscripterr.ErrDisabledOpcode.Is(err) {
 			t.Errorf("opcodeDisabled: unexpected error - got %v, "+
@@ -130,7 +130,7 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(int(opcodeVal))
 		}
 
-		pop := parsedOpcode{opcode: &opcodeArray[opcodeVal], data: data}
+		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: data}
 		gotStr := pop.print(true)
 		if gotStr != expectedStr {
 			t.Errorf("pop.print (opcode %x): Unexpected disasm "+
@@ -196,7 +196,7 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(int(opcodeVal))
 		}
 
-		pop := parsedOpcode{opcode: &opcodeArray[opcodeVal], data: data}
+		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: data}
 		gotStr := pop.print(false)
 		if gotStr != expectedStr {
 			t.Errorf("pop.print (opcode %x): Unexpected disasm "+

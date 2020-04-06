@@ -21,7 +21,7 @@ import (
 
 // isSmallInt returns whether or not the opcode is considered a small integer,
 // which is an OP_0, or OP_1 through OP_16.
-func isSmallInt(op *opcodeT) bool {
+func isSmallInt(op opcodeT) bool {
 	if op.value == opcode.OP_0 || (op.value >= opcode.OP_1 && op.value <= opcode.OP_16) {
 		return true
 	}
@@ -208,7 +208,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, 
 	retScript := make([]parsedOpcode, 0, len(script))
 	for i := 0; i < len(script); {
 		instr := script[i]
-		op := &opcodes[instr]
+		op := opcodes[instr]
 		pop := parsedOpcode{opcode: op}
 
 		// Parse data out of instruction.
@@ -685,7 +685,7 @@ func calcSignatureHash(script []parsedOpcode, hashType params.SigHashType, tx *w
 
 // asSmallInt returns the passed opcode, which must be true according to
 // isSmallInt(), as an integer.
-func asSmallInt(op *opcodeT) int {
+func asSmallInt(op opcodeT) int {
 	if op.value == opcode.OP_0 {
 		return 0
 	}
