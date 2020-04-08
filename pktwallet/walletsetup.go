@@ -292,7 +292,9 @@ func createWallet(cfg *config) er.R {
 	} else {
 		fmt.Printf(`{"seed":"%s"}`+"\n", seedInput)
 	}
-	seed.Zero()
+	if seed != nil {
+		seed.Zero()
+	}
 	return nil
 }
 
