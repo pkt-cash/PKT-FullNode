@@ -6,7 +6,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,8 +22,10 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
 	"github.com/pkt-cash/pktd/pktwallet/internal/prompt"
+	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 )
@@ -99,6 +104,13 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *wallet.Wallet) er.
 	return nil
 }
 
+type WalletSetupCfg struct {
+	Passphrase       *string `json:"passphrase"`
+	PublicPassphrase *string `json:"viewpassphrase"`
+	Seed             *string `json:"seed"`
+	SeedPassphrase   *string `json:"seedpassphrase"`
+}
+
 // createWallet prompts the user for information needed to generate a new wallet
 // and generates the wallet accordingly.  The new wallet will reside at the
 // provided path.
@@ -126,20 +138,76 @@ func createWallet(cfg *config) er.R {
 		}
 	}
 
+	fi, _ := os.Stdin.Stat()
+	tty := false
+	var privPass []byte
+	pubPass := []byte(wallet.InsecurePubPassphrase)
+	var seedInput []byte
+	var seed *seedwords.Seed
+	setupCfg := WalletSetupCfg{}
+	if (fi.Mode() & os.ModeCharDevice) != 0 {
+		tty = true
+	} else if bytes, err := ioutil.ReadAll(os.Stdin); err != nil {
+		return er.E(err)
+	} else if err := json.Unmarshal(bytes, &setupCfg); err != nil {
+		return er.E(err)
+	} else {
+		if setupCfg.Passphrase != nil {
+			privPass = []byte(*setupCfg.Passphrase)
+		}
+		if setupCfg.PublicPassphrase != nil {
+			pubPass = []byte(*setupCfg.PublicPassphrase)
+		}
+		if setupCfg.Seed != nil {
+			if decoded, err := hex.DecodeString(*setupCfg.Seed); err == nil {
+				zero.Bytes(decoded)
+				seedInput = []byte(*setupCfg.Seed)
+			} else {
+				seedEnc, err := seedwords.SeedFromWords(*setupCfg.Seed)
+				if err != nil {
+					return err
+				}
+				var bs []byte
+				if setupCfg.SeedPassphrase != nil {
+					bs = []byte(*setupCfg.SeedPassphrase)
+				}
+				if setupCfg.SeedPassphrase != nil || !seedEnc.NeedsPassphrase() {
+					s, err := seedEnc.Decrypt(bs, false)
+					if err != nil {
+						return err
+					}
+					seed = s
+				} else {
+					return er.New("The provided seed requires a passphrase")
+				}
+			}
+		} else {
+			if s, err := seedwords.RandomSeed(); err != nil {
+				return err
+			} else {
+				seed = s
+			}
+		}
+	}
+
 	// Start by prompting for the private passphrase.  When there is an
 	// existing keystore, the user will be promped for that passphrase,
 	// otherwise they will be prompted for a new one.
-	reader := bufio.NewReader(os.Stdin)
-	privPass, err := prompt.PrivatePass(reader, legacyKeyStore)
-	if err != nil {
-		return err
+	var reader *bufio.Reader
+	if tty {
+		reader = bufio.NewReader(os.Stdin)
+		pvt, err := prompt.PrivatePass(reader, legacyKeyStore)
+		if err != nil {
+			return err
+		}
+		privPass = pvt
 	}
 
 	// When there exists a legacy keystore, unlock it now and set up a
 	// callback to import all keystore keys into the new walletdb
 	// wallet
 	if legacyKeyStore != nil {
-		err = legacyKeyStore.Unlock(privPass)
+		err := legacyKeyStore.Unlock(privPass)
 		if err != nil {
 			return err
 		}
@@ -181,28 +249,50 @@ func createWallet(cfg *config) er.R {
 	// Ascertain the public passphrase.  This will either be a value
 	// specified by the user or the default hard-coded public passphrase if
 	// the user does not want the additional public data encryption.
-	pubPass, err := prompt.PublicPass(reader, privPass,
-		[]byte(wallet.InsecurePubPassphrase), []byte(cfg.WalletPass))
-	if err != nil {
-		return err
+	if tty {
+		pub, err := prompt.PublicPass(reader, privPass,
+			[]byte(wallet.InsecurePubPassphrase), []byte(cfg.WalletPass))
+		if err != nil {
+			return err
+		}
+		pubPass = pub
 	}
 
 	// Ascertain the wallet generation seed.  This will either be an
 	// automatically generated value the user has already confirmed or a
 	// value the user has entered which has already been validated.
-	seed, err := prompt.Seed(reader)
-	if err != nil {
-		return err
+	if tty {
+		si, sd, err := prompt.Seed(reader, privPass)
+		if err != nil {
+			return err
+		}
+		seedInput = si
+		seed = sd
 	}
 
-	fmt.Println("Creating the wallet...")
-	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
+	if tty {
+		fmt.Println("Creating the wallet...")
+	}
+	w, err := loader.CreateNewWallet(pubPass, privPass, seedInput, seed)
 	if err != nil {
 		return err
 	}
 
 	w.Manager.Close()
-	fmt.Println("The wallet has been created successfully.")
+	if tty {
+		fmt.Println("The wallet has been created successfully.")
+	} else if seed != nil {
+		seedEnc := seed.Encrypt(privPass)
+		if words, err := seedEnc.Words("english"); err != nil {
+			return err
+		} else {
+			fmt.Printf(`{"seed":"%s"}`+"\n", words)
+		}
+		seedEnc.Zero()
+	} else {
+		fmt.Printf(`{"seed":"%s"}`+"\n", seedInput)
+	}
+	seed.Zero()
 	return nil
 }
 
@@ -228,8 +318,13 @@ func createSimulationWallet(cfg *config) er.R {
 	}
 	defer db.Close()
 
+	seed, err := seedwords.RandomSeed()
+	if err != nil {
+		return err
+	}
+
 	// Create the wallet.
-	err = wallet.Create(db, pubPass, privPass, nil, activeNet.Params, time.Now())
+	err = wallet.Create(db, pubPass, privPass, nil, seed, activeNet.Params)
 	if err != nil {
 		return err
 	}

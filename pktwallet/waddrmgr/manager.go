@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 	"github.com/pkt-cash/pktd/pktwallet/snacl"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -286,6 +287,8 @@ type Manager struct {
 	// This key will be zeroed when the address manager is locked.
 	cryptoKeyPrivEncrypted []byte
 	cryptoKeyPriv          EncryptorDecryptor
+
+	xseed *seedwords.SeedEnc
 
 	// cryptoKeyScript is the key used to encrypt script data.
 	//
@@ -752,6 +755,15 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 			return managerError(ErrCrypto, str, err)
 		}
 
+		var newSeed *seedwords.SeedEnc
+		if m.xseed == nil {
+		} else if s, err := m.xseed.Decrypt(oldPassphrase, false); err != nil {
+			return managerError(ErrCrypto, "Unable to decrypt seed", err)
+		} else {
+			newSeed = s.Encrypt(newPassphrase)
+			s.Zero()
+		}
+
 		// Re-encrypt the crypto script key using the new master
 		// private key.
 		decScript, err := secretKey.Decrypt(m.cryptoKeyScriptEncrypted)
@@ -782,7 +794,7 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 
 		// Save the new keys and params to the db in a single
 		// transaction.
-		err = putCryptoKeys(ns, nil, encPriv, encScript)
+		err = putCryptoKeys(ns, nil, encPriv, encScript, newSeed)
 		if err != nil {
 			return maybeConvertDbError(err)
 		}
@@ -811,7 +823,7 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 
 		// Save the new keys and params to the the db in a single
 		// transaction.
-		err = putCryptoKeys(ns, encryptedPub, nil, nil)
+		err = putCryptoKeys(ns, encryptedPub, nil, nil, nil)
 		if err != nil {
 			return maybeConvertDbError(err)
 		}
@@ -903,6 +915,11 @@ func (m *Manager) ConvertToWatchingOnly(ns walletdb.ReadWriteBucket) er.R {
 	zero.Bytes(m.cryptoKeyPrivEncrypted)
 	m.cryptoKeyPrivEncrypted = nil
 	m.cryptoKeyPriv = nil
+
+	if m.xseed != nil {
+		m.xseed.Zero()
+		m.xseed = nil
+	}
 
 	// The master private key is derived from a passphrase when the manager
 	// is unlocked, so there is no encrypted version to zero.  However,
@@ -1165,7 +1182,8 @@ func (m *Manager) Decrypt(keyType CryptoKeyType, in []byte) ([]byte, er.R) {
 // newManager returns a new locked address manager with the given parameters.
 func newManager(chainParams *chaincfg.Params, masterKeyPub *snacl.SecretKey,
 	masterKeyPriv *snacl.SecretKey, cryptoKeyPub EncryptorDecryptor,
-	cryptoKeyPrivEncrypted, cryptoKeyScriptEncrypted []byte, syncInfo *syncState,
+	cryptoKeyPrivEncrypted []byte, xseed *seedwords.SeedEnc,
+	cryptoKeyScriptEncrypted []byte, syncInfo *syncState,
 	birthday time.Time, privPassphraseSalt [saltSize]byte,
 	scopedManagers map[KeyScope]*ScopedKeyManager) *Manager {
 
@@ -1178,6 +1196,7 @@ func newManager(chainParams *chaincfg.Params, masterKeyPub *snacl.SecretKey,
 		masterKeyPriv:            masterKeyPriv,
 		cryptoKeyPub:             cryptoKeyPub,
 		cryptoKeyPrivEncrypted:   cryptoKeyPrivEncrypted,
+		xseed:                    xseed,
 		cryptoKeyPriv:            &cryptoKey{},
 		cryptoKeyScriptEncrypted: cryptoKeyScriptEncrypted,
 		cryptoKeyScript:          &cryptoKey{},
@@ -1314,7 +1333,7 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	}
 
 	// Load the crypto keys from the db.
-	cryptoKeyPubEnc, cryptoKeyPrivEnc, cryptoKeyScriptEnc, err :=
+	cryptoKeyPubEnc, cryptoKeyPrivEnc, xseed, cryptoKeyScriptEnc, err :=
 		fetchCryptoKeys(ns)
 	if err != nil {
 		return nil, maybeConvertDbError(err)
@@ -1407,7 +1426,7 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	// database.
 	mgr := newManager(
 		chainParams, &masterKeyPub, &masterKeyPriv,
-		cryptoKeyPub, cryptoKeyPrivEnc, cryptoKeyScriptEnc, syncInfo,
+		cryptoKeyPub, cryptoKeyPrivEnc, xseed, cryptoKeyScriptEnc, syncInfo,
 		birthday, privPassphraseSalt, scopedManagers,
 	)
 	mgr.watchingOnly = watchingOnly
@@ -1559,9 +1578,15 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 //
 // A ManagerError with an error code of ErrAlreadyExists will be returned the
 // address manager already exists in the specified namespace.
-func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []byte,
-	chainParams *chaincfg.Params, config *ScryptOptions,
-	birthday time.Time) er.R {
+func Create(
+	ns walletdb.ReadWriteBucket,
+	legacySeed []byte,
+	seedx *seedwords.Seed,
+	pubPassphrase, privPassphrase []byte,
+	chainParams *chaincfg.Params,
+	config *ScryptOptions,
+	birthday time.Time,
+) er.R {
 
 	// Return an error if the manager has already been created in
 	// the given database namespace.
@@ -1646,6 +1671,10 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		str := "failed to encrypt crypto script key"
 		return managerError(ErrCrypto, str, err)
 	}
+	var seedxEnc *seedwords.SeedEnc
+	if seedx != nil {
+		seedxEnc = seedx.Encrypt(privPassphrase)
+	}
 
 	// Use the genesis block for the passed chain as the created at block
 	// for the default.
@@ -1666,7 +1695,13 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	// can generate the required structure with no issues.
 
 	// Derive the master extended key from the seed.
-	rootKey, err := hdkeychain.NewMaster(seed, chainParams)
+	var seedBytes []byte
+	if seedx != nil {
+		seedBytes = seedx.Bytes()
+	} else {
+		seedBytes = legacySeed
+	}
+	rootKey, err := hdkeychain.NewMaster(seedBytes, chainParams)
 	if err != nil {
 		str := "failed to derive master extended key"
 		return managerError(ErrKeyChain, str, err)
@@ -1706,7 +1741,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 
 	// Save the encrypted crypto keys to the database.
 	err = putCryptoKeys(ns, cryptoKeyPubEnc, cryptoKeyPrivEnc,
-		cryptoKeyScriptEnc)
+		cryptoKeyScriptEnc, seedxEnc)
 	if err != nil {
 		return maybeConvertDbError(err)
 	}
@@ -1728,6 +1763,5 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		return maybeConvertDbError(err)
 	}
 
-	// Use 48 hours as margin of safety for wallet birthday.
-	return putBirthday(ns, birthday.Add(-48*time.Hour))
+	return putBirthday(ns, birthday)
 }

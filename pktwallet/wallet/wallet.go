@@ -29,6 +29,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -2940,23 +2941,31 @@ func (w *Wallet) ChainParams() *chaincfg.Params {
 // Create creates an new wallet, writing it to an empty database.  If the passed
 // seed is non-nil, it is used.  Otherwise, a secure random seed of the
 // recommended length is generated.
-func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Params,
-	birthday time.Time) er.R {
+func Create(db walletdb.DB, pubPass, privPass []byte, seedInput []byte,
+	seedx *seedwords.Seed, params *chaincfg.Params) er.R {
 
 	// If a seed was provided, ensure that it is of valid length. Otherwise,
 	// we generate a random seed for the wallet with the recommended seed
 	// length.
-	if seed == nil {
-		hdSeed, err := hdkeychain.GenerateSeed(
-			hdkeychain.RecommendedSeedLen)
-		if err != nil {
-			return err
+	var legacySeed []byte
+	if seedx != nil {
+	} else if seedbin, err := hex.DecodeString(string(seedInput)); err == nil {
+		// it's a legacy seed, we need to just support it
+		if len(seedbin) < hdkeychain.MinSeedBytes ||
+			len(seedbin) > hdkeychain.MaxSeedBytes {
+			return hdkeychain.ErrInvalidSeedLen.Default()
 		}
-		seed = hdSeed
+		legacySeed = seedbin
+	} else {
+		return er.New("No seed provided")
 	}
-	if len(seed) < hdkeychain.MinSeedBytes ||
-		len(seed) > hdkeychain.MaxSeedBytes {
-		return hdkeychain.ErrInvalidSeedLen.Default()
+
+	var birthday time.Time
+	if seedx != nil {
+		birthday = seedx.Birthday()
+	} else {
+		// If we don't know the bday, put it before all of this began
+		birthday = time.Unix(1231006505, 0)
 	}
 
 	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
@@ -2970,7 +2979,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 		}
 
 		err = waddrmgr.Create(
-			addrmgrNs, seed, pubPass, privPass, params, nil,
+			addrmgrNs, legacySeed, seedx, pubPass, privPass, params, nil,
 			birthday,
 		)
 		if err != nil {

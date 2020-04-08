@@ -257,7 +257,7 @@ func setupManager(t *testing.T) (tearDownFunc func(), db walletdb.DB, mgr *Manag
 			return err
 		}
 		err = Create(
-			ns, seed, pubPassphrase, privPassphrase,
+			ns, seed, nil, pubPassphrase, privPassphrase,
 			&chaincfg.MainNetParams, fastScrypt, time.Time{},
 		)
 		if err != nil {

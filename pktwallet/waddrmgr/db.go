@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -266,6 +267,7 @@ var (
 	cryptoPrivKeyName   = []byte("cpriv")
 	cryptoPubKeyName    = []byte("cpub")
 	cryptoScriptKeyName = []byte("cscript")
+	cryptoSeedName      = []byte("cseed")
 	watchingOnlyName    = []byte("watchonly")
 
 	// Sync related key names (sync bucket).
@@ -577,14 +579,14 @@ func fetchMasterHDKeys(ns walletdb.ReadBucket) ([]byte, []byte, er.R) {
 // protect the extended keys, imported keys, and scripts.  Any of the returned
 // values can be nil, but in practice only the crypto private and script keys
 // will be nil for a watching-only database.
-func fetchCryptoKeys(ns walletdb.ReadBucket) ([]byte, []byte, []byte, er.R) {
+func fetchCryptoKeys(ns walletdb.ReadBucket) ([]byte, []byte, *seedwords.SeedEnc, []byte, er.R) {
 	bucket := ns.NestedReadBucket(mainBucketName)
 
 	// Load the crypto public key parameters.  Required.
 	val := bucket.Get(cryptoPubKeyName)
 	if val == nil {
 		str := "required encrypted crypto public not stored in database"
-		return nil, nil, nil, managerError(ErrDatabase, str, nil)
+		return nil, nil, nil, nil, managerError(ErrDatabase, str, nil)
 	}
 	pubKey := make([]byte, len(val))
 	copy(pubKey, val)
@@ -597,6 +599,14 @@ func fetchCryptoKeys(ns walletdb.ReadBucket) ([]byte, []byte, []byte, er.R) {
 		copy(privKey, val)
 	}
 
+	// Load the seed.
+	var xseed *seedwords.SeedEnc
+	if val = bucket.Get(cryptoSeedName); val != nil {
+		s := seedwords.SeedEnc{}
+		copy(s.Bytes[:], val)
+		xseed = &s
+	}
+
 	// Load the crypto script key parameters if they were stored.
 	var scriptKey []byte
 	val = bucket.Get(cryptoScriptKeyName)
@@ -605,14 +615,19 @@ func fetchCryptoKeys(ns walletdb.ReadBucket) ([]byte, []byte, []byte, er.R) {
 		copy(scriptKey, val)
 	}
 
-	return pubKey, privKey, scriptKey, nil
+	return pubKey, privKey, xseed, scriptKey, nil
 }
 
 // putCryptoKeys stores the encrypted crypto keys which are in turn used to
 // protect the extended and imported keys.  Either parameter can be nil in
 // which case no value is written for the parameter.
-func putCryptoKeys(ns walletdb.ReadWriteBucket, pubKeyEncrypted, privKeyEncrypted,
-	scriptKeyEncrypted []byte) er.R {
+func putCryptoKeys(
+	ns walletdb.ReadWriteBucket,
+	pubKeyEncrypted []byte,
+	privKeyEncrypted []byte,
+	scriptKeyEncrypted []byte,
+	seedxEnc *seedwords.SeedEnc,
+) er.R {
 
 	bucket := ns.NestedReadWriteBucket(mainBucketName)
 
@@ -638,6 +653,11 @@ func putCryptoKeys(ns walletdb.ReadWriteBucket, pubKeyEncrypted, privKeyEncrypte
 			str := "failed to store encrypted crypto script key"
 			return managerError(ErrDatabase, str, err)
 		}
+	}
+
+	if seedxEnc == nil {
+	} else if err := bucket.Put(cryptoSeedName, seedxEnc.Bytes[:]); err != nil {
+		return managerError(ErrDatabase, "failed to store encrypted seed", err)
 	}
 
 	return nil

@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/golangcrypto/ssh/terminal"
 	"github.com/pkt-cash/pktd/btcutil/hdkeychain"
 	"github.com/pkt-cash/pktd/pktwallet/internal/legacy/keystore"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 )
 
 // ProvideSeed is used to prompt for the wallet seed which maybe required during
@@ -262,34 +263,40 @@ func PublicPass(reader *bufio.Reader, privPass []byte,
 // the user along with prompting them for confirmation.  When the user answers
 // yes, a the user is prompted for it.  All prompts are repeated until the user
 // enters a valid response.
-func Seed(reader *bufio.Reader) ([]byte, er.R) {
+func Seed(reader *bufio.Reader, passphrase []byte) ([]byte, *seedwords.Seed, er.R) {
 	// Ascertain the wallet generation seed.
 	useUserSeed, err := promptListBool(reader, "Do you have an "+
 		"existing wallet seed you want to use?", "no")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !useUserSeed {
-		seed, err := hdkeychain.GenerateSeed(hdkeychain.RecommendedSeedLen)
+		seed, err := seedwords.RandomSeed()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-
+		fmt.Println("Encrypting your seed...")
+		seedEnc := seed.Encrypt(passphrase)
+		words, err := seedEnc.Words("english")
+		if err != nil {
+			return nil, nil, err
+		}
+		seedEnc.Zero()
 		fmt.Println("Your wallet generation seed is:")
-		fmt.Printf("%x\n", seed)
-		fmt.Println("IMPORTANT: Keep the seed in a safe place as you\n" +
-			"will NOT be able to restore your wallet without it.")
+		fmt.Printf("\n%s\n\n", words)
+		fmt.Println("IMPORTANT: Keep the seed in a safe place.\n" +
+			"If your wallet is destroyed, you can recover it as long as\n" +
+			"you have this seed and your wallet passphrase.")
 		fmt.Println("Please keep in mind that anyone who has access\n" +
-			"to the seed can also restore your wallet thereby\n" +
-			"giving them access to all your funds, so it is\n" +
-			"imperative that you keep it in a secure location.")
+			"to the seed only needs to guess your wallet passphrase to\n" +
+			"access your funds.")
 
 		for {
 			fmt.Print(`Once you have stored the seed in a safe ` +
-				`and secure location, enter "OK" to continue: `)
+				`and secure location, type "OK" to continue: `)
 			confirmSeed, err := reader.ReadString('\n')
 			if err != nil {
-				return nil, er.E(err)
+				return nil, nil, er.E(err)
 			}
 			confirmSeed = strings.TrimSpace(confirmSeed)
 			confirmSeed = strings.Trim(confirmSeed, `"`)
@@ -298,28 +305,46 @@ func Seed(reader *bufio.Reader) ([]byte, er.R) {
 			}
 		}
 
-		return seed, nil
+		return nil, seed, nil
 	}
 
 	for {
 		fmt.Print("Enter existing wallet seed: ")
 		seedStr, err := reader.ReadString('\n')
 		if err != nil {
-			return nil, er.E(err)
+			return nil, nil, er.E(err)
 		}
 		seedStr = strings.TrimSpace(strings.ToLower(seedStr))
 
-		seed, err := hex.DecodeString(seedStr)
-		if err != nil || len(seed) < hdkeychain.MinSeedBytes ||
-			len(seed) > hdkeychain.MaxSeedBytes {
-
-			fmt.Printf("Invalid seed specified.  Must be a "+
-				"hexadecimal value that is at least %d bits and "+
-				"at most %d bits\n", hdkeychain.MinSeedBytes*8,
-				hdkeychain.MaxSeedBytes*8)
-			continue
+		if seed, err := hex.DecodeString(seedStr); err != nil {
+		} else if len(seed) < hdkeychain.MinSeedBytes {
+		} else if len(seed) > hdkeychain.MaxSeedBytes {
+		} else {
+			return []byte(seedStr), nil, nil
 		}
 
-		return seed, nil
+		if sw, err := seedwords.SeedFromWords(seedStr); err != nil {
+			fmt.Printf("Invalid seed specified [%s]", err.Message())
+		} else if sw.NeedsPassphrase() {
+			fmt.Println("This seed was taken from a wallet protected by a password.")
+			for {
+				pass, err := promptPass(reader, "Enter the wallet password now", false)
+				if err != nil {
+					return nil, nil, err
+				}
+				fmt.Println("Decrypting your seed...")
+				if seed, err := sw.Decrypt(pass, false); err != nil {
+					fmt.Println("The seed did not decrypt properly, please try again.")
+				} else {
+					return nil, seed, nil
+				}
+			}
+		} else {
+			if seed, err := sw.Decrypt(nil, false); err != nil {
+				return nil, nil, err
+			} else {
+				return nil, seed, nil
+			}
+		}
 	}
 }
