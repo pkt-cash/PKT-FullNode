@@ -665,6 +665,10 @@ func (m *Manager) ForEachAccountAddress(ns walletdb.ReadBucket, account uint32,
 	return nil
 }
 
+func (m *Manager) Seed() *seedwords.SeedEnc {
+	return m.xseed
+}
+
 // ChainParams returns the chain parameters for this address manager.
 func (m *Manager) ChainParams() *chaincfg.Params {
 	// NOTE: No need for mutex here since the net field does not change
@@ -812,6 +816,10 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 		m.masterKeyPriv = newMasterKey
 		m.privPassphraseSalt = passphraseSalt
 		m.hashedPrivPassphrase = hashedPassphrase
+		if m.xseed != nil {
+			m.xseed.Zero()
+		}
+		m.xseed = newSeed
 	} else {
 		// Re-encrypt the crypto public key using the new master public
 		// key.

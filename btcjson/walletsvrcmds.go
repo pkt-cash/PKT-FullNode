@@ -66,6 +66,8 @@ type GetAddressBalancesCmd struct {
 	ShowZeroBalance *bool
 }
 
+type GetWalletSeedCmd struct{}
+
 type ResyncCmd struct {
 	DropDb *bool
 }
@@ -450,6 +452,7 @@ func init() {
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)
 	MustRegisterCmd("getreceivedbyaddress", (*GetReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("gettransaction", (*GetTransactionCmd)(nil), flags)
+	MustRegisterCmd("getwalletseed", (*GetWalletSeedCmd)(nil), flags)
 	MustRegisterCmd("importprivkey", (*ImportPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("listlockunspent", (*ListLockUnspentCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaddress", (*ListReceivedByAddressCmd)(nil), flags)

@@ -43,6 +43,9 @@ var helpDescsEnUS = map[string]string{
 	"getaddressbalancesresult-address":        "The address which has this balance",
 	"getaddressbalancesresult-outputcount":    "The number of transaction outputs which make up the balance",
 
+	"getwalletseed--synopsis": "Get the wallet seed words for this wallet",
+	"getwalletseed--result0":  "The seed words used, along with the wallet passphrase, to create the wallet",
+
 	// SetNetworkStewardCmd help.
 	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",
 	"setnetworkstewardvote-voteagainst": "The address to vote against (if this is the current NS then this will cause a vote for an election)",

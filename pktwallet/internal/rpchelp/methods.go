@@ -39,6 +39,7 @@ var Methods = []struct {
 	{"getnewaddress", returnsString},
 	{"getreceivedbyaddress", returnsNumber},
 	{"gettransaction", []interface{}{(*btcjson.GetTransactionResult)(nil)}},
+	{"getwalletseed", returnsString},
 	{"help", append(returnsString, returnsString[0])},
 	{"importprivkey", nil},
 	{"listlockunspent", []interface{}{(*[]btcjson.TransactionInput)(nil)}},

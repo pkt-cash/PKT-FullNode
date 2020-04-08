@@ -119,6 +119,7 @@ var rpcHandlers = map[string]struct {
 	"resync":                {handler: resync},
 	"vacuum":                {handler: vacuum},
 	"getaddressbalances":    {handler: getAddressBalances},
+	"getwalletseed":         {handler: getWalletSeed},
 	// This was an extension but the reference implementation added it as
 	// well, but with a different API (no account parameter).  It's listed
 	// here because it hasn't been update to use the reference
@@ -357,6 +358,17 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 		}
 		return results, nil
 	}
+}
+
+func getWalletSeed(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	if w.Manager.IsLocked() {
+		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
+	}
+	seed := w.Manager.Seed()
+	if seed == nil {
+		return nil, er.New("No seed found, this is probably a legacy wallet")
+	}
+	return seed.Words("english")
 }
 
 // getBalance handles a getbalance request by returning the balance for an
