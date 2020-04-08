@@ -759,7 +759,10 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 					timeSpent := time.Since(startTime)
 					blocksSynced := height - ws.SyncFrom
 					blocksToGo := ws.SyncTo - height
-					timePerBlock := timeSpent / time.Duration(blocksSynced)
+					timePerBlock := time.Duration(0)
+					if blocksSynced > 0 {
+						timePerBlock = timeSpent / time.Duration(blocksSynced)
+					}
 					timeToGo = timePerBlock * time.Duration(blocksToGo)
 					ws.SyncRemainingSeconds = int64(timeToGo.Seconds())
 				}
