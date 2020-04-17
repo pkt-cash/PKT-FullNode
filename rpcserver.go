@@ -1175,29 +1175,53 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	}
 
 	blockHeader := &blk.MsgBlock().Header
+	difficulty := getDifficultyRatio(blockHeader.Bits, params)
+	var retargetEstimate *float64
+
+	blocksBetweenRetargets := int32(params.TargetTimespan / params.TargetTimePerBlock)
+	blocksUntilRetarget := blocksBetweenRetargets - (int32(blockHeight) % blocksBetweenRetargets)
+	if blocksUntilRetarget == blocksBetweenRetargets {
+		blocksUntilRetarget = 0
+	}
+	if blockHeight > blocksBetweenRetargets {
+		lastHdr, err := s.cfg.Chain.BlockHeaderByHeight(blockHeight - blocksBetweenRetargets)
+		if err != nil {
+			return nil, internalRPCError(err, "Computing expected difficulty retarget")
+		}
+		timeRangeSeconds := blockHeader.Timestamp.Unix() - lastHdr.Timestamp.Unix()
+		nextTar := s.cfg.Chain.ComputeNextTarget(timeRangeSeconds, blockHeader.Bits)
+		nextDiff := getDifficultyRatio(nextTar, params)
+		re := float64(nextDiff) / float64(difficulty)
+		retargetEstimate = &re
+	}
+
+	//ComputeNextTarget
+
 	blockReply := btcjson.GetBlockVerboseResult{
-		Hash:            c.Hash,
-		Version:         blockHeader.Version,
-		VersionHex:      fmt.Sprintf("%08x", blockHeader.Version),
-		MerkleRoot:      blockHeader.MerkleRoot.String(),
-		PreviousHash:    blockHeader.PrevBlock.String(),
-		Nonce:           blockHeader.Nonce,
-		Time:            blockHeader.Timestamp.Unix(),
-		Confirmations:   int64(1 + best.Height - blockHeight),
-		Height:          int64(blockHeight),
-		Size:            int32(len(blkBytes)),
-		StrippedSize:    int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:          int32(blockchain.GetBlockWeight(blk)),
-		Bits:            strconv.FormatInt(int64(blockHeader.Bits), 16),
-		Difficulty:      getDifficultyRatio(blockHeader.Bits, params),
-		NextHash:        nextHashString,
-		PcpVersion:      pcVer,
-		PcAnnCount:      pcAnnCount,
-		PcAnnBits:       pcAnnBits,
-		PcAnnDifficulty: pcAnnDifficulty,
-		PcBlkDifficulty: pcBlkDifficulty,
-		BlockReward:     strconv.FormatInt(blockReward, 10),
-		NetworkSteward:  ns,
+		Hash:                c.Hash,
+		Version:             blockHeader.Version,
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
+		MerkleRoot:          blockHeader.MerkleRoot.String(),
+		PreviousHash:        blockHeader.PrevBlock.String(),
+		Nonce:               blockHeader.Nonce,
+		Time:                blockHeader.Timestamp.Unix(),
+		Confirmations:       int64(1 + best.Height - blockHeight),
+		Height:              int64(blockHeight),
+		Size:                int32(len(blkBytes)),
+		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:              int32(blockchain.GetBlockWeight(blk)),
+		Bits:                strconv.FormatInt(int64(blockHeader.Bits), 16),
+		Difficulty:          difficulty,
+		NextHash:            nextHashString,
+		PcpVersion:          pcVer,
+		PcAnnCount:          pcAnnCount,
+		PcAnnBits:           pcAnnBits,
+		PcAnnDifficulty:     pcAnnDifficulty,
+		PcBlkDifficulty:     pcBlkDifficulty,
+		BlockReward:         strconv.FormatInt(blockReward, 10),
+		NetworkSteward:      ns,
+		BlocksUntilRetarget: blocksUntilRetarget,
+		RetargetEstimate:    retargetEstimate,
 	}
 
 	if c.VerboseTx == nil || !*c.VerboseTx {

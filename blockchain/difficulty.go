@@ -232,6 +232,8 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 		// For networks that support it, allow special reduction of the
 		// required difficulty once too much time has elapsed without
 		// mining a block.
+		// PKT blockchain had this enabled up until height 50000 so this
+		// is necessary in order to be able to sync.
 		if b.chainParams.ReduceMinDifficulty ||
 			(b.chainParams.HDCoinType == 390 && lastNode.height < 50000) {
 			// Return minimum difficulty when more than the desired
@@ -264,10 +266,24 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 	// Limit the amount of adjustment that can occur to the previous
 	// difficulty.
 	actualTimespan := lastNode.timestamp - firstNode.timestamp
-	adjustedTimespan := actualTimespan
-	if actualTimespan < b.minRetargetTimespan {
+
+	newTargetBits := b.computeNextTarget(actualTimespan, lastNode.bits)
+
+	log.Debugf("Difficulty retarget at block height %d", lastNode.height+1)
+	log.Debugf("Old target %08x (%064x)", lastNode.bits, lastNode.bits)
+	log.Debugf("New target %08x (%064x)", newTargetBits, CompactToBig(newTargetBits))
+	log.Debugf("Actual timespan %v, target timespan %v",
+		time.Duration(actualTimespan)*time.Second,
+		b.chainParams.TargetTimespan)
+
+	return newTargetBits, nil
+}
+
+func (b *BlockChain) computeNextTarget(timespanSeconds int64, currentDiff uint32) uint32 {
+	adjustedTimespan := timespanSeconds
+	if timespanSeconds < b.minRetargetTimespan {
 		adjustedTimespan = b.minRetargetTimespan
-	} else if actualTimespan > b.maxRetargetTimespan {
+	} else if timespanSeconds > b.maxRetargetTimespan {
 		adjustedTimespan = b.maxRetargetTimespan
 	}
 
@@ -276,7 +292,7 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 	// The result uses integer division which means it will be slightly
 	// rounded down.  Bitcoind also uses integer division to calculate this
 	// result.
-	oldTarget := CompactToBig(lastNode.bits)
+	oldTarget := CompactToBig(currentDiff)
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(adjustedTimespan))
 	targetTimeSpan := int64(b.chainParams.TargetTimespan / time.Second)
 	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
@@ -291,15 +307,14 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 	// newTarget since conversion to the compact representation loses
 	// precision.
 	newTargetBits := BigToCompact(newTarget)
-	log.Debugf("Difficulty retarget at block height %d", lastNode.height+1)
-	log.Debugf("Old target %08x (%064x)", lastNode.bits, oldTarget)
-	log.Debugf("New target %08x (%064x)", newTargetBits, CompactToBig(newTargetBits))
-	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
-		time.Duration(actualTimespan)*time.Second,
-		time.Duration(adjustedTimespan)*time.Second,
-		b.chainParams.TargetTimespan)
 
-	return newTargetBits, nil
+	return newTargetBits
+}
+
+func (b *BlockChain) ComputeNextTarget(timespanSeconds int64, currentDiff uint32) uint32 {
+	b.chainLock.Lock()
+	defer b.chainLock.Unlock()
+	return b.computeNextTarget(timespanSeconds, currentDiff)
 }
 
 // CalcNextRequiredDifficulty calculates the required difficulty for the block

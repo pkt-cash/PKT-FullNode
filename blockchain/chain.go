@@ -1375,6 +1375,21 @@ func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, er.R
 	return &node.hash, nil
 }
 
+// BlockHeaderByHeight returns the block header of the block at the given height in the
+// main chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockHeaderByHeight(blockHeight int32) (*wire.BlockHeader, er.R) {
+	node := b.bestChain.NodeByHeight(blockHeight)
+	if node == nil {
+		str := fmt.Sprintf("no block at height %d exists", blockHeight)
+		return nil, errNotInMainChain(str)
+
+	}
+	h := node.Header()
+	return &h, nil
+}
+
 // HeightRange returns a range of block hashes for the given start and end
 // heights.  It is inclusive of the start height and exclusive of the end
 // height.  The end height will be limited to the current main chain height.
