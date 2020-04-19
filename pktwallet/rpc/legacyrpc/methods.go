@@ -422,10 +422,15 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		walletStats = *ws
 	})
 
+	mgrStamp := w.Manager.SyncedTo()
+
 	out := btcjson.WalletInfoResult{
-		CurrentBlockHash:      bs.Hash.String(),
-		CurrentHeight:         bs.Height,
-		CurrentBlockTimestamp: bs.Timestamp,
+		CurrentBlockHash:      mgrStamp.Hash.String(),
+		CurrentHeight:         mgrStamp.Height,
+		CurrentBlockTimestamp: mgrStamp.Timestamp,
+		BackendBlockHash:      bs.Hash.String(),
+		BackendHeight:         bs.Height,
+		BackendBlockTimestamp: bs.Timestamp,
 		IsSyncing:             !chainClient.IsCurrent(),
 		Backend:               chainClient.BackEnd(),
 		WalletVersion:         int32(waddrmgr.LatestMgrVersion),

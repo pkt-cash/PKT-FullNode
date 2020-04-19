@@ -205,6 +205,27 @@ func (w *Wallet) handleChainNotifications() {
 func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) er.R {
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 
+	st := w.Manager.SyncedTo()
+	for height := st.Height + 1; height < b.Height; height++ {
+		log.Infof("Inserting block [%d] which is out of order, must insert [%d] first",
+			b.Height, height)
+		hash, err := w.chainClient.GetBlockHash(int64(height))
+		if err != nil {
+			err.AddMessage(fmt.Sprintf("Unable to backfill missing block hash [%d]", st.Height+1))
+			return err
+		}
+		hdr, err := w.chainClient.GetBlockHeader(hash)
+		bs := waddrmgr.BlockStamp{
+			Height:    height,
+			Hash:      *hash,
+			Timestamp: hdr.Timestamp,
+		}
+		if err := w.Manager.SetSyncedTo(addrmgrNs, &bs); err != nil {
+			return err
+		}
+		w.NtfnServer.notifyAttachedBlock(dbtx, &b)
+	}
+
 	bs := waddrmgr.BlockStamp{
 		Height:    b.Height,
 		Hash:      b.Hash,

@@ -94,6 +94,9 @@ type WalletInfoResult struct {
 	CurrentBlockHash      string
 	CurrentHeight         int32
 	CurrentBlockTimestamp time.Time
+	BackendBlockHash      string
+	BackendHeight         int32
+	BackendBlockTimestamp time.Time
 	IsSyncing             bool
 	Backend               string
 	WalletVersion         int32
