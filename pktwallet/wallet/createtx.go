@@ -571,9 +571,9 @@ func validateMsgTx(tx *wire.MsgTx) er.R {
 	}
 	for i, add := range tx.Additional {
 		if len(add.PkScript) == 0 {
-			return er.Errorf("Unable to valudate transaction, add.PkScript is empty")
+			return er.Errorf("Unable to validate transaction, add.PkScript is empty")
 		} else if add.Value == nil {
-			return er.Errorf("Unable to valudate transaction, add.Value is unknown")
+			return er.Errorf("Unable to validate transaction, add.Value is unknown")
 		}
 		vm, err := txscript.NewEngine(add.PkScript, tx, i,
 			txscript.StandardVerifyFlags, nil, hashCache, *add.Value)
