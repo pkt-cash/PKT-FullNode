@@ -171,24 +171,6 @@ func ExtractWitnessProgramInfo(script []byte) (int, []byte, er.R) {
 	return witnessVersion, witnessProgram, nil
 }
 
-// isPushOnly returns true if the script only pushes data, false otherwise.
-func isPushOnly(pops []parsescript.ParsedOpcode) bool {
-	// NOTE: This function does NOT verify opcodes directly since it is
-	// internal and is only called with parsed opcodes for scripts that did
-	// not have any parse errors.  Thus, consensus is properly maintained.
-
-	for _, pop := range pops {
-		// All opcodes up to OP_16 are data push instructions.
-		// NOTE: This does consider OP_RESERVED to be a data push
-		// instruction, but execution of OP_RESERVED will fail anyways
-		// and matches the behavior required by consensus.
-		if pop.Opcode.Value > opcode.OP_16 {
-			return false
-		}
-	}
-	return true
-}
-
 // IsPushOnlyScript returns whether or not the passed script only pushes data.
 //
 // False will be returned when the script does not parse.
@@ -197,7 +179,7 @@ func IsPushOnlyScript(script []byte) bool {
 	if err != nil {
 		return false
 	}
-	return isPushOnly(pops)
+	return parsescript.IsPushOnly(pops)
 }
 
 // unparseScript reversed the action of parseScript and returns the
@@ -670,7 +652,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// The signature script must only push data to the stack for P2SH to be
 	// a valid pair, so the signature operation count is 0 when that is not
 	// the case.
-	if !isPushOnly(sigPops) || len(sigPops) == 0 {
+	if !parsescript.IsPushOnly(sigPops) || len(sigPops) == 0 {
 		return 0
 	}
 
@@ -709,7 +691,7 @@ func GetWitnessSigOpCount(sigScript, pkScript []byte, witness wire.TxWitness) in
 	if err != nil {
 		return 0
 	}
-	if IsPayToScriptHash(pkScript) && isPushOnly(sigPops) &&
+	if IsPayToScriptHash(pkScript) && parsescript.IsPushOnly(sigPops) &&
 		IsWitnessProgram(sigScript[1:]) {
 		return getWitnessSigOps(sigScript[1:], witness)
 	}

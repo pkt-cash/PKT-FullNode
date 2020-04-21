@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire/constants"
 )
@@ -1057,20 +1058,27 @@ func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn, add *TxInAdditi
 	} else if len(sigScript) < 2 {
 	} else if sigScript[0] != 0xff || sigScript[1] != 0x00 {
 	} else {
-		buf := bytes.NewBuffer(sigScript[2:])
-		vi, err := ReadVarInt(buf, pver)
+		// What follows ff00 is a push script, that means it's not just a simple length
+		codes, err := parsescript.ParseScript(sigScript[2:])
 		if err != nil {
-		} else if int(vi) != buf.Len() {
+			// In theory this could be ok, but it would be a payment to a script that
+			// literally begins with ff00 (invalid_opcode + 0)
+			err.AddMessage("Malformatted EPTF transaction")
+			return err
+		} else if !parsescript.IsPushOnly(codes) {
+			return er.New("Malformatted EPTF, not a push script")
+		} else if len(codes) != 1 {
+			return er.New("Malformatted EPTF, push script with more than 1 entry")
 		} else {
-			bytes := buf.Bytes()
-			if len(bytes) < 1 {
-				return er.New("Unable to read EPTF input, runt")
+			addr := codes[0].Data
+			if len(addr) < 1 {
+				return er.New("Unable to read EPTF address, runt")
 			}
-			if bytes[0] != 0xfd {
-				return er.Errorf("Unable to read EPTF input, unexpected key [%x]", bytes[0])
+			if addr[0] != 0xfd {
+				return er.Errorf("Unable to read EPTF input, unexpected key [%x]", addr[0])
 			}
 			ti.SignatureScript = nil
-			add.PkScript = bytes[1:]
+			add.PkScript = addr[1:]
 		}
 	}
 	return readElement(r, &ti.Sequence)

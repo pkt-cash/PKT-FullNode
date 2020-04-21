@@ -284,7 +284,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 	si.PkScriptClass = typeOfScript(pkPops)
 
 	// Can't have a signature script that doesn't just push data.
-	if !isPushOnly(sigPops) {
+	if !parsescript.IsPushOnly(sigPops) {
 		return nil, txscripterr.ScriptError(txscripterr.ErrNotPushOnly,
 			"signature script is not push only")
 	}

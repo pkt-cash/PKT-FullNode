@@ -122,3 +122,21 @@ func ParseScriptTemplate(script []byte, opcodes map[byte]opcode.Opcode) ([]Parse
 func ParseScript(script []byte) ([]ParsedOpcode, er.R) {
 	return ParseScriptTemplate(script, nil)
 }
+
+// IsPushOnly returns true if the script only pushes data, false otherwise.
+func IsPushOnly(pops []ParsedOpcode) bool {
+	// NOTE: This function does NOT verify opcodes directly since it is
+	// internal and is only called with parsed opcodes for scripts that did
+	// not have any parse errors.  Thus, consensus is properly maintained.
+
+	for _, pop := range pops {
+		// All opcodes up to OP_16 are data push instructions.
+		// NOTE: This does consider OP_RESERVED to be a data push
+		// instruction, but execution of OP_RESERVED will fail anyways
+		// and matches the behavior required by consensus.
+		if pop.Opcode.Value > opcode.OP_16 {
+			return false
+		}
+	}
+	return true
+}
