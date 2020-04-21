@@ -720,7 +720,7 @@ func createTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 		Hash:     mtx.WitnessHash().String(),
 		Size:     int32(mtx.SerializeSize()),
 		Vsize:    int32(mempool.GetTxVirtualSize(btcutil.NewTx(mtx))),
-		Vin:      createVinList(mtx),
+		Vin:      createVinList(mtx, chainParams),
 		Vout:     createVoutList(mtx, chainParams, nil),
 		Version:  mtx.Version,
 		LockTime: mtx.LockTime,
@@ -3175,7 +3175,7 @@ func fetchInputTxos(s *rpcServer, tx *wire.MsgTx) (map[wire.OutPoint]wire.TxOut,
 
 // createVinList returns a slice of JSON objects for the inputs of the passed
 // transaction.
-func createVinList(mtx *wire.MsgTx) []btcjson.VinPrevOut {
+func createVinList(mtx *wire.MsgTx, chainParams *chaincfg.Params) []btcjson.VinPrevOut {
 	// Coinbase transactions only have a single txin by definition.
 	if blockchain.IsCoinBaseTx(mtx) {
 		txIn := mtx.TxIn[0]
@@ -3187,7 +3187,7 @@ func createVinList(mtx *wire.MsgTx) []btcjson.VinPrevOut {
 
 	vinList := make([]btcjson.VinPrevOut, 0, len(mtx.TxIn))
 
-	for _, txIn := range mtx.TxIn {
+	for i, txIn := range mtx.TxIn {
 		// The disassembled string will contain [error] inline
 		// if the script doesn't fully parse, so ignore the
 		// error here.
@@ -3205,6 +3205,23 @@ func createVinList(mtx *wire.MsgTx) []btcjson.VinPrevOut {
 				Asm: disbuf,
 				Hex: hex.EncodeToString(txIn.SignatureScript),
 			},
+		}
+
+		if len(mtx.Additional) == len(mtx.TxIn) {
+			po := btcjson.PrevOut{}
+			if mtx.Additional[i].Value != nil {
+				v := *mtx.Additional[i].Value
+				po.ValueCoins = btcutil.Amount(v).ToBTC()
+				po.Svalue = strconv.FormatInt(v, 10)
+			}
+			if len(mtx.Additional[i].PkScript) > 0 {
+				s := mtx.Additional[i].PkScript
+				a := txscript.PkScriptToAddress(s, chainParams).EncodeAddress()
+				po.Address = a
+			}
+			if po.Address != "" || po.Svalue != "" {
+				vinEntry.PrevOut = &po
+			}
 		}
 
 		if len(txIn.Witness) != 0 {
@@ -3288,7 +3305,7 @@ func createVinListPrevOut(
 	vinExtra bool,
 	filterAddrMap map[string]struct{},
 ) ([]btcjson.VinPrevOut, er.R) {
-	vinFullList := createVinList(mtx)
+	vinFullList := createVinList(mtx, chainParams)
 	if !vinExtra && len(filterAddrMap) == 0 {
 		return vinFullList, nil
 	}
