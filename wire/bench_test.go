@@ -256,9 +256,10 @@ func BenchmarkReadTxIn(b *testing.B) {
 	}
 	r := bytes.NewReader(buf)
 	var txIn TxIn
+	var add TxInAdditional
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		readTxIn(r, 0, 0, &txIn)
+		readTxIn(r, 0, 0, &txIn, &add)
 		scriptPool.Return(txIn.SignatureScript)
 	}
 }

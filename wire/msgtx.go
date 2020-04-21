@@ -251,7 +251,7 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 
 type TxInAdditional struct {
 	PkScript []byte
-	Value    int64
+	Value    *int64
 }
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -390,10 +390,29 @@ func (msg *MsgTx) Copy() *MsgTx {
 // See Deserialize for decoding transactions stored to disk, such as in a
 // database, as opposed to decoding transactions from the wire.
 func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R {
+
 	version, err := binarySerializer.Uint32(r, littleEndian)
 	if err != nil {
 		return err
 	}
+
+	eptf := false
+	if version == 0x46545045 { // EPTF
+		eptf = true
+		enc |= WitnessEncoding
+		if b, err := binarySerializer.Uint8(r); err != nil || b != 0xff {
+			return messageError("MsgTx.BtcDecode", "Expected ff after EPTF")
+		}
+		if b, err := binarySerializer.Uint8(r); err != nil || b != 0x00 {
+			return messageError("MsgTx.BtcDecode", "Expected 00 after EPTF\\xff")
+		}
+		if v, err := binarySerializer.Uint32(r, littleEndian); err != nil {
+			return err
+		} else {
+			version = v
+		}
+	}
+
 	msg.Version = int32(version)
 
 	count, err := ReadVarInt(r, pver)
@@ -423,6 +442,9 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R 
 		if err != nil {
 			return err
 		}
+	} else if eptf {
+		return messageError("MsgTx.BtcDecode",
+			"EPTF transaction but seems to be non-segwit encoding")
 	}
 
 	// Prevent more input transactions than could possibly fit into a
@@ -468,12 +490,19 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R 
 	var totalScriptSize uint64
 	txIns := make([]TxIn, count)
 	msg.TxIn = make([]*TxIn, count)
+	if eptf {
+		msg.Additional = make([]TxInAdditional, count)
+	}
 	for i := uint64(0); i < count; i++ {
 		// The pointer is set now in case a script buffer is borrowed
 		// and needs to be returned to the pool on error.
 		ti := &txIns[i]
 		msg.TxIn[i] = ti
-		err = readTxIn(r, pver, msg.Version, ti)
+		var add *TxInAdditional
+		if eptf {
+			add = &msg.Additional[i]
+		}
+		err = readTxIn(r, pver, msg.Version, ti, add)
 		if err != nil {
 			returnScriptBuffers()
 			return err
@@ -517,7 +546,7 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R 
 	// If the transaction's flag byte isn't 0x00 at this point, then one or
 	// more of its inputs has accompanying witness data.
 	if flag[0] != 0 && enc == WitnessEncoding {
-		for _, txin := range msg.TxIn {
+		for i, txin := range msg.TxIn {
 			// For each input, the witness is encoded as a stack
 			// with one or more items. Therefore, we first read a
 			// varint which encodes the number of stack items.
@@ -525,6 +554,27 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er.R 
 			if err != nil {
 				returnScriptBuffers()
 				return err
+			}
+
+			if eptf && witCount == 0xffffffff {
+				// The amount is hidden inside of this witness entry
+				if amt, err := binarySerializer.Uint64(r, littleEndian); err != nil {
+					returnScriptBuffers()
+					return err
+				} else if ver, err := binarySerializer.Uint16(r, littleEndian); err != nil {
+					returnScriptBuffers()
+					return err
+				} else if ver != 0 {
+					returnScriptBuffers()
+					return er.Errorf("unexpected EPTF witness version [%d]", ver)
+				} else if wc, err := ReadVarInt(r, pver); err != nil {
+					returnScriptBuffers()
+					return err
+				} else {
+					witCount = wc
+					iamt := int64(amt)
+					msg.Additional[i].Value = &iamt
+				}
 			}
 
 			// Prevent a possible memory exhaustion attack by
@@ -769,8 +819,8 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er.R 
 	if doWitness {
 		for i, ti := range msg.TxIn {
 			amt := int64(-1)
-			if eptf && len(msg.Additional[i].PkScript) > 0 {
-				amt = msg.Additional[i].Value
+			if eptf && msg.Additional[i].Value != nil {
+				amt = *msg.Additional[i].Value
 			}
 			if err := writeTxWitness(w, pver, msg.Version, ti.Witness, amt); err != nil {
 				return err
@@ -990,18 +1040,39 @@ func readScript(r io.Reader, pver uint32, maxAllowed uint32, fieldName string) (
 
 // readTxIn reads the next sequence of bytes from r as a transaction input
 // (TxIn).
-func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn) er.R {
+func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn, add *TxInAdditional) er.R {
 	err := readOutPoint(r, pver, version, &ti.PreviousOutPoint)
 	if err != nil {
 		return err
 	}
 
-	ti.SignatureScript, err = readScript(r, pver, MaxMessagePayload,
+	sigScript, err := readScript(r, pver, MaxMessagePayload,
 		"transaction input signature script")
 	if err != nil {
 		return err
 	}
 
+	ti.SignatureScript = sigScript
+	if add == nil {
+	} else if len(sigScript) < 2 {
+	} else if sigScript[0] != 0xff || sigScript[1] != 0x00 {
+	} else {
+		buf := bytes.NewBuffer(sigScript[2:])
+		vi, err := ReadVarInt(buf, pver)
+		if err != nil {
+		} else if int(vi) != buf.Len() {
+		} else {
+			bytes := buf.Bytes()
+			if len(bytes) < 1 {
+				return er.New("Unable to read EPTF input, runt")
+			}
+			if bytes[0] != 0xfd {
+				return er.Errorf("Unable to read EPTF input, unexpected key [%x]", bytes[0])
+			}
+			ti.SignatureScript = nil
+			add.PkScript = bytes[1:]
+		}
+	}
 	return readElement(r, &ti.Sequence)
 }
 

@@ -2678,7 +2678,15 @@ type SignatureError struct {
 func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 	additionalPrevScripts map[wire.OutPoint][]byte,
 	additionalKeysByAddress map[string]*btcutil.WIF,
-	p2shRedeemScriptsByAddress map[string][]byte) ([]SignatureError, er.R) {
+	p2shRedeemScriptsByAddress map[string][]byte,
+) ([]SignatureError, er.R) {
+
+	hashCache := txscript.NewTxSigHashes(tx)
+	if len(tx.Additional) == 0 {
+		tx.Additional = make([]wire.TxInAdditional, len(tx.TxIn))
+	} else if len(tx.Additional) != len(tx.TxIn) {
+		return nil, er.New("tx contains Additional field of unexpected length")
+	}
 
 	var signErrors []SignatureError
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
@@ -2686,8 +2694,13 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
 		for i, txIn := range tx.TxIn {
-			prevOutScript, ok := additionalPrevScripts[txIn.PreviousOutPoint]
-			if !ok {
+			prevPkScript, ok := additionalPrevScripts[txIn.PreviousOutPoint]
+			if ok {
+				tx.Additional[i].PkScript = prevPkScript
+			}
+			if len(tx.Additional[i].PkScript) > 0 && tx.Additional[i].Value != nil {
+				// PkScript is included in the tx already
+			} else {
 				prevHash := &txIn.PreviousOutPoint.Hash
 				prevIndex := txIn.PreviousOutPoint.Index
 				txDetails, err := w.TxStore.TxDetails(txmgrNs, prevHash)
@@ -2699,7 +2712,13 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 					return er.Errorf("%v not found",
 						txIn.PreviousOutPoint)
 				}
-				prevOutScript = txDetails.MsgTx.TxOut[prevIndex].PkScript
+				if len(tx.Additional[i].PkScript) == 0 {
+					tx.Additional[i].PkScript = txDetails.MsgTx.TxOut[prevIndex].PkScript
+				}
+				if tx.Additional[i].Value == nil {
+					v := txDetails.MsgTx.TxOut[prevIndex].Value
+					tx.Additional[i].Value = &v
+				}
 			}
 
 			// Set up our callbacks that we pass to txscript so it can
@@ -2761,26 +2780,33 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 			// so we always verify the output.
 			if (hashType&params.SigHashSingle) !=
 				params.SigHashSingle || i < len(tx.TxOut) {
-
-				script, err := txscript.SignTxOutput(w.ChainParams(),
-					tx, i, prevOutScript, hashType, getKey,
-					getScript, txIn.SignatureScript)
-				// Failure to sign isn't an error, it just means that
-				// the tx isn't complete.
-				if err != nil {
+				if err := txauthor.SignInputScript(
+					tx,
+					i,
+					hashType,
+					hashCache,
+					getKey,
+					getScript,
+					w.ChainParams(),
+				); err != nil {
+					// Failure to sign isn't an error, it just means that
+					// the tx isn't complete.
 					signErrors = append(signErrors, SignatureError{
 						InputIndex: uint32(i),
 						Error:      err,
 					})
 					continue
 				}
-				txIn.SignatureScript = script
 			}
 
 			// Either it was already signed or we just signed it.
 			// Find out if it is completely satisfied or still needs more.
-			vm, err := txscript.NewEngine(prevOutScript, tx, i,
-				txscript.StandardVerifyFlags, nil, nil, 0)
+			var v int64
+			if tx.Additional[i].Value != nil {
+				v = *tx.Additional[i].Value
+			}
+			vm, err := txscript.NewEngine(tx.Additional[i].PkScript, tx, i,
+				txscript.StandardVerifyFlags, nil, hashCache, v)
 			if err == nil {
 				err = vm.Execute()
 			}

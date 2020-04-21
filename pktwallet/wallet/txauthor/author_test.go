@@ -38,7 +38,7 @@ func makeInputSource(unspents []*wire.TxOut) InputSource {
 			currentTotal += btcutil.Amount(u.Value)
 			currentInputs = append(currentInputs, nextInput)
 			currentInputAdditional = append(currentInputAdditional, wire.TxInAdditional{
-				Value: u.Value,
+				Value: &u.Value,
 			})
 		}
 		return currentTotal, currentInputs, currentInputAdditional, nil

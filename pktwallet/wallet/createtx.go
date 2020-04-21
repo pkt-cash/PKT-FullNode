@@ -55,9 +55,10 @@ func makeInputSource(eligible []*wtxmgr.Credit) txauthor.InputSource {
 			nextInput := wire.NewTxIn(&nextCredit.OutPoint, nil, nil)
 			currentTotal += nextCredit.Amount
 			currentInputs = append(currentInputs, nextInput)
+			v := int64(nextCredit.Amount)
 			currentAdditonal = append(currentAdditonal, wire.TxInAdditional{
 				PkScript: nextCredit.PkScript,
-				Value:    int64(nextCredit.Amount),
+				Value:    &v,
 			})
 		}
 		return currentTotal, currentInputs, currentAdditonal, nil
@@ -571,9 +572,11 @@ func validateMsgTx(tx *wire.MsgTx) er.R {
 	for i, add := range tx.Additional {
 		if len(add.PkScript) == 0 {
 			return er.Errorf("Unable to valudate transaction, add.PkScript is empty")
+		} else if add.Value == nil {
+			return er.Errorf("Unable to valudate transaction, add.Value is unknown")
 		}
 		vm, err := txscript.NewEngine(add.PkScript, tx, i,
-			txscript.StandardVerifyFlags, nil, hashCache, add.Value)
+			txscript.StandardVerifyFlags, nil, hashCache, *add.Value)
 		if err != nil {
 			err.AddMessage("cannot create script engine")
 			return err

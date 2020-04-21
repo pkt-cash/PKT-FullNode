@@ -1468,10 +1468,15 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient chain.In
 		return nil, btcjson.ErrRPCInvalidParameter.New("Invalid sighash parameter", nil)
 	}
 
-	// TODO: really we probably should look these up with pktd anyway to
-	// make sure that they match the blockchain if present.
 	inputs := make(map[wire.OutPoint][]byte)
 	scripts := make(map[string][]byte)
+
+	for i, add := range tx.Additional {
+		if len(add.PkScript) > 0 {
+			inputs[tx.TxIn[i].PreviousOutPoint] = add.PkScript
+		}
+	}
+
 	var cmdInputs []btcjson.RawTxInput
 	if cmd.Inputs != nil {
 		cmdInputs = *cmd.Inputs

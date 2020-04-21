@@ -474,7 +474,7 @@ func testStartRescan(harness *neutrinoHarness, t *testing.T) {
 			}
 			inputAdditional = []wire.TxInAdditional{
 				{
-					Value:    tx.TxOut[ourIndex].Value,
+					Value:    &tx.TxOut[ourIndex].Value,
 					PkScript: tx.TxOut[ourIndex].PkScript,
 				},
 			}

@@ -210,7 +210,7 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 			er.New("can't sign NULLDATA transactions")
 	default:
 		return nil, class, nil, 0,
-			er.New("can't sign unknown transactions")
+			er.Errorf("can't sign unknown transactions: class = [%v]", class)
 	}
 }
 

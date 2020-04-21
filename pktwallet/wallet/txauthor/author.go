@@ -207,57 +207,68 @@ type SecretsSource interface {
 // based on the previous output script.
 func AddAllInputScripts(tx *wire.MsgTx, secrets SecretsSource) er.R {
 
-	inputs := tx.TxIn
 	hashCache := txscript.NewTxSigHashes(tx)
 	chainParams := secrets.ChainParams()
 
-	if len(inputs) != len(tx.Additional) {
+	if len(tx.TxIn) != len(tx.Additional) {
 		return er.New("tx.TxIn and tx.Additional slices must have equal length")
 	}
 
-	for i := range inputs {
-		pkScript := tx.Additional[i].PkScript
-		amt := tx.Additional[i].Value
-		if len(pkScript) == 0 {
-			if len(inputs[i].SignatureScript) > 0 {
+	for i := range tx.TxIn {
+		if len(tx.Additional[i].PkScript) == 0 {
+			if len(tx.TxIn[i].SignatureScript) > 0 {
 				// This input is already fully signed, we'll leave it alone
 				continue
 			}
 			return er.Errorf("Input number [%d] of transaction [%s] has no PkScript "+
 				"nor SignatureScript, cannot make transaction", i, tx.TxHash())
 		}
-
-		switch {
-		// If this is a p2sh output, who's script hash pre-image is a
-		// witness program, then we'll need to use a modified signing
-		// function which generates both the sigScript, and the witness
-		// script.
-		case txscript.IsPayToScriptHash(pkScript):
-			err := spendNestedWitnessPubKeyHash(inputs[i], pkScript,
-				amt, chainParams, secrets,
-				tx, hashCache, i)
-			if err != nil {
-				return err
-			}
-		case txscript.IsPayToWitnessPubKeyHash(pkScript):
-			err := spendWitnessKeyHash(inputs[i], pkScript,
-				amt, chainParams, secrets,
-				tx, hashCache, i)
-			if err != nil {
-				return err
-			}
-		default:
-			sigScript := inputs[i].SignatureScript
-			script, err := txscript.SignTxOutput(chainParams, tx, i,
-				pkScript, params.SigHashAll, secrets, secrets,
-				sigScript)
-			if err != nil {
-				return err
-			}
-			inputs[i].SignatureScript = script
+		if err := SignInputScript(
+			tx, i, params.SigHashAll, hashCache, secrets, secrets, chainParams); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func SignInputScript(
+	tx *wire.MsgTx,
+	inputNum int,
+	sigHashType params.SigHashType,
+	hashCache *txscript.TxSigHashes,
+	kdb txscript.KeyDB,
+	sdb txscript.ScriptDB,
+	chainParams *chaincfg.Params,
+) er.R {
+	pkScript := tx.Additional[inputNum].PkScript
+	amt := tx.Additional[inputNum].Value
+	if len(pkScript) == 0 {
+		return er.New("Cannot sign transaction because it does not contain additional data")
+	}
+	if txscript.IsPayToScriptHash(pkScript) {
+		err := spendNestedWitnessPubKeyHash(tx.TxIn[inputNum], pkScript,
+			amt, chainParams, kdb,
+			tx, hashCache, inputNum, sigHashType)
+		if err != nil {
+			return err
+		}
+	} else if txscript.IsPayToWitnessPubKeyHash(pkScript) {
+		err := spendWitnessKeyHash(tx.TxIn[inputNum], pkScript,
+			amt, chainParams, kdb,
+			tx, hashCache, inputNum, sigHashType)
+		if err != nil {
+			return err
+		}
+	} else {
+		sigScript := tx.TxIn[inputNum].SignatureScript
+		script, err := txscript.SignTxOutput(
+			chainParams, tx, inputNum, pkScript, sigHashType, kdb, sdb, sigScript)
+		if err != nil {
+			return err
+		}
+		tx.TxIn[inputNum].SignatureScript = script
+	}
 	return nil
 }
 
@@ -267,8 +278,14 @@ func AddAllInputScripts(tx *wire.MsgTx, secrets SecretsSource) er.R {
 // will fail since the new sighash digest algorithm defined in BIP0143 includes
 // the input value in the sighash.
 func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
-	inputValue int64, chainParams *chaincfg.Params, secrets SecretsSource,
-	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) er.R {
+	inputValueP *int64, chainParams *chaincfg.Params, secrets txscript.KeyDB,
+	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int,
+	hashType params.SigHashType) er.R {
+
+	if inputValueP == nil {
+		return er.New("Unable to sign transaction because input amount is unknown")
+	}
+	inputValue := *inputValueP
 
 	// First obtain the key pair associated with this p2wkh address.
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript,
@@ -303,7 +320,7 @@ func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
 		return err
 	}
 	witnessScript, err := txscript.WitnessSignature(tx, hashCache, idx,
-		inputValue, witnessProgram, params.SigHashAll, privKey, true)
+		inputValue, witnessProgram, hashType, privKey, true)
 	if err != nil {
 		return err
 	}
@@ -321,8 +338,14 @@ func spendWitnessKeyHash(txIn *wire.TxIn, pkScript []byte,
 // previous pkScript, or else verification will fail since the new sighash
 // digest algorithm defined in BIP0143 includes the input value in the sighash.
 func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
-	inputValue int64, chainParams *chaincfg.Params, secrets SecretsSource,
-	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int) er.R {
+	inputValueP *int64, chainParams *chaincfg.Params, secrets txscript.KeyDB,
+	tx *wire.MsgTx, hashCache *txscript.TxSigHashes, idx int,
+	hashType params.SigHashType) er.R {
+
+	if inputValueP == nil {
+		return er.New("Unable to sign transaction because input amount is unknown")
+	}
+	inputValue := *inputValueP
 
 	// First we need to obtain the key pair related to this p2sh output.
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript,
@@ -366,7 +389,7 @@ func spendNestedWitnessPubKeyHash(txIn *wire.TxIn, pkScript []byte,
 	// With the sigScript in place, we'll next generate the proper witness
 	// that'll allow us to spend the p2wkh output.
 	witnessScript, err := txscript.WitnessSignature(tx, hashCache, idx,
-		inputValue, witnessProgram, params.SigHashAll, privKey, compressed)
+		inputValue, witnessProgram, hashType, privKey, compressed)
 	if err != nil {
 		return err
 	}
