@@ -8,12 +8,11 @@ package txscript
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
-	"github.com/pkt-cash/pktd/txscript/txscripterr"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -21,8 +20,8 @@ import (
 
 // isSmallInt returns whether or not the opcode is considered a small integer,
 // which is an OP_0, or OP_1 through OP_16.
-func isSmallInt(op opcodeT) bool {
-	if op.value == opcode.OP_0 || (op.value >= opcode.OP_1 && op.value <= opcode.OP_16) {
+func isSmallInt(op opcode.Opcode) bool {
+	if op.Value == opcode.OP_0 || (op.Value >= opcode.OP_1 && op.Value <= opcode.OP_16) {
 		return true
 	}
 	return false
@@ -30,17 +29,17 @@ func isSmallInt(op opcodeT) bool {
 
 // isScriptHash returns true if the script passed is a pay-to-script-hash
 // transaction, false otherwise.
-func isScriptHash(pops []parsedOpcode) bool {
+func isScriptHash(pops []parsescript.ParsedOpcode) bool {
 	return len(pops) == 3 &&
-		pops[0].opcode.value == opcode.OP_HASH160 &&
-		pops[1].opcode.value == opcode.OP_DATA_20 &&
-		pops[2].opcode.value == opcode.OP_EQUAL
+		pops[0].Opcode.Value == opcode.OP_HASH160 &&
+		pops[1].Opcode.Value == opcode.OP_DATA_20 &&
+		pops[2].Opcode.Value == opcode.OP_EQUAL
 }
 
 // IsPayToScriptHash returns true if the script is in the standard
 // pay-to-script-hash (P2SH) format, false otherwise.
 func IsPayToScriptHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -49,36 +48,36 @@ func IsPayToScriptHash(script []byte) bool {
 
 // isWitnessScriptHash returns true if the passed script is a
 // pay-to-witness-script-hash transaction, false otherwise.
-func isWitnessScriptHash(pops []parsedOpcode) bool {
+func isWitnessScriptHash(pops []parsescript.ParsedOpcode) bool {
 	return len(pops) == 2 &&
-		pops[0].opcode.value == opcode.OP_0 &&
-		pops[1].opcode.value == opcode.OP_DATA_32
+		pops[0].Opcode.Value == opcode.OP_0 &&
+		pops[1].Opcode.Value == opcode.OP_DATA_32
 }
 
 // ElectionGetVotesForAgainst gets the candidates who are voted for and voted against
 // by the provided pkScript
 func ElectionGetVotesForAgainst(pkScript []byte) (voteFor []byte, voteAgainst []byte) {
-	pops, err := parseScript(pkScript)
+	pops, err := parsescript.ParseScript(pkScript)
 	if err != nil {
 		return nil, nil
 	}
 	for i, op := range pops {
-		if op.opcode.value != opcode.OP_VOTE {
+		if op.Opcode.Value != opcode.OP_VOTE {
 			continue
 		}
 		if i < 2 {
 			// invalid, too short
 			continue
 		}
-		if pops[i-1].opcode.value == opcode.OP_0 {
-		} else if canonicalPush(pops[i-1]) && len(pops[i-1].data) > 0 && len(pops[i-1].data) < 80 {
-			voteAgainst = pops[i-1].data
+		if pops[i-1].Opcode.Value == opcode.OP_0 {
+		} else if canonicalPush(pops[i-1]) && len(pops[i-1].Data) > 0 && len(pops[i-1].Data) < 80 {
+			voteAgainst = pops[i-1].Data
 		} else {
 			continue
 		}
-		if pops[i-2].opcode.value == opcode.OP_0 {
-		} else if canonicalPush(pops[i-2]) && len(pops[i-2].data) > 0 && len(pops[i-2].data) < 80 {
-			voteFor = pops[i-2].data
+		if pops[i-2].Opcode.Value == opcode.OP_0 {
+		} else if canonicalPush(pops[i-2]) && len(pops[i-2].Data) > 0 && len(pops[i-2].Data) < 80 {
+			voteFor = pops[i-2].Data
 		} else {
 			voteAgainst = nil
 			continue
@@ -91,7 +90,7 @@ func ElectionGetVotesForAgainst(pkScript []byte) (voteFor []byte, voteAgainst []
 // IsPayToWitnessScriptHash returns true if the is in the standard
 // pay-to-witness-script-hash (P2WSH) format, false otherwise.
 func IsPayToWitnessScriptHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -101,7 +100,7 @@ func IsPayToWitnessScriptHash(script []byte) bool {
 // IsPayToWitnessPubKeyHash returns true if the is in the standard
 // pay-to-witness-pubkey-hash (P2WKH) format, false otherwise.
 func IsPayToWitnessPubKeyHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -110,10 +109,10 @@ func IsPayToWitnessPubKeyHash(script []byte) bool {
 
 // isWitnessPubKeyHash returns true if the passed script is a
 // pay-to-witness-pubkey-hash, and false otherwise.
-func isWitnessPubKeyHash(pops []parsedOpcode) bool {
+func isWitnessPubKeyHash(pops []parsescript.ParsedOpcode) bool {
 	return len(pops) == 2 &&
-		pops[0].opcode.value == opcode.OP_0 &&
-		pops[1].opcode.value == opcode.OP_DATA_20
+		pops[0].Opcode.Value == opcode.OP_0 &&
+		pops[1].Opcode.Value == opcode.OP_DATA_20
 }
 
 // IsWitnessProgram returns true if the passed script is a valid witness
@@ -129,7 +128,7 @@ func IsWitnessProgram(script []byte) bool {
 		return false
 	}
 
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -143,17 +142,17 @@ func IsWitnessProgram(script []byte) bool {
 // first opcode MUST be a small integer (0-16), the push data MUST be
 // canonical, and finally the size of the push data must be between 2 and 40
 // bytes.
-func isWitnessProgram(pops []parsedOpcode) bool {
+func isWitnessProgram(pops []parsescript.ParsedOpcode) bool {
 	return len(pops) == 2 &&
-		isSmallInt(pops[0].opcode) &&
+		isSmallInt(pops[0].Opcode) &&
 		canonicalPush(pops[1]) &&
-		(len(pops[1].data) >= 2 && len(pops[1].data) <= 40)
+		(len(pops[1].Data) >= 2 && len(pops[1].Data) <= 40)
 }
 
 // ExtractWitnessProgramInfo attempts to extract the witness program version,
 // as well as the witness program itself from the passed script.
 func ExtractWitnessProgramInfo(script []byte) (int, []byte, er.R) {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -166,14 +165,14 @@ func ExtractWitnessProgramInfo(script []byte) (int, []byte, er.R) {
 			"unable to extract version or witness program")
 	}
 
-	witnessVersion := asSmallInt(pops[0].opcode)
-	witnessProgram := pops[1].data
+	witnessVersion := asSmallInt(pops[0].Opcode)
+	witnessProgram := pops[1].Data
 
 	return witnessVersion, witnessProgram, nil
 }
 
 // isPushOnly returns true if the script only pushes data, false otherwise.
-func isPushOnly(pops []parsedOpcode) bool {
+func isPushOnly(pops []parsescript.ParsedOpcode) bool {
 	// NOTE: This function does NOT verify opcodes directly since it is
 	// internal and is only called with parsed opcodes for scripts that did
 	// not have any parse errors.  Thus, consensus is properly maintained.
@@ -183,7 +182,7 @@ func isPushOnly(pops []parsedOpcode) bool {
 		// NOTE: This does consider OP_RESERVED to be a data push
 		// instruction, but execution of OP_RESERVED will fail anyways
 		// and matches the behavior required by consensus.
-		if pop.opcode.value > opcode.OP_16 {
+		if pop.Opcode.Value > opcode.OP_16 {
 			return false
 		}
 	}
@@ -194,112 +193,19 @@ func isPushOnly(pops []parsedOpcode) bool {
 //
 // False will be returned when the script does not parse.
 func IsPushOnlyScript(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return false
 	}
 	return isPushOnly(pops)
 }
 
-// parseScriptTemplate is the same as parseScript but allows the passing of the
-// template list for testing purposes.  When there are parse errors, it returns
-// the list of parsed opcodes up to the point of failure along with the error.
-func parseScriptTemplate(script []byte, opcodes *[256]opcodeT) ([]parsedOpcode, er.R) {
-	retScript := make([]parsedOpcode, 0, len(script))
-	for i := 0; i < len(script); {
-		instr := script[i]
-		op := opcodes[instr]
-		pop := parsedOpcode{opcode: op}
-
-		// Parse data out of instruction.
-		switch {
-		// No additional data.  Note that some of the opcodes, notably
-		// OP_1NEGATE, OP_0, and OP_[1-16] represent the data
-		// themselves.
-		case op.length == 1:
-			i++
-
-		// Data pushes of specific lengths -- OP_DATA_[1-75].
-		case op.length > 1:
-			if len(script[i:]) < op.length {
-				str := fmt.Sprintf("opcode %s requires %d "+
-					"bytes, but script only has %d remaining",
-					opcode.OpcodeName(op.value), op.length, len(script[i:]))
-				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
-					str)
-			}
-
-			// Slice out the data.
-			pop.data = script[i+1 : i+op.length]
-			i += op.length
-
-		// Data pushes with parsed lengths -- OP_PUSHDATAP{1,2,4}.
-		case op.length < 0:
-			var l uint
-			off := i + 1
-
-			if len(script[off:]) < -op.length {
-				str := fmt.Sprintf("opcode %s requires %d "+
-					"bytes, but script only has %d remaining",
-					opcode.OpcodeName(op.value), -op.length, len(script[off:]))
-				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
-					str)
-			}
-
-			// Next -length bytes are little endian length of data.
-			switch op.length {
-			case -1:
-				l = uint(script[off])
-			case -2:
-				l = ((uint(script[off+1]) << 8) |
-					uint(script[off]))
-			case -4:
-				l = ((uint(script[off+3]) << 24) |
-					(uint(script[off+2]) << 16) |
-					(uint(script[off+1]) << 8) |
-					uint(script[off]))
-			default:
-				str := fmt.Sprintf("invalid opcode length %d",
-					op.length)
-				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
-					str)
-			}
-
-			// Move offset to beginning of the data.
-			off += -op.length
-
-			// Disallow entries that do not fit script or were
-			// sign extended.
-			if int(l) > len(script[off:]) || int(l) < 0 {
-				str := fmt.Sprintf("opcode %s pushes %d bytes, "+
-					"but script only has %d remaining",
-					opcode.OpcodeName(op.value), int(l), len(script[off:]))
-				return retScript, txscripterr.ScriptError(txscripterr.ErrMalformedPush,
-					str)
-			}
-
-			pop.data = script[off : off+int(l)]
-			i += 1 - op.length + int(l)
-		}
-
-		retScript = append(retScript, pop)
-	}
-
-	return retScript, nil
-}
-
-// parseScript preparses the script in bytes into a list of parsedOpcodes while
-// applying a number of sanity checks.
-func parseScript(script []byte) ([]parsedOpcode, er.R) {
-	return parseScriptTemplate(script, &opcodeArray)
-}
-
 // unparseScript reversed the action of parseScript and returns the
 // parsedOpcodes as a list of bytes
-func unparseScript(pops []parsedOpcode) ([]byte, er.R) {
+func unparseScript(pops []parsescript.ParsedOpcode) ([]byte, er.R) {
 	script := make([]byte, 0, len(pops))
 	for _, pop := range pops {
-		b, err := pop.bytes()
+		b, err := popBytes(&pop)
 		if err != nil {
 			return nil, err
 		}
@@ -315,9 +221,9 @@ func unparseScript(pops []parsedOpcode) ([]byte, er.R) {
 // if the caller wants more information about the failure.
 func DisasmString(buf []byte) (string, er.R) {
 	var disbuf bytes.Buffer
-	opcodes, err := parseScript(buf)
+	opcodes, err := parsescript.ParseScript(buf)
 	for _, pop := range opcodes {
-		disbuf.WriteString(pop.print(true))
+		disbuf.WriteString(popPrint(&pop, true))
 		disbuf.WriteByte(' ')
 	}
 	if disbuf.Len() > 0 {
@@ -331,10 +237,10 @@ func DisasmString(buf []byte) (string, er.R) {
 
 // removeOpcode will remove any opcode matching ``opcode'' from the opcode
 // stream in pkscript
-func removeOpcode(pkscript []parsedOpcode, opcode byte) []parsedOpcode {
-	retScript := make([]parsedOpcode, 0, len(pkscript))
+func removeOpcode(pkscript []parsescript.ParsedOpcode, opcode byte) []parsescript.ParsedOpcode {
+	retScript := make([]parsescript.ParsedOpcode, 0, len(pkscript))
 	for _, pop := range pkscript {
-		if pop.opcode.value != opcode {
+		if pop.Opcode.Value != opcode {
 			retScript = append(retScript, pop)
 		}
 	}
@@ -344,10 +250,10 @@ func removeOpcode(pkscript []parsedOpcode, opcode byte) []parsedOpcode {
 // canonicalPush returns true if the object is either not a push instruction
 // or the push instruction contained wherein is matches the canonical form
 // or using the smallest instruction to do the job. False otherwise.
-func canonicalPush(pop parsedOpcode) bool {
-	op := pop.opcode.value
-	data := pop.data
-	dataLen := len(pop.data)
+func canonicalPush(pop parsescript.ParsedOpcode) bool {
+	op := pop.Opcode.Value
+	data := pop.Data
+	dataLen := len(pop.Data)
 	if op > opcode.OP_16 {
 		return true
 	}
@@ -369,10 +275,10 @@ func canonicalPush(pop parsedOpcode) bool {
 
 // removeOpcodeByData will return the script minus any opcodes that would push
 // the passed data to the stack.
-func removeOpcodeByData(pkscript []parsedOpcode, data []byte) []parsedOpcode {
-	retScript := make([]parsedOpcode, 0, len(pkscript))
+func removeOpcodeByData(pkscript []parsescript.ParsedOpcode, data []byte) []parsescript.ParsedOpcode {
+	retScript := make([]parsescript.ParsedOpcode, 0, len(pkscript))
 	for _, pop := range pkscript {
-		if !canonicalPush(pop) || !bytes.Contains(pop.data, data) {
+		if !canonicalPush(pop) || !bytes.Contains(pop.Data, data) {
 			retScript = append(retScript, pop)
 		}
 	}
@@ -445,7 +351,7 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // being spent, in addition to the final transaction fee. In the case the
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
-func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
+func calcWitnessSignatureHash(subScript []parsescript.ParsedOpcode, sigHashes *TxSigHashes,
 	hashType params.SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
 
 	// As a sanity check, ensure the passed input index for the transaction
@@ -503,7 +409,7 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		sigHash.Write([]byte{opcode.OP_DUP})
 		sigHash.Write([]byte{opcode.OP_HASH160})
 		sigHash.Write([]byte{opcode.OP_DATA_20})
-		sigHash.Write(subScript[1].data)
+		sigHash.Write(subScript[1].Data)
 		sigHash.Write([]byte{opcode.OP_EQUALVERIFY})
 		sigHash.Write([]byte{opcode.OP_CHECKSIG})
 	} else {
@@ -582,7 +488,7 @@ func shallowCopyTx(tx *wire.MsgTx) wire.MsgTx {
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
 func CalcSignatureHash(script []byte, hashType params.SigHashType, tx *wire.MsgTx, idx int) ([]byte, er.R) {
-	parsedScript, err := parseScript(script)
+	parsedScript, err := parsescript.ParseScript(script)
 	if err != nil {
 		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
@@ -592,7 +498,7 @@ func CalcSignatureHash(script []byte, hashType params.SigHashType, tx *wire.MsgT
 // calcSignatureHash will, given a script and hash type for the current script
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
-func calcSignatureHash(script []parsedOpcode, hashType params.SigHashType, tx *wire.MsgTx, idx int) []byte {
+func calcSignatureHash(script []parsescript.ParsedOpcode, hashType params.SigHashType, tx *wire.MsgTx, idx int) []byte {
 	// The SigHashSingle signature type signs only the corresponding input
 	// and output (the output with the same index number as the input).
 	//
@@ -685,22 +591,22 @@ func calcSignatureHash(script []parsedOpcode, hashType params.SigHashType, tx *w
 
 // asSmallInt returns the passed opcode, which must be true according to
 // isSmallInt(), as an integer.
-func asSmallInt(op opcodeT) int {
-	if op.value == opcode.OP_0 {
+func asSmallInt(op opcode.Opcode) int {
+	if op.Value == opcode.OP_0 {
 		return 0
 	}
 
-	return int(op.value - (opcode.OP_1 - 1))
+	return int(op.Value - (opcode.OP_1 - 1))
 }
 
 // getSigOpCount is the implementation function for counting the number of
 // signature operations in the script provided by pops. If precise mode is
 // requested then we attempt to count the number of operations for a multisig
 // op. Otherwise we use the maximum.
-func getSigOpCount(pops []parsedOpcode, precise bool) int {
+func getSigOpCount(pops []parsescript.ParsedOpcode, precise bool) int {
 	nSigs := 0
 	for i, pop := range pops {
-		switch pop.opcode.value {
+		switch pop.Opcode.Value {
 		case opcode.OP_CHECKSIG:
 			fallthrough
 		case opcode.OP_CHECKSIGVERIFY:
@@ -713,9 +619,9 @@ func getSigOpCount(pops []parsedOpcode, precise bool) int {
 			// OP_1 - OP_16 to signify the number of pubkeys.
 			// Otherwise, we use the max of 20.
 			if precise && i > 0 &&
-				pops[i-1].opcode.value >= opcode.OP_1 &&
-				pops[i-1].opcode.value <= opcode.OP_16 {
-				nSigs += asSmallInt(pops[i-1].opcode)
+				pops[i-1].Opcode.Value >= opcode.OP_1 &&
+				pops[i-1].Opcode.Value <= opcode.OP_16 {
+				nSigs += asSmallInt(pops[i-1].Opcode)
 			} else {
 				nSigs += params.MaxPubKeysPerMultiSig
 			}
@@ -734,7 +640,7 @@ func getSigOpCount(pops []parsedOpcode, precise bool) int {
 func GetSigOpCount(script []byte) int {
 	// Don't check error since parseScript returns the parsed-up-to-error
 	// list of pops.
-	pops, _ := parseScript(script)
+	pops, _ := parsescript.ParseScript(script)
 	return getSigOpCount(pops, false)
 }
 
@@ -746,7 +652,7 @@ func GetSigOpCount(script []byte) int {
 func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// Don't check error since parseScript returns the parsed-up-to-error
 	// list of pops.
-	pops, _ := parseScript(scriptPubKey)
+	pops, _ := parsescript.ParseScript(scriptPubKey)
 
 	// Treat non P2SH transactions as normal.
 	if !(bip16 && isScriptHash(pops)) {
@@ -756,7 +662,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// The public key script is a pay-to-script-hash, so parse the signature
 	// script to get the final item.  Scripts that fail to fully parse count
 	// as 0 signature operations.
-	sigPops, err := parseScript(scriptSig)
+	sigPops, err := parsescript.ParseScript(scriptSig)
 	if err != nil {
 		return 0
 	}
@@ -770,7 +676,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 
 	// The P2SH script is the last item the signature script pushes to the
 	// stack.  When the script is empty, there are no signature operations.
-	shScript := sigPops[len(sigPops)-1].data
+	shScript := sigPops[len(sigPops)-1].Data
 	if len(shScript) == 0 {
 		return 0
 	}
@@ -779,7 +685,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// returns the parsed-up-to-error list of pops and the consensus rules
 	// dictate signature operations are counted up to the first parse
 	// failure.
-	shPops, _ := parseScript(shScript)
+	shPops, _ := parsescript.ParseScript(shScript)
 	return getSigOpCount(shPops, true)
 }
 
@@ -799,7 +705,7 @@ func GetWitnessSigOpCount(sigScript, pkScript []byte, witness wire.TxWitness) in
 	// Next, we'll check the sigScript to see if this is a nested p2sh
 	// witness program. This is a case wherein the sigScript is actually a
 	// datapush of a p2wsh witness program.
-	sigPops, err := parseScript(sigScript)
+	sigPops, err := parsescript.ParseScript(sigScript)
 	if err != nil {
 		return 0
 	}
@@ -834,7 +740,7 @@ func getWitnessSigOps(pkScript []byte, witness wire.TxWitness) int {
 			len(witness) > 0:
 
 			witnessScript := witness[len(witness)-1]
-			pops, _ := parseScript(witnessScript)
+			pops, _ := parsescript.ParseScript(witnessScript)
 			return getSigOpCount(pops, true)
 		}
 	}
@@ -846,10 +752,10 @@ func getWitnessSigOps(pkScript []byte, witness wire.TxWitness) int {
 // guaranteed to fail at execution.  This allows inputs to be pruned instantly
 // when entering the UTXO set.
 func IsUnspendable(pkScript []byte) bool {
-	pops, err := parseScript(pkScript)
+	pops, err := parsescript.ParseScript(pkScript)
 	if err != nil {
 		return true
 	}
 
-	return len(pops) > 0 && pops[0].opcode.value == opcode.OP_RETURN
+	return len(pops) > 0 && pops[0].Opcode.Value == opcode.OP_RETURN
 }

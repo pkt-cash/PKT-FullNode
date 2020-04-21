@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
@@ -97,53 +98,53 @@ func (t ScriptClass) IsSegwit() bool {
 
 // isPubkey returns true if the script passed is a pay-to-pubkey transaction,
 // false otherwise.
-func isPubkey(pops []parsedOpcode) bool {
+func isPubkey(pops []parsescript.ParsedOpcode) bool {
 	// Valid pubkeys are either 33 or 65 bytes.
 	return len(pops) == 2 &&
-		(len(pops[0].data) == 33 || len(pops[0].data) == 65) &&
-		pops[1].opcode.value == opcode.OP_CHECKSIG
+		(len(pops[0].Data) == 33 || len(pops[0].Data) == 65) &&
+		pops[1].Opcode.Value == opcode.OP_CHECKSIG
 }
 
 // isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
 // transaction, false otherwise.
-func isPubkeyHash(pops []parsedOpcode) bool {
+func isPubkeyHash(pops []parsescript.ParsedOpcode) bool {
 	return len(pops) == 5 &&
-		pops[0].opcode.value == opcode.OP_DUP &&
-		pops[1].opcode.value == opcode.OP_HASH160 &&
-		pops[2].opcode.value == opcode.OP_DATA_20 &&
-		pops[3].opcode.value == opcode.OP_EQUALVERIFY &&
-		pops[4].opcode.value == opcode.OP_CHECKSIG
+		pops[0].Opcode.Value == opcode.OP_DUP &&
+		pops[1].Opcode.Value == opcode.OP_HASH160 &&
+		pops[2].Opcode.Value == opcode.OP_DATA_20 &&
+		pops[3].Opcode.Value == opcode.OP_EQUALVERIFY &&
+		pops[4].Opcode.Value == opcode.OP_CHECKSIG
 
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
 // otherwise.
-func isMultiSig(pops []parsedOpcode) bool {
+func isMultiSig(pops []parsescript.ParsedOpcode) bool {
 	// The absolute minimum is 1 pubkey:
 	// OP_0/OP_1-16 <pubkey> OP_1 OP_CHECKMULTISIG
 	l := len(pops)
 	if l < 4 {
 		return false
 	}
-	if !isSmallInt(pops[0].opcode) {
+	if !isSmallInt(pops[0].Opcode) {
 		return false
 	}
-	if !isSmallInt(pops[l-2].opcode) {
+	if !isSmallInt(pops[l-2].Opcode) {
 		return false
 	}
-	if pops[l-1].opcode.value != opcode.OP_CHECKMULTISIG {
+	if pops[l-1].Opcode.Value != opcode.OP_CHECKMULTISIG {
 		return false
 	}
 
 	// Verify the number of pubkeys specified matches the actual number
 	// of pubkeys provided.
-	if l-2-1 != asSmallInt(pops[l-2].opcode) {
+	if l-2-1 != asSmallInt(pops[l-2].Opcode) {
 		return false
 	}
 
 	for _, pop := range pops[1 : l-2] {
 		// Valid pubkeys are either 33 or 65 bytes.
-		if len(pop.data) != 33 && len(pop.data) != 65 {
+		if len(pop.Data) != 33 && len(pop.Data) != 65 {
 			return false
 		}
 	}
@@ -152,25 +153,25 @@ func isMultiSig(pops []parsedOpcode) bool {
 
 // isNullData returns true if the passed script is a null data transaction,
 // false otherwise.
-func isNullData(pops []parsedOpcode) bool {
+func isNullData(pops []parsescript.ParsedOpcode) bool {
 	// A nulldata transaction is either a single OP_RETURN or an
 	// OP_RETURN SMALLDATA (where SMALLDATA is a data push up to
 	// MaxDataCarrierSize bytes).
 	l := len(pops)
-	if l == 1 && pops[0].opcode.value == opcode.OP_RETURN {
+	if l == 1 && pops[0].Opcode.Value == opcode.OP_RETURN {
 		return true
 	}
 
 	return l == 2 &&
-		pops[0].opcode.value == opcode.OP_RETURN &&
-		(isSmallInt(pops[1].opcode) || pops[1].opcode.value <=
+		pops[0].Opcode.Value == opcode.OP_RETURN &&
+		(isSmallInt(pops[1].Opcode) || pops[1].Opcode.Value <=
 			opcode.OP_PUSHDATA4) &&
-		len(pops[1].data) <= MaxDataCarrierSize
+		len(pops[1].Data) <= MaxDataCarrierSize
 }
 
 // scriptType returns the type of the script being inspected from the known
 // standard types.
-func typeOfScript(pops []parsedOpcode) ScriptClass {
+func typeOfScript(pops []parsescript.ParsedOpcode) ScriptClass {
 	if isPubkey(pops) {
 		return PubKeyTy
 	} else if isPubkeyHash(pops) {
@@ -193,7 +194,7 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 //
 // NonStandardTy will be returned when the script does not parse.
 func GetScriptClass(script []byte) ScriptClass {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return NonStandardTy
 	}
@@ -206,7 +207,7 @@ func GetScriptClass(script []byte) ScriptClass {
 // then -1 is returned. We are an internal function and thus assume that class
 // is the real class of pops (and we can thus assume things that were determined
 // while finding out the type).
-func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
+func expectedInputs(pops []parsescript.ParsedOpcode, class ScriptClass) int {
 	switch class {
 	case PubKeyTy:
 		return 1
@@ -233,7 +234,7 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 		// the original bitcoind bug where OP_CHECKMULTISIG pops an
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
-		return asSmallInt(pops[0].opcode) + 1
+		return asSmallInt(pops[0].Opcode) + 1
 
 	case NullDataTy:
 		fallthrough
@@ -268,12 +269,12 @@ type ScriptInfo struct {
 func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 	bip16, segwit bool) (*ScriptInfo, er.R) {
 
-	sigPops, err := parseScript(sigScript)
+	sigPops, err := parsescript.ParseScript(sigScript)
 	if err != nil {
 		return nil, err
 	}
 
-	pkPops, err := parseScript(pkScript)
+	pkPops, err := parsescript.ParseScript(pkScript)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +296,8 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 	case si.PkScriptClass == ScriptHashTy && bip16 && !segwit:
 		// The pay-to-hash-script is the final data push of the
 		// signature script.
-		script := sigPops[len(sigPops)-1].data
-		shPops, err := parseScript(script)
+		script := sigPops[len(sigPops)-1].Data
+		shPops, err := parsescript.ParseScript(script)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +328,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 
 		// Extract the pushed witness program from the sigScript so we
 		// can determine the number of expected inputs.
-		pkPops, _ := parseScript(sigScript[1:])
+		pkPops, _ := parsescript.ParseScript(sigScript[1:])
 		shInputs := expectedInputs(pkPops, typeOfScript(pkPops))
 		if shInputs == -1 {
 			si.ExpectedInputs = -1
@@ -346,7 +347,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 		// The witness script is the final element of the witness
 		// stack.
 		witnessScript := witness[len(witness)-1]
-		pops, _ := parseScript(witnessScript)
+		pops, _ := parsescript.ParseScript(witnessScript)
 
 		shInputs := expectedInputs(pops, typeOfScript(pops))
 		if shInputs == -1 {
@@ -373,7 +374,7 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 // a multi-signature transaction script.  The passed script MUST already be
 // known to be a multi-signature script.
 func CalcMultiSigStats(script []byte) (int, int, er.R) {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -390,8 +391,8 @@ func CalcMultiSigStats(script []byte) (int, int, er.R) {
 		return 0, 0, txscripterr.ScriptError(txscripterr.ErrNotMultisigScript, str)
 	}
 
-	numSigs := asSmallInt(pops[0].opcode)
-	numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
+	numSigs := asSmallInt(pops[0].Opcode)
+	numPubKeys := asSmallInt(pops[len(pops)-2].Opcode)
 	return numPubKeys, numSigs, nil
 }
 
@@ -462,7 +463,7 @@ func appendVote(sb *scriptbuilder.ScriptBuilder, voteFor, voteAgainst []byte) *s
 }
 
 func payToNonStandardScriptBuilder(pkScript, voteFor, voteAgainst []byte) ([]byte, er.R) {
-	pops, err := parseScript(pkScript)
+	pops, err := parsescript.ParseScript(pkScript)
 	if err != nil {
 		// There's an error parsing, lets not touch it
 		return pkScript, nil
@@ -531,11 +532,11 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, er.R) {
 
 // stripVote removes any votes from a script so that it will appear as a cannonical
 // transaction.
-func stripVote(pops []parsedOpcode) []parsedOpcode {
-	out := make([]parsedOpcode, 0, len(pops))
+func stripVote(pops []parsescript.ParsedOpcode) []parsescript.ParsedOpcode {
+	out := make([]parsescript.ParsedOpcode, 0, len(pops))
 	for _, pop := range pops {
 		out = append(out, pop)
-		if pop.opcode.value != opcode.OP_VOTE {
+		if pop.Opcode.Value != opcode.OP_VOTE {
 			continue
 		}
 		if len(out) < 3 {
@@ -543,10 +544,10 @@ func stripVote(pops []parsedOpcode) []parsedOpcode {
 		}
 		last := out[len(out)-2]
 		secondLast := out[len(out)-3]
-		if last.opcode.value != opcode.OP_0 && !canonicalPush(last) {
+		if last.Opcode.Value != opcode.OP_0 && !canonicalPush(last) {
 			continue
 		}
-		if secondLast.opcode.value != opcode.OP_0 && !canonicalPush(secondLast) {
+		if secondLast.Opcode.Value != opcode.OP_0 && !canonicalPush(secondLast) {
 			continue
 		}
 		// pop second op, last op, vote
@@ -593,16 +594,16 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 // PushedData returns an array of byte slices containing any pushed data found
 // in the passed script.  This includes OP_0, but not OP_1 - OP_16.
 func PushedData(script []byte) ([][]byte, er.R) {
-	pops, err := parseScript(script)
+	pops, err := parsescript.ParseScript(script)
 	if err != nil {
 		return nil, err
 	}
 
 	var data [][]byte
 	for _, pop := range pops {
-		if pop.data != nil {
-			data = append(data, pop.data)
-		} else if pop.opcode.value == opcode.OP_0 {
+		if pop.Data != nil {
+			data = append(data, pop.Data)
+		} else if pop.Opcode.Value == opcode.OP_0 {
 			data = append(data, nil)
 		}
 	}
@@ -619,7 +620,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 
 	// No valid addresses or required signatures if the script doesn't
 	// parse.
-	pops, err := parseScript(pkScript)
+	pops, err := parsescript.ParseScript(pkScript)
 	if err != nil {
 		return NonStandardTy, nil, 0, err
 	}
@@ -634,7 +635,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKeyHash(pops[2].data,
+		addr, err := btcutil.NewAddressPubKeyHash(pops[2].Data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -646,7 +647,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the pubkey hash is the second item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessPubKeyHash(pops[1].data,
+		addr, err := btcutil.NewAddressWitnessPubKeyHash(pops[1].Data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -658,7 +659,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey is the first item on the stack.
 		// Skip the pubkey if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[0].data, chainParams)
+		addr, err := btcutil.NewAddressPubKey(pops[0].Data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -669,7 +670,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the script hash is the 2nd item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressScriptHashFromHash(pops[1].data,
+		addr, err := btcutil.NewAddressScriptHashFromHash(pops[1].Data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -681,7 +682,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the script hash is the second item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessScriptHash(pops[1].data,
+		addr, err := btcutil.NewAddressWitnessScriptHash(pops[1].Data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -693,13 +694,13 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the number of required signatures is the 1st item
 		// on the stack and the number of public keys is the 2nd to last
 		// item on the stack.
-		requiredSigs = asSmallInt(pops[0].opcode)
-		numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
+		requiredSigs = asSmallInt(pops[0].Opcode)
+		numPubKeys := asSmallInt(pops[len(pops)-2].Opcode)
 
 		// Extract the public keys while skipping any that are invalid.
 		addrs = make([]btcutil.Address, 0, numPubKeys)
 		for i := 0; i < numPubKeys; i++ {
-			addr, err := btcutil.NewAddressPubKey(pops[i+1].data,
+			addr, err := btcutil.NewAddressPubKey(pops[i+1].Data,
 				chainParams)
 			if err == nil {
 				addrs = append(addrs, addr)

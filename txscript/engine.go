@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -106,7 +107,7 @@ var halfOrder = new(big.Int).Rsh(btcec.S256().N, 1)
 
 // Engine is the virtual machine that executes scripts.
 type Engine struct {
-	scripts         [][]parsedOpcode
+	scripts         [][]parsescript.ParsedOpcode
 	scriptIdx       int
 	scriptOff       int
 	lastCodeSep     int
@@ -145,23 +146,23 @@ func (vm *Engine) isBranchExecuting() bool {
 // executeOpcode peforms execution on the passed opcode.  It takes into account
 // whether or not it is hidden by conditionals, but some rules still must be
 // tested in this case.
-func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
+func (vm *Engine) executeOpcode(pop *parsescript.ParsedOpcode) er.R {
 	// Disabled opcodes are fail on program counter.
-	if pop.isDisabled() {
+	if popIsDisabled(pop) {
 		str := fmt.Sprintf("attempt to execute disabled opcode %s",
-			opcode.OpcodeName(pop.opcode.value))
+			opcode.OpcodeName(pop.Opcode.Value))
 		return txscripterr.ScriptError(txscripterr.ErrDisabledOpcode, str)
 	}
 
 	// Always-illegal opcodes are fail on program counter.
-	if pop.alwaysIllegal() {
+	if popAlwaysIllegal(pop) {
 		str := fmt.Sprintf("attempt to execute reserved opcode %s",
-			opcode.OpcodeName(pop.opcode.value))
+			opcode.OpcodeName(pop.Opcode.Value))
 		return txscripterr.ScriptError(txscripterr.ErrReservedOpcode, str)
 	}
 
 	// Note that this includes OP_RESERVED which counts as a push operation.
-	if pop.opcode.value > opcode.OP_16 {
+	if pop.Opcode.Value > opcode.OP_16 {
 		vm.numOps++
 		if vm.numOps > params.MaxOpsPerScript {
 			str := fmt.Sprintf("exceeded max operation limit of %d",
@@ -169,24 +170,24 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 			return txscripterr.ScriptError(txscripterr.ErrTooManyOperations, str)
 		}
 
-	} else if len(pop.data) > params.MaxScriptElementSize {
+	} else if len(pop.Data) > params.MaxScriptElementSize {
 		str := fmt.Sprintf("element size %d exceeds max allowed size %d",
-			len(pop.data), params.MaxScriptElementSize)
+			len(pop.Data), params.MaxScriptElementSize)
 		return txscripterr.ScriptError(txscripterr.ErrElementTooBig, str)
 	}
 
 	// Nothing left to do when this is not a conditional opcode and it is
 	// not in an executing branch.
-	if !vm.isBranchExecuting() && !pop.isConditional() {
+	if !vm.isBranchExecuting() && !popIsConditional(pop) {
 		return nil
 	}
 
 	// Ensure all executed data push opcodes use the minimal encoding when
 	// the minimal data verification flag is set.
 	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() &&
-		pop.opcode.value <= opcode.OP_PUSHDATA4 {
+		pop.Opcode.Value <= opcode.OP_PUSHDATA4 {
 
-		if err := pop.checkMinimalDataPush(); err != nil {
+		if err := popCheckMinimalDataPush(pop); err != nil {
 			return err
 		}
 	}
@@ -200,7 +201,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) er.R {
 // to the caller to provide a valid offset.
 func (vm *Engine) disasm(scriptIdx int, scriptOff int) string {
 	return fmt.Sprintf("%02x:%04x: %s", scriptIdx, scriptOff,
-		vm.scripts[scriptIdx][scriptOff].print(false))
+		popPrint(&vm.scripts[scriptIdx][scriptOff], false))
 }
 
 // validPC returns an error if the current script position is valid for
@@ -257,7 +258,7 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 			if err != nil {
 				return err
 			}
-			pops, err := parseScript(pkScript)
+			pops, err := parsescript.ParseScript(pkScript)
 			if err != nil {
 				return err
 			}
@@ -298,7 +299,7 @@ func (vm *Engine) verifyWitnessProgram(witness [][]byte) er.R {
 			// With all the validity checks passed, parse the
 			// script into individual op-codes so w can execute it
 			// as the next script.
-			pops, err := parseScript(witnessScript)
+			pops, err := parsescript.ParseScript(witnessScript)
 			if err != nil {
 				return err
 			}
@@ -480,7 +481,7 @@ func (vm *Engine) Step() (done bool, err er.R) {
 			}
 
 			script := vm.savedFirstStack[len(vm.savedFirstStack)-1]
-			pops, err := parseScript(script)
+			pops, err := parsescript.ParseScript(script)
 			if err != nil {
 				return false, err
 			}
@@ -549,7 +550,7 @@ func (vm *Engine) Execute() (err er.R) {
 }
 
 // subScript returns the script since the last OP_CODESEPARATOR.
-func (vm *Engine) subScript() []parsedOpcode {
+func (vm *Engine) subScript() []parsescript.ParsedOpcode {
 	return vm.scripts[vm.scriptIdx][vm.lastCodeSep:]
 }
 
@@ -878,7 +879,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 	// with a pay-to-script-hash transaction, there will be ultimately be
 	// a third script to execute.
 	scripts := [][]byte{scriptSig, scriptPubKey}
-	vm.scripts = make([][]parsedOpcode, len(scripts))
+	vm.scripts = make([][]parsescript.ParsedOpcode, len(scripts))
 	for i, scr := range scripts {
 		if len(scr) > params.MaxScriptSize {
 			str := fmt.Sprintf("script size %d is larger than max "+
@@ -886,7 +887,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 			return nil, txscripterr.ScriptError(txscripterr.ErrScriptTooBig, str)
 		}
 		var err er.R
-		vm.scripts[i], err = parseScript(scr)
+		vm.scripts[i], err = parsescript.ParseScript(scr)
 		if err != nil {
 			return nil, err
 		}
@@ -944,9 +945,9 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 			// reintroduce malleability.
 			sigPops := vm.scripts[0]
 			if len(sigPops) == 1 && canonicalPush(sigPops[0]) &&
-				IsWitnessProgram(sigPops[0].data) {
+				IsWitnessProgram(sigPops[0].Data) {
 
-				witProgram = sigPops[0].data
+				witProgram = sigPops[0].Data
 			} else {
 				errStr := "signature script for witness " +
 					"nested p2sh is not canonical"

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 )
 
@@ -26,7 +27,7 @@ func TestOpcodeDisabled(t *testing.T) {
 		opcode.OP_LSHIFT, opcode.OP_RSHIFT,
 	}
 	for _, opcodeVal := range tests {
-		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: nil}
+		pop := parsescript.ParsedOpcode{Opcode: opcode.MkOpcode(byte(opcodeVal)), Data: nil}
 		err := opcodeDisabled(&pop, nil)
 		if !txscripterr.ErrDisabledOpcode.Is(err) {
 			t.Errorf("opcodeDisabled: unexpected error - got %v, "+
@@ -130,8 +131,8 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(int(opcodeVal))
 		}
 
-		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: data}
-		gotStr := pop.print(true)
+		pop := parsescript.ParsedOpcode{Opcode: opcode.MkOpcode(byte(opcodeVal)), Data: data}
+		gotStr := popPrint(&pop, true)
 		if gotStr != expectedStr {
 			t.Errorf("pop.print (opcode %x): Unexpected disasm "+
 				"string - got %v, want %v", opcodeVal, gotStr,
@@ -196,8 +197,8 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(int(opcodeVal))
 		}
 
-		pop := parsedOpcode{opcode: opcodeArray[opcodeVal], data: data}
-		gotStr := pop.print(false)
+		pop := parsescript.ParsedOpcode{Opcode: opcode.MkOpcode(byte(opcodeVal)), Data: data}
+		gotStr := popPrint(&pop, false)
 		if gotStr != expectedStr {
 			t.Errorf("pop.print (opcode %x): Unexpected disasm "+
 				"string - got %v, want %v", opcodeVal, gotStr,

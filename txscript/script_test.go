@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 
@@ -23,12 +24,12 @@ import (
 func TestParseOpcode(t *testing.T) {
 	// Deep copy the array and make one of the opcodes invalid by setting it
 	// to the wrong length.
-	fakeArray := opcodeArray
-	fakeArray[opcode.OP_PUSHDATA4] = opcodeT{value: opcode.OP_PUSHDATA4, length: -8}
+	fakeArray := make(map[byte]opcode.Opcode)
+	fakeArray[opcode.OP_PUSHDATA4] = opcode.Opcode{Value: opcode.OP_PUSHDATA4, Length: -8}
 
 	// This script would be fine if -8 was a valid length.
-	_, err := parseScriptTemplate([]byte{opcode.OP_PUSHDATA4, 0x1, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00}, &fakeArray)
+	_, err := parsescript.ParseScriptTemplate([]byte{opcode.OP_PUSHDATA4, 0x1, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00}, fakeArray)
 	if err == nil {
 		t.Errorf("no error with dodgy opcode array!")
 	}
@@ -39,3645 +40,3645 @@ func TestParseOpcode(t *testing.T) {
 func TestUnparsingInvalidOpcodes(t *testing.T) {
 	tests := []struct {
 		name        string
-		pop         *parsedOpcode
+		pop         *parsescript.ParsedOpcode
 		expectedErr er.R
 	}{
 		{
 			name: "OP_FALSE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_FALSE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_FALSE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_FALSE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_FALSE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_FALSE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_1 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_1],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_1),
+				Data:   nil,
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_1",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_1],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_1),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_1 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_1],
-				data:   make([]byte, 2),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_1),
+				Data:   make([]byte, 2),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_2 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_2],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_2),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_2],
-				data:   make([]byte, 2),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_2),
+				Data:   make([]byte, 2),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_2 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_2],
-				data:   make([]byte, 3),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_2),
+				Data:   make([]byte, 3),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_3 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_3],
-				data:   make([]byte, 2),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_3),
+				Data:   make([]byte, 2),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_3",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_3],
-				data:   make([]byte, 3),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_3),
+				Data:   make([]byte, 3),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_3 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_3],
-				data:   make([]byte, 4),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_3),
+				Data:   make([]byte, 4),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_4 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_4],
-				data:   make([]byte, 3),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_4),
+				Data:   make([]byte, 3),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_4",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_4],
-				data:   make([]byte, 4),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_4),
+				Data:   make([]byte, 4),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_4 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_4],
-				data:   make([]byte, 5),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_4),
+				Data:   make([]byte, 5),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_5 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_5],
-				data:   make([]byte, 4),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_5),
+				Data:   make([]byte, 4),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_5",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_5],
-				data:   make([]byte, 5),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_5),
+				Data:   make([]byte, 5),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_5 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_5],
-				data:   make([]byte, 6),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_5),
+				Data:   make([]byte, 6),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_6 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_6],
-				data:   make([]byte, 5),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_6),
+				Data:   make([]byte, 5),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_6",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_6],
-				data:   make([]byte, 6),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_6),
+				Data:   make([]byte, 6),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_6 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_6],
-				data:   make([]byte, 7),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_6),
+				Data:   make([]byte, 7),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_7 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_7],
-				data:   make([]byte, 6),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_7),
+				Data:   make([]byte, 6),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_7",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_7],
-				data:   make([]byte, 7),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_7),
+				Data:   make([]byte, 7),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_7 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_7],
-				data:   make([]byte, 8),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_7),
+				Data:   make([]byte, 8),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_8 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_8],
-				data:   make([]byte, 7),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_8),
+				Data:   make([]byte, 7),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_8",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_8],
-				data:   make([]byte, 8),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_8),
+				Data:   make([]byte, 8),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_8 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_8],
-				data:   make([]byte, 9),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_8),
+				Data:   make([]byte, 9),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_9 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_9],
-				data:   make([]byte, 8),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_9),
+				Data:   make([]byte, 8),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_9",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_9],
-				data:   make([]byte, 9),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_9),
+				Data:   make([]byte, 9),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_9 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_9],
-				data:   make([]byte, 10),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_9),
+				Data:   make([]byte, 10),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_10 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_10],
-				data:   make([]byte, 9),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_10),
+				Data:   make([]byte, 9),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_10",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_10],
-				data:   make([]byte, 10),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_10),
+				Data:   make([]byte, 10),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_10 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_10],
-				data:   make([]byte, 11),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_10),
+				Data:   make([]byte, 11),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_11 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_11],
-				data:   make([]byte, 10),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_11),
+				Data:   make([]byte, 10),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_11",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_11],
-				data:   make([]byte, 11),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_11),
+				Data:   make([]byte, 11),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_11 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_11],
-				data:   make([]byte, 12),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_11),
+				Data:   make([]byte, 12),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_12 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_12],
-				data:   make([]byte, 11),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_12),
+				Data:   make([]byte, 11),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_12",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_12],
-				data:   make([]byte, 12),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_12),
+				Data:   make([]byte, 12),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_12 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_12],
-				data:   make([]byte, 13),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_12),
+				Data:   make([]byte, 13),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_13 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_13],
-				data:   make([]byte, 12),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_13),
+				Data:   make([]byte, 12),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_13",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_13],
-				data:   make([]byte, 13),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_13),
+				Data:   make([]byte, 13),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_13 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_13],
-				data:   make([]byte, 14),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_13),
+				Data:   make([]byte, 14),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_14 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_14],
-				data:   make([]byte, 13),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_14),
+				Data:   make([]byte, 13),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_14",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_14],
-				data:   make([]byte, 14),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_14),
+				Data:   make([]byte, 14),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_14 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_14],
-				data:   make([]byte, 15),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_14),
+				Data:   make([]byte, 15),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_15 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_15],
-				data:   make([]byte, 14),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_15),
+				Data:   make([]byte, 14),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_15",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_15],
-				data:   make([]byte, 15),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_15),
+				Data:   make([]byte, 15),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_15 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_15],
-				data:   make([]byte, 16),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_15),
+				Data:   make([]byte, 16),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_16 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_16],
-				data:   make([]byte, 15),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_16),
+				Data:   make([]byte, 15),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_16",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_16],
-				data:   make([]byte, 16),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_16),
+				Data:   make([]byte, 16),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_16 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_16],
-				data:   make([]byte, 17),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_16),
+				Data:   make([]byte, 17),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_17 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_17],
-				data:   make([]byte, 16),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_17),
+				Data:   make([]byte, 16),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_17",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_17],
-				data:   make([]byte, 17),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_17),
+				Data:   make([]byte, 17),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_17 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_17],
-				data:   make([]byte, 18),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_17),
+				Data:   make([]byte, 18),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_18 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_18],
-				data:   make([]byte, 17),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_18),
+				Data:   make([]byte, 17),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_18",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_18],
-				data:   make([]byte, 18),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_18),
+				Data:   make([]byte, 18),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_18 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_18],
-				data:   make([]byte, 19),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_18),
+				Data:   make([]byte, 19),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_19 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_19],
-				data:   make([]byte, 18),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_19),
+				Data:   make([]byte, 18),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_19",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_19],
-				data:   make([]byte, 19),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_19),
+				Data:   make([]byte, 19),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_19 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_19],
-				data:   make([]byte, 20),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_19),
+				Data:   make([]byte, 20),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_20 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_20],
-				data:   make([]byte, 19),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_20),
+				Data:   make([]byte, 19),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_20",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_20],
-				data:   make([]byte, 20),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_20),
+				Data:   make([]byte, 20),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_20 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_20],
-				data:   make([]byte, 21),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_20),
+				Data:   make([]byte, 21),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_21 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_21],
-				data:   make([]byte, 20),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_21),
+				Data:   make([]byte, 20),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_21",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_21],
-				data:   make([]byte, 21),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_21),
+				Data:   make([]byte, 21),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_21 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_21],
-				data:   make([]byte, 22),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_21),
+				Data:   make([]byte, 22),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_22 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_22],
-				data:   make([]byte, 21),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_22),
+				Data:   make([]byte, 21),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_22",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_22],
-				data:   make([]byte, 22),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_22),
+				Data:   make([]byte, 22),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_22 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_22],
-				data:   make([]byte, 23),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_22),
+				Data:   make([]byte, 23),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_23 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_23],
-				data:   make([]byte, 22),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_23),
+				Data:   make([]byte, 22),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_23",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_23],
-				data:   make([]byte, 23),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_23),
+				Data:   make([]byte, 23),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_23 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_23],
-				data:   make([]byte, 24),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_23),
+				Data:   make([]byte, 24),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_24 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_24],
-				data:   make([]byte, 23),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_24),
+				Data:   make([]byte, 23),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_24",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_24],
-				data:   make([]byte, 24),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_24),
+				Data:   make([]byte, 24),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_24 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_24],
-				data:   make([]byte, 25),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_24),
+				Data:   make([]byte, 25),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_25 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_25],
-				data:   make([]byte, 24),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_25),
+				Data:   make([]byte, 24),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_25",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_25],
-				data:   make([]byte, 25),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_25),
+				Data:   make([]byte, 25),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_25 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_25],
-				data:   make([]byte, 26),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_25),
+				Data:   make([]byte, 26),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_26 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_26],
-				data:   make([]byte, 25),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_26),
+				Data:   make([]byte, 25),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_26",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_26],
-				data:   make([]byte, 26),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_26),
+				Data:   make([]byte, 26),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_26 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_26],
-				data:   make([]byte, 27),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_26),
+				Data:   make([]byte, 27),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_27 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_27],
-				data:   make([]byte, 26),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_27),
+				Data:   make([]byte, 26),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_27",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_27],
-				data:   make([]byte, 27),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_27),
+				Data:   make([]byte, 27),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_27 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_27],
-				data:   make([]byte, 28),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_27),
+				Data:   make([]byte, 28),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_28 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_28],
-				data:   make([]byte, 27),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_28),
+				Data:   make([]byte, 27),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_28",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_28],
-				data:   make([]byte, 28),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_28),
+				Data:   make([]byte, 28),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_28 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_28],
-				data:   make([]byte, 29),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_28),
+				Data:   make([]byte, 29),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_29 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_29],
-				data:   make([]byte, 28),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_29),
+				Data:   make([]byte, 28),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_29",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_29],
-				data:   make([]byte, 29),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_29),
+				Data:   make([]byte, 29),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_29 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_29],
-				data:   make([]byte, 30),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_29),
+				Data:   make([]byte, 30),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_30 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_30],
-				data:   make([]byte, 29),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_30),
+				Data:   make([]byte, 29),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_30",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_30],
-				data:   make([]byte, 30),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_30),
+				Data:   make([]byte, 30),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_30 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_30],
-				data:   make([]byte, 31),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_30),
+				Data:   make([]byte, 31),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_31 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_31],
-				data:   make([]byte, 30),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_31),
+				Data:   make([]byte, 30),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_31",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_31],
-				data:   make([]byte, 31),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_31),
+				Data:   make([]byte, 31),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_31 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_31],
-				data:   make([]byte, 32),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_31),
+				Data:   make([]byte, 32),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_32 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_32],
-				data:   make([]byte, 31),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_32),
+				Data:   make([]byte, 31),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_32",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_32],
-				data:   make([]byte, 32),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_32),
+				Data:   make([]byte, 32),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_32 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_32],
-				data:   make([]byte, 33),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_32),
+				Data:   make([]byte, 33),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_33 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_33],
-				data:   make([]byte, 32),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_33),
+				Data:   make([]byte, 32),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_33",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_33],
-				data:   make([]byte, 33),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_33),
+				Data:   make([]byte, 33),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_33 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_33],
-				data:   make([]byte, 34),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_33),
+				Data:   make([]byte, 34),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_34 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_34],
-				data:   make([]byte, 33),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_34),
+				Data:   make([]byte, 33),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_34",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_34],
-				data:   make([]byte, 34),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_34),
+				Data:   make([]byte, 34),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_34 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_34],
-				data:   make([]byte, 35),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_34),
+				Data:   make([]byte, 35),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_35 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_35],
-				data:   make([]byte, 34),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_35),
+				Data:   make([]byte, 34),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_35",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_35],
-				data:   make([]byte, 35),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_35),
+				Data:   make([]byte, 35),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_35 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_35],
-				data:   make([]byte, 36),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_35),
+				Data:   make([]byte, 36),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_36 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_36],
-				data:   make([]byte, 35),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_36),
+				Data:   make([]byte, 35),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_36",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_36],
-				data:   make([]byte, 36),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_36),
+				Data:   make([]byte, 36),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_36 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_36],
-				data:   make([]byte, 37),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_36),
+				Data:   make([]byte, 37),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_37 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_37],
-				data:   make([]byte, 36),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_37),
+				Data:   make([]byte, 36),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_37",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_37],
-				data:   make([]byte, 37),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_37),
+				Data:   make([]byte, 37),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_37 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_37],
-				data:   make([]byte, 38),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_37),
+				Data:   make([]byte, 38),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_38 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_38],
-				data:   make([]byte, 37),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_38),
+				Data:   make([]byte, 37),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_38",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_38],
-				data:   make([]byte, 38),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_38),
+				Data:   make([]byte, 38),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_38 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_38],
-				data:   make([]byte, 39),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_38),
+				Data:   make([]byte, 39),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_39 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_39],
-				data:   make([]byte, 38),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_39),
+				Data:   make([]byte, 38),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_39",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_39],
-				data:   make([]byte, 39),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_39),
+				Data:   make([]byte, 39),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_39 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_39],
-				data:   make([]byte, 40),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_39),
+				Data:   make([]byte, 40),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_40 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_40],
-				data:   make([]byte, 39),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_40),
+				Data:   make([]byte, 39),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_40",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_40],
-				data:   make([]byte, 40),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_40),
+				Data:   make([]byte, 40),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_40 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_40],
-				data:   make([]byte, 41),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_40),
+				Data:   make([]byte, 41),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_41 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_41],
-				data:   make([]byte, 40),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_41),
+				Data:   make([]byte, 40),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_41",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_41],
-				data:   make([]byte, 41),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_41),
+				Data:   make([]byte, 41),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_41 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_41],
-				data:   make([]byte, 42),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_41),
+				Data:   make([]byte, 42),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_42 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_42],
-				data:   make([]byte, 41),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_42),
+				Data:   make([]byte, 41),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_42",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_42],
-				data:   make([]byte, 42),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_42),
+				Data:   make([]byte, 42),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_42 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_42],
-				data:   make([]byte, 43),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_42),
+				Data:   make([]byte, 43),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_43 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_43],
-				data:   make([]byte, 42),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_43),
+				Data:   make([]byte, 42),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_43",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_43],
-				data:   make([]byte, 43),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_43),
+				Data:   make([]byte, 43),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_43 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_43],
-				data:   make([]byte, 44),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_43),
+				Data:   make([]byte, 44),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_44 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_44],
-				data:   make([]byte, 43),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_44),
+				Data:   make([]byte, 43),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_44",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_44],
-				data:   make([]byte, 44),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_44),
+				Data:   make([]byte, 44),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_44 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_44],
-				data:   make([]byte, 45),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_44),
+				Data:   make([]byte, 45),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_45 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_45],
-				data:   make([]byte, 44),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_45),
+				Data:   make([]byte, 44),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_45",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_45],
-				data:   make([]byte, 45),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_45),
+				Data:   make([]byte, 45),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_45 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_45],
-				data:   make([]byte, 46),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_45),
+				Data:   make([]byte, 46),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_46 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_46],
-				data:   make([]byte, 45),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_46),
+				Data:   make([]byte, 45),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_46",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_46],
-				data:   make([]byte, 46),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_46),
+				Data:   make([]byte, 46),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_46 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_46],
-				data:   make([]byte, 47),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_46),
+				Data:   make([]byte, 47),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_47 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_47],
-				data:   make([]byte, 46),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_47),
+				Data:   make([]byte, 46),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_47",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_47],
-				data:   make([]byte, 47),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_47),
+				Data:   make([]byte, 47),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_47 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_47],
-				data:   make([]byte, 48),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_47),
+				Data:   make([]byte, 48),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_48 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_48],
-				data:   make([]byte, 47),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_48),
+				Data:   make([]byte, 47),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_48",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_48],
-				data:   make([]byte, 48),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_48),
+				Data:   make([]byte, 48),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_48 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_48],
-				data:   make([]byte, 49),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_48),
+				Data:   make([]byte, 49),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_49 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_49],
-				data:   make([]byte, 48),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_49),
+				Data:   make([]byte, 48),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_49",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_49],
-				data:   make([]byte, 49),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_49),
+				Data:   make([]byte, 49),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_49 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_49],
-				data:   make([]byte, 50),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_49),
+				Data:   make([]byte, 50),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_50 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_50],
-				data:   make([]byte, 49),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_50),
+				Data:   make([]byte, 49),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_50",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_50],
-				data:   make([]byte, 50),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_50),
+				Data:   make([]byte, 50),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_50 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_50],
-				data:   make([]byte, 51),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_50),
+				Data:   make([]byte, 51),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_51 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_51],
-				data:   make([]byte, 50),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_51),
+				Data:   make([]byte, 50),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_51",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_51],
-				data:   make([]byte, 51),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_51),
+				Data:   make([]byte, 51),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_51 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_51],
-				data:   make([]byte, 52),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_51),
+				Data:   make([]byte, 52),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_52 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_52],
-				data:   make([]byte, 51),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_52),
+				Data:   make([]byte, 51),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_52",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_52],
-				data:   make([]byte, 52),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_52),
+				Data:   make([]byte, 52),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_52 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_52],
-				data:   make([]byte, 53),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_52),
+				Data:   make([]byte, 53),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_53 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_53],
-				data:   make([]byte, 52),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_53),
+				Data:   make([]byte, 52),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_53",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_53],
-				data:   make([]byte, 53),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_53),
+				Data:   make([]byte, 53),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_53 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_53],
-				data:   make([]byte, 54),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_53),
+				Data:   make([]byte, 54),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_54 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_54],
-				data:   make([]byte, 53),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_54),
+				Data:   make([]byte, 53),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_54",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_54],
-				data:   make([]byte, 54),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_54),
+				Data:   make([]byte, 54),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_54 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_54],
-				data:   make([]byte, 55),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_54),
+				Data:   make([]byte, 55),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_55 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_55],
-				data:   make([]byte, 54),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_55),
+				Data:   make([]byte, 54),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_55",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_55],
-				data:   make([]byte, 55),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_55),
+				Data:   make([]byte, 55),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_55 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_55],
-				data:   make([]byte, 56),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_55),
+				Data:   make([]byte, 56),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_56 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_56],
-				data:   make([]byte, 55),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_56),
+				Data:   make([]byte, 55),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_56",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_56],
-				data:   make([]byte, 56),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_56),
+				Data:   make([]byte, 56),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_56 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_56],
-				data:   make([]byte, 57),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_56),
+				Data:   make([]byte, 57),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_57 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_57],
-				data:   make([]byte, 56),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_57),
+				Data:   make([]byte, 56),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_57",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_57],
-				data:   make([]byte, 57),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_57),
+				Data:   make([]byte, 57),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_57 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_57],
-				data:   make([]byte, 58),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_57),
+				Data:   make([]byte, 58),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_58 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_58],
-				data:   make([]byte, 57),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_58),
+				Data:   make([]byte, 57),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_58",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_58],
-				data:   make([]byte, 58),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_58),
+				Data:   make([]byte, 58),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_58 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_58],
-				data:   make([]byte, 59),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_58),
+				Data:   make([]byte, 59),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_59 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_59],
-				data:   make([]byte, 58),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_59),
+				Data:   make([]byte, 58),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_59",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_59],
-				data:   make([]byte, 59),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_59),
+				Data:   make([]byte, 59),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_59 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_59],
-				data:   make([]byte, 60),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_59),
+				Data:   make([]byte, 60),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_60 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_60],
-				data:   make([]byte, 59),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_60),
+				Data:   make([]byte, 59),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_60",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_60],
-				data:   make([]byte, 60),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_60),
+				Data:   make([]byte, 60),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_60 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_60],
-				data:   make([]byte, 61),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_60),
+				Data:   make([]byte, 61),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_61 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_61],
-				data:   make([]byte, 60),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_61),
+				Data:   make([]byte, 60),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_61",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_61],
-				data:   make([]byte, 61),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_61),
+				Data:   make([]byte, 61),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_61 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_61],
-				data:   make([]byte, 62),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_61),
+				Data:   make([]byte, 62),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_62 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_62],
-				data:   make([]byte, 61),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_62),
+				Data:   make([]byte, 61),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_62",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_62],
-				data:   make([]byte, 62),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_62),
+				Data:   make([]byte, 62),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_62 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_62],
-				data:   make([]byte, 63),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_62),
+				Data:   make([]byte, 63),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_63 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_63],
-				data:   make([]byte, 62),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_63),
+				Data:   make([]byte, 62),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_63",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_63],
-				data:   make([]byte, 63),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_63),
+				Data:   make([]byte, 63),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_63 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_63],
-				data:   make([]byte, 64),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_63),
+				Data:   make([]byte, 64),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_64 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_64],
-				data:   make([]byte, 63),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_64),
+				Data:   make([]byte, 63),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_64",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_64],
-				data:   make([]byte, 64),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_64),
+				Data:   make([]byte, 64),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_64 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_64],
-				data:   make([]byte, 65),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_64),
+				Data:   make([]byte, 65),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_65 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_65],
-				data:   make([]byte, 64),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_65),
+				Data:   make([]byte, 64),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_65",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_65],
-				data:   make([]byte, 65),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_65),
+				Data:   make([]byte, 65),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_65 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_65],
-				data:   make([]byte, 66),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_65),
+				Data:   make([]byte, 66),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_66 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_66],
-				data:   make([]byte, 65),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_66),
+				Data:   make([]byte, 65),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_66",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_66],
-				data:   make([]byte, 66),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_66),
+				Data:   make([]byte, 66),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_66 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_66],
-				data:   make([]byte, 67),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_66),
+				Data:   make([]byte, 67),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_67 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_67],
-				data:   make([]byte, 66),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_67),
+				Data:   make([]byte, 66),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_67",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_67],
-				data:   make([]byte, 67),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_67),
+				Data:   make([]byte, 67),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_67 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_67],
-				data:   make([]byte, 68),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_67),
+				Data:   make([]byte, 68),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_68 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_68],
-				data:   make([]byte, 67),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_68),
+				Data:   make([]byte, 67),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_68",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_68],
-				data:   make([]byte, 68),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_68),
+				Data:   make([]byte, 68),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_68 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_68],
-				data:   make([]byte, 69),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_68),
+				Data:   make([]byte, 69),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_69 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_69],
-				data:   make([]byte, 68),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_69),
+				Data:   make([]byte, 68),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_69",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_69],
-				data:   make([]byte, 69),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_69),
+				Data:   make([]byte, 69),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_69 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_69],
-				data:   make([]byte, 70),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_69),
+				Data:   make([]byte, 70),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_70 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_70],
-				data:   make([]byte, 69),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_70),
+				Data:   make([]byte, 69),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_70",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_70],
-				data:   make([]byte, 70),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_70),
+				Data:   make([]byte, 70),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_70 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_70],
-				data:   make([]byte, 71),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_70),
+				Data:   make([]byte, 71),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_71 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_71],
-				data:   make([]byte, 70),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_71),
+				Data:   make([]byte, 70),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_71",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_71],
-				data:   make([]byte, 71),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_71),
+				Data:   make([]byte, 71),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_71 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_71],
-				data:   make([]byte, 72),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_71),
+				Data:   make([]byte, 72),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_72 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_72],
-				data:   make([]byte, 71),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_72),
+				Data:   make([]byte, 71),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_72",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_72],
-				data:   make([]byte, 72),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_72),
+				Data:   make([]byte, 72),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_72 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_72],
-				data:   make([]byte, 73),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_72),
+				Data:   make([]byte, 73),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_73 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_73],
-				data:   make([]byte, 72),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_73),
+				Data:   make([]byte, 72),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_73",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_73],
-				data:   make([]byte, 73),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_73),
+				Data:   make([]byte, 73),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_73 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_73],
-				data:   make([]byte, 74),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_73),
+				Data:   make([]byte, 74),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_74 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_74],
-				data:   make([]byte, 73),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_74),
+				Data:   make([]byte, 73),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_74",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_74],
-				data:   make([]byte, 74),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_74),
+				Data:   make([]byte, 74),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_74 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_74],
-				data:   make([]byte, 75),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_74),
+				Data:   make([]byte, 75),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_75 short",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_75],
-				data:   make([]byte, 74),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_75),
+				Data:   make([]byte, 74),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DATA_75",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_75],
-				data:   make([]byte, 75),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_75),
+				Data:   make([]byte, 75),
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DATA_75 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DATA_75],
-				data:   make([]byte, 76),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DATA_75),
+				Data:   make([]byte, 76),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_PUSHDATA1",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUSHDATA1],
-				data:   []byte{0, 1, 2, 3, 4},
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUSHDATA1),
+				Data:   []byte{0, 1, 2, 3, 4},
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_PUSHDATA2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUSHDATA2],
-				data:   []byte{0, 1, 2, 3, 4},
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUSHDATA2),
+				Data:   []byte{0, 1, 2, 3, 4},
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_PUSHDATA4",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUSHDATA1],
-				data:   []byte{0, 1, 2, 3, 4},
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUSHDATA1),
+				Data:   []byte{0, 1, 2, 3, 4},
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_1NEGATE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1NEGATE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1NEGATE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_1NEGATE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1NEGATE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1NEGATE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RESERVED",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RESERVED long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_TRUE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TRUE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TRUE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_TRUE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TRUE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TRUE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_3",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_3],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_3),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_3 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_3],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_3),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_4",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_4],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_4),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_4 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_4],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_4),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_5",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_5],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_5),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_5 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_5],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_5),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_6",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_6],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_6),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_6 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_6],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_6),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_7",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_7],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_7),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_7 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_7],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_7),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_8",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_8],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_8),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_8 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_8],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_8),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_9",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_9],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_9),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_9 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_9],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_9),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_10",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_10],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_10),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_10 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_10],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_10),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_11",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_11],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_11),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_11 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_11],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_11),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_12",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_12],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_12),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_12 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_12],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_12),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_13",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_13],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_13),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_13 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_13],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_13),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_14",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_14],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_14),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_14 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_14],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_14),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_15",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_15],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_15),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_15 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_15],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_15),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_16",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_16],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_16),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_16 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_16],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_16),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_VER",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VER],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VER),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_VER long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VER],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VER),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_IF",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_IF],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_IF),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_IF long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_IF],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_IF),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOTIF",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOTIF],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOTIF),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOTIF long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOTIF],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOTIF),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_VERIF",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VERIF],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VERIF),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_VERIF long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VERIF],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VERIF),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_VOTE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VOTE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VOTE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_VOTE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VOTE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VOTE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ELSE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ELSE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ELSE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ELSE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ELSE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ELSE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ENDIF",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ENDIF],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ENDIF),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ENDIF long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ENDIF],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ENDIF),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_VERIFY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VERIFY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VERIFY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_VERIFY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_VERIFY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_VERIFY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RETURN",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RETURN],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RETURN),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RETURN long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RETURN],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RETURN),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_TOALTSTACK",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TOALTSTACK],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TOALTSTACK),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_TOALTSTACK long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TOALTSTACK],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TOALTSTACK),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_FROMALTSTACK",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_FROMALTSTACK],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_FROMALTSTACK),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_FROMALTSTACK long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_FROMALTSTACK],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_FROMALTSTACK),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2DROP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DROP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DROP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2DROP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DROP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DROP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2DUP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DUP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DUP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2DUP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DUP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DUP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_3DUP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_3DUP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_3DUP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_3DUP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_3DUP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_3DUP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2OVER",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2OVER],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2OVER),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2OVER long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2OVER],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2OVER),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2ROT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2ROT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2ROT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2ROT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2ROT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2ROT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2SWAP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2SWAP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2SWAP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2SWAP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2SWAP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2SWAP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_IFDUP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_IFDUP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_IFDUP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_IFDUP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_IFDUP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_IFDUP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DEPTH",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DEPTH],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DEPTH),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DEPTH long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DEPTH],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DEPTH),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DROP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DROP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DROP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DROP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DROP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DROP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DUP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DUP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DUP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DUP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DUP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DUP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NIP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NIP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NIP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NIP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NIP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NIP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_OVER",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_OVER],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_OVER),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_OVER long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_OVER],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_OVER),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_PICK",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PICK],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PICK),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_PICK long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PICK],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PICK),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ROLL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ROLL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ROLL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ROLL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ROLL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ROLL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ROT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ROT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ROT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ROT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ROT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ROT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SWAP",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SWAP],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SWAP),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SWAP long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SWAP],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SWAP),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_TUCK",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TUCK],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TUCK),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_TUCK long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_TUCK],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_TUCK),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CAT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CAT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CAT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CAT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CAT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CAT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SUBSTR",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SUBSTR],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SUBSTR),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SUBSTR long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SUBSTR],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SUBSTR),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_LEFT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LEFT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LEFT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_LEFT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LEFT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LEFT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_LEFT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LEFT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LEFT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_LEFT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LEFT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LEFT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RIGHT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RIGHT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RIGHT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RIGHT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RIGHT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RIGHT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SIZE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SIZE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SIZE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SIZE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SIZE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SIZE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_INVERT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_INVERT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_INVERT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_INVERT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_INVERT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_INVERT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_AND",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_AND],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_AND),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_AND long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_AND],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_AND),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_OR",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_OR],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_OR),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_OR long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_OR],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_OR),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_XOR",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_XOR],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_XOR),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_XOR long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_XOR],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_XOR),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_EQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_EQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_EQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_EQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_EQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_EQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_EQUALVERIFY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_EQUALVERIFY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_EQUALVERIFY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_EQUALVERIFY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_EQUALVERIFY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_EQUALVERIFY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RESERVED1",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED1],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED1),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RESERVED1 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED1],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED1),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RESERVED2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED2],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED2),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RESERVED2 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RESERVED2],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RESERVED2),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_1ADD",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1ADD],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1ADD),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_1ADD long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1ADD],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1ADD),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_1SUB",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1SUB],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1SUB),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_1SUB long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_1SUB],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_1SUB),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2MUL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2MUL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2MUL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2MUL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2MUL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2MUL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_2DIV",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DIV],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DIV),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_2DIV long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_2DIV],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_2DIV),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NEGATE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NEGATE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NEGATE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NEGATE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NEGATE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NEGATE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ABS",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ABS],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ABS),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ABS long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ABS],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ABS),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_0NOTEQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_0NOTEQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_0NOTEQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_0NOTEQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_0NOTEQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_0NOTEQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_ADD",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ADD],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ADD),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_ADD long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_ADD],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_ADD),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SUB",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SUB],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SUB),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SUB long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SUB],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SUB),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_MUL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MUL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MUL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_MUL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MUL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MUL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_DIV",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DIV],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DIV),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_DIV long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_DIV],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_DIV),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_MOD",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MOD],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MOD),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_MOD long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MOD],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MOD),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_LSHIFT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LSHIFT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LSHIFT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_LSHIFT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LSHIFT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LSHIFT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RSHIFT",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RSHIFT],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RSHIFT),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RSHIFT long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RSHIFT],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RSHIFT),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_BOOLAND",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_BOOLAND],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_BOOLAND),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_BOOLAND long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_BOOLAND],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_BOOLAND),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_BOOLOR",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_BOOLOR],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_BOOLOR),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_BOOLOR long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_BOOLOR],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_BOOLOR),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NUMEQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMEQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMEQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NUMEQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMEQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMEQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NUMEQUALVERIFY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMEQUALVERIFY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMEQUALVERIFY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NUMEQUALVERIFY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMEQUALVERIFY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMEQUALVERIFY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NUMNOTEQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMNOTEQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMNOTEQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NUMNOTEQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NUMNOTEQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NUMNOTEQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_LESSTHAN",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LESSTHAN],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LESSTHAN),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_LESSTHAN long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LESSTHAN],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LESSTHAN),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_GREATERTHAN",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_GREATERTHAN],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_GREATERTHAN),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_GREATERTHAN long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_GREATERTHAN],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_GREATERTHAN),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_LESSTHANOREQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LESSTHANOREQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LESSTHANOREQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_LESSTHANOREQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_LESSTHANOREQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_LESSTHANOREQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_GREATERTHANOREQUAL",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_GREATERTHANOREQUAL],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_GREATERTHANOREQUAL),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_GREATERTHANOREQUAL long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_GREATERTHANOREQUAL],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_GREATERTHANOREQUAL),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_MIN",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MIN],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MIN),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_MIN long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MIN],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MIN),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_MAX",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MAX],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MAX),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_MAX long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_MAX],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_MAX),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_WITHIN",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_WITHIN],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_WITHIN),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_WITHIN long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_WITHIN],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_WITHIN),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_RIPEMD160",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RIPEMD160],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RIPEMD160),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_RIPEMD160 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_RIPEMD160],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_RIPEMD160),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SHA1",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SHA1],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SHA1),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SHA1 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SHA1],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SHA1),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_SHA256",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SHA256],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SHA256),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_SHA256 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_SHA256],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_SHA256),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_HASH160",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_HASH160],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_HASH160),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_HASH160 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_HASH160],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_HASH160),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_HASH256",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_HASH256],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_HASH256),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_HASH256 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_HASH256],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_HASH256),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CODESAPERATOR",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CODESEPARATOR],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CODESEPARATOR),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CODESEPARATOR long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CODESEPARATOR],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CODESEPARATOR),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CHECKSIG",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKSIG],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKSIG),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CHECKSIG long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKSIG],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKSIG),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CHECKSIGVERIFY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKSIGVERIFY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKSIGVERIFY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CHECKSIGVERIFY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKSIGVERIFY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKSIGVERIFY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CHECKMULTISIG",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKMULTISIG],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKMULTISIG),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CHECKMULTISIG long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKMULTISIG],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKMULTISIG),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_CHECKMULTISIGVERIFY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKMULTISIGVERIFY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKMULTISIGVERIFY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_CHECKMULTISIGVERIFY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_CHECKMULTISIGVERIFY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_CHECKMULTISIGVERIFY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP1",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP1],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP1),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP1 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP1],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP1),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP2",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP2],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP2),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP2 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP2],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP2),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP3",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP3],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP3),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP3 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP3],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP3),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP4",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP4],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP4),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP4 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP4],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP4),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP5",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP5],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP5),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP5 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP5],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP5),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP6",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP6],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP6),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP6 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP6],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP6),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP7",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP7],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP7),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP7 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP7],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP7),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP8",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP8],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP8),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP8 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP8],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP8),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP9",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP9],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP9),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP9 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP9],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP9),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_NOP10",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP10],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP10),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_NOP10 long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_NOP10],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_NOP10),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_PUBKEYHASH",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUBKEYHASH],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUBKEYHASH),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_PUBKEYHASH long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUBKEYHASH],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUBKEYHASH),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_PUBKEY",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUBKEY],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUBKEY),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_PUBKEY long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_PUBKEY],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_PUBKEY),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 		{
 			name: "OP_INVALIDOPCODE",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_INVALIDOPCODE],
-				data:   nil,
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_INVALIDOPCODE),
+				Data:   nil,
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "OP_INVALIDOPCODE long",
-			pop: &parsedOpcode{
-				opcode: opcodeArray[opcode.OP_INVALIDOPCODE],
-				data:   make([]byte, 1),
+			pop: &parsescript.ParsedOpcode{
+				Opcode: opcode.MkOpcode(opcode.OP_INVALIDOPCODE),
+				Data:   make([]byte, 1),
 			},
 			expectedErr: txscripterr.ScriptError(txscripterr.ErrInternal, ""),
 		},
 	}
 
 	for _, test := range tests {
-		_, err := test.pop.bytes()
+		_, err := popBytes(test.pop)
 		if e := tstCheckScriptError(err, test.expectedErr); e != nil {
 			t.Errorf("Parsed opcode test '%s': %v", test.name, e)
 			continue
@@ -3762,7 +3763,7 @@ func TestHasCanonicalPush(t *testing.T) {
 				script)
 			continue
 		}
-		pops, err := parseScript(script)
+		pops, err := parsescript.ParseScript(script)
 		if err != nil {
 			t.Errorf("parseScript: #%d failed: %v", i, err)
 			continue
@@ -3787,7 +3788,7 @@ func TestHasCanonicalPush(t *testing.T) {
 			t.Errorf("StandardPushesTests IsPushOnlyScript test #%d failed: %x\n", i, script)
 			continue
 		}
-		pops, err := parseScript(script)
+		pops, err := parsescript.ParseScript(script)
 		if err != nil {
 			t.Errorf("StandardPushesTests #%d failed to TstParseScript: %v", i, err)
 			continue
@@ -3998,7 +3999,7 @@ func TestRemoveOpcodes(t *testing.T) {
 	// raw script, remove the passed opcode, then unparse the result back
 	// into a raw script.
 	tstRemoveOpcode := func(script []byte, opcode byte) ([]byte, er.R) {
-		pops, err := parseScript(script)
+		pops, err := parsescript.ParseScript(script)
 		if err != nil {
 			return nil, err
 		}
@@ -4149,7 +4150,7 @@ func TestRemoveOpcodeByData(t *testing.T) {
 	// raw script, remove the passed data, then unparse the result back
 	// into a raw script.
 	tstRemoveOpcodeByData := func(script []byte, data []byte) ([]byte, er.R) {
-		pops, err := parseScript(script)
+		pops, err := parsescript.ParseScript(script)
 		if err != nil {
 			return nil, err
 		}
@@ -4244,7 +4245,7 @@ func TestHasCanonicalPushes(t *testing.T) {
 
 	for i, test := range tests {
 		script := mustParseShortForm(test.script)
-		pops, err := parseScript(script)
+		pops, err := parsescript.ParseScript(script)
 		if err != nil {
 			if test.expected {
 				t.Errorf("TstParseScript #%d failed: %v", i, err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -211,11 +212,11 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 		// The redeem script will always be the last data push of the
 		// signature script, so we'll parse the script into opcodes to
 		// obtain it.
-		parsedOpcodes, err := parseScript(sigScript)
+		parsedOpcodes, err := parsescript.ParseScript(sigScript)
 		if err != nil {
 			return PkScript{}, err
 		}
-		redeemScript := parsedOpcodes[len(parsedOpcodes)-1].data
+		redeemScript := parsedOpcodes[len(parsedOpcodes)-1].Data
 
 		scriptHash := btcutil.Hash160(redeemScript)
 		script, err := payToScriptHashScript(scriptHash)

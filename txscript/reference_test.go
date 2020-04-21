@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/txscript/txscripterr"
 	"github.com/pkt-cash/pktd/wire/constants"
@@ -859,7 +860,7 @@ func TestCalcSignatureHash(t *testing.T) {
 		}
 
 		subScript, _ := hex.DecodeString(test[1].(string))
-		parsedScript, err := parseScript(subScript)
+		parsedScript, err := parsescript.ParseScript(subScript)
 		if err != nil {
 			t.Errorf("TestCalcSignatureHash failed test #%d: "+
 				"Failed to parse sub-script: %v", i, err)

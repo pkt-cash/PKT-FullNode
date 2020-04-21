@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/parsescript"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
 	"github.com/pkt-cash/pktd/btcec"
@@ -24,7 +25,7 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	amt int64, subScript []byte, hashType params.SigHashType,
 	key *btcec.PrivateKey) ([]byte, er.R) {
 
-	parsedScript, err := parseScript(subScript)
+	parsedScript, err := parsescript.ParseScript(subScript)
 	if err != nil {
 		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
@@ -232,18 +233,18 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	case ScriptHashTy:
 		// Remove the last push in the script and then recurse.
 		// this could be a lot less inefficient.
-		sigPops, err := parseScript(sigScript)
+		sigPops, err := parsescript.ParseScript(sigScript)
 		if err != nil || len(sigPops) == 0 {
 			return prevScript
 		}
-		prevPops, err := parseScript(prevScript)
+		prevPops, err := parsescript.ParseScript(prevScript)
 		if err != nil || len(prevPops) == 0 {
 			return sigScript
 		}
 
 		// assume that script in sigPops is the correct one, we just
 		// made it.
-		script := sigPops[len(sigPops)-1].data
+		script := sigPops[len(sigPops)-1].Data
 
 		// We already know this information somewhere up the stack.
 		class, addresses, nrequired, _ :=
@@ -293,23 +294,23 @@ func mergeMultiSig(tx *wire.MsgTx, idx int, addresses []btcutil.Address,
 	// This is an internal only function and we already parsed this script
 	// as ok for multisig (this is how we got here), so if this fails then
 	// all assumptions are broken and who knows which way is up?
-	pkPops, _ := parseScript(pkScript)
+	pkPops, _ := parsescript.ParseScript(pkScript)
 
-	sigPops, err := parseScript(sigScript)
+	sigPops, err := parsescript.ParseScript(sigScript)
 	if err != nil || len(sigPops) == 0 {
 		return prevScript
 	}
 
-	prevPops, err := parseScript(prevScript)
+	prevPops, err := parsescript.ParseScript(prevScript)
 	if err != nil || len(prevPops) == 0 {
 		return sigScript
 	}
 
 	// Convenience function to avoid duplication.
-	extractSigs := func(pops []parsedOpcode, sigs [][]byte) [][]byte {
+	extractSigs := func(pops []parsescript.ParsedOpcode, sigs [][]byte) [][]byte {
 		for _, pop := range pops {
-			if len(pop.data) != 0 {
-				sigs = append(sigs, pop.data)
+			if len(pop.Data) != 0 {
+				sigs = append(sigs, pop.Data)
 			}
 		}
 		return sigs
