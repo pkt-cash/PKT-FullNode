@@ -241,7 +241,8 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	if userpass, err := pktconfig.ReadUserPass(serverConfigPath); err != nil {
-		return nil, nil, err
+		fmt.Fprintf(os.Stderr, "Warning: cannot open file [%s] [%s]\n",
+			serverConfigPath, err.String())
 	} else {
 		cfg.RPCUser = userpass[0]
 		cfg.RPCPassword = userpass[1]

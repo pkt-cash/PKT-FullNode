@@ -51,6 +51,7 @@ func main() {
 	version.SetUserAgentName("btcctl")
 	cfg, args, err := loadConfig()
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.String())
 		os.Exit(1)
 	}
 	if len(args) < 1 {
