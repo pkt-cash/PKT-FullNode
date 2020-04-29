@@ -435,6 +435,9 @@ func readRawTxRecordBlock(k []byte, block *Block) er.R {
 func fetchTxRecord(ns walletdb.ReadBucket, txHash *chainhash.Hash, block *Block) (*TxRecord, er.R) {
 	k := keyTxRecord(txHash, block)
 	v := ns.NestedReadBucket(bucketTxRecords).Get(k)
+	if v == nil {
+		return nil, nil
+	}
 
 	rec := new(TxRecord)
 	err := readRawTxRecord(txHash, v, rec)

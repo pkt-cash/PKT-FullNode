@@ -760,6 +760,8 @@ func (s *Store) ForEachUnspentOutput(
 		rec, err := fetchTxRecord(ns, &op.Hash, &block)
 		if err != nil {
 			return err
+		} else if rec == nil {
+			return er.New("fetchTxRecord() -> nil")
 		}
 		txOut := rec.MsgTx.TxOut[op.Index]
 		cred := Credit{
@@ -906,6 +908,10 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			rec, err := fetchTxRecord(ns, txHash, &block.Block)
 			if err != nil {
 				return 0, err
+			} else if rec == nil {
+				// Stray block.transactions entry for transaction which
+				// should have been deleted.
+				continue
 			}
 			numOuts := uint32(len(rec.MsgTx.TxOut))
 			for i := uint32(0); i < numOuts; i++ {
