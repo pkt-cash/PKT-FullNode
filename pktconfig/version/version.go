@@ -17,7 +17,7 @@ const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 // versioning 2.0.0 spec (http://semver.org/).
 const (
 	AppMajorVersion uint = 1
-	AppMinorVersion uint = 0
+	AppMinorVersion uint = 1
 	AppPatchVersion uint = 0
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
