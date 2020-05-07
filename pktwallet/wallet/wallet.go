@@ -1211,6 +1211,7 @@ type (
 		ChangeAddress   *btcutil.Address
 		InputMinHeight  int
 		InputComparator utils.Comparator
+		MaxInputs       int
 	}
 	createTxRequest struct {
 		req  CreateTxReq
