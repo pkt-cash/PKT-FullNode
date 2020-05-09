@@ -8,7 +8,7 @@ notifications:
 branches:
   only:
   - master
-  - pktd-mergeall
+  - develop
 go:
   - "1.12.x"
 sudo: false
