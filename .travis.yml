@@ -1,16 +1,25 @@
-language: go
+dist: xenial
+lang: go
 notifications:
   irc:
     channels:
       - "chat.freenode.net#pkt"
     on_success: change
     on_failure: always
-branches:
-  only:
-  - master
-  - develop
 go:
   - "1.12.x"
-sudo: false
-script:
-  - ./do
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          packages:
+            - rpmbuild
+      script:
+        - gem install --no-document fpm
+        - bash -x ./contrib/deb/build.sh
+        - bash -x ./contrib/rpm/build.sh
+    - os: osx
+      script:
+        - gem install --no-document fpm
+        - bash -x ./contrib/macos/build.sh
