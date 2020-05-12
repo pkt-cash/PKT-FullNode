@@ -5,16 +5,17 @@
 # e.g. ./contrib/gem/build.sh
 #
 
-
-BINARY_FOLDER=.
-RPM_PACKAGE_NAME=pktd
-
 ./do
 echo "Binary built. Building GEM now."
 
+mkdir ./bins
+mv ./pktd ./bins
+mv ./wallet ./bins/pktwallet
+mv ./btcctl ./bins/pktctl
+
 if which fpm; then
 	if which pkgbuild; then
-		fpm -n $RPM_PACKAGE_NAME -s dir -t osxpkg $BINARY_FOLDER
+		fpm -n pktd -s dir -t osxpkg -v "$(./bins/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bins
 		echo "GEM file built."
 	else
 		echo "pkgbuild not installed or not reachable"

@@ -5,16 +5,17 @@
 # e.g. ./contrib/rpm/build.sh
 #
 
-
-BINARY_FOLDER=.
-RPM_PACKAGE_NAME=pktd
-
 ./do
 echo "Binary built. Building RPM now."
 
+mkdir ./bins
+mv ./pktd ./bins
+mv ./wallet ./bins/pktwallet
+mv ./btcctl ./bins/pktctl
+
 if which fpm; then
 	if which rpmbuild; then
-		fpm -n $RPM_PACKAGE_NAME -s dir -t rpm $BINARY_FOLDER
+		fpm -n pktd -s dir -t rpm -v "$(./bins/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bins
 		echo "RPM file built."
 	else
 		echo "rpmbuild not installed or not reachable"
