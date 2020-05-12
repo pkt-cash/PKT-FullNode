@@ -6,8 +6,6 @@ notifications:
       - "chat.freenode.net#pkt"
     on_success: change
     on_failure: always
-go:
-  - 1.14.1
 matrix:
   include:
     - os: linux
@@ -15,11 +13,13 @@ matrix:
         apt:
           packages:
             - rpm
+      go: 1.14.1
       script:
         - gem install --no-document fpm
         - bash -x ./contrib/deb/build.sh
         - bash -x ./contrib/rpm/build.sh
     - os: osx
+      go: 1.14.1
       script:
         - gem install --no-document fpm
         - bash -x ./contrib/macos/build.sh
