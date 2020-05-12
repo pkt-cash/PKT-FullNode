@@ -14,7 +14,7 @@ matrix:
       addons:
         apt:
           packages:
-            - rpmbuild
+            - rpm
       script:
         - gem install --no-document fpm
         - bash -x ./contrib/deb/build.sh
