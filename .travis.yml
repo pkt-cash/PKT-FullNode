@@ -1,5 +1,5 @@
 dist: xenial
-lang: go
+language: go
 notifications:
   irc:
     channels:
@@ -13,13 +13,13 @@ matrix:
         apt:
           packages:
             - rpm
-      go: 1.14.1
+      go: "1.14.1"
       script:
         - gem install --no-document fpm
         - bash -x ./contrib/deb/build.sh
         - bash -x ./contrib/rpm/build.sh
     - os: osx
-      go: 1.14.1
+      go: "1.14.1"
       script:
         - gem install --no-document fpm
         - bash -x ./contrib/macos/build.sh
