@@ -6,8 +6,8 @@
 #
 if which fpm; then
 	if which pkgbuild; then
-		fpm -n pktd-mac-amd64 -s dir -t osxpkg -v "$(./bin/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bin
-		echo "GEM file built."
+		fpm -n pktd-mac -s dir -t osxpkg -v "$(./bin/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bin
+		echo "PKG file built."
 	else
 		echo "pkgbuild not installed or not reachable"
 		exit 1
