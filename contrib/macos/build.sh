@@ -4,18 +4,9 @@
 # This script should be run from the project root
 # e.g. ./contrib/gem/build.sh
 #
-
-./do
-echo "Binary built. Building GEM now."
-
-mkdir ./bins
-mv ./pktd ./bins
-mv ./wallet ./bins/pktwallet
-mv ./btcctl ./bins/pktctl
-
 if which fpm; then
 	if which pkgbuild; then
-		fpm -n pktd-mac -s dir -t osxpkg -v "$(./bins/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bins
+		fpm -n pktd-mac-amd64 -s dir -t osxpkg -v "$(./bin/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bin
 		echo "GEM file built."
 	else
 		echo "pkgbuild not installed or not reachable"
