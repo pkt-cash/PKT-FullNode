@@ -36,7 +36,7 @@ deploy:
   file:
     - "pktd-mac-*.pkg"
     - "pktd-linux-*.rpm"
-    - "pktd-linux-*.deb"
+    - "pktd-linux_*.deb"
   on:
     repo: pkt-cash/pktd
     tags: true
