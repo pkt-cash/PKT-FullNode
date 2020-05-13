@@ -3,6 +3,11 @@ die() { echo $1; exit 1; }
 export GO111MODULE=on
 PKTD_GIT_ID=$(git rev-list -1 HEAD | cut -c 1-8)
 if ! git diff --quiet; then
+    if test "x$PKT_FAIL_DIRTY" != x; then
+        echo "Build is dirty, failing"
+        git diff
+        exit 1;
+    fi
     PKTD_GIT_ID="${PKTD_GIT_ID}-dirty"
 fi
 PKTD_LDFLAGS="-X github.com/pkt-cash/pktd/pktconfig/version.appBuild=${PKTD_GIT_ID}"
