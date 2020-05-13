@@ -4,17 +4,9 @@
 # This script should be run from the project root
 # e.g. ./contrib/rpm/build.sh
 #
-
-
-BINARY_FOLDER=.
-RPM_PACKAGE_NAME=pktd
-
-./do
-echo "Binary built. Building RPM now."
-
 if which fpm; then
 	if which rpmbuild; then
-		fpm -n $RPM_PACKAGE_NAME -s dir -t rpm $BINARY_FOLDER
+		fpm -n pktd-linux -s dir -t rpm -v "$(./bin/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bin
 		echo "RPM file built."
 	else
 		echo "rpmbuild not installed or not reachable"

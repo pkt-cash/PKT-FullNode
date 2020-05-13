@@ -65,6 +65,8 @@ func pktdMain(serverChan chan<- *server) er.R {
 	// Show version at startup.
 	pktdLog.Infof("Version %s", version.Version())
 
+	version.WarnIfPrerelease(pktdLog)
+
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
 		go func() {

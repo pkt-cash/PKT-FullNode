@@ -5,40 +5,69 @@
 package version
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
-)
-
-// semanticAlphabet
-const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
-
-// These constants define the application version and follow the semantic
-// versioning 2.0.0 spec (http://semver.org/).
-const (
-	AppMajorVersion uint = 1
-	AppMinorVersion uint = 1
-	AppPatchVersion uint = 0
-
-	// appPreRelease MUST only contain characters from semanticAlphabet
-	// per the semantic versioning spec.
-	appPreRelease = "beta"
-)
-
-var (
-	// userAgentName is the user agent name and is used to help identify
-	// ourselves to other bitcoin peers.
-	userAgentName = "unknown"
-
-	// userAgentVersion is the user agent version and is used to help
-	// identify ourselves to other bitcoin peers.
-	userAgentVersion = fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
+	"regexp"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
 // process with '-ldflags "-X main.appBuild foo' if needed.  It MUST only
 // contain characters from semanticAlphabet per the semantic versioning spec.
 var appBuild string
+
+var userAgentName = "unknown" // pktd, pktwallet, pktctl...
+var appMajor uint = 0
+var appMinor uint = 0
+var appPatch uint = 0
+var version = "0.0.0-custom"
+var custom = true
+var prerelease = false
+var dirty = false
+
+func init() {
+	if len(appBuild) == 0 {
+		// custom build
+		return
+	}
+	tag := "-custom"
+	// pktd-v1.1.0-beta-19-gfa3ba767
+	if _, err := fmt.Sscanf(appBuild, "pktd-v%d.%d.%d", &appMajor, &appMinor, &appPatch); err == nil {
+		tag = ""
+		custom = false
+		if x := regexp.MustCompile(`-[0-9]+-g[0-9a-f]{8}`).FindString(appBuild); len(x) > 0 {
+			tag += "-" + x[strings.LastIndex(x, "-")+2:]
+			prerelease = true
+		}
+		if strings.Contains(appBuild, "-dirty") {
+			tag += "-dirty"
+			dirty = true
+		}
+	}
+	version = fmt.Sprintf("%d.%d.%d%s", appMajor, appMinor, appPatch, tag)
+}
+
+func IsCustom() bool {
+	return custom
+}
+
+func IsDirty() bool {
+	return dirty
+}
+
+func IsPrerelease() bool {
+	return prerelease
+}
+
+func AppMajorVersion() uint {
+	return appMajor
+}
+func AppMinorVersion() uint {
+	return appMinor
+}
+func AppPatchVersion() uint {
+	return appPatch
+}
 
 func SetUserAgentName(ua string) {
 	if userAgentName != "unknown" {
@@ -48,30 +77,7 @@ func SetUserAgentName(ua string) {
 	userAgentName = ua
 }
 
-// version returns the application version as a properly formed string per the
-// semantic versioning 2.0.0 spec (http://semver.org/).
 func Version() string {
-	// Start with the major, minor, and patch versions.
-	version := fmt.Sprintf("%d.%d.%d", AppMajorVersion, AppMinorVersion, AppPatchVersion)
-
-	// Append pre-release version if there is one.  The hyphen called for
-	// by the semantic versioning spec is automatically appended and should
-	// not be contained in the pre-release string.  The pre-release version
-	// is not appended if it contains invalid characters.
-	preRelease := normalizeVerString(appPreRelease)
-	if preRelease != "" {
-		version = fmt.Sprintf("%s-%s", version, preRelease)
-	}
-
-	// Append build metadata if there is any.  The plus called for
-	// by the semantic versioning spec is automatically appended and should
-	// not be contained in the build metadata string.  The build metadata
-	// string is not appended if it contains invalid characters.
-	//build := normalizeVerString(appBuild)
-	if appBuild != "" {
-		version = fmt.Sprintf("%s+%s", version, appBuild)
-	}
-
 	return version
 }
 
@@ -80,19 +86,13 @@ func UserAgentName() string {
 }
 
 func UserAgentVersion() string {
-	return userAgentVersion
+	return version
 }
 
-// normalizeVerString returns the passed string stripped of all characters which
-// are not valid according to the semantic versioning guidelines for pre-release
-// version and build metadata strings.  In particular they MUST only contain
-// characters in semanticAlphabet.
-func normalizeVerString(str string) string {
-	var result bytes.Buffer
-	for _, r := range str {
-		if strings.ContainsRune(semanticAlphabet, r) {
-			result.WriteRune(r)
-		}
+func WarnIfPrerelease(log pktlog.Logger) {
+	if IsCustom() || IsDirty() {
+		log.Warnf("THIS IS A DEVELOPMENT VERSION, THINGS MAY BREAK")
+	} else if IsPrerelease() {
+		log.Infof("This is a pre-release version")
 	}
-	return result.String()
 }

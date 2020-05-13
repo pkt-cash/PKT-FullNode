@@ -83,7 +83,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.
 	}
 	httpRequest.Close = true
 	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.Header.Set("X-Pkt-RPC-Version", fmt.Sprintf("%d", version.AppMajorVersion))
+	httpRequest.Header.Set("X-Pkt-RPC-Version", fmt.Sprintf("%d", version.AppMajorVersion()))
 
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)

@@ -256,6 +256,7 @@ type SendFromCmd struct {
 	MinConf       *int `jsonrpcdefault:"1"`
 	Comment       *string
 	CommentTo     *string
+	MaxInputs     *int
 }
 
 // NewSendFromCmd returns a new instance which can be used to issue a sendfrom
@@ -283,6 +284,7 @@ type CreateTransactionCmd struct {
 	InputMinHeight *int
 	MinConf        *int `jsonrpcdefault:"1"`
 	Vote           *bool
+	MaxInputs      *int
 }
 
 // SendManyCmd defines the sendmany JSON-RPC command.
@@ -291,6 +293,7 @@ type SendManyCmd struct {
 	FromAddresses *[]string
 	MinConf       *int `jsonrpcdefault:"1"`
 	Comment       *string
+	MaxInputs     *int
 }
 
 // NewSendManyCmd returns a new instance which can be used to issue a sendmany

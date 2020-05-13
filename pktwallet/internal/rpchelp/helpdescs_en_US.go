@@ -31,6 +31,7 @@ var helpDescsEnUS = map[string]string{
 	"createtransaction-toaddress":      "The recipient to send the coins to",
 	"createtransaction-fromaddresses":  "Addresses to use for selecting coins to spend",
 	"createtransaction-inputminheight": "The minimum block height to take inputs from (default: 0)",
+	"createtransaction-maxinputs":      "Maximum number of transaction inputs that are allowed",
 	"createtransaction--result0":       "The hex encoded transaction result",
 
 	// GetAddressBalancesCmd help.
@@ -280,6 +281,7 @@ var helpDescsEnUS = map[string]string{
 	"sendfrom-minconf":       "Minimum number of block confirmations required before a transaction output is eligible to be spent",
 	"sendfrom-comment":       "Unused",
 	"sendfrom-commentto":     "Unused",
+	"sendfrom-maxinputs":     "Maximum number of transaction inputs that are allowed",
 	"sendfrom--result0":      "The transaction hash of the sent transaction",
 
 	// SendManyCmd help.
@@ -292,6 +294,7 @@ var helpDescsEnUS = map[string]string{
 	"sendmany-amounts--value": "Amount to send to the payment address valued in bitcoin",
 	"sendmany-minconf":        "Minimum number of block confirmations required before a transaction output is eligible to be spent",
 	"sendmany-comment":        "Unused",
+	"sendmany-maxinputs":      "Maximum number of transaction inputs that are allowed",
 	"sendmany--result0":       "The transaction hash of the sent transaction",
 
 	// SendToAddressCmd help.

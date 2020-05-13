@@ -1144,12 +1144,14 @@ func sendOutputs(
 	dryRun bool,
 	changeAddress *string,
 	inputMinHeight int,
+	maxInputs int,
 ) (*txauthor.AuthoredTx, er.R) {
 	req := wallet.CreateTxReq{
 		Minconf:        minconf,
 		FeeSatPerKB:    feeSatPerKb,
 		DryRun:         dryRun,
 		InputMinHeight: inputMinHeight,
+		MaxInputs:      maxInputs,
 	}
 	if inputMinHeight > 0 {
 		// TODO(cjd): Ideally we would expose the comparator choice to the
@@ -1202,14 +1204,14 @@ func sendOutputs(
 // It returns the transaction hash in string format upon success
 // All errors are returned in btcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
-	fromAddressses *[]string, minconf int32, feeSatPerKb btcutil.Amount) (string, er.R) {
+	fromAddressses *[]string, minconf int32, feeSatPerKb btcutil.Amount, maxInputs int) (string, er.R) {
 
 	vote, err := w.NetworkStewardVote(0, waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return "", err
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, 0)
+	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, 0, maxInputs)
 	if err != nil {
 		return "", err
 	}
@@ -1254,7 +1256,12 @@ func sendFrom(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		cmd.ToAddress: amt,
 	}
 
-	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb)
+	maxInputs := -1
+	if cmd.MaxInputs != nil {
+		maxInputs = *cmd.MaxInputs
+	}
+
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs)
 }
 
 func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
@@ -1290,8 +1297,13 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		}
 	}
 
+	maxInputs := -1
+	if cmd.MaxInputs != nil {
+		maxInputs = *cmd.MaxInputs
+	}
+
 	tx, err := sendOutputs(w, amounts, vote, cmd.FromAddresses, minconf,
-		feeSatPerKb, true, cmd.ChangeAddress, inputMinHeight)
+		feeSatPerKb, true, cmd.ChangeAddress, inputMinHeight, maxInputs)
 	if err != nil {
 		return "", err
 	}
@@ -1359,7 +1371,12 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		pairs[k] = amt
 	}
 
-	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb)
+	maxInputs := -1
+	if cmd.MaxInputs != nil {
+		maxInputs = *cmd.MaxInputs
+	}
+
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs)
 }
 
 // sendToAddress handles a sendtoaddress RPC request by creating a new
@@ -1392,7 +1409,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, nil, 1, txrules.DefaultRelayFeePerKb)
+	return sendPairs(w, pairs, nil, 1, txrules.DefaultRelayFeePerKb, -1)
 }
 
 // setTxFee sets the transaction fee per kilobyte added to transactions.

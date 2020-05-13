@@ -149,7 +149,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	}
 	eligibleOuts, err := w.findEligibleOutputs(
 		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs,
-		txr.InputMinHeight, txr.InputComparator)
+		txr.InputMinHeight, txr.InputComparator, txr.MaxInputs)
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +289,11 @@ type amountCount struct {
 	credits *redblacktree.Tree
 }
 
-func (a *amountCount) overLimit() bool {
+func (a *amountCount) overLimit(maxInputs int) bool {
 	count := a.credits.Size()
-	if count < MaxInputsPerTxLegacy {
+	if maxInputs > 0 {
+		return count > maxInputs
+	} else if count < MaxInputsPerTxLegacy {
 	} else if a.isSegwit && count < MaxInputsPerTx {
 	} else {
 		return true
@@ -372,6 +374,7 @@ func (w *Wallet) findEligibleOutputs(
 	bs *waddrmgr.BlockStamp,
 	inputMinHeight int,
 	inputComparator utils.Comparator,
+	maxInputs int,
 ) (eligibleOutputs, er.R) {
 	out := eligibleOutputs{}
 	chainClient, err := w.requireChainClient()
@@ -484,7 +487,7 @@ func (w *Wallet) findEligibleOutputs(
 			}
 		}
 
-		if !ha.overLimit() {
+		if !ha.overLimit(maxInputs) {
 			// We don't have too many inputs
 		} else if needAmount == 0 && inputComparator == nil {
 			// We're sweeping the wallet with no ordering specified
@@ -537,7 +540,7 @@ func (w *Wallet) findEligibleOutputs(
 		outAc.isSegwit = outAc.isSegwit && ac.isSegwit
 
 		wasOver := false
-		for outAc.overLimit() {
+		for outAc.overLimit(maxInputs) {
 			// Too many inputs, we will remove the worst
 			worst := outAc.credits.Right().Key.(*wtxmgr.Credit)
 			outAc.credits.Remove(worst)

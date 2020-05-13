@@ -48,7 +48,7 @@ func usage(errorMessage string) {
 }
 
 func main() {
-	version.SetUserAgentName("btcctl")
+	version.SetUserAgentName("pktctl")
 	cfg, args, err := loadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.String())

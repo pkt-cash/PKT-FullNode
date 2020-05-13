@@ -104,6 +104,7 @@ func walletMain() er.R {
 
 	// Show version at startup.
 	log.Infof("Version %s", version.Version())
+	version.WarnIfPrerelease(log)
 
 	if cfg.Profile != "" {
 		go func() {

@@ -2491,9 +2491,9 @@ func handleGetInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (in
 	best := s.cfg.Chain.BestSnapshot()
 	ret := &btcjson.InfoChainResult{
 		Version: int32(
-			1000000*version.AppMajorVersion +
-				10000*version.AppMinorVersion +
-				100*version.AppPatchVersion),
+			1000000*version.AppMajorVersion() +
+				10000*version.AppMinorVersion() +
+				100*version.AppPatchVersion()),
 		ProtocolVersion: int32(maxProtocolVersion),
 		Blocks:          best.Height,
 		TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
