@@ -15,7 +15,7 @@ mv ./btcctl ./bins/pktctl
 
 if which fpm; then
 	if which pkgbuild; then
-		fpm -n pktd -s dir -t osxpkg -v "$(./bins/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bins
+		fpm -n pktd-mac -s dir -t osxpkg -v "$(./bins/pktctl --version | sed 's/.* version //' | tr -d '\n')" ./bins
 		echo "GEM file built."
 	else
 		echo "pkgbuild not installed or not reachable"
