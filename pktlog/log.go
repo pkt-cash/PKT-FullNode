@@ -59,20 +59,31 @@ const (
 	// Lshortfile modifies the logger output to include filename and line number
 	// of the logging callsite, e.g. main.go:123.  Overrides Llongfile.
 	Lshortfile
+
+	Lcolor
 )
 
 // Read logger flags from the LOGFLAGS environment variable.  Multiple flags can
 // be set at once, separated by commas.
 func init() {
+	hasFlags := false
 	for _, f := range strings.Split(os.Getenv("LOGFLAGS"), ",") {
 		switch f {
+		case "none":
 		case "longfile":
 			defaultFlags |= Llongfile
 		case "shortfile":
 			defaultFlags |= Lshortfile
+		case "color":
+			defaultFlags |= Lcolor
+		default:
+			continue
 		}
+		hasFlags = true
 	}
-	defaultFlags |= Lshortfile
+	if !hasFlags {
+		defaultFlags |= Lshortfile | Lcolor
+	}
 }
 
 // Level is the level at which a logger is configured.  All messages sent
@@ -199,13 +210,57 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
+const (
+	reset =      "\x1b[0m"
+	bright =     "\x1b[1m"
+	dim =        "\x1b[2m"
+	underscore = "\x1b[4m"
+	blink =      "\x1b[5m"
+	reverse =    "\x1b[7m"
+	hidden =     "\x1b[8m"
+
+	fgBlack =    "\x1b[30m"
+	fgRed =      "\x1b[31m"
+	fgGreen =    "\x1b[32m"
+	fgYellow =   "\x1b[33m"
+	fgBlue =     "\x1b[34m"
+	fgMagenta =  "\x1b[35m"
+	fgCyan =     "\x1b[36m"
+	fgWhite =    "\x1b[37m"
+
+	bgBlack =    "\x1b[40m"
+	bgRed =      "\x1b[41m"
+	bgGreen =    "\x1b[42m"
+	bgYellow =   "\x1b[43m"
+	bgBlue =     "\x1b[44m"
+	bgMagenta =  "\x1b[45m"
+	bgCyan =     "\x1b[46m"
+	bgWhite =    "\x1b[47m"
+
+
+	colorWarn = bright + fgYellow
+	colorErr = bright + fgMagenta
+	colorCrit = bright + fgRed
+)
+
 // Appends a header in the default format 'YYYY-MM-DD hh:mm:ss.sss [LVL] TAG: '.
 // If either of the Lshortfile or Llongfile flags are specified, the file named
 // and line number are included after the tag and before the final colon.
-func formatHeader(buf *[]byte, t time.Time, lvl, tag string, file string, line int) {
+func formatHeader(flags uint32, buf *[]byte, t time.Time, lvl, tag string, file string, line int) bool {
 	year, month, day := t.Date()
 	hour, min, sec := t.Clock()
 	ms := t.Nanosecond() / 1e6
+
+	hasColor := false
+	if flags&Lcolor == Lcolor {
+		hasColor = true
+		switch lvl {
+		case "WRN":  *buf = append(*buf, colorWarn...); break;
+		case "ERR":  *buf = append(*buf, colorErr...); break;
+		case "CRT":  *buf = append(*buf, colorCrit...); break;
+		default: hasColor = false
+		}
+	}
 
 	itoa(buf, year, 4)
 	*buf = append(*buf, '-')
@@ -231,6 +286,8 @@ func formatHeader(buf *[]byte, t time.Time, lvl, tag string, file string, line i
 		itoa(buf, line, -1)
 	}
 	*buf = append(*buf, ": "...)
+
+	return hasColor
 }
 
 // calldepth is the call depth of the callsite function relative to the
@@ -274,10 +331,13 @@ func (b *Backend) print(lvl, tag string, args ...interface{}) {
 		file, line = callsite(b.flag)
 	}
 
-	formatHeader(bytebuf, t, lvl, tag, file, line)
+	hasColor := formatHeader(b.flag, bytebuf, t, lvl, tag, file, line)
 	buf := bytes.NewBuffer(*bytebuf)
 	fmt.Fprintln(buf, args...)
 	*bytebuf = buf.Bytes()
+	if hasColor {
+		*bytebuf = append(*bytebuf, reset...);
+	}
 
 	b.mu.Lock()
 	b.w.Write(*bytebuf)
@@ -301,10 +361,14 @@ func (b *Backend) printf(lvl, tag string, format string, args ...interface{}) {
 		file, line = callsite(b.flag)
 	}
 
-	formatHeader(bytebuf, t, lvl, tag, file, line)
+	hasColor := formatHeader(b.flag, bytebuf, t, lvl, tag, file, line)
 	buf := bytes.NewBuffer(*bytebuf)
 	fmt.Fprintf(buf, format, args...)
-	*bytebuf = append(buf.Bytes(), '\n')
+	*bytebuf = buf.Bytes()
+	if hasColor {
+		*bytebuf = append(*bytebuf, reset...);
+	}
+	*bytebuf = append(*bytebuf, '\n')
 
 	b.mu.Lock()
 	b.w.Write(*bytebuf)

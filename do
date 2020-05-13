@@ -1,7 +1,7 @@
 #!/bin/sh
 die() { echo $1; exit 1; }
 export GO111MODULE=on
-PKTD_GIT_ID=$(git rev-list -1 HEAD | cut -c 1-8)
+PKTD_GIT_ID=$(git describe --tags HEAD)
 if ! git diff --quiet; then
     if test "x$PKT_FAIL_DIRTY" != x; then
         echo "Build is dirty, failing"

@@ -127,7 +127,7 @@ func NewServer(opts *Options, walletLoader *wallet.Loader, listeners []net.Liste
 				return
 			}
 			if r.Header.Get("User-Agent") == "Go-http-client/1.1" {
-				if r.Header.Get("X-Pkt-RPC-Version") != fmt.Sprintf("%d", version.AppMajorVersion) {
+				if r.Header.Get("X-Pkt-RPC-Version") != fmt.Sprintf("%d", version.AppMajorVersion()) {
 					http.Error(w, "Wrong RPC version, please upgrade btcctl", http.StatusBadRequest)
 					return
 				}
