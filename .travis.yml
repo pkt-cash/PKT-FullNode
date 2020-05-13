@@ -6,7 +6,7 @@ notifications:
       - "chat.freenode.net#pkt"
     on_success: change
     on_failure: always
-matrix:
+jobs:
   include:
     - os: linux
       addons:
