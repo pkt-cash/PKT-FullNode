@@ -927,7 +927,7 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 // more details.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejectDupOrphans bool) ([]*chainhash.Hash, *TxDesc, er.R) {
+func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejectDupOrphans bool) ([]wire.OutPoint, *TxDesc, er.R) {
 	txHash := tx.Hash()
 
 	// If a transaction has iwtness data, and segwit isn't active yet, If
@@ -1031,15 +1031,14 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// don't exist or are already spent.  Adding orphans to the orphan pool
 	// is not handled by this function, and the caller should use
 	// maybeAddOrphan if this behavior is desired.
-	var missingParents []*chainhash.Hash
+	var missingParents []wire.OutPoint
 	for outpoint, entry := range utxoView.Entries() {
 		if entry == nil || entry.IsSpent() {
 			// Must make a copy of the hash here since the iterator
 			// is replaced and taking its address directly would
 			// result in all of the entries pointing to the same
 			// memory location and thus all be the final hash.
-			hashCopy := outpoint.Hash
-			missingParents = append(missingParents, &hashCopy)
+			missingParents = append(missingParents, outpoint)
 		}
 	}
 	if len(missingParents) > 0 {
@@ -1210,7 +1209,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 // be added to the orphan pool.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) MaybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit bool) ([]*chainhash.Hash, *TxDesc, er.R) {
+func (mp *TxPool) MaybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit bool) ([]wire.OutPoint, *TxDesc, er.R) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
 	hashes, txD, err := mp.maybeAcceptTransaction(tx, isNew, rateLimit, true)
@@ -1375,7 +1374,7 @@ func (mp *TxPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit bool
 		// which is not really always the case.
 		str := fmt.Sprintf("orphan transaction %v references "+
 			"outputs of unknown or fully-spent "+
-			"transaction %v", tx.Hash(), missingParents[0])
+			"transaction %v", tx.Hash(), missingParents[0].String())
 		return nil, ruleerror.ErrOrphanTransactionDisallowed.New(str, nil)
 	}
 
