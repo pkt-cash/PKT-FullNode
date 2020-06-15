@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
 	"fmt"
@@ -396,6 +397,24 @@ func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, er.R) {
 
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), k.key)
 	return privKey, nil
+}
+
+func (k *ExtendedKey) GetSecret(name []byte) ([]byte, er.R) {
+	if !k.isPrivate {
+		return nil, ErrNotPrivExtKey.Default()
+	}
+	if len(k.key) == 0 {
+		return nil, ErrNotPrivExtKey.New("Private key has been zeroed", nil)
+	}
+
+	sha := sha256.New()
+	sha.Write([]byte("GET_SECRET_1"))
+	var l [8]byte
+	binary.LittleEndian.PutUint64(l[:], uint64(len(name)))
+	sha.Write(l[:])
+	sha.Write(name)
+	sha.Write(k.key)
+	return sha.Sum(nil), nil
 }
 
 // Address converts the extended key to a standard bitcoin pay-to-pubkey-hash

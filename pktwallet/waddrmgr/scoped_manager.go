@@ -1297,6 +1297,21 @@ func (s *ScopedKeyManager) LastInternalAddress(ns walletdb.ReadBucket,
 	return nil, managerError(ErrAddressNotFound, "no previous internal address", nil)
 }
 
+func (s *ScopedKeyManager) GetSecret(ns walletdb.ReadBucket, account uint32, name []byte) ([]byte, er.R) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	acctInfo, err := s.loadAccountInfo(ns, account)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.rootManager.IsLocked() {
+		return nil, er.New("You need to enter your wallet passphrase before getting a secret")
+	}
+	return acctInfo.acctKeyPriv.GetSecret(name)
+}
+
 // NewRawAccount creates a new account for the scoped manager. This method
 // differs from the NewAccount method in that this method takes the acount
 // number *directly*, rather than taking a string name for the account, then

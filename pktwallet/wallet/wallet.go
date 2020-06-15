@@ -1478,6 +1478,30 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err 
 	return
 }
 
+func (w *Wallet) GetSecret(name string) (*string, er.R) {
+	if w.Manager.IsLocked() {
+		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
+	}
+	// It's going to be easiest to use KeyScopeBIP0044 because that's what is
+	// used by everything else to generate addresses, so if we need to migrate
+	// to a different system, we'll be able to continue.
+	manager, err := w.Manager.FetchScopedKeyManager(waddrmgr.KeyScopeBIP0044)
+	if err != nil {
+		return nil, err
+	}
+	var out *string
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		b, err := manager.GetSecret(addrmgrNs, waddrmgr.DefaultAccountNum, []byte(name))
+		if err == nil {
+			s := hex.EncodeToString(b)
+			out = &s
+		}
+		return err
+	})
+	return out, err
+}
+
 // CalculateBalance sums the amounts of all unspent transaction
 // outputs to addresses of a wallet and returns the balance.
 //

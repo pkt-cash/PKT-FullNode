@@ -120,6 +120,7 @@ var rpcHandlers = map[string]struct {
 	"vacuum":                {handler: vacuum},
 	"getaddressbalances":    {handler: getAddressBalances},
 	"getwalletseed":         {handler: getWalletSeed},
+	"getsecret":             {handler: getSecret},
 	// This was an extension but the reference implementation added it as
 	// well, but with a different API (no account parameter).  It's listed
 	// here because it hasn't been update to use the reference
@@ -369,6 +370,11 @@ func getWalletSeed(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		return nil, er.New("No seed found, this is probably a legacy wallet")
 	}
 	return seed.Words("english")
+}
+
+func getSecret(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	cmd := icmd.(*btcjson.GetSecretCmd)
+	return w.GetSecret(cmd.Name)
 }
 
 // getBalance handles a getbalance request by returning the balance for an

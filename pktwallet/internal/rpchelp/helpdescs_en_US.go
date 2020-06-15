@@ -47,6 +47,10 @@ var helpDescsEnUS = map[string]string{
 	"getwalletseed--synopsis": "Get the wallet seed words for this wallet",
 	"getwalletseed--result0":  "The seed words used, along with the wallet passphrase, to create the wallet",
 
+	"getsecret--synopsis": "Get a secret seed which is generated using the wallet's private key, this can be used as a password for another application",
+	"getsecret-name":      "A name which will be used to generate the secret seed, the same seed will always be provided given the same name",
+	"getsecret--result0":  "A 32 byte secret seed in hex form",
+
 	// SetNetworkStewardCmd help.
 	"setnetworkstewardvote--synopsis":   "Configure the wallet to vote for a network steward when making payments (note: payments to segwit addresses cannot vote)",
 	"setnetworkstewardvote-voteagainst": "The address to vote against (if this is the current NS then this will cause a vote for an election)",

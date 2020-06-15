@@ -68,6 +68,10 @@ type GetAddressBalancesCmd struct {
 
 type GetWalletSeedCmd struct{}
 
+type GetSecretCmd struct {
+	Name string
+}
+
 type ResyncCmd struct {
 	DropDb *bool
 }
@@ -456,6 +460,7 @@ func init() {
 	MustRegisterCmd("getreceivedbyaddress", (*GetReceivedByAddressCmd)(nil), flags)
 	MustRegisterCmd("gettransaction", (*GetTransactionCmd)(nil), flags)
 	MustRegisterCmd("getwalletseed", (*GetWalletSeedCmd)(nil), flags)
+	MustRegisterCmd("getsecret", (*GetSecretCmd)(nil), flags)
 	MustRegisterCmd("importprivkey", (*ImportPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("listlockunspent", (*ListLockUnspentCmd)(nil), flags)
 	MustRegisterCmd("listreceivedbyaddress", (*ListReceivedByAddressCmd)(nil), flags)
