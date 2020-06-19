@@ -202,7 +202,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			v := existsRawTxRecord(ns, k)
 			prevPk, err := fetchRawTxRecordPkScript(k, v, spender.index)
 			if err != nil {
-				log.Warn("Error decoding address spent from")
+				log.Warnf("Error decoding address spent from because [%s]", err.String())
 			} else {
 				prevPkScript = prevPk
 			}
@@ -224,7 +224,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 		if err := deleteRawUnspent(ns, unspentKey); err != nil {
 			return err
 		}
-		log.Info("Spent [%s] from address [%s] in tx [%s] height [%d]",
+		log.Infof("Spent [%s] from address [%s] in tx [%s] height [%d]",
 			amt.String(), hex.EncodeToString(prevPkScript), rec.Hash.String(), block.Height)
 
 		newMinedBalance -= amt
