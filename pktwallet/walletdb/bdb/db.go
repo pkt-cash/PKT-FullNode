@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/coreos/bbolt"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"go.etcd.io/bbolt"
 )
 
 // convertErr converts some bolt errors to the equivalent walletdb error.
