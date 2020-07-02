@@ -75,8 +75,12 @@ type NeutrinoInfo struct {
 }
 
 type WalletStats struct {
-	AutoVacuuming        bool
-	TimeOfLastAutoVacuum time.Time
+	AutoVacuuming          bool
+	AutoVacuumCycles       int
+	AutoVacuumBurned       int
+	AutoVacuumOrphaned     int
+	AutoVacuumVisitedUtxos int
+	TimeOfLastAutoVacuum   time.Time
 
 	// If we're currently in a resync
 	Syncing              bool

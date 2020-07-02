@@ -53,6 +53,10 @@ func goAutoVacuum(cfg *config, w *wallet.Wallet) {
 	for {
 		w.UpdateStats(func(ws *btcjson.WalletStats) {
 			ws.AutoVacuuming = true
+			ws.AutoVacuumCycles = 0
+			ws.AutoVacuumBurned = 0
+			ws.AutoVacuumOrphaned = 0
+			ws.AutoVacuumVisitedUtxos = 0
 		})
 		startKey := ""
 		totals := btcjson.VacuumDbRes{}
@@ -71,6 +75,12 @@ func goAutoVacuum(cfg *config, w *wallet.Wallet) {
 				// completed a vacuum cycle
 				break
 			}
+			w.UpdateStats(func(ws *btcjson.WalletStats) {
+				ws.AutoVacuumCycles++
+				ws.AutoVacuumBurned += res.Burned
+				ws.AutoVacuumOrphaned += res.Orphaned
+				ws.AutoVacuumVisitedUtxos += res.VisitedUtxos
+			})
 			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
 		}
 		log.Debugf("Autovacuum complete [%d] burned [%d] orphaned [%d] visited utxos",

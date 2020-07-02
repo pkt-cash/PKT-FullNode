@@ -282,7 +282,7 @@ func loadConfig() (*config, []string, er.R) {
 		LogDir:                 defaultLogDir,
 		AutoVacuum:             true,
 		AutoVacuumMs:           100,
-		AutoVacuumPauseMs:      5000,
+		AutoVacuumPauseMs:      200,
 		AutoVacuumSleepSec:     3600,
 		WalletPass:             wallet.InsecurePubPassphrase,
 		CAFile:                 cfgutil.NewExplicitString(""),
