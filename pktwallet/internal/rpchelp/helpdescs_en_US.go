@@ -32,6 +32,7 @@ var helpDescsEnUS = map[string]string{
 	"createtransaction-fromaddresses":  "Addresses to use for selecting coins to spend",
 	"createtransaction-inputminheight": "The minimum block height to take inputs from (default: 0)",
 	"createtransaction-maxinputs":      "Maximum number of transaction inputs that are allowed",
+	"createtransaction-autolock":       "If specified, all txouts spent for this transaction will be locked under this name",
 	"createtransaction--result0":       "The hex encoded transaction result",
 
 	// GetAddressBalancesCmd help.
@@ -274,6 +275,7 @@ var helpDescsEnUS = map[string]string{
 		"If unlock is true and no transaction outputs are specified, all locked outputs are marked unlocked.",
 	"lockunspent-unlock":       "True to unlock outputs, false to lock",
 	"lockunspent-transactions": "Transaction outputs to lock or unlock",
+	"lockunspent-lockname":     "Name of the lock to apply, allows groups of locks to be cleared at once",
 	"lockunspent--result0":     "The boolean 'true'",
 
 	// SendFromCmd help.

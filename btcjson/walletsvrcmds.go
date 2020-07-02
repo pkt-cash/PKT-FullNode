@@ -241,6 +241,7 @@ func NewListUnspentCmd(minConf, maxConf *int, addresses *[]string) *ListUnspentC
 type LockUnspentCmd struct {
 	Unlock       bool
 	Transactions []TransactionInput
+	LockName     *string
 }
 
 // NewLockUnspentCmd returns a new instance which can be used to issue a
@@ -289,6 +290,7 @@ type CreateTransactionCmd struct {
 	MinConf        *int `jsonrpcdefault:"1"`
 	Vote           *bool
 	MaxInputs      *int
+	AutoLock       *string
 }
 
 // SendManyCmd defines the sendmany JSON-RPC command.

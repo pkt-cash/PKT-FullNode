@@ -48,6 +48,12 @@ type TransactionInput struct {
 	Vout uint32 `json:"vout"`
 }
 
+type LockedUnspent struct {
+	Txid     string `json:"txid"`
+	Vout     uint32 `json:"vout"`
+	LockName string `json:"lockname"`
+}
+
 // CreateRawTransactionCmd defines the createrawtransaction JSON-RPC command.
 type CreateRawTransactionCmd struct {
 	Inputs   []TransactionInput

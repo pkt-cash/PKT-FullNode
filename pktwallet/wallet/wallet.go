@@ -96,7 +96,7 @@ type Wallet struct {
 	chainClientSynced  bool
 	chainClientSyncMtx sync.Mutex
 
-	lockedOutpoints map[wire.OutPoint]struct{}
+	lockedOutpoints map[wire.OutPoint]string
 
 	recoveryWindow uint32
 
@@ -2431,8 +2431,8 @@ func (w *Wallet) LockedOutpoint(op wire.OutPoint) bool {
 
 // LockOutpoint marks an outpoint as locked, that is, it should not be used as
 // an input for newly created transactions.
-func (w *Wallet) LockOutpoint(op wire.OutPoint) {
-	w.lockedOutpoints[op] = struct{}{}
+func (w *Wallet) LockOutpoint(op wire.OutPoint, name string) {
+	w.lockedOutpoints[op] = name
 }
 
 // UnlockOutpoint marks an outpoint as unlocked, that is, it may be used as an
@@ -2443,20 +2443,29 @@ func (w *Wallet) UnlockOutpoint(op wire.OutPoint) {
 
 // ResetLockedOutpoints resets the set of locked outpoints so all may be used
 // as inputs for new transactions.
-func (w *Wallet) ResetLockedOutpoints() {
-	w.lockedOutpoints = map[wire.OutPoint]struct{}{}
+func (w *Wallet) ResetLockedOutpoints(lockName *string) {
+	if lockName != nil {
+		for op, ln := range w.lockedOutpoints {
+			if ln == *lockName {
+				delete(w.lockedOutpoints, op)
+			}
+		}
+	} else {
+		w.lockedOutpoints = map[wire.OutPoint]string{}
+	}
 }
 
 // LockedOutpoints returns a slice of currently locked outpoints.  This is
 // intended to be used by marshaling the result as a JSON array for
 // listlockunspent RPC results.
-func (w *Wallet) LockedOutpoints() []btcjson.TransactionInput {
-	locked := make([]btcjson.TransactionInput, len(w.lockedOutpoints))
+func (w *Wallet) LockedOutpoints() []btcjson.LockedUnspent {
+	locked := make([]btcjson.LockedUnspent, len(w.lockedOutpoints))
 	i := 0
-	for op := range w.lockedOutpoints {
-		locked[i] = btcjson.TransactionInput{
-			Txid: op.Hash.String(),
-			Vout: op.Index,
+	for op, ln := range w.lockedOutpoints {
+		locked[i] = btcjson.LockedUnspent{
+			Txid:     op.Hash.String(),
+			Vout:     op.Index,
+			LockName: ln,
 		}
 		i++
 	}
@@ -3177,7 +3186,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		db:                  db,
 		Manager:             addrMgr,
 		TxStore:             txMgr,
-		lockedOutpoints:     map[wire.OutPoint]struct{}{},
+		lockedOutpoints:     map[wire.OutPoint]string{},
 		recoveryWindow:      recoveryWindow,
 		rescanAddJob:        make(chan *RescanJob),
 		rescanBatch:         make(chan *rescanBatch),

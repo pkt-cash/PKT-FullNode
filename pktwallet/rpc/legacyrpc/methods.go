@@ -1093,10 +1093,14 @@ func listUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 // lockUnspent handles the lockunspent command.
 func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.LockUnspentCmd)
+	lockName := "none"
+	if cmd.LockName != nil {
+		lockName = *cmd.LockName
+	}
 
 	switch {
 	case cmd.Unlock && len(cmd.Transactions) == 0:
-		w.ResetLockedOutpoints()
+		w.ResetLockedOutpoints(cmd.LockName)
 	default:
 		for _, input := range cmd.Transactions {
 			txHash, err := chainhash.NewHashFromStr(input.Txid)
@@ -1107,7 +1111,7 @@ func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 			if cmd.Unlock {
 				w.UnlockOutpoint(op)
 			} else {
-				w.LockOutpoint(op)
+				w.LockOutpoint(op, lockName)
 			}
 		}
 	}
@@ -1278,9 +1282,12 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	if cmd.Amount < 0 {
 		return nil, errNeedPositiveAmount()
 	}
-	minconf := int32(*cmd.MinConf)
-	if minconf < 0 {
-		return nil, errNeedPositiveMinconf()
+	minconf := int32(0)
+	if cmd.MinConf != nil {
+		minconf = int32(*cmd.MinConf)
+		if minconf < 0 {
+			return nil, errNeedPositiveMinconf()
+		}
 	}
 	inputMinHeight := 0
 	if cmd.InputMinHeight != nil && *cmd.InputMinHeight > 0 {
@@ -1312,6 +1319,13 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		feeSatPerKb, true, cmd.ChangeAddress, inputMinHeight, maxInputs)
 	if err != nil {
 		return "", err
+	}
+
+	if cmd.AutoLock != nil {
+		for _, in := range tx.Tx.TxIn {
+			op := in.PreviousOutPoint
+			w.LockOutpoint(op, *cmd.AutoLock)
+		}
 	}
 
 	if cmd.ElectrumFormat != nil && *cmd.ElectrumFormat {
