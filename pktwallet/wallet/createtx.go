@@ -166,6 +166,9 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	log.Debugf("Found [%d] eligable inputs from addresses [%s], excluded [%d] (unconfirmed) "+
 		"and [%d] (too many inputs for tx)",
 		len(eligibleOuts.credits), addrStr, eligibleOuts.unconfirmedCount, eligibleOuts.unusedCount)
+	for _, eo := range eligibleOuts.credits {
+		log.Debugf("  %s @ %d - %s", eo.OutPoint.String(), eo.Height, eo.Amount.String())
+	}
 
 	inputSource := makeInputSource(eligibleOuts.credits)
 	changeSource := func() ([]byte, er.R) {
@@ -417,7 +420,7 @@ func (w *Wallet) findEligibleOutputs(
 		if output.FromCoinBase {
 			if !confirmed(int32(w.chainParams.CoinbaseMaturity), output.Height, bs.Height) {
 				return nil
-			} else if txrules.IsBurned(output, w.chainParams, bs.Height) {
+			} else if txrules.IsBurned(output, w.chainParams, bs.Height+1440) {
 				log.Debugf("Skipping burned output at height %d", output.Height)
 				return nil
 			}
@@ -505,6 +508,17 @@ func (w *Wallet) findEligibleOutputs(
 		return nil
 	}); err != nil && !er.IsLoopBreak(err) {
 		return out, err
+	}
+
+	if inputComparator != nil {
+		// This is a special consideration because when there is a custom comparator,
+		// we don't short circuit early so we might have a winner on our hands but not
+		// know it.
+		for _, ac := range haveAmounts {
+			if ac.amount >= needAmount {
+				winner = ac
+			}
+		}
 	}
 
 	if winner != nil {
