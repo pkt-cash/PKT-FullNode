@@ -1241,14 +1241,14 @@ func sendOutputs(
 // It returns the transaction hash in string format upon success
 // All errors are returned in btcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
-	fromAddressses *[]string, minconf int32, feeSatPerKb btcutil.Amount, maxInputs int) (string, er.R) {
+	fromAddressses *[]string, minconf int32, feeSatPerKb btcutil.Amount, maxInputs, inputMinHeight int) (string, er.R) {
 
 	vote, err := w.NetworkStewardVote(0, waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return "", err
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, 0, maxInputs)
+	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, inputMinHeight, maxInputs)
 	if err != nil {
 		return "", err
 	}
@@ -1298,7 +1298,12 @@ func sendFrom(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		maxInputs = *cmd.MaxInputs
 	}
 
-	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs)
+	minHeight := 0
+	if cmd.MinHeight != nil {
+		minHeight = *cmd.MinHeight
+	}
+
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs, minHeight)
 }
 
 func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
@@ -1423,7 +1428,7 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 		maxInputs = *cmd.MaxInputs
 	}
 
-	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs)
+	return sendPairs(w, pairs, cmd.FromAddresses, minConf, txrules.DefaultRelayFeePerKb, maxInputs, 0)
 }
 
 // sendToAddress handles a sendtoaddress RPC request by creating a new
@@ -1456,7 +1461,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, nil, 1, txrules.DefaultRelayFeePerKb, -1)
+	return sendPairs(w, pairs, nil, 1, txrules.DefaultRelayFeePerKb, -1, 0)
 }
 
 // setTxFee sets the transaction fee per kilobyte added to transactions.

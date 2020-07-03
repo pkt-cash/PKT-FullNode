@@ -262,6 +262,7 @@ type SendFromCmd struct {
 	Comment       *string
 	CommentTo     *string
 	MaxInputs     *int
+	MinHeight     *int
 }
 
 // NewSendFromCmd returns a new instance which can be used to issue a sendfrom
@@ -277,6 +278,7 @@ func NewSendFromCmd(fromAddresses *[]string, toAddress string, amount float64, m
 		MinConf:       minConf,
 		Comment:       comment,
 		CommentTo:     commentTo,
+		MinHeight:     nil,
 	}
 }
 

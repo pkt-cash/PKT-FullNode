@@ -293,6 +293,7 @@ var helpDescsEnUS = map[string]string{
 	"sendfrom-comment":       "Unused",
 	"sendfrom-commentto":     "Unused",
 	"sendfrom-maxinputs":     "Maximum number of transaction inputs that are allowed",
+	"sendfrom-minheight":     "Only select transactions from this height or above",
 	"sendfrom--result0":      "The transaction hash of the sent transaction",
 
 	// SendManyCmd help.
