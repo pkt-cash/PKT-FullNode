@@ -19,6 +19,6 @@ require (
 	github.com/kkdai/bstream v1.0.0
 	github.com/lightningnetwork/lnd/queue v1.0.1
 	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	google.golang.org/grpc v1.29.1
 )
