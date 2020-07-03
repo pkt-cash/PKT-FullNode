@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/banman"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
@@ -1254,7 +1255,7 @@ func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
 	}
 
 	txHashStr := tx.Tx.TxHash().String()
-	log.Infof("Successfully sent transaction %v", txHashStr)
+	log.Infof("Successfully sent transaction [%s]", pktlog.Txid(txHashStr))
 	return txHashStr, nil
 }
 

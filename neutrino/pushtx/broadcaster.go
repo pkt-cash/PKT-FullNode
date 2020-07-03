@@ -114,7 +114,7 @@ func (b *Broadcaster) broadcastHandler(sub *blockntfns.Subscription) {
 	defer b.wg.Done()
 	defer sub.Cancel()
 
-	log.Infof("Broadcaster now active")
+	log.Debugf("Broadcaster now active")
 
 	// transactions is the set of transactions we have broadcast so far,
 	// and are still not confirmed.

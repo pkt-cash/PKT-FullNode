@@ -186,9 +186,9 @@ func walletMain() er.R {
 	}
 	if legacyRPCServer != nil {
 		addInterruptHandler(func() {
-			log.Warn("Stopping legacy RPC server...")
+			log.Warn("Stopping RPC server...")
 			legacyRPCServer.Stop()
-			log.Info("Legacy RPC server shutdown")
+			log.Info("RPC server shutdown")
 		})
 		go func() {
 			<-legacyRPCServer.RequestProcessShutdown()
@@ -210,7 +210,7 @@ func walletMain() er.R {
 // methods.
 func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Loader) {
 	var certs []byte
-	if !cfg.UseSPV {
+	if cfg.UseRPC {
 		certs = readCAFile()
 	}
 

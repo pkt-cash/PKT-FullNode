@@ -39,6 +39,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -61,6 +62,8 @@ const (
 	Lshortfile
 
 	Lcolor
+
+	Llongdate
 )
 
 // Read logger flags from the LOGFLAGS environment variable.  Multiple flags can
@@ -76,6 +79,8 @@ func init() {
 			defaultFlags |= Lshortfile
 		case "color":
 			defaultFlags |= Lcolor
+		case "longdate":
+			defaultFlags |= Llongdate
 		default:
 			continue
 		}
@@ -211,70 +216,109 @@ func itoa(buf *[]byte, i int, wid int) {
 }
 
 const (
-	reset =      "\x1b[0m"
-	bright =     "\x1b[1m"
-	dim =        "\x1b[2m"
+	Reset      = "\x1b[0m"
+	Bright     = "\x1b[1m"
+	dim        = "\x1b[2m"
 	underscore = "\x1b[4m"
-	blink =      "\x1b[5m"
-	reverse =    "\x1b[7m"
-	hidden =     "\x1b[8m"
+	blink      = "\x1b[5m"
+	reverse    = "\x1b[7m"
+	hidden     = "\x1b[8m"
 
-	fgBlack =    "\x1b[30m"
-	fgRed =      "\x1b[31m"
-	fgGreen =    "\x1b[32m"
-	fgYellow =   "\x1b[33m"
-	fgBlue =     "\x1b[34m"
-	fgMagenta =  "\x1b[35m"
-	fgCyan =     "\x1b[36m"
-	fgWhite =    "\x1b[37m"
+	fgBlack   = "\x1b[30m"
+	fgRed     = "\x1b[31m"
+	FgGreen   = "\x1b[32m"
+	fgYellow  = "\x1b[33m"
+	fgBlue    = "\x1b[34m"
+	FgMagenta = "\x1b[35m"
+	fgCyan    = "\x1b[36m"
+	fgWhite   = "\x1b[37m"
 
-	bgBlack =    "\x1b[40m"
-	bgRed =      "\x1b[41m"
-	bgGreen =    "\x1b[42m"
-	bgYellow =   "\x1b[43m"
-	bgBlue =     "\x1b[44m"
-	bgMagenta =  "\x1b[45m"
-	bgCyan =     "\x1b[46m"
-	bgWhite =    "\x1b[47m"
+	bgBlack   = "\x1b[40m"
+	bgRed     = "\x1b[41m"
+	BgGreen   = "\x1b[42m"
+	bgYellow  = "\x1b[43m"
+	bgBlue    = "\x1b[44m"
+	bgMagenta = "\x1b[45m"
+	bgCyan    = "\x1b[46m"
+	bgWhite   = "\x1b[47m"
 
-
-	colorWarn = bright + fgYellow
-	colorErr = bright + fgMagenta
-	colorCrit = bright + fgRed
+	colorDbg  = dim + fgWhite
+	colorWarn = Bright + fgYellow
+	colorErr  = Bright + FgMagenta
+	colorCrit = Bright + fgRed
 )
+
+func Height(h int32) string {
+	out := "unconfirmed"
+	if h > -1 {
+		out = strconv.FormatInt(int64(h), 10)
+	}
+	return fgYellow + out + Reset
+}
+
+func Txid(str string) string {
+	return fgCyan + str + Reset
+}
+
+func GreenBg(str string) string {
+	return BgGreen + fgBlack + str + Reset
+}
+
+func Coins(amount float64) string {
+	return Bright + FgGreen + strconv.FormatFloat(amount, 'f', 4, 64) + Reset
+}
+
+func Address(addr string) string {
+	return Bright + FgMagenta + addr + Reset
+}
 
 // Appends a header in the default format 'YYYY-MM-DD hh:mm:ss.sss [LVL] TAG: '.
 // If either of the Lshortfile or Llongfile flags are specified, the file named
 // and line number are included after the tag and before the final colon.
 func formatHeader(flags uint32, buf *[]byte, t time.Time, lvl, tag string, file string, line int) bool {
-	year, month, day := t.Date()
-	hour, min, sec := t.Clock()
-	ms := t.Nanosecond() / 1e6
 
 	hasColor := false
 	if flags&Lcolor == Lcolor {
 		hasColor = true
 		switch lvl {
-		case "WRN":  *buf = append(*buf, colorWarn...); break;
-		case "ERR":  *buf = append(*buf, colorErr...); break;
-		case "CRT":  *buf = append(*buf, colorCrit...); break;
-		default: hasColor = false
+		case "DBG":
+			*buf = append(*buf, colorDbg...)
+			break
+		case "WRN":
+			*buf = append(*buf, colorWarn...)
+			break
+		case "ERR":
+			*buf = append(*buf, colorErr...)
+			break
+		case "CRT":
+			*buf = append(*buf, colorCrit...)
+			break
+		default:
+			hasColor = false
 		}
 	}
 
-	itoa(buf, year, 4)
-	*buf = append(*buf, '-')
-	itoa(buf, int(month), 2)
-	*buf = append(*buf, '-')
-	itoa(buf, day, 2)
-	*buf = append(*buf, ' ')
-	itoa(buf, hour, 2)
-	*buf = append(*buf, ':')
-	itoa(buf, min, 2)
-	*buf = append(*buf, ':')
-	itoa(buf, sec, 2)
-	*buf = append(*buf, '.')
-	itoa(buf, ms, 3)
+	if flags&Llongdate == Llongdate {
+		year, month, day := t.Date()
+		hour, min, sec := t.Clock()
+		ms := t.Nanosecond() / 1e6
+
+		itoa(buf, year, 4)
+		*buf = append(*buf, '-')
+		itoa(buf, int(month), 2)
+		*buf = append(*buf, '-')
+		itoa(buf, day, 2)
+		*buf = append(*buf, ' ')
+		itoa(buf, hour, 2)
+		*buf = append(*buf, ':')
+		itoa(buf, min, 2)
+		*buf = append(*buf, ':')
+		itoa(buf, sec, 2)
+		*buf = append(*buf, '.')
+		itoa(buf, ms, 3)
+	} else {
+		itoa(buf, int(t.Unix()), -1)
+	}
 	*buf = append(*buf, " ["...)
 	*buf = append(*buf, lvl...)
 	*buf = append(*buf, "] "...)
@@ -336,7 +380,7 @@ func (b *Backend) print(lvl, tag string, args ...interface{}) {
 	fmt.Fprintln(buf, args...)
 	*bytebuf = buf.Bytes()
 	if hasColor {
-		*bytebuf = append(*bytebuf, reset...);
+		*bytebuf = append(*bytebuf, Reset...)
 	}
 
 	b.mu.Lock()
@@ -366,7 +410,7 @@ func (b *Backend) printf(lvl, tag string, format string, args ...interface{}) {
 	fmt.Fprintf(buf, format, args...)
 	*bytebuf = buf.Bytes()
 	if hasColor {
-		*bytebuf = append(*bytebuf, reset...);
+		*bytebuf = append(*bytebuf, Reset...)
 	}
 	*bytebuf = append(*bytebuf, '\n')
 

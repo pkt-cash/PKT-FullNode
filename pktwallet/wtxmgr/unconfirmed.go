@@ -8,6 +8,7 @@ package wtxmgr
 import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -37,7 +38,7 @@ func (s *Store) insertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R
 		}
 	}
 
-	log.Infof("Inserting unconfirmed transaction %v", rec.Hash)
+	log.Infof("Inserting unconfirmed transaction [%s]", pktlog.Txid(rec.Hash.String()))
 	v, err := valueTxRecord(rec)
 	if err != nil {
 		return err

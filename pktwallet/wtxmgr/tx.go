@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -226,8 +227,12 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	}
 
 	for addr, amt := range spentByAddress {
-		log.Infof("Spent [%s] from address [%s] in tx [%s] height [%d]",
-			amt.String(), addr, rec.Hash.String(), block.Height)
+		log.Infof("📩 %s [%s] from [%s] tx [%s] @ [%d]",
+			pktlog.GreenBg("Confirmed spend"),
+			pktlog.Coins(amt.ToBTC()),
+			pktlog.Address(addr),
+			pktlog.Txid(rec.Hash.String()),
+			pktlog.Height(block.Height))
 	}
 
 	// For each output of the record that is marked as a credit, if the
@@ -364,8 +369,9 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// If this transaction previously existed within the store as unmined,
 	// we'll need to remove it from the unmined bucket.
 	if v := existsRawUnmined(ns, rec.Hash[:]); v != nil {
-		log.Infof("Marking unconfirmed transaction %v mined in block %d",
-			&rec.Hash, block.Height)
+		log.Infof("Marking unconfirmed transaction [%s] mined in block [%s]",
+			pktlog.Txid(rec.Hash.String()),
+			pktlog.Height(block.Height))
 
 		if err := s.deleteUnminedTx(ns, rec); err != nil {
 			return err

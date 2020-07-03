@@ -275,7 +275,7 @@ func (m *SubscriptionManager) NewSubscription(bestHeight uint32) (*Subscription,
 
 // handleNewSubscription handles a request to create a new block subscription.
 func (m *SubscriptionManager) handleNewSubscription(sub *newSubscription) er.R {
-	log.Infof("Registering block subscription: id=%d", sub.id)
+	log.Debugf("Registering block subscription: id=%d", sub.id)
 
 	// We'll start by retrieving a backlog of notifications from the
 	// client's best height.
@@ -323,7 +323,7 @@ func (m *SubscriptionManager) handleCancelSubscription(msg *cancelSubscription) 
 		return
 	}
 
-	log.Infof("Canceling block subscription: id=%d", msg.id)
+	log.Debugf("Canceling block subscription: id=%d", msg.id)
 
 	// If there is one, we'll stop their internal queue to no longer deliver
 	// notifications to them.

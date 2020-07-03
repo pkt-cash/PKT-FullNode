@@ -372,7 +372,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 		if err := w.waitUntilBackendSynced(chainClient); err != nil {
 			return err
 		}
-		log.Debug("Chain backend synced to tip!")
+		log.Info("Chain backend synced to tip! 👍")
 	}
 
 	// If we've yet to find our birthday block, we'll do so now.
@@ -694,7 +694,7 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 	var blocks []*waddrmgr.BlockStamp
 	startHeight := w.Manager.SyncedTo().Height + 1
 
-	log.Infof("Rescanning for used addresses from [%d] to [%d] ([%d] blocks)",
+	log.Debugf("Rescanning for used addresses from [%d] to [%d] ([%d] blocks)",
 		startHeight, bestHeight, bestHeight-startHeight)
 
 	startTime := time.Now()
@@ -780,7 +780,7 @@ func (w *Wallet) recovery(chainClient chain.Interface, birthdayBlock *waddrmgr.B
 			})
 
 			if len(recoveryBatch) > 0 {
-				log.Infof("Recovered addresses from blocks [%d-%d] "+
+				log.Debugf("Recovered addresses from blocks [%d-%d] "+
 					"Expected remaining time [%v]", recoveryBatch[0].Height,
 					recoveryBatch[len(recoveryBatch)-1].Height, timeToGo)
 			}
@@ -857,7 +857,7 @@ func (w *Wallet) recoverScopedAddresses(
 		return nil
 	}
 
-	log.Infof("Scanning %d blocks for recoverable addresses", len(batch))
+	log.Debugf("Scanning %d blocks for recoverable addresses", len(batch))
 
 expandHorizons:
 	for scope, scopedMgr := range scopedMgrs {

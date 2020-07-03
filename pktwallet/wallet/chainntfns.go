@@ -7,10 +7,12 @@ package wallet
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -49,7 +51,7 @@ func (w *Wallet) handleChainNotifications() {
 		// if it doesn't match the original hash returned by
 		// the notification, to roll back and restart the
 		// rescan.
-		log.Infof("Catching up block hashes to height %d, this"+
+		log.Debugf("Catching up block hashes to height %d, this"+
 			" might take a while", height)
 		err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
@@ -84,7 +86,7 @@ func (w *Wallet) handleChainNotifications() {
 			log.Errorf(err.String())
 		}
 
-		log.Info("Done catching up block hashes")
+		log.Debug("Done catching up block hashes")
 		return err
 	}
 
@@ -95,6 +97,7 @@ func (w *Wallet) handleChainNotifications() {
 				return
 			}
 
+			log.Infof("Notification %v", reflect.TypeOf(n))
 			var notificationName string
 			var err er.R
 			switch n := n.(type) {
@@ -136,6 +139,7 @@ func (w *Wallet) handleChainNotifications() {
 				})
 				notificationName = "relevant transaction"
 			case chain.FilteredBlockConnected:
+				log.Infof("Found %d txns", len(n.RelevantTxs))
 				// Atomically update for the whole block.
 				if len(n.RelevantTxs) > 0 {
 					err = walletdb.Update(w.db, func(
@@ -207,7 +211,7 @@ func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) er.
 
 	st := w.Manager.SyncedTo()
 	for height := st.Height + 1; height < b.Height; height++ {
-		log.Infof("Inserting block [%d] which is out of order, must insert [%d] first",
+		log.Debugf("Inserting block [%d] which is out of order, must insert [%d] first",
 			b.Height, height)
 		hash, err := w.chainClient.GetBlockHash(int64(height))
 		if err != nil {
@@ -335,12 +339,18 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 					return err
 				}
 				txOutAmt := btcutil.Amount(rec.MsgTx.TxOut[i].Value)
-				height := ""
 				if block != nil {
-					height = fmt.Sprintf("height [%d]", block.Height)
+					log.Infof("💸 "+pktlog.GreenBg("Got paid!")+" [%s] -> [%s] tx [%s] @ [%s]",
+						pktlog.Coins(txOutAmt.ToBTC()),
+						pktlog.Address(addr.String()),
+						pktlog.Txid(rec.Hash.String()),
+						pktlog.Height(block.Height))
+				} else {
+					log.Infof("Detected unconfirmed payment [%s] -> [%s] tx [%s]",
+						pktlog.Coins(txOutAmt.ToBTC()),
+						pktlog.Address(addr.String()),
+						pktlog.Txid(rec.Hash.String()))
 				}
-				log.Infof("Got paid! [%s] --> [%s] in tx [%s]%s",
-					txOutAmt.String(), addr.String(), rec.Hash, height)
 				continue
 			}
 

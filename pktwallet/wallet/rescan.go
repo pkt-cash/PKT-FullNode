@@ -212,14 +212,14 @@ out:
 		select {
 		case msg := <-w.rescanProgress:
 			n := msg.Notification
-			log.Infof("Rescanned through block %v (height %d)",
+			log.Debugf("Rescanned through block %v (height %d)",
 				n.Hash, n.Height)
 
 		case msg := <-w.rescanFinished:
 			n := msg.Notification
 			addrs := msg.Addresses
 			noun := pickNoun(len(addrs), "address", "addresses")
-			log.Infof("Finished rescan for %d %s (synced to block "+
+			log.Debugf("Finished rescan for %d %s (synced to block "+
 				"%s, height %d)", len(addrs), noun, n.Hash,
 				n.Height)
 
@@ -252,7 +252,7 @@ out:
 			// Log the newly-started rescan.
 			numAddrs := len(batch.addrs)
 			noun := pickNoun(numAddrs, "address", "addresses")
-			log.Infof("Started rescan from block %v (height %d) for %d %s",
+			log.Debugf("Started rescan from block %v (height %d) for %d %s",
 				batch.bs.Hash, batch.bs.Height, numAddrs, noun)
 
 			err := chainClient.Rescan(&batch.bs.Hash, batch.addrs,

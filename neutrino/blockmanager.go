@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
@@ -471,7 +472,7 @@ waitForHeaders:
 	// cfheaders. We do this to speed up the sync, as the check pointed
 	// sync is faster, than fetching each header from each peer during the
 	// normal "at tip" syncing.
-	log.Infof("Waiting for more block headers, then will start "+
+	log.Debugf("Waiting for more block headers, then will start "+
 		"cfheaders sync from height %v...", b.filterHeaderTip)
 
 	b.newHeadersSignal.L.Lock()
@@ -508,7 +509,7 @@ waitForHeaders:
 	lastHash := lastHeader.BlockHash()
 
 	b.newFilterHeadersMtx.RLock()
-	log.Infof("Starting cfheaders sync from (block_height=%v, "+
+	log.Debugf("Starting cfheaders sync from (block_height=%v, "+
 		"block_hash=%v) to (block_height=%v, block_hash=%v)",
 		b.filterHeaderTip, b.filterHeaderTipHash, lastHeight,
 		lastHeader.BlockHash())
@@ -517,7 +518,7 @@ waitForHeaders:
 	fType := wire.GCSFilterRegular
 	store := b.server.RegFilterHeaders
 
-	log.Infof("Starting cfheaders sync for filter_type=%v", fType)
+	log.Debugf("Starting cfheaders sync for filter_type=%v", fType)
 
 	// If we have less than a full checkpoint's worth of blocks, such as on
 	// simnet, we don't really need to request checkpoints as we'll get 0
@@ -623,7 +624,7 @@ waitForHeaders:
 	b.newFilterHeadersMtx.RUnlock()
 	b.newHeadersMtx.RUnlock()
 
-	log.Infof("Fully caught up with cfheaders at height "+
+	log.Debugf("Fully caught up with cfheaders at height "+
 		"%v, waiting at tip for new blocks", lastHeight)
 
 	// Now that we've been fully caught up to the tip of the current header
@@ -811,14 +812,14 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 
 	initialFilterHeader := curHeader
 
-	log.Infof("Fetching set of checkpointed cfheaders filters from "+
+	log.Debugf("Fetching set of checkpointed cfheaders filters from "+
 		"height=%v, hash=%v", curHeight, curHeader)
 
 	// The starting interval is the checkpoint index that we'll be starting
 	// from based on our current height in the filter header index.
 	startingInterval := curHeight / wire.CFCheckptInterval
 
-	log.Infof("Starting to query for cfheaders from "+
+	log.Debugf("Starting to query for cfheaders from "+
 		"checkpoint_interval=%v", startingInterval)
 
 	queryMsgs := make([]wire.Message, 0, len(checkpoints))
@@ -2050,8 +2051,8 @@ func (b *blockManager) startSync(peers *list.List) {
 			return
 		}
 
-		log.Infof("Syncing to block height %d from peer %s",
-			bestPeer.LastBlock(), bestPeer.Addr())
+		log.Infof("Syncing to block height [%s] from peer %s",
+			pktlog.Height(bestPeer.LastBlock()), bestPeer.Addr())
 
 		// Now that we know we have a new sync peer, we'll lock it in
 		// within the proper attribute.
@@ -2074,7 +2075,7 @@ func (b *blockManager) startSync(peers *list.List) {
 
 			stopHash = b.nextCheckpoint.Hash
 		} else {
-			log.Infof("Fetching set of headers from tip "+
+			log.Debugf("Fetching set of headers from tip "+
 				"(height=%v) from peer %s", bestHeight,
 				bestPeer.Addr())
 		}
