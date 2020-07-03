@@ -216,11 +216,21 @@ type GetNetworkStewardVoteResult struct {
 }
 
 type GetAddressBalancesResult struct {
-	Address        string  `json:"address"`
-	Total          float64 `json:"total"`
-	Spendable      float64 `json:"spendable"`
-	ImmatureReward float64 `json:"immaturereward"`
-	OutputCount    int32   `json:"outputcount"`
+	Address string `json:"address"`
+
+	Total  float64 `json:"total"`
+	Stotal string  `json:"stotal"`
+
+	Spendable  float64 `json:"spendable"`
+	Sspendable string  `json:"sspendable"`
+
+	ImmatureReward  float64 `json:"immaturereward"`
+	SimmatureReward string  `json:"simmaturereward"`
+
+	Unconfirmed  float64 `json:"unconfirmed"`
+	Sunconfirmed string  `json:"sunconfirmed"`
+
+	OutputCount int32 `json:"outputcount"`
 }
 
 type VacuumDbRes struct {

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -351,11 +352,21 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 		results := make([]btcjson.GetAddressBalancesResult, 0, len(bals))
 		for addr, bal := range bals {
 			results = append(results, btcjson.GetAddressBalancesResult{
-				Address:        addr.EncodeAddress(),
-				Spendable:      bal.Spendable.ToBTC(),
-				Total:          bal.Total.ToBTC(),
-				ImmatureReward: bal.ImmatureReward.ToBTC(),
-				OutputCount:    bal.OutputCount,
+				Address: addr.EncodeAddress(),
+
+				Spendable:  bal.Spendable.ToBTC(),
+				Sspendable: strconv.FormatInt(int64(bal.Spendable), 10),
+
+				Total:  bal.Total.ToBTC(),
+				Stotal: strconv.FormatInt(int64(bal.Total), 10),
+
+				ImmatureReward:  bal.ImmatureReward.ToBTC(),
+				SimmatureReward: strconv.FormatInt(int64(bal.ImmatureReward), 10),
+
+				Unconfirmed:  bal.Unconfirmed.ToBTC(),
+				Sunconfirmed: strconv.FormatInt(int64(bal.Unconfirmed), 10),
+
+				OutputCount: bal.OutputCount,
 			})
 		}
 		return results, nil
