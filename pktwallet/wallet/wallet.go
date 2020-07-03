@@ -15,6 +15,7 @@ import (
 
 	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
 	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/params"
@@ -3160,6 +3161,10 @@ func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.Vacu
 			}
 
 			if _, err := chainClient.GetBlockHeader(&op.Block.Hash); err != nil {
+				if !headerfs.ErrHashNotFound.Is(err) {
+					// Don't confuse with a real error
+					return err
+				}
 				// The block containing the previous transaction which paid this one
 				// has gone missing, if it's a coinbase then we need to kill it because
 				// it's never coming back. If it's a regular transaction we're going to

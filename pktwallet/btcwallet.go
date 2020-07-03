@@ -63,6 +63,9 @@ func goAutoVacuum(cfg *config, w *wallet.Wallet) {
 		for {
 			res, err := w.VacuumDb(startKey,
 				time.Duration(cfg.AutoVacuumMs)*time.Millisecond)
+			if w.ShuttingDown() {
+				return
+			}
 			if err != nil {
 				log.Warnf("Error while vacuuming database [%s]", err.String())
 				break
