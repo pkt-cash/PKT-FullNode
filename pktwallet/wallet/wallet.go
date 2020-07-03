@@ -253,6 +253,10 @@ func (w *Wallet) Stop() {
 	}
 }
 
+func (w *Wallet) Db() walletdb.DB {
+	return w.db
+}
+
 // ShuttingDown returns whether the wallet is currently in the process of
 // shutting down or not.
 func (w *Wallet) ShuttingDown() bool {
@@ -3109,22 +3113,61 @@ func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.Vacu
 				stats.Burned++
 				return nil
 			}
+			txD, err := w.TxStore.TxDetails(txNs, &op.Hash)
+			if err != nil {
+				return err
+			}
 			if op.Height < 0 {
-			} else if _, err := chainClient.GetBlockHeader(&op.Block.Hash); err != nil {
+				if txD == nil {
+					log.Errorf("Unmined UTXO %s "+
+						"has no accompanying transaction in the db", op.String())
+					// TODO(cjd): Need to somehow fix this
+					return nil
+				}
+				if txD.Block.Height != -1 {
+					log.Errorf("Unmined UTXO %s "+
+						"is mined according to the tx db", op.String())
+					// TODO(cjd): Need to somehow fix this
+					return nil
+				}
+				return nil
+			}
+
+			if txD == nil {
+				log.Errorf("Mined UTXO %s "+
+					"has no accompanying record in tx db", op.String())
+				return nil
+			}
+			if txD.Block.Height == -1 {
+				log.Errorf("Mined UTXO %s "+
+					"is unmined according to the tx db", op.String())
+				return nil
+			}
+
+			if _, err := chainClient.GetBlockHeader(&op.Block.Hash); err != nil {
+				// The block containing the previous transaction which paid this one
+				// has gone missing, if it's a coinbase then we need to kill it because
+				// it's never coming back. If it's a regular transaction we're going to
+				// revert it and put it back in the mempool.
 				log.Debugf("Removing tx [%s] because it references orphan block [%s]",
 					op.OutPoint.Hash.String(), op.Block.Hash)
 				badOutputs = append(badOutputs, *op)
 				stats.Orphaned++
 				return nil
 			}
+
 			return nil
 		}); err != nil && !er.IsLoopBreak(err) {
 			return err
 		}
 		stats.VisitedUtxos = i
+		badHashes := map[chainhash.Hash]struct{}{}
 		for _, op := range badOutputs {
-			if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
+			if _, ok := badHashes[op.OutPoint.Hash]; ok {
+			} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
 				return err
+			} else {
+				badHashes[op.OutPoint.Hash] = struct{}{}
 			}
 		}
 		return nil

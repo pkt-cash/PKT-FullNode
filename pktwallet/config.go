@@ -68,6 +68,7 @@ type config struct {
 	LogDir             string                  `long:"logdir" description:"Directory to log output."`
 	Profile            string                  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
 	AutoVacuum         bool                    `long:"autovacuum" description:"Automatically clean up unspendable outputs from the database in the background"`
+	NoAutoVacuum       bool                    `long:"noautovacuum" description:"Do not automatically clean up unspendable outputs from the database in the background"`
 	AutoVacuumMs       uint32                  `long:"autovacuummaxms" description:"Maximum number of milliseconds to spend on an auto-vacuum cycle"`
 	AutoVacuumPauseMs  uint32                  `long:"autovacuumpausems" description:"Number of milliseconds to pause before resuming vacuuming"`
 	AutoVacuumSleepSec uint32                  `long:"autovacuumsleepsec" description:"Number of seconds to sleep after autovacuum is complete before starting again"`
@@ -281,6 +282,7 @@ func loadConfig() (*config, []string, er.R) {
 		AppDataDir:             cfgutil.NewExplicitString(defaultAppDataDir),
 		LogDir:                 defaultLogDir,
 		AutoVacuum:             true,
+		NoAutoVacuum:           false,
 		AutoVacuumMs:           100,
 		AutoVacuumPauseMs:      200,
 		AutoVacuumSleepSec:     3600,

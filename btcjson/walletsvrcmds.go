@@ -436,6 +436,8 @@ func NewWalletPassphraseChangeCmd(oldPassphrase, newPassphrase string) *WalletPa
 	}
 }
 
+type WalletMempoolCmd struct{}
+
 // SetNetworkStewardVoteCmd is the argument to the wallet command setnetworkstewardvote
 type SetNetworkStewardVoteCmd struct {
 	VoteFor     *string `json:"votefor"`
@@ -480,4 +482,5 @@ func init() {
 	MustRegisterCmd("walletlock", (*WalletLockCmd)(nil), flags)
 	MustRegisterCmd("walletpassphrase", (*WalletPassphraseCmd)(nil), flags)
 	MustRegisterCmd("walletpassphrasechange", (*WalletPassphraseChangeCmd)(nil), flags)
+	MustRegisterCmd("walletmempool", (*WalletMempoolCmd)(nil), flags)
 }

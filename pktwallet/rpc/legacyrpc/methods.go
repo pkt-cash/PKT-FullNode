@@ -31,6 +31,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
@@ -121,6 +122,7 @@ var rpcHandlers = map[string]struct {
 	"getaddressbalances":    {handler: getAddressBalances},
 	"getwalletseed":         {handler: getWalletSeed},
 	"getsecret":             {handler: getSecret},
+	"walletmempool":         {handler: walletMempool},
 	// This was an extension but the reference implementation added it as
 	// well, but with a different API (no account parameter).  It's listed
 	// here because it hasn't been update to use the reference
@@ -375,6 +377,24 @@ func getWalletSeed(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 func getSecret(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetSecretCmd)
 	return w.GetSecret(cmd.Name)
+}
+
+func walletMempool(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	var unminedTxDetails []wtxmgr.TxDetails
+	if err := walletdb.View(w.Db(), func(tx walletdb.ReadTx) er.R {
+		ns := tx.ReadBucket([]byte("wtxmgr"))
+		return w.TxStore.RangeTransactions(ns, -1, -1, func(utxd []wtxmgr.TxDetails) (bool, er.R) {
+			unminedTxDetails = utxd
+			return true, nil
+		})
+	}); err != nil {
+		return nil, err
+	}
+	out := make([]string, len(unminedTxDetails))
+	for i, utd := range unminedTxDetails {
+		out[i] = utd.Hash.String()
+	}
+	return out, nil
 }
 
 // getBalance handles a getbalance request by returning the balance for an

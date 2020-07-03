@@ -199,6 +199,7 @@ var rpcAskWallet = map[string]struct{}{
 	"walletlock":             {},
 	"walletpassphrase":       {},
 	"walletpassphrasechange": {},
+	"walletmempool":          {},
 }
 
 // Commands that are currently unimplemented, but should ultimately be.

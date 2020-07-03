@@ -149,7 +149,7 @@ func walletMain() er.R {
 		startWalletRPCServices(w, rpcs, legacyRPCServer)
 	})
 
-	if cfg.AutoVacuum {
+	if cfg.AutoVacuum && !cfg.NoAutoVacuum {
 		loader.RunAfterLoad(func(w *wallet.Wallet) { go goAutoVacuum(cfg, w) })
 	}
 
