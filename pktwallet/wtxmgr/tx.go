@@ -7,10 +7,10 @@ package wtxmgr
 
 import (
 	"bytes"
-	"encoding/hex"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -173,6 +173,8 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 		},
 	}
 
+	spentByAddress := map[string]btcutil.Amount{}
+
 	newMinedBalance := minedBalance
 	for i, input := range rec.MsgTx.TxIn {
 		unspentKey, credKey := existsUnspent(ns, &input.PreviousOutPoint)
@@ -196,16 +198,11 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			continue
 		}
 
-		var prevPkScript []byte
-		{
-			k := extractRawCreditTxRecordKey(credKey)
-			v := existsRawTxRecord(ns, k)
-			prevPk, err := fetchRawTxRecordPkScript(k, v, spender.index)
-			if err != nil {
-				log.Warnf("Error decoding address spent from because [%s]", err.String())
-			} else {
-				prevPkScript = prevPk
-			}
+		prevAddr := "unknown"
+		if prevPk, err := AddressForOutPoint(ns, &input.PreviousOutPoint); err != nil {
+			log.Warnf("Error decoding address spent from because [%s]", err.String())
+		} else if prevPk != nil {
+			prevAddr = txscript.PkScriptToAddress(prevPk, s.chainParams).String()
 		}
 
 		// If this output is relevant to us, we'll mark the it as spent
@@ -224,10 +221,13 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 		if err := deleteRawUnspent(ns, unspentKey); err != nil {
 			return err
 		}
-		log.Infof("Spent [%s] from address [%s] in tx [%s] height [%d]",
-			amt.String(), hex.EncodeToString(prevPkScript), rec.Hash.String(), block.Height)
-
+		spentByAddress[prevAddr] += amt
 		newMinedBalance -= amt
+	}
+
+	for addr, amt := range spentByAddress {
+		log.Infof("Spent [%s] from address [%s] in tx [%s] height [%d]",
+			amt.String(), addr, rec.Hash.String(), block.Height)
 	}
 
 	// For each output of the record that is marked as a credit, if the

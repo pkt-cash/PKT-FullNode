@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -388,6 +389,39 @@ func (s *Store) RangeTransactions(ns walletdb.ReadBucket, begin, end int32,
 	return err
 }
 
+func AddressForOutPoint(ns walletdb.ReadBucket, prevOut *wire.OutPoint) ([]byte, er.R) {
+	// Input may spend a previous unmined output, a
+	// mined output (which would still be marked
+	// unspent), or neither.
+	if v := existsRawUnmined(ns, prevOut.Hash[:]); v != nil {
+		// Ensure a credit exists for this
+		// unmined transaction before including
+		// the output script.
+		k := canonicalOutPoint(&prevOut.Hash, prevOut.Index)
+		if existsRawUnminedCredit(ns, k) == nil {
+			return nil, nil
+		} else if pkScript, err := fetchRawTxRecordPkScript(
+			prevOut.Hash[:],
+			v,
+			prevOut.Index,
+		); err != nil {
+			return nil, err
+		} else {
+			return pkScript, nil
+		}
+	} else if _, credKey := existsUnspent(ns, prevOut); credKey != nil {
+		k := extractRawCreditTxRecordKey(credKey)
+		v = existsRawTxRecord(ns, k)
+		if pkScript, err := fetchRawTxRecordPkScript(k, v, prevOut.Index); err != nil {
+			return nil, err
+		} else {
+			return pkScript, nil
+		}
+	} else {
+		return nil, nil
+	}
+}
+
 // PreviousPkScripts returns a slice of previous output scripts for each credit
 // output this transaction record debits from.
 func (s *Store) PreviousPkScripts(ns walletdb.ReadBucket, rec *TxRecord, block *Block) ([][]byte, er.R) {
@@ -396,41 +430,10 @@ func (s *Store) PreviousPkScripts(ns walletdb.ReadBucket, rec *TxRecord, block *
 	if block == nil {
 		for _, input := range rec.MsgTx.TxIn {
 			prevOut := &input.PreviousOutPoint
-
-			// Input may spend a previous unmined output, a
-			// mined output (which would still be marked
-			// unspent), or neither.
-
-			v := existsRawUnmined(ns, prevOut.Hash[:])
-			if v != nil {
-				// Ensure a credit exists for this
-				// unmined transaction before including
-				// the output script.
-				k := canonicalOutPoint(&prevOut.Hash, prevOut.Index)
-				if existsRawUnminedCredit(ns, k) == nil {
-					continue
-				}
-
-				pkScript, err := fetchRawTxRecordPkScript(
-					prevOut.Hash[:], v, prevOut.Index)
-				if err != nil {
-					return nil, err
-				}
+			if pkScript, err := AddressForOutPoint(ns, prevOut); err != nil {
+				return nil, err
+			} else if pkScript != nil {
 				pkScripts = append(pkScripts, pkScript)
-				continue
-			}
-
-			_, credKey := existsUnspent(ns, prevOut)
-			if credKey != nil {
-				k := extractRawCreditTxRecordKey(credKey)
-				v = existsRawTxRecord(ns, k)
-				pkScript, err := fetchRawTxRecordPkScript(k, v,
-					prevOut.Index)
-				if err != nil {
-					return nil, err
-				}
-				pkScripts = append(pkScripts, pkScript)
-				continue
 			}
 		}
 		return pkScripts, nil
