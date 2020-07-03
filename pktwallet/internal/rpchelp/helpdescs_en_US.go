@@ -387,6 +387,11 @@ var helpDescsEnUS = map[string]string{
 	"walletpassphrasechange-oldpassphrase": "The old wallet passphrase",
 	"walletpassphrasechange-newpassphrase": "The new wallet passphrase",
 
+	// WalletMempoolCmd help.
+	"walletmempool--synopsis":    "Show the unconfirmed transactions which are being broadcasted by the wallet",
+	"walletmempoolitem-received": "The time when the transaction was first seen/made",
+	"walletmempoolitem-txid":     "Transaction id",
+
 	// ExportWatchingWalletCmd help.
 	"exportwatchingwallet--synopsis": "Creates and returns a duplicate of the wallet database without any private keys to be used as a watching-only wallet.",
 	"exportwatchingwallet-account":   "Unused (must be unset or \"*\")",

@@ -31,7 +31,6 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
@@ -380,21 +379,18 @@ func getSecret(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 }
 
 func walletMempool(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	var unminedTxDetails []wtxmgr.TxDetails
-	if err := walletdb.View(w.Db(), func(tx walletdb.ReadTx) er.R {
-		ns := tx.ReadBucket([]byte("wtxmgr"))
-		return w.TxStore.RangeTransactions(ns, -1, -1, func(utxd []wtxmgr.TxDetails) (bool, er.R) {
-			unminedTxDetails = utxd
-			return true, nil
-		})
-	}); err != nil {
+	if txs, err := w.WalletMempool(); err != nil {
 		return nil, err
+	} else {
+		out := make([]btcjson.WalletMempoolItem, len(txs))
+		for i, h := range txs {
+			out[i] = btcjson.WalletMempoolItem{
+				Txid:     h.Hash.String(),
+				Received: h.Received.String(),
+			}
+		}
+		return out, nil
 	}
-	out := make([]string, len(unminedTxDetails))
-	for i, utd := range unminedTxDetails {
-		out[i] = utd.Hash.String()
-	}
-	return out, nil
 }
 
 // getBalance handles a getbalance request by returning the balance for an

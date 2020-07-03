@@ -3086,6 +3086,18 @@ func (w *Wallet) ResyncChain(dropDb bool) er.R {
 	return w.recovery(chainClient, &genesis)
 }
 
+func (w *Wallet) WalletMempool() ([]wtxmgr.TxDetails, er.R) {
+	var unminedTxDetails []wtxmgr.TxDetails
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		ns := tx.ReadBucket([]byte("wtxmgr"))
+		return w.TxStore.RangeTransactions(ns, -1, -1, func(utxd []wtxmgr.TxDetails) (bool, er.R) {
+			unminedTxDetails = utxd
+			return true, nil
+		})
+	})
+	return unminedTxDetails, err
+}
+
 // zero duration means it will continue vacuuming until it is done, no matter how long.
 func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.VacuumDbRes, er.R) {
 	deadline := time.Now().Add(maxTime)

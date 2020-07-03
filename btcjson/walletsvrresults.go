@@ -229,3 +229,9 @@ type VacuumDbRes struct {
 	VisitedUtxos int
 	EndKey       string
 }
+
+type WalletMempoolItem struct {
+	Txid     string
+	Received string
+}
+type WalletMempoolRes []WalletMempoolItem

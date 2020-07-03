@@ -60,7 +60,7 @@ var Methods = []struct {
 	{"walletlock", nil},
 	{"walletpassphrase", nil},
 	{"walletpassphrasechange", nil},
-	{"walletmempool", []interface{}{(*[]string)(nil)}},
+	{"walletmempool", []interface{}{(*btcjson.WalletMempoolRes)(nil)}},
 	{"exportwatchingwallet", returnsString},
 	{"getbestblock", []interface{}{(*btcjson.GetBestBlockResult)(nil)}},
 	{"getunconfirmedbalance", returnsNumber},
