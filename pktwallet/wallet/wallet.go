@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/params"
 
+	"github.com/LK4D4/trylock"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -63,6 +64,8 @@ var (
 	// down.
 	ErrWalletShuttingDown = Err.CodeWithDetail("ErrWalletShuttingDown",
 		"wallet shutting down")
+
+	ErrInProgress = Err.CodeWithDetail("ErrInProgress", "Already in progress")
 
 	// Namespace bucket keys.
 	waddrmgrNamespaceKey = []byte("waddrmgr")
@@ -129,6 +132,8 @@ type Wallet struct {
 	started bool
 	quit    chan struct{}
 	quitMu  sync.Mutex
+
+	rescanMempoolMu trylock.Mutex
 
 	wsLock sync.RWMutex
 	ws     btcjson.WalletStats
@@ -3102,6 +3107,58 @@ func (w *Wallet) WalletMempool() ([]wtxmgr.TxDetails, er.R) {
 	return unminedTxDetails, err
 }
 
+func (w *Wallet) RescanMempoolTxns() er.R {
+	if !w.rescanMempoolMu.TryLock() {
+		return ErrInProgress.Default()
+	}
+	defer func() {
+		log.Debugf("RescanMempoolTxns() done")
+		w.rescanMempoolMu.Unlock()
+	}()
+
+	if txDetails, err := w.WalletMempool(); err != nil {
+		return err
+	} else {
+		if len(txDetails) == 0 {
+			return nil
+		}
+		earliest := txDetails[0].Received
+		log.Debugf("RescanMempoolTxns() [%d] mempool transactions, scanning to see if they're confirmed",
+			len(txDetails))
+		addrs := make([]btcutil.Address, 0, len(txDetails))
+		for _, c := range txDetails {
+			for _, out := range c.MsgTx.TxOut {
+				addrs = append(addrs, txscript.PkScriptToAddress(out.PkScript, w.chainParams))
+				break
+			}
+			if c.Received.Before(earliest) {
+				earliest = c.Received
+			}
+		}
+		if bs, err := locateBirthdayBlock(w.chainClient, earliest); err != nil {
+			return err
+		} else {
+			saddrs := make([]string, 0, len(addrs))
+			for _, a := range addrs {
+				saddrs = append(saddrs, a.String())
+			}
+			log.Debugf("RescanMempoolTxns() Begin scan from height [%d] for addresses [%s]",
+				bs.Height, strings.Join(saddrs, ", "))
+			select {
+			case err := <-w.SubmitRescan(&RescanJob{
+				InitialSync: false,
+				Addrs:       addrs,
+				OutPoints:   nil,
+				BlockStamp:  *bs,
+			}):
+				return err
+			case <-w.quitChan():
+				return ErrWalletShuttingDown.Default()
+			}
+		}
+	}
+}
+
 // zero duration means it will continue vacuuming until it is done, no matter how long.
 func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.VacuumDbRes, er.R) {
 	deadline := time.Now().Add(maxTime)
@@ -3179,15 +3236,21 @@ func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.Vacu
 			return nil
 		}); err != nil && !er.IsLoopBreak(err) {
 			return err
-		}
-		stats.VisitedUtxos = i
-		badHashes := map[chainhash.Hash]struct{}{}
-		for _, op := range badOutputs {
-			if _, ok := badHashes[op.OutPoint.Hash]; ok {
-			} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
-				return err
-			} else {
-				badHashes[op.OutPoint.Hash] = struct{}{}
+		} else {
+			stats.VisitedUtxos = i
+			badHashes := map[chainhash.Hash]struct{}{}
+			for _, op := range badOutputs {
+				if _, ok := badHashes[op.OutPoint.Hash]; ok {
+				} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
+					return err
+				} else {
+					badHashes[op.OutPoint.Hash] = struct{}{}
+				}
+			}
+
+			if err == nil {
+				// it's not a loopbreak, we're at the end of the line, lets scan for unconfirmed txns
+				return w.RescanMempoolTxns()
 			}
 		}
 		return nil

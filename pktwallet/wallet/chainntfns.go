@@ -226,14 +226,19 @@ func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) er.
 		w.NtfnServer.notifyAttachedBlock(dbtx, &b)
 	}
 
-	bs := waddrmgr.BlockStamp{
-		Height:    b.Height,
-		Hash:      b.Hash,
-		Timestamp: b.Time,
-	}
-	err := w.Manager.SetSyncedTo(addrmgrNs, &bs)
-	if err != nil {
-		return err
+	if st.Height > b.Height {
+		// we're re-syncing, attaching blocks down in the depths of the chain
+		// SetSyncedTo will fail because it only keeps the last 10k blocks
+	} else {
+		bs := waddrmgr.BlockStamp{
+			Height:    b.Height,
+			Hash:      b.Hash,
+			Timestamp: b.Time,
+		}
+		err := w.Manager.SetSyncedTo(addrmgrNs, &bs)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Notify interested clients of the connected block.
