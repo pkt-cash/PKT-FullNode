@@ -227,7 +227,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	}
 
 	for addr, amt := range spentByAddress {
-		log.Infof("📩 %s [%s] from [%s] tx [%s] @ [%d]",
+		log.Infof("📩 %s [%s] from [%s] tx [%s] @ [%s]",
 			pktlog.GreenBg("Confirmed spend"),
 			pktlog.Coins(amt.ToBTC()),
 			pktlog.Address(addr),
@@ -369,9 +369,9 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// If this transaction previously existed within the store as unmined,
 	// we'll need to remove it from the unmined bucket.
 	if v := existsRawUnmined(ns, rec.Hash[:]); v != nil {
-		log.Infof("Marking unconfirmed transaction [%s] mined in block [%s]",
-			pktlog.Txid(rec.Hash.String()),
-			pktlog.Height(block.Height))
+		log.Debugf("Marking unconfirmed transaction [%s] mined in block [%d]",
+			rec.Hash.String(),
+			block.Height)
 
 		if err := s.deleteUnminedTx(ns, rec); err != nil {
 			return err
@@ -393,17 +393,17 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 // TODO(jrick): This should not be necessary.  Instead, pass the indexes
 // that are known to contain credits when a transaction or merkleblock is
 // inserted into the store.
-func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta, index uint32, change bool) er.R {
+func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta, index uint32, change bool) (bool, er.R) {
 	if int(index) >= len(rec.MsgTx.TxOut) {
 		str := "transaction output does not exist"
-		return storeError(ErrInput, str, nil)
+		return false, storeError(ErrInput, str, nil)
 	}
 
 	isNew, err := s.addCredit(ns, rec, block, index, change)
 	if err == nil && isNew && s.NotifyUnspent != nil {
 		s.NotifyUnspent(&rec.Hash, index)
 	}
-	return err
+	return isNew, err
 }
 
 // addCredit is an AddCredit helper that runs in an update transaction.  The
@@ -472,6 +472,7 @@ func rollbackTransaction(
 	ns walletdb.ReadWriteBucket,
 	txHash *chainhash.Hash,
 	block *Block,
+	params *chaincfg.Params,
 ) (coins btcutil.Amount, err er.R) {
 	coins = btcutil.Amount(0)
 
@@ -499,6 +500,13 @@ func rollbackTransaction(
 				continue
 			}
 			op.Index = uint32(i)
+
+			addr := txscript.PkScriptToAddress(output.PkScript, params)
+			log.Infof("😱 %s [%s] <- [%s] by rollback of [%s]",
+				pktlog.BgYellow("Got UNPAID"),
+				pktlog.Coins(btcutil.Amount(output.Value).ToBTC()),
+				pktlog.Address(addr.String()),
+				pktlog.Txid(rec.Hash.String()))
 
 			// Delete the unspents from this coinbase
 			unspentKey, credKey := existsUnspent(ns, &op)
@@ -561,6 +569,7 @@ func rollbackTransaction(
 	// exists) and delete the debit.  The previous output is
 	// recorded in the unconfirmed store for every previous
 	// output, not just debits.
+	unspentByAddress := map[string]btcutil.Amount{}
 	for i, input := range rec.MsgTx.TxIn {
 		prevOut := &input.PreviousOutPoint
 		prevOutKey := canonicalOutPoint(&prevOut.Hash,
@@ -610,6 +619,21 @@ func rollbackTransaction(
 		if err = putRawUnspent(ns, prevOutKey, unspentVal); err != nil {
 			return
 		}
+
+		prevAddr := "unknown"
+		if prevPk, err := AddressForOutPoint(ns, &input.PreviousOutPoint); err != nil {
+			log.Warnf("Error decoding address spent from because [%s]", err.String())
+		} else if prevPk != nil {
+			prevAddr = txscript.PkScriptToAddress(prevPk, params).String()
+		}
+		unspentByAddress[prevAddr] += amt
+	}
+
+	for addr, amt := range unspentByAddress {
+		log.Infof("⚠️ Spend unconfirmed [%s] <- [%s] by rollback of [%s]",
+			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
+			pktlog.Address(addr),
+			pktlog.Txid(rec.Hash.String()))
 	}
 
 	// For each detached non-coinbase credit, move the
@@ -618,6 +642,7 @@ func rollbackTransaction(
 	// mined balance is decremented.
 	//
 	// TODO: use a credit iterator
+	unearnedByAddress := map[string]btcutil.Amount{}
 	for i, output := range rec.MsgTx.TxOut {
 		k, v := existsCredit(ns, &rec.Hash, uint32(i), block)
 		if v == nil {
@@ -645,7 +670,15 @@ func rollbackTransaction(
 			if err = deleteRawUnspent(ns, outPointKey); err != nil {
 				return
 			}
+			prevAddr := txscript.PkScriptToAddress(output.PkScript, params).String()
+			unearnedByAddress[prevAddr] += btcutil.Amount(output.Value)
 		}
+	}
+	for addr, amt := range unearnedByAddress {
+		log.Infof("⚠️ Income unconfirmed [%s] <- [%s] by rollback of [%s]",
+			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
+			pktlog.Address(addr),
+			pktlog.Txid(rec.Hash.String()))
 	}
 	return
 }
@@ -658,10 +691,11 @@ func RollbackTransaction(
 	ns walletdb.ReadWriteBucket,
 	txHash *chainhash.Hash,
 	block *Block,
+	params *chaincfg.Params,
 ) er.R {
 	if minedBalance, err := fetchMinedBalance(ns); err != nil {
 		return err
-	} else if coins, err := rollbackTransaction(ns, txHash, block); err != nil {
+	} else if coins, err := rollbackTransaction(ns, txHash, block, params); err != nil {
 		return err
 	} else if err := putMinedBalance(ns, minedBalance+coins); err != nil {
 		return err
@@ -686,12 +720,13 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
 
 		heightsToRemove = append(heightsToRemove, it.elem.Height)
 
-		log.Infof("Rolling back %d transactions from block %v height %d",
+		log.Warnf("ROLLBACK rolling back %d transactions from block %v height %d",
 			len(b.transactions), b.Hash, b.Height)
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]
-			coins, err := rollbackTransaction(ns, txHash, &b.Block)
+			log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
+			coins, err := rollbackTransaction(ns, txHash, &b.Block, s.chainParams)
 			if err != nil {
 				return err
 			}

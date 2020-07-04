@@ -1331,7 +1331,7 @@ out:
 			if timeout == nil {
 				log.Info("The wallet has been unlocked without a time limit")
 			} else {
-				log.Info("The wallet has been temporarily unlocked")
+				log.Info("🔓 Wallet unlocked for use")
 			}
 			req.err <- nil
 			continue
@@ -3116,17 +3116,31 @@ func (w *Wallet) RescanMempoolTxns() er.R {
 		w.rescanMempoolMu.Unlock()
 	}()
 
+	var (
+		addrs   []btcutil.Address
+		unspent []wtxmgr.Credit
+	)
 	if txDetails, err := w.WalletMempool(); err != nil {
 		return err
-	} else {
-		if len(txDetails) == 0 {
-			return nil
+	} else if incl := (func() (incl []wtxmgr.TxDetails) {
+		for _, td := range txDetails {
+			if td.Received.Unix() < time.Now().Unix()-3600 {
+				incl = append(incl, td)
+			}
 		}
-		earliest := txDetails[0].Received
+		return
+	})(); len(incl) == 0 {
+		return nil
+	} else if err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
+		addrs, unspent, err = w.activeData(dbtx)
+		return err
+	}); err != nil {
+		return err
+	} else {
+		earliest := incl[0].Received
 		log.Debugf("RescanMempoolTxns() [%d] mempool transactions, scanning to see if they're confirmed",
-			len(txDetails))
-		addrs := make([]btcutil.Address, 0, len(txDetails))
-		for _, c := range txDetails {
+			len(incl))
+		for _, c := range incl {
 			for _, out := range c.MsgTx.TxOut {
 				addrs = append(addrs, txscript.PkScriptToAddress(out.PkScript, w.chainParams))
 				break
@@ -3144,17 +3158,7 @@ func (w *Wallet) RescanMempoolTxns() er.R {
 			}
 			log.Debugf("RescanMempoolTxns() Begin scan from height [%d] for addresses [%s]",
 				bs.Height, strings.Join(saddrs, ", "))
-			select {
-			case err := <-w.SubmitRescan(&RescanJob{
-				InitialSync: false,
-				Addrs:       addrs,
-				OutPoints:   nil,
-				BlockStamp:  *bs,
-			}):
-				return err
-			case <-w.quitChan():
-				return ErrWalletShuttingDown.Default()
-			}
+			return w.rescanWithTarget(addrs, unspent, bs)
 		}
 	}
 }
@@ -3241,7 +3245,7 @@ func (w *Wallet) VacuumDb(startKey string, maxTime time.Duration) (*btcjson.Vacu
 			badHashes := map[chainhash.Hash]struct{}{}
 			for _, op := range badOutputs {
 				if _, ok := badHashes[op.OutPoint.Hash]; ok {
-				} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block); err != nil {
+				} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block, w.chainParams); err != nil {
 					return err
 				} else {
 					badHashes[op.OutPoint.Hash] = struct{}{}

@@ -330,7 +330,7 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
-				err = w.TxStore.AddCredit(txmgrNs, rec, block, uint32(i), ma.Internal())
+				isNew, err := w.TxStore.AddCredit(txmgrNs, rec, block, uint32(i), ma.Internal())
 				if err != nil {
 					return err
 				}
@@ -339,14 +339,16 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 					return err
 				}
 				txOutAmt := btcutil.Amount(rec.MsgTx.TxOut[i].Value)
-				if block != nil {
+				if !isNew {
+					// don't log when we see the same money again
+				} else if block != nil {
 					log.Infof("💸 "+pktlog.GreenBg("Got paid!")+" [%s] -> [%s] tx [%s] @ [%s]",
 						pktlog.Coins(txOutAmt.ToBTC()),
 						pktlog.Address(addr.String()),
 						pktlog.Txid(rec.Hash.String()),
 						pktlog.Height(block.Height))
 				} else {
-					log.Infof("Detected unconfirmed payment [%s] -> [%s] tx [%s]",
+					log.Infof("⏱  Detected unconfirmed payment [%s] -> [%s] tx [%s]",
 						pktlog.Coins(txOutAmt.ToBTC()),
 						pktlog.Address(addr.String()),
 						pktlog.Txid(rec.Hash.String()))

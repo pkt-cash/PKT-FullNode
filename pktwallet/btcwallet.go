@@ -179,16 +179,16 @@ func walletMain() er.R {
 		addInterruptHandler(func() {
 			// TODO: Does this need to wait for the grpc server to
 			// finish up any requests?
-			log.Warn("Stopping RPC server...")
+			log.Debug("Stopping RPC server...")
 			rpcs.Stop()
-			log.Info("RPC server shutdown")
+			log.Debug("RPC server shutdown")
 		})
 	}
 	if legacyRPCServer != nil {
 		addInterruptHandler(func() {
-			log.Warn("Stopping RPC server...")
+			log.Debug("Stopping RPC server...")
 			legacyRPCServer.Stop()
-			log.Info("RPC server shutdown")
+			log.Debug("RPC server shutdown")
 		})
 		go func() {
 			<-legacyRPCServer.RequestProcessShutdown()
