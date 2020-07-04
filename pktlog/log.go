@@ -244,8 +244,8 @@ const (
 
 	colorDbg  = dim + fgWhite
 	colorWarn = Bright + fgYellow
-	colorErr  = Bright + FgMagenta
-	colorCrit = Bright + fgRed
+	colorErr  = Bright + fgRed
+	colorCrit = Bright + fgBlack + bgRed
 )
 
 func Height(h int32) string {
@@ -262,6 +262,10 @@ func Txid(str string) string {
 
 func GreenBg(str string) string {
 	return BgGreen + fgBlack + str + Reset
+}
+
+func BgYellow(str string) string {
+	return bgYellow + fgBlack + str + Reset
 }
 
 func Coins(amount float64) string {
