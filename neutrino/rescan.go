@@ -5,6 +5,7 @@ package neutrino
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -812,6 +813,22 @@ rescanLoop:
 	}
 }
 
+func logWatchList(chain ChainSource, ro *rescanOptions, scanning bool) {
+	wl := map[string]struct{}{}
+	cp := chain.ChainParams()
+	for _, pk := range ro.watchList {
+		wl[txscript.PkScriptToAddress(pk, &cp).String()] = struct{}{}
+	}
+	wl1 := make([]string, 0, len(wl))
+	for a := range wl {
+		wl1 = append(wl1, a)
+	}
+	log.Debugf("logWatchList() [%s] ([%d] entries) scanning [%v]",
+		strings.Join(wl1, ", "),
+		len(wl),
+		scanning)
+}
+
 // notifyBlock calls appropriate listeners based on the block filter.
 func notifyBlock(chain ChainSource, ro *rescanOptions,
 	curHeader wire.BlockHeader, curStamp waddrmgr.BlockStamp,
@@ -838,6 +855,8 @@ func notifyBlock(chain ChainSource, ro *rescanOptions,
 			}
 		}
 	}
+
+	logWatchList(chain, ro, scanning)
 
 	if ro.ntfn.OnFilteredBlockConnected != nil {
 		ro.ntfn.OnFilteredBlockConnected(curStamp.Height, &curHeader,
@@ -943,6 +962,8 @@ func notifyBlockWithFilter(chain ChainSource, ro *rescanOptions,
 			}
 		}
 	}
+
+	logWatchList(chain, ro, filter != nil)
 
 	if ro.ntfn.OnFilteredBlockConnected != nil {
 		ro.ntfn.OnFilteredBlockConnected(curStamp.Height, curHeader,
