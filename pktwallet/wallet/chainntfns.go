@@ -330,7 +330,7 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
-				isNew, err := w.TxStore.AddCredit(txmgrNs, rec, block, uint32(i), ma.Internal())
+				isNew, err := w.TxStore.AddCredit2(txmgrNs, rec, block, uint32(i), ma.Internal())
 				if err != nil {
 					return err
 				}

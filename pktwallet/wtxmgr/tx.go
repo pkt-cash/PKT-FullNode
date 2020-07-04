@@ -393,7 +393,7 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 // TODO(jrick): This should not be necessary.  Instead, pass the indexes
 // that are known to contain credits when a transaction or merkleblock is
 // inserted into the store.
-func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta, index uint32, change bool) (bool, er.R) {
+func (s *Store) AddCredit2(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta, index uint32, change bool) (bool, er.R) {
 	if int(index) >= len(rec.MsgTx.TxOut) {
 		str := "transaction output does not exist"
 		return false, storeError(ErrInput, str, nil)
@@ -404,6 +404,11 @@ func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		s.NotifyUnspent(&rec.Hash, index)
 	}
 	return isNew, err
+}
+
+func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta, index uint32, change bool) er.R {
+	_, err := s.AddCredit2(ns, rec, block, index, change)
+	return err
 }
 
 // addCredit is an AddCredit helper that runs in an update transaction.  The
