@@ -164,7 +164,7 @@ func TestGroupKey(t *testing.T) {
 		{name: "ipv4 rfc1918 192.168/16", ip: "192.168.1.2", expected: "unroutable"},
 		{name: "ipv6 rfc3849 2001:db8::/32", ip: "2001:db8::1234", expected: "unroutable"},
 		{name: "ipv4 rfc3927 169.254/16", ip: "169.254.1.2", expected: "unroutable"},
-		{name: "ipv6 rfc4193 fc00::/7", ip: "fc00::1234", expected: "unroutable"},
+		{name: "ipv6 rfc4193 fc00::/7", ip: "fd00::1234", expected: "unroutable"},
 		{name: "ipv6 rfc4843 2001:10::/28", ip: "2001:10::1234", expected: "unroutable"},
 		{name: "ipv6 rfc4862 fe80::/64", ip: "fe80::1234", expected: "unroutable"},
 
@@ -178,6 +178,9 @@ func TestGroupKey(t *testing.T) {
 		{name: "ipv6 rfc4380 toredo ipv4", ip: "2001:0:1234::f3fe:fdfc", expected: "12.1.0.0"},
 		{name: "ipv6 rfc6052 well-known prefix with ipv4", ip: "64:ff9b::0c01:0203", expected: "12.1.0.0"},
 		{name: "ipv6 rfc6145 translated ipv4", ip: "::ffff:0:0c01:0203", expected: "12.1.0.0"},
+
+		// Cjdns
+		{name: "ipv6 cjdns fc00::/8", ip: "fc00::1234", expected: "fc00::"},
 
 		// Tor.
 		{name: "ipv6 tor onioncat", ip: "fd87:d87e:eb43:1234::5678", expected: "tor:2"},

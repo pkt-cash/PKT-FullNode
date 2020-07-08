@@ -40,6 +40,9 @@ var (
 	// by RFC4193 (FC00::/7).
 	rfc4193Net = ipNet("FC00::", 7, 128)
 
+	// cjdnsNet is half of rfc4193Net which is often routable for PKT nodes
+	cjdnsNet = ipNet("FC00::", 8, 128)
+
 	// rfc4380Net specifies the IPv6 teredo tunneling over UDP address block
 	// as defined by RFC4380 (2001::/32).
 	rfc4380Net = ipNet("2001::", 32, 128)
@@ -159,6 +162,10 @@ func IsRFC4193(na *wire.NetAddress) bool {
 	return rfc4193Net.Contains(na.IP)
 }
 
+func IsCjdns(na *wire.NetAddress) bool {
+	return cjdnsNet.Contains(na.IP)
+}
+
 // IsRFC4380 returns whether or not the passed address is part of the IPv6
 // teredo tunneling over UDP range as defined by RFC4380 (2001::/32).
 func IsRFC4380(na *wire.NetAddress) bool {
@@ -226,7 +233,7 @@ func IsRoutable(na *wire.NetAddress) bool {
 	return IsValid(na) && !(IsRFC1918(na) || IsRFC2544(na) ||
 		IsRFC3927(na) || IsRFC4862(na) || IsRFC3849(na) ||
 		IsRFC4843(na) || IsRFC5737(na) || IsRFC6598(na) ||
-		IsLocal(na) || (IsRFC4193(na) && !IsOnionCatTor(na)))
+		IsLocal(na) || (IsRFC4193(na) && !IsCjdns(na) && !IsOnionCatTor(na)))
 }
 
 // GroupKey returns a string representing the network group an address is part
