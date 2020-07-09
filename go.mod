@@ -15,10 +15,9 @@ require (
 	github.com/dchest/blake2b v1.0.0
 	github.com/emirpasic/gods v1.12.0
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/jrick/logrotate v1.0.0
 	github.com/kkdai/bstream v1.0.0
-	github.com/lightningnetwork/lnd/queue v1.0.1
-	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	google.golang.org/grpc v1.29.1
+	github.com/lightningnetwork/lnd/queue v1.0.4
+	go.etcd.io/bbolt v1.3.5
+	golang.org/x/crypto v0.0.0-20200707235045-ab33eee955e0
+	google.golang.org/grpc v1.30.0
 )

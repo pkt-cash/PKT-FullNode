@@ -50,11 +50,6 @@ func pktdMain(serverChan chan<- *server) er.R {
 		return err
 	}
 	cfg = tcfg
-	defer func() {
-		if logRotator != nil {
-			logRotator.Close()
-		}
-	}()
 
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from

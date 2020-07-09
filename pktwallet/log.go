@@ -5,12 +5,9 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
-	"github.com/jrick/logrotate/rotator"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -26,7 +23,6 @@ type logWriter struct{}
 
 func (logWriter) Write(p []byte) (n int, err error) {
 	os.Stdout.Write(p)
-	logRotatorPipe.Write(p)
 	return len(p), nil
 }
 
@@ -43,10 +39,6 @@ var (
 	// The backend must not be used before the log rotator has been initialized,
 	// or data races and/or nil pointer dereferences will occur.
 	backendLog = pktlog.NewBackend(logWriter{})
-
-	// logRotator is one of the logging outputs.  It should be closed on
-	// application shutdown.
-	logRotator *rotator.Rotator
 
 	// logRotatorPipe is the write-end pipe for writing to the log rotator.  It
 	// is written to by the Write method of the logWriter type.
@@ -80,29 +72,6 @@ var subsystemLoggers = map[string]pktlog.Logger{
 	"GRPC": grpcLog,
 	"RPCS": legacyRPCLog,
 	"BTCN": btcnLog,
-}
-
-// initLogRotator initializes the logging rotater to write logs to logFile and
-// create roll files in the same directory.  It must be called before the
-// package-global log rotater variables are used.
-func initLogRotator(logFile string) {
-	logDir, _ := filepath.Split(logFile)
-	err := os.MkdirAll(logDir, 0700)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create log directory: %v\n", err)
-		os.Exit(1)
-	}
-	r, err := rotator.New(logFile, 10*1024, false, 3)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create file rotator: %v\n", err)
-		os.Exit(1)
-	}
-
-	pr, pw := io.Pipe()
-	go r.Run(pr)
-
-	logRotator = r
-	logRotatorPipe = pw
 }
 
 // setLogLevel sets the logging level for provided subsystem.  Invalid

@@ -109,11 +109,6 @@ func walletMain() er.R {
 		return err
 	}
 	cfg = tcfg
-	defer func() {
-		if logRotator != nil {
-			logRotator.Close()
-		}
-	}()
 
 	// Show version at startup.
 	log.Infof("Version %s", version.Version())
