@@ -43,6 +43,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/sethgrid/pester"
 )
 
 // NAT is an interface representing a NAT traversal options for example UPNP or
@@ -226,7 +227,7 @@ func getOurIP() (ip string, err er.R) {
 // getServiceURL parses the xml description at the given root url to find the
 // url for the WANIPConnection service to be used for port forwarding.
 func getServiceURL(rootURL string) (url string, err er.R) {
-	r, errr := http.Get(rootURL)
+	r, errr := pester.Get(rootURL)
 	if errr != nil {
 		err = er.E(errr)
 		return

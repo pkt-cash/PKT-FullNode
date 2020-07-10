@@ -52,6 +52,8 @@ github.com/lightningnetwork/lnd/ticker v1.0.0/go.mod h1:iaLXJiVgI1sPANIF2qYYUJXj
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.1/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
+github.com/sethgrid/pester v1.1.0 h1:IyEAVvwSUPjs2ACFZkBe5N59BBUpSIkQ71Hr6cM5A+w=
+github.com/sethgrid/pester v1.1.0/go.mod h1:Ad7IjTpvzZO8Fl0vh9AzQ+j/jYZfyp2diGwI8m5q+ns=
 go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50 h1:ASw9n1EHMftwnP3Az4XW6e308+gNsrHzmdhd0Olz9Hs=
 go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/bbolt v1.3.5 h1:XAzx9gjCb0Rxj7EoqcClPD1d5ZBxZJk0jbuoPHenBt0=
