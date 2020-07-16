@@ -411,7 +411,7 @@ func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) er.R {
 		if ph > 0x7fffffff {
 			return ruleerror.ErrBadPow.New("ann parent block height is negative", nil)
 		}
-		hash, err := b.BlockHashByHeight(int32(ph))
+		hash, err := b.BlockHashByHeightContextual(int32(ph), &block.MsgBlock().Header.PrevBlock)
 		if err != nil {
 			return ruleerror.ErrPowCannotVerify.New(
 				fmt.Sprintf("Cannot verify pow, missing block at height [%d]", ph), err)

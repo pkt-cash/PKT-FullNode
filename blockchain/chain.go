@@ -1375,6 +1375,28 @@ func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, er.R
 	return &node.hash, nil
 }
 
+func (b *BlockChain) BlockHashByHeightContextual(height int32, context *chainhash.Hash) (
+	*chainhash.Hash,
+	er.R,
+) {
+	if node := b.index.LookupNode(context); node == nil {
+		return nil, er.Errorf("Context block node not found")
+	} else if node.height < height {
+		return nil, er.Errorf("Context block hash has height [%d], cannot lookup block at height [%d]",
+			node.height, height)
+	} else {
+		for {
+			if node.height == height {
+				return &node.hash, nil
+			}
+			if node.parent == nil {
+				return nil, er.Errorf("Interrupted chain [%s] has no parent", node.hash.String())
+			}
+			node = node.parent
+		}
+	}
+}
+
 // BlockHeaderByHeight returns the block header of the block at the given height in the
 // main chain.
 //
