@@ -2731,12 +2731,26 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		return nil, err
 	}
 
+	msc := 0
+	switch cfg.MiningSkipChecks {
+	case "txns":
+		msc = mining.CheckTxns
+		break
+	case "template":
+		msc = mining.CheckBlkTemplate
+		break
+	case "both":
+		msc = mining.CheckBoth
+		break
+	}
+
 	// Create the mining policy and block template generator based on the
 	// configuration options.
 	//
 	// NOTE: The CPU miner relies on the mempool, so the mempool has to be
 	// created before calling the function to create the CPU miner.
 	policy := mining.Policy{
+		SkipChecks:        msc,
 		BlockMinWeight:    cfg.BlockMinWeight,
 		BlockMaxWeight:    cfg.BlockMaxWeight,
 		BlockMinSize:      cfg.BlockMinSize,

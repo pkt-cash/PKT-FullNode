@@ -799,17 +799,19 @@ mempoolLoop:
 			continue
 		}
 
-		startTime := time.Now()
-		err = blockchain.ValidateTransactionScripts(tx, blockUtxos,
-			txscript.StandardVerifyFlags, g.sigCache,
-			g.hashCache)
-		if err != nil {
-			log.Infof("Skipping tx %s due to error in "+
-				"ValidateTransactionScripts: %v", tx.Hash(), err)
-			logSkippedDeps(tx, deps)
-			continue
+		if g.policy.SkipChecks&CheckTxns == 0 {
+			startTime := time.Now()
+			err = blockchain.ValidateTransactionScripts(tx, blockUtxos,
+				txscript.StandardVerifyFlags, g.sigCache,
+				g.hashCache)
+			if err != nil {
+				log.Infof("Skipping tx %s due to error in "+
+					"ValidateTransactionScripts: %v", tx.Hash(), err)
+				logSkippedDeps(tx, deps)
+				continue
+			}
+			timeCheckingSigs += time.Since(startTime)
 		}
-		timeCheckingSigs += time.Since(startTime)
 
 		// Spend the transaction inputs in the block utxo view and add
 		// an entry for it to ensure any transactions which reference
@@ -925,19 +927,27 @@ mempoolLoop:
 		}
 	}
 
-	log.Debugf("Spent [%v] checking sigs", timeCheckingSigs)
+	if g.policy.SkipChecks&CheckTxns == 0 {
+		log.Debugf("Spent [%v] checking sigs", timeCheckingSigs)
+	} else {
+		log.Debugf("Sig check skipped")
+	}
 
 	// Finally, perform a full check on the created block against the chain
 	// consensus rules to ensure it properly connects to the current best
 	// chain with no issues.
 	block := btcutil.NewBlock(&msgBlock)
 	block.SetHeight(nextBlockHeight)
-	startTime := time.Now()
-	if err := g.chain.CheckConnectBlockTemplate(block); err != nil {
-		log.Infof("CheckConnectBlockTemplate() failed")
-		return nil, err
+	if g.policy.SkipChecks&CheckBlkTemplate == 0 {
+		startTime := time.Now()
+		if err := g.chain.CheckConnectBlockTemplate(block); err != nil {
+			log.Infof("CheckConnectBlockTemplate() failed")
+			return nil, err
+		}
+		log.Debugf("Spent [%v] checking block template", time.Since(startTime))
+	} else {
+		log.Debugf("Block template check skipped")
 	}
-	log.Debugf("Spent [%v] checking block template", time.Since(startTime))
 
 	log.Debugf("Created new block template (%d transactions, %d in "+
 		"fees, %d signature operations cost, %d weight, target difficulty "+

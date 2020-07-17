@@ -17,6 +17,12 @@ const (
 	UnminedHeight = 0x7fffffff
 )
 
+const (
+	CheckTxns        = 1
+	CheckBlkTemplate = 2
+	CheckBoth        = CheckTxns | CheckBlkTemplate
+)
+
 // Policy houses the policy (configuration parameters) which is used to control
 // the generation of block templates.  See the documentation for
 // NewBlockTemplate for more details on each of these parameters are used.
@@ -45,6 +51,8 @@ type Policy struct {
 	// required for a transaction to be treated as free for mining purposes
 	// (block template generation).
 	TxMinFreeFee btcutil.Amount
+
+	SkipChecks int
 }
 
 // minInt is a helper function to return the minimum of two ints.  This avoids

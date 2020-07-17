@@ -168,6 +168,7 @@ type config struct {
 	RelayNonStd          bool          `long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
 	RejectNonStd         bool          `long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
 	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+	MiningSkipChecks     string        `long:"miningskipchecks" description:"Either 'txns', 'template' or 'both', skips certain time-consuming checks during mining process, be careful as you might create invalid block templates!"`
 	lookup               func(string) ([]net.IP, er.R)
 	oniondial            func(string, string, time.Duration) (net.Conn, er.R)
 	dial                 func(string, string, time.Duration) (net.Conn, er.R)
