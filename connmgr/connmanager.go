@@ -349,7 +349,7 @@ out:
 				}
 
 				connReq.updateState(ConnFailing)
-				log.Debugf("Failed to connect to %v: %v",
+				log.Tracef("Failed to connect to %v: %v",
 					connReq, msg.err)
 				cm.handleFailedConn(connReq)
 			}
@@ -446,7 +446,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		}
 	}
 
-	log.Debugf("Attempting to connect to %v", c)
+	log.Tracef("Attempting to connect to %v", c)
 
 	conn, err := cm.cfg.Dial(c.Addr)
 	if err != nil {

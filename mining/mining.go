@@ -553,6 +553,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddresses map[btcutil.Address]f
 	log.Debugf("Considering %d transactions for inclusion to new block",
 		len(sourceTxns))
 
+	timeCheckingSigs := time.Duration(0)
+
 mempoolLoop:
 	for _, txDesc := range sourceTxns {
 		// A block can't have more than one coinbase or contain
@@ -796,15 +798,18 @@ mempoolLoop:
 			logSkippedDeps(tx, deps)
 			continue
 		}
+
+		startTime := time.Now()
 		err = blockchain.ValidateTransactionScripts(tx, blockUtxos,
 			txscript.StandardVerifyFlags, g.sigCache,
 			g.hashCache)
 		if err != nil {
-			log.Tracef("Skipping tx %s due to error in "+
+			log.Infof("Skipping tx %s due to error in "+
 				"ValidateTransactionScripts: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
+		timeCheckingSigs += time.Since(startTime)
 
 		// Spend the transaction inputs in the block utxo view and add
 		// an entry for it to ensure any transactions which reference
@@ -920,14 +925,19 @@ mempoolLoop:
 		}
 	}
 
+	log.Debugf("Spent [%v] checking sigs", timeCheckingSigs)
+
 	// Finally, perform a full check on the created block against the chain
 	// consensus rules to ensure it properly connects to the current best
 	// chain with no issues.
 	block := btcutil.NewBlock(&msgBlock)
 	block.SetHeight(nextBlockHeight)
+	startTime := time.Now()
 	if err := g.chain.CheckConnectBlockTemplate(block); err != nil {
+		log.Infof("CheckConnectBlockTemplate() failed")
 		return nil, err
 	}
+	log.Debugf("Spent [%v] checking block template", time.Since(startTime))
 
 	log.Debugf("Created new block template (%d transactions, %d in "+
 		"fees, %d signature operations cost, %d weight, target difficulty "+
