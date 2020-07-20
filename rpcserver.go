@@ -1281,14 +1281,15 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	chainSnapshot := chain.BestSnapshot()
 
 	chainInfo := &btcjson.GetBlockChainInfoResult{
-		Chain:         params.Name,
-		Blocks:        chainSnapshot.Height,
-		Headers:       chainSnapshot.Height,
-		BestBlockHash: chainSnapshot.Hash.String(),
-		Difficulty:    getDifficultyRatio(chainSnapshot.Bits, params),
-		MedianTime:    chainSnapshot.MedianTime.Unix(),
-		Pruned:        false,
-		Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
+		Chain:                params.Name,
+		Blocks:               chainSnapshot.Height,
+		Headers:              chainSnapshot.Height,
+		BestBlockHash:        chainSnapshot.Hash.String(),
+		InitialBlockDownload: !chain.IsCurrent(),
+		Difficulty:           getDifficultyRatio(chainSnapshot.Bits, params),
+		MedianTime:           chainSnapshot.MedianTime.Unix(),
+		Pruned:               false,
+		Bip9SoftForks:        make(map[string]*btcjson.Bip9SoftForkDescription),
 	}
 
 	// Next, populate the response with information describing the current
