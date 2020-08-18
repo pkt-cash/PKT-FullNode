@@ -48,6 +48,12 @@ const (
 	// must be less than 2^32 (4 GiB).  This is also why it's a typed
 	// constant.
 	maxBlockFileSize uint32 = 512 * 1024 * 1024 // 512 MiB
+
+	// blockMetadataSize is the number of bytes added as the metadata to
+	// a serialized block (4 bytes network version + 4 bytes block size +
+	// 4 bytes checksum).
+	blockMetadataSize = 12
+
 )
 
 var (
