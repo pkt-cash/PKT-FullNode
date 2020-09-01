@@ -49,6 +49,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/constants"
+	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
@@ -121,6 +122,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"decoderawtransaction":   handleDecodeRawTransaction,
 	"decodescript":           handleDecodeScript,
 	"estimatefee":            handleEstimateFee,
+	"estimatesmartfee":       handleEstimateSmartFee,
 	"generate":               handleGenerate,
 	"getaddednodeinfo":       handleGetAddedNodeInfo,
 	"getbestblock":           handleGetBestBlock,
@@ -145,6 +147,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getminingpayouts":       handleGetMiningPayouts,
 	"getnettotals":           handleGetNetTotals,
 	"getnetworkhashps":       handleGetNetworkHashPS,
+	"getnetworkinfo":         handleGetNetworkInfo,
 	"getnetworksteward":      handleGetNetworkSteward,
 	"getpeerinfo":            handleGetPeerInfo,
 	"getrawmempool":          handleGetRawMempool,
@@ -879,6 +882,25 @@ func handleEstimateFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{})
 	return float64(feeRate), nil
 }
 
+func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.EstimateSmartFeeCmd)
+
+	if s.cfg.FeeEstimator == nil {
+		return nil, er.New("Fee estimation disabled")
+	}
+
+	conservitive := true
+	if c.EstimateMode != nil && *c.EstimateMode == btcjson.EstimateModeEconomical {
+		conservitive = false
+	}
+
+	if c.ConfTarget <= 0 {
+		return -1.0, er.New("Parameter NumBlocks must be positive")
+	}
+
+	return s.cfg.FeeEstimator.EstimateSmartFee(uint32(c.ConfTarget), conservitive), nil
+}
+
 // handleGenerate handles generate commands.
 func handleGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	// Respond with an error if there are no addresses to pay the
@@ -1280,11 +1302,21 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	chain := s.cfg.Chain
 	chainSnapshot := chain.BestSnapshot()
 
+	highestBlock := chainSnapshot.Height
+	for _, p := range s.cfg.ConnMgr.ConnectedPeers() {
+		lb := p.ToPeer().LastBlock()
+		if lb > highestBlock {
+			highestBlock = lb
+		}
+	}
+	progress := float64(chainSnapshot.Height) / float64(highestBlock)
+
 	chainInfo := &btcjson.GetBlockChainInfoResult{
 		Chain:                params.Name,
 		Blocks:               chainSnapshot.Height,
 		Headers:              chainSnapshot.Height,
 		BestBlockHash:        chainSnapshot.Hash.String(),
+		VerificationProgress: progress,
 		InitialBlockDownload: !chain.IsCurrent(),
 		Difficulty:           getDifficultyRatio(chainSnapshot.Bits, params),
 		MedianTime:           chainSnapshot.MedianTime.Unix(),
@@ -1381,6 +1413,54 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	}
 
 	return chainInfo, nil
+}
+
+type GetNetworkInfoNetworks struct {
+	Name                      string `json:"name"`
+	Limited                   bool   `json:"limited"`
+	Reachable                 bool   `json:"reachable"`
+	Proxy                     string `json:"proxy"`
+	Proxyrandomizecredentials string `json:"proxy_randomize_credentials"`
+}
+
+type GetNetworkInfoResp struct {
+	Version            int32                    `json:"version"`
+	Subversion         string                   `json:"subversion"`
+	Protocolversion    int32                    `json:"protocolversion"`
+	Localservices      string                   `json:"localservices"`
+	Localservicesnames []string                 `json:"localservicesnames"`
+	Localrelay         bool                     `json:"localrelay"`
+	Timeoffset         int64                    `json:"timeoffset"`
+	Networkactive      bool                     `json:"networkactive"`
+	Connections        int32                    `json:"connections"`
+	Networks           []GetNetworkInfoNetworks `json:"networks"`
+	Relayfee           float64                  `json:"relayfee"`
+	Incrementalfee     float64                  `json:"incrementalfee"`
+	Localaddresses     []string                 `json:"localaddresses"`
+}
+
+func handleGetNetworkInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	return GetNetworkInfoResp{
+		Version: int32(version.AppMajorVersion()*1000000 +
+			version.AppMinorVersion()*10000 +
+			version.AppPatchVersion()*100),
+		Subversion:         version.UserAgentVersion(),
+		Protocolversion:    int32(maxProtocolVersion),
+		Localservices:      strconv.FormatUint(uint64(s.cfg.ServiceFlags), 16),
+		Localservicesnames: strings.Split(s.cfg.ServiceFlags.String(), "|"),
+		Localrelay:         !cfg.BlocksOnly,
+		Timeoffset:         int64(s.cfg.TimeSource.Offset().Seconds()),
+		Networkactive:      !cfg.DisableListen,
+		Connections:        s.cfg.ConnMgr.ConnectedCount(),
+		Networks:           []GetNetworkInfoNetworks{}, // TODO: populate
+		Relayfee:           cfg.minRelayTxFee.ToBTC(),
+
+		// Not implemented here, but in practice replace-by-fee requires a tx to have as much fees
+		// as everything is replaces plus the minimum again.
+		Incrementalfee: cfg.minRelayTxFee.ToBTC(),
+
+		Localaddresses: []string{}, // TODO populate
+	}, nil
 }
 
 // handleGetBlockCount implements the getblockcount command.
@@ -2808,7 +2888,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 
 	verbose := false
 	if c.Verbose != nil {
-		verbose = *c.Verbose != 0
+		verbose = *c.Verbose
 	}
 
 	// Try to fetch the transaction from the memory pool and if that fails,
@@ -4221,6 +4301,8 @@ func (s *rpcServer) jsonRPCReq(
 		}
 	}
 
+	rpcsLog.Infof("RPC %s", request.Method)
+
 	// Attempt to parse the JSON-RPC request into a known concrete
 	// command.
 	if jsonErr == nil {
@@ -4628,6 +4710,8 @@ type rpcserverConfig struct {
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
+
+	ServiceFlags protocol.ServiceFlag
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.
