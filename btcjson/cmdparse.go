@@ -140,6 +140,15 @@ func UnmarshalCmd(r *Request) (interface{}, er.R) {
 			// explicitly detect that error and make it nicer.
 			fieldName := strings.ToLower(rt.Field(i).Name)
 			if jerr, ok := err.(*json.UnmarshalTypeError); ok {
+				if jerr.Type.Kind() == reflect.Bool && jerr.Value == "number" {
+					var num int
+					if json.Unmarshal(r.Params[i], &num) == nil {
+						if num == 0 || num == 1 {
+							reflect.Indirect(rvf).SetBool(num != 0)
+							continue
+						}
+					}
+				}
 				str := fmt.Sprintf("parameter #%d '%s' must "+
 					"be type %v (got %v)", i+1, fieldName,
 					jerr.Type, jerr.Value)
