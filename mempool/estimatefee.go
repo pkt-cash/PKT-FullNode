@@ -70,7 +70,7 @@ func (rate SatoshiPerByte) ToBtcPerKb() BtcPerKilobyte {
 		return -1.0
 	}
 
-	return BtcPerKilobyte(float64(rate) * bytePerKb * float64(globalcfg.UnitsPerCoinI64()))
+	return BtcPerKilobyte(float64(rate) * bytePerKb / float64(globalcfg.UnitsPerCoinI64()))
 }
 
 // NewSatoshiPerByte creates a SatoshiPerByte from an Amount and a
