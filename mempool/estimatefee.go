@@ -19,6 +19,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/mining"
 )
 
@@ -47,8 +48,6 @@ const (
 	DefaultEstimateFeeMinRegisteredBlocks = 3
 
 	bytePerKb = 1000
-
-	btcPerSatoshi = 1E-8
 )
 
 var (
@@ -71,7 +70,7 @@ func (rate SatoshiPerByte) ToBtcPerKb() BtcPerKilobyte {
 		return -1.0
 	}
 
-	return BtcPerKilobyte(float64(rate) * bytePerKb * btcPerSatoshi)
+	return BtcPerKilobyte(float64(rate) * bytePerKb * float64(globalcfg.UnitsPerCoinI64()))
 }
 
 // NewSatoshiPerByte creates a SatoshiPerByte from an Amount and a
