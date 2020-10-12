@@ -147,6 +147,34 @@ var helpDescsEnUS = map[string]string{
 	"estimatefee--result0": "Estimated fee per kilobyte in satoshis for a block to " +
 		"be mined in the next NumBlocks blocks.",
 
+	"estimatesmartfee--synopsis":     "Better estimatefee, currently implemented using estimatefee",
+	"estimatesmartfee-estimatemode":  "ECONOMICAL or CONSERVATIVE to decide how to estimate fee rate",
+	"estimatesmartfee-conftarget":    "Target number of blocks until transaction confirms",
+	"estimatesmartfeeresult-feerate": "Fee in coins per kilobyte",
+	"estimatesmartfeeresult-errors":  "Array of string errors which may have occurred while processing",
+	"estimatesmartfeeresult-blocks":  "Exists for API compatibility, always zero",
+
+	"getnetworkinfo--synopsis":                "Get info about the crypto network",
+	"getnetworkinforesult-version":            "App version",
+	"getnetworkinforesult-subversion":         "App user-agent string",
+	"getnetworkinforesult-protocolversion":    "Protocol version",
+	"getnetworkinforesult-localservices":      "Service flag bits as hex string",
+	"getnetworkinforesult-localservicesnames": "Service flags stringified",
+	"getnetworkinforesult-localrelay":         "True if this node is willing to relay transactions",
+	"getnetworkinforesult-timeoffset":         "How much we have adjusted our clock to agree with the network",
+	"getnetworkinforesult-connections":        "Number of peer connections",
+	"getnetworkinforesult-networkactive":      "True if we are listening for incoming connections",
+	"getnetworkinforesult-networks":           "TODO Always empty for now",
+	"getnetworkinforesult-relayfee":           "Lowest transaction fee that is allowed for relaying",
+	"getnetworkinforesult-incrementalfee":     "Minimum fee increment for BIP 125 replacement",
+	"getnetworkinforesult-localaddresses":     "TODO Always empty for now",
+
+	"getnetworkinfonetworks-proxy_randomize_credentials": "True if randomized credentials are used",
+	"getnetworkinfonetworks-proxy":                       "host:port of proxy, if in use",
+	"getnetworkinfonetworks-reachable":                   "If the network is externally reachable",
+	"getnetworkinfonetworks-limited":                     "True if this is the only allowed network",
+	"getnetworkinfonetworks-name":                        "IPv4 / IPv6 / onion",
+
 	// GenerateCmd help
 	"generate--synopsis": "Generates a set number of blocks (simnet or regtest only) and returns a JSON\n" +
 		" array of their hashes.",
@@ -769,6 +797,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"decoderawtransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
 	"decodescript":           {(*btcjson.DecodeScriptResult)(nil)},
 	"estimatefee":            {(*float64)(nil)},
+	"estimatesmartfee":       {(*btcjson.EstimateSmartFeeResult)(nil)},
 	"generate":               {(*[]string)(nil)},
 	"getaddednodeinfo":       {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
 	"getbestblock":           {(*btcjson.GetBestBlockResult)(nil)},
@@ -792,6 +821,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getmininginfo":          {(*btcjson.GetMiningInfoResult)(nil)},
 	"getminingpayouts":       {(*btcjson.GetMiningPayoutsResult)(nil)},
 	"getnettotals":           {(*btcjson.GetNetTotalsResult)(nil)},
+	"getnetworkinfo":         {(*btcjson.GetNetworkInfoResult)(nil)},
 	"getnetworksteward":      {(*btcjson.GetNetworkStewardResult)(nil)},
 	"getnetworkhashps":       {(*int64)(nil)},
 	"getpeerinfo":            {(*[]btcjson.GetPeerInfoResult)(nil)},

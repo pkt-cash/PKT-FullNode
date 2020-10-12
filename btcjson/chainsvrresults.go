@@ -234,6 +234,30 @@ type GetPeerInfoResult struct {
 	SyncNode       bool    `json:"syncnode"`
 }
 
+type GetNetworkInfoNetworks struct {
+	Name                      string `json:"name"`
+	Limited                   bool   `json:"limited"`
+	Reachable                 bool   `json:"reachable"`
+	Proxy                     string `json:"proxy"`
+	Proxyrandomizecredentials string `json:"proxy_randomize_credentials"`
+}
+
+type GetNetworkInfoResult struct {
+	Version            int32                    `json:"version"`
+	Subversion         string                   `json:"subversion"`
+	Protocolversion    int32                    `json:"protocolversion"`
+	Localservices      string                   `json:"localservices"`
+	Localservicesnames []string                 `json:"localservicesnames"`
+	Localrelay         bool                     `json:"localrelay"`
+	Timeoffset         int64                    `json:"timeoffset"`
+	Networkactive      bool                     `json:"networkactive"`
+	Connections        int32                    `json:"connections"`
+	Networks           []GetNetworkInfoNetworks `json:"networks"`
+	Relayfee           float64                  `json:"relayfee"`
+	Incrementalfee     float64                  `json:"incrementalfee"`
+	Localaddresses     []string                 `json:"localaddresses"`
+}
+
 type GetRawBlockTemplateResult struct {
 	Height            int32    `json:"height"`
 	Header            string   `json:"header"`

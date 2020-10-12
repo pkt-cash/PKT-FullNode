@@ -1415,32 +1415,8 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	return chainInfo, nil
 }
 
-type GetNetworkInfoNetworks struct {
-	Name                      string `json:"name"`
-	Limited                   bool   `json:"limited"`
-	Reachable                 bool   `json:"reachable"`
-	Proxy                     string `json:"proxy"`
-	Proxyrandomizecredentials string `json:"proxy_randomize_credentials"`
-}
-
-type GetNetworkInfoResp struct {
-	Version            int32                    `json:"version"`
-	Subversion         string                   `json:"subversion"`
-	Protocolversion    int32                    `json:"protocolversion"`
-	Localservices      string                   `json:"localservices"`
-	Localservicesnames []string                 `json:"localservicesnames"`
-	Localrelay         bool                     `json:"localrelay"`
-	Timeoffset         int64                    `json:"timeoffset"`
-	Networkactive      bool                     `json:"networkactive"`
-	Connections        int32                    `json:"connections"`
-	Networks           []GetNetworkInfoNetworks `json:"networks"`
-	Relayfee           float64                  `json:"relayfee"`
-	Incrementalfee     float64                  `json:"incrementalfee"`
-	Localaddresses     []string                 `json:"localaddresses"`
-}
-
 func handleGetNetworkInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
-	return GetNetworkInfoResp{
+	return btcjson.GetNetworkInfoResult{
 		Version: int32(version.AppMajorVersion()*1000000 +
 			version.AppMinorVersion()*10000 +
 			version.AppPatchVersion()*100),
@@ -1452,7 +1428,7 @@ func handleGetNetworkInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct
 		Timeoffset:         int64(s.cfg.TimeSource.Offset().Seconds()),
 		Networkactive:      !cfg.DisableListen,
 		Connections:        s.cfg.ConnMgr.ConnectedCount(),
-		Networks:           []GetNetworkInfoNetworks{}, // TODO: populate
+		Networks:           []btcjson.GetNetworkInfoNetworks{}, // TODO: populate
 		Relayfee:           cfg.minRelayTxFee.ToBTC(),
 
 		// Not implemented here, but in practice replace-by-fee requires a tx to have as much fees
