@@ -33,8 +33,13 @@ var (
 func main() {
 	version.SetUserAgentName("pktwallet")
 
-	// Use all processor cores.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// After EXTENSIVE RUNTIME testing on multiple
+	// platforms, this should be MIN 4 and maybe
+	// closer to 8 - so 6 is it!
+	// (esp to avoid GC lag in goleveldb - which 
+	//  still leaks memory on occasion that causes
+	//  longer and longer GC runs.  ugh go.)
+	runtime.GOMAXPROCS(runtime.NumCPU()*6)
 
 	// Work around defer not working after os.Exit.
 	if err := walletMain(); err != nil {
