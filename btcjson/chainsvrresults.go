@@ -56,6 +56,7 @@ type GetBlockVerboseResult struct {
 	PcAnnBits           string        `json:"packetcryptannbits,omitempty"`
 	PcAnnDifficulty     *float64      `json:"packetcryptanndifficulty,omitempty"`
 	PcBlkDifficulty     *float64      `json:"packetcryptblkdifficulty,omitempty"`
+	PcBlkBits           string        `json:"packetcryptblkbits,omitempty"`
 	BlockReward         string        `json:"sblockreward"`
 	NetworkSteward      string        `json:"networksteward,omitempty"`
 	BlocksUntilRetarget int32         `json:"blocksuntilretarget"`
