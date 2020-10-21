@@ -443,30 +443,36 @@ func (t *tOps) open(f *tFile) (ch *cache.Handle, err error) {
 // given key.
 func (t *tOps) find(f *tFile, key []byte, ro *opt.ReadOptions) (rkey, rvalue []byte, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return nil, nil, err
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).Find(key, true, ro)
 }
 
 // Finds key that is greater than or equal to the given key.
 func (t *tOps) findKey(f *tFile, key []byte, ro *opt.ReadOptions) (rkey []byte, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).FindKey(key, true, ro)
 }
 
 // Returns approximate offset of the given key.
 func (t *tOps) offsetOf(f *tFile, key []byte) (offset int64, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).OffsetOf(key)
 }
 
