@@ -395,8 +395,6 @@ func (v *version) computeCompaction() {
 
 	v.cLevel = bestLevel
 	v.cScore = bestScore
-
-	v.s.logf("version@stat F·%v S·%s%v Sc·%v", statFiles, shortenb(int(statTotSize)), statSizes, statScore)
 }
 
 func (v *version) needCompaction() bool {

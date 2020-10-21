@@ -167,11 +167,16 @@ func (db *DB) compactionTransact(name string, t compactionTransactInterface) {
 	)
 	var (
 		backoff  = backoffMin
-		backoffT = time.NewTimer(backoff)
+		backoffT *time.Timer
 		lastCnt  = compactionTransactCounter(0)
 
 		disableBackoff = db.s.o.GetDisableCompactionBackoff()
 	)
+	defer func() {
+		if backoffT != nil {
+			backoffT.Stop()
+		}
+	}()
 	for n := 0; ; n++ {
 		// Check whether the DB is closed.
 		if db.isClosed() {
@@ -215,8 +220,12 @@ func (db *DB) compactionTransact(name string, t compactionTransactInterface) {
 				lastCnt = cnt
 			}
 
-			// Backoff.
-			backoffT.Reset(backoff)
+			// Better Backoff.
+			if backoffT == nil {
+				backoffT = time.NewTimer(backoff)
+			} else {
+				backoffT.Reset(backoff)
+			}
 			if backoff < backoffMax {
 				backoff *= backoffMul
 				if backoff > backoffMax {
