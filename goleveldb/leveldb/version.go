@@ -59,7 +59,7 @@ func (v *version) incref() {
 		case v.s.refCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
 			// We can use v.levels directly here since it is immutable.
 		case <-v.s.closeC:
-			v.s.log("reference loop already exist")
+			v.s.log("reference loop already exits")
 		}
 	}
 }
@@ -75,7 +75,7 @@ func (v *version) releaseNB() {
 	case v.s.relCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
 		// We can use v.levels directly here since it is immutable.
 	case <-v.s.closeC:
-		v.s.log("reference loop already exist")
+		v.s.log("reference loop already exits")
 	}
 
 	v.released = true
