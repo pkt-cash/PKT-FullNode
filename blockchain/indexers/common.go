@@ -24,7 +24,7 @@ var (
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
 
-	// errInterruptRequested indicates that an operation was cancelled due
+	// errInterruptRequested indicates that an operation was canceled due
 	// to a user-requested interrupt.
 	errInterruptRequested = Err.Code("errInterruptRequested")
 

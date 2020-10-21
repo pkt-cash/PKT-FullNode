@@ -395,7 +395,7 @@ func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
 	return true
 }
 
-// handleNewPeerMsg deals with new peers that have signalled they may
+// handleNewPeerMsg deals with new peers that have signaled they may
 // be considered as a sync peer (they have already successfully negotiated).  It
 // also starts syncing if needed.  It is invoked from the syncHandler goroutine.
 func (sm *SyncManager) handleNewPeerMsg(peer *peerpkg.Peer) {
@@ -473,7 +473,7 @@ func (sm *SyncManager) shouldDCStalledSyncPeer() bool {
 	return peerHeight > best.Height
 }
 
-// handleDonePeerMsg deals with peers that have signalled they are done.  It
+// handleDonePeerMsg deals with peers that have signaled they are done.  It
 // removes the peer as a candidate for syncing and in the case where it was
 // the current sync peer, attempts to select a new best peer to sync from.  It
 // is invoked from the syncHandler goroutine.

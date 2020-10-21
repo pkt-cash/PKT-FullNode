@@ -7,9 +7,9 @@ import (
 var Err er.ErrorType = er.NewErrorType("neutrino.Err")
 
 var (
-	// ErrGetUtxoCancelled signals that a GetUtxo request was cancelled.
-	ErrGetUtxoCancelled = Err.CodeWithDetail("ErrGetUtxoCancelled",
-		"get utxo request cancelled")
+	// ErrGetUtxoCanceled signals that a GetUtxo request was canceled.
+	ErrGetUtxoCanceled = Err.CodeWithDetail("ErrGetUtxoCanceled",
+		"getutxorequest cancellation")
 
 	// ErrShuttingDown signals that neutrino received a shutdown request.
 	ErrShuttingDown = Err.CodeWithDetail("ErrShuttingDown",

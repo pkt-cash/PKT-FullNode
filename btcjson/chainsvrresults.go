@@ -100,7 +100,7 @@ type GetAddedNodeInfoResult struct {
 }
 
 // SoftForkDescription describes the current state of a soft-fork which was
-// deployed using a super-majority block signalling.
+// deployed using a super-majority block signaling.
 type SoftForkDescription struct {
 	ID      string `json:"id"`
 	Version uint32 `json:"version"`

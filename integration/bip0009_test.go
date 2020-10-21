@@ -149,9 +149,9 @@ func testBIP0009(t *testing.T, forkKey string, deploymentID uint32) {
 	// *** ThresholdDefined part 2 - 1 block prior to ThresholdStarted ***
 	//
 	// Generate enough blocks to reach the height just before the first
-	// state transition without signalling support since the state should
+	// state transition without signaling support since the state should
 	// move to started once the start time has been reached regardless of
-	// support signalling.
+	// support signaling.
 	//
 	// NOTE: This is two blocks before the confirmation window because the
 	// getblockchaininfo RPC reports the status for the block AFTER the
@@ -289,7 +289,7 @@ func testBIP0009(t *testing.T, forkKey string, deploymentID uint32) {
 //   ThresholdLockedIn
 //   - Assert chain height is expected and state is still ThresholdStarted
 // - Generate enough blocks to reach the next state transition window with only
-//   the exact number of blocks required to achieve locked in status signalling
+//   the exact number of blocks required to achieve locked in status signaling
 //   support.
 //   - Assert chain height is expected and state moved to ThresholdLockedIn
 // - Generate 1 fewer blocks than needed to reach the next state transition

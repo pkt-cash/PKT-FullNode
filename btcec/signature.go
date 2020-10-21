@@ -284,7 +284,7 @@ func hashToInt(hash []byte, c elliptic.Curve) *big.Int {
 // in the inner loop in Step 1. The counter provided is actually the j parameter
 // of the loop * 2 - on the first iteration of j we do the R case, else the -R
 // case in step 1.6. This counter is used in the bitcoin compressed signature
-// format and thus we match bitcoind's behaviour here.
+// format and thus we match bitcoind's behavior here.
 func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 	iter int, doChecks bool) (*PublicKey, er.R) {
 	// 1.1 x = (n * i) + r

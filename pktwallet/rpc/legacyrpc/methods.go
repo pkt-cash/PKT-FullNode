@@ -1703,7 +1703,7 @@ func validateAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	// We could put whether or not the address is a script here,
 	// by checking the type of "addr", however, the reference
 	// implementation only puts that information if the script is
-	// "ismine", and we follow that behaviour.
+	// "ismine", and we follow that behavior.
 	result.Address = addr.EncodeAddress()
 	result.IsValid = true
 

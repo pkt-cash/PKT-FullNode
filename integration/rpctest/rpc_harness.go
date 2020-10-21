@@ -331,7 +331,7 @@ func (h *Harness) connectRPCClient() er.R {
 // include a change output indicated by the change boolean. Any unspent outputs
 // selected as inputs for the crafted transaction are marked as unspendable in
 // order to avoid potential double-spends by future calls to this method. If the
-// created transaction is cancelled for any reason then the selected inputs MUST
+// created transaction is canceled for any reason then the selected inputs MUST
 // be freed via a call to UnlockOutputs. Otherwise, the locked inputs won't be
 // returned to the pool of spendable outputs.
 //

@@ -1648,7 +1648,7 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	return true
 }
 
-// handleDonePeerMsg deals with peers that have signalled they are done.  It is
+// handleDonePeerMsg deals with peers that have signaled they are done.  It is
 // invoked from the peerHandler goroutine.
 func (s *server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	var list map[int32]*serverPeer
@@ -2111,7 +2111,7 @@ func (s *server) peerHandler() {
 				// Bitcoind uses a lookup of the dns seeder here. This
 				// is rather strange since the values looked up by the
 				// DNS seed lookups will vary quite a lot.
-				// to replicate this behaviour we put all addresses as
+				// to replicate this behavior we put all addresses as
 				// having come from the first one.
 				s.addrManager.AddAddresses(addrs, addrs[0])
 			})

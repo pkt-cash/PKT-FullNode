@@ -1329,7 +1329,7 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 
 	// Next, populate the response with information describing the current
 	// status of soft-forks deployed via the super-majority block
-	// signalling mechanism.
+	// signaling mechanism.
 	height := chainSnapshot.Height
 	chainInfo.SoftForks = []*btcjson.SoftForkDescription{
 		{

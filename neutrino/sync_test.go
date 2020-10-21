@@ -176,13 +176,13 @@ var (
 
 	// ourKnownTxsByBlock lets the rescan goroutine keep track of
 	// transactions we're interested in that are in the blockchain we're
-	// following as signalled by OnBlockConnected, OnBlockDisconnected,
+	// following as signaled by OnBlockConnected, OnBlockDisconnected,
 	// OnRecvTx, and OnRedeemingTx.
 	ourKnownTxsByBlock = make(map[chainhash.Hash][]*btcutil.Tx)
 
 	// ourKnownTxsByFilteredBlock lets the rescan goroutine keep track of
 	// transactions we're interested in that are in the blockchain we're
-	// following as signalled by OnFilteredBlockConnected and
+	// following as signaled by OnFilteredBlockConnected and
 	// OnFilteredBlockDisconnected.
 	ourKnownTxsByFilteredBlock = make(map[chainhash.Hash][]*btcutil.Tx)
 )
