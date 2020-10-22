@@ -126,7 +126,7 @@ func walletMain() er.R {
 	}
 
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250) // XXX wtf this
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
 
 	// Create and start HTTP server to serve wallet client connections.
 	// This will be updated with the wallet and chain server RPC client
