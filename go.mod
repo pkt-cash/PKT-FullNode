@@ -24,9 +24,8 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca
 	go.etcd.io/bbolt v1.3.6-0.20200807205753-f6be82302843
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/net v0.0.0-20201020065357-d65d470038a5 // indirect
-	golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13 // indirect
-	google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154 // indirect
-	google.golang.org/grpc v1.34.0-dev.0.20201020200225-9519efffeb5d
-	google.golang.org/protobuf v1.25.0 // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
+	golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a // indirect
+	google.golang.org/genproto v0.0.0-20201021134325-0d71844de594 // indirect
+	google.golang.org/grpc v1.34.0-dev.0.20201021230544-4e8458e5c638
 )
