@@ -109,6 +109,7 @@ type config struct {
 	Whitelists           []string      `long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 	AgentBlacklist       []string      `long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause pktd to reject any peers whose user-agent contains any of the blacklisted substrings."`
 	AgentWhitelist       []string      `long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause pktd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
+	HomeDir              string        `long:"homedir" description:"Creates this directory at startup"`
 	RPCUser              string        `short:"u" long:"rpcuser" description:"Username for RPC connections"`
 	RPCPass              string        `short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
 	RPCLimitUser         string        `long:"rpclimituser" description:"Username for limited RPC connections"`
@@ -420,6 +421,7 @@ func loadConfig() (*config, []string, er.R) {
 		RPCMaxClients:        defaultMaxRPCClients,
 		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
 		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+		HomeDir:              defaultHomeDir,
 		DataDir:              defaultDataDir,
 		LogDir:               defaultLogDir,
 		DbType:               defaultDbType,
@@ -511,7 +513,7 @@ func loadConfig() (*config, []string, er.R) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	errr = os.MkdirAll(defaultHomeDir, 0700)
+	errr = os.MkdirAll(cfg.HomeDir, 0700)
 	if errr != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because

@@ -67,6 +67,7 @@ Application Options:
       --proxyuser=          Username for proxy server
       --proxypass=          Password for proxy server
       --onion=              Connect to tor hidden services via SOCKS5 proxy
+      --homedir=            Creates this directory at startup
                             (eg. 127.0.0.1:9050)
       --onionuser=          Username for onion proxy server
       --onionpass=          Password for onion proxy server
