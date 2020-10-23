@@ -257,9 +257,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		if err != nil {
 			return nil, err
 		}
-		if err := chainClient.NotifyReceived(addrs); err != nil {
-			return nil, err
-		}
+		w.watch.WatchAddrs(addrs)
 	}
 
 	return tx, nil

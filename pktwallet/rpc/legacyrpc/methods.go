@@ -119,7 +119,6 @@ var rpcHandlers = map[string]struct {
 	"addp2shscript":         {handler: addP2shScript},
 	"createtransaction":     {handler: createTransaction},
 	"resync":                {handler: resync},
-	"vacuum":                {handler: vacuum},
 	"getaddressbalances":    {handler: getAddressBalances},
 	"getwalletseed":         {handler: getWalletSeed},
 	"getsecret":             {handler: getSecret},
@@ -1378,20 +1377,20 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 
 func resync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ResyncCmd)
-	return nil, w.ResyncChain(cmd.DropDb != nil && *cmd.DropDb)
-}
-
-func vacuum(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.VacuumCmd)
-	bk := ""
-	mc := time.Duration(0)
-	if cmd.BeginKey != nil {
-		bk = *cmd.BeginKey
+	fh := int32(0)
+	if cmd.FromHeight != nil {
+		fh = *cmd.FromHeight
 	}
-	if cmd.MaxWorkMs != nil {
-		mc = time.Duration(*cmd.MaxWorkMs) * time.Millisecond
+	var a []string
+	if cmd.Addresses != nil {
+		a = *cmd.Addresses
 	}
-	return w.VacuumDb(bk, mc)
+	return nil, w.ResyncChain(
+		fh,
+		cmd.Force != nil && *cmd.Force,
+		cmd.Methodical != nil && *cmd.Methodical,
+		a,
+		cmd.DropDb != nil && *cmd.DropDb)
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction

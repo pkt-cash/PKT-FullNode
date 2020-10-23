@@ -75,12 +75,14 @@ type NeutrinoInfo struct {
 }
 
 type WalletStats struct {
-	AutoVacuuming          bool
-	AutoVacuumCycles       int
-	AutoVacuumBurned       int
-	AutoVacuumOrphaned     int
-	AutoVacuumVisitedUtxos int
-	TimeOfLastAutoVacuum   time.Time
+	MaintenanceInProgress bool
+	MaintenanceName       string
+	MaintenanceCycles     int
+	//AutoVacuumBurned           int
+	//AutoVacuumOrphaned         int
+	//AutoVacuumVisitedUtxos     int
+	MaintenanceLastBlockVisited int
+	TimeOfLastMaintenance       time.Time
 
 	// If we're currently in a resync
 	Syncing              bool
@@ -233,11 +235,13 @@ type GetAddressBalancesResult struct {
 	OutputCount int32 `json:"outputcount"`
 }
 
-type VacuumDbRes struct {
-	Burned       int
-	Orphaned     int
-	VisitedUtxos int
-	EndKey       string
+type MaintenanceStats struct {
+	// Burned           int
+	// Orphaned         int
+	// VisitedUtxos     int
+	LastBlockVisited int
+	Done             bool
+	Name             string
 }
 
 type WalletMempoolItem struct {

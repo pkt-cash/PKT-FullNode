@@ -73,12 +73,11 @@ type GetSecretCmd struct {
 }
 
 type ResyncCmd struct {
-	DropDb *bool
-}
-
-type VacuumCmd struct {
-	MaxWorkMs *uint64
-	BeginKey  *string
+	FromHeight *int32
+	Methodical *bool
+	Force      *bool
+	Addresses  *[]string
+	DropDb     *bool
 }
 
 // GetBalanceCmd defines the getbalance JSON-RPC command.
@@ -444,7 +443,6 @@ func init() {
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("getaddressbalances", (*GetAddressBalancesCmd)(nil), flags)
 	MustRegisterCmd("resync", (*ResyncCmd)(nil), flags)
-	MustRegisterCmd("vacuum", (*VacuumCmd)(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
 	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)

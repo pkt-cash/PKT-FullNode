@@ -332,30 +332,36 @@ func (s *Store) RemoveUnminedTx(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R
 // removed as well.
 func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	block *BlockMeta) er.R {
-
-	// If a transaction record for this hash and block already exists, we
-	// can exit early.
-	if _, v := existsTxRecord(ns, &rec.Hash, &block.Block); v != nil {
-		return nil
-	}
+	// this might get called on a tx which is already in the db
 
 	// If a block record does not yet exist for any transactions from this
 	// block, insert a block record first. Otherwise, update it by adding
 	// the transaction hash to the set of transactions from this block.
-	var err er.R
 	blockKey, blockValue := existsBlockRecord(ns, block.Height)
 	if blockValue == nil {
-		err = putBlockRecord(ns, block, &rec.Hash)
-	} else {
-		blockValue, err = appendRawBlockRecord(blockValue, &rec.Hash)
-		if err != nil {
+		if err := putBlockRecord(ns, block, &rec.Hash); err != nil {
 			return err
 		}
-		err = putRawBlockRecord(ns, blockKey, blockValue)
+	} else {
+		br := blockRecord{}
+		if err := readRawBlockRecord(blockKey, blockValue, &br); err != nil {
+			return err
+		}
+		has := false
+		for _, txid := range br.transactions {
+			if txid.IsEqual(&rec.Hash) {
+				has = true
+			}
+		}
+		if has {
+		} else if blockValue, err := appendRawBlockRecord(blockValue, &rec.Hash); err != nil {
+			return err
+		} else if err := putRawBlockRecord(ns, blockKey, blockValue); err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
+
+	// no harm in putting the tx record again
 	if err := putTxRecord(ns, rec, &block.Block); err != nil {
 		return err
 	}
@@ -465,12 +471,6 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	}
 
 	return true, putUnspent(ns, &cred.outPoint, &block.Block)
-}
-
-// Rollback removes all blocks at height onwards, moving any transactions within
-// each block to the unconfirmed pool.
-func (s *Store) Rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
-	return s.rollback(ns, height)
 }
 
 func rollbackTransaction(
@@ -689,9 +689,7 @@ func rollbackTransaction(
 }
 
 // RollbackTransaction kills off a transaction in case it is invalid or burned
-// or the block is orphaned. The results are:
-// coins: the amount to *add* to the balance
-// err: any error which might occur
+// or the block is orphaned.
 func RollbackTransaction(
 	ns walletdb.ReadWriteBucket,
 	txHash *chainhash.Hash,
@@ -708,57 +706,40 @@ func RollbackTransaction(
 	return nil
 }
 
-func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) er.R {
+func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 	minedBalance, err := fetchMinedBalance(ns)
 	if err != nil {
 		return err
 	}
 
-	var heightsToRemove []int32
-
-	it := makeReverseBlockIterator(ns)
-	for it.prev() {
-		b := &it.elem
-		if it.elem.Height < height {
-			break
-		}
-
-		heightsToRemove = append(heightsToRemove, it.elem.Height)
-
-		log.Warnf("ROLLBACK rolling back %d transactions from block %v height %d",
-			len(b.transactions), b.Hash, b.Height)
-
-		for i := range b.transactions {
-			txHash := &b.transactions[i]
-			log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
-			coins, err := rollbackTransaction(ns, txHash, &b.Block, s.chainParams)
-			if err != nil {
-				return err
-			}
-			minedBalance += coins
-		}
-
-		// reposition cursor before deleting this k/v pair and advancing to the
-		// previous.
-		it.reposition(it.elem.Height)
-
-		// Avoid cursor deletion until bolt issue #620 is resolved.
-		// err = it.delete()
-		// if err != nil {
-		// 	return err
-		// }
+	it := makeReadBlockIterator(ns, height)
+	if !it.next() {
+		return ErrNoExists.Default()
 	}
+	b := &it.elem
+	if it.elem.Height != height {
+		panic("Iterator mistake")
+	}
+	log.Warnf("ROLLBACK rolling back %d transactions from block %v height %d",
+		len(b.transactions), b.Hash, b.Height)
+
+	for i := range b.transactions {
+		txHash := &b.transactions[i]
+		log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
+		coins, err := rollbackTransaction(ns, txHash, &b.Block, s.chainParams)
+		if err != nil {
+			return err
+		}
+		minedBalance += coins
+	}
+
 	if it.err != nil {
 		return it.err
 	}
 
-	// Delete the block records outside of the iteration since cursor deletion
-	// is broken.
-	for _, h := range heightsToRemove {
-		err = deleteBlockRecord(ns, h)
-		if err != nil {
-			return err
-		}
+	err = deleteBlockRecord(ns, height)
+	if err != nil {
+		return err
 	}
 
 	return putMinedBalance(ns, minedBalance)

@@ -68,8 +68,12 @@ var helpDescsEnUS = map[string]string{
 	"getnetworkstewardvoteresult-votefor":     "The address which your wallet is currently voting for",
 
 	// ResyncCmd help
-	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
-	"resync-dropdb":    "Clean most of the data out of the wallet transaction store before resyncing",
+	"resync--synopsis":  "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
+	"resync-addresses":  "If specified, the wallet will ONLY scan the chain for these addresses, not others",
+	"resync-fromheight": "Start re-syncing to the chain from specified height, default: 0",
+	"resync-force":      "Certain combinations of arguments can be dangerous, override safety checks",
+	"resync-dropdb":     "Clean most of the data out of the wallet transaction store before resyncing",
+	"resync-methodical": "Re-insert all transactions, even if they are already known, helps fix database corruption",
 
 	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
 	"vacuum-maxworkms": "The maximum number of database rows to visit, useful for performing background vacuum operations in pages",

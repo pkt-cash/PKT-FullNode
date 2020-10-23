@@ -36,10 +36,10 @@ func main() {
 	// After EXTENSIVE RUNTIME testing on multiple
 	// platforms, this should be MIN 4 and maybe
 	// closer to 8 - so 6 is it!
-	// (esp to avoid GC lag in goleveldb - which 
+	// (esp to avoid GC lag in goleveldb - which
 	//  still leaks memory on occasion that causes
 	//  longer and longer GC runs.  ugh go.)
-	runtime.GOMAXPROCS(runtime.NumCPU()*6)
+	runtime.GOMAXPROCS(runtime.NumCPU() * 6)
 
 	// Work around defer not working after os.Exit.
 	if err := walletMain(); err != nil {
@@ -47,7 +47,7 @@ func main() {
 	}
 }
 
-func goAutoVacuum(cfg *config, w *wallet.Wallet) {
+func goMaintenance(cfg *config, w *wallet.Wallet) {
 	for {
 		// Don't try to vacuum until the chain connection comes up
 		if w.ChainClient() != nil {
@@ -57,47 +57,44 @@ func goAutoVacuum(cfg *config, w *wallet.Wallet) {
 	}
 	for {
 		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.AutoVacuuming = true
-			ws.AutoVacuumCycles = 0
-			ws.AutoVacuumBurned = 0
-			ws.AutoVacuumOrphaned = 0
-			ws.AutoVacuumVisitedUtxos = 0
+			ws.MaintenanceInProgress = true
+			ws.MaintenanceCycles = 0
+			ws.MaintenanceLastBlockVisited = 0
+			ws.MaintenanceName = ""
 		})
-		startKey := ""
-		totals := btcjson.VacuumDbRes{}
 		for {
-			res, err := w.VacuumDb(startKey,
-				time.Duration(cfg.AutoVacuumMs)*time.Millisecond)
+			res, err := w.Maintenance(time.Duration(cfg.AutoVacuumMs) * time.Millisecond)
 			if w.ShuttingDown() {
 				return
 			}
 			if err != nil {
-				log.Warnf("Error while vacuuming database [%s]", err.String())
-				break
-			}
-			totals.Burned += res.Burned
-			totals.Orphaned += res.Orphaned
-			totals.VisitedUtxos += res.VisitedUtxos
-			startKey = res.EndKey
-			if startKey == "" {
-				// completed a vacuum cycle
+				log.Warnf("Error while running maintanence job [%s]", err.String())
 				break
 			}
 			w.UpdateStats(func(ws *btcjson.WalletStats) {
-				ws.AutoVacuumCycles++
-				ws.AutoVacuumBurned += res.Burned
-				ws.AutoVacuumOrphaned += res.Orphaned
-				ws.AutoVacuumVisitedUtxos += res.VisitedUtxos
+				ws.MaintenanceCycles++
+				ws.MaintenanceLastBlockVisited = res.LastBlockVisited
+				ws.MaintenanceName = res.Name
 			})
+			if res.Done {
+				// completed a vacuum cycle
+				break
+			}
 			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
 		}
-		log.Debugf("Autovacuum complete [%d] burned [%d] orphaned [%d] visited utxos",
-			totals.Burned, totals.Orphaned, totals.VisitedUtxos)
 		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.AutoVacuuming = false
-			ws.TimeOfLastAutoVacuum = time.Now()
+			ws.MaintenanceInProgress = false
+			ws.TimeOfLastMaintenance = time.Now()
 		})
-		time.Sleep(time.Duration(cfg.AutoVacuumSleepSec) * time.Second)
+		startTime := time.Now()
+		for {
+			if w.NeedMaintenance() {
+				break
+			} else if time.Since(startTime) > time.Duration(cfg.AutoVacuumSleepSec)*time.Second {
+				break
+			}
+			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
+		}
 	}
 }
 
@@ -153,7 +150,7 @@ func walletMain() er.R {
 	})
 
 	if cfg.AutoVacuum && !cfg.NoAutoVacuum {
-		loader.RunAfterLoad(func(w *wallet.Wallet) { go goAutoVacuum(cfg, w) })
+		loader.RunAfterLoad(func(w *wallet.Wallet) { go goMaintenance(cfg, w) })
 	}
 
 	if !cfg.NoInitialLoad {
