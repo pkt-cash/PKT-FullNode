@@ -219,6 +219,7 @@ func (b *Broadcaster) rebroadcast(txs map[chainhash.Hash]*wire.MsgTx,
 
 	sortedTxs := wtxmgr.DependencySort(txs)
 	for _, tx := range sortedTxs {
+		log.Debugf("Re-broadcasting transaction [%s]", tx.TxHash().String())
 		// Before attempting to broadcast this transaction, we check
 		// whether we are shutting down.
 		select {

@@ -13,7 +13,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	libwaddrmgr "github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
@@ -401,7 +400,7 @@ func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Addre
 			OnFilteredBlockConnected: s.onFilteredBlockConnected,
 			OnBlockDisconnected:      s.onBlockDisconnected,
 		}),
-		neutrino.StartBlock(&libwaddrmgr.BlockStamp{Hash: *startHash}),
+		neutrino.StartBlock(&waddrmgr.BlockStamp{Hash: *startHash}),
 		neutrino.StartTime(s.startTime),
 		neutrino.QuitChan(s.rescanQuit),
 		neutrino.WatchAddrs(addrs...),

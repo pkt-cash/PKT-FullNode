@@ -1203,7 +1203,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 
 	// With all the necessary items retrieved, we'll launch our concurrent
 	// query to the set of connected peers.
-	log.Debugf("Fetching filters for heights=[%v, %v], stophash=%v",
+	log.Tracef("Fetching filters for heights=[%v, %v], stophash=%v",
 		query.startHeight, query.stopHeight, query.stopHash)
 
 	go func() {

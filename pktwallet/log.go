@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io"
 	"os"
 
 	"github.com/pkt-cash/pktd/neutrino"
@@ -39,10 +38,6 @@ var (
 	// The backend must not be used before the log rotator has been initialized,
 	// or data races and/or nil pointer dereferences will occur.
 	backendLog = pktlog.NewBackend(logWriter{})
-
-	// logRotatorPipe is the write-end pipe for writing to the log rotator.  It
-	// is written to by the Write method of the logWriter type.
-	logRotatorPipe *io.PipeWriter
 
 	log          = backendLog.Logger("BTCW")
 	walletLog    = backendLog.Logger("WLLT")
