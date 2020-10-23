@@ -9,7 +9,7 @@
 package btcjson
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -247,7 +247,7 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 	type templateRequest TemplateRequest
 
 	request := (*templateRequest)(t)
-	if err := json.Unmarshal(data, &request); err != nil {
+	if err := jsoniter.Unmarshal(data, &request); err != nil {
 		return er.Native(er.E(err))
 	}
 

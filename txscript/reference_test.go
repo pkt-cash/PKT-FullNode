@@ -8,7 +8,7 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -493,7 +493,7 @@ func TestScripts(t *testing.T) {
 	}
 
 	var tests [][]interface{}
-	err = json.Unmarshal(file, &tests)
+	err = jsoniter.Unmarshal(file, &tests)
 	if err != nil {
 		t.Fatalf("TestScripts couldn't Unmarshal: %v", err)
 	}
@@ -524,7 +524,7 @@ func TestTxInvalidTests(t *testing.T) {
 	}
 
 	var tests [][]interface{}
-	err = json.Unmarshal(file, &tests)
+	err = jsoniter.Unmarshal(file, &tests)
 	if err != nil {
 		t.Fatalf("TestTxInvalidTests couldn't Unmarshal: %v\n", err)
 	}
@@ -680,7 +680,7 @@ func TestTxValidTests(t *testing.T) {
 	}
 
 	var tests [][]interface{}
-	err = json.Unmarshal(file, &tests)
+	err = jsoniter.Unmarshal(file, &tests)
 	if err != nil {
 		t.Fatalf("TestTxValidTests couldn't Unmarshal: %v\n", err)
 	}
@@ -835,7 +835,7 @@ func TestCalcSignatureHash(t *testing.T) {
 	}
 
 	var tests [][]interface{}
-	err = json.Unmarshal(file, &tests)
+	err = jsoniter.Unmarshal(file, &tests)
 	if err != nil {
 		t.Fatalf("TestCalcSignatureHash couldn't Unmarshal: %v\n",
 			err)

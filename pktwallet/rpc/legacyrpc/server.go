@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -402,7 +402,7 @@ out:
 			}
 
 			var req btcjson.Request
-			err := json.Unmarshal(reqBytes, &req)
+			err := jsoniter.Unmarshal(reqBytes, &req)
 			if err != nil {
 				if !wsc.authenticated {
 					// Disconnect immediately.
@@ -410,7 +410,7 @@ out:
 				}
 				resp := makeResponse(req.ID, nil,
 					btcjson.ErrRPCInvalidRequest.Default())
-				mresp, errr := json.Marshal(resp)
+				mresp, errr := jsoniter.Marshal(resp)
 				// We expect the marshal to succeed.  If it
 				// doesn't, it indicates some non-marshalable
 				// type in the response.
@@ -432,7 +432,7 @@ out:
 				wsc.authenticated = true
 				resp := makeResponse(req.ID, nil, nil)
 				// Expected to never fail.
-				mresp, errr := json.Marshal(resp)
+				mresp, errr := jsoniter.Marshal(resp)
 				if errr != nil {
 					panic(errr)
 				}
@@ -452,7 +452,7 @@ out:
 			case "stop":
 				resp := makeResponse(req.ID,
 					"pktwallet stopping.", nil)
-				mresp, errr := json.Marshal(resp)
+				mresp, errr := jsoniter.Marshal(resp)
 				// Expected to never fail.
 				if errr != nil {
 					panic(err)
@@ -566,7 +566,7 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 	// processing.  While checking the methods, disallow authenticate
 	// requests, as they are invalid for HTTP POST clients.
 	var req btcjson.Request
-	errr = json.Unmarshal(rpcRequest, &req)
+	errr = jsoniter.Unmarshal(rpcRequest, &req)
 	if errr != nil {
 		resp, err := btcjson.MarshalResponse(req.ID, nil,
 			btcjson.ErrRPCInvalidRequest.Default())

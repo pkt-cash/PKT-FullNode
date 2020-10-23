@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"github.com/json-iterator/go"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -172,7 +173,7 @@ func main() {
 
 	} else if strings.HasPrefix(strResult, `"`) {
 		var str string
-		if err := json.Unmarshal(result.Result, &str); err != nil {
+		if err := jsoniter.Unmarshal(result.Result, &str); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to unmarshal result: %v",
 				err)
 			os.Exit(1)

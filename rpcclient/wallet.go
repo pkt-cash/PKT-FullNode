@@ -6,7 +6,7 @@
 package rpcclient
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -34,7 +34,7 @@ func (r FutureGetInfoResult) Receive() (*btcjson.InfoWalletResult, er.R) {
 
 	// Unmarshal result as a getinfo result object.
 	var infoRes btcjson.InfoWalletResult
-	err = er.E(json.Unmarshal(res, &infoRes))
+	err = er.E(jsoniter.Unmarshal(res, &infoRes))
 	if err != nil {
 		return nil, err
 	}

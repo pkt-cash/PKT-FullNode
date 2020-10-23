@@ -5,7 +5,7 @@
 package rpcclient
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -18,7 +18,7 @@ type FutureRawResult chan *response
 
 // Receive waits for the response promised by the future and returns the raw
 // response, or an error if the request was unsuccessful.
-func (r FutureRawResult) Receive() (json.RawMessage, er.R) {
+func (r FutureRawResult) Receive() (jsoniter.RawMessage, er.R) {
 	return receiveFuture(r)
 }
 
@@ -27,7 +27,7 @@ func (r FutureRawResult) Receive() (json.RawMessage, er.R) {
 // function on the returned instance.
 //
 // See RawRequest for the blocking version and more details.
-func (c *Client) RawRequestAsync(method string, params []json.RawMessage) FutureRawResult {
+func (c *Client) RawRequestAsync(method string, params []jsoniter.RawMessage) FutureRawResult {
 	// Method may not be empty.
 	if method == "" {
 		return newFutureError(er.New("no method"))
@@ -36,7 +36,7 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 	// Marshal parameters as "[]" instead of "null" when no parameters
 	// are passed.
 	if params == nil {
-		params = []json.RawMessage{}
+		params = []jsoniter.RawMessage{}
 	}
 
 	// Create a raw JSON-RPC request using the provided method and params
@@ -50,7 +50,7 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 		Method:  method,
 		Params:  params,
 	}
-	marshalledJSON, errr := json.Marshal(rawRequest)
+	marshalledJSON, errr := jsoniter.Marshal(rawRequest)
 	if errr != nil {
 		return newFutureError(er.E(errr))
 	}
@@ -74,6 +74,6 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 // requests that are not handled by this client package, or to proxy partially
 // unmarshaled requests to another JSON-RPC server if a request cannot be
 // handled directly.
-func (c *Client) RawRequest(method string, params []json.RawMessage) (json.RawMessage, er.R) {
+func (c *Client) RawRequest(method string, params []jsoniter.RawMessage) (jsoniter.RawMessage, er.R) {
 	return c.RawRequestAsync(method, params).Receive()
 }

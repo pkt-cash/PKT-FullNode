@@ -12,7 +12,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"math"
@@ -1270,7 +1270,7 @@ out:
 		}
 
 		var request btcjson.Request
-		errr = json.Unmarshal(msg, &request)
+		errr = jsoniter.Unmarshal(msg, &request)
 		if errr != nil {
 			if !c.authenticated {
 				break out

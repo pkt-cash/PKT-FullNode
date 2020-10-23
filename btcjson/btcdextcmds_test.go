@@ -7,11 +7,10 @@ package btcjson_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
-
+	"github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -234,7 +233,7 @@ func TestBtcdExtCmds(t *testing.T) {
 		}
 
 		var request btcjson.Request
-		if err := json.Unmarshal(marshalled, &request); err != nil {
+		if err := jsoniter.Unmarshal(marshalled, &request); err != nil {
 			t.Errorf("Test #%d (%s) unexpected error while "+
 				"unmarshalling JSON-RPC request: %v", i,
 				test.name, err)

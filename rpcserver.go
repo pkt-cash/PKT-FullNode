@@ -12,7 +12,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -4253,7 +4253,7 @@ func createMarshalledReply(id, result interface{}, jsonErr er.R) ([]byte, er.R) 
 }
 
 func createResponse(id, result interface{}, jsonErr er.R) (*btcjson.Response, er.R) {
-	marshalledResult, errr := json.Marshal(result)
+	marshalledResult, errr := jsoniter.Marshal(result)
 	if errr != nil {
 		return nil, er.E(errr)
 	}
@@ -4352,14 +4352,14 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 	var jsonErr er.R
 	isArray := len(body) > 0 && body[0] == '['
 	if isArray {
-		if errr := json.Unmarshal(body, &requests); errr != nil {
+		if errr := jsoniter.Unmarshal(body, &requests); errr != nil {
 			jsonErr = btcjson.NewRPCError(
 				btcjson.ErrRPCParse,
 				"Failed to parse requests",
 				er.E(errr),
 			)
 		}
-	} else if errr := json.Unmarshal(body, &req0); errr != nil {
+	} else if errr := jsoniter.Unmarshal(body, &req0); errr != nil {
 		jsonErr = btcjson.NewRPCError(
 			btcjson.ErrRPCParse,
 			"Failed to parse request",
@@ -4387,14 +4387,14 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 			rpcsLog.Error(err)
 			return
 		}
-		out, errr := json.Marshal(&resp)
+		out, errr := jsoniter.Marshal(&resp)
 		if errr != nil {
 			rpcsLog.Error(er.E(errr))
 			return
 		}
 		msg = out
 	} else if isArray {
-		out, errr := json.Marshal(&responses)
+		out, errr := jsoniter.Marshal(&responses)
 		if errr != nil {
 			rpcsLog.Error(er.E(errr))
 			return
@@ -4403,7 +4403,7 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 	} else {
 		var resp0 *btcjson.Response
 		resp0 = responses[0]
-		out, errr := json.Marshal(&resp0)
+		out, errr := jsoniter.Marshal(&resp0)
 		if errr != nil {
 			rpcsLog.Error(er.E(errr))
 			return

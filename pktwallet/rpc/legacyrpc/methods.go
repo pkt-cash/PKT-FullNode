@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"net"
 	"strconv"
@@ -198,7 +198,7 @@ func makeResponse(id, result interface{}, err er.R) btcjson.Response {
 			Error: btcjson.SerializeError(jsonError(err)),
 		}
 	}
-	resultBytes, errr := json.Marshal(result)
+	resultBytes, errr := jsoniter.Marshal(result)
 	if errr != nil {
 		return btcjson.Response{
 			ID: idPtr,
@@ -208,7 +208,7 @@ func makeResponse(id, result interface{}, err er.R) btcjson.Response {
 	}
 	return btcjson.Response{
 		ID:     idPtr,
-		Result: json.RawMessage(resultBytes),
+		Result: jsoniter.RawMessage(resultBytes),
 	}
 }
 
@@ -860,7 +860,7 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 			rawChainUsage, err := client.RawRequest("help", nil)
 			var chainUsage string
 			if err == nil {
-				_ = json.Unmarshal([]byte(rawChainUsage), &chainUsage)
+				_ = jsoniter.Unmarshal([]byte(rawChainUsage), &chainUsage)
 			}
 			if chainUsage != "" {
 				usages = "Chain server usage:\n\n" + chainUsage + "\n\n" +
@@ -894,9 +894,9 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 		param[0] = '"'
 		copy(param[1:], *cmd.Command)
 		param[len(param)-1] = '"'
-		rawChainHelp, err := client.RawRequest("help", []json.RawMessage{param})
+		rawChainHelp, err := client.RawRequest("help", []jsoniter.RawMessage{param})
 		if err == nil {
-			_ = json.Unmarshal([]byte(rawChainHelp), &chainHelp)
+			_ = jsoniter.Unmarshal([]byte(rawChainHelp), &chainHelp)
 		}
 	}
 	if chainHelp != "" {
