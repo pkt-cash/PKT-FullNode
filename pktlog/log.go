@@ -144,10 +144,20 @@ func (l Level) String() string {
 
 // NewBackend creates a logger backend from a Writer.
 func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
-	b := &Backend{w: w, flag: defaultFlags}
+	b := &Backend{
+		flag: defaultFlags,
+		ch:   make(chan *[]byte, 1024),
+	}
 	for _, o := range opts {
 		o(b)
 	}
+	go func() {
+		for {
+			l := <-b.ch
+			w.Write(*l)
+			recycleBuffer(l)
+		}
+	}()
 	return b
 }
 
@@ -155,7 +165,7 @@ func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
 // the backend's Writer.  Backend provides atomic writes to the Writer from all
 // subsystems.
 type Backend struct {
-	w    io.Writer
+	ch   chan *[]byte
 	mu   sync.Mutex // ensures atomic writes
 	flag uint32
 }
@@ -386,12 +396,17 @@ func (b *Backend) print(lvl, tag string, args ...interface{}) {
 	if hasColor {
 		*bytebuf = append(*bytebuf, Reset...)
 	}
+	b.write(bytebuf)
+}
 
-	b.mu.Lock()
-	b.w.Write(*bytebuf)
-	b.mu.Unlock()
-
-	recycleBuffer(bytebuf)
+func (b *Backend) write(buf *[]byte) {
+	select {
+	case b.ch <- buf:
+		// ok
+	default:
+		// failed, recycle the buffer ourselves
+		recycleBuffer(buf)
+	}
 }
 
 // printf outputs a log message to the writer associated with the backend after
@@ -418,11 +433,7 @@ func (b *Backend) printf(lvl, tag string, format string, args ...interface{}) {
 	}
 	*bytebuf = append(*bytebuf, '\n')
 
-	b.mu.Lock()
-	b.w.Write(*bytebuf)
-	b.mu.Unlock()
-
-	recycleBuffer(bytebuf)
+	b.write(bytebuf)
 }
 
 // Logger returns a new logger for a particular subsystem that writes to the
