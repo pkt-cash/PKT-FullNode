@@ -70,7 +70,6 @@ func testStore() (*Store, walletdb.DB, func(), er.R) {
 	}
 
 	teardown := func() {
-		db.Close()
 		os.RemoveAll(tmpDir)
 	}
 
