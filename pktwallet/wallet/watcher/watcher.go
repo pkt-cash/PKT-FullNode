@@ -17,7 +17,7 @@ type OutPointWatch struct {
 }
 
 type Watcher struct {
-	watchAddrsLock sync.Mutex
+	watchAddrsLock sync.RWMutex
 	watchAddrs     map[btcutil.Address]struct{}
 	watchPoints    []OutPointWatch
 }
@@ -60,8 +60,8 @@ func (w *Watcher) WatchAddr(addr btcutil.Address) {
 }
 
 func (w *Watcher) FilterReq(height int32) *chain.FilterBlocksRequest {
-	w.watchAddrsLock.Lock()
-	defer w.watchAddrsLock.Unlock()
+	w.watchAddrsLock.RLock()
+	defer w.watchAddrsLock.RUnlock()
 	filterReq := chain.FilterBlocksRequest{
 		Blocks:           nil,
 		ExternalAddrs:    make(map[waddrmgr.ScopedIndex]btcutil.Address),

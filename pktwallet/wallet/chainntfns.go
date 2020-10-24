@@ -72,9 +72,7 @@ func (w *Wallet) handleChainNotifications() {
 					panic(err.String())
 				}
 			case chain.BlockConnected:
-				err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
-					return w.connectBlock(tx, wtxmgr.BlockMeta(n).Block)
-				})
+				err = w.block(wtxmgr.BlockMeta(n).Block)
 				notificationName = "block connected"
 			case chain.BlockDisconnected:
 				// Do nothing, connect block triggers the operations
@@ -103,37 +101,6 @@ func (w *Wallet) handleChainNotifications() {
 	}
 }
 
-// connectBlock handles a chain server notification by marking a wallet
-// that's currently in-sync with the chain server as being synced up to
-// the passed block.
-func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, bm wtxmgr.Block) er.R {
-	header, err := w.chainClient.GetBlockHeader(&bm.Hash)
-	if err != nil {
-		return err
-	}
-	w.chainLock.Lock()
-	defer w.chainLock.Unlock()
-	return w._connectBlock1(dbtx, header, bm.Height)
-}
-
-func (w *Wallet) _doFilter(
-	header *wire.BlockHeader,
-	height int32,
-	watch *watcher.Watcher,
-) (*chain.FilterBlocksResponse, er.R) {
-	filterReq := watch.FilterReq(height)
-	filterReq.Blocks = []wtxmgr.BlockMeta{
-		{
-			Block: wtxmgr.Block{
-				Hash:   header.BlockHash(),
-				Height: height,
-			},
-			Time: header.Timestamp,
-		},
-	}
-	return w.chainClient.FilterBlocks(filterReq)
-}
-
 func (w *Wallet) storeTxns(
 	dbtx walletdb.ReadWriteTx,
 	filterResp *chain.FilterBlocksResponse,
@@ -148,75 +115,17 @@ func (w *Wallet) storeTxns(
 	return nil
 }
 
-func (w *Wallet) _connectBlock1(
-	dbtx walletdb.ReadWriteTx,
-	header *wire.BlockHeader,
-	height int32,
-) er.R {
-	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
-
-	st := w.Manager.SyncedTo()
-	if height > st.Height+1 {
-		if headerP, err := w.chainClient.GetBlockHeader(&header.PrevBlock); err != nil {
-			return err
-		} else if err := w._connectBlock1(dbtx, headerP, height-1); err != nil {
-			return err
-		}
-		st = w.Manager.SyncedTo()
-	}
-
-	if height < st.Height+1 {
-		// Don't make too much fuss, we were just called with a number lower than the tip we know
-		return nil
-	}
-
-	if height != st.Height+1 {
-		panic("chain height was altered in another thread")
-	}
-
-	if header.PrevBlock != st.Hash {
-		if err := w._rollbackBlock(dbtx, st); err != nil {
-			return err
-		} else if headerP, err := w.chainClient.GetBlockHeader(&header.PrevBlock); err != nil {
-			return err
-		} else if err := w._connectBlock1(dbtx, headerP, height-1); err != nil {
-			return err
-		}
-		st = w.Manager.SyncedTo()
-	}
-
-	if height != st.Height+1 || header.PrevBlock != st.Hash {
-		panic("chain height was altered in another thread")
-	}
-
-	if err := w.Manager.SetSyncedTo(addrmgrNs, &waddrmgr.BlockStamp{
-		Height:    height,
-		Hash:      header.BlockHash(),
-		Timestamp: header.Timestamp,
-	}); err != nil {
-		return err
-	}
-
-	if filterResp, err := w._doFilter(header, height, &w.watch); err != nil {
-		return err
-	} else if filterResp == nil {
-		// No interesting transactions, nothing to do
-	} else if w.storeTxns(dbtx, filterResp); err != nil {
-		return err
-	}
-
-	// Notify interested clients of the connected block.
-	//
-	// TODO: move all notifications outside of the database transaction.
-	w.NtfnServer.notifyAttachedBlock(dbtx, &wtxmgr.BlockMeta{
-		Block: wtxmgr.Block{
-			Hash:   header.BlockHash(),
-			Height: height,
-		},
-		Time: header.Timestamp,
-	})
-	return nil
-}
+// // Notify interested clients of the connected block.
+// //
+// // TODO: move all notifications outside of the database transaction.
+// w.NtfnServer.notifyAttachedBlock(dbtx, &wtxmgr.BlockMeta{
+// 	Block: wtxmgr.Block{
+// 		Hash:   header.BlockHash(),
+// 		Height: height,
+// 	},
+// 	Time: header.Timestamp,
+// })
+// return nil
 
 func (w *Wallet) _rollbackBlock(dbtx walletdb.ReadWriteTx, bs waddrmgr.BlockStamp) er.R {
 	log.Infof("Rollback of block [%v @ %v]", bs.Hash, bs.Height)

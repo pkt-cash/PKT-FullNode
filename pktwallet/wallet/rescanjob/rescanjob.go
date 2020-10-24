@@ -3,7 +3,6 @@ package rescanjob
 import (
 	"sync"
 
-	"github.com/pkt-cash/pktd/pktwallet/wallet/filterfetcher"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/watcher"
 )
 
@@ -12,7 +11,6 @@ type RescanJob struct {
 	Height int32
 	Quick  bool
 	Name   string
-	FF     *filterfetcher.FilterFetcher
 	ctx    *RescanJobs
 }
 

@@ -6,6 +6,7 @@
 package wallet
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -28,12 +29,12 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/filterfetcher"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/rescanjob"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/watcher"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/workqueue"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb/migration"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
@@ -473,11 +474,9 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	}
 	st := w.Manager.SyncedTo()
 	if st.Height >= bestHeight {
-	} else if err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
-		return w.connectBlock(dbtx, wtxmgr.Block{
-			Hash:   *bestH,
-			Height: bestHeight,
-		})
+	} else if err := w.block(wtxmgr.Block{
+		Hash:   *bestH,
+		Height: bestHeight,
 	}); err != nil {
 		return err
 	}
@@ -1810,13 +1809,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 			Quick:  false,
 			Height: bs.Height,
 			Watch:  &watch,
-			FF: filterfetcher.New(
-				filterfetcher.DefaultWorkerCount,
-				filterfetcher.DefaultBacklog,
-				bs.Height,
-				w.chainClient,
-				&watch,
-			),
 		})
 	} else {
 		w.watch.WatchAddr(addr)
@@ -2453,13 +2445,6 @@ func (w *Wallet) ResyncChain(fromHeight int32, force, slow bool, addresses []str
 		Height: fromHeight,
 		Watch:  watch,
 		Quick:  !slow,
-		FF: filterfetcher.New(
-			filterfetcher.DefaultWorkerCount,
-			filterfetcher.DefaultBacklog,
-			fromHeight,
-			w.chainClient,
-			watch,
-		),
 	})
 	return nil
 }
@@ -2476,9 +2461,306 @@ func (w *Wallet) WalletMempool() ([]wtxmgr.TxDetails, er.R) {
 	return unminedTxDetails, err
 }
 
+type SyncerResp struct {
+	filter *chain.FilterBlocksResponse
+	header *wire.BlockHeader
+	height int32
+}
+
+func rescanStep(
+	db walletdb.DB,
+	height int32,
+	chainClient chain.Interface,
+	txStore *wtxmgr.Store,
+	watch *watcher.Watcher,
+	isRescan bool,
+) (SyncerResp, er.R) {
+	var out SyncerResp
+	if isRescan && height%1000 == 0 {
+		log.Debugf("Rescan cycle [%v]", height)
+	}
+	return out, walletdb.View(db, func(tx walletdb.ReadTx) er.R {
+		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+		var txDetails []wtxmgr.TxDetails
+		txStore.RangeTransactions(txmgrNs, height, height,
+			func(details []wtxmgr.TxDetails) (bool, er.R) {
+				txDetails = details
+				return false, nil
+			})
+		if hash, err := chainClient.GetBlockHash(int64(height)); err != nil {
+			return err
+		} else if len(txDetails) > 0 && !hash.IsEqual(&txDetails[0].Block.Hash) {
+			log.Infof("Block [%v @ %v] mismatch, backend says [%v @ %v]",
+				txDetails[0].Block.Hash, height, hash, height)
+			//w.TxStore.RollbackOne(txNs, rj.Height)
+			// TODO, something
+			return nil
+		} else if header, err := chainClient.GetBlockHeader(hash); err != nil {
+			return err
+		} else {
+			filterReq := watch.FilterReq(height)
+			filterReq.Blocks = []wtxmgr.BlockMeta{
+				{
+					Block: wtxmgr.Block{
+						Hash:   header.BlockHash(),
+						Height: height,
+					},
+					Time: header.Timestamp,
+				},
+			}
+			res, err := chainClient.FilterBlocks(filterReq)
+			if res == nil {
+				// valid to have no response and no error
+				return err
+			}
+			var knownTx = make(map[chainhash.Hash]struct{})
+			for _, txd := range txDetails {
+				knownTx[txd.Hash] = struct{}{}
+			}
+			var newTransactions = make([]*wire.MsgTx, 0)
+			for _, tx := range res.RelevantTxns {
+				shouldReload := true
+				for _, txd := range txDetails {
+					txh := tx.TxHash()
+					if txh.IsEqual(&txd.Hash) {
+						// We already know about the tx so we don't bother reloading it
+						// unless we have a reason to
+						shouldReload = false
+						break
+					}
+				}
+				if !shouldReload {
+					// See if this tx gives coins to an address which we don't have a known credit for
+				outer:
+					for _, addr := range filterReq.ImportedAddrs {
+						script := addr.ScriptAddress()
+						for _, out := range tx.TxOut {
+							if bytes.Equal(script, out.PkScript) {
+								shouldReload = true
+								break outer
+							}
+						}
+					}
+				}
+				if !shouldReload {
+					// See if this tx spends coins which weren't spent before
+					ops := make(map[wire.OutPoint]struct{})
+					for _, in := range tx.TxIn {
+						ops[in.PreviousOutPoint] = struct{}{}
+					}
+					for op := range filterReq.WatchedOutPoints {
+						if _, ok := ops[op]; ok {
+							shouldReload = true
+							break
+						}
+					}
+				}
+				if shouldReload {
+					newTransactions = append(newTransactions, tx)
+				}
+			}
+			if len(newTransactions) == 0 {
+				return nil
+			}
+			res.RelevantTxns = newTransactions
+			out = SyncerResp{
+				filter: res,
+				header: header,
+				height: height,
+			}
+			return nil
+		}
+	})
+}
+
+func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
+	blk := blks[0]
+	if !isRescan {
+		st := w.Manager.SyncedTo()
+		if blk.height != st.Height+1 || blk.header.PrevBlock != st.Hash {
+			return er.Errorf("Cannot connect block [%s @ %d] because current state is [%s @ %d] and "+
+				"block header expects [%s]",
+				blk.header.BlockHash().String(), blk.height,
+				st.Hash.String(), st.Height,
+				blk.header.PrevBlock.String())
+		}
+	} else {
+		found := false
+		for _, b := range blks {
+			if b.filter != nil {
+				found = true
+				break
+			}
+		}
+		// Short cirtuit if we're resyncing and there are no filters
+		if !found {
+			return nil
+		}
+	}
+	w.chainLock.Lock()
+	defer w.chainLock.Unlock()
+	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
+		for _, b := range blks {
+			if b.filter == nil {
+			} else if err := w.storeTxns(dbtx, b.filter); err != nil {
+				return err
+			}
+			if isRescan {
+				continue
+			}
+			addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
+			if err := w.Manager.SetSyncedTo(addrmgrNs, &waddrmgr.BlockStamp{
+				Height:    b.height,
+				Hash:      b.header.BlockHash(),
+				Timestamp: b.header.Timestamp,
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+const syncerBatchSz = 8
+
+func (w *Wallet) rescan2(
+	blockMin, blockMax int32,
+	isRescan bool,
+) er.R {
+	chainClient, err := w.requireChainClient()
+	if err != nil {
+		return err
+	}
+	txStore := w.TxStore
+	watch := &w.watch
+	db := w.db
+	responses := make(map[int32]SyncerResp)
+	var respLock sync.Mutex
+	q := workqueue.New(
+		workqueue.DefaultWorkerCount,
+		workqueue.DefaultBacklog,
+		uint64(blockMin),
+		uint64(blockMax),
+		func(blockNm uint64) er.R {
+			res, err := rescanStep(
+				db,
+				int32(blockNm),
+				chainClient,
+				txStore,
+				watch,
+				isRescan,
+			)
+			if err != nil {
+				return err
+			} else {
+				respLock.Lock()
+				defer respLock.Unlock()
+				responses[int32(blockNm)] = res
+			}
+			return nil
+		},
+	)
+	blockNum := blockMin
+	batch := make([]SyncerResp, 0, syncerBatchSz)
+	for {
+		for ; blockNum < blockMax; blockNum++ {
+			if err := q.Get(uint64(blockNum)); err != nil {
+				return err
+			}
+			respLock.Lock()
+			batch = append(batch, responses[int32(blockNum)])
+			delete(responses, int32(blockNum))
+			respLock.Unlock()
+			if len(batch) >= syncerBatchSz {
+				blockNum++
+				break
+			}
+		}
+		if len(batch) == 0 {
+			return nil
+		}
+		if isRescan {
+			for _, blk := range batch {
+				for _, tx := range blk.filter.RelevantTxns {
+					log.Debugf("Reloading transaction [%s]", tx.TxHash().String())
+				}
+			}
+		}
+		if err := w.connectBlocks(batch, isRescan); err != nil {
+			return err
+		}
+		batch = batch[:0]
+	}
+}
+
+func (w *Wallet) rollbackIfNeeded() er.R {
+	for {
+		st := w.Manager.SyncedTo()
+		if nextHash, err := w.chainClient.GetBlockHash(int64(st.Height + 1)); err != nil {
+			return err
+		} else if nextHdr, err := w.chainClient.GetBlockHeader(nextHash); err != nil {
+			return err
+		} else if nextHdr.PrevBlock.IsEqual(&st.Hash) {
+			return nil
+		} else {
+			w.chainLock.Lock()
+			defer w.chainLock.Unlock()
+			if err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
+				return w._rollbackBlock(dbtx, st)
+			}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (w *Wallet) block(bm wtxmgr.Block) er.R {
+	header, err := w.chainClient.GetBlockHeader(&bm.Hash)
+	if err != nil {
+		return err
+	}
+
+	st := w.Manager.SyncedTo()
+	if bm.Height < st.Height+1 {
+		// Old block, not interesting
+		return nil
+	}
+	if bm.Height == st.Height+1 && header.PrevBlock.IsEqual(&st.Hash) {
+		// Easy case, the new block is one more block than the one we have
+		filterReq := w.watch.FilterReq(bm.Height)
+		filterReq.Blocks = []wtxmgr.BlockMeta{
+			{
+				Block: wtxmgr.Block{
+					Hash:   header.BlockHash(),
+					Height: bm.Height,
+				},
+				Time: header.Timestamp,
+			},
+		}
+		if res, err := w.chainClient.FilterBlocks(filterReq); err != nil {
+			return err
+		} else {
+			return w.connectBlocks([]SyncerResp{
+				{
+					filter: res,
+					header: header,
+					height: bm.Height,
+				},
+			}, false)
+		}
+	}
+	if err := w.rollbackIfNeeded(); err != nil {
+		return err
+	}
+	// Remember to re-check the stamp because it might have been rolled back
+	st = w.Manager.SyncedTo()
+	if err := w.rescan2(st.Height+1, bm.Height+1, false); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (w *Wallet) rescan(
-	tx walletdb.ReadWriteTx,
-	deadline time.Time,
 	stats *btcjson.MaintenanceStats,
 ) (bool, er.R) {
 	rj := w.rescanJobs.GetJob()
@@ -2486,178 +2768,29 @@ func (w *Wallet) rescan(
 		return true, nil
 	}
 	st := w.Manager.SyncedTo()
-	txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-	txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-	for ; rj.Height < st.Height; rj.Height++ {
-		if time.Now().After(deadline) {
-			return false, nil
-		}
-		var txDetails []wtxmgr.TxDetails
-		w.TxStore.RangeTransactions(txmgrNs, rj.Height, rj.Height,
-			func(details []wtxmgr.TxDetails) (bool, er.R) {
-				txDetails = details
-				return false, nil
-			})
-		if w.chainClient == nil {
-			// During shutdown
-			return true, nil
-		} else if len(txDetails) == 0 {
-			// fallthrough, try reloading just in case
-		} else if hash2, err := w.chainClient.GetBlockHash(int64(rj.Height)); err != nil {
-			return true, err
-		} else if hash2.IsEqual(&txDetails[0].Block.Hash) {
-			// fallthrough
-		} else {
-			log.Infof("Block [%v @ %v] mismatch, backend says [%v @ %v]",
-				txDetails[0].Block.Hash, rj.Height, hash2, rj.Height)
-			w.TxStore.RollbackOne(txNs, rj.Height)
-		}
-		if res, err := rj.FF.Fetch(rj.Height); err != nil {
-			return false, err
-		} else if res == nil {
-			// nil
-		} else {
-			if rj.Quick {
-				var knownTxids = make(map[chainhash.Hash]struct{})
-				for _, txd := range txDetails {
-					knownTxids[txd.Hash] = struct{}{}
-				}
-				var newTransactions = make([]*wire.MsgTx, 0)
-				for _, tx := range res.RelevantTxns {
-					if _, ok := knownTxids[tx.TxHash()]; !ok {
-						newTransactions = append(newTransactions, tx)
-					}
-				}
-				if len(newTransactions) == 0 {
-					continue
-				}
-				res.RelevantTxns = newTransactions
-			}
-			if err := w.storeTxns(tx, res); err != nil {
-				return false, err
-			}
-		}
-		stats.LastBlockVisited = int(rj.Height)
-		stats.Name = "rescan-" + rj.Name
+	if rj.Height >= st.Height {
+		return true, nil
 	}
-	return true, nil
+	top := rj.Height + 5000
+	if st.Height < top {
+		top = st.Height
+	}
+	if err := w.rescan2(rj.Height, top, true); err != nil {
+		return false, err
+	}
+	rj.Height = top
+	stats.LastBlockVisited = int(rj.Height)
+	stats.Name = "rescan-" + rj.Name
+	return top == st.Height, nil
 }
-
-// func (w *Wallet) cleanUnspents(
-// 	tx walletdb.ReadWriteTx,
-// 	deadline time.Time,
-// 	stats *btcjson.VacuumDbRes,
-// ) er.R {
-// 	key := stats.EndKey
-// 	stats.EndKey = ""
-// 	txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-// 	var badOutputs []wtxmgr.Credit
-// 	i := 0
-// 	if sk, errr := hex.DecodeString(key); errr != nil {
-// 		return er.E(errr)
-// 	} else if chainClient, err := w.requireChainClient(); err != nil {
-// 		return err
-// 	} else if bs, err := chainClient.BlockStamp(); err != nil {
-// 		return err
-// 	} else if err := w.TxStore.ForEachUnspentOutput(txNs, sk, func(k []byte, op *wtxmgr.Credit) er.R {
-// 		if time.Now().After(deadline) {
-// 			stats.EndKey = hex.EncodeToString(k)
-// 			return er.LoopBreak
-// 		}
-// 		i++
-// 		if txrules.IsBurned(op, w.chainParams, bs.Height) {
-// 			log.Debugf("Removing tx [%s] which has burned",
-// 				op.OutPoint.Hash.String())
-// 			badOutputs = append(badOutputs, *op)
-// 			stats.Burned++
-// 			return nil
-// 		}
-// 		txD, err := w.TxStore.TxDetails(txNs, &op.Hash)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if op.Height < 0 {
-// 			if txD == nil {
-// 				log.Errorf("Unmined UTXO %s "+
-// 					"has no accompanying transaction in the db", op.String())
-// 				// TODO(cjd): Need to somehow fix this
-// 				return nil
-// 			}
-// 			if txD.Block.Height != -1 {
-// 				log.Errorf("Unmined UTXO %s "+
-// 					"is mined according to the tx db", op.String())
-// 				// TODO(cjd): Need to somehow fix this
-// 				return nil
-// 			}
-// 			return nil
-// 		}
-
-// 		if txD == nil {
-// 			log.Errorf("Mined UTXO %s "+
-// 				"has no accompanying record in tx db", op.String())
-// 			return nil
-// 		}
-// 		if txD.Block.Height == -1 {
-// 			log.Errorf("Mined UTXO %s "+
-// 				"is unmined according to the tx db", op.String())
-// 			return nil
-// 		}
-
-// 		if _, err := chainClient.GetBlockHeader(&op.Block.Hash); err != nil {
-// 			if !headerfs.ErrHashNotFound.Is(err) {
-// 				// Don't confuse with a real error
-// 				return err
-// 			}
-// 			// The block containing the previous transaction which paid this one
-// 			// has gone missing, if it's a coinbase then we need to kill it because
-// 			// it's never coming back. If it's a regular transaction we're going to
-// 			// revert it and put it back in the mempool.
-// 			log.Debugf("Removing tx [%s] because it references orphan block [%s]",
-// 				op.OutPoint.Hash.String(), op.Block.Hash)
-// 			badOutputs = append(badOutputs, *op)
-// 			stats.Orphaned++
-// 			return nil
-// 		}
-
-// 		return nil
-// 	}); err != nil && !er.IsLoopBreak(err) {
-// 		return err
-// 	} else {
-// 		stats.VisitedUtxos = i
-// 		badHashes := map[chainhash.Hash]struct{}{}
-// 		for _, op := range badOutputs {
-// 			if _, ok := badHashes[op.OutPoint.Hash]; ok {
-// 			} else if err := wtxmgr.RollbackTransaction(txNs, &op.OutPoint.Hash, &op.Block, w.chainParams); err != nil {
-// 				return err
-// 			} else {
-// 				badHashes[op.OutPoint.Hash] = struct{}{}
-// 			}
-// 		}
-// 		return nil
-// 	}
-// }
-
-// func truncateKey(key string) string {
-// 	idx := strings.LastIndex(key, "-")
-// 	if idx >= 0 {
-// 		return key[idx+1:]
-// 	}
-// 	return key
-// }
 
 // zero duration means it will continue vacuuming until it is done, no matter how long.
 func (w *Wallet) Maintenance(maxTime time.Duration) (*btcjson.MaintenanceStats, er.R) {
-	deadline := time.Now().Add(maxTime)
 	stats := btcjson.MaintenanceStats{}
-	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
-		if done, err := w.rescan(tx, deadline, &stats); err != nil {
-			return err
-		} else {
-			stats.Done = done
-		}
-		return nil
-	}); err != nil {
+	if done, err := w.rescan(&stats); err != nil {
 		return &stats, err
+	} else {
+		stats.Done = done
 	}
 	return &stats, nil
 }

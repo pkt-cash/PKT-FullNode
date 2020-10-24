@@ -208,7 +208,7 @@ func (s *NeutrinoClient) FilterBlocks(
 			continue
 		}
 
-		log.Debugf("Fetching block height=%d hash=%v", blk.Height, blk.Hash)
+		log.Tracef("Fetching block height=%d hash=%v", blk.Height, blk.Hash)
 
 		// TODO(conner): can optimize bandwidth by only fetching
 		// stripped blocks
