@@ -159,12 +159,6 @@ func Create(ns walletdb.ReadWriteBucket) er.R {
 func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	block *BlockMeta) er.R {
 
-	// Fetch the mined balance in case we need to update it.
-	minedBalance, err := fetchMinedBalance(ns)
-	if err != nil {
-		return err
-	}
-
 	// Add a debit record for each unspent credit spent by this transaction.
 	// The index is set in each iteration below.
 	spender := indexedIncidence{
@@ -176,7 +170,6 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 
 	spentByAddress := map[string]btcutil.Amount{}
 
-	newMinedBalance := minedBalance
 	for i, input := range rec.MsgTx.TxIn {
 		unspentKey, credKey := existsUnspent(ns, &input.PreviousOutPoint)
 		if credKey == nil {
@@ -223,7 +216,6 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 		spentByAddress[prevAddr] += amt
-		newMinedBalance -= amt
 	}
 
 	for addr, amt := range spentByAddress {
@@ -274,15 +266,9 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 
-		newMinedBalance += amount
 	}
 	if it.err != nil {
 		return it.err
-	}
-
-	// Update the balance if it has changed.
-	if newMinedBalance != minedBalance {
-		return putMinedBalance(ns, newMinedBalance)
 	}
 
 	return nil
@@ -457,15 +443,6 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	}
 	v = valueUnspentCredit(&cred)
 	err := putRawCredit(ns, k, v)
-	if err != nil {
-		return false, err
-	}
-
-	minedBalance, err := fetchMinedBalance(ns)
-	if err != nil {
-		return false, err
-	}
-	err = putMinedBalance(ns, minedBalance+txOutAmt)
 	if err != nil {
 		return false, err
 	}
@@ -696,22 +673,13 @@ func RollbackTransaction(
 	block *Block,
 	params *chaincfg.Params,
 ) er.R {
-	if minedBalance, err := fetchMinedBalance(ns); err != nil {
-		return err
-	} else if coins, err := rollbackTransaction(ns, txHash, block, params); err != nil {
-		return err
-	} else if err := putMinedBalance(ns, minedBalance+coins); err != nil {
+	if _, err := rollbackTransaction(ns, txHash, block, params); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
-	minedBalance, err := fetchMinedBalance(ns)
-	if err != nil {
-		return err
-	}
-
 	it := makeReadBlockIterator(ns, height)
 	if !it.next() {
 		return ErrNoExists.Default()
@@ -726,23 +694,20 @@ func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 	for i := range b.transactions {
 		txHash := &b.transactions[i]
 		log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
-		coins, err := rollbackTransaction(ns, txHash, &b.Block, s.chainParams)
-		if err != nil {
+		if _, err := rollbackTransaction(ns, txHash, &b.Block, s.chainParams); err != nil {
 			return err
 		}
-		minedBalance += coins
 	}
 
 	if it.err != nil {
 		return it.err
 	}
 
-	err = deleteBlockRecord(ns, height)
-	if err != nil {
+	if err := deleteBlockRecord(ns, height); err != nil {
 		return err
 	}
 
-	return putMinedBalance(ns, minedBalance)
+	return nil
 }
 
 // ForEachUnspentOutput runs the visitor over each unspent output (in undefined order)
@@ -870,134 +835,25 @@ func (s *Store) GetUnspentOutputs(ns walletdb.ReadBucket) ([]Credit, er.R) {
 	return unspent, err
 }
 
-// Balance returns the spendable wallet balance (total value of all unspent
-// transaction outputs) given a minimum of minConf confirmations, calculated
-// at a current chain height of curHeight.  Coinbase outputs are only included
-// in the balance if maturity has been reached.
-//
-// Balance may return unexpected results if syncHeight is lower than the block
-// height of the most recent mined transaction in the store.
 func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32) (btcutil.Amount, er.R) {
-	bal, err := fetchMinedBalance(ns)
-	if err != nil {
-		return 0, err
-	}
-
-	// Subtract the balance for each credit that is spent by an unmined
-	// transaction.
-	var op wire.OutPoint
-	var block Block
-	err = ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) er.R {
-		err := readCanonicalOutPoint(k, &op)
-		if err != nil {
-			return err
-		}
-		err = readUnspentBlock(v, &block)
-		if err != nil {
-			return err
-		}
-		if existsRawUnminedInput(ns, k) != nil {
-			_, v := existsCredit(ns, &op.Hash, op.Index, &block)
-			amt, err := fetchRawCreditAmount(v)
-			if err != nil {
-				return err
+	// Assiming the height of the chain is syncHeight
+	// we accept all unspent outputs with at least minConf confirms
+	coinbaseMaturity := int32(s.chainParams.CoinbaseMaturity)
+	bal := btcutil.Amount(0)
+	return bal, s.ForEachUnspentOutput(ns, nil, func(_ []byte, output *Credit) er.R {
+		if output.Height == -1 {
+			// Not yet mined
+			if minConf == 0 {
+				bal += output.Amount
 			}
-			bal -= amt
+			return nil
+		}
+		confs := syncHeight - output.Height + 1
+		if output.FromCoinBase && confs < coinbaseMaturity {
+		} else if confs < minConf {
+		} else {
+			bal += output.Amount
 		}
 		return nil
 	})
-	if err != nil {
-		if Err.Is(err) {
-			return 0, err
-		}
-		str := "failed iterating unspent outputs"
-		return 0, storeError(ErrDatabase, str, err)
-	}
-
-	// Decrement the balance for any unspent credit with less than
-	// minConf confirmations and any (unspent) immature coinbase credit.
-	coinbaseMaturity := int32(s.chainParams.CoinbaseMaturity)
-	stopConf := minConf
-	if coinbaseMaturity > stopConf {
-		stopConf = coinbaseMaturity
-	}
-	lastHeight := syncHeight - stopConf
-	blockIt := makeReadReverseBlockIterator(ns)
-	for blockIt.prev() {
-		block := &blockIt.elem
-
-		if block.Height < lastHeight {
-			break
-		}
-
-		for i := range block.transactions {
-			txHash := &block.transactions[i]
-			rec, err := fetchTxRecord(ns, txHash, &block.Block)
-			if err != nil {
-				return 0, err
-			} else if rec == nil {
-				// Stray block.transactions entry for transaction which
-				// should have been deleted.
-				continue
-			}
-			numOuts := uint32(len(rec.MsgTx.TxOut))
-			for i := uint32(0); i < numOuts; i++ {
-				// Avoid double decrementing the credit amount
-				// if it was already removed for being spent by
-				// an unmined tx.
-				opKey := canonicalOutPoint(txHash, i)
-				if existsRawUnminedInput(ns, opKey) != nil {
-					continue
-				}
-
-				_, v := existsCredit(ns, txHash, i, &block.Block)
-				if v == nil {
-					continue
-				}
-				amt, spent, err := fetchRawCreditAmountSpent(v)
-				if err != nil {
-					return 0, err
-				}
-				if spent {
-					continue
-				}
-				confs := syncHeight - block.Height + 1
-				if confs < minConf || (blockchain.IsCoinBaseTx(&rec.MsgTx) &&
-					confs < coinbaseMaturity) {
-					bal -= amt
-				}
-			}
-		}
-	}
-	if blockIt.err != nil {
-		return 0, blockIt.err
-	}
-
-	// If unmined outputs are included, increment the balance for each
-	// output that is unspent.
-	if minConf == 0 {
-		err = ns.NestedReadBucket(bucketUnminedCredits).ForEach(func(k, v []byte) er.R {
-			if existsRawUnminedInput(ns, k) != nil {
-				// Output is spent by an unmined transaction.
-				// Skip to next unmined credit.
-				return nil
-			}
-
-			amount, err := fetchRawUnminedCreditAmount(v)
-			if err != nil {
-				return err
-			}
-			bal += amount
-			return nil
-		})
-		if err != nil {
-			if Err.Is(err) {
-				return 0, err
-			}
-			str := "failed to iterate over unmined credits bucket"
-			return 0, storeError(ErrDatabase, str, err)
-		}
-	}
-
-	return bal, nil
 }

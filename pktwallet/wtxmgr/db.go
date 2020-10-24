@@ -74,36 +74,9 @@ var (
 
 // Root (namespace) bucket keys
 var (
-	rootCreateDate   = []byte("date")
-	rootVersion      = []byte("vers")
-	rootMinedBalance = []byte("bal")
+	rootCreateDate = []byte("date")
+	rootVersion    = []byte("vers")
 )
-
-// The root bucket's mined balance k/v pair records the total balance for all
-// unspent credits from mined transactions.  This includes immature outputs, and
-// outputs spent by mempool transactions, which must be considered when
-// returning the actual balance for a given number of block confirmations.  The
-// value is the amount serialized as a uint64.
-func fetchMinedBalance(ns walletdb.ReadBucket) (btcutil.Amount, er.R) {
-	v := ns.Get(rootMinedBalance)
-	if len(v) != 8 {
-		str := fmt.Sprintf("balance: short read (expected 8 bytes, "+
-			"read %v)", len(v))
-		return 0, storeError(ErrData, str, nil)
-	}
-	return btcutil.Amount(byteOrder.Uint64(v)), nil
-}
-
-func putMinedBalance(ns walletdb.ReadWriteBucket, amt btcutil.Amount) er.R {
-	v := make([]byte, 8)
-	byteOrder.PutUint64(v, uint64(amt))
-	err := ns.Put(rootMinedBalance, v)
-	if err != nil {
-		str := "failed to put balance"
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
 
 // Several data structures are given canonical serialization formats as either
 // keys or values.  These common formats allow keys and values to be reused
@@ -1296,14 +1269,6 @@ func createStore(ns walletdb.ReadWriteBucket) er.R {
 	err := ns.Put(rootCreateDate, v[:])
 	if err != nil {
 		str := "failed to store database creation time"
-		return storeError(ErrDatabase, str, err)
-	}
-
-	// Write a zero balance.
-	byteOrder.PutUint64(v[:], 0)
-	err = ns.Put(rootMinedBalance, v[:])
-	if err != nil {
-		str := "failed to write zero balance"
 		return storeError(ErrDatabase, str, err)
 	}
 
