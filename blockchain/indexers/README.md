@@ -1,9 +1,7 @@
 indexers
 ========
 
-[![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
-[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://godoc.org/github.com/btcsuite/btcd/blockchain/indexers?status.png)](http://godoc.org/github.com/btcsuite/btcd/blockchain/indexers)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://Copyfree.org)
 
 Package indexers implements optional block chain indexes.
 
@@ -20,13 +18,7 @@ via an RPC interface.
     or debit the address
   - Requires the transaction-by-hash index
 
-## Installation
-
-```bash
-$ go get -u github.com/btcsuite/btcd/blockchain/indexers
-```
-
 ## License
 
-Package indexers is licensed under the [copyfree](http://copyfree.org) ISC
+Package indexers is licensed under the [Copyfree](http://Copyfree.org) ISC
 License.
