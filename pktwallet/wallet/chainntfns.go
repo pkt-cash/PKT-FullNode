@@ -267,7 +267,7 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 	// relevant.  This assumption will not hold true when SPV support is
 	// added, but until then, simply insert the transaction because there
 	// should either be one or more relevant inputs or outputs.
-	err := w.TxStore.InsertTx(txmgrNs, rec, block)
+	err := w.TxStore.InsertTx2(txmgrNs, rec, block)
 	if err != nil {
 		return err
 	}

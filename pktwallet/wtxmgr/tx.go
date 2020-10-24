@@ -227,50 +227,6 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			pktlog.Height(block.Height))
 	}
 
-	// For each output of the record that is marked as a credit, if the
-	// output is marked as a credit by the unconfirmed store, remove the
-	// marker and mark the output as a credit in the db.
-	//
-	// Moved credits are added as unspents, even if there is another
-	// unconfirmed transaction which spends them.
-	cred := credit{
-		outPoint: wire.OutPoint{Hash: rec.Hash},
-		block:    block.Block,
-		spentBy:  indexedIncidence{index: ^uint32(0)},
-	}
-
-	it := makeUnminedCreditIterator(ns, &rec.Hash)
-	for it.next() {
-		// TODO: This should use the raw apis.  The credit value (it.cv)
-		// can be moved from unmined directly to the credits bucket.
-		// The key needs a modification to include the block
-		// height/hash.
-		index, err := fetchRawUnminedCreditIndex(it.ck)
-		if err != nil {
-			return err
-		}
-		amount, change, err := fetchRawUnminedCreditAmountChange(it.cv)
-		if err != nil {
-			return err
-		}
-
-		cred.outPoint.Index = index
-		cred.amount = amount
-		cred.change = change
-
-		if err := putUnspentCredit(ns, &cred); err != nil {
-			return err
-		}
-		err = putUnspent(ns, &cred.outPoint, &block.Block)
-		if err != nil {
-			return err
-		}
-
-	}
-	if it.err != nil {
-		return it.err
-	}
-
 	return nil
 }
 
@@ -291,11 +247,33 @@ func (s *Store) deleteUnminedTx(ns walletdb.ReadWriteBucket, rec *TxRecord) er.R
 // InsertTx records a transaction as belonging to a wallet's transaction
 // history.  If block is nil, the transaction is considered unspent, and the
 // transaction's index must be unset.
-func (s *Store) InsertTx(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta) er.R {
+func (s *Store) InsertTx2(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta) er.R {
 	if block == nil {
 		return s.insertMemPoolTx(ns, rec)
 	}
 	return s.insertMinedTx(ns, rec, block)
+}
+
+// It is bad to scan the unmined credits and automatically add them, we should
+// be adding anything which is relevant to any of our addresses, but this is used
+// in a ton of tests so we'd better support it.
+func (s *Store) InsertTx(ns walletdb.ReadWriteBucket, rec *TxRecord, block *BlockMeta) er.R {
+	if block != nil {
+		it := makeUnminedCreditIterator(ns, &rec.Hash)
+		for it.next() {
+			if index, err := fetchRawUnminedCreditIndex(it.ck); err != nil {
+				return err
+			} else if _, change, err := fetchRawUnminedCreditAmountChange(it.cv); err != nil {
+				return err
+			} else if _, err := s.addCredit(ns, rec, block, index, change); err != nil {
+				return err
+			}
+		}
+	}
+	if err := s.InsertTx2(ns, rec, block); err != nil {
+		return err
+	}
+	return nil
 }
 
 // RemoveUnminedTx attempts to remove an unmined transaction from the
