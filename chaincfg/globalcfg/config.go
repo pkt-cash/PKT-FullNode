@@ -130,8 +130,12 @@ func GetProofOfWorkAlgorithm() ProofOfWork {
 
 // IsPacketCryptAllowedVersion tells whether the specified version of PacketCrypt proof is allowed.
 func IsPacketCryptAllowedVersion(version int, blockHeight int32) bool {
-	checkRegistered()
-	return version <= 1 || blockHeight >= 113949
+	if version > 1 && blockHeight < 113949 {
+		return false
+	} else if version < 2 && blockHeight > 122621 {
+		return false
+	}
+	return true
 }
 
 // HasNetworkSteward returns true for blockchains which require a network steward fee
