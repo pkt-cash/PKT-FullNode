@@ -88,7 +88,7 @@ type config struct {
 	ProxyPass        string                  `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
 
 	// SPV client options
-	UseSPV       bool          `long:"usespv" description:"Enables the experimental use of SPV rather than RPC for chain synchronization, WARNING: does not verify PacketCrypt proofs, unsafe for PKT chain"`
+	UseSPV       bool          `long:"usespv" description:"Use SPV mode (default)"`
 	AddPeers     []string      `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
 	ConnectPeers []string      `long:"connect" description:"Connect only to the specified peers at startup"`
 	MaxPeers     int           `long:"maxpeers" description:"Max number of inbound and outbound peers"`

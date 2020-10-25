@@ -231,9 +231,6 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 				continue
 			}
 			cp := cfg.ConnectPeers
-			if len(cfg.ConnectPeers) == 0 && !cfg.UseSPV {
-				cp = []string{"localhost"}
-			}
 			chainService, err = neutrino.NewChainService(
 				neutrino.Config{
 					DataDir:      netDir,

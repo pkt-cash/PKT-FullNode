@@ -1270,6 +1270,11 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 		return nil, er.Errorf("Couldn't get header for block %s "+
 			"from database", blockHash)
 	}
+	return s.GetBlock0(blockHash, height, options...)
+}
+
+func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
+	options ...QueryOption) (*btcutil.Block, er.R) {
 
 	// Starting with the set of default options, we'll apply any specified
 	// functional options to the query so that we can check what inv type

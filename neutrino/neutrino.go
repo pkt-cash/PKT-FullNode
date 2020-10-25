@@ -711,9 +711,9 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 				// The peer behind this address should support
 				// all of our required services.
-				if addr.Services()&RequiredServices != RequiredServices {
-					continue
-				}
+				// if addr.Services()&RequiredServices != RequiredServices {
+				// 	continue
+				// }
 
 				// Address will not be invalid, local or unroutable
 				// because addrmanager rejects those on addition.
@@ -1008,15 +1008,16 @@ func (s *ChainService) peerHandler() {
 	}
 
 	if !DisableDNSSeed {
+		log.Debugf("Starting DNS seeder")
 		// Add peers discovered through DNS to the address manager.
 		connmgr.SeedFromDNS(&s.chainParams, RequiredServices,
 			s.nameResolver, func(addrs []*wire.NetAddress) {
 				var validAddrs []*wire.NetAddress
 				for _, addr := range addrs {
-					if addr.Services&RequiredServices !=
-						RequiredServices {
-						continue
-					}
+					// if addr.Services&RequiredServices !=
+					// 	RequiredServices {
+					// 	continue
+					// }
 
 					validAddrs = append(validAddrs, addr)
 				}

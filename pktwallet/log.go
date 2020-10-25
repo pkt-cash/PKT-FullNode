@@ -7,13 +7,25 @@ package main
 import (
 	"os"
 
+	"github.com/pkt-cash/pktd/addrmgr"
+	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/blockchain/indexers"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
+	"github.com/pkt-cash/pktd/connmgr"
+	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/mining"
+	"github.com/pkt-cash/pktd/mining/cpuminer"
+	"github.com/pkt-cash/pktd/netsync"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and
@@ -46,6 +58,23 @@ var (
 	grpcLog      = backendLog.Logger("GRPC")
 	legacyRPCLog = backendLog.Logger("RPCS")
 	btcnLog      = backendLog.Logger("BTCN")
+
+	adxrLog = backendLog.Logger("ADXR")
+	amgrLog = backendLog.Logger("AMGR")
+	cmgrLog = backendLog.Logger("CMGR")
+	bcdbLog = backendLog.Logger("BCDB")
+	pktdLog = backendLog.Logger("BTCD")
+	chanLog = backendLog.Logger("CHAN")
+	discLog = backendLog.Logger("DISC")
+	indxLog = backendLog.Logger("INDX")
+	minrLog = backendLog.Logger("MINR")
+	peerLog = backendLog.Logger("PEER")
+	rpcsLog = backendLog.Logger("RPCS")
+	scrpLog = backendLog.Logger("SCRP")
+	srvrLog = backendLog.Logger("SRVR")
+	syncLog = backendLog.Logger("SYNC")
+	txmpLog = backendLog.Logger("TXMP")
+	pcptLog = backendLog.Logger("PCPT")
 )
 
 // Initialize package-global logger variables.
@@ -56,6 +85,19 @@ func init() {
 	rpcclient.UseLogger(chainLog)
 	legacyrpc.UseLogger(legacyRPCLog)
 	neutrino.UseLogger(btcnLog)
+
+	addrmgr.UseLogger(amgrLog)
+	connmgr.UseLogger(cmgrLog)
+	blockchain.UseLogger(chanLog)
+	indexers.UseLogger(indxLog)
+	mining.UseLogger(minrLog)
+	cpuminer.UseLogger(minrLog)
+	peer.UseLogger(peerLog)
+	txscript.UseLogger(scrpLog)
+	netsync.UseLogger(syncLog)
+	mempool.UseLogger(txmpLog)
+	block.UseLogger(pcptLog)
+	proof.UseLogger(pcptLog)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
@@ -67,6 +109,22 @@ var subsystemLoggers = map[string]pktlog.Logger{
 	"GRPC": grpcLog,
 	"RPCS": legacyRPCLog,
 	"BTCN": btcnLog,
+
+	"ADXR": adxrLog,
+	"AMGR": amgrLog,
+	"CMGR": cmgrLog,
+	"BCDB": bcdbLog,
+	"PKTD": pktdLog,
+	"CHAN": chanLog,
+	"DISC": discLog,
+	"INDX": indxLog,
+	"MINR": minrLog,
+	"PEER": peerLog,
+	"SCRP": scrpLog,
+	"SRVR": srvrLog,
+	"SYNC": syncLog,
+	"TXMP": txmpLog,
+	"PCPT": pcptLog,
 }
 
 // setLogLevel sets the logging level for provided subsystem.  Invalid
