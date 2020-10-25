@@ -129,6 +129,12 @@ func walletMain() er.R {
 	// before exiting.  Interrupt handlers run in LIFO order, so the wallet
 	// (which should be closed last) is added first.
 	addInterruptHandler(func() {
+		// When panicing, do not cleanly unload the wallet (by closing
+		// the db).  If a panic occured inside a bolt transaction, the
+		// db mutex is still held and this causes a deadlock.
+		if r := recover(); r != nil {
+			panic(r)
+		}
 		err := loader.UnloadWallet()
 		if err != nil && !wallet.ErrNotLoaded.Is(err) {
 			log.Errorf("Failed to close wallet: %v", err)
