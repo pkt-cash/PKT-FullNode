@@ -1,5 +1,5 @@
 language: go
-go: 1.14.1
+go: 1.15.3
 notifications:
   irc:
     channels:
@@ -11,7 +11,7 @@ env:
 jobs:
   include:
   - os: linux
-    dist: xenial
+    dist: bionic
     addons:
       apt:
         packages:
