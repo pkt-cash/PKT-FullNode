@@ -553,14 +553,20 @@ type ChainService struct {
 	broadcaster          *pushtx.Broadcaster
 	banStore             banman.Store
 
-	// TODO: Add a map for more granular exclusion?
-	mtxCFilter sync.Mutex
+	mtxCFilter     sync.Mutex
+	pendingFilters map[*pendingFiltersReq]struct{}
 
 	userAgentName    string
 	userAgentVersion string
 
 	nameResolver func(string) ([]net.IP, er.R)
 	dialer       func(net.Addr) (net.Conn, er.R)
+}
+
+type pendingFiltersReq struct {
+	bottomHeight int32
+	topHeight    int32
+	ch           chan struct{}
 }
 
 // NewChainService returns a new chain service configured to connect to the
@@ -617,6 +623,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 		userAgentVersion:  UserAgentVersion,
 		nameResolver:      nameResolver,
 		dialer:            dialer,
+		pendingFilters:    make(map[*pendingFiltersReq]struct{}),
 	}
 
 	// We set the queryPeers method to point to queryChainServicePeers,
