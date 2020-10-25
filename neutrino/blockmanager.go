@@ -902,7 +902,7 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 		return
 	}
 
-	log.Infof("Attempting to query for %v cfheader batches", batchesCount)
+	log.Debugf("Attempting to query for %v cfheader batches", batchesCount)
 
 	// With the set of messages constructed, we'll now request the batch
 	// all at once. This message will distributed the header requests
@@ -2314,9 +2314,6 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 	msg := hmsg.headers
 	numHeaders := len(msg.Headers)
 
-	log.Debugf("Got headers message from [%s] with [%d] headers",
-		hmsg.peer.Addr(), numHeaders)
-
 	// Nothing to do for an empty headers message.
 	if numHeaders == 0 {
 		return
@@ -2333,6 +2330,9 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		hmsg.peer.Disconnect()
 		return
 	}
+
+	log.Infof("Got headers message from [%s] with [%d] headers, height [%d]",
+		hmsg.peer.Addr(), numHeaders, backHeight+1)
 
 	needProofs := make([]hashHeight, 0, 1)
 
@@ -2368,7 +2368,8 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		for _, hash := range needProofs {
 			sem <- 1
 			go func(hh hashHeight) {
-				h, err := s.GetBlock0(hh.hash, uint32(hh.height))
+				h, err := s.GetBlock0(hh.hash, uint32(hh.height),
+					Timeout(time.Second*60), Encoding(wire.BaseEncoding))
 				if err != nil {
 					log.Infof("Unable to get block [%s @ %d]: %s",
 						hh.hash.String(), hh.height, err.String())
