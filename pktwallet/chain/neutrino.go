@@ -210,12 +210,11 @@ func (s *NeutrinoClient) FilterBlocks(
 
 		log.Tracef("Fetching block height=%d hash=%v", blk.Height, blk.Hash)
 
-		// TODO(conner): can optimize bandwidth by only fetching
-		// stripped blocks
-		rawBlock, err := s.GetBlock(&blk.Hash)
+		block, err := s.CS.GetBlock(blk.Hash, neutrino.Encoding(wire.BaseEncoding))
 		if err != nil {
 			return nil, err
 		}
+		rawBlock := block.MsgBlock()
 
 		if !blockFilterer.FilterBlock(rawBlock) {
 			continue
@@ -302,7 +301,7 @@ func (s *NeutrinoClient) pollCFilter(hash *chainhash.Hash) (*gcs.Filter, er.R) {
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		filter, err = s.CS.GetCFilter(*hash, wire.GCSFilterRegular)
+		filter, err = s.CS.GetCFilter(*hash, wire.GCSFilterRegular, neutrino.OptimisticBatch())
 		if err != nil {
 			count++
 			continue
