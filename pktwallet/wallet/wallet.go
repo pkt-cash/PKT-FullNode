@@ -51,11 +51,6 @@ const (
 	// NOTE: at time of writing, public encryption only applies to public
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
-
-	// recoveryBatchSize is the default number of blocks that will be
-	// scanned successively by the recovery manager, in the event that the
-	// wallet is started in recovery mode.
-	recoveryBatchSize = 50
 )
 
 var (
@@ -64,8 +59,6 @@ var (
 	// down.
 	ErrWalletShuttingDown = Err.CodeWithDetail("ErrWalletShuttingDown",
 		"wallet shutting down")
-
-	ErrInProgress = Err.CodeWithDetail("ErrInProgress", "Already in progress")
 
 	// Namespace bucket keys.
 	waddrmgrNamespaceKey = []byte("waddrmgr")
@@ -100,7 +93,7 @@ type Wallet struct {
 	chainClientSynced  bool
 	chainClientSyncMtx sync.Mutex
 
-	lockedOutpoints map[wire.OutPoint]string
+	lockedOutpoints    map[wire.OutPoint]string
 	lockedOutpointsMtx sync.Mutex
 
 	recoveryWindow uint32
