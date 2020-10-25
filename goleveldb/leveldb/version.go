@@ -59,7 +59,7 @@ func (v *version) incref() {
 		case v.s.refCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
 			// We can use v.levels directly here since it is immutable.
 		case <-v.s.closeC:
-			v.s.log("reference loop already exist")
+			v.s.log("reference loop already exits")
 		}
 	}
 }
@@ -75,7 +75,7 @@ func (v *version) releaseNB() {
 	case v.s.relCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
 		// We can use v.levels directly here since it is immutable.
 	case <-v.s.closeC:
-		v.s.log("reference loop already exist")
+		v.s.log("reference loop already exits")
 	}
 
 	v.released = true
@@ -87,7 +87,7 @@ func (v *version) release() {
 	v.s.vmu.Unlock()
 }
 
-func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int, t *tFile) bool, lf func(level int) bool) {
+func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int, t *tFile) bool, lf func() bool) {
 	ukey := ikey.ukey()
 
 	// Aux level.
@@ -100,7 +100,7 @@ func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int
 			}
 		}
 
-		if lf != nil && !lf(-1) {
+		if lf != nil && !lf() {
 			return
 		}
 	}
@@ -121,6 +121,10 @@ func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int
 					}
 				}
 			}
+
+			if lf != nil && !lf() {
+				return
+			}
 		} else {
 			if i := tables.searchMax(v.s.icmp, ikey); i < len(tables) {
 				t := tables[i]
@@ -130,10 +134,6 @@ func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int
 					}
 				}
 			}
-		}
-
-		if lf != nil && !lf(level) {
-			return
 		}
 	}
 }
@@ -217,7 +217,7 @@ func (v *version) get(aux tFiles, ikey internalKey, ro *opt.ReadOptions, noValue
 		}
 
 		return true
-	}, func(level int) bool {
+	}, func() bool {
 		if zfound {
 			switch zkt {
 			case keyTypeVal:
@@ -395,8 +395,6 @@ func (v *version) computeCompaction() {
 
 	v.cLevel = bestLevel
 	v.cScore = bestScore
-
-	v.s.logf("version@stat F·%v S·%s%v Sc·%v", statFiles, shortenb(int(statTotSize)), statSizes, statScore)
 }
 
 func (v *version) needCompaction() bool {

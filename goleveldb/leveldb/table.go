@@ -305,7 +305,12 @@ func (tf tFiles) newIndexIterator(tops *tOps, icmp *iComparer, slice *util.Range
 		} else {
 			limit = tf.Len()
 		}
-		tf = tf[start:limit]
+
+		if start > limit {
+			tf = tf[limit:limit]
+		} else {
+			tf = tf[start:limit]
+		}
 	}
 	return iterator.NewArrayIndexer(&tFilesArrayIndexer{
 		tFiles: tf,
@@ -363,6 +368,7 @@ type tOps struct {
 	cache        *cache.Cache
 	bcache       *cache.Cache
 	bpool        *util.BufferPool
+	sbpool       *simpleBufferPool
 }
 
 // Creates an empty table and returns table writer.
@@ -372,6 +378,7 @@ func (t *tOps) create() (*tWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	fw = newAsyncWriter(fw, t.s.o.GetBlockSize(), 16, t.sbpool)
 	return &tWriter{
 		t:  t,
 		fd: fd,
@@ -443,30 +450,36 @@ func (t *tOps) open(f *tFile) (ch *cache.Handle, err error) {
 // given key.
 func (t *tOps) find(f *tFile, key []byte, ro *opt.ReadOptions) (rkey, rvalue []byte, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return nil, nil, err
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).Find(key, true, ro)
 }
 
 // Finds key that is greater than or equal to the given key.
 func (t *tOps) findKey(f *tFile, key []byte, ro *opt.ReadOptions) (rkey []byte, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).FindKey(key, true, ro)
 }
 
 // Returns approximate offset of the given key.
 func (t *tOps) offsetOf(f *tFile, key []byte) (offset int64, err error) {
 	ch, err := t.open(f)
+	if ch != nil {
+		defer ch.Release()
+	}
 	if err != nil {
 		return
 	}
-	defer ch.Release()
 	return ch.Value().(*table.Reader).OffsetOf(key)
 }
 
@@ -501,7 +514,6 @@ func (t *tOps) remove(fd storage.FileDesc) {
 // Closes the table ops instance. It will close all tables,
 // regadless still used or not.
 func (t *tOps) close() {
-	t.bpool.Close()
 	t.cache.Close()
 	if t.bcache != nil {
 		t.bcache.CloseWeak()
@@ -514,6 +526,7 @@ func newTableOps(s *session) *tOps {
 		cacher cache.Cacher
 		bcache *cache.Cache
 		bpool  *util.BufferPool
+		sbpool *simpleBufferPool
 	)
 	if s.o.GetOpenFilesCacheCapacity() > 0 {
 		cacher = s.o.GetOpenFilesCacher().New(s.o.GetOpenFilesCacheCapacity())
@@ -527,6 +540,7 @@ func newTableOps(s *session) *tOps {
 	}
 	if !s.o.GetDisableBufferPool() {
 		bpool = util.NewBufferPool(s.o.GetBlockSize() + 5)
+		sbpool = &simpleBufferPool{}
 	}
 	return &tOps{
 		s:            s,
@@ -535,6 +549,7 @@ func newTableOps(s *session) *tOps {
 		cache:        cache.NewCache(cacher),
 		bcache:       bcache,
 		bpool:        bpool,
+		sbpool:       sbpool,
 	}
 }
 
