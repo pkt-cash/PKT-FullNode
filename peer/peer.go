@@ -570,8 +570,12 @@ func (p *Peer) String() string {
 func (p *Peer) UpdateLastBlockHeight(newHeight int32) {
 	p.statsMtx.Lock()
 	if newHeight <= p.lastBlock {
-        p.statsMtx.Unlock()
-        return
+		// This function gets called during sync process with lower numbers
+		// than what the peer initially reported as we sync up, so we should
+		// not accept the number being lowered
+		// See: https://github.com/decred/dcrd/commit/0ab86a42f3a644e4b119543510f0c22ee6081bad
+		p.statsMtx.Unlock()
+		return
 	}
 	log.Tracef("Updating last block height of peer %v from %v to %v",
 		p.addr, p.lastBlock, newHeight)
