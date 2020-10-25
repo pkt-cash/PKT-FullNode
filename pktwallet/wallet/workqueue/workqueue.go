@@ -20,58 +20,37 @@ type WorkQueue struct {
 	nextNum     uint64
 	maxNum      uint64
 	resultCache map[uint64]er.R
+	resultChan  chan struct{}
 
-	threads    []threadCtx
-	callerLock sync.Mutex
+	threads []threadCtx
 }
 
-type doNext uint8
-
-const nextCont doNext = 0
-const nextSleep doNext = 1
-const nextQuit doNext = 2
-
-const maxEntries = 20
-
-type workTask struct {
-	dn      doNext
-	nextNum uint64
-}
-
-func work(tctx threadCtx, t workTask) {
-	err := tctx.job(t.nextNum)
+func work(tctx threadCtx, nextNum uint64) {
+	err := tctx.job(nextNum)
 	tctx.ff.lock.Lock()
 	defer tctx.ff.lock.Unlock()
-	tctx.ff.resultCache[t.nextNum] = err
+	tctx.ff.resultCache[nextNum] = err
 }
 
-func task(tctx threadCtx) workTask {
+func task(tctx threadCtx) (bool, uint64) {
+	tctx.ff.resultChan <- struct{}{}
 	tctx.ff.lock.Lock()
 	defer tctx.ff.lock.Unlock()
-	if len(tctx.ff.resultCache) >= maxEntries {
-		return workTask{dn: nextSleep}
-	}
 	num := tctx.ff.nextNum
 	if num >= tctx.ff.maxNum {
-		return workTask{dn: nextQuit}
+		return true, num
 	}
 	tctx.ff.nextNum++
-	return workTask{
-		dn:      nextCont,
-		nextNum: num,
-	}
+	return false, num
 }
 
 func threadLoop(tctx threadCtx) {
 	for {
-		t := task(tctx)
-		if t.dn == nextSleep {
-			time.Sleep(time.Millisecond * 500)
-			continue
-		} else if t.dn == nextQuit {
+		if done, t := task(tctx); done {
 			return
+		} else {
+			work(tctx, t)
 		}
-		work(tctx, t)
 	}
 }
 
@@ -84,6 +63,7 @@ func (ff *WorkQueue) Get(
 		ff.lock.Lock()
 		if r, ok := ff.resultCache[num]; ok {
 			delete(ff.resultCache, num)
+			<-ff.resultChan
 			res = r
 			found = true
 		}
@@ -103,6 +83,7 @@ func New(workerCount,
 ) *WorkQueue {
 	out := WorkQueue{
 		resultCache: make(map[uint64]er.R),
+		resultChan:  make(chan struct{}, maxResults),
 		threads:     make([]threadCtx, workerCount),
 		nextNum:     rangeMin,
 		maxNum:      rangeMax,

@@ -69,11 +69,13 @@ var helpDescsEnUS = map[string]string{
 
 	// ResyncCmd help
 	"resync--synopsis":  "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
-	"resync-addresses":  "If specified, the wallet will ONLY scan the chain for these addresses, not others",
-	"resync-fromheight": "Start re-syncing to the chain from specified height, default: 0",
-	"resync-force":      "Certain combinations of arguments can be dangerous, override safety checks",
-	"resync-dropdb":     "Clean most of the data out of the wallet transaction store before resyncing",
-	"resync-methodical": "Re-insert all transactions, even if they are already known, helps fix database corruption",
+	"resync-addresses":  "If specified, the wallet will ONLY scan the chain for these addresses, not others. If dropdb is specified then it will scan all addresses including these",
+	"resync-fromheight": "Start re-syncing to the chain from specified height, default or -1 will use the height of the chain when the wallet was created",
+	"resync-toheight":   "Stop resyncing when this height is reached, default or -1 will use the tip of the chain",
+	"resync-dropdb":     "Clean most of the data out of the wallet transaction store, this is not a real resync, it just drops the wallet and then lets it begin working again",
+
+	"stopresync--synopsis": "Stop a re-synchronization job before it's completion",
+	"stopresync--result0":  "The name of the sync job which was stopped",
 
 	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
 	"vacuum-maxworkms": "The maximum number of database rows to visit, useful for performing background vacuum operations in pages",

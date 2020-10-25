@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 
@@ -56,45 +55,8 @@ func goMaintenance(cfg *config, w *wallet.Wallet) {
 		time.Sleep(time.Duration(1) * time.Second)
 	}
 	for {
-		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.MaintenanceInProgress = true
-			ws.MaintenanceCycles = 0
-			ws.MaintenanceLastBlockVisited = 0
-			ws.MaintenanceName = ""
-		})
-		for {
-			res, err := w.Maintenance(time.Duration(cfg.AutoVacuumMs) * time.Millisecond)
-			if w.ShuttingDown() {
-				return
-			}
-			if err != nil {
-				log.Warnf("Error while running maintanence job [%s]", err.String())
-				break
-			}
-			w.UpdateStats(func(ws *btcjson.WalletStats) {
-				ws.MaintenanceCycles++
-				ws.MaintenanceLastBlockVisited = res.LastBlockVisited
-				ws.MaintenanceName = res.Name
-			})
-			if res.Done {
-				// completed a vacuum cycle
-				break
-			}
-			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
-		}
-		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.MaintenanceInProgress = false
-			ws.TimeOfLastMaintenance = time.Now()
-		})
-		startTime := time.Now()
-		for {
-			if w.NeedMaintenance() {
-				break
-			} else if time.Since(startTime) > time.Duration(cfg.AutoVacuumSleepSec)*time.Second {
-				break
-			}
-			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
-		}
+		w.Maintenance()
+		time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
 	}
 }
 

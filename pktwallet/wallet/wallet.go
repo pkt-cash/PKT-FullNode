@@ -29,7 +29,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/genesis"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/rescanjob"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
@@ -128,9 +127,18 @@ type Wallet struct {
 	wsLock sync.RWMutex
 	ws     btcjson.WalletStats
 
-	watch      watcher.Watcher
-	rescanJobs rescanjob.RescanJobs
-	chainLock  sync.Mutex
+	watch     watcher.Watcher
+	chainLock sync.Mutex
+
+	rescanJLock sync.Mutex
+	rescanJ     *rescanJob
+}
+
+type rescanJob struct {
+	watch      *watcher.Watcher
+	height     int32
+	stopHeight int32
+	name       string
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -1729,6 +1737,16 @@ func (w *Wallet) DumpWIFPrivateKey(addr btcutil.Address) (string, er.R) {
 func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 	bs *waddrmgr.BlockStamp, rescan bool) (string, er.R) {
 
+	if rescan {
+		w.rescanJLock.Lock()
+		defer w.rescanJLock.Unlock()
+		if w.rescanJ != nil {
+			return "", er.Errorf(
+				"You requested a rescan but there is already a rescan job"+
+					" ([%v]) running, use `stoprescan` to stop it", w.rescanJ.name)
+		}
+	}
+
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return "", err
@@ -1804,12 +1822,12 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 		name := fmt.Sprintf("import-%s-rescan", addr.EncodeAddress())
 		watch := watcher.New()
 		watch.WatchAddr(addr)
-		w.rescanJobs.EnqueueJob(&rescanjob.RescanJob{
-			Name:   name,
-			Quick:  false,
-			Height: bs.Height,
-			Watch:  &watch,
-		})
+		w.rescanJ = &rescanJob{
+			name:       name,
+			height:     bs.Height,
+			stopHeight: -1,
+			watch:      &watch,
+		}
 	} else {
 		w.watch.WatchAddr(addr)
 	}
@@ -2404,18 +2422,55 @@ func Create(db walletdb.DB, pubPass, privPass []byte, seedInput []byte,
 	})
 }
 
-// ResyncChain re-synchronizes the wallet from the very first block
-func (w *Wallet) ResyncChain(fromHeight int32, force, slow bool, addresses []string, dropDb bool) er.R {
-	gj := w.rescanJobs.GetJob()
-	if !force && gj != nil {
-		return er.Errorf(
-			"There is already a rescan job ([%v]) running, use `force` to override",
-			gj.Name)
+func (w *Wallet) StopResync() (string, er.R) {
+	w.rescanJLock.Lock()
+	defer w.rescanJLock.Unlock()
+	gj := w.rescanJ
+	if gj == nil {
+		return "", er.Errorf("No stoppable resync currently in progress")
 	}
+	w.rescanJ = nil
+	return gj.name, nil
+}
+
+// ResyncChain re-synchronizes the wallet from the very first block
+func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dropDb bool) er.R {
+	w.rescanJLock.Lock()
+	defer w.rescanJLock.Unlock()
+	gj := w.rescanJ
+	if gj != nil {
+		return er.Errorf(
+			"There is already a rescan job ([%v]) running, use `stoprescan` to stop it",
+			gj.name)
+	}
+
+	// fromHeight < 0 -> use the wallet birthday
+	if fromHeight < 0 {
+		if err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+			addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+			if bs, _, err := w.Manager.BirthdayBlock(addrmgrNs); err != nil {
+				return err
+			} else {
+				fromHeight = bs.Height
+				log.Infof("resync: fromHeight negative/unspecified so using wallet birthday [%d]",
+					fromHeight)
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	if dropDb && toHeight > -1 {
+		return er.Errorf("You cannot limit the sync-to height of a dropdb resync")
+	}
+
 	watch := &w.watch
 	if addresses != nil {
-		ww := watcher.New()
-		watch = &ww
+		if !dropDb {
+			ww := watcher.New()
+			watch = &ww
+		}
 		for _, addrStr := range addresses {
 			addr, err := btcutil.DecodeAddress(addrStr, w.chainParams)
 			if err != nil {
@@ -2423,29 +2478,31 @@ func (w *Wallet) ResyncChain(fromHeight int32, force, slow bool, addresses []str
 			}
 			watch.WatchAddr(addr)
 		}
-		if dropDb && !force {
-			return er.New(
-				"It's rare to want to drop the wallet db and then resync only one address," +
-					" use `force` if you're sure.")
-		}
 	}
 
 	if !dropDb {
+		w.rescanJ = &rescanJob{
+			name: fmt.Sprintf("resync-%d-to-%d-at-%d",
+				fromHeight, toHeight, time.Now().Unix()),
+			height:     fromHeight,
+			stopHeight: toHeight,
+			watch:      watch,
+		}
+		return nil
+	}
+
+	if bs, err := getBlockStamp(w.chainClient, fromHeight); err != nil {
+		return err
 	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
 			return err
 		}
+		w.Manager.SetSyncedTo(tx.ReadWriteBucket(waddrmgrNamespaceKey), bs)
 		return nil
 	}); err != nil {
 		return err
 	}
-	w.rescanJobs.EnqueueJob(&rescanjob.RescanJob{
-		Name:   fmt.Sprintf("rpc-resync-%v", time.Now().Unix()),
-		Height: fromHeight,
-		Watch:  watch,
-		Quick:  !slow,
-	})
 	return nil
 }
 
@@ -2476,7 +2533,7 @@ func rescanStep(
 	isRescan bool,
 ) (SyncerResp, er.R) {
 	var out SyncerResp
-	if isRescan && height%1000 == 0 {
+	if isRescan && height%100 == 0 {
 		log.Debugf("Rescan cycle [%v]", height)
 	}
 	return out, walletdb.View(db, func(tx walletdb.ReadTx) er.R {
@@ -2638,7 +2695,7 @@ func (w *Wallet) rescan2(
 	var respLock sync.Mutex
 	q := workqueue.New(
 		workqueue.DefaultWorkerCount,
-		workqueue.DefaultBacklog,
+		workqueue.DefaultBacklog*5,
 		uint64(blockMin),
 		uint64(blockMax),
 		func(blockNm uint64) er.R {
@@ -2681,6 +2738,9 @@ func (w *Wallet) rescan2(
 		}
 		if isRescan {
 			for _, blk := range batch {
+				if blk.filter == nil {
+					continue
+				}
 				for _, tx := range blk.filter.RelevantTxns {
 					log.Debugf("Reloading transaction [%s]", tx.TxHash().String())
 				}
@@ -2760,43 +2820,46 @@ func (w *Wallet) block(bm wtxmgr.Block) er.R {
 	return nil
 }
 
-func (w *Wallet) rescan(
-	stats *btcjson.MaintenanceStats,
-) (bool, er.R) {
-	rj := w.rescanJobs.GetJob()
+func (w *Wallet) Maintenance() {
+	w.rescanJLock.Lock()
+	defer w.rescanJLock.Unlock()
+	rj := w.rescanJ
+	w.rescanJ = nil
 	if rj == nil {
-		return true, nil
+		return
 	}
-	st := w.Manager.SyncedTo()
-	if rj.Height >= st.Height {
-		return true, nil
+	sta := w.Manager.SyncedTo()
+	limit := sta.Height
+	if rj.stopHeight > -1 {
+		limit = rj.stopHeight
 	}
-	top := rj.Height + 5000
-	if st.Height < top {
-		top = st.Height
+	if rj.height >= limit {
+		w.UpdateStats(func(ws *btcjson.WalletStats) {
+			ws.MaintenanceInProgress = false
+			ws.MaintenanceName = rj.name
+		})
+		return
 	}
-	if err := w.rescan2(rj.Height, top, true); err != nil {
-		return false, err
+	top := rj.height + 5000
+	if limit < top {
+		top = limit
 	}
-	rj.Height = top
-	stats.LastBlockVisited = int(rj.Height)
-	stats.Name = "rescan-" + rj.Name
-	return top == st.Height, nil
-}
-
-// zero duration means it will continue vacuuming until it is done, no matter how long.
-func (w *Wallet) Maintenance(maxTime time.Duration) (*btcjson.MaintenanceStats, er.R) {
-	stats := btcjson.MaintenanceStats{}
-	if done, err := w.rescan(&stats); err != nil {
-		return &stats, err
-	} else {
-		stats.Done = done
+	if err := w.rescan2(rj.height, top, true); err != nil {
+		log.Warnf("Error while running maintanence job [%s]", err.String())
+		return
 	}
-	return &stats, nil
-}
-
-func (w *Wallet) NeedMaintenance() bool {
-	return w.rescanJobs.GetJob() != nil
+	rj.height = top
+	w.rescanJ = rj
+	w.UpdateStats(func(ws *btcjson.WalletStats) {
+		if !ws.MaintenanceInProgress {
+			ws.MaintenanceInProgress = true
+			ws.TimeOfLastMaintenance = time.Now()
+			ws.MaintenanceCycles = 0
+		}
+		ws.MaintenanceCycles++
+		ws.MaintenanceLastBlockVisited = int(top)
+		ws.MaintenanceName = rj.name
+	})
 }
 
 // Open loads an already-created wallet from the passed database and namespaces.
@@ -2863,7 +2926,6 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		chainParams:        params,
 		quit:               make(chan struct{}),
 		watch:              watcher.New(),
-		rescanJobs:         rescanjob.New(),
 	}
 
 	w.NtfnServer = newNotificationServer(w)

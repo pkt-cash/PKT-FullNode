@@ -119,6 +119,7 @@ var rpcHandlers = map[string]struct {
 	"addp2shscript":         {handler: addP2shScript},
 	"createtransaction":     {handler: createTransaction},
 	"resync":                {handler: resync},
+	"stopresync":            {handler: stopResync},
 	"getaddressbalances":    {handler: getAddressBalances},
 	"getwalletseed":         {handler: getWalletSeed},
 	"getsecret":             {handler: getSecret},
@@ -1375,22 +1376,25 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return hex.EncodeToString(b.Bytes()), nil
 }
 
+func stopResync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	return w.StopResync()
+}
+
 func resync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.ResyncCmd)
-	fh := int32(0)
+	fh := int32(-1)
+	th := int32(-1)
 	if cmd.FromHeight != nil {
 		fh = *cmd.FromHeight
+	}
+	if cmd.ToHeight != nil {
+		th = *cmd.ToHeight
 	}
 	var a []string
 	if cmd.Addresses != nil {
 		a = *cmd.Addresses
 	}
-	return nil, w.ResyncChain(
-		fh,
-		cmd.Force != nil && *cmd.Force,
-		cmd.Methodical != nil && *cmd.Methodical,
-		a,
-		cmd.DropDb != nil && *cmd.DropDb)
+	return nil, w.ResyncChain(fh, th, a, cmd.DropDb != nil && *cmd.DropDb)
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction
