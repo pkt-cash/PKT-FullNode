@@ -417,7 +417,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 	}
 
 	// During the time we wait for retry there is a chance that
-	// this connection was already cancelled
+	// this connection was already canceled
 	if c.State() == ConnCanceled {
 		log.Debugf("Ignoring connect for canceled connreq=%v", c)
 		return

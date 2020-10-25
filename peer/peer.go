@@ -868,7 +868,7 @@ func (p *Peer) WantsHeaders() bool {
 	return sendHeadersPreferred
 }
 
-// IsWitnessEnabled returns true if the peer has signalled that it supports
+// IsWitnessEnabled returns true if the peer has signaled that it supports
 // segregated witness.
 //
 // This function is safe for concurrent access.
@@ -1305,7 +1305,7 @@ out:
 				}
 
 			case sccHandlerStart:
-				// Warn on unbalanced callback signalling.
+				// Warn on unbalanced callback signaling.
 				if handlerActive {
 					log.Warn("Received handler start " +
 						"control command while a " +
@@ -1317,7 +1317,7 @@ out:
 				handlersStartTime = time.Now()
 
 			case sccHandlerDone:
-				// Warn on unbalanced callback signalling.
+				// Warn on unbalanced callback signlling.
 				if !handlerActive {
 					log.Warn("Received handler done " +
 						"control command when a " +

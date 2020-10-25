@@ -1037,7 +1037,7 @@ func (s *ChainService) peerHandler() {
 				// here. This is rather strange since the
 				// values looked up by the DNS seed lookups
 				// will vary quite a lot.  to replicate this
-				// behaviour we put all addresses as having
+				// behavior we put all addresses as having
 				// come from the first one.
 				s.addrManager.AddAddresses(
 					validAddrs, validAddrs[0],
@@ -1205,7 +1205,7 @@ func (s *ChainService) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	return true
 }
 
-// handleDonePeerMsg deals with peers that have signalled they are done.  It is
+// handleDonePeerMsg deals with peers that have signaled they are done.  It is
 // invoked from the peerHandler goroutine.
 func (s *ChainService) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 	var list map[int32]*ServerPeer

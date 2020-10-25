@@ -72,7 +72,7 @@ func (r *GetUtxoRequest) Result(cancel <-chan struct{}) (*SpendReport, er.R) {
 		return r.result.report, r.result.err
 
 	case <-cancel:
-		return nil, ErrGetUtxoCancelled.Default()
+		return nil, ErrGetUtxoCanceled.Default()
 
 	case <-r.quit:
 		return nil, ErrShuttingDown.Default()

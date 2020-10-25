@@ -132,7 +132,7 @@ func TestManagerCancelSubscription(t *testing.T) {
 	defer subMgr.Stop()
 
 	// We'll create two client subscriptions to ensure subscription
-	// cancellation works as intended. We'll be canceling the second
+	// cancelation works as intended. We'll be canceling the second
 	// subscription only.
 	sub1, err := subMgr.NewSubscription(0)
 	if err != nil {

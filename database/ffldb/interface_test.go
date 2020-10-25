@@ -2201,7 +2201,7 @@ func testConcurrecy(tc *testContext) bool {
 func testConcurrentClose(tc *testContext) bool {
 	// Start up a few readers and wait for them to acquire views.  Each
 	// reader waits for a signal to complete to ensure the transactions stay
-	// open until they are explicitly signalled to be closed.
+	// open until they are explicitly signaled to be closed.
 	var activeReaders int32
 	numReaders := 3
 	started := make(chan struct{})

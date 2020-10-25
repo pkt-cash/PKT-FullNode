@@ -220,7 +220,7 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // and nrequired are the result of extracting the addresses from pkscript.
 // The return value is the best effort merging of the two scripts. Calling this
 // function with addresses, class and nrequired that do not match pkScript is
-// an error and results in undefined behaviour.
+// an error and results in undefined behavior.
 func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, class ScriptClass, addresses []btcutil.Address,
 	nRequired int, sigScript, prevScript []byte) []byte {
@@ -273,7 +273,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	// has either zero signature, can't be spent, or has a single signature
 	// which is either present or not. The other two cases are handled
 	// above. In the conflict case here we just assume the longest is
-	// correct (this matches behaviour of the reference implementation).
+	// correct (this matches behavior of the reference implementation).
 	default:
 		if len(sigScript) > len(prevScript) {
 			return sigScript
@@ -287,7 +287,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // and nRequired should be the results from extracting the addresses from
 // pkScript. Since this function is internal only we assume that the arguments
 // have come from other functions internally and thus are all consistent with
-// each other, behaviour is undefined if this contract is broken.
+// each other, behavior is undefined if this contract is broken.
 func mergeMultiSig(tx *wire.MsgTx, idx int, addresses []btcutil.Address,
 	nRequired int, pkScript, sigScript, prevScript []byte) []byte {
 
