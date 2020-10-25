@@ -5,7 +5,7 @@
 package btcjson_test
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"math"
 	"reflect"
 	"testing"
@@ -454,7 +454,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblockcount",
-				Params:  []json.RawMessage{[]byte(`"bogusparam"`)},
+				Params:  []jsoniter.RawMessage{[]byte(`"bogusparam"`)},
 				ID:      nil,
 			},
 			err: btcjson.ErrNumParams.Default(),
@@ -464,7 +464,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblock",
-				Params:  []json.RawMessage{[]byte("1")},
+				Params:  []jsoniter.RawMessage{[]byte("1")},
 				ID:      nil,
 			},
 			err: btcjson.ErrInvalidType.Default(),
@@ -474,7 +474,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblock",
-				Params:  []json.RawMessage{[]byte(`"1`)},
+				Params:  []jsoniter.RawMessage{[]byte(`"1`)},
 				ID:      nil,
 			},
 			err: btcjson.ErrInvalidType.Default(),

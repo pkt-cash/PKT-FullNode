@@ -7,7 +7,7 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -31,7 +31,7 @@ func (r FutureGetRawTransactionResult) Receive() (*btcutil.Tx, er.R) {
 
 	// Unmarshal result as a string.
 	var txHex string
-	err = er.E(json.Unmarshal(res, &txHex))
+	err = er.E(jsoniter.Unmarshal(res, &txHex))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (r FutureSendRawTransactionResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a string.
 	var txHashStr string
-	err = er.E(json.Unmarshal(res, &txHashStr))
+	err = er.E(jsoniter.Unmarshal(res, &txHashStr))
 	if err != nil {
 		return nil, err
 	}

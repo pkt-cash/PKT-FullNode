@@ -8,7 +8,7 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -31,7 +31,7 @@ func (r FutureGetBlockResult) Receive() (*wire.MsgBlock, er.R) {
 
 	// Unmarshal result as a string.
 	var blockHex string
-	err = er.E(json.Unmarshal(res, &blockHex))
+	err = er.E(jsoniter.Unmarshal(res, &blockHex))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (r FutureGetBlockVerboseResult) Receive() (*btcjson.GetBlockVerboseResult, 
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult btcjson.GetBlockVerboseResult
-	err = er.E(json.Unmarshal(res, &blockResult))
+	err = er.E(jsoniter.Unmarshal(res, &blockResult))
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (r FutureGetBlockHashResult) Receive() (*chainhash.Hash, er.R) {
 
 	// Unmarshal the result as a string-encoded sha.
 	var txHashStr string
-	err = er.E(json.Unmarshal(res, &txHashStr))
+	err = er.E(jsoniter.Unmarshal(res, &txHashStr))
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r FutureGetBlockHeaderResult) Receive() (*wire.BlockHeader, er.R) {
 
 	// Unmarshal result as a string.
 	var bhHex string
-	err = er.E(json.Unmarshal(res, &bhHex))
+	err = er.E(jsoniter.Unmarshal(res, &bhHex))
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (r FutureGetRawMempoolResult) Receive() ([]*chainhash.Hash, er.R) {
 
 	// Unmarshal the result as an array of strings.
 	var txHashStrs []string
-	err = er.E(json.Unmarshal(res, &txHashStrs))
+	err = er.E(jsoniter.Unmarshal(res, &txHashStrs))
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, er.R) {
 
 	// Unmarshal result as an gettxout result object.
 	var txOutInfo *btcjson.GetTxOutResult
-	err = er.E(json.Unmarshal(res, &txOutInfo))
+	err = er.E(jsoniter.Unmarshal(res, &txOutInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (r FutureGetCFilterResult) Receive() (*wire.MsgCFilter, er.R) {
 
 	// Unmarshal result as a string.
 	var filterHex string
-	err = er.E(json.Unmarshal(res, &filterHex))
+	err = er.E(jsoniter.Unmarshal(res, &filterHex))
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (r FutureGetCFilterHeaderResult) Receive() (*wire.MsgCFHeaders, er.R) {
 
 	// Unmarshal result as a string.
 	var headerHex string
-	err = er.E(json.Unmarshal(res, &headerHex))
+	err = er.E(jsoniter.Unmarshal(res, &headerHex))
 	if err != nil {
 		return nil, err
 	}

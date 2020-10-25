@@ -6,7 +6,7 @@
 package btcjson
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
@@ -355,7 +355,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Sequence: v.Sequence,
 			Witness:  v.Witness,
 		}
-		out, err := json.Marshal(coinbaseStruct)
+		out, err := jsoniter.Marshal(coinbaseStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -373,7 +373,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Witness:   v.Witness,
 			Sequence:  v.Sequence,
 		}
-		out, err := json.Marshal(txStruct)
+		out, err := jsoniter.Marshal(txStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -388,7 +388,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 		ScriptSig: v.ScriptSig,
 		Sequence:  v.Sequence,
 	}
-	out, err := json.Marshal(txStruct)
+	out, err := jsoniter.Marshal(txStruct)
 	return out, er.Native(er.E(err))
 }
 
@@ -431,7 +431,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			Coinbase: v.Coinbase,
 			Sequence: v.Sequence,
 		}
-		out, err := json.Marshal(coinbaseStruct)
+		out, err := jsoniter.Marshal(coinbaseStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -451,7 +451,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			PrevOut:   v.PrevOut,
 			Sequence:  v.Sequence,
 		}
-		out, err := json.Marshal(txStruct)
+		out, err := jsoniter.Marshal(txStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -468,7 +468,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 		PrevOut:   v.PrevOut,
 		Sequence:  v.Sequence,
 	}
-	out, err := json.Marshal(txStruct)
+	out, err := jsoniter.Marshal(txStruct)
 	return out, er.Native(er.E(err))
 }
 

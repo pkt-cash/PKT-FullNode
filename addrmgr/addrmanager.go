@@ -10,7 +10,7 @@ import (
 	crand "crypto/rand" // for seeding
 	"encoding/base32"
 	"encoding/binary"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"io"
 	"math/rand"
 	"net"
@@ -413,7 +413,7 @@ func (a *AddrManager) savePeers() {
 		log.Errorf("Error opening file %s: %v", a.peersFile, err)
 		return
 	}
-	enc := json.NewEncoder(w)
+	enc := jsoniter.NewEncoder(w)
 	defer w.Close()
 	if err := enc.Encode(&sam); err != nil {
 		log.Errorf("Failed to encode file %s: %v", a.peersFile, err)
@@ -455,7 +455,7 @@ func (a *AddrManager) deserializePeers(filePath string) er.R {
 	defer r.Close()
 
 	var sam serializedAddrManager
-	dec := json.NewDecoder(r)
+	dec := jsoniter.NewDecoder(r)
 	errr = dec.Decode(&sam)
 	if errr != nil {
 		return er.Errorf("error reading %s: %v", filePath, errr)

@@ -6,7 +6,7 @@
 package btcjson_test
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -34,7 +34,7 @@ func TestChainSvrWsResults(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		marshalled, err := json.Marshal(test.result)
+		marshalled, err := jsoniter.Marshal(test.result)
 		if err != nil {
 			t.Errorf("Test #%d (%s) unexpected error: %v", i,
 				test.name, err)

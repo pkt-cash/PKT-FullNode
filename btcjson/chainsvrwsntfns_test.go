@@ -7,7 +7,7 @@ package btcjson_test
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"reflect"
 	"testing"
@@ -273,7 +273,7 @@ func TestChainSvrWsNtfns(t *testing.T) {
 		}
 
 		var request btcjson.Request
-		if err := json.Unmarshal(marshalled, &request); err != nil {
+		if err := jsoniter.Unmarshal(marshalled, &request); err != nil {
 			t.Errorf("Test #%d (%s) unexpected error while "+
 				"unmarshalling JSON-RPC request: %v", i,
 				test.name, err)

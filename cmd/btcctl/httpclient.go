@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -126,7 +126,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.
 
 	// Unmarshal the response.
 	var resp btcjson.Response
-	if err := er.E(json.Unmarshal(respBytes, &resp)); err != nil {
+	if err := er.E(jsoniter.Unmarshal(respBytes, &resp)); err != nil {
 		return nil, err
 	}
 

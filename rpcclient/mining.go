@@ -6,7 +6,7 @@ package rpcclient
 
 import (
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -29,7 +29,7 @@ func (r FutureGenerateResult) Receive() ([]*chainhash.Hash, er.R) {
 
 	// Unmarshal result as a list of strings.
 	var result []string
-	err = er.E(json.Unmarshal(res, &result))
+	err = er.E(jsoniter.Unmarshal(res, &result))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (r FutureSubmitBlockResult) Receive() er.R {
 
 	if string(res) != "null" {
 		var result string
-		err = er.E(json.Unmarshal(res, &result))
+		err = er.E(jsoniter.Unmarshal(res, &result))
 		if err != nil {
 			return err
 		}

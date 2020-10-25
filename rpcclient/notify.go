@@ -8,7 +8,7 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"time"
 
@@ -196,7 +196,7 @@ type NotificationHandlers struct {
 	// for this package needs to be updated for a new notification type or
 	// the caller is using a custom notification this package does not know
 	// about.
-	OnUnknownNotification func(method string, params []json.RawMessage)
+	OnUnknownNotification func(method string, params []jsoniter.RawMessage)
 }
 
 // handleNotification examines the passed notification type, performs
@@ -478,7 +478,7 @@ func (e wrongNumParams) Error() string {
 
 // parseChainNtfnParams parses out the block hash and height from the parameters
 // of blockconnected and blockdisconnected notifications.
-func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
+func parseChainNtfnParams(params []jsoniter.RawMessage) (*chainhash.Hash,
 	int32, time.Time, er.R) {
 
 	if len(params) != 3 {
@@ -487,21 +487,21 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 
 	// Unmarshal first parameter as a string.
 	var blockHashStr string
-	err := er.E(json.Unmarshal(params[0], &blockHashStr))
+	err := er.E(jsoniter.Unmarshal(params[0], &blockHashStr))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal second parameter as an integer.
 	var blockHeight int32
-	err = er.E(json.Unmarshal(params[1], &blockHeight))
+	err = er.E(jsoniter.Unmarshal(params[1], &blockHeight))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal third parameter as unix time.
 	var blockTimeUnix int64
-	err = er.E(json.Unmarshal(params[2], &blockTimeUnix))
+	err = er.E(jsoniter.Unmarshal(params[2], &blockTimeUnix))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
@@ -523,7 +523,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 //
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockConnectedParams(params []jsoniter.RawMessage) (int32,
 	*wire.BlockHeader, []*btcutil.Tx, er.R) {
 
 	if len(params) < 3 {
@@ -532,7 +532,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
-	err := er.E(json.Unmarshal(params[0], &blockHeight))
+	err := er.E(jsoniter.Unmarshal(params[0], &blockHeight))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -552,7 +552,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 
 	// Unmarshal third parameter as a slice of hex-encoded strings.
 	var hexTransactions []string
-	err = er.E(json.Unmarshal(params[2], &hexTransactions))
+	err = er.E(jsoniter.Unmarshal(params[2], &hexTransactions))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -579,7 +579,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 //
 // NOTE: This is a pktd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockDisconnectedParams(params []jsoniter.RawMessage) (int32,
 	*wire.BlockHeader, er.R) {
 	if len(params) < 2 {
 		return 0, nil, er.E(wrongNumParams(len(params)))
@@ -587,7 +587,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
-	err := er.E(json.Unmarshal(params[0], &blockHeight))
+	err := er.E(jsoniter.Unmarshal(params[0], &blockHeight))
 	if err != nil {
 		return 0, nil, err
 	}
@@ -608,9 +608,9 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	return blockHeight, &blockHeader, nil
 }
 
-func parseHexParam(param json.RawMessage) ([]byte, er.R) {
+func parseHexParam(param jsoniter.RawMessage) ([]byte, er.R) {
 	var s string
-	err := er.E(json.Unmarshal(param, &s))
+	err := er.E(jsoniter.Unmarshal(param, &s))
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +620,7 @@ func parseHexParam(param json.RawMessage) ([]byte, er.R) {
 
 // parseRelevantTxAcceptedParams parses out the parameter included in a
 // relevanttxaccepted notification.
-func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte, err er.R) {
+func parseRelevantTxAcceptedParams(params []jsoniter.RawMessage) (transaction []byte, err er.R) {
 	if len(params) < 1 {
 		return nil, er.E(wrongNumParams(len(params)))
 	}
@@ -631,7 +631,7 @@ func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte
 // parseChainTxNtfnParams parses out the transaction and optional details about
 // the block it's mined in from the parameters of recvtx and redeemingtx
 // notifications.
-func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
+func parseChainTxNtfnParams(params []jsoniter.RawMessage) (*btcutil.Tx,
 	*btcjson.BlockDetails, er.R) {
 
 	if len(params) == 0 || len(params) > 2 {
@@ -640,7 +640,7 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 
 	// Unmarshal first parameter as a string.
 	var txHex string
-	err := er.E(json.Unmarshal(params[0], &txHex))
+	err := er.E(jsoniter.Unmarshal(params[0], &txHex))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -649,7 +649,7 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 	// JSON object.
 	var block *btcjson.BlockDetails
 	if len(params) > 1 {
-		err = er.E(json.Unmarshal(params[1], &block))
+		err = er.E(jsoniter.Unmarshal(params[1], &block))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -674,28 +674,28 @@ func parseChainTxNtfnParams(params []json.RawMessage) (*btcutil.Tx,
 
 // parseRescanProgressParams parses out the height of the last rescanned block
 // from the parameters of rescanfinished and rescanprogress notifications.
-func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32, time.Time, er.R) {
+func parseRescanProgressParams(params []jsoniter.RawMessage) (*chainhash.Hash, int32, time.Time, er.R) {
 	if len(params) != 3 {
 		return nil, 0, time.Time{}, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as an string.
 	var hashStr string
-	err := er.E(json.Unmarshal(params[0], &hashStr))
+	err := er.E(jsoniter.Unmarshal(params[0], &hashStr))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal second parameter as an integer.
 	var height int32
-	err = er.E(json.Unmarshal(params[1], &height))
+	err = er.E(jsoniter.Unmarshal(params[1], &height))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
 
 	// Unmarshal third parameter as an integer.
 	var blkTime int64
-	err = er.E(json.Unmarshal(params[2], &blkTime))
+	err = er.E(jsoniter.Unmarshal(params[2], &blkTime))
 	if err != nil {
 		return nil, 0, time.Time{}, err
 	}
@@ -711,7 +711,7 @@ func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32
 
 // parseTxAcceptedNtfnParams parses out the transaction hash and total amount
 // from the parameters of a txaccepted notification.
-func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
+func parseTxAcceptedNtfnParams(params []jsoniter.RawMessage) (*chainhash.Hash,
 	btcutil.Amount, er.R) {
 
 	if len(params) != 2 {
@@ -720,14 +720,14 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 
 	// Unmarshal first parameter as a string.
 	var txHashStr string
-	err := er.E(json.Unmarshal(params[0], &txHashStr))
+	err := er.E(jsoniter.Unmarshal(params[0], &txHashStr))
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Unmarshal second parameter as a floating point number.
 	var famt float64
-	err = er.E(json.Unmarshal(params[1], &famt))
+	err = er.E(jsoniter.Unmarshal(params[1], &famt))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -749,7 +749,7 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 
 // parseTxAcceptedVerboseNtfnParams parses out details about a raw transaction
 // from the parameters of a txacceptedverbose notification.
-func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawResult,
+func parseTxAcceptedVerboseNtfnParams(params []jsoniter.RawMessage) (*btcjson.TxRawResult,
 	er.R) {
 
 	if len(params) != 1 {
@@ -758,7 +758,7 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 
 	// Unmarshal first parameter as a raw transaction result object.
 	var rawTx btcjson.TxRawResult
-	err := er.E(json.Unmarshal(params[0], &rawTx))
+	err := er.E(jsoniter.Unmarshal(params[0], &rawTx))
 	if err != nil {
 		return nil, err
 	}
@@ -771,14 +771,14 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*btcjson.TxRawR
 
 // parseBtcdConnectedNtfnParams parses out the connection status of pktd
 // and pktwallet from the parameters of a pktdconnected notification.
-func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, er.R) {
+func parseBtcdConnectedNtfnParams(params []jsoniter.RawMessage) (bool, er.R) {
 	if len(params) != 1 {
 		return false, er.E(wrongNumParams(len(params)))
 	}
 
 	// Unmarshal first parameter as a boolean.
 	var connected bool
-	err := er.E(json.Unmarshal(params[0], &connected))
+	err := er.E(jsoniter.Unmarshal(params[0], &connected))
 	if err != nil {
 		return false, err
 	}
@@ -789,7 +789,7 @@ func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, er.R) {
 // parseAccountBalanceNtfnParams parses out the account name, total balance,
 // and whether or not the balance is confirmed or unconfirmed from the
 // parameters of an accountbalance notification.
-func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
+func parseAccountBalanceNtfnParams(params []jsoniter.RawMessage) (account string,
 	balance btcutil.Amount, confirmed bool, err er.R) {
 
 	if len(params) != 3 {
@@ -797,20 +797,20 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 	}
 
 	// Unmarshal first parameter as a string.
-	err = er.E(json.Unmarshal(params[0], &account))
+	err = er.E(jsoniter.Unmarshal(params[0], &account))
 	if err != nil {
 		return "", 0, false, err
 	}
 
 	// Unmarshal second parameter as a floating point number.
 	var fbal float64
-	err = er.E(json.Unmarshal(params[1], &fbal))
+	err = er.E(jsoniter.Unmarshal(params[1], &fbal))
 	if err != nil {
 		return "", 0, false, err
 	}
 
 	// Unmarshal third parameter as a boolean.
-	err = er.E(json.Unmarshal(params[2], &confirmed))
+	err = er.E(jsoniter.Unmarshal(params[2], &confirmed))
 	if err != nil {
 		return "", 0, false, err
 	}
@@ -826,7 +826,7 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 
 // parseWalletLockStateNtfnParams parses out the account name and locked
 // state of an account from the parameters of a walletlockstate notification.
-func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
+func parseWalletLockStateNtfnParams(params []jsoniter.RawMessage) (account string,
 	locked bool, err er.R) {
 
 	if len(params) != 2 {
@@ -834,13 +834,13 @@ func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
 	}
 
 	// Unmarshal first parameter as a string.
-	err = er.E(json.Unmarshal(params[0], &account))
+	err = er.E(jsoniter.Unmarshal(params[0], &account))
 	if err != nil {
 		return "", false, err
 	}
 
 	// Unmarshal second parameter as a boolean.
-	err = er.E(json.Unmarshal(params[1], &locked))
+	err = er.E(jsoniter.Unmarshal(params[1], &locked))
 	if err != nil {
 		return "", false, err
 	}

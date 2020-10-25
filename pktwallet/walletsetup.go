@@ -7,7 +7,7 @@ package main
 import (
 	"bufio"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -149,7 +149,7 @@ func createWallet(cfg *config) er.R {
 		tty = true
 	} else if bytes, err := ioutil.ReadAll(os.Stdin); err != nil {
 		return er.E(err)
-	} else if err := json.Unmarshal(bytes, &setupCfg); err != nil {
+	} else if err := jsoniter.Unmarshal(bytes, &setupCfg); err != nil {
 		return er.E(err)
 	} else {
 		if setupCfg.Passphrase != nil {

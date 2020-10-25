@@ -5,6 +5,7 @@
 package btcjson
 
 import (
+	"github.com/json-iterator/go"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -65,7 +66,7 @@ func MarshalCmd(id interface{}, cmd interface{}) ([]byte, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	out, errr := json.Marshal(rawCmd)
+	out, errr := jsoniter.Marshal(rawCmd)
 	return out, er.E(errr)
 }
 
@@ -135,14 +136,14 @@ func UnmarshalCmd(r *Request) (interface{}, er.R) {
 		rvf := rv.Field(i)
 		// Unmarshal the parameter into the struct field.
 		concreteVal := rvf.Addr().Interface()
-		if err := json.Unmarshal(r.Params[i], &concreteVal); err != nil {
+		if err := jsoniter.Unmarshal(r.Params[i], &concreteVal); err != nil {
 			// The most common error is the wrong type, so
 			// explicitly detect that error and make it nicer.
 			fieldName := strings.ToLower(rt.Field(i).Name)
 			if jerr, ok := err.(*json.UnmarshalTypeError); ok {
 				if jerr.Type.Kind() == reflect.Bool && jerr.Value == "number" {
 					var num int
-					if json.Unmarshal(r.Params[i], &num) == nil {
+					if jsoniter.Unmarshal(r.Params[i], &num) == nil {
 						if num == 0 || num == 1 {
 							reflect.Indirect(rvf).SetBool(num != 0)
 							continue
@@ -220,7 +221,7 @@ func typesMaybeCompatible(dest reflect.Type, src reflect.Type) bool {
 			return true
 
 		// Strings can potentially be converted to arrays, slice,
-		// structs, and maps via json.Unmarshal.
+		// structs, and maps via jsoniter.Unmarshal.
 		case reflect.Array, reflect.Slice, reflect.Struct, reflect.Map:
 			return true
 		}
@@ -244,7 +245,7 @@ func baseType(arg reflect.Type) (reflect.Type, int) {
 // assigning the provided source value to the destination field.  It supports
 // direct type assignments, indirection, conversion of numeric types, and
 // unmarshaling of strings into arrays, slices, structs, and maps via
-// json.Unmarshal.
+// jsoniter.Unmarshal.
 func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect.Value) er.R {
 	// Just error now when the types have no chance of being compatible.
 	destBaseType, destIndirects := baseType(dest.Type())
@@ -477,10 +478,10 @@ func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect
 			dest.SetString(src.String())
 
 		// String -> arrays, slices, structs, and maps via
-		// json.Unmarshal.
+		// jsoniter.Unmarshal.
 		case reflect.Array, reflect.Slice, reflect.Struct, reflect.Map:
 			concreteVal := dest.Addr().Interface()
-			err := json.Unmarshal([]byte(src.String()), &concreteVal)
+			err := jsoniter.Unmarshal([]byte(src.String()), &concreteVal)
 			if err != nil {
 				str := fmt.Sprintf("parameter #%d '%s' must "+
 					"be valid JSON which unsmarshals to a %v",
@@ -518,7 +519,7 @@ func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect
 //   - Conversion from string to any size float for everything
 //     strconv.ParseFloat recognizes
 //   - Conversion from string to arrays, slices, structs, and maps by treating
-//     the string as marshalled JSON and calling json.Unmarshal into the
+//     the string as marshalled JSON and calling jsoniter.Unmarshal into the
 //     destination field
 func NewCmd(method string, args ...interface{}) (interface{}, er.R) {
 	// Look up details about the provided method.  Any methods that aren't
