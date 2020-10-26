@@ -561,6 +561,8 @@ type ChainService struct {
 
 	nameResolver func(string) ([]net.IP, er.R)
 	dialer       func(net.Addr) (net.Conn, er.R)
+
+	reqNum uint32
 }
 
 type pendingFiltersReq struct {

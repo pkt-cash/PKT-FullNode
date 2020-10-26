@@ -3,6 +3,7 @@
 package neutrino
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -753,19 +754,26 @@ func queryChainServicePeers(
 	peerTimeout := time.NewTimer(qo.timeout)
 	connectionTimeout := time.NewTimer(qo.peerConnectTimeout)
 	connectionTicker := connectionTimeout.C
+	reqNum := atomic.AddUint32(&s.reqNum, 1)
+	reqName := fmt.Sprintf("%d/%s", reqNum, queryMsg.Command())
 	if queryPeer != nil {
 		peerTries[queryPeer.Addr()]++
 		queryPeer.subscribeRecvMsg(subscription)
 		queryPeer.QueueMessageWithEncoding(queryMsg, nil, qo.encoding)
+		log.Debugf("[%s] sending to sync peer [%s]", reqName, queryPeer)
+	} else {
+		log.Debugf("[%s] not sending because we have no sync peer", reqName)
 	}
 checkResponses:
 	for {
+		log.Debugf("[%s] waiting for replies or timeouts", reqName)
 		select {
 		case <-connectionTicker:
 			// When we time out, we're done.
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
+			log.Debugf("[%s] ended peerConnectTimeout", reqName)
 			break checkResponses
 
 		case <-queryQuit:
@@ -773,6 +781,7 @@ checkResponses:
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
+			log.Debugf("[%s] quit signal", reqName)
 			break checkResponses
 
 		case <-s.quit:
@@ -780,12 +789,15 @@ checkResponses:
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
+			log.Debugf("[%s] server shutdown", reqName)
 			break checkResponses
 
 		// A message has arrived over the subscription channel, so we
 		// execute the checkResponses callback to see if this ends our
 		// query session.
 		case sm := <-msgChan:
+			log.Debugf("[%s] got reply [%s] from [%s]",
+				reqName, sm.msg.Command(), sm.sp.String())
 			// TODO: This will get stuck if checkResponse gets
 			// stuck. This is a caveat for callers that should be
 			// fixed before exposing this function for public use.
@@ -818,6 +830,9 @@ checkResponses:
 		case <-peerTimeout.C:
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
+				log.Debugf("[%s] got timeout from [%s]", reqName, queryPeer.String())
+			} else {
+				log.Debugf("[%s] got timeout (no query peer)", reqName)
 			}
 
 			queryPeer = nil
@@ -851,7 +866,10 @@ checkResponses:
 			// If at this point, we don't yet have a query peer,
 			// then we'll exit now as all the peers are exhausted.
 			if queryPeer == nil {
+				log.Debugf("[%s] no new peer found to query, done", reqName)
 				break checkResponses
+			} else {
+				log.Debugf("[%s] re-sent query to [%s]", reqName, queryPeer.String())
 			}
 		}
 	}
@@ -862,6 +880,7 @@ checkResponses:
 	if qo.doneChan != nil {
 		close(qo.doneChan)
 	}
+	log.Debugf("[%s] complete")
 }
 
 // getFilterFromCache returns a filter from ChainService's FilterCache if it
