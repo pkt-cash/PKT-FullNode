@@ -276,7 +276,8 @@ func newBlockManager(s *ChainService,
 
 	// Verification of PacketCrypt or AuxPoW proofs
 	bm.likelyChainTip = int32(time.Since(time.Unix(1566252000, 0)).Minutes())
-	log.Tracef("Deduced that the probable chain tip is [%d]", bm.likelyChainTip)
+	bm.updateLikelyChainTip(int32(height))
+
 	var rv [4]byte
 	if _, errr := rand.Read(rv[:]); errr != nil {
 		return nil, er.E(errr)
@@ -284,6 +285,20 @@ func newBlockManager(s *ChainService,
 	bm.randomVerificationSeed = binary.LittleEndian.Uint32(rv[:])
 
 	return &bm, nil
+}
+
+func (b *blockManager) updateLikelyChainTip(height int32) {
+	cp := b.findPreviousHeaderCheckpoint(height)
+	if cp == nil {
+		return
+	}
+	fh, err := b.server.BlockHeaders.FetchHeaderByHeight(uint32(height))
+	if err != nil {
+		log.Infof("Unable to update probable chain tip [%s]", err)
+		return
+	}
+	b.likelyChainTip = int32(time.Since(fh.Timestamp).Minutes()) + int32(height)
+	log.Debugf("Updated the probable chain tip to [%d]", b.likelyChainTip)
 }
 
 // Start begins the core block handler which processes block and inv messages.
@@ -2336,9 +2351,13 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 
 	needProofs := make([]hashHeight, 0, 1)
 
+	tip := hmsg.peer.LastBlock()
+	if tip > b.likelyChainTip {
+		tip = b.likelyChainTip
+	}
 	for i, header := range msg.Headers {
 		h := int32(backHeight) + int32(i) + 1
-		depth := b.likelyChainTip - h
+		depth := tip - h
 		if depth < 1 {
 			depth = 1
 		}
@@ -2797,6 +2816,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 
 	// When this header is a checkpoint, find the next checkpoint.
 	if receivedCheckpoint {
+		b.updateLikelyChainTip(b.nextCheckpoint.Height)
 		b.nextCheckpoint = b.findNextHeaderCheckpoint(finalHeight)
 	}
 
