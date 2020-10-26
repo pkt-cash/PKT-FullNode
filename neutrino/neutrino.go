@@ -528,7 +528,7 @@ type ChainService struct {
 	// queryPeers will be called to send messages to one or more peers,
 	// expecting a response.
 	queryPeers func(wire.Message, func(*ServerPeer, wire.Message,
-		chan<- struct{}), ...QueryOption)
+		chan<- struct{}) bool, ...QueryOption)
 
 	// queryBatch will be called to distribute a batch of messages across
 	// our connected peers.
@@ -630,8 +630,10 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 	// We set the queryPeers method to point to queryChainServicePeers,
 	// passing a reference to the newly created ChainService.
-	s.queryPeers = func(msg wire.Message, f func(*ServerPeer,
-		wire.Message, chan<- struct{}), qo ...QueryOption) {
+	s.queryPeers = func(msg wire.Message,
+		f func(*ServerPeer, wire.Message, chan<- struct{}) bool,
+		qo ...QueryOption,
+	) {
 		queryChainServicePeers(&s, msg, f, qo...)
 	}
 

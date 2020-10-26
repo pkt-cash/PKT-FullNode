@@ -719,7 +719,7 @@ func queryChainServicePeers(
 	// required response has been found. This is done by closing the
 	// channel.
 	checkResponse func(sp *ServerPeer, resp wire.Message,
-		quit chan<- struct{}),
+		quit chan<- struct{}) bool,
 
 	// options takes functional options for executing the query.
 	options ...QueryOption) {
@@ -801,18 +801,19 @@ checkResponses:
 			// TODO: This will get stuck if checkResponse gets
 			// stuck. This is a caveat for callers that should be
 			// fixed before exposing this function for public use.
-			checkResponse(sm.sp, sm.msg, queryQuit)
+			if checkResponse(sm.sp, sm.msg, queryQuit) {
 
-			// Each time we receive a response from the current
-			// peer, we'll reset the main peer timeout as they're
-			// being responsive.
-			if !peerTimeout.Stop() {
-				select {
-				case <-peerTimeout.C:
-				default:
+				// Each time we receive a response from the current
+				// peer, we'll reset the main peer timeout as they're
+				// being responsive.
+				if !peerTimeout.Stop() {
+					select {
+					case <-peerTimeout.C:
+					default:
+					}
 				}
+				peerTimeout.Reset(qo.timeout)
 			}
-			peerTimeout.Reset(qo.timeout)
 
 			// Also at this point, if the peerConnectTimeout is
 			// still active, then we can disable it, as we're
@@ -1092,25 +1093,27 @@ func (s *ChainService) prepareCFiltersQuery(
 
 // handleCFiltersRespons is called every time we receive a response for the
 // GetCFilters request.
+// Returns true if the reply is valid (related to the query) but we still need more
+// closes the quit chan if we're done
 func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
-	resp wire.Message, quit chan<- struct{}) {
+	resp wire.Message, quit chan<- struct{}) bool {
 
 	// We're only interested in "cfilter" messages.
 	response, ok := resp.(*wire.MsgCFilter)
 	if !ok {
-		return
+		return false
 	}
 
 	// If the response doesn't match our request, ignore this message.
 	if q.filterType != response.FilterType {
-		return
+		return false
 	}
 
 	// If this filter is for a block not in our index, we can ignore it, as
 	// we either already got it, or it is out of our queried range.
 	i, ok := q.headerIndex[response.BlockHash]
 	if !ok {
-		return
+		return false
 	}
 
 	gotFilter, err := gcs.FromNBytes(
@@ -1118,7 +1121,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	)
 	if err != nil {
 		// Malformed filter data. We can ignore this message.
-		return
+		return false
 	}
 
 	// Now that we have a proper filter, ensure that re-calculating the
@@ -1130,11 +1133,12 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 		gotFilter, prevHeader,
 	)
 	if err != nil {
-		return
+		return false
 	}
 
 	if gotHeader != curHeader {
-		return
+		// It was a legit reply, but we need more replied
+		return true
 	}
 
 	// At this point, the filter matches what we know about it and we
@@ -1188,6 +1192,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	if len(q.headerIndex) == 0 {
 		close(quit)
 	}
+	return true
 }
 
 func (s *ChainService) doFilterRequest(
@@ -1246,8 +1251,8 @@ func (s *ChainService) doFilterRequest(
 
 				// Check responses and if we get one that matches, end
 				// the query early.
-				func(_ *ServerPeer, resp wire.Message, quit chan<- struct{}) {
-					s.handleCFiltersResponse(query, resp, quit)
+				func(_ *ServerPeer, resp wire.Message, quit chan<- struct{}) bool {
+					return s.handleCFiltersResponse(query, resp, quit)
 				},
 				query.options...,
 			)
@@ -1436,8 +1441,7 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 
 		// Check responses and if we get one that matches, end the
 		// query early.
-		func(sp *ServerPeer, resp wire.Message,
-			quit chan<- struct{}) {
+		func(sp *ServerPeer, resp wire.Message, quit chan<- struct{}) bool {
 			switch response := resp.(type) {
 			// We're only interested in "block" messages.
 			case *wire.MsgBlock:
@@ -1445,12 +1449,12 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 				// found a block, or we risk closing an already
 				// closed channel.
 				if foundBlock != nil {
-					return
+					return false
 				}
 
 				// If this isn't our block, ignore it.
 				if response.BlockHash() != blockHash {
-					return
+					return false
 				}
 				block := btcutil.NewBlock(response)
 
@@ -1477,7 +1481,7 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 						"disconnecting peer", blockHash,
 						sp.Addr())
 					sp.Disconnect()
-					return
+					return false
 				}
 
 				// TODO(roasbeef): modify CheckBlockSanity to
@@ -1489,8 +1493,10 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 				// the caller.
 				foundBlock = block
 				close(quit)
+				return true
 			default:
 			}
+			return false
 		},
 		options...,
 	)
