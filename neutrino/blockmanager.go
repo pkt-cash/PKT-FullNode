@@ -2397,8 +2397,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		for _, hash := range needProofs {
 			sem <- 1
 			go func(hh hashHeight) {
-				h, err := s.GetBlock0(hh.hash, uint32(hh.height),
-					Timeout(time.Second*60), Encoding(wire.BaseEncoding))
+				h, err := s.GetBlock0(hh.hash, uint32(hh.height), Encoding(wire.BaseEncoding))
 				if err != nil {
 					log.Infof("Unable to get block [%s @ %d]: %s",
 						hh.hash.String(), hh.height, err.String())
