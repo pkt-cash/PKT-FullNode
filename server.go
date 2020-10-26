@@ -1645,7 +1645,7 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 		// Request known addresses if the server address manager needs
 		// more and the peer has a protocol version new enough to
 		// include a timestamp with addresses.
-		hasTimestamp := sp.ProtocolVersion() >= wire.NetAddressTimeVersion
+		hasTimestamp := sp.ProtocolVersion() >= protocol.NetAddressTimeVersion
 		if s.addrManager.NeedMoreAddresses() && hasTimestamp {
 			sp.QueueMessage(wire.NewMsgGetAddr(), nil)
 		}
