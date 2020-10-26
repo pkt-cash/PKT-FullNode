@@ -2247,7 +2247,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 
 	// If this is the sync peer or we're current, get the headers for the
 	// announced blocks and update the last announced block.
-	if lastBlock != -1 && (imsg.peer == b.SyncPeer() || b.BlockHeadersSynced()) {
+	if lastBlock != -1 && b.BlockHeadersSynced() {
 		lastEl := b.headerList.Back()
 		var lastHash chainhash.Hash
 		if lastEl != nil {
