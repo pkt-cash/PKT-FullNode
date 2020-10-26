@@ -2726,7 +2726,10 @@ func (w *Wallet) rescan2(
 				return err
 			}
 			respLock.Lock()
-			batch = append(batch, responses[int32(blockNum)])
+			x := responses[int32(blockNum)]
+			if x.header != nil {
+				batch = append(batch, x)
+			}
 			delete(responses, int32(blockNum))
 			respLock.Unlock()
 			if len(batch) >= syncerBatchSz {
