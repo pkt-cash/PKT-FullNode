@@ -1737,7 +1737,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 		if w.rescanJ != nil {
 			return "", er.Errorf(
 				"You requested a rescan but there is already a rescan job"+
-					" ([%v]) running, use `stoprescan` to stop it", w.rescanJ.name)
+					" ([%v]) running, use `stopresync` to stop it", w.rescanJ.name)
 		}
 	}
 
@@ -2441,7 +2441,7 @@ func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dro
 	gj := w.rescanJ
 	if gj != nil {
 		return er.Errorf(
-			"There is already a rescan job ([%v]) running, use `stoprescan` to stop it",
+			"There is already a rescan job ([%v]) running, use `stopresync` to stop it",
 			gj.name)
 	}
 
