@@ -389,7 +389,7 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 		return
 	}
 
-	log.Infof("New valid peer %s (%s)", sp, sp.UserAgent())
+	log.Infof("New valid peer [%s] (%s)", pktlog.IpAddr(sp.Addr()), sp.UserAgent())
 
 	// Ignore the peer if it's not a sync candidate.
 	if !b.isSyncCandidate(sp) {
@@ -416,6 +416,8 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 			return
 		}
 		stopHash := &zeroHash
+
+		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(sp.Addr()))
 		sp.PushGetHeadersMsg(locator, stopHash)
 	}
 
@@ -450,7 +452,7 @@ func (b *blockManager) handleDonePeerMsg(peers *list.List, sp *ServerPeer) {
 		}
 	}
 
-	log.Infof("Lost peer %s", sp)
+	log.Infof("Lost peer [%s]", pktlog.IpAddr(sp.Addr()))
 
 	// Attempt to find a new peer to sync from if the quitting peer is the
 	// sync peer.  Also, reset the header state.
@@ -2090,8 +2092,8 @@ func (b *blockManager) startSync(peers *list.List) {
 			return
 		}
 
-		log.Infof("Syncing to block height [%s] from peer %s",
-			pktlog.Height(bestPeer.LastBlock()), bestPeer.Addr())
+		log.Infof("Syncing to block height [%s] from peer [%s]",
+			pktlog.Height(bestPeer.LastBlock()), pktlog.IpAddr(bestPeer.Addr()))
 
 		// Now that we know we have a new sync peer, we'll lock it in
 		// within the proper attribute.
@@ -2108,9 +2110,11 @@ func (b *blockManager) startSync(peers *list.List) {
 		// we'll use the next checkpoint to guide the set of headers we
 		// fetch, setting our stop hash to the next checkpoint hash.
 		if b.nextCheckpoint != nil && int32(bestHeight) < b.nextCheckpoint.Height {
-			log.Infof("Downloading headers for blocks %d to "+
-				"%d from peer %s", bestHeight+1,
-				b.nextCheckpoint.Height, bestPeer.Addr())
+			log.Infof("Downloading headers for blocks [%s] to [%s] from peer [%s]",
+				pktlog.Int(int(bestHeight+1)),
+				pktlog.Int(int(b.nextCheckpoint.Height)),
+				pktlog.IpAddr(bestPeer.Addr()),
+			)
 
 			stopHash = b.nextCheckpoint.Hash
 		} else {
@@ -2121,6 +2125,7 @@ func (b *blockManager) startSync(peers *list.List) {
 
 		// With our stop hash selected, we'll kick off the sync from
 		// this peer with an initial GetHeaders message.
+		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(b.SyncPeer().Addr()))
 		b.SyncPeer().PushGetHeadersMsg(locator, stopHash)
 	} else {
 		log.Warnf("No sync peer candidates available")
@@ -2287,6 +2292,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 			}
 
 			// Get headers based on locator.
+			log.Infof("Requesting headers from [%s]", pktlog.IpAddr(imsg.peer.Addr()))
 			err = imsg.peer.PushGetHeadersMsg(locator,
 				&invVects[lastBlock].Hash)
 			if err != nil {
@@ -2346,9 +2352,6 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		return
 	}
 
-	log.Infof("Got headers message from [%s] with [%d] headers, height [%d]",
-		hmsg.peer.Addr(), numHeaders, backHeight+1)
-
 	needProofs := make([]hashHeight, 0, 1)
 
 	tip := hmsg.peer.LastBlock()
@@ -2372,6 +2375,13 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			needProofs = append(needProofs, hashHeight{hash: header.BlockHash(), height: h})
 		}
 	}
+
+	log.Infof("Headers from [%s] height: [%s] checking [%s] PacketCrypt proofs of total [%s] headers",
+		pktlog.IpAddr(hmsg.peer.Addr()),
+		pktlog.Height(int32(backHeight+1)),
+		pktlog.Int(len(needProofs)),
+		pktlog.Int(len(msg.Headers)),
+	)
 
 	if len(needProofs) == 0 {
 		log.Debugf("No PacketCrypt proofs required for header batch")
@@ -2764,7 +2774,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			nodeHash := node.Header.BlockHash()
 			if nodeHash.IsEqual(b.nextCheckpoint.Hash) {
 				receivedCheckpoint = true
-				log.Infof("Verified downloaded block "+
+				log.Debugf("Verified downloaded block "+
 					"header against checkpoint at height "+
 					"%d/hash %s", node.Height, nodeHash)
 			} else {
