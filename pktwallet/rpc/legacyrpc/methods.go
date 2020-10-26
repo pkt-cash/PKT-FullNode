@@ -9,12 +9,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 	"fmt"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -1648,11 +1649,11 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient chain.In
 		if err != nil {
 			return nil, err
 		}
-		script, errr := hex.DecodeString(result.ScriptPubKey.Hex)
-		if errr != nil {
-			return nil, er.E(errr)
+		if a, err := btcutil.DecodeAddress(result.Address, w.ChainParams()); err != nil {
+			return nil, err
+		} else {
+			inputs[outPoint] = a.ScriptAddress()
 		}
-		inputs[outPoint] = script
 	}
 
 	// All args collected. Now we can sign all the inputs that we can.
