@@ -24,11 +24,11 @@ const (
 	// svcDisplayName is the service name that will be shown in the windows
 	// services list.  Not the svcName is the "real" name which is used
 	// to control the service.  This is only for display purposes.
-	svcDisplayName = "Btcd Service"
+	svcDisplayName = "PKTd Service"
 
 	// svcDesc is the description of the service.
-	svcDesc = "Downloads and stays synchronized with the bitcoin block " +
-		"chain and provides chain services to applications."
+	svcDesc = "Synchronizes with the PKT Cash blockchain" +
+		"and provides access and services to applications."
 )
 
 // elog is used to send messages to the Windows event log.
