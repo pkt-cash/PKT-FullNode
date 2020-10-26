@@ -766,14 +766,14 @@ func queryChainServicePeers(
 	}
 checkResponses:
 	for {
-		log.Debugf("[%s] waiting for replies or timeouts", reqName)
+		log.Tracef("[%s] waiting for replies or timeouts", reqName)
 		select {
 		case <-connectionTicker:
 			// When we time out, we're done.
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
-			log.Debugf("[%s] ended peerConnectTimeout", reqName)
+			log.Debugf("[%s] connection timeout", reqName)
 			break checkResponses
 
 		case <-queryQuit:
@@ -781,7 +781,7 @@ checkResponses:
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
-			log.Debugf("[%s] quit signal", reqName)
+			log.Debugf("[%s] complete", reqName)
 			break checkResponses
 
 		case <-s.quit:
@@ -796,12 +796,15 @@ checkResponses:
 		// execute the checkResponses callback to see if this ends our
 		// query session.
 		case sm := <-msgChan:
-			log.Debugf("[%s] got reply [%s] from [%s]",
-				reqName, sm.msg.Command(), sm.sp.String())
 			// TODO: This will get stuck if checkResponse gets
 			// stuck. This is a caveat for callers that should be
 			// fixed before exposing this function for public use.
 			if checkResponse(sm.sp, sm.msg, queryQuit) {
+				if sm.msg.Command() != "cfilter" {
+					// cfilter messages are way too noisy
+					log.Debugf("[%s] good reply [%s] from [%s]",
+						reqName, sm.msg.Command(), sm.sp.String())
+				}
 
 				// Each time we receive a response from the current
 				// peer, we'll reset the main peer timeout as they're
@@ -867,7 +870,7 @@ checkResponses:
 			// If at this point, we don't yet have a query peer,
 			// then we'll exit now as all the peers are exhausted.
 			if queryPeer == nil {
-				log.Debugf("[%s] no new peer found to query, done", reqName)
+				log.Debugf("[%s] no peers to query", reqName)
 				break checkResponses
 			} else {
 				log.Debugf("[%s] re-sent query to [%s]", reqName, queryPeer.String())
@@ -881,7 +884,6 @@ checkResponses:
 	if qo.doneChan != nil {
 		close(qo.doneChan)
 	}
-	log.Debugf("[%s] complete")
 }
 
 // getFilterFromCache returns a filter from ChainService's FilterCache if it
