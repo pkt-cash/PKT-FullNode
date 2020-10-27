@@ -75,12 +75,9 @@ type NeutrinoInfo struct {
 }
 
 type WalletStats struct {
-	MaintenanceInProgress bool
-	MaintenanceName       string
-	MaintenanceCycles     int
-	//AutoVacuumBurned           int
-	//AutoVacuumOrphaned         int
-	//AutoVacuumVisitedUtxos     int
+	MaintenanceInProgress       bool
+	MaintenanceName             string
+	MaintenanceCycles           int
 	MaintenanceLastBlockVisited int
 	TimeOfLastMaintenance       time.Time
 

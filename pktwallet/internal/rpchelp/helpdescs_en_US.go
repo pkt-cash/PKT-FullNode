@@ -77,15 +77,6 @@ var helpDescsEnUS = map[string]string{
 	"stopresync--synopsis": "Stop a re-synchronization job before it's completion",
 	"stopresync--result0":  "The name of the sync job which was stopped",
 
-	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
-	"vacuum-maxworkms": "The maximum number of database rows to visit, useful for performing background vacuum operations in pages",
-	"vacuum-beginkey":  "The key of the first item to vacuum, use the result endkey in order to perform vacuum in pages",
-
-	"vacuumdbres-endkey":       "The database key of the last entry visited, can be passed to startKey argument to vacuum the database in sections",
-	"vacuumdbres-orphaned":     "The number of orphaned transactions which were cleared out by the vacuum operation",
-	"vacuumdbres-burned":       "The number of burned coins which were cleared out by the vacuum operation",
-	"vacuumdbres-visitedutxos": "The number of outputs which were visited when vacuuming",
-
 	// CreateMultisigCmd help.
 	"createmultisig--synopsis": "Generate a multisig address and redeem script.",
 	"createmultisig-keys":      "Pubkeys and/or pay-to-pubkey-hash addresses to partially control the multisig address",

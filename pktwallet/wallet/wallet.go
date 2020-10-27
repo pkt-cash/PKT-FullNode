@@ -183,12 +183,6 @@ func (w *Wallet) SynchronizeRPC(chainClient chain.Interface) {
 	}
 	w.chainClient = chainClient
 
-	// If the chain client is a NeutrinoClient instance, set a birthday so
-	// we don't download all the filters as we go.
-	switch cc := chainClient.(type) {
-	case *chain.NeutrinoClient:
-		cc.SetStartTime(w.Manager.Birthday())
-	}
 	w.chainClientLock.Unlock()
 
 	// TODO: It would be preferable to either run these goroutines
@@ -196,7 +190,7 @@ func (w *Wallet) SynchronizeRPC(chainClient chain.Interface) {
 	// make changes from the RPC client) and not have to stop and
 	// restart them each time the client disconnects and reconnets.
 	w.wg.Add(1)
-	go w.handleChainNotifications()
+	go w.goMainLoop()
 }
 
 // requireChainClient marks that a wallet method can only be completed when the
@@ -377,7 +371,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	// MaxReorgDepth blocks to store. We don't do this for development
 	// environments as we can't guarantee a lively chain.
 	if !w.isDevEnv() {
-		log.Debug("Waiting for chain backend to sync to tip")
+		log.Info("Waiting for chain backend to sync to tip")
 		if err := w.waitUntilBackendSynced(chainClient); err != nil {
 			return err
 		}
@@ -435,18 +429,6 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 		ws.BirthdayBlock = birthdayStamp.Height
 	})
 
-	// Request notifications for connected and disconnected blocks.
-	//
-	// TODO(jrick): Either request this notification only once, or when
-	// rpcclient is modified to allow some notification request to not
-	// automatically resent on reconnect, include the notifyblocks request
-	// as well.  I am leaning towards allowing off all rpcclient
-	// notification re-registrations, in which case the code here should be
-	// left as is.
-	if err := chainClient.NotifyBlocks(); err != nil {
-		return err
-	}
-
 	// Finally, we'll trigger a wallet rescan and request notifications for
 	// transactions sending to all wallet addresses and spending all wallet
 	// UTXOs.
@@ -470,18 +452,6 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	w.watch.WatchAddrs(addrs)
 	w.watch.WatchOutpoints(ao)
 
-	bestH, bestHeight, err := chainClient.GetBestBlock()
-	if err != nil {
-		return err
-	}
-	st := w.Manager.SyncedTo()
-	if st.Height >= bestHeight {
-	} else if err := w.block(wtxmgr.Block{
-		Hash:   *bestH,
-		Height: bestHeight,
-	}); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -500,9 +470,9 @@ func (w *Wallet) isDevEnv() bool {
 // waitUntilBackendSynced blocks until the chain backend considers itself
 // "current".
 func (w *Wallet) waitUntilBackendSynced(chainClient chain.Interface) er.R {
-	// We'll poll every second to determine if our chain considers itself
+	// We'll poll every 100ms to determine if our chain considers itself
 	// "current".
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(time.Millisecond * 100)
 	defer t.Stop()
 
 	for {
@@ -2824,7 +2794,7 @@ func (w *Wallet) block(bm wtxmgr.Block) er.R {
 	return nil
 }
 
-func (w *Wallet) Maintenance() {
+func (w *Wallet) rescan() {
 	w.rescanJLock.Lock()
 	defer w.rescanJLock.Unlock()
 	rj := w.rescanJ
@@ -2864,6 +2834,61 @@ func (w *Wallet) Maintenance() {
 		ws.MaintenanceLastBlockVisited = int(top)
 		ws.MaintenanceName = rj.name
 	})
+}
+
+func (w *Wallet) checkBlock() {
+	cc := w.chainClient
+	if cc == nil {
+		/// shutting down
+		return
+	}
+	bestH, bestHeight, err := cc.GetBestBlock()
+	if err != nil {
+		log.Warnf("Error checking for best block [%s]", err.String())
+	}
+	st := w.Manager.SyncedTo()
+	if st.Height >= bestHeight {
+	} else if err := w.block(wtxmgr.Block{
+		Hash:   *bestH,
+		Height: bestHeight,
+	}); err != nil {
+		log.Warnf("Error registering block", err.String())
+	}
+}
+
+func (w *Wallet) walletInit() {
+	birthdayStore := &walletBirthdayStore{
+		db:      w.db,
+		manager: w.Manager,
+	}
+	birthdayBlock, err := birthdaySanityCheck(
+		w.ChainClient(), birthdayStore,
+	)
+	if err != nil && !waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
+		err.AddMessage("Unable to sanity check wallet birthday block")
+		panic(err.String())
+	}
+
+	err = w.syncWithChain(birthdayBlock)
+	if err != nil && !w.ShuttingDown() {
+		err.AddMessage("Unable to synchronize wallet to chain")
+		panic(err.String())
+	}
+}
+
+func (w *Wallet) goMainLoop() {
+	for {
+		if w.ChainClient() != nil {
+			break
+		}
+		time.Sleep(time.Duration(1) * time.Second)
+	}
+	w.walletInit()
+	for {
+		w.rescan()
+		w.checkBlock()
+		time.Sleep(time.Duration(500) * time.Millisecond)
+	}
 }
 
 // Open loads an already-created wallet from the passed database and namespaces.
