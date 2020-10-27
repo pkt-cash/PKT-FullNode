@@ -889,6 +889,7 @@ checkResponses:
 				log.Debugf("[%s] no peers to query", reqName)
 				break checkResponses
 			}
+			peerTimeout.Reset(qo.timeout)
 		}
 	}
 
