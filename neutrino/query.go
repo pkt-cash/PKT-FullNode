@@ -781,7 +781,7 @@ checkResponses:
 			if queryPeer != nil {
 				queryPeer.unsubscribeRecvMsgs(subscription)
 			}
-			log.Debugf("[%s] complete", reqName)
+			log.Tracef("[%s] complete", reqName)
 			break checkResponses
 
 		case <-s.quit:
