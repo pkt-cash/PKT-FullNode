@@ -1348,22 +1348,30 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 		return nil, err
 	}
 
-	_, height, err := s.BlockHeaders.FetchHeader(&blockHash)
-	if err != nil {
+	doHash := &blockHash
+	var doHeight int64
+	if _, height, err := s.BlockHeaders.FetchHeader(&blockHash); err != nil {
 		return nil, err
-	}
-	// We need to always load on even boundaries
-	doHeight := int64(height) / filterBatchSize * filterBatchSize
-	if doHeight == 0 {
-		// height 0 is unfetchable
-		doHeight++
-	}
-	doHash, err := s.GetBlockHash(doHeight)
-	if err != nil {
-		log.Debug("Non-critical error getting hash at height [%d]: [%s]",
-			doHeight, err.String())
-		doHash = &blockHash
+	} else if _, tipHeight, err := s.BlockHeaders.ChainTip(); err != nil {
+		return nil, err
+	} else if tipHeight-height < wire.MaxGetCFiltersReqRange {
+		// We're at or near the tip, don't load a batch
 		doHeight = int64(height)
+	} else {
+		// Always load on even boundaries to prevent duplication
+		tryHeight := int64(height) / filterBatchSize * filterBatchSize
+		if tryHeight == 0 {
+			// height 0 is unfetchable
+			tryHeight++
+		}
+		if dh, err := s.GetBlockHash(tryHeight); err != nil {
+			log.Debug("Non-critical error getting hash at height [%d]: [%s]",
+				doHeight, err.String())
+			doHeight = int64(height)
+		} else {
+			doHash = dh
+			doHeight = tryHeight
+		}
 	}
 
 	for {
