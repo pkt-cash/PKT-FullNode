@@ -760,7 +760,7 @@ func queryChainServicePeers(
 		peerTries[queryPeer.Addr()]++
 		queryPeer.subscribeRecvMsg(subscription)
 		queryPeer.QueueMessageWithEncoding(queryMsg, nil, qo.encoding)
-		log.Debugf("[%s] sending to sync peer [%s]", reqName, queryPeer)
+		log.Tracef("[%s] sending to sync peer [%s]", reqName, queryPeer)
 	} else {
 		log.Debugf("[%s] not sending because we have no sync peer", reqName)
 	}
@@ -800,11 +800,9 @@ checkResponses:
 			// stuck. This is a caveat for callers that should be
 			// fixed before exposing this function for public use.
 			if checkResponse(sm.sp, sm.msg, queryQuit) {
-				if sm.msg.Command() != "cfilter" {
-					// cfilter messages are way too noisy
-					log.Debugf("[%s] good reply [%s] from [%s]",
-						reqName, sm.msg.Command(), sm.sp.String())
-				}
+				// cfilter messages are way too noisy
+				log.Tracef("[%s] good reply [%s] from [%s]",
+					reqName, sm.msg.Command(), sm.sp.String())
 
 				// Each time we receive a response from the current
 				// peer, we'll reset the main peer timeout as they're
