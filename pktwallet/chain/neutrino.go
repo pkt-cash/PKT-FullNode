@@ -48,7 +48,11 @@ func (s *NeutrinoClient) Start() er.R {
 
 // Stop replicates the RPC client's Stop method.
 func (s *NeutrinoClient) Stop() {
-	close(s.stop)
+	select {
+	case <-s.stop:
+	default:
+		close(s.stop)
+	}
 }
 
 // WaitForShutdown replicates the RPC client's WaitForShutdown method.

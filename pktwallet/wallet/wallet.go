@@ -189,7 +189,6 @@ func (w *Wallet) SynchronizeRPC(chainClient chain.Interface) {
 	// separately from the wallet (use wallet mutator functions to
 	// make changes from the RPC client) and not have to stop and
 	// restart them each time the client disconnects and reconnets.
-	w.wg.Add(1)
 	go w.goMainLoop()
 }
 
@@ -2877,6 +2876,7 @@ func (w *Wallet) walletInit() {
 }
 
 func (w *Wallet) goMainLoop() {
+	w.wg.Add(1)
 	for {
 		if w.ChainClient() != nil {
 			break
@@ -2887,8 +2887,12 @@ func (w *Wallet) goMainLoop() {
 	for {
 		w.rescan()
 		w.checkBlock()
+		if w.ShuttingDown() {
+			break
+		}
 		time.Sleep(time.Duration(500) * time.Millisecond)
 	}
+	w.wg.Done()
 }
 
 // Open loads an already-created wallet from the passed database and namespaces.
