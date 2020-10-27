@@ -755,12 +755,24 @@ func queryChainServicePeers(
 	connectionTimeout := time.NewTimer(qo.peerConnectTimeout)
 	connectionTicker := connectionTimeout.C
 	reqNum := atomic.AddUint32(&s.reqNum, 1)
+
+	query := Query{
+		ReqNum:     reqNum,
+		Command:    queryMsg.Command(),
+		Peer:       queryPeer,
+		CreateTime: uint32(time.Now().Unix()),
+	}
+	s.mtxQueries.Lock()
+	s.queries[reqNum] = &query
+	s.mtxQueries.Unlock()
+
 	reqName := fmt.Sprintf("%d/%s", reqNum, queryMsg.Command())
 	if queryPeer != nil {
 		peerTries[queryPeer.Addr()]++
 		queryPeer.subscribeRecvMsg(subscription)
 		queryPeer.QueueMessageWithEncoding(queryMsg, nil, qo.encoding)
 		log.Tracef("[%s] sending to sync peer [%s]", reqName, queryPeer)
+		query.LastRequestTime = uint32(time.Now().Unix())
 	} else {
 		log.Debugf("[%s] not sending because we have no sync peer", reqName)
 	}
@@ -803,6 +815,7 @@ checkResponses:
 				// cfilter messages are way too noisy
 				log.Tracef("[%s] good reply [%s] from [%s]",
 					reqName, sm.msg.Command(), sm.sp.String())
+				query.LastResponseTime = uint32(time.Now().Unix())
 
 				// Each time we receive a response from the current
 				// peer, we'll reset the main peer timeout as they're
@@ -830,13 +843,7 @@ checkResponses:
 		// The current peer we're querying has failed to answer the
 		// query. Time to select a new peer and query it.
 		case <-peerTimeout.C:
-			if queryPeer != nil {
-				queryPeer.unsubscribeRecvMsgs(subscription)
-				log.Debugf("[%s] got timeout from [%s]", reqName, queryPeer.String())
-			} else {
-				log.Debugf("[%s] got timeout (no query peer)", reqName)
-			}
-
+			oldQueryPeer := queryPeer
 			queryPeer = nil
 			for _, peer := range s.Peers() {
 				// If the peer is no longer connected, we'll
@@ -856,12 +863,23 @@ checkResponses:
 
 				queryPeer = peer
 
+				if oldQueryPeer != nil {
+					oldQueryPeer.unsubscribeRecvMsgs(subscription)
+					log.Debugf("[%s] got timeout from [%s], querying [%s]",
+						reqName, oldQueryPeer.String(), queryPeer.String())
+				} else {
+					log.Debugf("[%s] found a peer to query [%s]",
+						reqName, queryPeer.String())
+				}
+
 				// Found a peer we can query.
 				peerTries[queryPeer.Addr()]++
 				queryPeer.subscribeRecvMsg(subscription)
 				queryPeer.QueueMessageWithEncoding(
 					queryMsg, nil, qo.encoding,
 				)
+				query.LastRequestTime = uint32(time.Now().Unix())
+				query.Peer = queryPeer
 				break
 			}
 
@@ -870,8 +888,6 @@ checkResponses:
 			if queryPeer == nil {
 				log.Debugf("[%s] no peers to query", reqName)
 				break checkResponses
-			} else {
-				log.Debugf("[%s] re-sent query to [%s]", reqName, queryPeer.String())
 			}
 		}
 	}
@@ -882,6 +898,9 @@ checkResponses:
 	if qo.doneChan != nil {
 		close(qo.doneChan)
 	}
+	s.mtxQueries.Lock()
+	delete(s.queries, reqNum)
+	s.mtxQueries.Unlock()
 }
 
 // getFilterFromCache returns a filter from ChainService's FilterCache if it
@@ -1137,8 +1156,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	}
 
 	if gotHeader != curHeader {
-		// It was a legit reply, but we need more replied
-		return true
+		return false
 	}
 
 	// At this point, the filter matches what we know about it and we

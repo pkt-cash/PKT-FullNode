@@ -500,6 +500,20 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		}); err != nil {
 			return nil, err
 		}
+		for _, q := range neut.CS.GetActiveQueries() {
+			peer := "<none>"
+			if q.Peer != nil {
+				peer = q.Peer.String()
+			}
+			ni.Queries = append(ni.Queries, btcjson.NeutrinoQuery{
+				Peer:             peer,
+				Command:          q.Command,
+				ReqNum:           q.ReqNum,
+				CreateTime:       q.CreateTime,
+				LastRequestTime:  q.LastRequestTime,
+				LastResponseTime: q.LastResponseTime,
+			})
+		}
 	}
 
 	return out, nil

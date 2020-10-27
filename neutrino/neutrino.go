@@ -562,7 +562,18 @@ type ChainService struct {
 	nameResolver func(string) ([]net.IP, er.R)
 	dialer       func(net.Addr) (net.Conn, er.R)
 
-	reqNum uint32
+	reqNum     uint32
+	queries    map[uint32]*Query
+	mtxQueries sync.Mutex
+}
+
+type Query struct {
+	Peer             *ServerPeer
+	Command          string
+	ReqNum           uint32
+	CreateTime       uint32
+	LastRequestTime  uint32
+	LastResponseTime uint32
 }
 
 type pendingFiltersReq struct {
@@ -626,6 +637,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 		nameResolver:      nameResolver,
 		dialer:            dialer,
 		pendingFilters:    make(map[*pendingFiltersReq]struct{}),
+		queries:           make(map[uint32]*Query),
 	}
 
 	// We set the queryPeers method to point to queryChainServicePeers,
@@ -853,6 +865,16 @@ func (s *ChainService) BestBlock() (*waddrmgr.BlockStamp, er.R) {
 		Height: int32(bestHeight),
 		Hash:   bestHeader.BlockHash(),
 	}, nil
+}
+
+func (s *ChainService) GetActiveQueries() []*Query {
+	s.mtxQueries.Lock()
+	out := make([]*Query, 0, len(s.queries))
+	for _, q := range s.queries {
+		out = append(out, q)
+	}
+	s.mtxQueries.Unlock()
+	return out
 }
 
 // GetBlockHash returns the block hash at the given height.

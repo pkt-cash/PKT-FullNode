@@ -69,9 +69,19 @@ type NeutrinoBan struct {
 	EndTime string `json:"endtime"`
 }
 
+type NeutrinoQuery struct {
+	Peer             string
+	Command          string
+	ReqNum           uint32
+	CreateTime       uint32
+	LastRequestTime  uint32
+	LastResponseTime uint32
+}
+
 type NeutrinoInfo struct {
-	Peers []peer.PeerDesc
-	Bans  []NeutrinoBan
+	Peers   []peer.PeerDesc
+	Bans    []NeutrinoBan
+	Queries []NeutrinoQuery
 }
 
 type WalletStats struct {
