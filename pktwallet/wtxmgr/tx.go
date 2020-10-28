@@ -652,14 +652,16 @@ func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 	if it.elem.Height != height {
 		panic("Iterator mistake")
 	}
-	log.Warnf("ROLLBACK rolling back %d transactions from block %v height %d",
-		len(b.transactions), b.Hash, b.Height)
 
 	// dedupe because we might have duplication in the db
 	txns := make(map[chainhash.Hash]struct{})
 	for _, txHash := range b.transactions {
 		txns[txHash] = struct{}{}
 	}
+
+	log.Warnf("ROLLBACK rolling back %d transactions from block %v height %d",
+		len(txns), b.Hash, b.Height)
+
 	for txHash := range txns {
 		log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
 		if _, err := rollbackTransaction(ns, &txHash, &b.Block, s.chainParams); err != nil {
