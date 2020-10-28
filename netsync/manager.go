@@ -34,23 +34,23 @@ const (
 
 	// maxRejectedTxns is the maximum number of rejected transactions
 	// hashes to store in memory.
-	maxRejectedTxns = 1000
+	maxRejectedTxns = 1200
 
 	// maxRequestedBlocks is the maximum number of requested block
 	// hashes to store in memory.
-	maxRequestedBlocks = wire.MaxInvPerMsg
+	maxRequestedBlocks = (wire.MaxInvPerMsg - 100)
 
 	// maxRequestedTxns is the maximum number of requested transactions
 	// hashes to store in memory.
-	maxRequestedTxns = wire.MaxInvPerMsg
+	maxRequestedTxns = (wire.MaxInvPerMsg - 100)
 
 	// maxStallDuration is the time after which we will disconnect our
 	// current sync peer if we haven't made progress.
-	maxStallDuration = 3 * time.Minute
+	maxStallDuration = 1 * time.Minute
 
 	// stallSampleInterval the interval at which we will check to see if our
 	// sync has stalled.
-	stallSampleInterval = 30 * time.Second
+	stallSampleInterval = 10 * time.Second
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.

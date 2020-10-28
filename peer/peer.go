@@ -35,7 +35,7 @@ const (
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
-	DefaultTrickleInterval = 10 * time.Second
+	DefaultTrickleInterval = 15 * time.Second
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
@@ -577,10 +577,10 @@ func (p *Peer) UpdateLastBlockHeight(newHeight int32) {
 		p.statsMtx.Unlock()
 		return
 	}
+	defer p.statsMtx.Unlock()
 	log.Tracef("Updating last block height of peer %v from %v to %v",
 		p.addr, p.lastBlock, newHeight)
 	p.lastBlock = newHeight
-	p.statsMtx.Unlock()
 }
 
 // UpdateLastAnnouncedBlock updates meta-data about the last block hash this
@@ -1416,7 +1416,7 @@ out:
 			// disconnect the peer when we're in regression test mode and the
 			// error is one of the allowed errors.
 			if p.isAllowedReadError(err) {
-				log.Errorf("Allowed test error from %s: %v", p, err)
+				log.Errorf("Allowed read error from %s: %v", p, err)
 				idleTimer.Reset(idleTimeout)
 				continue
 			}
