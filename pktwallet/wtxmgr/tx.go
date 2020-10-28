@@ -643,20 +643,6 @@ func rollbackTransaction(
 	return
 }
 
-// RollbackTransaction kills off a transaction in case it is invalid or burned
-// or the block is orphaned.
-func RollbackTransaction(
-	ns walletdb.ReadWriteBucket,
-	txHash *chainhash.Hash,
-	block *Block,
-	params *chaincfg.Params,
-) er.R {
-	if _, err := rollbackTransaction(ns, txHash, block, params); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 	it := makeReadBlockIterator(ns, height)
 	if !it.next() {
