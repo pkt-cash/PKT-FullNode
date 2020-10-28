@@ -2627,6 +2627,10 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 	defer w.chainLock.Unlock()
 	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		for _, b := range blks {
+			if bs := w.Manager.SyncedTo(); b.height > bs.Height+1 {
+				// This happens if we get a resync/dropdb triggered while we're syncing
+				continue
+			}
 			if b.rollbackHash != nil {
 				txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 				log.Infof("Invalid block detected at [%d] replacing [%s] -> [%s]",
