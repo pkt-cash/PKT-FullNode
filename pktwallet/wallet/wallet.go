@@ -2489,9 +2489,15 @@ func (w *Wallet) WalletMempool() ([]wtxmgr.TxDetails, er.R) {
 }
 
 type SyncerResp struct {
+	// this can be nil if rollbackHash is non-nil
 	filter *chain.FilterBlocksResponse
+
+	// if nil then there is nothing to be done at all
 	header *wire.BlockHeader
 	height int32
+
+	// nil unless we have a block to revert
+	rollbackHash *chainhash.Hash
 }
 
 func rescanStep(
@@ -2516,12 +2522,6 @@ func rescanStep(
 			})
 		if hash, err := chainClient.GetBlockHash(int64(height)); err != nil {
 			return err
-		} else if len(txDetails) > 0 && !hash.IsEqual(&txDetails[0].Block.Hash) {
-			log.Infof("Block [%v @ %v] mismatch, backend says [%v @ %v]",
-				txDetails[0].Block.Hash, height, hash, height)
-			//w.TxStore.RollbackOne(txNs, rj.Height)
-			// TODO, something
-			return nil
 		} else if header, err := chainClient.GetBlockHeader(hash); err != nil {
 			return err
 		} else {
@@ -2536,6 +2536,15 @@ func rescanStep(
 				},
 			}
 			res, err := chainClient.FilterBlocks(filterReq)
+			if len(txDetails) > 0 && !hash.IsEqual(&txDetails[0].Block.Hash) {
+				out = SyncerResp{
+					filter:       res,
+					header:       header,
+					height:       height,
+					rollbackHash: &txDetails[0].Block.Hash,
+				}
+				return nil
+			}
 			if res == nil {
 				// valid to have no response and no error
 				return err
@@ -2611,23 +2620,19 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 				st.Hash.String(), st.Height,
 				blk.header.PrevBlock.String())
 		}
-	} else {
-		found := false
-		for _, b := range blks {
-			if b.filter != nil {
-				found = true
-				break
-			}
-		}
-		// Short cirtuit if we're resyncing and there are no filters
-		if !found {
-			return nil
-		}
 	}
 	w.chainLock.Lock()
 	defer w.chainLock.Unlock()
 	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		for _, b := range blks {
+			if b.rollbackHash != nil {
+				txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
+				log.Infof("Invalid block detected at [%d] replacing [%s] -> [%s]",
+					b.height, b.rollbackHash, b.header.BlockHash())
+				if err := w.TxStore.RollbackOne(txmgrNs, b.height); err != nil {
+					return err
+				}
+			}
 			if b.filter == nil {
 			} else if err := w.storeTxns(dbtx, b.filter); err != nil {
 				return err
@@ -2697,6 +2702,7 @@ func (w *Wallet) rescan2(
 			respLock.Lock()
 			x := responses[int32(blockNum)]
 			if x.header != nil {
+				// no header means there's nothing to be done at all
 				batch = append(batch, x)
 			}
 			delete(responses, int32(blockNum))
@@ -2813,7 +2819,7 @@ func (w *Wallet) rescan() {
 		})
 		return
 	}
-	top := rj.height + 5000
+	top := rj.height + 100
 	if limit < top {
 		top = limit
 	}
