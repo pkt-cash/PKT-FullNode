@@ -116,7 +116,7 @@ type WalletSetupCfg struct {
 // provided path.
 func createWallet(cfg *config) er.R {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, true, 250)
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time
