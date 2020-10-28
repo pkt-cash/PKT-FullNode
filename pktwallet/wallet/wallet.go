@@ -2486,6 +2486,88 @@ type SyncerResp struct {
 	rollbackHash *chainhash.Hash
 }
 
+// Returns true if tx pays a an address in the set of watchedAddrs which is not recorded in storedTx
+func paysUncreditedAddress(
+	tx *wire.MsgTx,
+	storedTx *wtxmgr.TxDetails,
+	watchedAddrs []btcutil.Address,
+) bool {
+	for _, addr := range watchedAddrs {
+		script := addr.ScriptAddress()
+		for index, out := range tx.TxOut {
+			if !bytes.Equal(script, out.PkScript) {
+				continue
+			}
+			found := false
+			for _, credit := range storedTx.Credits {
+				if credit.Index != uint32(index) {
+				} else if credit.Amount != btcutil.Amount(out.Value) {
+					log.Debug("Reload [%s] because out records show it "+
+						"paying [%s] [%s] but the chains says [%s]",
+						tx.TxHash(),
+						addr.EncodeAddress(),
+						credit.Amount.ToBTC(),
+						btcutil.Amount(out.Value).ToBTC(),
+					)
+					return true
+				} else {
+					// We found a matching credit, we're done
+					found = true
+					break
+				}
+			}
+			if !found {
+				log.Debug("Reload [%s] because it pays [%s] and we are missing that credit",
+					tx.TxHash(), addr.EncodeAddress())
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// This is easy because utxos are removed from the watchlist when they are spent
+// We don't need to care about the storedTx
+func spendsUndebitedAddress(
+	tx *wire.MsgTx,
+	storedTx *wtxmgr.TxDetails,
+	watchedAddrs map[wire.OutPoint]btcutil.Address,
+) bool {
+	ops := make(map[wire.OutPoint]struct{})
+	for _, in := range tx.TxIn {
+		ops[in.PreviousOutPoint] = struct{}{}
+	}
+	for op, addr := range watchedAddrs {
+		if _, ok := ops[op]; ok {
+			log.Debug("Reload [%s] because it spends from [%s]",
+				tx.TxHash(), addr.EncodeAddress())
+			return true
+		}
+	}
+	return false
+}
+
+// Returns the relevant txDetail and whether or not we should reload it
+func existsTxEntry(
+	tx *wire.MsgTx,
+	header *wire.BlockHeader,
+	txDetails []wtxmgr.TxDetails,
+) (*wtxmgr.TxDetails, bool) {
+	blockHash := header.BlockHash()
+	for _, txd := range txDetails {
+		txh := tx.TxHash()
+		if !txh.IsEqual(&txd.Hash) {
+			continue
+		} else if txd.Block.Hash.IsEqual(&blockHash) {
+			log.Debugf("Reloading [%s] because it has block hash [%s] but correct is [%s]",
+				txd.Block.Hash.String(), blockHash.String())
+			return &txd, true
+		}
+		return &txd, false
+	}
+	return nil, true
+}
+
 func rescanStep(
 	db walletdb.DB,
 	height int32,
@@ -2549,41 +2631,17 @@ func rescanStep(
 			}
 			var newTransactions = make([]*wire.MsgTx, 0)
 			for _, tx := range res.RelevantTxns {
-				shouldReload := true
-				for _, txd := range txDetails {
-					txh := tx.TxHash()
-					if txh.IsEqual(&txd.Hash) {
-						// We already know about the tx so we don't bother reloading it
-						// unless we have a reason to
-						shouldReload = false
-						break
+				detail, shouldReload := existsTxEntry(tx, header, txDetails)
+				if detail == nil {
+					if isRescan {
+						// This is the case whenever we receive a new block so we will only log if rescanning
+						log.Debug("Reload [%s] because we're missing the tx entry", tx.TxHash())
 					}
-				}
-				if !shouldReload {
+				} else if paysUncreditedAddress(tx, detail, filterReq.ImportedAddrs) {
 					// See if this tx gives coins to an address which we don't have a known credit for
-				outer:
-					for _, addr := range filterReq.ImportedAddrs {
-						script := addr.ScriptAddress()
-						for _, out := range tx.TxOut {
-							if bytes.Equal(script, out.PkScript) {
-								shouldReload = true
-								break outer
-							}
-						}
-					}
-				}
-				if !shouldReload {
-					// See if this tx spends coins which weren't spent before
-					ops := make(map[wire.OutPoint]struct{})
-					for _, in := range tx.TxIn {
-						ops[in.PreviousOutPoint] = struct{}{}
-					}
-					for op := range filterReq.WatchedOutPoints {
-						if _, ok := ops[op]; ok {
-							shouldReload = true
-							break
-						}
-					}
+					shouldReload = true
+				} else if spendsUndebitedAddress(tx, detail, filterReq.WatchedOutPoints) {
+					shouldReload = true
 				}
 				if shouldReload {
 					newTransactions = append(newTransactions, tx)
