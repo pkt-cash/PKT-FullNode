@@ -2676,7 +2676,6 @@ func (w *Wallet) rescan2(
 	blockMin, blockMax int32,
 	isRescan bool,
 ) er.R {
-	log.Debugf("rescan2 [%d] -> [%d]", blockMin, blockMax)
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return err
@@ -2722,7 +2721,6 @@ func (w *Wallet) rescan2(
 			if x.header != nil {
 				// no header means there's nothing to be done at all
 				batch = append(batch, x)
-				log.Debugf("Block [%d] [%s]", blockNum, x.header.BlockHash())
 			}
 			delete(responses, int32(blockNum))
 			respLock.Unlock()
@@ -2812,7 +2810,13 @@ func (w *Wallet) block(bm wtxmgr.Block) er.R {
 	}
 	// Remember to re-check the stamp because it might have been rolled back
 	st = w.Manager.SyncedTo()
-	if err := w.rescan2(st.Height+1, bm.Height+1, false); err != nil {
+
+	// Don't do more than 100 blocks in a cycle
+	top := bm.Height + 1
+	if top > st.Height+100 {
+		top = st.Height + 100
+	}
+	if err := w.rescan2(st.Height+1, top, false); err != nil {
 		return err
 	}
 	return nil
