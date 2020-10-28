@@ -2713,6 +2713,7 @@ func (w *Wallet) rescan2(
 			if x.header != nil {
 				// no header means there's nothing to be done at all
 				batch = append(batch, x)
+				log.Debugf("Block [%d] [%s]", blockNum, x.header.BlockHash())
 			}
 			delete(responses, int32(blockNum))
 			respLock.Unlock()
