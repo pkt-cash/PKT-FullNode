@@ -171,6 +171,8 @@ type ListUnspentResult struct {
 	RedeemScript  string  `json:"redeemScript,omitempty"`
 	Amount        float64 `json:"amount"`
 	Confirmations int64   `json:"confirmations"`
+	Height        int64   `json:"height"`
+	BlockHash     string  `json:"blockHash"`
 	Spendable     bool    `json:"spendable"`
 }
 

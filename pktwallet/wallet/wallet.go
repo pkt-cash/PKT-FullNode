@@ -1589,6 +1589,8 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 				ScriptPubKey:  hex.EncodeToString(output.PkScript),
 				Amount:        output.Amount.ToBTC(),
 				Confirmations: int64(confs),
+				Height:        int64(output.Height),
+				BlockHash:     output.Block.Hash.String(),
 				Spendable:     spendable,
 			}
 
