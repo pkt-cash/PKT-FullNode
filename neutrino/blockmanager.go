@@ -2371,7 +2371,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		numI := binary.LittleEndian.Uint32(x[:4])
 		numF := float64(numI) / 4294967296.0
 		if numF <= 20.0/float64(depth) {
-			log.Debugf("Requesting PacketCrypt Proof for block number [%d]", h)
+			log.Tracef("Requesting PacketCrypt Proof for block number [%d]", h)
 			needProofs = append(needProofs, hashHeight{hash: header.BlockHash(), height: h})
 		}
 	}
@@ -2433,12 +2433,12 @@ func blockHashByHeight(needHeight int32,
 		if int(needHeight-newHeadersHeight) >= len(newHeaders) {
 			return chainhash.Hash{}, er.New("height too big")
 		}
-		log.Debugf("PacketCrypt getting header hash [%d] from new headers", needHeight)
+		log.Tracef("PacketCrypt getting header hash [%d] from new headers", needHeight)
 		return newHeaders[needHeight-newHeadersHeight].BlockHash(), nil
 	} else if hdr, err := server.BlockHeaders.FetchHeaderByHeight(uint32(needHeight)); err != nil {
 		return chainhash.Hash{}, err
 	} else {
-		log.Debugf("PacketCrypt getting header hash [%d] from chain", needHeight)
+		log.Tracef("PacketCrypt getting header hash [%d] from chain", needHeight)
 		return hdr.BlockHash(), nil
 	}
 }
@@ -2539,7 +2539,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			if blk, ok := phmsg.proofs[thisHeaderHeight]; ok {
 				thisHeaderIndex := int32(i)
 				newHeadersHeight := thisHeaderHeight - thisHeaderIndex
-				log.Debugf("Checking PacketCrypt proof add1")
+				log.Tracef("Checking PacketCrypt proof add1")
 				if err := checkPacketCryptProof(
 					blk, thisHeaderHeight, msg.Headers, newHeadersHeight, b.server,
 				); err != nil {
