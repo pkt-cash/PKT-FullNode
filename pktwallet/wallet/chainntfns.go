@@ -85,7 +85,7 @@ func (w *Wallet) _rollbackBlock(dbtx walletdb.ReadWriteTx, bs waddrmgr.BlockStam
 	}
 
 	err = w.TxStore.RollbackOne(txmgrNs, bs.Height)
-	if err != nil {
+	if err != nil && !wtxmgr.ErrNoExists.Is(err) {
 		return err
 	}
 
