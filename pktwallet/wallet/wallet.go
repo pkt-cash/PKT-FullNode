@@ -2615,8 +2615,6 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 				blk.header.PrevBlock.String())
 		}
 	}
-	w.chainLock.Lock()
-	defer w.chainLock.Unlock()
 	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		for _, b := range blks {
 			if bs := w.Manager.SyncedTo(); b.height > bs.Height+1 {
