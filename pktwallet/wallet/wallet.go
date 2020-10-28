@@ -2509,6 +2509,33 @@ func existsTxEntry(
 	return nil, true
 }
 
+func mkFilterReq(w *watcher.Watcher, header *wire.BlockHeader, height int32) *chain.FilterBlocksRequest {
+	filterReq := w.FilterReq(height)
+	filterReq.Blocks = []wtxmgr.BlockMeta{
+		{
+			Block: wtxmgr.Block{
+				Hash:   header.BlockHash(),
+				Height: height,
+			},
+			Time: header.Timestamp,
+		},
+	}
+	return filterReq
+}
+
+func containsDuplicateTx(txd []wtxmgr.TxDetails) bool {
+	for i, d := range txd {
+		for _, dd := range txd[i:] {
+			if d.Hash.IsEqual(&dd.Hash) {
+				log.Debugf("Rolling back [%s] because tx [%s] is duplicated in the db",
+					d.Block.Hash, d.Hash)
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func rescanStep(
 	db walletdb.DB,
 	height int32,
@@ -2534,18 +2561,10 @@ func rescanStep(
 		} else if header, err := chainClient.GetBlockHeader(hash); err != nil {
 			return err
 		} else {
-			filterReq := watch.FilterReq(height)
-			filterReq.Blocks = []wtxmgr.BlockMeta{
-				{
-					Block: wtxmgr.Block{
-						Hash:   header.BlockHash(),
-						Height: height,
-					},
-					Time: header.Timestamp,
-				},
-			}
+			filterReq := mkFilterReq(watch, header, height)
 			res, err := chainClient.FilterBlocks(filterReq)
-			if len(txDetails) > 0 && !hash.IsEqual(&txDetails[0].Block.Hash) {
+			if len(txDetails) == 0 {
+			} else if !hash.IsEqual(&txDetails[0].Block.Hash) || containsDuplicateTx(txDetails) {
 				out = SyncerResp{
 					filter:       res,
 					header:       header,
@@ -2576,7 +2595,7 @@ func rescanStep(
 				if detail == nil {
 					if isRescan {
 						// This is the case whenever we receive a new block so we will only log if rescanning
-						log.Debug("Reload [%s] because we're missing the tx entry", tx.TxHash())
+						log.Debugf("Reload [%s] because we're missing the tx entry", tx.TxHash())
 					}
 				} else if paysUncreditedAddress(tx, detail, filterReq.ImportedAddrs) {
 					// See if this tx gives coins to an address which we don't have a known credit for
