@@ -2494,6 +2494,7 @@ func (w *Wallet) WalletMempool() ([]wtxmgr.TxDetails, er.R) {
 
 type SyncerResp struct {
 	// this can be nil if rollbackHash is non-nil
+	// or if we're syncing the chain and we need to load headers
 	filter *chain.FilterBlocksResponse
 
 	// if nil then there is nothing to be done at all
@@ -2599,7 +2600,7 @@ func rescanStep(
 					newTransactions = append(newTransactions, tx)
 				}
 			}
-			if len(newTransactions) == 0 {
+			if len(newTransactions) == 0 && isRescan {
 				return nil
 			}
 			res.RelevantTxns = newTransactions
@@ -2865,7 +2866,7 @@ func (w *Wallet) checkBlock() {
 		Hash:   *bestH,
 		Height: bestHeight,
 	}); err != nil {
-		log.Warnf("Error registering block", err.String())
+		log.Warnf("Error registering block [%s]", err.String())
 	}
 }
 
