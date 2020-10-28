@@ -406,7 +406,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	}
 
 	txOutAmt := btcutil.Amount(rec.MsgTx.TxOut[index].Value)
-	log.Debugf("Marking transaction %v output %d (%v) spendable",
+	log.Tracef("Marking transaction %v output %d (%v) spendable",
 		rec.Hash, index, txOutAmt)
 
 	cred := credit{

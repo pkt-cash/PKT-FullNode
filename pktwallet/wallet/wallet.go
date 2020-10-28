@@ -2847,7 +2847,7 @@ func (w *Wallet) rescan() {
 		top = limit
 	}
 	if err := w.rescan2(rj.height, top, true); err != nil {
-		log.Warnf("Error while running maintanence job [%s]", err.String())
+		log.Warnf("Error while running resync [%s] resync stopped", err.String())
 		return
 	}
 	rj.height = top
