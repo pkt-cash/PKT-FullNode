@@ -2552,6 +2552,14 @@ func rescanStep(
 			}
 			if res == nil {
 				// valid to have no response and no error
+				if !isRescan {
+					// If we're not rescanning, we MUST send the header
+					out = SyncerResp{
+						filter: res,
+						header: header,
+						height: height,
+					}
+				}
 				return err
 			}
 			var knownTx = make(map[chainhash.Hash]struct{})
