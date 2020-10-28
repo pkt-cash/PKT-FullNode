@@ -2525,7 +2525,7 @@ func mkFilterReq(w *watcher.Watcher, header *wire.BlockHeader, height int32) *ch
 
 func containsDuplicateTx(txd []wtxmgr.TxDetails) bool {
 	for i, d := range txd {
-		for _, dd := range txd[i:] {
+		for _, dd := range txd[:i] {
 			if d.Hash.IsEqual(&dd.Hash) {
 				log.Debugf("Rolling back [%s] because tx [%s] is duplicated in the db",
 					d.Block.Hash, d.Hash)
