@@ -2499,9 +2499,9 @@ func existsTxEntry(
 		txh := tx.TxHash()
 		if !txh.IsEqual(&txd.Hash) {
 			continue
-		} else if txd.Block.Hash.IsEqual(&blockHash) {
+		} else if !txd.Block.Hash.IsEqual(&blockHash) {
 			log.Debugf("Reloading [%s] because it has block hash [%s] but correct is [%s]",
-				txd.Block.Hash.String(), blockHash.String())
+				tx.TxHash(), txd.Block.Hash.String(), blockHash.String())
 			return &txd, true
 		}
 		return &txd, false
