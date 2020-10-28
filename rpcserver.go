@@ -3948,6 +3948,8 @@ type rpcServer struct {
 	helpCacher             *helpCacher
 	requestProcessShutdown chan struct{}
 	quit                   chan int
+	reqNum                 int64
+	reqCompl               int64
 }
 
 // httpStatusLine returns a response Status-Line (RFC 2616 Section 6.1)
@@ -4222,7 +4224,16 @@ func (s *rpcServer) jsonRPCReq(
 		}
 	}
 
-	rpcsLog.Infof("RPC %s", request.Method)
+	ps := make([]string, 0, len(request.Params))
+	for _, par := range request.Params {
+		ps = append(ps, string(par))
+	}
+
+	reqNum := atomic.AddInt64(&s.reqNum, 1)
+	reqCompl := atomic.LoadInt64(&s.reqCompl)
+
+	rpcsLog.Infof("> %d:%d RPC %s %s",
+		reqNum, (reqNum - reqCompl), request.Method, strings.Join(ps, " "))
 
 	// Attempt to parse the JSON-RPC request into a known concrete
 	// command.
@@ -4235,7 +4246,16 @@ func (s *rpcServer) jsonRPCReq(
 		}
 	}
 
-	return createResponse(request.ID, result, jsonErr)
+	resp, err := createResponse(request.ID, result, jsonErr)
+
+	resStr := "ok"
+	if err != nil {
+		resStr = err.Message()
+	}
+	rpcsLog.Infof("< %d:%d RPC %s %s", reqNum, (reqNum - reqCompl), request.Method, resStr)
+	atomic.AddInt64(&s.reqCompl, 1)
+
+	return resp, err
 }
 
 // jsonRPCRead handles reading and responding to RPC messages.
