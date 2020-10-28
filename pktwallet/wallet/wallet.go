@@ -2470,7 +2470,9 @@ func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dro
 		if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
 			return err
 		}
-		w.Manager.SetSyncedTo(tx.ReadWriteBucket(waddrmgrNamespaceKey), bs)
+		if err := w.Manager.SetSyncedTo(tx.ReadWriteBucket(waddrmgrNamespaceKey), bs); err != nil {
+			return err
+		}
 		return nil
 	}); err != nil {
 		return err
