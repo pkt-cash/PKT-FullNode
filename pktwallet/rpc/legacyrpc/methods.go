@@ -579,22 +579,15 @@ func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.
 // getUnconfirmedBalance handles a getunconfirmedbalance extension request
 // by returning the current unconfirmed balance of an account.
 func getUnconfirmedBalance(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetUnconfirmedBalanceCmd)
-
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
+	bals, err := w.CalculateAddressBalances(0, false)
 	if err != nil {
 		return nil, err
 	}
-	bals, err := w.CalculateAccountBalances(account, 1)
-	if err != nil {
-		return nil, err
+	sum := btcutil.Amount(0)
+	for _, b := range bals {
+		sum += b.Unconfirmed
 	}
-
-	return (bals.Total - bals.Spendable).ToBTC(), nil
+	return sum.ToBTC(), nil
 }
 
 // importPrivKey handles an importprivkey request by parsing

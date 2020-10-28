@@ -962,47 +962,6 @@ func (w *Wallet) CalculateAddressBalances(
 	})
 }
 
-// CalculateAccountBalances sums the amounts of all unspent transaction
-// outputs to the given account of a wallet and returns the balance.
-//
-// This function is much slower than it needs to be since transactions outputs
-// are not indexed by the accounts they credit to, and all unspent transaction
-// outputs must be iterated.
-func (w *Wallet) CalculateAccountBalances(account uint32, confirms int32) (Balances, er.R) {
-	var bals Balances
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-
-		// Get current block.  The block height used for calculating
-		// the number of tx confirmations.
-		syncBlock := w.Manager.SyncedTo()
-
-		return w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(_ []byte, output *wtxmgr.Credit) er.R {
-			var outputAcct uint32
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(
-				output.PkScript, w.chainParams)
-			if err == nil && len(addrs) > 0 {
-				_, outputAcct, err = w.Manager.AddrAccount(addrmgrNs, addrs[0])
-			}
-			if err != nil || outputAcct != account {
-				// disregard the error and keep searching
-				return nil
-			}
-
-			bals.Total += output.Amount
-			if output.FromCoinBase && !confirmed(int32(w.chainParams.CoinbaseMaturity),
-				output.Height, syncBlock.Height) {
-				bals.ImmatureReward += output.Amount
-			} else if confirmed(confirms, output.Height, syncBlock.Height) {
-				bals.Spendable += output.Amount
-			}
-			return nil
-		})
-	})
-	return bals, err
-}
-
 // CurrentAddress gets the most recently requested Bitcoin payment address
 // from a wallet for a particular key-chain scope.  If the address has already
 // been used (there is at least one transaction spending to it in the
@@ -1118,24 +1077,6 @@ func (w *Wallet) AddressInfo(a btcutil.Address) (waddrmgr.ManagedAddress, er.R) 
 		return err
 	})
 	return managedAddress, err
-}
-
-// AccountNumber returns the account number for an account name under a
-// particular key scope.
-func (w *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (uint32, er.R) {
-	manager, err := w.Manager.FetchScopedKeyManager(scope)
-	if err != nil {
-		return 0, err
-	}
-
-	var account uint32
-	err = walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		var err er.R
-		account, err = manager.LookupAccount(addrmgrNs, accountName)
-		return err
-	})
-	return account, err
 }
 
 // AccountName returns the name of an account.
