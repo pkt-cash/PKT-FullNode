@@ -2452,7 +2452,7 @@ func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dro
 
 	if !dropDb {
 		w.rescanJ = &rescanJob{
-			name: fmt.Sprintf("resync-%d-to-%d-at-%d",
+			name: fmt.Sprintf("resync_%d_to_%d_at_%d",
 				fromHeight, toHeight, time.Now().Unix()),
 			height:     fromHeight,
 			stopHeight: toHeight,
@@ -2465,6 +2465,8 @@ func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dro
 		return err
 	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		w.chainLock.Lock()
+		defer w.chainLock.Unlock()
 		if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
 			return err
 		}
