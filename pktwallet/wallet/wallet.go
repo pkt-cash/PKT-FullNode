@@ -121,8 +121,7 @@ type Wallet struct {
 	wsLock sync.RWMutex
 	ws     btcjson.WalletStats
 
-	watch     watcher.Watcher
-	chainLock sync.Mutex
+	watch watcher.Watcher
 
 	rescanJLock sync.Mutex
 	rescanJ     *rescanJob
@@ -133,6 +132,7 @@ type rescanJob struct {
 	height     int32
 	stopHeight int32
 	name       string
+	dropDb     bool
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -2450,32 +2450,13 @@ func (w *Wallet) ResyncChain(fromHeight, toHeight int32, addresses []string, dro
 		}
 	}
 
-	if !dropDb {
-		w.rescanJ = &rescanJob{
-			name: fmt.Sprintf("resync_%d_to_%d_at_%d",
-				fromHeight, toHeight, time.Now().Unix()),
-			height:     fromHeight,
-			stopHeight: toHeight,
-			watch:      watch,
-		}
-		return nil
-	}
-
-	if bs, err := getBlockStamp(w.chainClient, fromHeight); err != nil {
-		return err
-	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
-		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-		w.chainLock.Lock()
-		defer w.chainLock.Unlock()
-		if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
-			return err
-		}
-		if err := w.Manager.SetSyncedTo(tx.ReadWriteBucket(waddrmgrNamespaceKey), bs); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return err
+	w.rescanJ = &rescanJob{
+		name: fmt.Sprintf("resync_%d_to_%d_at_%d",
+			fromHeight, toHeight, time.Now().Unix()),
+		height:     fromHeight,
+		stopHeight: toHeight,
+		watch:      watch,
+		dropDb:     dropDb,
 	}
 	return nil
 }
@@ -2759,8 +2740,6 @@ func (w *Wallet) rollbackIfNeeded() er.R {
 		} else if nextHdr.PrevBlock.IsEqual(&st.Hash) {
 			return nil
 		} else {
-			w.chainLock.Lock()
-			defer w.chainLock.Unlock()
 			if err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 				return w._rollbackBlock(dbtx, st)
 			}); err != nil {
@@ -2830,6 +2809,29 @@ func (w *Wallet) rescan() {
 	if rj == nil {
 		return
 	}
+
+	// Process dropdb requests
+	if !rj.dropDb {
+	} else if bs, err := getBlockStamp(w.chainClient, rj.height); err != nil {
+		log.Warnf("Error dropping db [%s]", err.String())
+		return
+	} else if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		txNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		log.Infof("Dropping transaction db")
+		if err := wtxmgr.DropTransactionHistory(txNs); err != nil {
+			return err
+		}
+		if err := w.Manager.SetSyncedTo(tx.ReadWriteBucket(waddrmgrNamespaceKey), bs); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Warnf("Error dropping transaction db [%s]", err)
+		return
+	} else {
+		return
+	}
+
 	sta := w.Manager.SyncedTo()
 	limit := sta.Height
 	if rj.stopHeight > -1 {
