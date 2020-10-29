@@ -342,7 +342,7 @@ func loadConfig() (*config, []string, er.R) {
 			return nil, nil, er.E(errr)
 		}
 		// file doesn't exist, whatever
-	} else {
+	} else if len(userpass) >= 2 {
 		cfg.BtcdUsername = userpass[0]
 		cfg.BtcdPassword = userpass[1]
 	}
