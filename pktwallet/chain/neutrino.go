@@ -115,7 +115,7 @@ func (s *NeutrinoClient) IsCurrent() bool {
 // SendRawTransaction replicates the RPC client's SendRawTransaction command.
 func (s *NeutrinoClient) SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) (
 	*chainhash.Hash, er.R) {
-	err := s.CS.SendTransaction(tx)
+	err := s.CS.SendTransaction0(tx)
 	if err != nil {
 		return nil, err
 	}

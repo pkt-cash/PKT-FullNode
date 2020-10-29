@@ -290,18 +290,10 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 // accordingly.  We pass the message down to blockmanager which will call
 // QueueMessage with any appropriate responses.
 func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
-	log.Tracef("Got inv with %d items from %s", len(msg.InvList), p.Addr())
+	sp.server.inv(msg, sp)
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
 	for _, invVect := range msg.InvList {
 		if invVect.Type == wire.InvTypeTx {
-			log.Tracef("Ignoring tx %s in inv from %v -- "+
-				"SPV mode", invVect.Hash, sp)
-			if sp.ProtocolVersion() >= protocol.BIP0037Version {
-				log.Infof("Peer %v is announcing "+
-					"transactions -- disconnecting", sp)
-				sp.Disconnect()
-				return
-			}
 			continue
 		}
 		err := newInv.AddInvVect(invVect)
@@ -314,6 +306,50 @@ func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
 	if len(newInv.InvList) > 0 {
 		sp.server.blockManager.QueueInv(newInv, sp)
 	}
+}
+
+func (s *ChainService) inv(msg *wire.MsgInv, sp *ServerPeer) {
+	s.mtxInvListeners.Lock()
+	defer s.mtxInvListeners.Unlock()
+	for _, iv := range msg.InvList {
+		if ls, ok := s.invListeners[iv.Hash]; ok {
+			for _, l := range ls {
+				select {
+				case l <- sp:
+				default: // full, don't block
+					log.Warnf("inv channel full for [%s]", iv.Hash.String())
+				}
+			}
+		}
+	}
+}
+
+func (s *ChainService) ListenInvs(h chainhash.Hash) chan *ServerPeer {
+	s.mtxInvListeners.Lock()
+	defer s.mtxInvListeners.Unlock()
+	ch := make(chan *ServerPeer, 256)
+	s.invListeners[h] = append(s.invListeners[h], ch)
+	return ch
+}
+
+func (s *ChainService) StopListenInvs(h chainhash.Hash, ch chan *ServerPeer) bool {
+	s.mtxInvListeners.Lock()
+	defer s.mtxInvListeners.Unlock()
+	if ls, ok := s.invListeners[h]; ok {
+		x := make([]chan *ServerPeer, 0, len(ls)-1)
+		for _, l := range ls {
+			if l != ch {
+				x = append(x, l)
+			}
+		}
+		if len(x) == 0 {
+			delete(s.invListeners, h)
+		} else {
+			s.invListeners[h] = x
+		}
+		return len(x) == len(ls)-1
+	}
+	return false
 }
 
 // OnHeaders is invoked when a peer receives a headers bitcoin
@@ -565,6 +601,9 @@ type ChainService struct {
 	reqNum     uint32
 	queries    map[uint32]*Query
 	mtxQueries sync.Mutex
+
+	mtxInvListeners sync.Mutex
+	invListeners    map[chainhash.Hash][]chan *ServerPeer
 }
 
 type Query struct {
@@ -638,6 +677,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 		dialer:            dialer,
 		pendingFilters:    make(map[*pendingFiltersReq]struct{}),
 		queries:           make(map[uint32]*Query),
+		invListeners:      make(map[chainhash.Hash][]chan *ServerPeer),
 	}
 
 	// We set the queryPeers method to point to queryChainServicePeers,
@@ -820,7 +860,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 	s.broadcaster = pushtx.NewBroadcaster(&pushtx.Config{
 		Broadcast: func(tx *wire.MsgTx) er.R {
-			return s.sendTransaction(tx)
+			return s.SendTransaction0(tx)
 		},
 		SubscribeBlocks: func() (*blockntfns.Subscription, er.R) {
 			return s.blockSubscriptionMgr.NewSubscription(0)
@@ -1336,7 +1376,7 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 		ChainParams:      &sp.server.chainParams,
 		Services:         sp.server.services,
 		ProtocolVersion:  protocol.FeeFilterVersion,
-		DisableRelayTx:   true,
+		DisableRelayTx:   false,
 	}
 }
 
