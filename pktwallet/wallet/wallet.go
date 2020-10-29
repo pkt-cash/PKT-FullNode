@@ -1481,36 +1481,29 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 		syncBlock := w.Manager.SyncedTo()
 
 		filter := len(addresses) != 0
-		unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
-		if err != nil {
-			return err
-		}
-		sort.Sort(sort.Reverse(creditSlice(unspent)))
-
 		defaultAccountName := "default"
 
-		results = make([]*btcjson.ListUnspentResult, 0, len(unspent))
-		for i := range unspent {
-			output := unspent[i]
+		results = make([]*btcjson.ListUnspentResult, 0)
+		w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(key []byte, output *wtxmgr.Credit) er.R {
 
 			// Outputs with fewer confirmations than the minimum or more
 			// confs than the maximum are excluded.
 			confs := confirms(output.Height, syncBlock.Height)
 			if confs < minconf || confs > maxconf {
-				continue
+				return nil
 			}
 
 			// Only mature coinbase outputs are included.
 			if output.FromCoinBase {
 				target := int32(w.ChainParams().CoinbaseMaturity)
 				if !confirmed(target, output.Height, syncBlock.Height) {
-					continue
+					return nil
 				}
 			}
 
 			// Exclude locked outputs from the result set.
 			if w.LockedOutpoint(output.OutPoint) {
-				continue
+				return nil
 			}
 
 			// Lookup the associated account for the output.  Use the
@@ -1523,7 +1516,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 			sc, addrs, _, err := txscript.ExtractPkScriptAddrs(
 				output.PkScript, w.chainParams)
 			if err != nil {
-				continue
+				return nil
 			}
 			if len(addrs) > 0 {
 				smgr, acct, err := w.Manager.AddrAccount(addrmgrNs, addrs[0])
@@ -1542,7 +1535,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 						goto include
 					}
 				}
-				continue
+				return nil
 			}
 
 		include:
@@ -1602,7 +1595,8 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 			}
 
 			results = append(results, result)
-		}
+			return nil
+		})
 		return nil
 	})
 	return results, err
