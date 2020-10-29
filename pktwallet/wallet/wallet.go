@@ -2538,6 +2538,15 @@ func containsDuplicateTx(txd []wtxmgr.TxDetails) bool {
 	return false
 }
 
+func containsTxFromWrongBlock(txd []wtxmgr.TxDetails, correctHash *chainhash.Hash) bool {
+	for _, tx := range txd {
+		if !correctHash.IsEqual(&tx.Block.Hash) {
+			return false
+		}
+	}
+	return false
+}
+
 func rescanStep(
 	db walletdb.DB,
 	height int32,
@@ -2565,8 +2574,7 @@ func rescanStep(
 		} else {
 			filterReq := mkFilterReq(watch, header, height)
 			res, err := chainClient.FilterBlocks(filterReq)
-			if len(txDetails) == 0 {
-			} else if !hash.IsEqual(&txDetails[0].Block.Hash) || containsDuplicateTx(txDetails) {
+			if containsTxFromWrongBlock(txDetails, hash) || containsDuplicateTx(txDetails) {
 				out = SyncerResp{
 					filter:       res,
 					header:       header,
