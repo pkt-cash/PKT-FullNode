@@ -13,7 +13,6 @@ import (
 	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
-	"go.etcd.io/bbolt"
 )
 
 // createTestBanStore creates a test Store backed by a boltdb instance.
@@ -25,10 +24,8 @@ func createTestBanStore(t *testing.T) (banman.Store, func()) {
 		t.Fatalf("unable to create db dir: %v", er.E(errr))
 	}
 	dbPath := filepath.Join(dbDir, "test.db")
-    opts := &bbolt.Options{
-        NoFreelistSync: true,
-    }
-	db, err := walletdb.Create("bdb", dbPath, opts)
+
+	db, err := walletdb.Create("bdb", dbPath)
 	if err != nil {
 		os.RemoveAll(dbDir)
 		t.Fatalf("unable to create db: %v", err)

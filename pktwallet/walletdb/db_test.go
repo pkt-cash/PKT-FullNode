@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
-	"go.etcd.io/bbolt"
 )
 
 // TestAddDuplicateDriver ensures that adding a duplicate driver does not
@@ -47,11 +46,9 @@ func TestAddDuplicateDriver(t *testing.T) {
 		t.Errorf("unexpected duplicate driver registration error - "+
 			"got %v, want %v", err, walletdb.ErrDbTypeRegistered)
 	}
+
 	dbPath := "dupdrivertest.db"
-	opts := &bbolt.Options{
-		NoFreelistSync: true,
-	}
-	db, err := walletdb.Create(dbType, dbPath, opts)
+	db, err := walletdb.Create(dbType, dbPath)
 	if err != nil {
 		t.Errorf("failed to create database: %v", err)
 		return
@@ -85,10 +82,7 @@ func TestCreateOpenFail(t *testing.T) {
 
 	// Ensure creating a database with the new type fails with the expected
 	// error.
-	opts := &bbolt.Options{
-        NoFreelistSync: true,
-    }
-	_, err := walletdb.Create(dbType, opts)
+	_, err := walletdb.Create(dbType)
 	if err.String() != openError.String() {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
@@ -97,7 +91,7 @@ func TestCreateOpenFail(t *testing.T) {
 
 	// Ensure opening a database with the new type fails with the expected
 	// error.
-	_, err = walletdb.Open(dbType, opts)
+	_, err = walletdb.Open(dbType)
 	if err.String() != openError.String() {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
@@ -111,10 +105,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// Ensure creating a database with an unsupported type fails with the
 	// expected error.
 	dbType := "unsupported"
-	opts := &bbolt.Options{
-		NoFreelistSync: true,
-	}
-	_, err := walletdb.Create(dbType, opts)
+	_, err := walletdb.Create(dbType)
 	if !walletdb.ErrDbUnknownType.Is(err) {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			walletdb.ErrDbUnknownType)
@@ -123,7 +114,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 
 	// Ensure opening a database with the an unsupported type fails with the
 	// expected error.
-	_, err = walletdb.Open(dbType, opts)
+	_, err = walletdb.Open(dbType)
 	if !walletdb.ErrDbUnknownType.Is(err) {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			walletdb.ErrDbUnknownType)

@@ -15,7 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
-	"go.etcd.io/bbolt"
 )
 
 func createTestDatabase() (func(), FilterDatabase, er.R) {
@@ -23,10 +22,8 @@ func createTestDatabase() (func(), FilterDatabase, er.R) {
 	if errr != nil {
 		return nil, nil, er.E(errr)
 	}
-    opts := &bbolt.Options{
-        NoFreelistSync: true,
-    }
-	db, err := walletdb.Create("bdb", tempDir+"/test.db", opts)
+
+	db, err := walletdb.Create("bdb", tempDir+"/test.db")
 	if err != nil {
 		return nil, nil, err
 	}

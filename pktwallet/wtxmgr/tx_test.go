@@ -21,7 +21,6 @@ import (
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/constants"
-	"go.etcd.io/bbolt"
 )
 
 // Received transaction output for mainnet outpoint
@@ -52,10 +51,7 @@ func testDB() (walletdb.DB, func(), er.R) {
 	if errr != nil {
 		return nil, func() {}, er.E(errr)
 	}
-	opts := &bbolt.Options{
-		NoFreelistSync: true,
-	}
-	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"), opts)
+	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
 	return db, func() { os.RemoveAll(tmpDir) }, err
 }
 
@@ -66,10 +62,8 @@ func testStore() (*Store, walletdb.DB, func(), er.R) {
 	if errr != nil {
 		return nil, nil, func() {}, er.E(errr)
 	}
-	opts := &bbolt.Options{
-		NoFreelistSync: true,
-	}
-	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"), opts)
+
+	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		return nil, nil, nil, err

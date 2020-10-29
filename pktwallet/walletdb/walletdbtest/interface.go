@@ -12,7 +12,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-	"go.etcd.io/bbolt"
 )
 
 // errSubTestFail is used to signal that a sub test returned false.
@@ -676,8 +675,8 @@ func testAdditionalErrors(tc *testContext) bool {
 }
 
 // TestInterface performs all interfaces tests for this database driver.
-func TestInterface(t Tester, dbType, dbPath string, opts *bbolt.Options) {
-	db, err := walletdb.Create(dbType, dbPath, opts)
+func TestInterface(t Tester, dbType, dbPath string) {
+	db, err := walletdb.Create(dbType, dbPath)
 	if err != nil {
 		t.Errorf("Failed to create test database (%s) %v", dbType, err)
 		return
