@@ -35,7 +35,16 @@ const (
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
-	DefaultTrickleInterval = 15 * time.Second
+	//
+	// The BTCD default is 10 - this controls the wait before nodes send
+	// more txns at once and reduces the time new txns have to wait before
+	// before being broadcast - with the previous settings, the maximum a
+	// single node could send would be about ~28MB worth of txns every ten
+	// minutes - XXX(trn) I'm investigating the effects of removing the
+	// trickling concept all-together and attempting to broadcast all txns
+	// immediately, but it would require some extra peer selection logic,
+	// rather than just rebroadcasting txns to connected peers at random.
+	DefaultTrickleInterval = 5 * time.Second
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
