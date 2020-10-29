@@ -27,7 +27,7 @@ const (
 	svcDisplayName = "PKTd Service"
 
 	// svcDesc is the description of the service.
-	svcDesc = "Synchronizes with the PKT Cash blockchain" +
+	svcDesc = "Synchronizes with the PKT blockchain" +
 		"and provides access and services to applications."
 )
 
