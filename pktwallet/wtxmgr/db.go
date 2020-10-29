@@ -286,7 +286,7 @@ func (it *blockIterator) prev() bool {
 	return true
 }
 
-// unavailable until https://github.com/boltdb/bolt/issues/620 is fixed.
+// unavailable until https://github.com/etcd-io/bbolt/issues/146 is fixed.
 // func (it *blockIterator) delete() error {
 // 	err := it.c.Delete()
 // 	if err != nil {
