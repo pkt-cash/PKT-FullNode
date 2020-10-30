@@ -712,10 +712,17 @@ func (s *Store) ForEachUnspentOutput(
 			return err
 		}
 
-		blockTime, err := fetchBlockTime(ns, block.Height)
+		blockHash, blockTime, err := fetchBlockHashTime(ns, block.Height)
 		if err != nil {
 			return err
 		}
+		if !blockHash.IsEqual(&block.Hash) {
+			log.Debugf("Skipping transaction [%s] because it references block [%s @ %d] "+
+				"which is not in the chain",
+				op.Hash, block.Hash, block.Height)
+			return nil
+		}
+
 		// TODO(jrick): reading the entire transaction should
 		// be avoidable.  Creating the credit only requires the
 		// output amount and pkScript.

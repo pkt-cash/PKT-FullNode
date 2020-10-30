@@ -59,7 +59,7 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *chainhash.Hash, r
 	if err != nil {
 		return nil, err
 	}
-	details.Block.Time, err = fetchBlockTime(ns, details.Block.Height)
+	_, details.Block.Time, err = fetchBlockHashTime(ns, details.Block.Height)
 	if err != nil {
 		return nil, err
 	}
