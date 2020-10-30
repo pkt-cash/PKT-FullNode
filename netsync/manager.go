@@ -33,24 +33,31 @@ const (
 	minInFlightBlocks = 10
 
 	// maxRejectedTxns is the maximum number of rejected transactions
-	// hashes to store in memory.
-	maxRejectedTxns = 1000
+	// hashes to store in memory. 
+	maxRejectedTxns = 1200
 
 	// maxRequestedBlocks is the maximum number of requested block
-	// hashes to store in memory.
-	maxRequestedBlocks = wire.MaxInvPerMsg
+	// hashes to store in memory. By requesting 100 less than the
+	// maximum, we avoid immediately triggering the remote peers ban
+	// manager when our connection is fast or latency is very low.
+	maxRequestedBlocks = (wire.MaxInvPerMsg - 100)
 
 	// maxRequestedTxns is the maximum number of requested transactions
-	// hashes to store in memory.
-	maxRequestedTxns = wire.MaxInvPerMsg
+	// hashes to store in memory. By requesting 100 less than the
+	// maximum, we avoid immediately triggering the remote peers ban
+	// manager when our connection is fast or latency is very low.
+	maxRequestedTxns = (wire.MaxInvPerMsg - 100)
 
 	// maxStallDuration is the time after which we will disconnect our
-	// current sync peer if we haven't made progress.
-	maxStallDuration = 3 * time.Minute
+	// current sync peer if we haven't made progress. For PKTD, it's
+	// not unreasonable to expect progress within one minute vs. the
+	// default of three minutes due the use of meshnet connections.
+	maxStallDuration = 1 * time.Minute
 
-	// stallSampleInterval the interval at which we will check to see if our
-	// sync has stalled.
-	stallSampleInterval = 30 * time.Second
+	// stallSampleInterval the interval at which we will check to see
+	// if our sync has stalled. Checking at 10 second intervals is the
+	// maximum possible without any noticeable performance penalties.
+	stallSampleInterval = 10 * time.Second
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
