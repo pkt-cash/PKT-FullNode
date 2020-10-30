@@ -1439,8 +1439,7 @@ out:
 					log.Errorf(errMsg)
 				}
 
-				// Push a reject message for the malformed message and wait for
-				// the message to be sent before disconnecting.
+				// Push a reject message for malformed messages.
 				//
 				// NOTE: Ideally this would include the command in the header if
 				// at least that much of the message was valid, but that is not
@@ -1448,7 +1447,6 @@ out:
 				// command.
 				p.PushRejectMsg("malformed", wire.RejectMalformed, errMsg, nil,
 					true)
-				p.Disconnect()
 			}
 			break out
 		}
