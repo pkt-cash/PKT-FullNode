@@ -301,28 +301,42 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// If a block record does not yet exist for any transactions from this
 	// block, insert a block record first. Otherwise, update it by adding
 	// the transaction hash to the set of transactions from this block.
-	blockKey, blockValue := existsBlockRecord(ns, block.Height)
-	if blockValue == nil {
-		if err := putBlockRecord(ns, block, &rec.Hash); err != nil {
-			return err
-		}
-	} else {
-		br := blockRecord{}
-		if err := readRawBlockRecord(blockKey, blockValue, &br); err != nil {
-			return err
-		}
-		has := false
+	br, err := fetchBlockRecord(ns, block.Height)
+	if err != nil && !ErrNoExists.Is(err) {
+		return err
+	}
+	var transactions []chainhash.Hash
+	if br != nil {
+		transactions = make([]chainhash.Hash, 0, len(br.transactions)+1)
 		for _, txid := range br.transactions {
-			if txid.IsEqual(&rec.Hash) {
-				has = true
+			if br.Block.Hash.IsEqual(&block.Block.Hash) {
+				if !txid.IsEqual(&rec.Hash) {
+					transactions = append(transactions, txid)
+				}
+			} else {
+				// Ideally we would do some sort of transaction rollback operation
+				// but we're dealing with a corrupt db and rollbackTransaction()
+				// is not going to rollback everything it can and ignore what it
+				// can't, instead it will fail with an error when any of the things
+				// it expects to be present are not. Also deleting the tx object
+				// without all of the associated credits and debits is risky because
+				// it can cause errors in other code. So we're just going to detach
+				// it from the block and let it be with the caviats:
+				//
+				// 1. there may be dangling credits and no associated block record
+				//      ForEachUnspentOutput will filter these out
+				// 2. there may be debits which spent credits that should not have
+				//      been spent.
 			}
 		}
-		if has {
-		} else if blockValue, err := appendRawBlockRecord(blockValue, &rec.Hash); err != nil {
-			return err
-		} else if err := putRawBlockRecord(ns, blockKey, blockValue); err != nil {
-			return err
-		}
+	}
+	transactions = append(transactions, rec.Hash)
+	if err := putBlockRecord(ns, &blockRecord{
+		Block:        block.Block,
+		Time:         block.Time,
+		transactions: transactions,
+	}); err != nil {
+		return err
 	}
 
 	// no harm in putting the tx record again
@@ -644,13 +658,9 @@ func rollbackTransaction(
 }
 
 func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
-	it := makeReadBlockIterator(ns, height)
-	if !it.next() {
-		return ErrNoExists.Default()
-	}
-	b := &it.elem
-	if it.elem.Height != height {
-		panic("Iterator mistake")
+	b, err := fetchBlockRecord(ns, height)
+	if err != nil {
+		return err
 	}
 
 	// dedupe because we might have duplication in the db
@@ -667,10 +677,6 @@ func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 		if _, err := rollbackTransaction(ns, &txHash, &b.Block, s.chainParams); err != nil {
 			return err
 		}
-	}
-
-	if it.err != nil {
-		return it.err
 	}
 
 	if err := deleteBlockRecord(ns, height); err != nil {
@@ -712,14 +718,14 @@ func (s *Store) ForEachUnspentOutput(
 			return err
 		}
 
-		blockHash, blockTime, err := fetchBlockHashTime(ns, block.Height)
+		br, err := fetchBlockRecord(ns, block.Height)
 		if err != nil {
 			return err
 		}
-		if !blockHash.IsEqual(&block.Hash) {
+		if !br.Hash.IsEqual(&block.Hash) {
 			log.Debugf("Skipping transaction [%s] because it references block [%s @ %d] "+
-				"which is not in the chain",
-				op.Hash, block.Hash, block.Height)
+				"which is not in the chain correct block is [%s]",
+				op.Hash, block.Hash, block.Height, br.Hash)
 			return nil
 		}
 
@@ -737,7 +743,7 @@ func (s *Store) ForEachUnspentOutput(
 			OutPoint: op,
 			BlockMeta: BlockMeta{
 				Block: block,
-				Time:  blockTime,
+				Time:  br.Time,
 			},
 			Amount:       btcutil.Amount(txOut.Value),
 			PkScript:     txOut.PkScript,

@@ -59,9 +59,12 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *chainhash.Hash, r
 	if err != nil {
 		return nil, err
 	}
-	_, details.Block.Time, err = fetchBlockHashTime(ns, details.Block.Height)
-	if err != nil {
+	// NOTE: we are not comparing the block hash and failing if it's wrong
+	//       the customer asked for this txHash and that's what we'll give them.
+	if br, err := fetchBlockRecord(ns, details.Block.Height); err != nil {
 		return nil, err
+	} else {
+		details.Block.Time = br.Time
 	}
 
 	credIter := makeReadCreditIterator(ns, recKey)

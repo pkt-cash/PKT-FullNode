@@ -153,31 +153,37 @@ func putRawBlockRecord(ns walletdb.ReadWriteBucket, k, v []byte) er.R {
 	return nil
 }
 
-func putBlockRecord(ns walletdb.ReadWriteBucket, block *BlockMeta, txHash *chainhash.Hash) er.R {
-	k := keyBlockRecord(block.Height)
-	v := valueBlockRecord(block, txHash)
+func putBlockRecord(ns walletdb.ReadWriteBucket, br *blockRecord) er.R {
+	k := keyBlockRecord(br.Block.Height)
+	v := valueBlockRecord(&BlockMeta{
+		Block: br.Block,
+		Time:  br.Time,
+	}, &br.transactions[0])
+	for _, txid := range br.transactions[1:] {
+		v, _ = appendRawBlockRecord(v, &txid)
+	}
 	return putRawBlockRecord(ns, k, v)
-}
-
-func fetchBlockHashTime(ns walletdb.ReadBucket, height int32) (*chainhash.Hash, time.Time, er.R) {
-	k := keyBlockRecord(height)
-	v := ns.NestedReadBucket(bucketBlocks).Get(k)
-	if len(v) < 44 {
-		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketBlocks, 44, len(v))
-		return nil, time.Time{}, storeError(ErrData, str, nil)
-	}
-	h, err := chainhash.NewHash(v[:32])
-	if err != nil {
-		panic("chainhash.NewHash() error")
-	}
-	return h, time.Unix(int64(byteOrder.Uint64(v[32:40])), 0), nil
 }
 
 func existsBlockRecord(ns walletdb.ReadBucket, height int32) (k, v []byte) {
 	k = keyBlockRecord(height)
 	v = ns.NestedReadBucket(bucketBlocks).Get(k)
 	return
+}
+
+func fetchBlockRecord(
+	ns walletdb.ReadBucket,
+	height int32,
+) (*blockRecord, er.R) {
+	blockKey, blockValue := existsBlockRecord(ns, height)
+	if blockValue == nil {
+		return nil, ErrNoExists.Default()
+	}
+	br := blockRecord{}
+	if err := readRawBlockRecord(blockKey, blockValue, &br); err != nil {
+		return nil, err
+	}
+	return &br, nil
 }
 
 func readRawBlockRecord(k, v []byte, block *blockRecord) er.R {
