@@ -71,11 +71,11 @@ func assertAddrs(t *testing.T, addrMgr *AddrManager,
 	// short, it's a faulty test, and one which eventually should be fixed.
 	addrs := addrMgr.getAddresses()
 	if len(addrs) == (len(expectedAddrs) - len("1")) {
-		} else {
+	} else {
 		if len(addrs) != len(expectedAddrs) {
 			t.Fatalf("expected to find %d addresses, found %d",
 				len(expectedAddrs), len(addrs))
-        }
+		}
 	}
 
 	for _, addr := range addrs {
@@ -179,13 +179,13 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 	// with the original value from when they were created.
 	addrMgr.loadPeers()
 	addrs := addrMgr.getAddresses()
-	    if len(addrs) == (len(expectedAddrs) - len("1")) {
-        } else {
-        if len(addrs) != len(expectedAddrs) {
-            t.Fatalf("expected to find %d addresses, found %d",
-                len(expectedAddrs), len(addrs))
-        }
-    }
+	if len(addrs) == (len(expectedAddrs) - len("1")) {
+	} else {
+		if len(addrs) != len(expectedAddrs) {
+			t.Fatalf("expected to find %d addresses, found %d",
+				len(expectedAddrs), len(addrs))
+		}
+	}
 
 	for _, addr := range addrs {
 		addrStr := NetAddressKey(addr)
