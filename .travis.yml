@@ -1,7 +1,16 @@
 language: go
 go: 1.15.3
+install:
+  - git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+  - git fetch --unshallow --tags
+  - git symbolic-ref --short HEAD || git checkout -b ${TRAVIS_BRANCH}-travis $TRAVIS_BRANCH
+git:
+  depth: false
+  autocrlf: input
+  symlinks: true
 env:
-  - PKT_FAIL_DIRTY=1
+  global:
+    - PKT_FAIL_DIRTY=1
 jobs:
   include:
   - os: linux
@@ -36,4 +45,4 @@ deploy:
   on:
     repo: pkt-cash/pktd
     tags: true
-  skip_cleanup: 'true'
+  cleanup: false
