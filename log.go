@@ -77,7 +77,6 @@ func init() {
 	txscript.UseLogger(scrpLog)
 	netsync.UseLogger(syncLog)
 	mempool.UseLogger(txmpLog)
-
 	block.UseLogger(pcptLog)
 	proof.UseLogger(pcptLog)
 }
