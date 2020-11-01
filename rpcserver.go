@@ -4461,10 +4461,7 @@ func (s *rpcServer) Start() {
 		s.wg.Add(1)
 		go func(listener net.Listener) {
 			rpcsLog.Infof("RPC server listening on %s", listener.Addr())
-			err := httpServer.Serve(listener)
-			if err != nil {
-				panic("Start: httpServer.Serve failed.")
-			}
+			httpServer.Serve(listener)
 			rpcsLog.Tracef("RPC listener done for %s", listener.Addr())
 			s.wg.Done()
 		}(listener)
