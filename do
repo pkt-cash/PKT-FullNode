@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 die() { printf '%s\n' "Error: ${*:?}" >&2; exit 1; }
-build() { l="${1:?}"; printf '%s\n' "Building ${l?${unset:?}}"; go build -trimpath -ldflags="${PKTD_LDFLAGS:?${unset:?}}" -o "${bindir:?${unset:?}}"/"${l?${unset:?}}" || die "Failed building ${l?${unset:?}}"; }
+build() { l="${1:-}"; printf '%s\n' "Building ${l:?${unset:?}}"; o=$(printf '%s\n' "${l:?${unset:?}}"|sed 's/^pktd$/./'); go build -o "${bindir:?${unset:?}}"/"${l?${unset:?}}" -trimpath -ldflags="${PKTD_LDFLAGS:?${unset:?}}" "./${o?${unset:?}}" || die "Failed building ${l?${unset:?}}"; }
 export GO111MODULE="on" && export unset="Error: Variable is unset; aborting."
 export bindir="./bin" && export PKTD_TESTFLAGS="-count=1 -cover -parallel=1"
 PKTD_GIT_ID=$(git update-index -q --refresh 2>/dev/null; git describe --tags HEAD 2>/dev/null)
