@@ -1394,7 +1394,11 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 	}
 
 	for {
-		s.doFilterRequest(*doHash, int32(doHeight), filterType, dbFilterType, options)
+		if err := s.doFilterRequest(
+			*doHash, int32(doHeight), filterType, dbFilterType, options,
+		); err != nil {
+			return nil, err
+		}
 
 		// Since another request might have added the filter to the cache while
 		// we were waiting for the mutex, we do a final lookup before starting
