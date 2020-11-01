@@ -22,7 +22,7 @@ go build -ldflags="${PKTD_LDFLAGS}" -o ./bin/pktctl ./cmd/btcctl || die "failed 
 echo "Running tests"
 go test ./... || die "tests failed"
 if [ -z "${SKIP_GOLEVELDB_TESTS:-}" ]; then 
-	{ { cd goleveldb; go test ./... || die "tests failed"; } && cd ..; }; 
+	{ { cd goleveldb; go test ${PKTD_TESTFLAGS:-} ./... || die "tests failed"; } && cd ..; }; 
 fi
 ./bin/pktd --version || die "can't run pktd"
 echo "Everything looks good - use ./bin/pktd to launch"
