@@ -4461,7 +4461,10 @@ func (s *rpcServer) Start() {
 		s.wg.Add(1)
 		go func(listener net.Listener) {
 			rpcsLog.Infof("RPC server listening on %s", listener.Addr())
-			httpServer.Serve(listener)
+			err := httpServer.Serve(listener)
+			if err != nil {
+				panic("Start: httpServer.Serve failed.")
+			}
 			rpcsLog.Tracef("RPC listener done for %s", listener.Addr())
 			s.wg.Done()
 		}(listener)
@@ -4486,7 +4489,10 @@ func genCertPair(certFile, keyFile string) er.R {
 		return er.E(errr)
 	}
 	if errr := ioutil.WriteFile(keyFile, key, 0600); errr != nil {
-		os.Remove(certFile)
+		perr := os.Remove(certFile)
+			if perr != nil {
+				panic("genCertPair: os.Remove failure")
+			}
 		return er.E(errr)
 	}
 

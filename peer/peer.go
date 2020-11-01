@@ -1717,6 +1717,9 @@ out:
 			invMsg := wire.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
 				iv := invSendQueue.Remove(e).(*wire.InvVect)
+				if iv == nil {
+					panic("queueHandler: iv == nil")
+				}
 
 				// Don't send inventory that became known after
 				// the initial check.
@@ -1750,6 +1753,9 @@ out:
 	// waiting for us.
 	for e := pendingMsgs.Front(); e != nil; e = pendingMsgs.Front() {
 		val := pendingMsgs.Remove(e)
+		if val == nil {
+			panic("queueHandler: val == nil")
+		}
 		msg := val.(outMsg)
 		if msg.doneChan != nil {
 			msg.doneChan <- struct{}{}
