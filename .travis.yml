@@ -2,8 +2,9 @@ language: go
 go: 1.15.3
 install:
   - git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
-  - git fetch --tags && git fetch --all
-  - git symbolic-ref --short HEAD || git checkout -b ${TRAVIS_BRANCH}-travis $TRAVIS_BRANCH
+  - git fetch --tags 
+  - git fetch --all
+  - git checkout -b ${TRAVIS_BRANCH}-travis $TRAVIS_BRANCH
 git:
   depth: false
   autocrlf: input
