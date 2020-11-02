@@ -1214,6 +1214,7 @@ func (mp *TxPool) MaybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit bool) 
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 	hashes, txD, err := mp.maybeAcceptTransaction(tx, isNew, rateLimit, true)
+
 	return hashes, txD, err
 }
 
@@ -1314,6 +1315,7 @@ func (mp *TxPool) ProcessOrphans(acceptedTx *btcutil.Tx) []*TxDesc {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 	acceptedTxns := mp.processOrphans(acceptedTx)
+
 	return acceptedTxns
 }
 
