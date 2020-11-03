@@ -704,8 +704,8 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// it as an actual error.
 		if ruleerror.Err.Is(err) {
 			if !ruleerror.ErrDuplicateBlock.Is(err) {
-				log.Infof("Rejected block %v from %s: %v", blockHash,
-					peer, err)
+				log.Infof("Rejected block %v from %s: %v - disconnecting peer",
+				    blockHash, peer, err)
 			}
 		} else {
 			log.Errorf("Failed to process block %v: %v",
@@ -719,6 +719,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// send it.
 		code, reason := ruleerror.ErrToRejectErr(err)
 		peer.PushRejectMsg(wire.CmdBlock, code, reason, blockHash, false)
+		peer.Disconnect()
 		return
 	}
 
