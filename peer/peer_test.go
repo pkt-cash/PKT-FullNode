@@ -208,15 +208,19 @@ func testPeer(t *testing.T, p *peer.Peer, s peerStats) {
 	}
 
 	stats = p.StatsSnapshot()
-	if p.LastSend() != stats.LastSend {
-		t.Errorf("testPeer: wrong LastSend - got %v, want %v", p.LastSend(), stats.LastSend)
-		return
+	if stats.LastSend != time.Unix(0, 0) {
+		if p.LastSend() != stats.LastSend {
+			t.Errorf("testPeer: wrong LastSend - got %v, want %v", p.LastSend(), stats.LastSend)
+			return
+		}
 	}
 
 	stats = p.StatsSnapshot()
-	if p.LastRecv() != stats.LastRecv {
-		t.Errorf("testPeer: wrong LastRecv - got %v, want %v", p.LastRecv(), stats.LastRecv)
-		return
+	if stats.LastRecv != time.Unix(0,0 ) {
+		if p.LastRecv() != stats.LastRecv {
+			t.Errorf("testPeer: wrong LastRecv - got %v, want %v", p.LastRecv(), stats.LastRecv)
+			return
+		}
 	}
 }
 
@@ -242,7 +246,7 @@ func TestPeerConnection(t *testing.T) {
 		ChainParams:       &chaincfg.MainNetParams,
 		ProtocolVersion:   protocol.RejectVersion, // Configure with older version
 		Services:          0,
-		TrickleInterval:   time.Second * 10,
+		TrickleInterval:   time.Second * 1,
 	}
 	peer2Cfg := &peer.Config{
 		Listeners:         peer1Cfg.Listeners,
@@ -251,7 +255,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
 		Services:          protocol.SFNodeNetwork | protocol.SFNodeWitness,
-		TrickleInterval:   time.Second * 10,
+		TrickleInterval:   time.Second * 1,
 	}
 
 	wantStats1 := peerStats{
@@ -377,9 +381,6 @@ func TestPeerListeners(t *testing.T) {
 			OnPong: func(p *peer.Peer, msg *wire.MsgPong) {
 				ok <- msg
 			},
-			OnAlert: func(p *peer.Peer, msg *wire.MsgAlert) {
-				ok <- msg
-			},
 			OnMemPool: func(p *peer.Peer, msg *wire.MsgMemPool) {
 				ok <- msg
 			},
@@ -456,7 +457,7 @@ func TestPeerListeners(t *testing.T) {
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
 		Services:          protocol.SFNodeBloom,
-		TrickleInterval:   time.Second * 10,
+		TrickleInterval:   time.Second * 1,
 	}
 	inConn, outConn := pipe(
 		&conn{raddr: "10.0.0.1:8333"},
@@ -505,10 +506,6 @@ func TestPeerListeners(t *testing.T) {
 		{
 			"OnPong",
 			wire.NewMsgPong(42),
-		},
-		{
-			"OnAlert",
-			wire.NewMsgAlert([]byte("payload"), []byte("signature")),
 		},
 		{
 			"OnMemPool",
@@ -627,7 +624,7 @@ func TestOutboundPeer(t *testing.T) {
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
 		Services:          0,
-		TrickleInterval:   time.Second * 10,
+		TrickleInterval:   time.Second * 1,
 	}
 
 	r, w := io.Pipe()
@@ -768,7 +765,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 		UserAgentComments: []string{"comment"},
 		ChainParams:       &chaincfg.MainNetParams,
 		Services:          0,
-		TrickleInterval:   time.Second * 10,
+		TrickleInterval:   time.Second * 1,
 	}
 
 	localNA := wire.NewNetAddressIPPort(
