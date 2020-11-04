@@ -1410,7 +1410,11 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 		if err != nil && !cache.ErrElementNotFound.Is(err) {
 			return nil, err
 		}
-		log.Warn("Made request for filter [%s] but still not in cache, retry",
+		// Maybe the block was rolled back while we were fetching ?
+		if _, _, err := s.BlockHeaders.FetchHeader(&blockHash); err != nil {
+			return nil, err
+		}
+		log.Warnf("Made request for filter [%s] but still not in cache, retry",
 			blockHash.String())
 	}
 }
