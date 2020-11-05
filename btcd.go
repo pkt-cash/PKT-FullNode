@@ -154,8 +154,8 @@ func pktdMain(serverChan chan<- *server) er.R {
 		return err
 	}
 	defer func() {
-		// Shut down in 1 minute, or just pull the plug.
-		const shutdownTimeout = 1 * time.Minute
+		// Shut down in21 minutes, or just pull the plug.
+		const shutdownTimeout = 2 * time.Minute
 		pktdLog.Infof("Attempting graceful shutdown (%s timeout)...", shutdownTimeout)
 		server.Stop()
 		shutdownDone := make(chan struct{})
@@ -169,10 +169,8 @@ func pktdMain(serverChan chan<- *server) er.R {
 		case <-time.Tick(shutdownTimeout):
 		pktdLog.Errorf("Graceful shutdown in %s failed - forcefully terminating in 5s...", shutdownTimeout)
 		time.Sleep(5 * time.Second)
-		// Are we still here?
 		panic("Forcefully terminating the server process...")
 		}
-		// We did it!
 		srvrLog.Infof("Server shutdown complete")
 	}()
 
