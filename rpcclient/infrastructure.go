@@ -1118,10 +1118,6 @@ type ConnConfig struct {
 	// however, not all servers support the websocket extensions, so this
 	// flag can be set to true to use basic HTTP POST requests instead.
 	HTTPPostMode bool
-
-	// EnableBCInfoHacks is an option provided to enable compatibility hacks
-	// when connecting to blockchain.info RPC server
-	EnableBCInfoHacks bool
 }
 
 // newHTTPClient returns a new http client that is configured according to the
