@@ -154,7 +154,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 		return err
 	}
 	defer func() {
-		// Shut down in21 minutes, or just pull the plug.
+		// Shut down in 2 minutes, or just pull the plug.
 		const shutdownTimeout = 2 * time.Minute
 		pktdLog.Infof("Attempting graceful shutdown (%s timeout)...", shutdownTimeout)
 		server.Stop()
