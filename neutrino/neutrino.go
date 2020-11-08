@@ -40,7 +40,7 @@ var (
 	// ConnectionRetryInterval is the base amount of time to wait in
 	// between retries when connecting to persistent peers.  It is adjusted
 	// by the number of retries such that there is a retry backoff.
-	ConnectionRetryInterval = time.Second * 5
+	ConnectionRetryInterval = time.Second * 3
 
 	// UserAgentName is the user agent name and is used to help identify
 	// ourselves to other bitcoin peers.
@@ -754,7 +754,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 			for tries := 0; tries < 100; tries++ {
 				select {
 				case <-s.quit:
-					return nil, ErrShuttingDown
+					return nil, er.Errorf("Neutrino already shutting down...")
 				default:
 				}
 
@@ -773,6 +773,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 				// Skip any addresses that correspond to our set
 				// of currently connected peers.
 				if _, ok := connectedPeers[addrString]; ok {
+					log.Debugf("Skipping new connection from already connected peer %v", addrString)
 					continue
 				}
 
@@ -878,11 +879,10 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 			// peer.
 			var tcpAddr net.Addr
 			for {
-				var err error
 				tcpAddr, err = s.addrStringToNetAddr(addr)
 				if err != nil {
 					log.Warnf("unable to lookup IP for "+
-						"%v: %v", addr, err)
+						"%v", addr)
 
 					select {
 					// Try again in 5 seconds.
