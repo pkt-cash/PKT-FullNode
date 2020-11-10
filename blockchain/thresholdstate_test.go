@@ -13,7 +13,6 @@ import (
 // TestThresholdStateStringer tests the stringized output for the
 // ThresholdState type.
 func TestThresholdStateStringer(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		in   ThresholdState
@@ -47,7 +46,6 @@ func TestThresholdStateStringer(t *testing.T) {
 // TestThresholdStateCache ensure the threshold state cache works as intended
 // including adding entries, updating existing entries, and flushing.
 func TestThresholdStateCache(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name       string

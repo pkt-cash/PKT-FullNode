@@ -651,7 +651,6 @@ func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) 
 }
 
 func TestCheckCFCheckptSanity(t *testing.T) {
-	t.Parallel()
 
 	for _, testCase := range cfCheckptTestCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -661,7 +660,6 @@ func TestCheckCFCheckptSanity(t *testing.T) {
 }
 
 func TestCheckForCFHeadersMismatch(t *testing.T) {
-	t.Parallel()
 
 	for _, testCase := range checkCFHTestCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -678,7 +676,6 @@ func TestCheckForCFHeadersMismatch(t *testing.T) {
 }
 
 func TestResolveFilterMismatchFromBlock(t *testing.T) {
-	t.Parallel()
 
 	// The correct filter should have the coinbase output and the regular
 	// script output.
