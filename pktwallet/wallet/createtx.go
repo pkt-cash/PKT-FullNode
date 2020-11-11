@@ -398,17 +398,6 @@ func (w *Wallet) findEligibleOutputs(
 			return nil
 		}
 
-		if minconf > 0 {
-			// Only include this output if it meets the required number of
-			// confirmations.  Coinbase transactions must have have reached
-			// maturity before their outputs may be spent.
-			if !confirmed(minconf, output.Height, bs.Height) {
-				out.unconfirmedCount++
-				out.unconfirmedAmt += output.Amount
-				return nil
-			}
-		}
-
 		if output.Height >= 0 && output.Height < int32(inputMinHeight) {
 			log.Debugf("Skipping output %s at height %d because it is below minimum %d",
 				output.String(), output.Height, inputMinHeight)
@@ -417,9 +406,24 @@ func (w *Wallet) findEligibleOutputs(
 
 		if output.FromCoinBase {
 			if !confirmed(int32(w.chainParams.CoinbaseMaturity), output.Height, bs.Height) {
+				log.Debugf("Skipping immature coinbase output [%s] at height %d",
+					output.OutPoint.String(), output.Height)
 				return nil
 			} else if txrules.IsBurned(output, w.chainParams, bs.Height+1440) {
 				log.Debugf("Skipping burned output at height %d", output.Height)
+				return nil
+			}
+		}
+
+		if minconf > 0 {
+			// Only include this output if it meets the required number of
+			// confirmations.  Coinbase transactions must have have reached
+			// maturity before their outputs may be spent.
+			if !confirmed(minconf, output.Height, bs.Height) {
+				log.Debugf("Skipping unconfirmed output [%s] at height %d",
+					output.OutPoint.String(), output.Height)
+				out.unconfirmedCount++
+				out.unconfirmedAmt += output.Amount
 				return nil
 			}
 		}
