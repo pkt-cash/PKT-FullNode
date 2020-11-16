@@ -31,7 +31,6 @@ var bigZero = big.NewInt(0)
 func Decode(b string) []byte {
 	answer := big.NewInt(0)
 	scratch := new(big.Int)
-
 	// Calculating with big.Int is slow for each iteration.
 	//    x += b58[b[i]] * j
 	//    j *= 58
