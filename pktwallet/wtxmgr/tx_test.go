@@ -46,15 +46,6 @@ var (
 	}
 )
 
-func testDB() (walletdb.DB, func(), er.R) {
-	tmpDir, errr := ioutil.TempDir("", "wtxmgr_test")
-	if errr != nil {
-		return nil, func() {}, er.E(errr)
-	}
-	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
-	return db, func() { os.RemoveAll(tmpDir) }, err
-}
-
 var namespaceKey = []byte("txstore")
 
 func testStore() (*Store, walletdb.DB, func(), er.R) {
