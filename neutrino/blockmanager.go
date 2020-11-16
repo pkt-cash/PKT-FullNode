@@ -1055,8 +1055,8 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 
 			curHeader, err = b.writeCFHeadersMsg(r, store)
 			if err != nil {
-				panic(fmt.Sprintf("couldn't write cfheaders "+
-					"msg: %v", err))
+				log.Errorf("Unable to write out cfheaders "+
+					"msg: %v", err)
 			}
 
 			// Then, we cycle through any cached messages, adding
@@ -2708,7 +2708,6 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 							"%v",
 							knownHead.PrevBlock,
 							err)
-						// Should we panic here?
 					}
 				}
 				knownWork.Add(knownWork,
@@ -2743,8 +2742,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			b.syncPeerMutex.Unlock()
 			_, err = b.server.rollBackToHeight(backHeight)
 			if err != nil {
-				panic(fmt.Sprintf("Rollback failed: %s", err))
-				// Should we panic here?
+				log.Criticalf("ROLLBACK FAILED: %s", err)
 			}
 
 			hdrs := headerfs.BlockHeader{
@@ -2755,7 +2753,6 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			if err != nil {
 				log.Criticalf("Couldn't write block to "+
 					"database: %s", err)
-				// Should we panic here?
 			}
 
 			b.headerList.ResetHeaderState(headerlist.Node{
@@ -2797,9 +2794,8 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 					prevCheckpoint.Height),
 				)
 				if err != nil {
-					log.Criticalf("Rollback failed: %s",
+					log.Criticalf("ROLLBACK FAILED: %s",
 						err)
-					// Should we panic here?
 				}
 
 				hmsg.peer.Disconnect()
