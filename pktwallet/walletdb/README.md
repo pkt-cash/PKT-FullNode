@@ -1,10 +1,7 @@
 walletdb
 ========
 
-[![Build Status](https://travis-ci.org/btcsuite/btcwallet.png?branch=master)]
-(https://travis-ci.org/btcsuite/btcwallet)
-
-Package walletdb provides a namespaced database interface for btcwallet.
+Package walletdb provides a namespaced database interface for pktwallet.
 
 A wallet essentially consists of a multitude of stored data such as private
 and public keys, key derivation bits, pay-to-script-hash scripts, and various
@@ -22,13 +19,10 @@ management, voting pools, and colored coin metadata in their own namespace
 without having to worry about conflicts with other packages even though they are
 sharing the same database that is managed by the wallet.
 
-A suite of tests is provided to ensure proper functionality.  See
-`test_coverage.txt` for the gocov coverage report.  Alternatively, if you are
-running a POSIX OS, you can run the `cov_report.sh` script for a real-time
-report.  Package walletdb is licensed under the copyfree ISC license.
+This interfaces provided by this package were heavily inspired by the original
+[BoltDB project](https://github.com/boltdb/bolt) by Ben B. Johnson.
 
-This interfaces provided by this package were heavily inspired by the excellent
-boltdb project at https://github.com/boltdb/bolt by Ben B. Johnson.
+Currently, the database in use is [etcd.io's BBoltDB](https://go.etcd.io/bbolt).
 
 ## Feature Overview
 
@@ -41,35 +35,7 @@ boltdb project at https://github.com/boltdb/bolt by Ben B. Johnson.
 - Supports registration of backend databases
 - Comprehensive test coverage
 
-## Documentation
-
-[![GoDoc](https://godoc.org/github.com/btcsuite/btcwallet/walletdb?status.png)]
-(http://godoc.org/github.com/btcsuite/btcwallet/walletdb)
-
-Full `go doc` style documentation for the project can be viewed online without
-installing this package by using the GoDoc site here:
-http://godoc.org/github.com/btcsuite/btcwallet/walletdb
-
-You can also view the documentation locally once the package is installed with
-the `godoc` tool by running `godoc -http=":6060"` and pointing your browser to
-http://localhost:6060/pkg/github.com/btcsuite/btcwallet/walletdb
-
-## Installation
-
-```bash
-$ go get github.com/btcsuite/btcwallet/walletdb
-```
-
-## Examples
-
-* [Basic Usage Example]
-  (http://godoc.org/github.com/btcsuite/btcwallet/walletdb#example-package--BasicUsage)  
-  Demonstrates creating a new database, getting a namespace from it, and using a
-  managed read-write transaction against the namespace to store and retrieve
-  data.
-
-
 ## License
 
-Package walletdb is licensed under the [copyfree](http://copyfree.org) ISC
+Package walletdb is licensed under the [Copyfree](http://Copyfree.org) ISC
 License.

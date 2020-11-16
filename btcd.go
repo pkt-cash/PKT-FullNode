@@ -295,9 +295,7 @@ func loadBlockDB() (database.DB, er.R) {
 
 func main() {
 	version.SetUserAgentName("pktd")
-
-	// Use all processor cores.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU()*6)
 
 	// Block and transaction processing can cause bursty allocations.  This
 	// limits the garbage collector from excessively overallocating during

@@ -92,14 +92,6 @@ var helpDescsEnUS = map[string]string{
 	"vin-txinwitness": "The witness used to redeem the input encoded as a string array of its items",
 	"vin-sequence":    "The script sequence number",
 
-	// ScriptPubKeyResult help.
-	"scriptpubkeyresult-asm":                "Disassembly of the script",
-	"scriptpubkeyresult-hex":                "Hex-encoded bytes of the script",
-	"scriptpubkeyresult-reqSigs":            "The number of required signatures",
-	"scriptpubkeyresult-type":               "The type of the script (e.g. 'pubkeyhash')",
-	"scriptpubkeyresult-addresses":          "The bitcoin addresses associated with this script",
-	"scriptpubkeyresult-deprecationwarning": "A warning because this structure is deprecated where it is being used",
-
 	"vote-for":     "The network steward which this payment is voting for",
 	"vote-against": "The network steward address which this payment is voting against",
 
@@ -146,6 +138,34 @@ var helpDescsEnUS = map[string]string{
 		"generated before the transaction is mined.",
 	"estimatefee--result0": "Estimated fee per kilobyte in satoshis for a block to " +
 		"be mined in the next NumBlocks blocks.",
+
+	"estimatesmartfee--synopsis":     "Better estimatefee, currently implemented using estimatefee",
+	"estimatesmartfee-estimatemode":  "ECONOMICAL or CONSERVATIVE to decide how to estimate fee rate",
+	"estimatesmartfee-conftarget":    "Target number of blocks until transaction confirms",
+	"estimatesmartfeeresult-feerate": "Fee in coins per kilobyte",
+	"estimatesmartfeeresult-errors":  "Array of string errors which may have occurred while processing",
+	"estimatesmartfeeresult-blocks":  "Exists for API compatibility, always zero",
+
+	"getnetworkinfo--synopsis":                "Get info about the crypto network",
+	"getnetworkinforesult-version":            "App version",
+	"getnetworkinforesult-subversion":         "App user-agent string",
+	"getnetworkinforesult-protocolversion":    "Protocol version",
+	"getnetworkinforesult-localservices":      "Service flag bits as hex string",
+	"getnetworkinforesult-localservicesnames": "Service flags stringified",
+	"getnetworkinforesult-localrelay":         "True if this node is willing to relay transactions",
+	"getnetworkinforesult-timeoffset":         "How much we have adjusted our clock to agree with the network",
+	"getnetworkinforesult-connections":        "Number of peer connections",
+	"getnetworkinforesult-networkactive":      "True if we are listening for incoming connections",
+	"getnetworkinforesult-networks":           "TODO Always empty for now",
+	"getnetworkinforesult-relayfee":           "Lowest transaction fee that is allowed for relaying",
+	"getnetworkinforesult-incrementalfee":     "Minimum fee increment for BIP 125 replacement",
+	"getnetworkinforesult-localaddresses":     "TODO Always empty for now",
+
+	"getnetworkinfonetworks-proxy_randomize_credentials": "True if randomized credentials are used",
+	"getnetworkinfonetworks-proxy":                       "host:port of proxy, if in use",
+	"getnetworkinfonetworks-reachable":                   "If the network is externally reachable",
+	"getnetworkinfonetworks-limited":                     "True if this is the only allowed network",
+	"getnetworkinfonetworks-name":                        "IPv4 / IPv6 / onion",
 
 	// GenerateCmd help
 	"generate--synopsis": "Generates a set number of blocks (simnet or regtest only) and returns a JSON\n" +
@@ -200,6 +220,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockchaininforesult-blocks":                "The number of blocks in the best known chain",
 	"getblockchaininforesult-headers":               "The number of headers that we've gathered for in the best known chain",
 	"getblockchaininforesult-bestblockhash":         "The block hash for the latest block in the main chain",
+	"getblockchaininforesult-initialblockdownload":  "Are we syncing the chain",
 	"getblockchaininforesult-difficulty":            "The current chain difficulty",
 	"getblockchaininforesult-mediantime":            "The median time from the PoV of the best block in the chain",
 	"getblockchaininforesult-verificationprogress":  "An estimate for how much of the best chain we've verified",
@@ -272,6 +293,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-packetcryptannbits":       "The bits which represent minimum announcement difficulty",
 	"getblockverboseresult-packetcryptanncount":      "The number of announcements which the winning miner was using",
 	"getblockverboseresult-packetcryptversion":       "The version of the PacketCrypt proof",
+	"getblockverboseresult-packetcryptblkbits":       "The bits which represent effective block difficulty (what the block miner must meet)",
 	"getblockverboseresult-sblockreward":             "The amount of atomic units of coins in this block height block reward",
 	"getblockverboseresult-networksteward":           "The address of the current network steward, if using the PKT chain or one which has one",
 	"getblockverboseresult-blocksuntilretarget":      "The number of blocks until the next difficulty retarget",
@@ -593,6 +615,17 @@ var helpDescsEnUS = map[string]string{
 	"ping--synopsis": "Queues a ping to be sent to each connected peer.\n" +
 		"Ping times are provided by getpeerinfo via the pingtime and pingwait fields.",
 
+	// Echo help.
+	"echo--synopsis": "Output the same as the input",
+	"echo--result0":  "The same as what you put in",
+	"echo-a":         "anything",
+	"echo-b":         "anything",
+	"echo-c":         "anything",
+	"echo-d":         "anything",
+	"echo-e":         "anything",
+	"echo-f":         "anything",
+	"echo-g":         "anything",
+
 	// SearchRawTransactionsCmd help.
 	"searchrawtransactions--synopsis": "Returns raw data for transactions involving the passed address.\n" +
 		"Returned transactions are pulled from both the database, and transactions currently in the mempool.\n" +
@@ -757,6 +790,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"decoderawtransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
 	"decodescript":           {(*btcjson.DecodeScriptResult)(nil)},
 	"estimatefee":            {(*float64)(nil)},
+	"estimatesmartfee":       {(*btcjson.EstimateSmartFeeResult)(nil)},
 	"generate":               {(*[]string)(nil)},
 	"getaddednodeinfo":       {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
 	"getbestblock":           {(*btcjson.GetBestBlockResult)(nil)},
@@ -780,6 +814,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getmininginfo":          {(*btcjson.GetMiningInfoResult)(nil)},
 	"getminingpayouts":       {(*btcjson.GetMiningPayoutsResult)(nil)},
 	"getnettotals":           {(*btcjson.GetNetTotalsResult)(nil)},
+	"getnetworkinfo":         {(*btcjson.GetNetworkInfoResult)(nil)},
 	"getnetworksteward":      {(*btcjson.GetNetworkStewardResult)(nil)},
 	"getnetworkhashps":       {(*int64)(nil)},
 	"getpeerinfo":            {(*[]btcjson.GetPeerInfoResult)(nil)},
@@ -791,6 +826,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"node":                   nil,
 	"help":                   {(*string)(nil), (*string)(nil)},
 	"ping":                   nil,
+	"echo":                   {(*[]string)(nil)},
 	"searchrawtransactions":  {(*string)(nil), (*[]btcjson.TxRawResult)(nil)},
 	"sendrawtransaction":     {(*string)(nil)},
 	"setgenerate":            nil,

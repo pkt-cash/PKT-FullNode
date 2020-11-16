@@ -1347,6 +1347,19 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 		if !util.CheckError(tc.t, testName, err, wantErrCode) {
 			return false
 		}
+
+		// Ensure fetching a block region larger than the block returns
+		// the expected error.
+		testName = fmt.Sprintf("FetchBlockRegion(%s) out of block size",
+			blockHash)
+		wantErrCode = database.ErrBlockRegionInvalid
+		region.Hash = blockHash
+		region.Offset = 0
+		region.Len = uint32(len(blockBytes) + 1)
+		_, err = tx.FetchBlockRegion(&region)
+		if !util.CheckError(tc.t, testName, err, wantErrCode) {
+			return false
+		}
 	}
 
 	// -----------------
@@ -1484,6 +1497,20 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	badBlockRegions = badBlockRegions[:len(badBlockRegions)-1]
 	for i := range badBlockRegions {
 		badBlockRegions[i].Offset = ^uint32(0)
+	}
+	wantErrCode = database.ErrBlockRegionInvalid
+	_, err = tx.FetchBlockRegions(badBlockRegions)
+	if !util.CheckError(tc.t, testName, err, wantErrCode) {
+		return false
+	}
+
+	// Ensure fetching block regions larger than the block returns the
+	// expected error.
+	testName = "FetchBlockRegions out of bunds"
+	badBlockRegions = badBlockRegions[:len(badBlockRegions)-1]
+	for i := range badBlockRegions {
+		badBlockRegions[i].Offset = 0
+		badBlockRegions[i].Len = uint32(len(allBlockBytes[i]) + 1)
 	}
 	wantErrCode = database.ErrBlockRegionInvalid
 	_, err = tx.FetchBlockRegions(badBlockRegions)
@@ -2174,7 +2201,7 @@ func testConcurrecy(tc *testContext) bool {
 func testConcurrentClose(tc *testContext) bool {
 	// Start up a few readers and wait for them to acquire views.  Each
 	// reader waits for a signal to complete to ensure the transactions stay
-	// open until they are explicitly signalled to be closed.
+	// open until they are explicitly signaled to be closed.
 	var activeReaders int32
 	numReaders := 3
 	started := make(chan struct{})

@@ -5,7 +5,7 @@
 package btcjson
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"reflect"
 	"sort"
@@ -250,7 +250,7 @@ func RegisterCmd(method string, cmd interface{}, flags UsageFlag) er.R {
 			}
 
 			rvf := reflect.New(rtf.Type.Elem())
-			err := json.Unmarshal([]byte(tag), rvf.Interface())
+			err := jsoniter.Unmarshal([]byte(tag), rvf.Interface())
 			if err != nil {
 				str := fmt.Sprintf("default value of %q is "+
 					"the wrong type (field name %q)", tag,

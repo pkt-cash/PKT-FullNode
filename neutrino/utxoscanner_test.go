@@ -495,36 +495,36 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 	// Check that neither succeed without any further action.
 	select {
 	case <-err100000:
-		t.Fatalf("getutxo should not have been cancelled yet")
+		t.Fatalf("getutxo should not have been canceled yet")
 	case <-time.After(50 * time.Millisecond):
 	}
 
 	select {
 	case <-err100001:
-		t.Fatalf("getutxo should not have been cancelled yet")
+		t.Fatalf("getutxo should not have been canceled yet")
 	case <-time.After(50 * time.Millisecond):
 	}
 
 	// Cancel the first request, which should cause it to return
-	// ErrGetUtxoCancelled.
+	// ErrGetUtxoCanceled.
 	close(cancel100000)
 
 	select {
 	case err := <-err100000:
-		if !ErrGetUtxoCancelled.Is(err) {
+		if !ErrGetUtxoCanceled.Is(err) {
 			t.Fatalf("unexpected error returned "+
 				"from Result, want: %v, got %v",
-				ErrGetUtxoCancelled, err)
+				ErrGetUtxoCanceled, err)
 		}
 	case <-time.After(50 * time.Millisecond):
-		t.Fatalf("getutxo should have been cancelled")
+		t.Fatalf("getutxo should have been canceled")
 	}
 
 	// The second task shouldn't have been started yet, and should deliver a
 	// message since it wasn't tied to the same cancel chan.
 	select {
 	case <-err100001:
-		t.Fatalf("getutxo should not have been cancelled yet")
+		t.Fatalf("getutxo should not have been canceled yet")
 	case <-time.After(50 * time.Millisecond):
 	}
 
@@ -537,7 +537,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 		scanner.Stop()
 	}()
 
-	// The second request should be cancelled as soon as the utxoscanner
+	// The second request should be canceled as soon as the utxoscanner
 	// begins shut down, returning ErrShuttingDown.
 	select {
 	case err := <-err100001:
@@ -547,7 +547,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 				ErrShuttingDown, err)
 		}
 	case <-time.After(50 * time.Millisecond):
-		t.Fatalf("getutxo should have been cancelled")
+		t.Fatalf("getutxo should have been canceled")
 	}
 
 	// Ensure that GetBlock gets unblocked so the batchManager can properly

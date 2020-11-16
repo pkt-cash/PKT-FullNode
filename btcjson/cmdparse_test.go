@@ -5,10 +5,11 @@
 package btcjson_test
 
 import (
-	"encoding/json"
 	"math"
 	"reflect"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -438,6 +439,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 		name    string
 		request btcjson.Request
 		err     er.R
+		chkres  func(interface{}) er.R
 	}{
 		{
 			name: "unregistered type",
@@ -454,7 +456,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblockcount",
-				Params:  []json.RawMessage{[]byte(`"bogusparam"`)},
+				Params:  []jsoniter.RawMessage{[]byte(`"bogusparam"`)},
 				ID:      nil,
 			},
 			err: btcjson.ErrNumParams.Default(),
@@ -464,7 +466,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblock",
-				Params:  []json.RawMessage{[]byte("1")},
+				Params:  []jsoniter.RawMessage{[]byte("1")},
 				ID:      nil,
 			},
 			err: btcjson.ErrInvalidType.Default(),
@@ -474,7 +476,51 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 			request: btcjson.Request{
 				Jsonrpc: "1.0",
 				Method:  "getblock",
-				Params:  []json.RawMessage{[]byte(`"1`)},
+				Params:  []jsoniter.RawMessage{[]byte(`"1`)},
+				ID:      nil,
+			},
+			err: btcjson.ErrInvalidType.Default(),
+		},
+		{
+			name: "converts int to boolean",
+			request: btcjson.Request{
+				Jsonrpc: "1.0",
+				Method:  "getrawmempool",
+				Params:  []jsoniter.RawMessage{[]byte("1")},
+				ID:      nil,
+			},
+			err: nil,
+			chkres: func(cmd interface{}) er.R {
+				c := cmd.(*btcjson.GetRawMempoolCmd)
+				if c.Verbose == nil || !*c.Verbose {
+					return er.Errorf("invalid result [%v]", c)
+				}
+				return nil
+			},
+		},
+		{
+			name: "converts int to boolean2",
+			request: btcjson.Request{
+				Jsonrpc: "1.0",
+				Method:  "getrawmempool",
+				Params:  []jsoniter.RawMessage{[]byte("0")},
+				ID:      nil,
+			},
+			err: nil,
+			chkres: func(cmd interface{}) er.R {
+				c := cmd.(*btcjson.GetRawMempoolCmd)
+				if c.Verbose == nil || *c.Verbose {
+					return er.Errorf("invalid result [%v]", c)
+				}
+				return nil
+			},
+		},
+		{
+			name: "converts int to boolean3",
+			request: btcjson.Request{
+				Jsonrpc: "1.0",
+				Method:  "getrawmempool",
+				Params:  []jsoniter.RawMessage{[]byte("3")},
 				ID:      nil,
 			},
 			err: btcjson.ErrInvalidType.Default(),
@@ -483,11 +529,15 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		_, err := btcjson.UnmarshalCmd(&test.request)
+		res, err := btcjson.UnmarshalCmd(&test.request)
 		if !er.FuzzyEquals(err, test.err) {
 			t.Errorf("Test #%d (%s) wrong error - got %T (%v), "+
 				"want %T", i, test.name, err, err, test.err)
 			continue
+		}
+		if test.chkres == nil {
+		} else if e := test.chkres(res); e != nil {
+			t.Error(err)
 		}
 	}
 }

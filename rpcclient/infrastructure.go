@@ -10,7 +10,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,8 +24,9 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/btcsuite/go-socks/socks"
-	"github.com/btcsuite/websocket"
+	"github.com/decred/go-socks/socks"
+	"github.com/gorilla/websocket"
+
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
@@ -290,13 +291,13 @@ type (
 	// rawNotification is a partially-unmarshaled JSON-RPC notification.
 	rawNotification struct {
 		Method string            `json:"method"`
-		Params []json.RawMessage `json:"params"`
+		Params []jsoniter.RawMessage `json:"params"`
 	}
 
 	// rawResponse is a partially-unmarshaled JSON-RPC response.  For this
 	// to be valid (according to JSON-RPC 1.0 spec), ID may not be nil.
 	rawResponse struct {
-		Result json.RawMessage `json:"result"`
+		Result jsoniter.RawMessage `json:"result"`
 		Error  *btcjson.RPCErr `json:"error"`
 	}
 )
@@ -331,7 +332,7 @@ func (c *Client) handleMessage(msg []byte) {
 	var in inMessage
 	in.rawResponse = new(rawResponse)
 	in.rawNotification = new(rawNotification)
-	err := er.E(json.Unmarshal(msg, &in))
+	err := er.E(jsoniter.Unmarshal(msg, &in))
 	if err != nil {
 		log.Warnf("Remote server sent invalid message: %v", err)
 		return
@@ -728,7 +729,7 @@ func (c *Client) handleSendPostMessage(details *sendPostDetails) {
 
 	// Try to unmarshal the response as a regular JSON-RPC response.
 	var resp rawResponse
-	err := er.E(json.Unmarshal(respBytes, &resp))
+	err := er.E(jsoniter.Unmarshal(respBytes, &resp))
 	if err != nil {
 		// When the response itself isn't a valid JSON-RPC response
 		// return an error which includes the HTTP status code and raw

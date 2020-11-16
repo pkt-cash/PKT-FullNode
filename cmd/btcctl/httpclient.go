@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -14,7 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 
-	"github.com/btcsuite/go-socks/socks"
+	"github.com/decred/go-socks/socks"
 	"github.com/pkt-cash/pktd/btcjson"
 )
 
@@ -40,7 +40,7 @@ func newHTTPClient(cfg *config) (*http.Client, er.R) {
 
 	// Configure TLS if needed.
 	var tlsConfig *tls.Config
-	if !cfg.NoTLS && cfg.RPCCert != "" {
+	if cfg.TLS && cfg.RPCCert != "" {
 		pem, err := ioutil.ReadFile(cfg.RPCCert)
 		if err != nil {
 			return nil, er.E(err)
@@ -72,7 +72,7 @@ func newHTTPClient(cfg *config) (*http.Client, er.R) {
 func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.R) {
 	// Generate a request to the configured RPC server.
 	protocol := "http"
-	if !cfg.NoTLS {
+	if cfg.TLS {
 		protocol = "https"
 	}
 	url := protocol + "://" + cfg.RPCServer
@@ -126,7 +126,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) (*btcjson.Response, er.
 
 	// Unmarshal the response.
 	var resp btcjson.Response
-	if err := er.E(json.Unmarshal(respBytes, &resp)); err != nil {
+	if err := er.E(jsoniter.Unmarshal(respBytes, &resp)); err != nil {
 		return nil, err
 	}
 

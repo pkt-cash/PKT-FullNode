@@ -55,7 +55,7 @@ func getEffectiveWorkRequirement(bnBlockHeaderWork, bnMinAnnWork *big.Int, annCo
 	out.Mul(out, bnBlockHeaderWork)
 
 	if packetCryptVersion >= 2 {
-		// Difficulty *= 1024
+		// Difficulty /= 1024
 		out.Rsh(out, 10)
 	}
 

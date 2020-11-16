@@ -5,6 +5,9 @@ package neutrino
 import (
 	"bytes"
 	"container/list"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"math/big"
@@ -12,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/opcode"
@@ -185,6 +189,14 @@ type blockManager struct {
 	minRetargetTimespan int64 // target timespan / adjustment factor
 	maxRetargetTimespan int64 // target timespan * adjustment factor
 	blocksPerRetarget   int32 // target timespan / target time per block
+
+	// For statistical verification of PacketCrypt (or AuxPoW)
+
+	// Probably this is the tip of the chain, deduced using time
+	likelyChainTip int32
+
+	// Random seed which is initialized on startup to choose which proofs to check
+	randomVerificationSeed uint32
 }
 
 // newBlockManager returns a new bitcoin block manager.  Use Start to begin
@@ -262,7 +274,31 @@ func newBlockManager(s *ChainService,
 	}
 	bm.filterHeaderTipHash = fh.BlockHash()
 
+	// Verification of PacketCrypt or AuxPoW proofs
+	bm.likelyChainTip = int32(time.Since(time.Unix(1566252000, 0)).Minutes())
+	bm.updateLikelyChainTip(int32(height))
+
+	var rv [4]byte
+	if _, errr := rand.Read(rv[:]); errr != nil {
+		return nil, er.E(errr)
+	}
+	bm.randomVerificationSeed = binary.LittleEndian.Uint32(rv[:])
+
 	return &bm, nil
+}
+
+func (b *blockManager) updateLikelyChainTip(height int32) {
+	cp := b.findPreviousHeaderCheckpoint(height)
+	if cp == nil {
+		return
+	}
+	fh, err := b.server.BlockHeaders.FetchHeaderByHeight(uint32(height))
+	if err != nil {
+		log.Infof("Unable to update probable chain tip [%s]", err)
+		return
+	}
+	b.likelyChainTip = int32(time.Since(fh.Timestamp).Minutes()) + int32(height)
+	log.Debugf("Updated the probable chain tip to [%d]", b.likelyChainTip)
 }
 
 // Start begins the core block handler which processes block and inv messages.
@@ -343,7 +379,7 @@ func (b *blockManager) NewPeer(sp *ServerPeer) {
 	}
 }
 
-// handleNewPeerMsg deals with new peers that have signalled they may be
+// handleNewPeerMsg deals with new peers that have signaled they may be
 // considered as a sync peer (they have already successfully negotiated).  It
 // also starts syncing if needed.  It is invoked from the syncHandler
 // goroutine.
@@ -353,7 +389,7 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 		return
 	}
 
-	log.Infof("New valid peer %s (%s)", sp, sp.UserAgent())
+	log.Infof("New valid peer [%s] (%s)", pktlog.IpAddr(sp.Addr()), sp.UserAgent())
 
 	// Ignore the peer if it's not a sync candidate.
 	if !b.isSyncCandidate(sp) {
@@ -380,6 +416,8 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 			return
 		}
 		stopHash := &zeroHash
+
+		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(sp.Addr()))
 		sp.PushGetHeadersMsg(locator, stopHash)
 	}
 
@@ -401,7 +439,7 @@ func (b *blockManager) DonePeer(sp *ServerPeer) {
 	}
 }
 
-// handleDonePeerMsg deals with peers that have signalled they are done.  It
+// handleDonePeerMsg deals with peers that have signaled they are done.  It
 // removes the peer as a candidate for syncing and in the case where it was the
 // current sync peer, attempts to select a new best peer to sync from.  It is
 // invoked from the syncHandler goroutine.
@@ -414,7 +452,7 @@ func (b *blockManager) handleDonePeerMsg(peers *list.List, sp *ServerPeer) {
 		}
 	}
 
-	log.Infof("Lost peer %s", sp)
+	log.Infof("Lost peer [%s]", pktlog.IpAddr(sp.Addr()))
 
 	// Attempt to find a new peer to sync from if the quitting peer is the
 	// sync peer.  Also, reset the header state.
@@ -881,7 +919,7 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 		return
 	}
 
-	log.Infof("Attempting to query for %v cfheader batches", batchesCount)
+	log.Debugf("Attempting to query for %v cfheader batches", batchesCount)
 
 	// With the set of messages constructed, we'll now request the batch
 	// all at once. This message will distributed the header requests
@@ -1913,6 +1951,9 @@ out:
 			case *headersMsg:
 				b.handleHeadersMsg(msg)
 
+			case *provenHeadersMsg:
+				b.handleProvenHeadersMsg(msg)
+
 			case *donePeerMsg:
 				b.handleDonePeerMsg(candidatePeers, msg.peer)
 
@@ -2051,8 +2092,8 @@ func (b *blockManager) startSync(peers *list.List) {
 			return
 		}
 
-		log.Infof("Syncing to block height [%s] from peer %s",
-			pktlog.Height(bestPeer.LastBlock()), bestPeer.Addr())
+		log.Infof("Syncing to block height [%s] from peer [%s]",
+			pktlog.Height(bestPeer.LastBlock()), pktlog.IpAddr(bestPeer.Addr()))
 
 		// Now that we know we have a new sync peer, we'll lock it in
 		// within the proper attribute.
@@ -2069,9 +2110,11 @@ func (b *blockManager) startSync(peers *list.List) {
 		// we'll use the next checkpoint to guide the set of headers we
 		// fetch, setting our stop hash to the next checkpoint hash.
 		if b.nextCheckpoint != nil && int32(bestHeight) < b.nextCheckpoint.Height {
-			log.Infof("Downloading headers for blocks %d to "+
-				"%d from peer %s", bestHeight+1,
-				b.nextCheckpoint.Height, bestPeer.Addr())
+			log.Infof("Downloading headers for blocks [%s] to [%s] from peer [%s]",
+				pktlog.Int(int(bestHeight+1)),
+				pktlog.Int(int(b.nextCheckpoint.Height)),
+				pktlog.IpAddr(bestPeer.Addr()),
+			)
 
 			stopHash = b.nextCheckpoint.Hash
 		} else {
@@ -2082,6 +2125,7 @@ func (b *blockManager) startSync(peers *list.List) {
 
 		// With our stop hash selected, we'll kick off the sync from
 		// this peer with an initial GetHeaders message.
+		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(b.SyncPeer().Addr()))
 		b.SyncPeer().PushGetHeadersMsg(locator, stopHash)
 	} else {
 		log.Warnf("No sync peer candidates available")
@@ -2223,7 +2267,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 
 	// If this is the sync peer or we're current, get the headers for the
 	// announced blocks and update the last announced block.
-	if lastBlock != -1 && (imsg.peer == b.SyncPeer() || b.BlockHeadersSynced()) {
+	if lastBlock != -1 && b.BlockHeadersSynced() {
 		lastEl := b.headerList.Back()
 		var lastHash chainhash.Hash
 		if lastEl != nil {
@@ -2248,6 +2292,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 			}
 
 			// Get headers based on locator.
+			log.Infof("Requesting headers from [%s]", pktlog.IpAddr(imsg.peer.Addr()))
 			err = imsg.peer.PushGetHeadersMsg(locator,
 				&invVects[lastBlock].Hash)
 			if err != nil {
@@ -2276,8 +2321,167 @@ func (b *blockManager) QueueHeaders(headers *wire.MsgHeaders, sp *ServerPeer) {
 	}
 }
 
-// handleHeadersMsg handles headers messages from all peers.
+type provenHeadersMsg struct {
+	hmsg   *headersMsg
+	proofs map[int32]*btcutil.Block
+}
+type hashHeight struct {
+	hash   chainhash.Hash
+	height int32
+}
+
+// handleHeadersMsg0 handles headers messages from all peers.
 func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
+	msg := hmsg.headers
+	numHeaders := len(msg.Headers)
+
+	// Nothing to do for an empty headers message.
+	if numHeaders == 0 {
+		return
+	}
+
+	_, backHeight, err := b.server.BlockHeaders.FetchHeader(
+		&msg.Headers[0].PrevBlock,
+	)
+	if err != nil {
+		log.Warnf("Received block header that does not"+
+			" properly connect to the chain from"+
+			" peer %s (%s) -- disconnecting",
+			hmsg.peer.Addr(), err)
+		hmsg.peer.Disconnect()
+		return
+	}
+
+	needProofs := make([]hashHeight, 0, 1)
+
+	tip := hmsg.peer.LastBlock()
+	if tip > b.likelyChainTip {
+		tip = b.likelyChainTip
+	}
+	for i, header := range msg.Headers {
+		h := int32(backHeight) + int32(i) + 1
+		depth := tip - h
+		if depth < 1 {
+			depth = 1
+		}
+		var buf [8]byte
+		binary.LittleEndian.PutUint32(buf[:4], b.randomVerificationSeed)
+		binary.LittleEndian.PutUint32(buf[4:], uint32(h))
+		x := sha256.Sum224(buf[:])
+		numI := binary.LittleEndian.Uint32(x[:4])
+		numF := float64(numI) / 4294967296.0
+		if numF <= 20.0/float64(depth) {
+			log.Tracef("Requesting PacketCrypt Proof for block number [%d]", h)
+			needProofs = append(needProofs, hashHeight{hash: header.BlockHash(), height: h})
+		}
+	}
+
+	log.Infof("Headers from [%s] height: [%s] checking [%s] PacketCrypt proofs of total [%s] headers",
+		pktlog.IpAddr(hmsg.peer.Addr()),
+		pktlog.Height(int32(backHeight+1)),
+		pktlog.Int(len(needProofs)),
+		pktlog.Int(len(msg.Headers)),
+	)
+
+	if len(needProofs) == 0 {
+		log.Debugf("No PacketCrypt proofs required for header batch")
+		b.handleProvenHeadersMsg(&provenHeadersMsg{hmsg: hmsg, proofs: nil})
+		return
+	}
+
+	var lk sync.Mutex
+	proofs := make(map[int32]*btcutil.Block)
+	s := b.server
+	go func() {
+		var sem = make(chan int, 4)
+		for _, hash := range needProofs {
+			sem <- 1
+			go func(hh hashHeight) {
+				h, err := s.GetBlock0(hh.hash, uint32(hh.height), Encoding(wire.BaseEncoding))
+				if err != nil {
+					log.Infof("Unable to get block [%s @ %d]: %s",
+						hh.hash.String(), hh.height, err.String())
+				} else {
+					log.Debugf("Got PacketCrypt proof for block [%s @ %d]",
+						hh.hash.String(), hh.height)
+					lk.Lock()
+					proofs[hh.height] = h
+					if len(proofs) == len(needProofs) {
+						select {
+						case b.peerChan <- &provenHeadersMsg{
+							hmsg:   hmsg,
+							proofs: proofs,
+						}:
+						case <-b.quit:
+							return
+						}
+					}
+					lk.Unlock()
+				}
+				<-sem
+			}(hash)
+		}
+	}()
+}
+
+func blockHashByHeight(needHeight int32,
+	newHeaders []*wire.BlockHeader,
+	newHeadersHeight int32,
+	server *ChainService,
+) (chainhash.Hash, er.R) {
+	if needHeight >= newHeadersHeight {
+		if int(needHeight-newHeadersHeight) >= len(newHeaders) {
+			return chainhash.Hash{}, er.New("height too big")
+		}
+		log.Tracef("PacketCrypt getting header hash [%d] from new headers", needHeight)
+		return newHeaders[needHeight-newHeadersHeight].BlockHash(), nil
+	} else if hdr, err := server.BlockHeaders.FetchHeaderByHeight(uint32(needHeight)); err != nil {
+		return chainhash.Hash{}, err
+	} else {
+		log.Tracef("PacketCrypt getting header hash [%d] from chain", needHeight)
+		return hdr.BlockHash(), nil
+	}
+}
+
+func checkPacketCryptProof(
+	block *btcutil.Block,
+	height int32,
+	newHeaders []*wire.BlockHeader,
+	newHeadersHeight int32,
+	server *ChainService,
+) er.R {
+	pcp := block.MsgBlock().Pcp
+	if pcp == nil {
+		return ruleerror.ErrBadPow.New("pow missing", nil)
+	}
+	if !globalcfg.IsPacketCryptAllowedVersion(pcp.Version, height) {
+		return ruleerror.ErrBadPow.New("Unallowed PacketCrypt proof version", nil)
+	}
+	hashes := make([]*chainhash.Hash, len(pcp.Announcements))
+	for i := 0; i < len(pcp.Announcements); i++ {
+		ph := pcp.Announcements[i].GetParentBlockHeight()
+		if ph > 0x7fffffff {
+			return ruleerror.ErrBadPow.New("ann parent block height is negative", nil)
+		}
+		hash, err := blockHashByHeight(int32(ph), newHeaders, newHeadersHeight, server)
+		if err != nil {
+			return ruleerror.ErrPowCannotVerify.New(
+				fmt.Sprintf("Cannot verify pow, missing block at height [%d]", ph), err)
+		}
+		hashes[i] = &hash
+	}
+	if _, err := packetcrypt.ValidatePcBlock(
+		block.MsgBlock(), height, 0, hashes,
+	); err != nil {
+		str := fmt.Sprintf("Error validating PacketCrypt proof [%v]", err)
+		return ruleerror.ErrBadPow.New(str, nil)
+	}
+	return nil
+}
+
+// handleHeadersMsg handles headers messages from all peers.
+func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
+	hmsg := phmsg.hmsg
 	msg := hmsg.headers
 	numHeaders := len(msg.Headers)
 
@@ -2330,6 +2534,21 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 					"%s -- disconnecting peer", err)
 				hmsg.peer.Disconnect()
 				return
+			}
+			thisHeaderHeight := int32(prevNode.Height + 1)
+			if blk, ok := phmsg.proofs[thisHeaderHeight]; ok {
+				thisHeaderIndex := int32(i)
+				newHeadersHeight := thisHeaderHeight - thisHeaderIndex
+				log.Tracef("Checking PacketCrypt proof add1")
+				if err := checkPacketCryptProof(
+					blk, thisHeaderHeight, msg.Headers, newHeadersHeight, b.server,
+				); err != nil {
+					log.Warnf("Failed PacketCrypt proof check on block [%s @ %d]"+
+						" check: %s -- disconnecting peer",
+						blk.Hash().String(), thisHeaderHeight, err)
+					hmsg.peer.Disconnect()
+					return
+				}
 			}
 
 			node.Height = prevNode.Height + 1
@@ -2441,6 +2660,23 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 					hmsg.peer.Disconnect()
 					return
 				}
+
+				thisHeaderHeight := int32(backHeight+1) + int32(j)
+				if blk, ok := phmsg.proofs[thisHeaderHeight]; ok {
+					thisHeaderIndex := int32(i + j)
+					newHeadersHeight := thisHeaderHeight - thisHeaderIndex
+					log.Debugf("Checking PacketCrypt proof reorg")
+					if err := checkPacketCryptProof(
+						blk, thisHeaderHeight, msg.Headers, newHeadersHeight, b.server,
+					); err != nil {
+						log.Warnf("Failed PacketCrypt proof check on block [%s @ %d]"+
+							" check: %s -- disconnecting peer",
+							blk.Hash().String(), thisHeaderHeight, err)
+						hmsg.peer.Disconnect()
+						return
+					}
+				}
+
 				totalWork.Add(totalWork,
 					blockchain.CalcWork(reorgHeader.Bits))
 				b.reorgList.PushBack(headerlist.Node{
@@ -2537,7 +2773,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			nodeHash := node.Header.BlockHash()
 			if nodeHash.IsEqual(b.nextCheckpoint.Hash) {
 				receivedCheckpoint = true
-				log.Infof("Verified downloaded block "+
+				log.Debugf("Verified downloaded block "+
 					"header against checkpoint at height "+
 					"%d/hash %s", node.Height, nodeHash)
 			} else {
@@ -2589,6 +2825,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 
 	// When this header is a checkpoint, find the next checkpoint.
 	if receivedCheckpoint {
+		b.updateLikelyChainTip(b.nextCheckpoint.Height)
 		b.nextCheckpoint = b.findNextHeaderCheckpoint(finalHeight)
 	}
 
@@ -2627,6 +2864,7 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 	if err != nil {
 		return err
 	}
+	// PacketCrypt is checked elsewhere
 	if globalcfg.GetProofOfWorkAlgorithm() == globalcfg.PowSha256 {
 		stubBlock := btcutil.NewBlock(&wire.MsgBlock{
 			Header: *blockHeader,
@@ -2635,22 +2873,6 @@ func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
 			blockchain.CompactToBig(diff))
 		if err != nil {
 			return err
-		}
-	} else {
-		if time.Since(timeLastLogged) > time.Second*5 {
-			peers := b.server.Peers()
-			insecure := false
-			for _, p := range peers {
-				if !p.persistent {
-					insecure = true
-				}
-
-			}
-			if insecure {
-				log.Warn("PacketCryptProofs are not being checked, this is not secure " +
-					"unless it is only connected to a trusted pktd instance")
-			}
-			timeLastLogged = time.Now()
 		}
 	}
 	// Ensure the block time is not too far in the future.

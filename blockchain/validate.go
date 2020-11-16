@@ -386,43 +386,47 @@ func ShaCheckProofOfWork(block *btcutil.Block, powLimit *big.Int) er.R {
 	return checkProofOfWork(&block.MsgBlock().Header, powLimit, BFNone)
 }
 
-func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) er.R {
+func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) (int32, er.R) {
 	pcp := block.MsgBlock().Pcp
 	if pcp == nil {
-		return ruleerror.ErrBadPow.New("pow missing", nil)
+		return -1, ruleerror.ErrBadPow.New("pow missing", nil)
 	}
 
 	coinbase, err := block.Tx(0)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	height, err := ExtractCoinbaseHeight(coinbase)
 	if err != nil {
-		return err
+		return -1, err
+	}
+
+	if b.LatestCheckpoint().Height >= height {
+		return height, nil
 	}
 
 	if !globalcfg.IsPacketCryptAllowedVersion(pcp.Version, height) {
-		return ruleerror.ErrBadPow.New("Unallowed PacketCrypt proof version", nil)
+		return height, ruleerror.ErrBadPow.New("Unallowed PacketCrypt proof version", nil)
 	}
 
 	hashes := make([]*chainhash.Hash, len(pcp.Announcements))
 	for i := 0; i < len(pcp.Announcements); i++ {
 		ph := pcp.Announcements[i].GetParentBlockHeight()
 		if ph > 0x7fffffff {
-			return ruleerror.ErrBadPow.New("ann parent block height is negative", nil)
+			return height, ruleerror.ErrBadPow.New("ann parent block height is negative", nil)
 		}
 		hash, err := b.BlockHashByHeightContextual(int32(ph), &block.MsgBlock().Header.PrevBlock)
 		if err != nil {
-			return ruleerror.ErrPowCannotVerify.New(
+			return height, ruleerror.ErrPowCannotVerify.New(
 				fmt.Sprintf("Cannot verify pow, missing block at height [%d]", ph), err)
 		}
 		hashes[i] = hash
 	}
 	if _, err := packetcrypt.ValidatePcBlock(block.MsgBlock(), height, 0, hashes); err != nil {
 		str := fmt.Sprintf("Error validating PacketCrypt proof [%v]", err)
-		return ruleerror.ErrBadPow.New(str, nil)
+		return height, ruleerror.ErrBadPow.New(str, nil)
 	}
-	return nil
+	return height, nil
 }
 
 // CountSigOps returns the number of signature operations for all transaction
@@ -970,7 +974,6 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		return 0, nil
 	}
 
-	txHash := tx.Hash()
 	var totalSatoshiIn int64
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
@@ -1059,7 +1062,7 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 	if totalSatoshiIn < totalSatoshiOut {
 		str := fmt.Sprintf("total value of all transaction inputs for "+
 			"transaction %v is %v which is less than the amount "+
-			"spent of %v", txHash, totalSatoshiIn, totalSatoshiOut)
+			"spent of %v", tx.Hash(), totalSatoshiIn, totalSatoshiOut)
 		return 0, ruleerror.ErrSpendTooHigh.New(str, nil)
 	}
 

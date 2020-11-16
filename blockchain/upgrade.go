@@ -27,7 +27,7 @@ const (
 	blockHdrOffset = 12
 )
 
-// errInterruptRequested indicates that an operation was cancelled due
+// errInterruptRequested indicates that an operation was canceled due
 // to a user-requested interrupt.
 var errInterruptRequested = errors.New("interrupt requested")
 
@@ -521,7 +521,7 @@ func upgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) er.R {
 
 			if interruptRequested(interrupt) {
 				// No error here so the database transaction
-				// is not cancelled and therefore outstanding
+				// is not canceled and therefore outstanding
 				// work is written to disk.
 				break
 			}

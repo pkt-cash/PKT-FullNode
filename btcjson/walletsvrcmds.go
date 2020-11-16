@@ -73,26 +73,13 @@ type GetSecretCmd struct {
 }
 
 type ResyncCmd struct {
-	DropDb *bool
+	FromHeight *int32
+	ToHeight   *int32
+	Addresses  *[]string
+	DropDb     *bool
 }
 
-type VacuumCmd struct {
-	MaxWorkMs *uint64
-	BeginKey  *string
-}
-
-// EstimateFeeCmd defines the estimatefee JSON-RPC command.
-type EstimateFeeCmd struct {
-	NumBlocks int64
-}
-
-// NewEstimateFeeCmd returns a new instance which can be used to issue a
-// estimatefee JSON-RPC command.
-func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
-	return &EstimateFeeCmd{
-		NumBlocks: numBlocks,
-	}
-}
+type StopResyncCmd struct{}
 
 // GetBalanceCmd defines the getbalance JSON-RPC command.
 type GetBalanceCmd struct {
@@ -457,9 +444,8 @@ func init() {
 	MustRegisterCmd("createtransaction", (*CreateTransactionCmd)(nil), flags)
 	MustRegisterCmd("getaddressbalances", (*GetAddressBalancesCmd)(nil), flags)
 	MustRegisterCmd("resync", (*ResyncCmd)(nil), flags)
-	MustRegisterCmd("vacuum", (*VacuumCmd)(nil), flags)
+	MustRegisterCmd("stopresync", (*StopResyncCmd)(nil), flags)
 	MustRegisterCmd("dumpprivkey", (*DumpPrivKeyCmd)(nil), flags)
-	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("getbalance", (*GetBalanceCmd)(nil), flags)
 	MustRegisterCmd("getnetworkstewardvote", (*GetNetworkStewardVoteCmd)(nil), flags)
 	MustRegisterCmd("getnewaddress", (*GetNewAddressCmd)(nil), flags)

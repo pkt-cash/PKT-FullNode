@@ -33,24 +33,31 @@ const (
 	minInFlightBlocks = 10
 
 	// maxRejectedTxns is the maximum number of rejected transactions
-	// hashes to store in memory.
-	maxRejectedTxns = 1000
+	// hashes to store in memory. 
+	maxRejectedTxns = 1200
 
 	// maxRequestedBlocks is the maximum number of requested block
-	// hashes to store in memory.
-	maxRequestedBlocks = wire.MaxInvPerMsg
+	// hashes to store in memory. By requesting 100 less than the
+	// maximum, we avoid immediately triggering the remote peers ban
+	// manager when our connection is fast or latency is very low.
+	maxRequestedBlocks = (wire.MaxInvPerMsg - 100)
 
 	// maxRequestedTxns is the maximum number of requested transactions
-	// hashes to store in memory.
-	maxRequestedTxns = wire.MaxInvPerMsg
+	// hashes to store in memory. By requesting 100 less than the
+	// maximum, we avoid immediately triggering the remote peers ban
+	// manager when our connection is fast or latency is very low.
+	maxRequestedTxns = (wire.MaxInvPerMsg - 100)
 
 	// maxStallDuration is the time after which we will disconnect our
-	// current sync peer if we haven't made progress.
-	maxStallDuration = 3 * time.Minute
+	// current sync peer if we haven't made progress. For PKTD, it's
+	// not unreasonable to expect progress within one minute vs. the
+	// default of three minutes due the use of meshnet connections.
+	maxStallDuration = 1 * time.Minute
 
-	// stallSampleInterval the interval at which we will check to see if our
-	// sync has stalled.
-	stallSampleInterval = 30 * time.Second
+	// stallSampleInterval the interval at which we will check to see
+	// if our sync has stalled. Checking at 10 second intervals is the
+	// maximum possible without any noticeable performance penalties.
+	stallSampleInterval = 10 * time.Second
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
@@ -395,7 +402,7 @@ func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
 	return true
 }
 
-// handleNewPeerMsg deals with new peers that have signalled they may
+// handleNewPeerMsg deals with new peers that have signaled they may
 // be considered as a sync peer (they have already successfully negotiated).  It
 // also starts syncing if needed.  It is invoked from the syncHandler goroutine.
 func (sm *SyncManager) handleNewPeerMsg(peer *peerpkg.Peer) {
@@ -473,7 +480,7 @@ func (sm *SyncManager) shouldDCStalledSyncPeer() bool {
 	return peerHeight > best.Height
 }
 
-// handleDonePeerMsg deals with peers that have signalled they are done.  It
+// handleDonePeerMsg deals with peers that have signaled they are done.  It
 // removes the peer as a candidate for syncing and in the case where it was
 // the current sync peer, attempts to select a new best peer to sync from.  It
 // is invoked from the syncHandler goroutine.
@@ -696,8 +703,10 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// it as such.  Otherwise, something really did go wrong, so log
 		// it as an actual error.
 		if ruleerror.Err.Is(err) {
-			log.Infof("Rejected block %v from %s: %v", blockHash,
-				peer, err)
+			if !ruleerror.ErrDuplicateBlock.Is(err) {
+				log.Infof("Rejected block %v from %s: %v", blockHash,
+					peer, err)
+			}
 		} else {
 			log.Errorf("Failed to process block %v: %v",
 				blockHash, err)
@@ -1314,16 +1323,9 @@ out:
 			case processBlockMsg:
 				_, isOrphan, err := sm.chain.ProcessBlock(
 					msg.block, msg.flags)
-				if err != nil {
-					msg.reply <- processBlockResponse{
-						isOrphan: false,
-						err:      err,
-					}
-				}
-
 				msg.reply <- processBlockResponse{
 					isOrphan: isOrphan,
-					err:      nil,
+					err:      err,
 				}
 
 			case isCurrentMsg:
@@ -1545,7 +1547,7 @@ func (sm *SyncManager) SyncPeerID() int32 {
 // ProcessBlock makes use of ProcessBlock on an internal instance of a block
 // chain.
 func (sm *SyncManager) ProcessBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, er.R) {
-	reply := make(chan processBlockResponse, 1)
+	reply := make(chan processBlockResponse)
 	sm.msgChan <- processBlockMsg{block: block, flags: flags, reply: reply}
 	response := <-reply
 	return response.isOrphan, response.err

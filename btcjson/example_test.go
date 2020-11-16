@@ -5,7 +5,7 @@
 package btcjson_test
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -50,7 +50,7 @@ func ExampleUnmarshalCmd() {
 
 	// Unmarshal the raw bytes from the wire into a JSON-RPC request.
 	var request btcjson.Request
-	if err := json.Unmarshal(data, &request); err != nil {
+	if err := jsoniter.Unmarshal(data, &request); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -122,7 +122,7 @@ func Example_unmarshalResponse() {
 
 	// Unmarshal the raw bytes from the wire into a JSON-RPC response.
 	var response btcjson.Response
-	if err := json.Unmarshal(data, &response); err != nil {
+	if err := jsoniter.Unmarshal(data, &response); err != nil {
 		fmt.Println("Malformed JSON-RPC response:", err)
 		return
 	}
@@ -137,7 +137,7 @@ func Example_unmarshalResponse() {
 
 	// Unmarshal the result into the expected type for the response.
 	var blockHeight int32
-	if err := json.Unmarshal(response.Result, &blockHeight); err != nil {
+	if err := jsoniter.Unmarshal(response.Result, &blockHeight); err != nil {
 		fmt.Printf("Unexpected result type: %T\n", response.Result)
 		return
 	}

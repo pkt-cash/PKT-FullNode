@@ -97,15 +97,11 @@ func DropTransactionHistory(ns walletdb.ReadWriteBucket) er.R {
 	if err := deleteBuckets(ns); err != nil {
 		return err
 	}
-	if err := ns.Delete(rootMinedBalance); err != nil {
-		return err
-	}
 
 	// With everything removed, we'll now recreate our buckets.
 	if err := createBuckets(ns); err != nil {
 		return err
 	}
 
-	// Finally, we'll insert a 0 value for our mined balance.
-	return putMinedBalance(ns, 0)
+	return nil
 }

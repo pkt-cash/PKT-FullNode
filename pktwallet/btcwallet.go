@@ -13,9 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"time"
 
-	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 
@@ -33,66 +31,17 @@ var (
 func main() {
 	version.SetUserAgentName("pktwallet")
 
-	// Use all processor cores.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// After EXTENSIVE RUNTIME testing on multiple
+	// platforms, this should be MIN 4 and maybe
+	// closer to 8 - so 6 is it!
+	// (esp to avoid GC lag in goleveldb - which
+	//  still leaks memory on occasion that causes
+	//  longer and longer GC runs.  ugh go.)
+	runtime.GOMAXPROCS(runtime.NumCPU() * 6)
 
 	// Work around defer not working after os.Exit.
 	if err := walletMain(); err != nil {
 		os.Exit(1)
-	}
-}
-
-func goAutoVacuum(cfg *config, w *wallet.Wallet) {
-	for {
-		// Don't try to vacuum until the chain connection comes up
-		if w.ChainClient() != nil {
-			break
-		}
-		time.Sleep(time.Duration(1) * time.Second)
-	}
-	for {
-		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.AutoVacuuming = true
-			ws.AutoVacuumCycles = 0
-			ws.AutoVacuumBurned = 0
-			ws.AutoVacuumOrphaned = 0
-			ws.AutoVacuumVisitedUtxos = 0
-		})
-		startKey := ""
-		totals := btcjson.VacuumDbRes{}
-		for {
-			res, err := w.VacuumDb(startKey,
-				time.Duration(cfg.AutoVacuumMs)*time.Millisecond)
-			if w.ShuttingDown() {
-				return
-			}
-			if err != nil {
-				log.Warnf("Error while vacuuming database [%s]", err.String())
-				break
-			}
-			totals.Burned += res.Burned
-			totals.Orphaned += res.Orphaned
-			totals.VisitedUtxos += res.VisitedUtxos
-			startKey = res.EndKey
-			if startKey == "" {
-				// completed a vacuum cycle
-				break
-			}
-			w.UpdateStats(func(ws *btcjson.WalletStats) {
-				ws.AutoVacuumCycles++
-				ws.AutoVacuumBurned += res.Burned
-				ws.AutoVacuumOrphaned += res.Orphaned
-				ws.AutoVacuumVisitedUtxos += res.VisitedUtxos
-			})
-			time.Sleep(time.Duration(cfg.AutoVacuumPauseMs) * time.Millisecond)
-		}
-		log.Debugf("Autovacuum complete [%d] burned [%d] orphaned [%d] visited utxos",
-			totals.Burned, totals.Orphaned, totals.VisitedUtxos)
-		w.UpdateStats(func(ws *btcjson.WalletStats) {
-			ws.AutoVacuuming = false
-			ws.TimeOfLastAutoVacuum = time.Now()
-		})
-		time.Sleep(time.Duration(cfg.AutoVacuumSleepSec) * time.Second)
 	}
 }
 
@@ -147,10 +96,6 @@ func walletMain() er.R {
 		startWalletRPCServices(w, rpcs, legacyRPCServer)
 	})
 
-	if cfg.AutoVacuum && !cfg.NoAutoVacuum {
-		loader.RunAfterLoad(func(w *wallet.Wallet) { go goAutoVacuum(cfg, w) })
-	}
-
 	if !cfg.NoInitialLoad {
 		// Load the wallet database.  It must have been created already
 		// or this will return an appropriate error.
@@ -165,6 +110,12 @@ func walletMain() er.R {
 	// before exiting.  Interrupt handlers run in LIFO order, so the wallet
 	// (which should be closed last) is added first.
 	addInterruptHandler(func() {
+		// When panicing, do not cleanly unload the wallet (by closing
+		// the db).  If a panic occured inside a bolt transaction, the
+		// db mutex is still held and this causes a deadlock.
+		if r := recover(); r != nil {
+			panic(r)
+		}
 		err := loader.UnloadWallet()
 		if err != nil && !wallet.ErrNotLoaded.Is(err) {
 			log.Errorf("Failed to close wallet: %v", err)
@@ -229,9 +180,6 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 				continue
 			}
 			cp := cfg.ConnectPeers
-			if len(cfg.ConnectPeers) == 0 && !cfg.UseSPV {
-				cp = []string{"localhost"}
-			}
 			chainService, err = neutrino.NewChainService(
 				neutrino.Config{
 					DataDir:      netDir,
@@ -307,7 +255,7 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 func readCAFile() []byte {
 	// Read certificate file if TLS is not disabled.
 	var certs []byte
-	if !cfg.DisableClientTLS {
+	if cfg.ClientTLS {
 		var errr error
 		certs, errr = ioutil.ReadFile(cfg.CAFile.Value)
 		if errr != nil {
@@ -316,8 +264,6 @@ func readCAFile() []byte {
 			// with nil certs and without the client connection.
 			certs = nil
 		}
-	} else {
-		log.Info("Chain server RPC TLS is disabled")
 	}
 
 	return certs
@@ -330,7 +276,7 @@ func readCAFile() []byte {
 func startChainRPC(certs []byte) (*chain.RPCClient, er.R) {
 	log.Infof("Attempting RPC client connection to %v", cfg.RPCConnect)
 	rpcc, err := chain.NewRPCClient(activeNet.Params, cfg.RPCConnect,
-		cfg.BtcdUsername, cfg.BtcdPassword, certs, cfg.DisableClientTLS, 0)
+		cfg.BtcdUsername, cfg.BtcdPassword, certs, !cfg.ClientTLS, 0)
 	if err != nil {
 		return nil, err
 	}

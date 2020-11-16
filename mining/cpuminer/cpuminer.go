@@ -451,7 +451,7 @@ func (m *CPUMiner) Start() {
 	log.Infof("CPU miner started")
 }
 
-// Stop gracefully stops the mining process by signalling all workers, and the
+// Stop gracefully stops the mining process by signaling all workers, and the
 // speed monitor to quit.  Calling this function when the CPU miner has not
 // already been started will have no effect.
 //

@@ -70,7 +70,6 @@ func testStore() (*Store, walletdb.DB, func(), er.R) {
 	}
 
 	teardown := func() {
-		db.Close()
 		os.RemoveAll(tmpDir)
 	}
 
@@ -162,7 +161,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: 0,
 			unc: btcutil.Amount(TstRecvTx.MsgTx().TxOut[0].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstRecvTx.Hash(),
 					Index: 0,
 				}: {},
@@ -189,7 +188,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: 0,
 			unc: btcutil.Amount(TstRecvTx.MsgTx().TxOut[0].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstRecvTx.Hash(),
 					Index: 0,
 				}: {},
@@ -216,7 +215,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: btcutil.Amount(TstRecvTx.MsgTx().TxOut[0].Value),
 			unc: 0,
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstRecvTx.Hash(),
 					Index: 0,
 				}: {},
@@ -241,7 +240,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: btcutil.Amount(TstRecvTx.MsgTx().TxOut[0].Value),
 			unc: 0,
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstRecvTx.Hash(),
 					Index: 0,
 				}: {},
@@ -251,13 +250,13 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 		{
 			name: "rollback confirmed credit",
 			f: func(s *Store, ns walletdb.ReadWriteBucket) (*Store, er.R) {
-				err := s.Rollback(ns, TstRecvTxBlockDetails.Height)
+				err := s.RollbackOne(ns, TstRecvTxBlockDetails.Height)
 				return s, err
 			},
 			bal: 0,
 			unc: btcutil.Amount(TstRecvTx.MsgTx().TxOut[0].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstRecvTx.Hash(),
 					Index: 0,
 				}: {},
@@ -284,7 +283,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: btcutil.Amount(TstDoubleSpendTx.MsgTx().TxOut[0].Value),
 			unc: 0,
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstDoubleSpendTx.Hash(),
 					Index: 0,
 				}: {},
@@ -343,7 +342,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: 0,
 			unc: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 0,
 				}: {},
@@ -369,11 +368,11 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: 0,
 			unc: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value + TstSpendingTx.MsgTx().TxOut[1].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 0,
 				}: {},
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 1,
 				}: {},
@@ -395,51 +394,51 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 			bal: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value + TstSpendingTx.MsgTx().TxOut[1].Value),
 			unc: 0,
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 0,
 				}: {},
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 1,
 				}: {},
 			},
 			unmined: map[chainhash.Hash]struct{}{},
 		},
-		{
-			name: "rollback after spending tx",
-			f: func(s *Store, ns walletdb.ReadWriteBucket) (*Store, er.R) {
-				err := s.Rollback(ns, TstSignedTxBlockDetails.Height+1)
-				return s, err
-			},
-			bal: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value + TstSpendingTx.MsgTx().TxOut[1].Value),
-			unc: 0,
-			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
-					Hash:  *TstSpendingTx.Hash(),
-					Index: 0,
-				}: {},
-				wire.OutPoint{
-					Hash:  *TstSpendingTx.Hash(),
-					Index: 1,
-				}: {},
-			},
-			unmined: map[chainhash.Hash]struct{}{},
-		},
+		// {  /// can't work because blocks are rolled back one at a time now.
+		// 	name: "rollback after spending tx",
+		// 	f: func(s *Store, ns walletdb.ReadWriteBucket) (*Store, er.R) {
+		// 		err := s.RollbackOne(ns, TstSignedTxBlockDetails.Height+1)
+		// 		return s, err
+		// 	},
+		// 	bal: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value + TstSpendingTx.MsgTx().TxOut[1].Value),
+		// 	unc: 0,
+		// 	unspents: map[wire.OutPoint]struct{}{
+		// 		wire.OutPoint{
+		// 			Hash:  *TstSpendingTx.Hash(),
+		// 			Index: 0,
+		// 		}: {},
+		// 		wire.OutPoint{
+		// 			Hash:  *TstSpendingTx.Hash(),
+		// 			Index: 1,
+		// 		}: {},
+		// 	},
+		// 	unmined: map[chainhash.Hash]struct{}{},
+		// },
 		{
 			name: "rollback spending tx block",
 			f: func(s *Store, ns walletdb.ReadWriteBucket) (*Store, er.R) {
-				err := s.Rollback(ns, TstSignedTxBlockDetails.Height)
+				err := s.RollbackOne(ns, TstSignedTxBlockDetails.Height)
 				return s, err
 			},
 			bal: 0,
 			unc: btcutil.Amount(TstSpendingTx.MsgTx().TxOut[0].Value + TstSpendingTx.MsgTx().TxOut[1].Value),
 			unspents: map[wire.OutPoint]struct{}{
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 0,
 				}: {},
-				wire.OutPoint{
+				{
 					Hash:  *TstSpendingTx.Hash(),
 					Index: 1,
 				}: {},
@@ -451,7 +450,7 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 		{
 			name: "rollback double spend tx block",
 			f: func(s *Store, ns walletdb.ReadWriteBucket) (*Store, er.R) {
-				err := s.Rollback(ns, TstRecvTxBlockDetails.Height)
+				err := s.RollbackOne(ns, TstRecvTxBlockDetails.Height)
 				return s, err
 			},
 			bal: 0,
@@ -996,7 +995,7 @@ func TestCoinbases(t *testing.T) {
 
 	// Reorg out the block that matured the coinbase and check balances
 	// again.
-	err = s.Rollback(ns, bMaturity.Height)
+	err = s.RollbackOne(ns, bMaturity.Height)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1018,7 +1017,7 @@ func TestCoinbases(t *testing.T) {
 	// more transactions in the store (since the previous outputs referenced
 	// by the spending tx no longer exist), and the balance will always be
 	// zero.
-	err = s.Rollback(ns, b100.Height)
+	err = s.RollbackOne(ns, b100.Height)
 	if err != nil {
 		t.Fatal(err)
 	}

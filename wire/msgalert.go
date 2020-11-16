@@ -117,10 +117,10 @@ type Alert struct {
 	ID int32
 
 	// All alerts with an ID less than or equal to this number should
-	// cancelled, deleted and not accepted in the future
+	// canceled, deleted and not accepted in the future
 	Cancel int32
 
-	// All alert IDs contained in this set should be cancelled as above
+	// All alert IDs contained in this set should be canceled as above
 	SetCancel []int32
 
 	// This alert only applies to versions greater than or equal to this

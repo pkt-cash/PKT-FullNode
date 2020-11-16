@@ -5,7 +5,7 @@
 package btcjson
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -61,14 +61,15 @@ func IsValidIDType(id interface{}) bool {
 type Request struct {
 	Jsonrpc string            `json:"jsonrpc"`
 	Method  string            `json:"method"`
-	Params  []json.RawMessage `json:"params"`
+	Params  []jsoniter.RawMessage `json:"params"`
 	ID      interface{}       `json:"id"`
 }
 
 // NewRequest returns a new JSON-RPC 1.0 request object given the provided id,
-// method, and parameters.  The parameters are marshalled into a json.RawMessage
-// for the Params field of the returned request object.  This function is only
-// provided in case the caller wants to construct raw requests for some reason.
+// method, and parameters.  The parameters are marshalled into a
+// jsoniter.RawMessage for the Params field of the returned request object.
+// This function is only provided in case the caller wants to construct raw
+// requests for some reason.
 //
 // Typically callers will instead want to create a registered concrete command
 // type with the NewCmd or New<Foo>Cmd functions and call the MarshalCmd
@@ -79,13 +80,13 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 		return nil, makeError(ErrInvalidType, str)
 	}
 
-	rawParams := make([]json.RawMessage, 0, len(params))
+	rawParams := make([]jsoniter.RawMessage, 0, len(params))
 	for _, param := range params {
-		marshalledParam, err := json.Marshal(param)
+		marshalledParam, err := jsoniter.Marshal(param)
 		if err != nil {
 			return nil, er.E(err)
 		}
-		rawMessage := json.RawMessage(marshalledParam)
+		rawMessage := jsoniter.RawMessage(marshalledParam)
 		rawParams = append(rawParams, rawMessage)
 	}
 
@@ -102,7 +103,7 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 // interface.  The ID field has to be a pointer for Go to put a null in it when
 // empty.
 type Response struct {
-	Result json.RawMessage `json:"result"`
+	Result jsoniter.RawMessage `json:"result"`
 	Error  *RPCErr         `json:"error"`
 	ID     *interface{}    `json:"id"`
 }
@@ -150,7 +151,7 @@ func NewResponse(id interface{}, marshalledResult []byte, rpcErr er.R) (*Respons
 // MarshalResponse marshals the passed id, result, and RPCError to a JSON-RPC
 // response byte slice that is suitable for transmission to a JSON-RPC client.
 func MarshalResponse(id interface{}, result interface{}, rpcErr er.R) ([]byte, er.R) {
-	marshalledResult, errr := json.Marshal(result)
+	marshalledResult, errr := jsoniter.Marshal(result)
 	if errr != nil {
 		return nil, er.E(errr)
 	}
@@ -158,6 +159,6 @@ func MarshalResponse(id interface{}, result interface{}, rpcErr er.R) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-	out, errr := json.Marshal(&response)
+	out, errr := jsoniter.Marshal(&response)
 	return out, er.E(errr)
 }

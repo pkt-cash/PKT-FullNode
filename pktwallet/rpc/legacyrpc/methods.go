@@ -9,12 +9,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -119,7 +120,7 @@ var rpcHandlers = map[string]struct {
 	"addp2shscript":         {handler: addP2shScript},
 	"createtransaction":     {handler: createTransaction},
 	"resync":                {handler: resync},
-	"vacuum":                {handler: vacuum},
+	"stopresync":            {handler: stopResync},
 	"getaddressbalances":    {handler: getAddressBalances},
 	"getwalletseed":         {handler: getWalletSeed},
 	"getsecret":             {handler: getSecret},
@@ -198,7 +199,7 @@ func makeResponse(id, result interface{}, err er.R) btcjson.Response {
 			Error: btcjson.SerializeError(jsonError(err)),
 		}
 	}
-	resultBytes, errr := json.Marshal(result)
+	resultBytes, errr := jsoniter.Marshal(result)
 	if errr != nil {
 		return btcjson.Response{
 			ID: idPtr,
@@ -208,7 +209,7 @@ func makeResponse(id, result interface{}, err er.R) btcjson.Response {
 	}
 	return btcjson.Response{
 		ID:     idPtr,
-		Result: json.RawMessage(resultBytes),
+		Result: jsoniter.RawMessage(resultBytes),
 	}
 }
 
@@ -499,6 +500,20 @@ func getInfo(icmd interface{}, w *wallet.Wallet, chainClient chain.Interface) (i
 		}); err != nil {
 			return nil, err
 		}
+		for _, q := range neut.CS.GetActiveQueries() {
+			peer := "<none>"
+			if q.Peer != nil {
+				peer = q.Peer.String()
+			}
+			ni.Queries = append(ni.Queries, btcjson.NeutrinoQuery{
+				Peer:             peer,
+				Command:          q.Command,
+				ReqNum:           q.ReqNum,
+				CreateTime:       q.CreateTime,
+				LastRequestTime:  q.LastRequestTime,
+				LastResponseTime: q.LastResponseTime,
+			})
+		}
 	}
 
 	return out, nil
@@ -564,22 +579,15 @@ func getNetworkStewardVote(icmd interface{}, w *wallet.Wallet) (interface{}, er.
 // getUnconfirmedBalance handles a getunconfirmedbalance extension request
 // by returning the current unconfirmed balance of an account.
 func getUnconfirmedBalance(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.GetUnconfirmedBalanceCmd)
-
-	acctName := "default"
-	if cmd.Account != nil {
-		acctName = *cmd.Account
-	}
-	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
+	bals, err := w.CalculateAddressBalances(0, false)
 	if err != nil {
 		return nil, err
 	}
-	bals, err := w.CalculateAccountBalances(account, 1)
-	if err != nil {
-		return nil, err
+	sum := btcutil.Amount(0)
+	for _, b := range bals {
+		sum += b.Unconfirmed
 	}
-
-	return (bals.Total - bals.Spendable).ToBTC(), nil
+	return sum.ToBTC(), nil
 }
 
 // importPrivKey handles an importprivkey request by parsing
@@ -860,7 +868,7 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 			rawChainUsage, err := client.RawRequest("help", nil)
 			var chainUsage string
 			if err == nil {
-				_ = json.Unmarshal([]byte(rawChainUsage), &chainUsage)
+				_ = jsoniter.Unmarshal([]byte(rawChainUsage), &chainUsage)
 			}
 			if chainUsage != "" {
 				usages = "Chain server usage:\n\n" + chainUsage + "\n\n" +
@@ -894,9 +902,9 @@ func help(icmd interface{}, w *wallet.Wallet, chainClient *chain.RPCClient) (int
 		param[0] = '"'
 		copy(param[1:], *cmd.Command)
 		param[len(param)-1] = '"'
-		rawChainHelp, err := client.RawRequest("help", []json.RawMessage{param})
+		rawChainHelp, err := client.RawRequest("help", []jsoniter.RawMessage{param})
 		if err == nil {
-			_ = json.Unmarshal([]byte(rawChainHelp), &chainHelp)
+			_ = jsoniter.Unmarshal([]byte(rawChainHelp), &chainHelp)
 		}
 	}
 	if chainHelp != "" {
@@ -1376,22 +1384,25 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	return hex.EncodeToString(b.Bytes()), nil
 }
 
-func resync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.ResyncCmd)
-	return nil, w.ResyncChain(cmd.DropDb != nil && *cmd.DropDb)
+func stopResync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	return w.StopResync()
 }
 
-func vacuum(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	cmd := icmd.(*btcjson.VacuumCmd)
-	bk := ""
-	mc := time.Duration(0)
-	if cmd.BeginKey != nil {
-		bk = *cmd.BeginKey
+func resync(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
+	cmd := icmd.(*btcjson.ResyncCmd)
+	fh := int32(-1)
+	th := int32(-1)
+	if cmd.FromHeight != nil {
+		fh = *cmd.FromHeight
 	}
-	if cmd.MaxWorkMs != nil {
-		mc = time.Duration(*cmd.MaxWorkMs) * time.Millisecond
+	if cmd.ToHeight != nil {
+		th = *cmd.ToHeight
 	}
-	return w.VacuumDb(bk, mc)
+	var a []string
+	if cmd.Addresses != nil {
+		a = *cmd.Addresses
+	}
+	return nil, w.ResyncChain(fh, th, a, cmd.DropDb != nil && *cmd.DropDb)
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction
@@ -1645,11 +1656,11 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient chain.In
 		if err != nil {
 			return nil, err
 		}
-		script, errr := hex.DecodeString(result.ScriptPubKey.Hex)
-		if errr != nil {
-			return nil, er.E(errr)
+		if a, err := btcutil.DecodeAddress(result.Address, w.ChainParams()); err != nil {
+			return nil, err
+		} else {
+			inputs[outPoint] = a.ScriptAddress()
 		}
-		inputs[outPoint] = script
 	}
 
 	// All args collected. Now we can sign all the inputs that we can.
@@ -1703,7 +1714,7 @@ func validateAddress(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	// We could put whether or not the address is a script here,
 	// by checking the type of "addr", however, the reference
 	// implementation only puts that information if the script is
-	// "ismine", and we follow that behaviour.
+	// "ismine", and we follow that behavior.
 	result.Address = addr.EncodeAddress()
 	result.IsValid = true
 

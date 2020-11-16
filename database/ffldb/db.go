@@ -17,18 +17,18 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
-	"github.com/btcsuite/goleveldb/leveldb"
-	"github.com/btcsuite/goleveldb/leveldb/comparer"
-	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
-	"github.com/btcsuite/goleveldb/leveldb/filter"
-	"github.com/btcsuite/goleveldb/leveldb/iterator"
-	"github.com/btcsuite/goleveldb/leveldb/opt"
-	"github.com/btcsuite/goleveldb/leveldb/util"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/database/internal/treap"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/comparer"
+	ldberrors "github.com/syndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/filter"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const (
@@ -42,6 +42,13 @@ const (
 )
 
 var (
+	// bytesMiB is the number of bytes in a mebibyte.
+	bytesMiB = 1024 * 1024
+
+	// minAvailableSpaceUpdate is the minimum space available (in bytes) to
+	// allow a write transaction.  The value is 50 MiB. //XXX make configurable
+	minAvailableSpaceUpdate = 50 * bytesMiB
+
 	// byteOrder is the preferred byte order used through the database and
 	// block files.  Sometimes big endian will be used to allow ordered byte
 	// sortable integer values.
@@ -974,7 +981,7 @@ type pendingBlock struct {
 }
 
 // transaction represents a database transaction.  It can either be read-only or
-// read-write and implements the database.Bucket interface.  The transaction
+// read-write and implements the database.Tx interface.  The transaction
 // provides a root bucket against which all read and writes occur.
 type transaction struct {
 	managed        bool             // Is the transaction managed?
@@ -1479,12 +1486,15 @@ func (tx *transaction) FetchBlockRegion(region *database.BlockRegion) ([]byte, e
 	}
 	location := deserializeBlockLoc(blockRow)
 
+	// Calculate the actual block size by removing the metadata.
+	blockLen := location.blockLen - blockMetadataSize
+
 	// Ensure the region is within the bounds of the block.
 	endOffset := region.Offset + region.Len
-	if endOffset < region.Offset || endOffset > location.blockLen {
+	if endOffset < region.Offset || endOffset > blockLen {
 		str := fmt.Sprintf("block %s region offset %d, length %d "+
 			"exceeds block length of %d", region.Hash,
-			region.Offset, region.Len, location.blockLen)
+			region.Offset, region.Len, blockLen)
 		return nil, makeDbErr(database.ErrBlockRegionInvalid, str, nil)
 
 	}
@@ -1577,12 +1587,15 @@ func (tx *transaction) FetchBlockRegions(regions []database.BlockRegion) ([][]by
 		}
 		location := deserializeBlockLoc(blockRow)
 
+		// Calculate the actual block size by removing the metadata.
+		blockLen := location.blockLen - blockMetadataSize
+
 		// Ensure the region is within the bounds of the block.
 		endOffset := region.Offset + region.Len
-		if endOffset < region.Offset || endOffset > location.blockLen {
+		if endOffset < region.Offset || endOffset > blockLen {
 			str := fmt.Sprintf("block %s region offset %d, length "+
 				"%d exceeds block length of %d", region.Hash,
-				region.Offset, region.Len, location.blockLen)
+				region.Offset, region.Len, blockLen)
 			return nil, makeDbErr(database.ErrBlockRegionInvalid, str, nil)
 		}
 
@@ -1752,6 +1765,7 @@ func (tx *transaction) Rollback() er.R {
 // the database.DB interface.  All database access is performed through
 // transactions which are obtained through the specific Namespace.
 type db struct {
+
 	writeLock sync.Mutex   // Limit to one write transaction at a time.
 	closeLock sync.RWMutex // Make database close block while txns active.
 	closed    bool         // Is the database closed?
@@ -1777,6 +1791,22 @@ func (db *db) Type() string {
 // which is used by the managed transaction code while the database method
 // returns the interface.
 func (db *db) begin(writable bool) (*transaction, er.R) {
+	    // Make sure there is enough available disk space so we can inform the
+    // user of the problem instead of causing a db failure.
+    if writable {
+        freeSpace, err := getAvailableDiskSpace(db.store.basePath)
+        if err != nil {
+        str := "failed to determine available disk space"
+            return nil, makeDbErr(database.ErrDriverSpecific, str, nil)
+        }
+        if freeSpace < uint64(minAvailableSpaceUpdate) {
+            errMsg := fmt.Sprintf("available disk space too low: "+
+                "%.1f MiB", float64(freeSpace)/float64(bytesMiB))
+            return nil, makeDbErr(database.ErrAvailableDiskSpace,
+                errMsg, nil)
+        }
+    }
+
 	// Whenever a new writable transaction is started, grab the write lock
 	// to ensure only a single write transaction can be active at the same
 	// time.  This lock will not be released until the transaction is
@@ -2026,12 +2056,18 @@ func openDB(dbPath string, network protocol.BitcoinNet, create bool) (database.D
 
 	// Open the metadata database (will create it if needed).
 	opts := opt.Options{
-		ErrorIfExist: create,
-		Strict:       opt.DefaultStrict,
-		Compression:  opt.NoCompression,
-		Filter:       filter.NewBloomFilter(10),
+		ErrorIfExist:				create,
+		Strict:						opt.StrictAll,
+		Compression:				opt.NoCompression,
+		DisableCompactionBackoff:	true,
+		DisableSeeksCompaction:		true,
+		WriteL0PauseTrigger:		8,
+		Filter:						filter.NewBloomFilter(10),
 	}
 	ldb, err := leveldb.OpenFile(metadataDbPath, &opts)
+	if _, corrupted := err.(*ldberrors.ErrCorrupted); corrupted {
+		ldb, err = leveldb.RecoverFile(metadataDbPath, nil)
+	}
 	if err != nil {
 		return nil, convertErr(err.Error(), err)
 	}

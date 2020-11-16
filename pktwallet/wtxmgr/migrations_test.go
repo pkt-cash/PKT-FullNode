@@ -107,21 +107,6 @@ func TestMigrationDropTransactionHistory(t *testing.T) {
 				"transactions, found %d", len(unconfirmedTxs))
 		}
 
-		// We should have a non-zero balance before the migration, and
-		// zero after.
-		minedBalance, err := fetchMinedBalance(ns)
-		if err != nil {
-			return err
-		}
-		if minedBalance == 0 && !afterMigration {
-			return er.New("expected non-zero balance before " +
-				"migration")
-		}
-		if minedBalance > 0 && afterMigration {
-			return er.Errorf("expected zero balance after "+
-				"migration, got %d", minedBalance)
-		}
-
 		return nil
 	}
 

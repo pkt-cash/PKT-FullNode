@@ -21,8 +21,8 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
-	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/decred/go-socks/socks"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -35,7 +35,16 @@ const (
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
-	DefaultTrickleInterval = 10 * time.Second
+	//
+	// The BTCD default is 10 - this controls the wait before nodes send
+	// more txns at once and reduces the time new txns have to wait before
+	// before being broadcast - with the previous settings, the maximum a
+	// single node could send would be about ~28MB worth of txns every ten
+	// minutes - XXX(trn) I'm investigating the effects of removing the
+	// trickling concept all-together and attempting to broadcast all txns
+	// immediately, but it would require some extra peer selection logic,
+	// rather than just rebroadcasting txns to connected peers at random.
+	DefaultTrickleInterval = 5 * time.Second
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
@@ -54,7 +63,7 @@ const (
 
 	// pingInterval is the interval of time to wait in between sending ping
 	// messages.
-	pingInterval = 2 * time.Minute
+	pingInterval = 1 * time.Minute
 
 	// negotiateTimeout is the duration of inactivity before we timeout a
 	// peer that hasn't completed the initial version negotiation.
@@ -569,10 +578,18 @@ func (p *Peer) String() string {
 // This function is safe for concurrent access.
 func (p *Peer) UpdateLastBlockHeight(newHeight int32) {
 	p.statsMtx.Lock()
+	if newHeight <= p.lastBlock {
+		// This function gets called during sync process with lower numbers
+		// than what the peer initially reported as we sync up, so we should
+		// not accept the number being lowered
+		// See: https://github.com/decred/dcrd/commit/0ab86a42f3a644e4b119543510f0c22ee6081bad
+		p.statsMtx.Unlock()
+		return
+	}
+	defer p.statsMtx.Unlock()
 	log.Tracef("Updating last block height of peer %v from %v to %v",
 		p.addr, p.lastBlock, newHeight)
 	p.lastBlock = newHeight
-	p.statsMtx.Unlock()
 }
 
 // UpdateLastAnnouncedBlock updates meta-data about the last block hash this
@@ -860,7 +877,7 @@ func (p *Peer) WantsHeaders() bool {
 	return sendHeadersPreferred
 }
 
-// IsWitnessEnabled returns true if the peer has signalled that it supports
+// IsWitnessEnabled returns true if the peer has signaled that it supports
 // segregated witness.
 //
 // This function is safe for concurrent access.
@@ -1297,7 +1314,7 @@ out:
 				}
 
 			case sccHandlerStart:
-				// Warn on unbalanced callback signalling.
+				// Warn on unbalanced callback signaling.
 				if handlerActive {
 					log.Warn("Received handler start " +
 						"control command while a " +
@@ -1309,7 +1326,7 @@ out:
 				handlersStartTime = time.Now()
 
 			case sccHandlerDone:
-				// Warn on unbalanced callback signalling.
+				// Warn on unbalanced callback signlling.
 				if !handlerActive {
 					log.Warn("Received handler done " +
 						"control command when a " +
@@ -1408,7 +1425,7 @@ out:
 			// disconnect the peer when we're in regression test mode and the
 			// error is one of the allowed errors.
 			if p.isAllowedReadError(err) {
-				log.Errorf("Allowed test error from %s: %v", p, err)
+				log.Errorf("Allowed read error from %s: %v", p, err)
 				idleTimer.Reset(idleTimeout)
 				continue
 			}
@@ -1422,8 +1439,7 @@ out:
 					log.Errorf(errMsg)
 				}
 
-				// Push a reject message for the malformed message and wait for
-				// the message to be sent before disconnecting.
+				// Push a reject message for malformed messages.
 				//
 				// NOTE: Ideally this would include the command in the header if
 				// at least that much of the message was valid, but that is not

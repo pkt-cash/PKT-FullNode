@@ -6,7 +6,7 @@
 package rpcclient
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -28,7 +28,7 @@ func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, er.R) {
 
 	// Unmarshal result as a getbestblock result object.
 	var bestBlock btcjson.GetBestBlockResult
-	errr := json.Unmarshal(res, &bestBlock)
+	errr := jsoniter.Unmarshal(res, &bestBlock)
 	if errr != nil {
 		return nil, 0, er.E(errr)
 	}
@@ -76,7 +76,7 @@ func (r FutureGetCurrentNetResult) Receive() (protocol.BitcoinNet, er.R) {
 
 	// Unmarshal result as an int64.
 	var net int64
-	errr := json.Unmarshal(res, &net)
+	errr := jsoniter.Unmarshal(res, &net)
 	if errr != nil {
 		return 0, er.E(errr)
 	}

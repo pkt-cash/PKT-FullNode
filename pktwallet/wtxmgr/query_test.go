@@ -468,7 +468,7 @@ func TestStoreQueries(t *testing.T) {
 			t.Errorf("RangeTransactions (reverse) ran func %d times", iterations)
 		}
 		// Make sure it also breaks early after one iteration through unmined transactions.
-		if err := s.Rollback(ns, b101.Height); err != nil {
+		if err := s.RollbackOne(ns, b101.Height); err != nil {
 			return err
 		}
 		iterations = 0
@@ -514,7 +514,7 @@ func TestStoreQueries(t *testing.T) {
 	tests = append(tests, queryTest{
 		desc: "rollback block 100",
 		updates: func(ns walletdb.ReadWriteBucket) er.R {
-			return s.Rollback(ns, b100.Height)
+			return s.RollbackOne(ns, b100.Height)
 		},
 		state: newState,
 	})

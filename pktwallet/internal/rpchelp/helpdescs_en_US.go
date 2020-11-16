@@ -68,17 +68,14 @@ var helpDescsEnUS = map[string]string{
 	"getnetworkstewardvoteresult-votefor":     "The address which your wallet is currently voting for",
 
 	// ResyncCmd help
-	"resync--synopsis": "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
-	"resync-dropdb":    "Clean most of the data out of the wallet transaction store before resyncing",
+	"resync--synopsis":  "Re-synchronize the wallet to the chain, scan from the first block to find any missing coins",
+	"resync-addresses":  "If specified, the wallet will ONLY scan the chain for these addresses, not others. If dropdb is specified then it will scan all addresses including these",
+	"resync-fromheight": "Start re-syncing to the chain from specified height, default or -1 will use the height of the chain when the wallet was created",
+	"resync-toheight":   "Stop resyncing when this height is reached, default or -1 will use the tip of the chain",
+	"resync-dropdb":     "Clean most of the data out of the wallet transaction store, this is not a real resync, it just drops the wallet and then lets it begin working again",
 
-	"vacuum--synopsis": "Scan the database for data which is not useful anymore",
-	"vacuum-maxworkms": "The maximum number of database rows to visit, useful for performing background vacuum operations in pages",
-	"vacuum-beginkey":  "The key of the first item to vacuum, use the result endkey in order to perform vacuum in pages",
-
-	"vacuumdbres-endkey":       "The database key of the last entry visited, can be passed to startKey argument to vacuum the database in sections",
-	"vacuumdbres-orphaned":     "The number of orphaned transactions which were cleared out by the vacuum operation",
-	"vacuumdbres-burned":       "The number of burned coins which were cleared out by the vacuum operation",
-	"vacuumdbres-visitedutxos": "The number of outputs which were visited when vacuuming",
+	"stopresync--synopsis": "Stop a re-synchronization job before it's completion",
+	"stopresync--result0":  "The name of the sync job which was stopped",
 
 	// CreateMultisigCmd help.
 	"createmultisig--synopsis": "Generate a multisig address and redeem script.",
@@ -272,6 +269,8 @@ var helpDescsEnUS = map[string]string{
 	"listunspentresult-amount":        "The amount of the output valued in bitcoin",
 	"listunspentresult-confirmations": "The number of block confirmations of the transaction",
 	"listunspentresult-spendable":     "Whether the output is entirely controlled by wallet keys/scripts (false for partially controlled multisig outputs or outputs to watch-only addresses)",
+	"listunspentresult-blockHash":     "The hash of the block which the transaction was included in",
+	"listunspentresult-height":        "The height of the block which the transaction was included in",
 
 	// LockUnspentCmd help.
 	"lockunspent--synopsis": "Locks or unlocks an unspent output.\n" +

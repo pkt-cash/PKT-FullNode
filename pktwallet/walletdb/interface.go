@@ -2,8 +2,8 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// This interface was inspired heavily by the excellent boltdb project at
-// https://github.com/boltdb/bolt by Ben B. Johnson.
+// This interface was inspired heavily by the excellent boltdb
+// project at https://github.com/boltdb/bolt by Ben B. Johnson.
 
 package walletdb
 
@@ -198,6 +198,12 @@ func View(db DB, f func(tx ReadTx) er.R) er.R {
 	if err != nil {
 		return err
 	}
+	// Make sure the transaction rolls back in the event of a panic.
+	defer func() {
+        if tx != nil {
+                tx.Rollback()
+        }
+	}()
 	err = f(tx)
 	rollbackErr := tx.Rollback()
 	if err != nil {
@@ -220,6 +226,12 @@ func Update(db DB, f func(tx ReadWriteTx) er.R) er.R {
 	if err != nil {
 		return err
 	}
+	// Make sure the transaction rolls back in the event of a panic.
+	defer func() {
+        if tx != nil {
+                tx.Rollback()
+        }
+	}()
 	err = f(tx)
 	if err != nil {
 		// Want to return the original error, not a rollback error if

@@ -6,7 +6,7 @@
 package btcjson
 
 import (
-	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 )
@@ -56,6 +56,7 @@ type GetBlockVerboseResult struct {
 	PcAnnBits           string        `json:"packetcryptannbits,omitempty"`
 	PcAnnDifficulty     *float64      `json:"packetcryptanndifficulty,omitempty"`
 	PcBlkDifficulty     *float64      `json:"packetcryptblkdifficulty,omitempty"`
+	PcBlkBits           string        `json:"packetcryptblkbits,omitempty"`
 	BlockReward         string        `json:"sblockreward"`
 	NetworkSteward      string        `json:"networksteward,omitempty"`
 	BlocksUntilRetarget int32         `json:"blocksuntilretarget"`
@@ -99,7 +100,7 @@ type GetAddedNodeInfoResult struct {
 }
 
 // SoftForkDescription describes the current state of a soft-fork which was
-// deployed using a super-majority block signalling.
+// deployed using a super-majority block signaling.
 type SoftForkDescription struct {
 	ID      string `json:"id"`
 	Version uint32 `json:"version"`
@@ -125,9 +126,10 @@ type GetBlockChainInfoResult struct {
 	Blocks               int32                               `json:"blocks"`
 	Headers              int32                               `json:"headers"`
 	BestBlockHash        string                              `json:"bestblockhash"`
+	InitialBlockDownload bool                                `json:"initialblockdownload"`
 	Difficulty           float64                             `json:"difficulty"`
 	MedianTime           int64                               `json:"mediantime"`
-	VerificationProgress float64                             `json:"verificationprogress,omitempty"`
+	VerificationProgress float64                             `json:"verificationprogress"`
 	Pruned               bool                                `json:"pruned"`
 	PruneHeight          int32                               `json:"pruneheight,omitempty"`
 	ChainWork            string                              `json:"chainwork,omitempty"`
@@ -233,6 +235,30 @@ type GetPeerInfoResult struct {
 	SyncNode       bool    `json:"syncnode"`
 }
 
+type GetNetworkInfoNetworks struct {
+	Name                      string `json:"name"`
+	Limited                   bool   `json:"limited"`
+	Reachable                 bool   `json:"reachable"`
+	Proxy                     string `json:"proxy"`
+	Proxyrandomizecredentials string `json:"proxy_randomize_credentials"`
+}
+
+type GetNetworkInfoResult struct {
+	Version            int32                    `json:"version"`
+	Subversion         string                   `json:"subversion"`
+	Protocolversion    int32                    `json:"protocolversion"`
+	Localservices      string                   `json:"localservices"`
+	Localservicesnames []string                 `json:"localservicesnames"`
+	Localrelay         bool                     `json:"localrelay"`
+	Timeoffset         int64                    `json:"timeoffset"`
+	Networkactive      bool                     `json:"networkactive"`
+	Connections        int32                    `json:"connections"`
+	Networks           []GetNetworkInfoNetworks `json:"networks"`
+	Relayfee           float64                  `json:"relayfee"`
+	Incrementalfee     float64                  `json:"incrementalfee"`
+	Localaddresses     []string                 `json:"localaddresses"`
+}
+
 type GetRawBlockTemplateResult struct {
 	Height            int32    `json:"height"`
 	Header            string   `json:"header"`
@@ -255,28 +281,15 @@ type GetRawMempoolVerboseResult struct {
 	Depends          []string `json:"depends"`
 }
 
-// ScriptPubKeyResult models the scriptPubKey data of a tx script.  It is
-// defined separately since it is used by multiple commands.
-// DEPRECATED: Will be removed in favor of simply returning "address"
-type ScriptPubKeyResult struct {
-	Asm                string   `json:"asm"`
-	Hex                string   `json:"hex,omitempty"`
-	ReqSigs            int32    `json:"reqSigs,omitempty"`
-	Type               string   `json:"type"`
-	Addresses          []string `json:"addresses,omitempty"`
-	DeprecationWarning string   `json:"deprecationwarning,omitempty"`
-}
-
 // GetTxOutResult models the data from the gettxout command.
 type GetTxOutResult struct {
-	BestBlock     string             `json:"bestblock"`
-	Confirmations int64              `json:"confirmations"`
-	ValueCoins    float64            `json:"value"`
-	Svalue        string             `json:"svalue"`
-	Address       string             `json:"address"`
-	Vote          *Vote              `json:"vote,omitempty"`
-	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
-	Coinbase      bool               `json:"coinbase"`
+	BestBlock     string  `json:"bestblock"`
+	Confirmations int64   `json:"confirmations"`
+	ValueCoins    float64 `json:"value"`
+	Svalue        string  `json:"svalue"`
+	Address       string  `json:"address"`
+	Vote          *Vote   `json:"vote,omitempty"`
+	Coinbase      bool    `json:"coinbase"`
 }
 
 // GetNetTotalsResult models the data returned from the getnettotals command.
@@ -329,7 +342,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Sequence: v.Sequence,
 			Witness:  v.Witness,
 		}
-		out, err := json.Marshal(coinbaseStruct)
+		out, err := jsoniter.Marshal(coinbaseStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -347,7 +360,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Witness:   v.Witness,
 			Sequence:  v.Sequence,
 		}
-		out, err := json.Marshal(txStruct)
+		out, err := jsoniter.Marshal(txStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -362,7 +375,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 		ScriptSig: v.ScriptSig,
 		Sequence:  v.Sequence,
 	}
-	out, err := json.Marshal(txStruct)
+	out, err := jsoniter.Marshal(txStruct)
 	return out, er.Native(er.E(err))
 }
 
@@ -405,7 +418,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			Coinbase: v.Coinbase,
 			Sequence: v.Sequence,
 		}
-		out, err := json.Marshal(coinbaseStruct)
+		out, err := jsoniter.Marshal(coinbaseStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -425,7 +438,7 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 			PrevOut:   v.PrevOut,
 			Sequence:  v.Sequence,
 		}
-		out, err := json.Marshal(txStruct)
+		out, err := jsoniter.Marshal(txStruct)
 		return out, er.Native(er.E(err))
 	}
 
@@ -442,19 +455,18 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 		PrevOut:   v.PrevOut,
 		Sequence:  v.Sequence,
 	}
-	out, err := json.Marshal(txStruct)
+	out, err := jsoniter.Marshal(txStruct)
 	return out, er.Native(er.E(err))
 }
 
 // Vout models parts of the tx data.  It is defined separately since both
 // getrawtransaction and decoderawtransaction use the same structure.
 type Vout struct {
-	ValueCoins   float64            `json:"value"`
-	Svalue       string             `json:"svalue"`
-	N            uint32             `json:"n"`
-	Address      string             `json:"address"`
-	Vote         *Vote              `json:"vote,omitempty"`
-	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
+	ValueCoins float64 `json:"value"`
+	Svalue     string  `json:"svalue"`
+	N          uint32  `json:"n"`
+	Address    string  `json:"address"`
+	Vote       *Vote   `json:"vote,omitempty"`
 }
 
 // GetMiningInfoResult models the data from the getmininginfo command.
@@ -521,4 +533,12 @@ type TxRawDecodeResult struct {
 type ValidateAddressChainResult struct {
 	IsValid bool   `json:"isvalid"`
 	Address string `json:"address,omitempty"`
+}
+
+// EstimateSmartFeeResult models the data returned buy the chain server
+// estimatesmartfee command
+type EstimateSmartFeeResult struct {
+	FeeRate *float64 `json:"feerate,omitempty"`
+	Errors  []string `json:"errors,omitempty"`
+	Blocks  int64    `json:"blocks"`
 }

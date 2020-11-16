@@ -12,7 +12,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,7 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/btcsuite/websocket"
+	jsoniter "github.com/json-iterator/go"
+
+	"github.com/gorilla/websocket"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
@@ -49,6 +50,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/constants"
+	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
 
@@ -121,6 +123,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"decoderawtransaction":   handleDecodeRawTransaction,
 	"decodescript":           handleDecodeScript,
 	"estimatefee":            handleEstimateFee,
+	"estimatesmartfee":       handleEstimateSmartFee,
 	"generate":               handleGenerate,
 	"getaddednodeinfo":       handleGetAddedNodeInfo,
 	"getbestblock":           handleGetBestBlock,
@@ -145,6 +148,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getminingpayouts":       handleGetMiningPayouts,
 	"getnettotals":           handleGetNetTotals,
 	"getnetworkhashps":       handleGetNetworkHashPS,
+	"getnetworkinfo":         handleGetNetworkInfo,
 	"getnetworksteward":      handleGetNetworkSteward,
 	"getpeerinfo":            handleGetPeerInfo,
 	"getrawmempool":          handleGetRawMempool,
@@ -156,6 +160,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"help":                   handleHelp,
 	"node":                   handleNode,
 	"ping":                   handlePing,
+	"echo":                   handleEcho,
 	"searchrawtransactions":  handleSearchRawTransactions,
 	"sendrawtransaction":     handleSendRawTransaction,
 	"setgenerate":            handleSetGenerate,
@@ -575,7 +580,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 			return nil, internalRPCError(err, context)
 		}
 
-		txOut := wire.NewTxOut(int64(satoshi), pkScript)
+		txOut := wire.NewTxOut(satoshi, pkScript)
 		mtx.AddTxOut(txOut)
 	}
 
@@ -639,35 +644,9 @@ func witnessToHex(witness wire.TxWitness) []string {
 func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
 	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
-		// The disassembled string will contain [error] inline if the
-		// script doesn't fully parse, so ignore the error here.
-		disbuf, _ := txscript.DisasmString(v.PkScript)
-
-		// Ignore the error here since an error means the script
-		// couldn't parse and there is no additional information about
-		// it anyways.
-		scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(
-			v.PkScript, chainParams)
-
-		// Encode the addresses while checking if the address passes the
-		// filter when needed.
-		passesFilter := len(filterAddrMap) == 0
-		encodedAddrs := make([]string, len(addrs))
-		for j, addr := range addrs {
-			encodedAddr := addr.EncodeAddress()
-			encodedAddrs[j] = encodedAddr
-
-			// No need to check the map again if the filter already
-			// passes.
-			if passesFilter {
-				continue
-			}
-			if _, exists := filterAddrMap[encodedAddr]; exists {
-				passesFilter = true
-			}
-		}
-
-		if !passesFilter {
+		encodedAddr := txscript.PkScriptToAddress(v.PkScript, chainParams).EncodeAddress()
+		if len(filterAddrMap) == 0 {
+		} else if _, exists := filterAddrMap[encodedAddr]; !exists {
 			continue
 		}
 
@@ -675,14 +654,7 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 		vout.N = uint32(i)
 		vout.ValueCoins = btcutil.Amount(v.Value).ToBTC()
 		vout.Svalue = strconv.FormatInt(v.Value, 10)
-		vout.Address = txscript.PkScriptToAddress(v.PkScript, chainParams).EncodeAddress()
-		vout.ScriptPubKey.Addresses = encodedAddrs
-		vout.ScriptPubKey.Asm = disbuf
-		vout.ScriptPubKey.Hex = hex.EncodeToString(v.PkScript)
-		vout.ScriptPubKey.Type = scriptClass.String()
-		vout.ScriptPubKey.ReqSigs = int32(reqSigs)
-		vout.ScriptPubKey.DeprecationWarning =
-			"scriptPubKey will soon be removed, please use address instead"
+		vout.Address = encodedAddr
 
 		vote(&vout.Vote, v.PkScript, chainParams)
 		voutList = append(voutList, vout)
@@ -876,6 +848,25 @@ func handleEstimateFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{})
 
 	// Convert to satoshis per kb.
 	return float64(feeRate), nil
+}
+
+func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.EstimateSmartFeeCmd)
+
+	if s.cfg.FeeEstimator == nil {
+		return nil, er.New("Fee estimation disabled")
+	}
+
+	conservitive := true
+	if c.EstimateMode != nil && *c.EstimateMode == btcjson.EstimateModeEconomical {
+		conservitive = false
+	}
+
+	if c.ConfTarget <= 0 {
+		return -1.0, er.New("Parameter NumBlocks must be positive")
+	}
+
+	return s.cfg.FeeEstimator.EstimateSmartFee(uint32(c.ConfTarget), conservitive), nil
 }
 
 // handleGenerate handles generate commands.
@@ -1132,6 +1123,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	pcAnnBits := ""
 	var pcAnnDifficulty *float64
 	var pcBlkDifficulty *float64
+	pcBlkBits := ""
 	if blk.MsgBlock().Pcp != nil {
 		pcVer = &blk.MsgBlock().Pcp.Version
 		commit := packetcrypt.ExtractCoinbaseCommit(blk.MsgBlock().Transactions[0])
@@ -1145,6 +1137,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 			blk.MsgBlock().Header.Bits, amd, pac, *pcVer)
 		blkdiff := getDifficultyRatio0(effectiveTarget, 0x207fffff)
 		pcBlkDifficulty = &blkdiff
+		pcBlkBits = fmt.Sprintf("%08x", effectiveTarget)
 	}
 
 	params := s.cfg.ChainParams
@@ -1167,7 +1160,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	var retargetEstimate *float64
 
 	blocksBetweenRetargets := int32(params.TargetTimespan / params.TargetTimePerBlock)
-	blocksUntilRetarget := blocksBetweenRetargets - (int32(blockHeight) % blocksBetweenRetargets)
+	blocksUntilRetarget := blocksBetweenRetargets - (blockHeight % blocksBetweenRetargets)
 	if blocksUntilRetarget == blocksBetweenRetargets {
 		blocksUntilRetarget = 0
 	}
@@ -1206,6 +1199,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		PcAnnBits:           pcAnnBits,
 		PcAnnDifficulty:     pcAnnDifficulty,
 		PcBlkDifficulty:     pcBlkDifficulty,
+		PcBlkBits:           pcBlkBits,
 		BlockReward:         strconv.FormatInt(blockReward, 10),
 		NetworkSteward:      ns,
 		BlocksUntilRetarget: blocksUntilRetarget,
@@ -1279,20 +1273,31 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	chain := s.cfg.Chain
 	chainSnapshot := chain.BestSnapshot()
 
+	highestBlock := chainSnapshot.Height
+	for _, p := range s.cfg.ConnMgr.ConnectedPeers() {
+		lb := p.ToPeer().LastBlock()
+		if lb > highestBlock {
+			highestBlock = lb
+		}
+	}
+	progress := float64(chainSnapshot.Height) / float64(highestBlock)
+
 	chainInfo := &btcjson.GetBlockChainInfoResult{
-		Chain:         params.Name,
-		Blocks:        chainSnapshot.Height,
-		Headers:       chainSnapshot.Height,
-		BestBlockHash: chainSnapshot.Hash.String(),
-		Difficulty:    getDifficultyRatio(chainSnapshot.Bits, params),
-		MedianTime:    chainSnapshot.MedianTime.Unix(),
-		Pruned:        false,
-		Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
+		Chain:                params.Name,
+		Blocks:               chainSnapshot.Height,
+		Headers:              chainSnapshot.Height,
+		BestBlockHash:        chainSnapshot.Hash.String(),
+		VerificationProgress: progress,
+		InitialBlockDownload: !chain.IsCurrent(),
+		Difficulty:           getDifficultyRatio(chainSnapshot.Bits, params),
+		MedianTime:           chainSnapshot.MedianTime.Unix(),
+		Pruned:               false,
+		Bip9SoftForks:        make(map[string]*btcjson.Bip9SoftForkDescription),
 	}
 
 	// Next, populate the response with information describing the current
 	// status of soft-forks deployed via the super-majority block
-	// signalling mechanism.
+	// signaling mechanism.
 	height := chainSnapshot.Height
 	chainInfo.SoftForks = []*btcjson.SoftForkDescription{
 		{
@@ -1381,6 +1386,30 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	return chainInfo, nil
 }
 
+func handleGetNetworkInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	return btcjson.GetNetworkInfoResult{
+		Version: int32(version.AppMajorVersion()*1000000 +
+			version.AppMinorVersion()*10000 +
+			version.AppPatchVersion()*100),
+		Subversion:         version.UserAgentVersion(),
+		Protocolversion:    int32(maxProtocolVersion),
+		Localservices:      strconv.FormatUint(uint64(s.cfg.ServiceFlags), 16),
+		Localservicesnames: strings.Split(s.cfg.ServiceFlags.String(), "|"),
+		Localrelay:         !cfg.BlocksOnly,
+		Timeoffset:         int64(s.cfg.TimeSource.Offset().Seconds()),
+		Networkactive:      !cfg.DisableListen,
+		Connections:        s.cfg.ConnMgr.ConnectedCount(),
+		Networks:           []btcjson.GetNetworkInfoNetworks{}, // TODO: populate
+		Relayfee:           cfg.minRelayTxFee.ToBTC(),
+
+		// Not implemented here, but in practice replace-by-fee requires a tx to have as much fees
+		// as everything is replaces plus the minimum again.
+		Incrementalfee: cfg.minRelayTxFee.ToBTC(),
+
+		Localaddresses: []string{}, // TODO populate
+	}, nil
+}
+
 // handleGetBlockCount implements the getblockcount command.
 func handleGetBlockCount(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	best := s.cfg.Chain.BestSnapshot()
@@ -1393,7 +1422,7 @@ func handleGetBlockHash(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 	hash, err := s.cfg.Chain.BlockHashByHeight(int32(c.Index))
 	if err != nil {
 		return nil, btcjson.NewRPCError(
-			btcjson.ErrRPCOutOfRange,
+			btcjson.ErrBlockHeightOutOfRange,
 			"Block number out of range",
 			nil,
 		)
@@ -2806,7 +2835,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 
 	verbose := false
 	if c.Verbose != nil {
-		verbose = *c.Verbose != 0
+		verbose = *c.Verbose
 	}
 
 	// Try to fetch the transaction from the memory pool and if that fails,
@@ -2994,36 +3023,10 @@ func handleGetTxOut(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		ValueCoins:    btcutil.Amount(value).ToBTC(),
 		Svalue:        strconv.FormatInt(value, 10),
 		Address:       txscript.PkScriptToAddress(pkScript, s.cfg.ChainParams).EncodeAddress(),
-		ScriptPubKey:  scriptPubKey(pkScript, s.cfg.ChainParams),
 		Coinbase:      isCoinbase,
 	}
 	vote(&txOutReply.Vote, pkScript, s.cfg.ChainParams)
 	return txOutReply, nil
-}
-
-func scriptPubKey(pkScript []byte, params *chaincfg.Params) btcjson.ScriptPubKeyResult {
-	// Disassemble script into single line printable format.
-	// The disassembled string will contain [error] inline if the script
-	// doesn't fully parse, so ignore the error here.
-	disbuf, _ := txscript.DisasmString(pkScript)
-
-	// Get further info about the script.
-	// Ignore the error here since an error means the script couldn't parse
-	// and there is no additional information about it anyways.
-	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(pkScript, params)
-	addresses := make([]string, len(addrs))
-	for i, addr := range addrs {
-		addresses[i] = addr.EncodeAddress()
-	}
-
-	return btcjson.ScriptPubKeyResult{
-		Asm:                disbuf,
-		Hex:                hex.EncodeToString(pkScript),
-		ReqSigs:            int32(reqSigs),
-		Type:               scriptClass.String(),
-		Addresses:          addresses,
-		DeprecationWarning: "scriptPubKey will soon be removed, please use address instead",
-	}
 }
 
 // handleHelp implements the help command.
@@ -3076,6 +3079,33 @@ func handlePing(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (inter
 	s.cfg.ConnMgr.BroadcastMessage(wire.NewMsgPing(nonce))
 
 	return nil, nil
+}
+
+func handleEcho(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.EchoCmd)
+	var out []string
+	if c.A != nil {
+		out = append(out, *c.A)
+	}
+	if c.B != nil {
+		out = append(out, *c.B)
+	}
+	if c.C != nil {
+		out = append(out, *c.C)
+	}
+	if c.D != nil {
+		out = append(out, *c.D)
+	}
+	if c.E != nil {
+		out = append(out, *c.E)
+	}
+	if c.F != nil {
+		out = append(out, *c.F)
+	}
+	if c.G != nil {
+		out = append(out, *c.G)
+	}
+	return out, nil
 }
 
 // retrievedTx represents a transaction that was either loaded from the
@@ -3918,6 +3948,8 @@ type rpcServer struct {
 	helpCacher             *helpCacher
 	requestProcessShutdown chan struct{}
 	quit                   chan int
+	reqNum                 int64
+	reqCompl               int64
 }
 
 // httpStatusLine returns a response Status-Line (RFC 2616 Section 6.1)
@@ -4160,11 +4192,70 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 	return &parsedCmd
 }
 
-// createMarshalledReply returns a new marshalled JSON-RPC response given the
-// passed parameters.  It will automatically convert errors that are not of
-// the type *btcjson.RPCError to the appropriate type as needed.
 func createMarshalledReply(id, result interface{}, jsonErr er.R) ([]byte, er.R) {
 	return btcjson.MarshalResponse(id, result, jsonErr)
+}
+
+func createResponse(id, result interface{}, jsonErr er.R) (*btcjson.Response, er.R) {
+	marshalledResult, errr := jsoniter.Marshal(result)
+	if errr != nil {
+		return nil, er.E(errr)
+	}
+	return btcjson.NewResponse(id, marshalledResult, jsonErr)
+}
+
+func (s *rpcServer) jsonRPCReq(
+	request *btcjson.Request,
+	closeChan chan struct{},
+	isAdmin bool,
+) (*btcjson.Response, er.R) {
+
+	var jsonErr er.R
+	var result interface{}
+
+	// Check if the user is limited and set error if method unauthorized
+	if !isAdmin {
+		if _, ok := rpcLimited[request.Method]; !ok {
+			jsonErr = btcjson.NewRPCError(
+				btcjson.ErrRPCInvalidParams,
+				"limited user not authorized for this method",
+				nil,
+			)
+		}
+	}
+
+	ps := make([]string, 0, len(request.Params))
+	for _, par := range request.Params {
+		ps = append(ps, string(par))
+	}
+
+	reqNum := atomic.AddInt64(&s.reqNum, 1)
+	reqCompl := atomic.LoadInt64(&s.reqCompl)
+
+	rpcsLog.Infof("> %d:%d RPC %s %s",
+		reqNum, (reqNum - reqCompl), request.Method, strings.Join(ps, " "))
+
+	// Attempt to parse the JSON-RPC request into a known concrete
+	// command.
+	if jsonErr == nil {
+		parsedCmd := parseCmd(request)
+		if parsedCmd.err != nil {
+			jsonErr = parsedCmd.err
+		} else {
+			result, jsonErr = s.standardCmdResult(parsedCmd, closeChan)
+		}
+	}
+
+	resp, err := createResponse(request.ID, result, jsonErr)
+
+	resStr := "ok"
+	if err != nil {
+		resStr = err.Message()
+	}
+	rpcsLog.Infof("< %d:%d RPC %s %s", reqNum, (reqNum - reqCompl), request.Method, resStr)
+	atomic.AddInt64(&s.reqCompl, 1)
+
+	return resp, err
 }
 
 // jsonRPCRead handles reading and responding to RPC messages.
@@ -4208,87 +4299,84 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 	defer buf.Flush()
 	conn.SetReadDeadline(timeZeroVal)
 
-	// Attempt to parse the raw body into a JSON-RPC request.
-	var responseID interface{}
+	// Setup a close notifier.  Since the connection is hijacked,
+	// the CloseNotifer on the ResponseWriter is not available.
+	closeChan := make(chan struct{}, 1)
+	go func() {
+		_, err := conn.Read(make([]byte, 1))
+		if err != nil {
+			close(closeChan)
+		}
+	}()
+
+	var requests []btcjson.Request
+	var req0 btcjson.Request
 	var jsonErr er.R
-	var result interface{}
-	var request btcjson.Request
-	if errr := json.Unmarshal(body, &request); errr != nil {
+	isArray := len(body) > 0 && body[0] == '['
+	if isArray {
+		if errr := jsoniter.Unmarshal(body, &requests); errr != nil {
+			jsonErr = btcjson.NewRPCError(
+				btcjson.ErrRPCParse,
+				"Failed to parse requests",
+				er.E(errr),
+			)
+		}
+	} else if errr := jsoniter.Unmarshal(body, &req0); errr != nil {
 		jsonErr = btcjson.NewRPCError(
 			btcjson.ErrRPCParse,
 			"Failed to parse request",
 			er.E(errr),
 		)
+	} else {
+		requests = append(requests, req0)
 	}
+
+	responses := make([]*btcjson.Response, 0, len(requests))
 	if jsonErr == nil {
-		// The JSON-RPC 1.0 spec defines that notifications must have their "id"
-		// set to null and states that notifications do not have a response.
-		//
-		// A JSON-RPC 2.0 notification is a request with "json-rpc":"2.0", and
-		// without an "id" member. The specification states that notifications
-		// must not be responded to. JSON-RPC 2.0 permits the null value as a
-		// valid request id, therefore such requests are not notifications.
-		//
-		// Bitcoin Core serves requests with "id":null or even an absent "id",
-		// and responds to such requests with "id":null in the response.
-		//
-		// Btcd does not respond to any request without and "id" or "id":null,
-		// regardless the indicated JSON-RPC protocol version unless RPC quirks
-		// are enabled. With RPC quirks enabled, such requests will be responded
-		// to if the reqeust does not indicate JSON-RPC version.
-		//
-		// RPC quirks can be enabled by the user to avoid compatibility issues
-		// with software relying on Core's behavior.
-		if request.ID == nil && !(cfg.RPCQuirks && request.Jsonrpc == "") {
+		for _, req := range requests {
+			res, jsonErr := s.jsonRPCReq(&req, closeChan, isAdmin)
+			if jsonErr != nil {
+				break
+			}
+			responses = append(responses, res)
+		}
+	}
+
+	var msg []byte
+	if jsonErr != nil {
+		resp, err := createResponse(requests[0].ID, nil, jsonErr)
+		if err != nil {
+			rpcsLog.Error(err)
 			return
 		}
-
-		// The parse was at least successful enough to have an ID so
-		// set it for the response.
-		responseID = request.ID
-
-		// Setup a close notifier.  Since the connection is hijacked,
-		// the CloseNotifer on the ResponseWriter is not available.
-		closeChan := make(chan struct{}, 1)
-		go func() {
-			_, err := conn.Read(make([]byte, 1))
-			if err != nil {
-				close(closeChan)
-			}
-		}()
-
-		// Check if the user is limited and set error if method unauthorized
-		if !isAdmin {
-			if _, ok := rpcLimited[request.Method]; !ok {
-				jsonErr = btcjson.NewRPCError(
-					btcjson.ErrRPCInvalidParams,
-					"limited user not authorized for this method",
-					nil,
-				)
-			}
+		out, errr := jsoniter.Marshal(&resp)
+		if errr != nil {
+			rpcsLog.Error(er.E(errr))
+			return
 		}
-
-		if jsonErr == nil {
-			// Attempt to parse the JSON-RPC request into a known concrete
-			// command.
-			parsedCmd := parseCmd(&request)
-			if parsedCmd.err != nil {
-				jsonErr = parsedCmd.err
-			} else {
-				result, jsonErr = s.standardCmdResult(parsedCmd, closeChan)
-			}
+		msg = out
+	} else if isArray {
+		out, errr := jsoniter.Marshal(&responses)
+		if errr != nil {
+			rpcsLog.Error(er.E(errr))
+			return
 		}
+		msg = out
+	} else {
+		var resp0 *btcjson.Response
+		resp0 = responses[0]
+		out, errr := jsoniter.Marshal(&resp0)
+		if errr != nil {
+			rpcsLog.Error(er.E(errr))
+			return
+		}
+		msg = out
 	}
 
-	// Marshal the response.
-	msg, err := createMarshalledReply(responseID, result, jsonErr)
-	if err != nil {
-		rpcsLog.Errorf("Failed to marshal reply: %v", err)
-		return
-	}
+	w.Header().Add("Content-Length", strconv.FormatInt(int64(len(msg)+1), 10))
 
 	// Write the response.
-	err = s.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
+	err := s.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
 	if err != nil {
 		rpcsLog.Error(err)
 		return
@@ -4563,6 +4651,8 @@ type rpcserverConfig struct {
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
+
+	ServiceFlags protocol.ServiceFlag
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.

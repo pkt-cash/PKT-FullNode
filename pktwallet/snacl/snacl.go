@@ -13,9 +13,9 @@ import (
 	"runtime/debug"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/scrypt"
 
-	"github.com/btcsuite/golangcrypto/nacl/secretbox"
-	"github.com/btcsuite/golangcrypto/scrypt"
 	"github.com/pkt-cash/pktd/pktwallet/internal/zero"
 )
 

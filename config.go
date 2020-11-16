@@ -6,7 +6,10 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -16,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/go-socks/socks"
+	"github.com/decred/go-socks/socks"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -29,7 +32,6 @@ import (
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/pktconfig"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
@@ -107,6 +109,7 @@ type config struct {
 	Whitelists           []string      `long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 	AgentBlacklist       []string      `long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause pktd to reject any peers whose user-agent contains any of the blacklisted substrings."`
 	AgentWhitelist       []string      `long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause pktd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
+	HomeDir              string        `long:"homedir" description:"Creates this directory at startup"`
 	RPCUser              string        `short:"u" long:"rpcuser" description:"Username for RPC connections"`
 	RPCPass              string        `short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
 	RPCLimitUser         string        `long:"rpclimituser" description:"Username for limited RPC connections"`
@@ -119,7 +122,8 @@ type config struct {
 	RPCMaxConcurrentReqs int           `long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	RPCQuirks            bool          `long:"rpcquirks" description:"Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE: Discouraged unless interoperability issues need to be worked around"`
 	DisableRPC           bool          `long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
-	DisableTLS           bool          `long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+	DisableTLS           bool          `long:"notls" description:"Nolonger used, see --tls" hidden:"true"`
+	EnableTLS            bool          `long:"tls" description:"Enable TLS for the RPC server -- default is disabled unless bound to non-localhost"`
 	DisableDNSSeed       bool          `long:"nodnsseed" description:"Disable DNS seeding for peers"`
 	ExternalIPs          []string      `long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
 	Proxy                string        `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
@@ -417,6 +421,7 @@ func loadConfig() (*config, []string, er.R) {
 		RPCMaxClients:        defaultMaxRPCClients,
 		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
 		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+		HomeDir:              defaultHomeDir,
 		DataDir:              defaultDataDir,
 		LogDir:               defaultLogDir,
 		DbType:               defaultDbType,
@@ -475,18 +480,10 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	// Load additional config from file.
-	var configFileError er.R
+	configNotFound := false
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
 	if !(preCfg.RegressionTest || preCfg.SimNet) || preCfg.ConfigFile !=
 		defaultConfigFile {
-
-		if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-			err := pktconfig.CreateDefaultConfigFile(preCfg.ConfigFile, pktconfig.PktdSampleConfig)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating a "+
-					"default config file: %v\n", err)
-			}
-		}
 
 		errr := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
 		if errr != nil {
@@ -496,7 +493,7 @@ func loadConfig() (*config, []string, er.R) {
 				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, er.E(errr)
 			}
-			configFileError = er.E(errr)
+			configNotFound = true
 		}
 	}
 
@@ -516,7 +513,7 @@ func loadConfig() (*config, []string, er.R) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	errr = os.MkdirAll(defaultHomeDir, 0700)
+	errr = os.MkdirAll(cfg.HomeDir, 0700)
 	if errr != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -741,6 +738,25 @@ func loadConfig() (*config, []string, er.R) {
 		return nil, nil, err
 	}
 
+	if cfg.RPCUser == "" || cfg.RPCPass == "" {
+		pktdLog.Infof("Creating a .cookie file")
+		cookiePath := filepath.Join(defaultHomeDir, ".cookie")
+		var buf [32]byte
+		if _, errr := rand.Read(buf[:]); errr != nil {
+			err := er.E(errr)
+			err.AddMessage("Unable to get random numbers")
+			return nil, nil, err
+		}
+		cfg.RPCUser = "__PKT_COOKIE__"
+		cfg.RPCPass = hex.EncodeToString(buf[:])
+		cookie := cfg.RPCUser + ":" + cfg.RPCPass
+		if errr := ioutil.WriteFile(cookiePath, []byte(cookie), 0600); errr != nil {
+			err := er.E(errr)
+			err.AddMessage("Could not write cookie")
+			return nil, nil, err
+		}
+	}
+
 	// The RPC server is disabled if no username or password is provided.
 	if (cfg.RPCUser == "" || cfg.RPCPass == "") &&
 		(cfg.RPCLimitUser == "" || cfg.RPCLimitPass == "") {
@@ -933,36 +949,6 @@ func loadConfig() (*config, []string, er.R) {
 	cfg.RPCListeners = normalizeAddresses(cfg.RPCListeners,
 		activeNetParams.rpcPort)
 
-	// Only allow TLS to be disabled if the RPC is bound to localhost
-	// addresses.
-	if !cfg.DisableRPC && cfg.DisableTLS {
-		allowedTLSListeners := map[string]struct{}{
-			"localhost": {},
-			"127.0.0.1": {},
-			"::1":       {},
-		}
-		for _, addr := range cfg.RPCListeners {
-			host, _, err := net.SplitHostPort(addr)
-			if err != nil {
-				str := "%s: RPC listen interface '%s' is " +
-					"invalid: %v"
-				err := er.Errorf(str, funcName, addr, err)
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
-			}
-			if _, ok := allowedTLSListeners[host]; !ok {
-				str := "%s: the --notls option may not be used " +
-					"when binding RPC to non localhost " +
-					"addresses: %s"
-				err := er.Errorf(str, funcName, addr)
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
-			}
-		}
-	}
-
 	// Add default port to all added peer addresses if needed and remove
 	// duplicate addresses.
 	cfg.AddPeers = normalizeAddresses(cfg.AddPeers,
@@ -1117,8 +1103,8 @@ func loadConfig() (*config, []string, er.R) {
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
-	if configFileError != nil {
-		pktdLog.Warnf("%v", configFileError)
+	if configNotFound && preCfg.ConfigFile != defaultConfigFile {
+		pktdLog.Warnf("Could not find config file [%s]", preCfg.ConfigFile)
 	}
 
 	return &cfg, remainingArgs, nil

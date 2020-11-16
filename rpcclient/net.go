@@ -5,7 +5,7 @@
 package rpcclient
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -72,7 +72,7 @@ func (r FutureGetPeerInfoResult) Receive() ([]btcjson.GetPeerInfoResult, er.R) {
 
 	// Unmarshal result as an array of getpeerinfo result objects.
 	var peerInfo []btcjson.GetPeerInfoResult
-	err = er.E(json.Unmarshal(res, &peerInfo))
+	err = er.E(jsoniter.Unmarshal(res, &peerInfo))
 	if err != nil {
 		return nil, err
 	}

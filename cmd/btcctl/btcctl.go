@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 )
@@ -154,6 +156,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, line)
 			}
 		}
+		os.Exit(-result.Error.Code)
 		return
 	}
 
@@ -171,7 +174,7 @@ func main() {
 
 	} else if strings.HasPrefix(strResult, `"`) {
 		var str string
-		if err := json.Unmarshal(result.Result, &str); err != nil {
+		if err := jsoniter.Unmarshal(result.Result, &str); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to unmarshal result: %v",
 				err)
 			os.Exit(1)

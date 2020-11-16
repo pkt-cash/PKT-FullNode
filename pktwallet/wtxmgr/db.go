@@ -74,36 +74,9 @@ var (
 
 // Root (namespace) bucket keys
 var (
-	rootCreateDate   = []byte("date")
-	rootVersion      = []byte("vers")
-	rootMinedBalance = []byte("bal")
+	rootCreateDate = []byte("date")
+	rootVersion    = []byte("vers")
 )
-
-// The root bucket's mined balance k/v pair records the total balance for all
-// unspent credits from mined transactions.  This includes immature outputs, and
-// outputs spent by mempool transactions, which must be considered when
-// returning the actual balance for a given number of block confirmations.  The
-// value is the amount serialized as a uint64.
-func fetchMinedBalance(ns walletdb.ReadBucket) (btcutil.Amount, er.R) {
-	v := ns.Get(rootMinedBalance)
-	if len(v) != 8 {
-		str := fmt.Sprintf("balance: short read (expected 8 bytes, "+
-			"read %v)", len(v))
-		return 0, storeError(ErrData, str, nil)
-	}
-	return btcutil.Amount(byteOrder.Uint64(v)), nil
-}
-
-func putMinedBalance(ns walletdb.ReadWriteBucket, amt btcutil.Amount) er.R {
-	v := make([]byte, 8)
-	byteOrder.PutUint64(v, uint64(amt))
-	err := ns.Put(rootMinedBalance, v)
-	if err != nil {
-		str := "failed to put balance"
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
 
 // Several data structures are given canonical serialization formats as either
 // keys or values.  These common formats allow keys and values to be reused
@@ -180,27 +153,37 @@ func putRawBlockRecord(ns walletdb.ReadWriteBucket, k, v []byte) er.R {
 	return nil
 }
 
-func putBlockRecord(ns walletdb.ReadWriteBucket, block *BlockMeta, txHash *chainhash.Hash) er.R {
-	k := keyBlockRecord(block.Height)
-	v := valueBlockRecord(block, txHash)
-	return putRawBlockRecord(ns, k, v)
-}
-
-func fetchBlockTime(ns walletdb.ReadBucket, height int32) (time.Time, er.R) {
-	k := keyBlockRecord(height)
-	v := ns.NestedReadBucket(bucketBlocks).Get(k)
-	if len(v) < 44 {
-		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketBlocks, 44, len(v))
-		return time.Time{}, storeError(ErrData, str, nil)
+func putBlockRecord(ns walletdb.ReadWriteBucket, br *blockRecord) er.R {
+	k := keyBlockRecord(br.Block.Height)
+	v := valueBlockRecord(&BlockMeta{
+		Block: br.Block,
+		Time:  br.Time,
+	}, &br.transactions[0])
+	for _, txid := range br.transactions[1:] {
+		v, _ = appendRawBlockRecord(v, &txid)
 	}
-	return time.Unix(int64(byteOrder.Uint64(v[32:40])), 0), nil
+	return putRawBlockRecord(ns, k, v)
 }
 
 func existsBlockRecord(ns walletdb.ReadBucket, height int32) (k, v []byte) {
 	k = keyBlockRecord(height)
 	v = ns.NestedReadBucket(bucketBlocks).Get(k)
 	return
+}
+
+func fetchBlockRecord(
+	ns walletdb.ReadBucket,
+	height int32,
+) (*blockRecord, er.R) {
+	blockKey, blockValue := existsBlockRecord(ns, height)
+	if blockValue == nil {
+		return nil, ErrNoExists.Default()
+	}
+	br := blockRecord{}
+	if err := readRawBlockRecord(blockKey, blockValue, &br); err != nil {
+		return nil, err
+	}
+	return &br, nil
 }
 
 func readRawBlockRecord(k, v []byte, block *blockRecord) er.R {
@@ -247,22 +230,6 @@ type blockIterator struct {
 func makeReadBlockIterator(ns walletdb.ReadBucket, height int32) blockIterator {
 	seek := make([]byte, 4)
 	byteOrder.PutUint32(seek, uint32(height))
-	c := ns.NestedReadBucket(bucketBlocks).ReadCursor()
-	return blockIterator{c: readCursor{c}, seek: seek}
-}
-
-// Works just like makeBlockIterator but will initially position the cursor at
-// the last k/v pair.  Use this with blockIterator.prev.
-func makeReverseBlockIterator(ns walletdb.ReadWriteBucket) blockIterator {
-	seek := make([]byte, 4)
-	byteOrder.PutUint32(seek, ^uint32(0))
-	c := ns.NestedReadWriteBucket(bucketBlocks).ReadWriteCursor()
-	return blockIterator{c: c, seek: seek}
-}
-
-func makeReadReverseBlockIterator(ns walletdb.ReadBucket) blockIterator {
-	seek := make([]byte, 4)
-	byteOrder.PutUint32(seek, ^uint32(0))
 	c := ns.NestedReadBucket(bucketBlocks).ReadCursor()
 	return blockIterator{c: readCursor{c}, seek: seek}
 }
@@ -329,7 +296,7 @@ func (it *blockIterator) prev() bool {
 	return true
 }
 
-// unavailable until https://github.com/boltdb/bolt/issues/620 is fixed.
+// unavailable until https://github.com/etcd-io/bbolt/issues/146 is fixed.
 // func (it *blockIterator) delete() error {
 // 	err := it.c.Delete()
 // 	if err != nil {
@@ -1296,14 +1263,6 @@ func createStore(ns walletdb.ReadWriteBucket) er.R {
 	err := ns.Put(rootCreateDate, v[:])
 	if err != nil {
 		str := "failed to store database creation time"
-		return storeError(ErrDatabase, str, err)
-	}
-
-	// Write a zero balance.
-	byteOrder.PutUint64(v[:], 0)
-	err = ns.Put(rootMinedBalance, v[:])
-	if err != nil {
-		str := "failed to write zero balance"
 		return storeError(ErrDatabase, str, err)
 	}
 

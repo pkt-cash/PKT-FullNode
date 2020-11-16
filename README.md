@@ -1,143 +1,70 @@
-btcd
+pktd
 ====
 
-[![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
-[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://Copyfree.org)
 
-btcd is an alternative full node bitcoin implementation written in Go (golang).
+`pktd` is the full node *PKT Cash* implementation, written in Go (golang).
 
-This project is currently under active development and is in a Beta state.  It
-is extremely stable and has been in production use since October 2013.
+This project is currently under active development and considered 
+to be beta quality software.
 
-It properly downloads, validates, and serves the block chain using the exact
-rules (including consensus bugs) for block acceptance as Bitcoin Core.  We have
-taken great care to avoid btcd causing a fork to the block chain.  It includes a
-full block validation testing framework which contains all of the 'official'
-block acceptance tests (and some additional ones) that is run on every pull
-request to help ensure it properly follows consensus.  Also, it passes all of
-the JSON test data in the Bitcoin Core code.
+In particular, the development branch of `pktd` is highly experimental, 
+and only be very carefully, if at all, operated in a production
+environment or pn the PKT Cash mainnet.
 
-It also properly relays newly mined blocks, maintains a transaction pool, and
-relays individual transactions that have not yet made it into a block.  It
-ensures all individual transactions admitted to the pool follow the rules
-required by the block chain and also includes more strict checks which filter
-transactions based on miner requirements ("standard" transactions).
+`pktd` is the primary mainnet node - It is known to correctly download,
+validate, and serve the PKT Cash blockchain, using the rule for block
+acceptance based on Bitcoin Core, with the addition of PacketCrypt Proofs. 
 
-One key difference between btcd and Bitcoin Core is that btcd does *NOT* include
-wallet functionality and this was a very intentional design decision.  See the
-blog entry [here](https://blog.conformal.com/btcd-not-your-moms-bitcoin-daemon)
-for more details.  This means you can't actually make or receive payments
-directly with btcd.  That functionality is provided by the
-[btcwallet](https://github.com/btcsuite/btcwallet) and
-[Paymetheus](https://github.com/btcsuite/Paymetheus) (Windows-only) projects
-which are both under active development.
+It relays newly mined blocks, and individual transactions that have not yet
+made it into a block, as well as maintaining a transaction pool. All
+individual transactions admitted to the pool follow the rules defined by the
+PKT Cash blockchain, which includes strict checks which filter transactions
+based on miner requirements ("standard" vs "non-standard" transactions).
+
+Unlike other similar software, `pktd` does *NOT* directly include wallet
+functionality - this was an intentional design decision.  You will not be
+able to make or receive payments directly with `pktd` directly.
+
+Example wallet functionality will be provided by the included, separate,
+[pktwallet](https://github.com/pkt-cash/pktd/pktwallet) package.
 
 ## Requirements
 
-[Go](http://golang.org) 1.11 or newer.
-
-## Installation
-
-#### Windows - MSI Available
-
-https://github.com/btcsuite/btcd/releases
-
-#### Linux/BSD/MacOSX/POSIX - Build from Source
-
-- Install Go according to the installation instructions here:
-  http://golang.org/doc/install
-
-- Ensure Go was installed properly and is a supported version:
-
-```bash
-$ go version
-$ go env GOROOT GOPATH
-```
-
-NOTE: The `GOROOT` and `GOPATH` above must not be the same path.  It is
-recommended that `GOPATH` is set to a directory in your home directory such as
-`~/goprojects` to avoid write permission issues.  It is also recommended to add
-`$GOPATH/bin` to your `PATH` at this point.
-
-- Run the following commands to obtain btcd, all dependencies, and install it:
-
-```bash
-$ cd $GOPATH/src/github.com/btcsuite/btcd
-$ GO111MODULE=on go install -v . ./cmd/...
-```
-
-- btcd (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
-  not already add the bin directory to your system path during Go installation,
-  we recommend you do so now.
-
-## Updating
-
-#### Windows
-
-Install a newer MSI
-
-#### Linux/BSD/MacOSX/POSIX - Build from Source
-
-- Run the following commands to update btcd, all dependencies, and install it:
-
-```bash
-$ cd $GOPATH/src/github.com/btcsuite/btcd
-$ git pull
-$ GO111MODULE=on go install -v . ./cmd/...
-```
-
-## Getting Started
-
-btcd has several configuration options available to tweak how it runs, but all
-of the basic operations described in the intro section work with zero
-configuration.
-
-#### Windows (Installed from MSI)
-
-Launch btcd from your Start menu.
-
-#### Linux/BSD/POSIX/Source
-
-```bash
-$ ./btcd
-```
-
-## IRC
-
-- irc.freenode.net
-- channel #btcd
-- [webchat](https://webchat.freenode.net/?channels=btcd)
+* [Go](http://golang.org) 1.14 or later.
+* A somewhat recent release of Git.
 
 ## Issue Tracker
 
-The [integrated github issue tracker](https://github.com/btcsuite/btcd/issues)
-is used for this project.
+* The GitHub [integrated GitHub issue tracker](https://github.com/pkt-cash/pktd/issues)
+is used for this project.  
+
+## Building
+
+Using `git`, clone the project from the repository:
+
+`git clone https://github.com/pkt-cash/pktd`
+
+Use the `./do` shell script to build `pktd`, `pktwallet`, and `pktctl`.
+
+NOTE: It is highly recommended to use only the toolchain Google distributes
+at the [official Golang homepage](https://golang.org/dl). Go provided by a 
+Linux distribution very often uses different defaults and applies non-standard
+patches against the official sources, often to meet specific distributions
+requirements (for example, Red Hat backports security fixes, as well as
+providing a different default linker configuration vs. the upstream Google
+Golang.)
+
+Support can only be provided for binaries compiled from unmodified released
+compilers, using the upstream Golang toolchain, and the official PKT Cash 
+source code. We simply cannot test and support every distribution specific
+toolchain combination. The official Golang Linux installer always available 
+for download [here](https://storage.googleapis.com/golang/getgo/installer_linux).
 
 ## Documentation
 
-The documentation is a work-in-progress.  It is located in the [docs](https://github.com/btcsuite/btcd/tree/master/docs) folder.
-
-## GPG Verification Key
-
-All official release tags are signed by Conformal so users can ensure the code
-has not been tampered with and is coming from the btcsuite developers.  To
-verify the signature perform the following:
-
-- Download the Conformal public key:
-  https://raw.githubusercontent.com/btcsuite/btcd/master/release/GIT-GPG-KEY-conformal.txt
-
-- Import the public key into your GPG keyring:
-  ```bash
-  gpg --import GIT-GPG-KEY-conformal.txt
-  ```
-
-- Verify the release tag with the following command where `TAG_NAME` is a
-  placeholder for the specific tag:
-  ```bash
-  git tag -v TAG_NAME
-  ```
+The documentation for `pktd` is work-in-progress, and is located in the [docs](https://github.com/pkt-cash/pktd/tree/master/docs) folder.
 
 ## License
 
-btcd is licensed under the [copyfree](http://copyfree.org) ISC License.
+`pktd` is licensed under the [Copyfree](http://Copyfree.org) ISC License.

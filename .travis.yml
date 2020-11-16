@@ -1,17 +1,11 @@
 language: go
-go: 1.14.1
-notifications:
-  irc:
-    channels:
-    - chat.freenode.net#pkt
-    on_success: change
-    on_failure: always
+go: 1.15.3
 env:
   - PKT_FAIL_DIRTY=1
 jobs:
   include:
   - os: linux
-    dist: xenial
+    dist: bionic
     addons:
       apt:
         packages:
