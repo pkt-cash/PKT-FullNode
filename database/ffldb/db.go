@@ -2062,6 +2062,7 @@ func openDB(dbPath string, network protocol.BitcoinNet, create bool) (database.D
 		DisableCompactionBackoff:	true,
 		DisableSeeksCompaction:		true,
 		WriteL0PauseTrigger:		8,
+		enableBufferPool:			false,
 		Filter:						filter.NewBloomFilter(10),
 	}
 	ldb, err := leveldb.OpenFile(metadataDbPath, &opts)
