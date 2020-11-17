@@ -661,7 +661,7 @@ type (
 	}
 
 	changePassphraseRequest struct {
-		old, new []byte
+		oldPass, newPass []byte
 		private  bool
 		err      chan er.R
 	}
@@ -710,7 +710,7 @@ out:
 			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 				addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				return w.Manager.ChangePassphrase(
-					addrmgrNs, req.old, req.new, req.private,
+					addrmgrNs, req.oldPass, req.newPass, req.private,
 					&waddrmgr.DefaultScryptOptions,
 				)
 			})
@@ -834,11 +834,11 @@ func (c heldUnlock) release() {
 // old to new.  Changing the passphrase is synchronized with all other address
 // manager locking and unlocking.  The lock state will be the same as it was
 // before the password change.
-func (w *Wallet) ChangePrivatePassphrase(old, new []byte) er.R {
+func (w *Wallet) ChangePrivatePassphrase(oldPass, newPass []byte) er.R {
 	err := make(chan er.R, 1)
 	w.changePassphrase <- changePassphraseRequest{
-		old:     old,
-		new:     new,
+		oldPass:     oldPass,
+		newPass:     newPass,
 		private: true,
 		err:     err,
 	}

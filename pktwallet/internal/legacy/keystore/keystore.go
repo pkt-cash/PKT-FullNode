@@ -855,7 +855,7 @@ func (s *Store) Lock() (err er.R) {
 
 // ChangePassphrase creates a new AES key from a new passphrase and
 // re-encrypts all encrypted private keys with the new key.
-func (s *Store) ChangePassphrase(new []byte) er.R {
+func (s *Store) ChangePassphrase(newPass []byte) er.R {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -868,7 +868,7 @@ func (s *Store) ChangePassphrase(new []byte) er.R {
 	}
 
 	oldkey := s.secret
-	newkey := kdf(new, &s.kdfParams)
+	newkey := kdf(newPass, &s.kdfParams)
 
 	for _, wa := range s.addrMap {
 		// Only btcAddresses curently have private keys.
@@ -887,7 +887,7 @@ func (s *Store) ChangePassphrase(new []byte) er.R {
 	zero(s.secret)
 
 	// Save new secrets.
-	s.passphrase = new
+	s.passphrase = newPass
 	s.secret = newkey
 
 	return nil
