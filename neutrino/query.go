@@ -1244,9 +1244,7 @@ func (s *ChainService) doFilterRequest(
 	bottomHeight := int32(queries[0].startHeight)
 	topHeight := int32(queries[len(queries)-1].stopHeight)
 	if bottomHeight > topHeight {
-		x := topHeight
-		topHeight = bottomHeight
-		bottomHeight = x
+		topHeight, bottomHeight = bottomHeight, topHeight
 	}
 	pfr := pendingFiltersReq{
 		ch: ch, bottomHeight: bottomHeight, topHeight: topHeight,

@@ -265,9 +265,7 @@ func Interpret(prog []uint32, ccState, memory []byte, cycles int) er.R {
 		}
 
 		ctx.hashctr = 0
-		x := ctx.hashOut
-		ctx.hashOut = ctx.hashIn
-		ctx.hashIn = x
+		ctx.hashOut, ctx.hashIn = ctx.hashIn, ctx.hashOut
 	}
 
 	return nil
