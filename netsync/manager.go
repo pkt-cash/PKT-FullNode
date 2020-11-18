@@ -612,7 +612,9 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
-	sm.peerNotifier.AnnounceNewTransactions(acceptedTxs)
+	if len(acceptedTxs) > 0 {
+		sm.peerNotifier.AnnounceNewTransactions(acceptedTxs)
+	}
 }
 
 // current returns true if we believe we are synced with our peers, false if we
