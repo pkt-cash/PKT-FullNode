@@ -40,7 +40,7 @@ var (
 	// ConnectionRetryInterval is the base amount of time to wait in
 	// between retries when connecting to persistent peers.  It is adjusted
 	// by the number of retries such that there is a retry backoff.
-	ConnectionRetryInterval = time.Second * 5
+	ConnectionRetryInterval = time.Second * 3
 
 	// UserAgentName is the user agent name and is used to help identify
 	// ourselves to other bitcoin peers.
@@ -245,9 +245,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 			log.Errorf("Unable to ban peer %v: %v", peerAddr, err)
 		}
 
-		if sp.connReq != nil {
-			sp.server.connManager.Remove(sp.connReq.ID())
-		}
+		sp.Disconnect()
 
 		return nil
 	}
@@ -766,6 +764,12 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 			}
 
 			for tries := 0; tries < 100; tries++ {
+				select {
+				case <-s.quit:
+					return nil, er.Errorf("Neutrino already shutting down...")
+				default:
+				}
+
 				addr := s.addrManager.GetAddress()
 				if addr == nil {
 					break
@@ -781,6 +785,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 				// Skip any addresses that correspond to our set
 				// of currently connected peers.
 				if _, ok := connectedPeers[addrString]; ok {
+					log.Debugf("Skipping new connection from already connected peer %v", addrString)
 					continue
 				}
 
@@ -840,23 +845,6 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	}
 	s.connManager = cmgr
 
-	// Start up persistent peers.
-	permanentPeers := cfg.ConnectPeers
-	if len(permanentPeers) == 0 {
-		permanentPeers = cfg.AddPeers
-	}
-	for _, addr := range permanentPeers {
-		tcpAddr, err := s.addrStringToNetAddr(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		go s.connManager.Connect(&connmgr.ConnReq{
-			Addr:      tcpAddr,
-			Permanent: true,
-		})
-	}
-
 	s.utxoScanner = NewUtxoScanner(&UtxoScannerConfig{
 		BestSnapshot: s.BestBlock,
 		GetBlockHash: s.GetBlockHash,
@@ -883,6 +871,48 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	s.banStore, err = banman.NewStore(cfg.Database)
 	if err != nil {
 		return nil, er.Errorf("unable to initialize ban store: %v", err)
+	}
+
+	// Start up persistent peers.
+	permanentPeers := cfg.ConnectPeers
+	if len(permanentPeers) == 0 {
+		permanentPeers = cfg.AddPeers
+	}
+
+	for _, addr := range permanentPeers {
+		addr := addr
+
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+
+			// Since netwok access might not be established yet, we
+			// loop until we are able to look up the permanent
+			// peer.
+			var tcpAddr net.Addr
+			for {
+				tcpAddr, err = s.addrStringToNetAddr(addr)
+				if err != nil {
+					log.Warnf("unable to lookup IP for "+
+						"%v", addr)
+
+					select {
+					// Try again in 5 seconds.
+					case <-time.After(ConnectionRetryInterval):
+					case <-s.quit:
+						return
+					}
+					continue
+				}
+
+				break
+			}
+
+			s.connManager.Connect(&connmgr.ConnReq{
+				Addr:      tcpAddr,
+				Permanent: true,
+			})
+		}()
 	}
 
 	return &s, nil
@@ -1273,6 +1303,12 @@ func (s *ChainService) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 		s.firstPeerConnect = nil
 	}
 
+	// Update the address' last seen time if the peer has acknowledged our
+	// version and has sent us its version as well.
+	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
+		s.addrManager.Connected(sp.NA())
+	}
+
 	return true
 }
 
@@ -1290,28 +1326,22 @@ func (s *ChainService) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
 		}
 		if !sp.Inbound() && sp.connReq != nil {
-			s.connManager.Disconnect(sp.connReq.ID())
+			if sp.persistent {
+				s.connManager.Disconnect(sp.connReq.ID())
+			} else {
+				s.connManager.Remove(sp.connReq.ID())
+				go s.connManager.NewConnReq()
+			}
 		}
 		delete(list, sp.ID())
 		log.Debugf("Removed peer %s", sp)
 		return
 	}
 
+	// We'll always remove peers that are not persistent.
 	if sp.connReq != nil {
-		// If the peer has been banned, we'll remove the connection
-		// request from the manager to ensure we don't reconnect again.
-		// Otherwise, we'll just simply disconnect.
-		if s.IsBanned(sp.connReq.Addr.String()) {
-			s.connManager.Remove(sp.connReq.ID())
-		} else {
-			s.connManager.Disconnect(sp.connReq.ID())
-		}
-	}
-
-	// Update the address' last seen time if the peer has acknowledged
-	// our version and has sent us its version as well.
-	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
-		s.addrManager.Connected(sp.NA())
+		s.connManager.Remove(sp.connReq.ID())
+		go s.connManager.NewConnReq()
 	}
 
 	// If we get here it means that either we didn't know about the peer
@@ -1391,18 +1421,34 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
 func (s *ChainService) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
+	// In the event that we have to disconnect the peer, we'll choose the
+	// appropriate method to do so based on whether the connection request
+	// is for a persistent peer or not.
+	var disconnect func()
+	if c.Permanent {
+		disconnect = func() {
+			s.connManager.Disconnect(c.ID())
+		}
+	} else {
+		disconnect = func() {
+			// Since we're completely removing the request for this
+			// peer, we'll need to request a new one.
+			s.connManager.Remove(c.ID())
+			go s.connManager.NewConnReq()
+		}
+	}
+
 	// If the peer is banned, then we'll disconnect them.
 	peerAddr := c.Addr.String()
 	if s.IsBanned(peerAddr) {
-		// Remove will end up closing the connection.
-		s.connManager.Remove(c.ID())
+		disconnect()
 		return
 	}
 
 	// If we're already connected to this peer, then we'll close out the new
 	// connection and keep the old.
 	if s.PeerByAddr(peerAddr) != nil {
-		conn.Close()
+		disconnect()
 		return
 	}
 
@@ -1410,7 +1456,8 @@ func (s *ChainService) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) 
 	p, err := peer.NewOutboundPeer(newPeerConfig(sp), peerAddr)
 	if err != nil {
 		log.Debugf("Cannot create outbound peer %s: %s", c.Addr, err)
-		s.connManager.Disconnect(c.ID())
+		disconnect()
+		return
 	}
 	sp.Peer = p
 	sp.connReq = c
