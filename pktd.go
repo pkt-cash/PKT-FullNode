@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
 	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/arl/statsviz"
 )
 
 const (
@@ -84,6 +85,21 @@ func pktdMain(serverChan chan<- *server) er.R {
 		pprof.StartCPUProfile(f)
 		defer f.Close()
 		defer pprof.StopCPUProfile()
+	}
+
+	// Enable StatsViz server if requested.
+	if cfg.StatsViz != "" {
+		statsvizAddr := net.JoinHostPort("", cfg.StatsViz)
+		pktdLog.Infof("StatsViz server listening on %s", statsvizAddr)
+		smux := http.NewServeMux()
+		statsvizRedirect := http.RedirectHandler("/debug/statsviz", http.StatusSeeOther)
+		smux.Handle("/", statsvizRedirect)
+		if err := statsviz.Register(smux, statsviz.Root("/debug/statsviz")); err != nil {
+			pktdLog.Errorf("%v", err)
+		}
+		go func() {
+			pktdLog.Errorf("%v", http.ListenAndServe(statsvizAddr, smux))
+		}()
 	}
 
 	// Perform upgrades to pktd as new versions require it.

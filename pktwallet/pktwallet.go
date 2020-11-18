@@ -22,6 +22,7 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/arl/statsviz"
 )
 
 var (
@@ -63,6 +64,7 @@ func walletMain() er.R {
 	log.Infof("Version %s", version.Version())
 	version.WarnIfPrerelease(log)
 
+	// Enable Profile server if requested.
 	if cfg.Profile != "" {
 		go func() {
 			listenAddr := net.JoinHostPort("", cfg.Profile)
@@ -71,6 +73,21 @@ func walletMain() er.R {
 				http.StatusSeeOther)
 			http.Handle("/", profileRedirect)
 			log.Errorf("%v", http.ListenAndServe(listenAddr, nil))
+		}()
+	}
+
+	// Enable StatsViz server if requested.
+	if cfg.StatsViz != "" {
+		statsvizAddr := net.JoinHostPort("", cfg.StatsViz)
+		pktdLog.Infof("StatsViz server listening on %s", statsvizAddr)
+		svmux := http.NewServeMux()
+		statsvizRedirect := http.RedirectHandler("/debug/statsviz", http.StatusSeeOther)
+		svmux.Handle("/", statsvizRedirect)
+		if err := statsviz.Register(svmux, statsviz.Root("/debug/statsviz")); err != nil {
+			pktdLog.Errorf("%v", err)
+		}
+		go func() {
+			pktdLog.Errorf("%v", http.ListenAndServe(statsvizAddr, svmux))
 		}()
 	}
 
