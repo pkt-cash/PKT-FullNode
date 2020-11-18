@@ -43,11 +43,11 @@ var (
 	ConnectionRetryInterval = time.Second * 3
 
 	// UserAgentName is the user agent name and is used to help identify
-	// ourselves to other bitcoin peers.
+	// ourselves to other peers.
 	UserAgentName = "neutrino"
 
 	// UserAgentVersion is the user agent version and is used to help
-	// identify ourselves to other bitcoin peers.
+	// identify ourselves to other peers.
 	UserAgentVersion = "0.0.4-beta"
 
 	// Services describes the services that are supported by the server.
@@ -206,16 +206,15 @@ func (sp *ServerPeer) pushSendHeadersMsg() er.R {
 	return nil
 }
 
-// OnVerAck is invoked when a peer receives a verack bitcoin message and is used
-// to send the "sendheaders" command to peers that are of a sufficienty new
+// OnVerAck is invoked when a peer receives a verack message and is used to
+// send the "sendheaders" command to peers that are of a sufficienty new
 // protocol version.
 func (sp *ServerPeer) OnVerAck(_ *peer.Peer, msg *wire.MsgVerAck) {
 	sp.pushSendHeadersMsg()
 }
 
-// OnVersion is invoked when a peer receives a version bitcoin message
-// and is used to negotiate the protocol version details as well as kick start
-// the communications.
+// OnVersion is invoked when a peer receives a version message and is used to
+// negotiate the protocol version details as well as kickstart communications.
 func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgReject {
 	// Add the remote peer time as a sample for creating an offset against
 	// the local clock to keep the network time in sync.
@@ -295,10 +294,10 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	return nil
 }
 
-// OnInv is invoked when a peer receives an inv bitcoin message and is
-// used to examine the inventory being advertised by the remote peer and react
+// OnInv is invoked when a peer receives an inv wire message and is used to
+// examine the inventory being advertised by the remote peer and react
 // accordingly.  We pass the message down to blockmanager which will call
-// QueueMessage with any appropriate responses.
+// QueueMessage with any appropriate responses
 func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
 	sp.server.inv(msg, sp)
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
@@ -362,7 +361,7 @@ func (s *ChainService) StopListenInvs(h chainhash.Hash, ch chan *ServerPeer) boo
 	return false
 }
 
-// OnHeaders is invoked when a peer receives a headers bitcoin
+// OnHeaders is invoked when a peer receives a headers wire
 // message.  The message is passed down to the block manager.
 func (sp *ServerPeer) OnHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	log.Tracef("Got headers with %d items from %s", len(msg.Headers),
@@ -370,7 +369,7 @@ func (sp *ServerPeer) OnHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	sp.server.blockManager.QueueHeaders(msg, sp)
 }
 
-// OnFeeFilter is invoked when a peer receives a feefilter bitcoin message and
+// OnFeeFilter is invoked when a peer receives a feefilter wire message and
 // is used by remote peers to request that no transactions which have a fee rate
 // lower than provided value are inventoried to them.  The peer will be
 // disconnected if an invalid fee filter value is provided.
@@ -386,13 +385,13 @@ func (sp *ServerPeer) OnFeeFilter(_ *peer.Peer, msg *wire.MsgFeeFilter) {
 	atomic.StoreInt64(&sp.feeFilter, msg.MinFee)
 }
 
-// OnReject is invoked when a peer receives a reject bitcoin message and is
+// OnReject is invoked when a peer receives a reject wire message and is
 // used to notify the server about a rejected transaction.
 func (sp *ServerPeer) OnReject(_ *peer.Peer, msg *wire.MsgReject) {
 	// TODO(roaseef): log?
 }
 
-// OnAddr is invoked when a peer receives an addr bitcoin message and is
+// OnAddr is invoked when a peer receives an addr wire message and is
 // used to notify the server about advertised addresses.
 func (sp *ServerPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	// Ignore addresses when running on the simulation test network.  This
@@ -632,8 +631,7 @@ type pendingFiltersReq struct {
 }
 
 // NewChainService returns a new chain service configured to connect to the
-// bitcoin network type specified by chainParams.  Use start to begin syncing
-// with peers.
+// network specified by chainParams. Use start to begin syncing with peers.
 func NewChainService(cfg Config) (*ChainService, er.R) {
 	// First, we'll sort out the methods that we'll use to established
 	// outbound TCP connections, as well as perform any DNS queries.
