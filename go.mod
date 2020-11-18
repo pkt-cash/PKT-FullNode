@@ -11,7 +11,6 @@ require (
 	github.com/btcsuite/winsvc v1.0.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dchest/blake2b v1.0.0
-	github.com/decred/go-socks v1.1.0
 	github.com/emirpasic/gods v1.12.1-0.20200630092735-7e2349589531
 	github.com/fsnotify/fsnotify v1.4.10-0.20200417215612-7f4cf4dd2b52 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect

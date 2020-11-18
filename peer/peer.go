@@ -22,7 +22,6 @@ import (
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/decred/go-socks/socks"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -328,7 +327,7 @@ func minUint32(a, b uint32) uint32 {
 // net.Addr interface and create a bitcoin NetAddress structure using that
 // information.
 func newNetAddress(addr net.Addr, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
-	// addr will be a net.TCPAddr when not using a proxy.
+	// addr should be a net.TCPAddr 
 	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
 		ip := tcpAddr.IP
 		port := uint16(tcpAddr.Port)
@@ -336,18 +335,7 @@ func newNetAddress(addr net.Addr, services protocol.ServiceFlag) (*wire.NetAddre
 		return na, nil
 	}
 
-	// addr will be a socks.ProxiedAddr when using a proxy.
-	if proxiedAddr, ok := addr.(*socks.ProxiedAddr); ok {
-		ip := net.ParseIP(proxiedAddr.Host)
-		if ip == nil {
-			ip = net.ParseIP("0.0.0.0")
-		}
-		port := uint16(proxiedAddr.Port)
-		na := wire.NewNetAddressIPPort(ip, port, services)
-		return na, nil
-	}
-
-	// For the most part, addr should be one of the two above cases, but
+	// For the most part, addr should be one the case above, however,
 	// to be safe, fall back to trying to parse the information from the
 	// address string as a last resort.
 	host, portStr, err := net.SplitHostPort(addr.String())
