@@ -667,8 +667,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 	// When creating the addr manager, we'll check to see if the user has
 	// provided their own resolution function. If so, then we'll use that
-	// instead as this may be proxying requests over an anonymizing
-	// network.
+	// instead as this may be routing requests over an anonymizing network.
 	amgr := addrmgr.New(cfg.DataDir, nameResolver)
 
 	s := ChainService{

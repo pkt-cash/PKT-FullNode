@@ -33,8 +33,6 @@ _testmain.go
 
 *.exe
 /btcctl
-/pktd
-/pktwallet
 /wallet
 /bin
 /pktd.test
