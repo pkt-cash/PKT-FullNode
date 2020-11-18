@@ -91,7 +91,6 @@ func serializeTx(tx *btcutil.Tx) []byte {
 }
 
 func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
-	t.Parallel()
 
 	// Create a double spend of the received blockchain transaction.
 	dupRecvTx, _ := btcutil.NewTxFromBytes(TstRecvSerializedTx)
@@ -547,7 +546,6 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 }
 
 func TestFindingSpentCredits(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -654,7 +652,6 @@ func spendOutputs(outputs []wire.OutPoint, outputValues ...int64) *wire.MsgTx {
 }
 
 func TestCoinbases(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1060,7 +1057,6 @@ func TestCoinbases(t *testing.T) {
 
 // Test moving multiple transactions from unmined buckets to the same block.
 func TestMoveMultipleToSameBlock(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1237,7 +1233,6 @@ func TestMoveMultipleToSameBlock(t *testing.T) {
 // NewTxRecord and NewTxRecordFromMsgTx both save the serialized transaction, so
 // manually strip it out to test this code path.
 func TestInsertUnserializedTx(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1304,7 +1299,6 @@ func TestInsertUnserializedTx(t *testing.T) {
 // descendants. Any balance modifications due to the unmined transaction should
 // be revered.
 func TestRemoveUnminedTx(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1453,7 +1447,6 @@ func TestRemoveUnminedTx(t *testing.T) {
 // TestInsertMempoolTxAlreadyConfirmed ensures that transactions that already
 // exist within the store as confirmed cannot be added as unconfirmed.
 func TestInsertMempoolTxAlreadyConfirmed(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1516,7 +1509,6 @@ func TestInsertMempoolTxAlreadyConfirmed(t *testing.T) {
 // that double spends an existing output within the wallet, it doesn't remove
 // any other spending transactions of the same output.
 func TestOutputsAfterRemoveDoubleSpend(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1789,7 +1781,6 @@ func testInsertMempoolDoubleSpendTx(t *testing.T, first bool) {
 // first spend seen is confirmed, then the second spend transaction within the
 // mempool should be removed from the wallet's store.
 func TestInsertMempoolDoubleSpendConfirmedFirstTx(t *testing.T) {
-	t.Parallel()
 	testInsertMempoolDoubleSpendTx(t, true)
 }
 
@@ -1798,7 +1789,6 @@ func TestInsertMempoolDoubleSpendConfirmedFirstTx(t *testing.T) {
 // second spend seen is confirmed, then the first spend transaction within the
 // mempool should be removed from the wallet's store.
 func TestInsertMempoolDoubleSpendConfirmSecondTx(t *testing.T) {
-	t.Parallel()
 	testInsertMempoolDoubleSpendTx(t, false)
 }
 
@@ -1807,7 +1797,6 @@ func TestInsertMempoolDoubleSpendConfirmSecondTx(t *testing.T) {
 // then the unconfirmed double spends within the mempool should be removed from
 // the wallet's store.
 func TestInsertConfirmedDoubleSpendTx(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1981,7 +1970,6 @@ func TestInsertConfirmedDoubleSpendTx(t *testing.T) {
 // confirmed. This can lead to outputs being duplicated in the store, which can
 // lead to creating double spends when querying the wallet's UTXO set.
 func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {

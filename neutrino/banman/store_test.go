@@ -48,7 +48,6 @@ func createTestBanStore(t *testing.T) (banman.Store, func()) {
 // TestBanStore ensures that the BanStore's state correctly reflects the
 // BanStatus of IP networks.
 func TestBanStore(t *testing.T) {
-	t.Parallel()
 
 	// We'll start by creating our test BanStore backed by a boltdb
 	// instance.
