@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/lightningnetwork/lnd/queue"
+	"github.com/pkt-cash/pktd/lnd/queue"
 )
 
 var (
