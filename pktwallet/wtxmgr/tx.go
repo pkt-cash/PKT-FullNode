@@ -7,6 +7,7 @@ package wtxmgr
 
 import (
 	"bytes"
+	"errors"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -19,6 +20,45 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
+)
+
+const (
+	// TxLabelLimit is the length limit we impose on transaction labels.
+	TxLabelLimit = 500
+
+	// DefaultLockDuration is the default duration used to lock outputs.
+	DefaultLockDuration = 10 * time.Minute
+)
+
+var (
+	// ErrEmptyLabel is returned when an attempt to write a label that is
+	// empty is made.
+	ErrEmptyLabel = errors.New("empty transaction label not allowed")
+
+	// ErrLabelTooLong is returned when an attempt to write a label that is
+	// to long is made.
+	ErrLabelTooLong = errors.New("transaction label exceeds limit")
+
+	// ErrNoLabelBucket is returned when the bucket holding optional
+	// transaction labels is not found. This occurs when no transactions
+	// have been labelled yet.
+	ErrNoLabelBucket = errors.New("labels bucket does not exist")
+
+	// ErrTxLabelNotFound is returned when no label is found for a
+	// transaction hash.
+	ErrTxLabelNotFound = errors.New("label for transaction not found")
+
+	// ErrUnknownOutput is an error returned when an output not known to the
+	// wallet is attempted to be locked.
+	ErrUnknownOutput = errors.New("unknown output")
+
+	// ErrOutputAlreadyLocked is an error returned when an output has
+	// already been locked to a different ID.
+	ErrOutputAlreadyLocked = errors.New("output already locked")
+
+	// ErrOutputUnlockNotAllowed is an error returned when an output unlock
+	// is attempted with a different ID than the one which locked it.
+	ErrOutputUnlockNotAllowed = errors.New("output unlock not alowed")
 )
 
 // Block contains the minimum amount of data to uniquely identify any block on
@@ -124,6 +164,9 @@ type Credit struct {
 	Received     time.Time
 	FromCoinBase bool
 }
+
+// LockID represents a unique context-specific ID assigned to an output lock.
+type LockID [32]byte
 
 // Store implements a transaction store for storing and managing wallet
 // transactions.
@@ -314,19 +357,19 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 					transactions = append(transactions, txid)
 				}
 			}
-				// Ideally we would do some sort of transaction rollback operation
-				// but we're dealing with a corrupt db and rollbackTransaction()
-				// is not going to rollback everything it can and ignore what it
-				// can't, instead it will fail with an error when any of the things
-				// it expects to be present are not. Also deleting the tx object
-				// without all of the associated credits and debits is risky because
-				// it can cause errors in other code. So we're just going to detach
-				// it from the block and let it be with the caviats:
-				//
-				// 1. there may be dangling credits and no associated block record
-				//      ForEachUnspentOutput will filter these out
-				// 2. there may be debits which spent credits that should not have
-				//      been spent.
+			// Ideally we would do some sort of transaction rollback operation
+			// but we're dealing with a corrupt db and rollbackTransaction()
+			// is not going to rollback everything it can and ignore what it
+			// can't, instead it will fail with an error when any of the things
+			// it expects to be present are not. Also deleting the tx object
+			// without all of the associated credits and debits is risky because
+			// it can cause errors in other code. So we're just going to detach
+			// it from the block and let it be with the caviats:
+			//
+			// 1. there may be dangling credits and no associated block record
+			//      ForEachUnspentOutput will filter these out
+			// 2. there may be debits which spent credits that should not have
+			//      been spent.
 		}
 	}
 	transactions = append(transactions, rec.Hash)

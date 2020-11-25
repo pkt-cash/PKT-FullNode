@@ -195,6 +195,10 @@ func (te typedErr) String() string {
 	return version.Version() + " " + te.Message() + s
 }
 
+func (te typedErr) Error() string {
+	return te.String()
+}
+
 func (te typedErr) Wrapped0() error {
 	return te.err.Wrapped0()
 }
@@ -220,11 +224,11 @@ type R interface {
 	Stack() []string
 	HasStack() bool
 	String() string
+	Error() string
 	Wrapped0() error
 	Native() error
 	AddMessage(m string)
 }
-
 type err struct {
 	messages []string
 	e        error
@@ -296,6 +300,10 @@ func (e err) String() string {
 		s = "\n\n" + strings.Join(e.Stack(), "\n") + "\n"
 	}
 	return version.Version() + " " + e.Message() + s
+}
+
+func (e err) Error() string {
+	return e.String()
 }
 
 func (e err) Wrapped0() error {

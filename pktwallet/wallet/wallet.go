@@ -135,6 +135,10 @@ type rescanJob struct {
 	dropDb     bool
 }
 
+func (w *Wallet) Database() walletdb.DB {
+	return w.db
+}
+
 // Start starts the goroutines necessary to manage a wallet.
 func (w *Wallet) Start() {
 	w.quitMu.Lock()
@@ -662,8 +666,8 @@ type (
 
 	changePassphraseRequest struct {
 		oldPass, newPass []byte
-		private  bool
-		err      chan er.R
+		private          bool
+		err              chan er.R
 	}
 
 	changePassphrasesRequest struct {
@@ -837,8 +841,8 @@ func (c heldUnlock) release() {
 func (w *Wallet) ChangePrivatePassphrase(oldPass, newPass []byte) er.R {
 	err := make(chan er.R, 1)
 	w.changePassphrase <- changePassphraseRequest{
-		oldPass:     oldPass,
-		newPass:     newPass,
+		oldPass: oldPass,
+		newPass: newPass,
 		private: true,
 		err:     err,
 	}

@@ -15,12 +15,16 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -120,7 +124,7 @@ func TestBIP0113Activation(t *testing.T) {
 	defer r.TearDown()
 
 	// Create a fresh output for usage within the test below.
-	const outputValue = btcutil.SatoshiPerBitcoin
+	const outputValue = globalcfg.SatoshiPerBitcoin()
 	outputKey, testOutput, testPkScript, err := makeTestOutput(r, t,
 		outputValue)
 	if err != nil {
@@ -159,7 +163,7 @@ func TestBIP0113Activation(t *testing.T) {
 	tx.LockTime = uint32(chainInfo.MedianTime) + 1
 
 	sigScript, err := txscript.SignatureScript(tx, 0, testPkScript,
-		txscript.SigHashAll, outputKey, true)
+		params.SigHashAll, outputKey, true)
 	if err != nil {
 		t.Fatalf("unable to generate sig: %v", err)
 	}
@@ -246,7 +250,7 @@ func TestBIP0113Activation(t *testing.T) {
 		})
 		tx.LockTime = uint32(medianTimePast + timeLockDelta)
 		sigScript, err = txscript.SignatureScript(tx, 0, testPkScript,
-			txscript.SigHashAll, outputKey, true)
+			params.SigHashAll, outputKey, true)
 		if err != nil {
 			t.Fatalf("unable to generate sig: %v", err)
 		}
@@ -291,10 +295,10 @@ func createCSVOutput(r *rpctest.Harness, t *testing.T,
 		uint32(timeLock))
 
 	// Our CSV script is simply: <sequenceLock> OP_CSV OP_DROP
-	b := txscript.NewScriptBuilder().
+	b := scriptbuilder.NewScriptBuilder().
 		AddInt64(int64(sequenceLock)).
-		AddOp(txscript.OP_CHECKSEQUENCEVERIFY).
-		AddOp(txscript.OP_DROP)
+		AddOp(opcode.OP_CHECKSEQUENCEVERIFY).
+		AddOp(opcode.OP_DROP)
 	csvScript, err := b.Script()
 	if err != nil {
 		return nil, nil, nil, err
@@ -349,8 +353,8 @@ func spendCSVOutput(redeemScript []byte, csvUTXO *wire.OutPoint,
 	})
 	tx.AddTxOut(targetOutput)
 
-	b := txscript.NewScriptBuilder().
-		AddOp(txscript.OP_TRUE).
+	b := scriptbuilder.NewScriptBuilder().
+		AddOp(opcode.OP_TRUE).
 		AddData(redeemScript)
 
 	sigScript, err := b.Script()
@@ -426,7 +430,7 @@ func TestBIP0068AndBIP0112Activation(t *testing.T) {
 	}
 
 	const (
-		outputAmt         = btcutil.SatoshiPerBitcoin
+		outputAmt         = globalcfg.SatoshiPerBitcoin()
 		relativeBlockLock = 10
 	)
 

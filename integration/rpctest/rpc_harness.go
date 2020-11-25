@@ -356,6 +356,13 @@ func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
 	return h.wallet.CreateTransaction(targetOutputs, feeRate, change)
 }
 
+// RPCConfig returns the harnesses current rpc configuration. This allows other
+// potential RPC clients created within tests to connect to a given test
+// harness instance.
+func (h *Harness) RPCConfig() rpcclient.ConnConfig {
+	return h.node.config.rpcConnConfig()
+}
+
 // P2PAddress returns the harness' P2P listening address. This allows potential
 // peers (such as SPV peers) created within tests to connect to a given test
 // harness instance.
