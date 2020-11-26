@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/lightningnetwork/lnd/lnpeer"
-	"github.com/lightningnetwork/lnd/lntest/wait"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnpeer"
+	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // newTestReliableSender creates a new reliable sender instance used for

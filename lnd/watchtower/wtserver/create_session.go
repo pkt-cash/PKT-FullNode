@@ -1,11 +1,11 @@
 package wtserver
 
 import (
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/lightningnetwork/lnd/watchtower/blob"
-	"github.com/lightningnetwork/lnd/watchtower/wtdb"
-	"github.com/lightningnetwork/lnd/watchtower/wtpolicy"
-	"github.com/lightningnetwork/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
 )
 
 // handleCreateSession processes a CreateSession message from the peer, and returns

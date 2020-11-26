@@ -10,7 +10,7 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 )
@@ -54,7 +54,7 @@ var (
 // NewWebSocketProxy attempts to expose the underlying handler as a response-
 // streaming WebSocket stream with newline-delimited JSON as the content
 // encoding.
-func NewWebSocketProxy(h http.Handler, logger btclog.Logger) http.Handler {
+func NewWebSocketProxy(h http.Handler, logger pktlog.Logger) http.Handler {
 	p := &WebsocketProxy{
 		backend: h,
 		logger:  logger,
@@ -72,7 +72,7 @@ func NewWebSocketProxy(h http.Handler, logger btclog.Logger) http.Handler {
 // WebsocketProxy provides websocket transport upgrade to compatible endpoints.
 type WebsocketProxy struct {
 	backend  http.Handler
-	logger   btclog.Logger
+	logger   pktlog.Logger
 	upgrader *websocket.Upgrader
 }
 

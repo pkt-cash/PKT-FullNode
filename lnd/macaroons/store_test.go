@@ -7,10 +7,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
-	"github.com/lightningnetwork/lnd/macaroons"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/macaroons"
 
-	"github.com/btcsuite/btcwallet/snacl"
+	"github.com/pkt-cash/pktd/pktwallet/snacl"
 	"github.com/stretchr/testify/require"
 )
 

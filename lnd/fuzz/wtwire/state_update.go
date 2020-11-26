@@ -3,7 +3,7 @@
 package wtwirefuzz
 
 import (
-	"github.com/lightningnetwork/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
 )
 
 // Fuzz_state_update is used by go-fuzz.

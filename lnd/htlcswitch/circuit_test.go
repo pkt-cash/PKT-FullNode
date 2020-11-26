@@ -6,15 +6,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
-	bitcoinCfg "github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil"
-	sphinx "github.com/lightningnetwork/lightning-onion"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/htlcswitch"
-	"github.com/lightningnetwork/lnd/htlcswitch/hop"
-	"github.com/lightningnetwork/lnd/keychain"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/btcec"
+	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/btcutil"
+	sphinx "github.com/pkt-cash/pktd/lightning-onion"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/htlcswitch"
+	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
+	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (

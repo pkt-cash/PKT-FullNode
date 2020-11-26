@@ -3,7 +3,7 @@
 package brontidefuzz
 
 import (
-	"github.com/lightningnetwork/lnd/brontide"
+	"github.com/pkt-cash/pktd/lnd/brontide"
 )
 
 // Fuzz_random_actthree is a go-fuzz harness for ActThree in the brontide

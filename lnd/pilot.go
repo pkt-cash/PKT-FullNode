@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/autopilot"
-	"github.com/lightningnetwork/lnd/chainreg"
-	"github.com/lightningnetwork/lnd/lncfg"
-	"github.com/lightningnetwork/lnd/lnwire"
-	"github.com/lightningnetwork/lnd/tor"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/autopilot"
+	"github.com/pkt-cash/pktd/lnd/chainreg"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/tor"
 )
 
 // validateAtplConfig is a helper method that makes sure the passed

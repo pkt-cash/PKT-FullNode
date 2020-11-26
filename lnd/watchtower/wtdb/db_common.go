@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
 const (

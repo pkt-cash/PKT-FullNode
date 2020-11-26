@@ -1,15 +1,15 @@
 package build
 
-import "github.com/btcsuite/btclog"
+import "github.com/pkt-cash/pktd/pktlog"
 
 // PrefixLog is a pass-through logger that adds a prefix to every logged line.
 type PrefixLog struct {
-	log    btclog.Logger
+	log    pktlog.Logger
 	prefix string
 }
 
 // NewPrefixLog instantiates a new prefixed logger.
-func NewPrefixLog(prefix string, log btclog.Logger) *PrefixLog {
+func NewPrefixLog(prefix string, log pktlog.Logger) *PrefixLog {
 	return &PrefixLog{
 		prefix: prefix,
 		log:    log,
@@ -99,14 +99,14 @@ func (p *PrefixLog) Critical(v ...interface{}) {
 }
 
 // Level returns the current logging level.
-func (p *PrefixLog) Level() btclog.Level {
+func (p *PrefixLog) Level() pktlog.Level {
 	return p.log.Level()
 }
 
 // SetLevel changes the logging level to the passed level.
-func (p *PrefixLog) SetLevel(level btclog.Level) {
+func (p *PrefixLog) SetLevel(level pktlog.Level) {
 	p.log.SetLevel(level)
 }
 
-// Assert that PrefixLog fulfills the btclog.Logger interface.
-var _ btclog.Logger = &PrefixLog{}
+// Assert that PrefixLog fulfills the pktlog.Logger interface.
+var _ pktlog.Logger = &PrefixLog{}

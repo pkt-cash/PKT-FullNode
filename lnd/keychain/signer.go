@@ -1,6 +1,6 @@
 package keychain
 
-import "github.com/btcsuite/btcd/btcec"
+import "github.com/pkt-cash/pktd/btcec"
 
 func NewPubKeyDigestSigner(keyDesc KeyDescriptor,
 	signer DigestSignerRing) *PubKeyDigestSigner {

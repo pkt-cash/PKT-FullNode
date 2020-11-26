@@ -12,11 +12,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/lncfg"
-	"github.com/lightningnetwork/lnd/lnrpc"
-	"github.com/lightningnetwork/lnd/macaroons"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
+	"github.com/pkt-cash/pktd/lnd/lnrpc"
+	"github.com/pkt-cash/pktd/lnd/macaroons"
 	"github.com/urfave/cli"
 
 	"golang.org/x/crypto/ssh/terminal"

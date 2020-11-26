@@ -3,7 +3,7 @@ package feature
 import (
 	"fmt"
 
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 type (

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/lightningnetwork/lnd/keychain"
-	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
-	"github.com/lightningnetwork/lnd/lntest"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
+	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/stretchr/testify/require"
 )
 

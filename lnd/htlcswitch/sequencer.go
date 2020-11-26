@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/go-errors/errors"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
 // defaultSequenceBatchSize specifies the window of sequence numbers that are

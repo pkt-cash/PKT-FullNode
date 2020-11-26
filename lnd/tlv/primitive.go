@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkt-cash/pktd/btcec"
 )
 
 // ErrTypeForEncoding signals that an incorrect type was passed to an Encoder.

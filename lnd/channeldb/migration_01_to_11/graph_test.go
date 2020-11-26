@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (

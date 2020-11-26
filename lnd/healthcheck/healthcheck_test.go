@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lightningnetwork/lnd/ticker"
+	"github.com/pkt-cash/pktd/lnd/ticker"
 	"github.com/stretchr/testify/require"
 )
 

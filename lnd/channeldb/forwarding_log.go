@@ -6,9 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/btcsuite/btcwallet/walletdb"
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (

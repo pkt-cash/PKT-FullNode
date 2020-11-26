@@ -3,7 +3,7 @@
 package lnwirefuzz
 
 import (
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // Fuzz_channel_reestablish is used by go-fuzz.

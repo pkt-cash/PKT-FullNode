@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lightningnetwork/lnd/clock"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/clock"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (

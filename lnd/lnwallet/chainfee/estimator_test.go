@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/pkt-cash/pktd/btcutil"
 )
 
 type mockSparseConfFeeSource struct {

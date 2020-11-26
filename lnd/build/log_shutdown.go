@@ -1,19 +1,19 @@
 package build
 
 import (
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/signal"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/signal"
 )
 
 // ShutdownLogger wraps an existing logger with a shutdown function which will
 // be called on Critical/Criticalf to prompt shutdown.
 type ShutdownLogger struct {
-	btclog.Logger
+	pktlog.Logger
 }
 
 // NewShutdownLogger creates a shutdown logger for the log provided which will
 // use the signal package to request shutdown on critical errors.
-func NewShutdownLogger(logger btclog.Logger) *ShutdownLogger {
+func NewShutdownLogger(logger pktlog.Logger) *ShutdownLogger {
 	return &ShutdownLogger{
 		Logger: logger,
 	}
@@ -23,7 +23,7 @@ func NewShutdownLogger(logger btclog.Logger) *ShutdownLogger {
 // log with LevelCritical. It will then call the shutdown logger's shutdown
 // function to prompt safe shutdown.
 //
-// Note: it is part of the btclog.Logger interface.
+// Note: it is part of the pktlog.Logger interface.
 func (s *ShutdownLogger) Criticalf(format string, params ...interface{}) {
 	s.Logger.Criticalf(format, params...)
 	s.shutdown()
@@ -33,7 +33,7 @@ func (s *ShutdownLogger) Criticalf(format string, params ...interface{}) {
 // and writes to log with LevelCritical. It will then call the shutdown
 // logger's shutdown function to prompt safe shutdown.
 //
-// Note: it is part of the btclog.Logger interface.
+// Note: it is part of the pktlog.Logger interface.
 func (s *ShutdownLogger) Critical(v ...interface{}) {
 	s.Logger.Critical(v)
 	s.shutdown()

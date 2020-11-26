@@ -5,7 +5,7 @@ package main
 import (
 	"context"
 
-	"github.com/lightningnetwork/lnd/lnrpc/watchtowerrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/watchtowerrpc"
 	"github.com/urfave/cli"
 )
 

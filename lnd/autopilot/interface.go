@@ -3,10 +3,10 @@ package autopilot
 import (
 	"net"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // DefaultConfTarget is the default confirmation target for autopilot channels.

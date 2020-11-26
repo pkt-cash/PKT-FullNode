@@ -3,51 +3,51 @@ package lnd
 import (
 	"context"
 
-	"github.com/btcsuite/btcd/connmgr"
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/connmgr"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/lightninglabs/neutrino"
-	sphinx "github.com/lightningnetwork/lightning-onion"
-	"github.com/lightningnetwork/lnd/autopilot"
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/chainntnfs"
-	"github.com/lightningnetwork/lnd/chainreg"
-	"github.com/lightningnetwork/lnd/chanacceptor"
-	"github.com/lightningnetwork/lnd/chanbackup"
-	"github.com/lightningnetwork/lnd/chanfitness"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/channelnotifier"
-	"github.com/lightningnetwork/lnd/contractcourt"
-	"github.com/lightningnetwork/lnd/discovery"
-	"github.com/lightningnetwork/lnd/healthcheck"
-	"github.com/lightningnetwork/lnd/htlcswitch"
-	"github.com/lightningnetwork/lnd/invoices"
-	"github.com/lightningnetwork/lnd/lnrpc/autopilotrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/chainrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/verrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
-	"github.com/lightningnetwork/lnd/lnwallet"
-	"github.com/lightningnetwork/lnd/lnwallet/chancloser"
-	"github.com/lightningnetwork/lnd/lnwallet/chanfunding"
-	"github.com/lightningnetwork/lnd/monitoring"
-	"github.com/lightningnetwork/lnd/netann"
-	"github.com/lightningnetwork/lnd/peer"
-	"github.com/lightningnetwork/lnd/peernotifier"
-	"github.com/lightningnetwork/lnd/routing"
-	"github.com/lightningnetwork/lnd/routing/localchans"
-	"github.com/lightningnetwork/lnd/signal"
-	"github.com/lightningnetwork/lnd/sweep"
-	"github.com/lightningnetwork/lnd/watchtower"
-	"github.com/lightningnetwork/lnd/watchtower/wtclient"
+	sphinx "github.com/pkt-cash/pktd/lightning-onion"
+	"github.com/pkt-cash/pktd/lnd/autopilot"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/lnd/chainreg"
+	"github.com/pkt-cash/pktd/lnd/chanacceptor"
+	"github.com/pkt-cash/pktd/lnd/chanbackup"
+	"github.com/pkt-cash/pktd/lnd/chanfitness"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/channelnotifier"
+	"github.com/pkt-cash/pktd/lnd/contractcourt"
+	"github.com/pkt-cash/pktd/lnd/discovery"
+	"github.com/pkt-cash/pktd/lnd/healthcheck"
+	"github.com/pkt-cash/pktd/lnd/htlcswitch"
+	"github.com/pkt-cash/pktd/lnd/invoices"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/autopilotrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/chainrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/invoicesrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/verrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/walletrpc"
+	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chancloser"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
+	"github.com/pkt-cash/pktd/lnd/monitoring"
+	"github.com/pkt-cash/pktd/lnd/netann"
+	"github.com/pkt-cash/pktd/lnd/peer"
+	"github.com/pkt-cash/pktd/lnd/peernotifier"
+	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/lnd/routing/localchans"
+	"github.com/pkt-cash/pktd/lnd/signal"
+	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/lnd/watchtower"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
 	"google.golang.org/grpc"
 )
 
 // replaceableLogger is a thin wrapper around a logger that is used so the
 // logger can be replaced easily without some black pointer magic.
 type replaceableLogger struct {
-	btclog.Logger
+	pktlog.Logger
 	subsystem string
 }
 
@@ -140,7 +140,7 @@ func SetupLoggers(root *build.RotatingLogWriter) {
 // AddSubLogger is a helper method to conveniently create and register the
 // logger of one or more sub systems.
 func AddSubLogger(root *build.RotatingLogWriter, subsystem string,
-	useLoggers ...func(btclog.Logger)) {
+	useLoggers ...func(pktlog.Logger)) {
 
 	// Create and register just a single logger to prevent them from
 	// overwriting each other internally.
@@ -151,7 +151,7 @@ func AddSubLogger(root *build.RotatingLogWriter, subsystem string,
 // SetSubLogger is a helper method to conveniently register the logger of a sub
 // system.
 func SetSubLogger(root *build.RotatingLogWriter, subsystem string,
-	logger btclog.Logger, useLoggers ...func(btclog.Logger)) {
+	logger pktlog.Logger, useLoggers ...func(pktlog.Logger)) {
 
 	root.RegisterSubLogger(subsystem, logger)
 	for _, useLogger := range useLoggers {
@@ -178,7 +178,7 @@ func newLogClosure(c func() string) logClosure {
 // errorLogUnaryServerInterceptor is a simple UnaryServerInterceptor that will
 // automatically log any errors that occur when serving a client's unary
 // request.
-func errorLogUnaryServerInterceptor(logger btclog.Logger) grpc.UnaryServerInterceptor {
+func errorLogUnaryServerInterceptor(logger pktlog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (interface{}, error) {
 
@@ -195,7 +195,7 @@ func errorLogUnaryServerInterceptor(logger btclog.Logger) grpc.UnaryServerInterc
 // errorLogStreamServerInterceptor is a simple StreamServerInterceptor that
 // will log any errors that occur while processing a client or server streaming
 // RPC.
-func errorLogStreamServerInterceptor(logger btclog.Logger) grpc.StreamServerInterceptor {
+func errorLogStreamServerInterceptor(logger pktlog.Logger) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream,
 		info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 

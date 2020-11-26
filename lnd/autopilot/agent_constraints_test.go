@@ -6,8 +6,8 @@ import (
 
 	prand "math/rand"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 func TestConstraintsChannelBudget(t *testing.T) {

@@ -3,7 +3,7 @@ package shachain
 import (
 	"encoding/hex"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // getBit return bit on index at position.

@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/lightningnetwork/lnd/input"
-	"github.com/lightningnetwork/lnd/lnwire"
-	"github.com/lightningnetwork/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/lnd/input"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/stretchr/testify/require"
 )
 

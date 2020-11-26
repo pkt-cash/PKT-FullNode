@@ -3,12 +3,12 @@ package wtclient
 import (
 	"net"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/lightningnetwork/lnd/keychain"
-	"github.com/lightningnetwork/lnd/lnwire"
-	"github.com/lightningnetwork/lnd/tor"
-	"github.com/lightningnetwork/lnd/watchtower/wtdb"
-	"github.com/lightningnetwork/lnd/watchtower/wtserver"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 )
 
 // DB abstracts the required database operations required by the watchtower

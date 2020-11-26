@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/integration/rpctest"
-	"github.com/btcsuite/btcd/rpcclient"
+	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/integration/rpctest"
+	"github.com/pkt-cash/pktd/rpcclient"
 )
 
 // logDirPattern is the pattern of the name of the temporary log directory.

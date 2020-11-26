@@ -3,10 +3,10 @@ package wtdb
 import (
 	"io"
 
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
-	"github.com/lightningnetwork/lnd/watchtower/blob"
-	"github.com/lightningnetwork/lnd/watchtower/wtpolicy"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 )
 
 // UnknownElementType is an alias for channeldb.UnknownElementType.

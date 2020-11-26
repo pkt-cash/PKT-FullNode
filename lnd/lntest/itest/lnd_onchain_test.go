@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/lnrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
-	"github.com/lightningnetwork/lnd/lntest"
-	"github.com/lightningnetwork/lnd/lntest/wait"
-	"github.com/lightningnetwork/lnd/sweep"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/lnrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/walletrpc"
+	"github.com/pkt-cash/pktd/lnd/lntest"
+	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/pkt-cash/pktd/lnd/sweep"
 )
 
 // testCPFP ensures that the daemon can bump an unconfirmed  transaction's fee

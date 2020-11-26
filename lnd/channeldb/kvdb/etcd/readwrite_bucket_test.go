@@ -7,7 +7,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/btcsuite/btcwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/stretchr/testify/require"
 )
 

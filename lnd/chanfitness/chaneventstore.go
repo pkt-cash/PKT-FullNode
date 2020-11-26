@@ -15,14 +15,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/channelnotifier"
-	"github.com/lightningnetwork/lnd/clock"
-	"github.com/lightningnetwork/lnd/peernotifier"
-	"github.com/lightningnetwork/lnd/routing/route"
-	"github.com/lightningnetwork/lnd/subscribe"
-	"github.com/lightningnetwork/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/channelnotifier"
+	"github.com/pkt-cash/pktd/lnd/clock"
+	"github.com/pkt-cash/pktd/lnd/peernotifier"
+	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/lnd/subscribe"
+	"github.com/pkt-cash/pktd/lnd/ticker"
 )
 
 const (

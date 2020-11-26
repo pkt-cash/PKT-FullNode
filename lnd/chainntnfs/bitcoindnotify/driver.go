@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcwallet/chain"
-	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 )
 
 // createNewNotifier creates a new instance of the ChainNotifier interface

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	sphinx "github.com/lightningnetwork/lightning-onion"
-	"github.com/lightningnetwork/lnd/chainntnfs"
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
+	sphinx "github.com/pkt-cash/pktd/lightning-onion"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
 const (

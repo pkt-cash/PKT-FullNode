@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/lightningnetwork/lnd/healthcheck"
+	"github.com/pkt-cash/pktd/lnd/healthcheck"
 	"go.etcd.io/bbolt"
 )
 

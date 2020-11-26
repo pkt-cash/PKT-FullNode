@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // element represents the entity which contains the hash and index

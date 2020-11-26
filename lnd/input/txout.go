@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // writeTxOut serializes a wire.TxOut struct into the passed io.Writer stream.

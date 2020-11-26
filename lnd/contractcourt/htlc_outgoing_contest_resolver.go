@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/lnwallet"
 )
 
 // htlcOutgoingContestResolver is a ContractResolver that's able to resolve an

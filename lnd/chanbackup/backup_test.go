@@ -5,9 +5,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/channeldb"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
 )
 
 type mockChannelSource struct {

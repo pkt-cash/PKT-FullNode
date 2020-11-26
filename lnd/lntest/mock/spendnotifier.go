@@ -3,9 +3,9 @@ package mock
 import (
 	"sync"
 
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/wire"
 
-	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 )
 
 // SpendNotifier extends the mock.ChainNotifier so that spend

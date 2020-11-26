@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd"
-	"github.com/lightningnetwork/lnd/lntest"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd"
+	"github.com/pkt-cash/pktd/lnd/lntest"
 )
 
 // testWumboChannels tests that only a node that signals wumbo channel

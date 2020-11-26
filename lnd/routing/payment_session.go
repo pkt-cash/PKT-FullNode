@@ -3,11 +3,11 @@ package routing
 import (
 	"fmt"
 
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/lnwire"
-	"github.com/lightningnetwork/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/routing/route"
 )
 
 // BlockPadding is used to increment the finalCltvDelta value for the last hop
@@ -156,7 +156,7 @@ type paymentSession struct {
 	minShardAmt lnwire.MilliSatoshi
 
 	// log is a payment session-specific logger.
-	log btclog.Logger
+	log pktlog.Logger
 }
 
 // newPaymentSession instantiates a new payment session.

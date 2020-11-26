@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // ChanUpdateMsgFlags is a bitfield that signals whether optional fields are

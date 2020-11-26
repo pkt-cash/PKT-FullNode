@@ -1,20 +1,20 @@
 package channeldb
 
 import (
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
-	mig "github.com/lightningnetwork/lnd/channeldb/migration"
-	"github.com/lightningnetwork/lnd/channeldb/migration12"
-	"github.com/lightningnetwork/lnd/channeldb/migration13"
-	"github.com/lightningnetwork/lnd/channeldb/migration16"
-	"github.com/lightningnetwork/lnd/channeldb/migration_01_to_11"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	mig "github.com/pkt-cash/pktd/lnd/channeldb/migration"
+	"github.com/pkt-cash/pktd/lnd/channeldb/migration12"
+	"github.com/pkt-cash/pktd/lnd/channeldb/migration13"
+	"github.com/pkt-cash/pktd/lnd/channeldb/migration16"
+	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11"
 )
 
 // log is a logger that is initialized with no output filters.  This
 // means the package will not perform any logging by default until the caller
 // requests it.
-var log btclog.Logger
+var log pktlog.Logger
 
 func init() {
 	UseLogger(build.NewSubLogger("CHDB", nil))
@@ -23,13 +23,13 @@ func init() {
 // DisableLog disables all library log output.  Logging output is disabled
 // by default until UseLogger is called.
 func DisableLog() {
-	UseLogger(btclog.Disabled)
+	UseLogger(pktlog.Disabled)
 }
 
 // UseLogger uses a specified Logger to output package logging info.
 // This should be used in preference to SetLogWriter if the caller is also
-// using btclog.
-func UseLogger(logger btclog.Logger) {
+// using pktlog.
+func UseLogger(logger pktlog.Logger) {
 	log = logger
 	mig.UseLogger(logger)
 	migration_01_to_11.UseLogger(logger)

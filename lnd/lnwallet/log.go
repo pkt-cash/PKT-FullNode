@@ -1,19 +1,19 @@
 package lnwallet
 
 import (
-	"github.com/btcsuite/btclog"
-	"github.com/btcsuite/btcwallet/chain"
-	btcwallet "github.com/btcsuite/btcwallet/wallet"
-	"github.com/btcsuite/btcwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	btcwallet "github.com/pkt-cash/pktd/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 )
 
 // walletLog is a logger that is initialized with no output filters.  This
 // means the package will not perform any logging by default until the caller
 // requests it.
-var walletLog btclog.Logger
+var walletLog pktlog.Logger
 
 // The default amount of logging is none.
 func init() {
@@ -23,13 +23,13 @@ func init() {
 // DisableLog disables all library log output.  Logging output is disabled
 // by default until UseLogger is called.
 func DisableLog() {
-	UseLogger(btclog.Disabled)
+	UseLogger(pktlog.Disabled)
 }
 
 // UseLogger uses a specified Logger to output package logging info.
 // This should be used in preference to SetLogWriter if the caller is also
-// using btclog.
-func UseLogger(logger btclog.Logger) {
+// using pktlog.
+func UseLogger(logger pktlog.Logger) {
 	walletLog = logger
 
 	btcwallet.UseLogger(logger)

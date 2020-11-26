@@ -8,10 +8,10 @@ import (
 	"io"
 	"sync"
 
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 
-	"github.com/btcsuite/btcwallet/snacl"
-	"github.com/btcsuite/btcwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/snacl"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 const (

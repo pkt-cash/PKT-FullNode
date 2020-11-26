@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lightningnetwork/lnd/lnrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc"
 )
 
 // legacyTrackPaymentServer is a wrapper struct that transforms a stream of main

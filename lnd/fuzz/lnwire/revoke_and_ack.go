@@ -3,7 +3,7 @@
 package lnwirefuzz
 
 import (
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // Fuzz_revoke_and_ack is used by go-fuzz.

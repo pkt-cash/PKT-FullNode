@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
-	"github.com/lightningnetwork/lnd/lntypes"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/lntypes"
 )
 
 var (

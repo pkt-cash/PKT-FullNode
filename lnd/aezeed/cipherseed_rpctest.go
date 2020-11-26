@@ -2,7 +2,7 @@
 
 package aezeed
 
-import "github.com/btcsuite/btcwallet/waddrmgr"
+import "github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 
 func init() {
 	// For the purposes of our itest, we'll crank down the scrypt params a

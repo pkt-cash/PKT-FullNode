@@ -3,7 +3,7 @@ package shachain
 import (
 	"io"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // Producer is an interface which serves as an abstraction over the data

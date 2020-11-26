@@ -1,7 +1,7 @@
 package input
 
 import (
-	"github.com/btcsuite/btcd/wire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Signer represents an abstract object capable of generating raw signatures as

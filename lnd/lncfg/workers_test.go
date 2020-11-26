@@ -3,7 +3,7 @@ package lncfg_test
 import (
 	"testing"
 
-	"github.com/lightningnetwork/lnd/lncfg"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // LinkUpdater is an interface implemented by most messages in BOLT 2 that are

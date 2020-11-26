@@ -1,8 +1,8 @@
 package lookout
 
 import (
-	"github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/labels"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/lnd/labels"
 )
 
 // PunisherConfig houses the resources required by the Punisher.

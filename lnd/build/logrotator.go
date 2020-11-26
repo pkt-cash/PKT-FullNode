@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/btcsuite/btclog"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/jrick/logrotate/rotator"
 )
 
@@ -16,11 +16,11 @@ import (
 type RotatingLogWriter struct {
 	// GenSubLogger is a function that returns a new logger for a subsystem
 	// belonging to the current RotatingLogWriter.
-	GenSubLogger func(string) btclog.Logger
+	GenSubLogger func(string) pktlog.Logger
 
 	logWriter *LogWriter
 
-	backendLog *btclog.Backend
+	backendLog *pktlog.Backend
 
 	logRotator *rotator.Rotator
 
@@ -37,9 +37,9 @@ var _ LeveledSubLogger = (*RotatingLogWriter)(nil)
 // the writer.
 func NewRotatingLogWriter() *RotatingLogWriter {
 	logWriter := &LogWriter{}
-	backendLog := btclog.NewBackend(logWriter)
+	backendLog := pktlog.NewBackend(logWriter)
 	return &RotatingLogWriter{
-		GenSubLogger: func(tag string) btclog.Logger {
+		GenSubLogger: func(tag string) pktlog.Logger {
 			logger := backendLog.Logger(tag)
 			return NewShutdownLogger(logger)
 		},
@@ -51,7 +51,7 @@ func NewRotatingLogWriter() *RotatingLogWriter {
 
 // RegisterSubLogger registers a new subsystem logger.
 func (r *RotatingLogWriter) RegisterSubLogger(subsystem string,
-	logger btclog.Logger) {
+	logger pktlog.Logger) {
 
 	r.subsystemLoggers[subsystem] = logger
 }
@@ -136,7 +136,7 @@ func (r *RotatingLogWriter) SetLogLevel(subsystemID string, logLevel string) {
 	}
 
 	// Defaults to info if the log level is invalid.
-	level, _ := btclog.LevelFromString(logLevel)
+	level, _ := pktlog.LevelFromString(logLevel)
 	logger.SetLevel(level)
 }
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // MaxMessagePayload is the maximum bytes a message can be regardless of other

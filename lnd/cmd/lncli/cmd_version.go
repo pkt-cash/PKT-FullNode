@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lightningnetwork/lnd/build"
-	"github.com/lightningnetwork/lnd/lnrpc/lnclipb"
-	"github.com/lightningnetwork/lnd/lnrpc/verrpc"
+	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/lnclipb"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/verrpc"
 	"github.com/urfave/cli"
 )
 

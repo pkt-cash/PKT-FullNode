@@ -1,9 +1,9 @@
 package wtclientrpc
 
 import (
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/lncfg"
-	"github.com/lightningnetwork/lnd/watchtower/wtclient"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
 )
 
 // Config is the primary configuration struct for the watchtower RPC server. It
@@ -25,5 +25,5 @@ type Config struct {
 	Resolver lncfg.TCPResolver
 
 	// Log is the logger instance we should log output to.
-	Log btclog.Logger
+	Log pktlog.Logger
 }

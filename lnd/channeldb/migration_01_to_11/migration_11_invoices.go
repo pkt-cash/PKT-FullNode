@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 
-	bitcoinCfg "github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/channeldb/kvdb"
-	"github.com/lightningnetwork/lnd/channeldb/migration_01_to_11/zpay32"
-	"github.com/lightningnetwork/lnd/lnwire"
+	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11/zpay32"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 )
 

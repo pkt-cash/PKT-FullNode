@@ -3,7 +3,7 @@ package sweep
 import (
 	"sync"
 
-	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 )
 
 // mockFeeEstimator implements a mock fee estimator. It closely resembles

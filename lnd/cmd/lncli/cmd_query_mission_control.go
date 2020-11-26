@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 
 	"github.com/urfave/cli"
 )

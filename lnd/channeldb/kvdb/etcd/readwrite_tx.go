@@ -3,7 +3,7 @@
 package etcd
 
 import (
-	"github.com/btcsuite/btcwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 // readWriteTx holds a reference to the STM transaction.

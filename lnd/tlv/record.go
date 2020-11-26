@@ -6,7 +6,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkt-cash/pktd/btcec"
 )
 
 // Type is an 64-bit identifier for a TLV Record.

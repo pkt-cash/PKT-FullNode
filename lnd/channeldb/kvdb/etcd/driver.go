@@ -5,7 +5,7 @@ package etcd
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcwallet/walletdb"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 const (

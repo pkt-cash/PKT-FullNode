@@ -1,11 +1,11 @@
 package chainreg
 
 import (
-	"github.com/btcsuite/btcd/chaincfg"
-	bitcoinCfg "github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	bitcoinWire "github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/keychain"
+	"github.com/pkt-cash/pktd/chaincfg"
+	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	bitcoinWire "github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/lnd/keychain"
 	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 	litecoinWire "github.com/ltcsuite/ltcd/wire"
 	pktCfg "github.com/pkt-cash/pktd/chaincfg"

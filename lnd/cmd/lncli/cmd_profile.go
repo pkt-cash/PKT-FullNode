@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/lncfg"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/urfave/cli"
 	"gopkg.in/macaroon.v2"
 )

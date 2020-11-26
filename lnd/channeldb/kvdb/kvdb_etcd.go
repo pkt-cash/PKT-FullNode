@@ -5,7 +5,7 @@ package kvdb
 import (
 	"context"
 
-	"github.com/lightningnetwork/lnd/channeldb/kvdb/etcd"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb/etcd"
 )
 
 // TestBackend is conditionally set to etcd when the kvdb_etcd build tag is

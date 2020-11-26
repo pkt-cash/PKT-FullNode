@@ -1,13 +1,13 @@
 package chancloser
 
 import (
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/build"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/build"
 )
 
-// chancloserLog is a logger that is initialized with the btclog.Disabled
+// chancloserLog is a logger that is initialized with the pktlog.Disabled
 // logger.
-var chancloserLog btclog.Logger
+var chancloserLog pktlog.Logger
 
 // The default amount of logging is none.
 func init() {
@@ -16,11 +16,11 @@ func init() {
 
 // DisableLog disables all logging output.
 func DisableLog() {
-	UseLogger(btclog.Disabled)
+	UseLogger(pktlog.Disabled)
 }
 
 // UseLogger uses a specified Logger to output package logging info.
-func UseLogger(logger btclog.Logger) {
+func UseLogger(logger pktlog.Logger) {
 	chancloserLog = logger
 }
 

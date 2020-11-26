@@ -4,29 +4,29 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/autopilot"
-	"github.com/lightningnetwork/lnd/chainreg"
-	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/htlcswitch"
-	"github.com/lightningnetwork/lnd/invoices"
-	"github.com/lightningnetwork/lnd/lncfg"
-	"github.com/lightningnetwork/lnd/lnrpc/autopilotrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/chainrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/watchtowerrpc"
-	"github.com/lightningnetwork/lnd/lnrpc/wtclientrpc"
-	"github.com/lightningnetwork/lnd/lnwire"
-	"github.com/lightningnetwork/lnd/macaroons"
-	"github.com/lightningnetwork/lnd/netann"
-	"github.com/lightningnetwork/lnd/routing"
-	"github.com/lightningnetwork/lnd/sweep"
-	"github.com/lightningnetwork/lnd/watchtower"
-	"github.com/lightningnetwork/lnd/watchtower/wtclient"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/autopilot"
+	"github.com/pkt-cash/pktd/lnd/chainreg"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/lnd/htlcswitch"
+	"github.com/pkt-cash/pktd/lnd/invoices"
+	"github.com/pkt-cash/pktd/lnd/lncfg"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/autopilotrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/chainrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/invoicesrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/walletrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/watchtowerrpc"
+	"github.com/pkt-cash/pktd/lnd/lnrpc/wtclientrpc"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/lnd/netann"
+	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/lnd/watchtower"
+	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
 )
 
 // subRPCServerConfigs is special sub-config in the main configuration that
@@ -98,7 +98,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	towerClient wtclient.Client,
 	tcpResolver lncfg.TCPResolver,
 	genInvoiceFeatures func() *lnwire.FeatureVector,
-	rpcLogger btclog.Logger) error {
+	rpcLogger pktlog.Logger) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.

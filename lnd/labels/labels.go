@@ -17,8 +17,8 @@ package labels
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcwallet/wtxmgr"
-	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // External labels a transaction as user initiated via the api. This

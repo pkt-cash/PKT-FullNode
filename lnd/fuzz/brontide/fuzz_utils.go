@@ -6,10 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/lightningnetwork/lnd/brontide"
-	"github.com/lightningnetwork/lnd/keychain"
+	"github.com/pkt-cash/pktd/lnd/brontide"
+	"github.com/pkt-cash/pktd/lnd/keychain"
 )
 
 var (

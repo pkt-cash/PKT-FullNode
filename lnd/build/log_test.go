@@ -3,8 +3,8 @@ package build_test
 import (
 	"testing"
 
-	"github.com/btcsuite/btclog"
-	"github.com/lightningnetwork/lnd/build"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,8 +15,8 @@ type mockSubLogger struct {
 
 func (m *mockSubLogger) SubLoggers() build.SubLoggers {
 	return build.SubLoggers{
-		"PEER": btclog.Disabled,
-		"SRVR": btclog.Disabled,
+		"PEER": pktlog.Disabled,
+		"SRVR": pktlog.Disabled,
 	}
 }
 

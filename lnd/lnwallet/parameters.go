@@ -1,9 +1,9 @@
 package lnwallet
 
 import (
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcwallet/wallet/txrules"
-	"github.com/lightningnetwork/lnd/input"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
+	"github.com/pkt-cash/pktd/lnd/input"
 )
 
 // DefaultDustLimit is used to calculate the dust HTLC amount which will be
