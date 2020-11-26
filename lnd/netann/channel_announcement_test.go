@@ -48,7 +48,7 @@ func TestCreateChanAnnouncement(t *testing.T) {
 		ChainHash:        expChanAnn.ChainHash,
 		ChannelID:        expChanAnn.ShortChannelID.ToUint64(),
 		ChannelPoint:     wire.OutPoint{Index: 1},
-		Capacity:         btcutil.SatoshiPerBitcoin,
+		Capacity:         btcutil.UnitsPerCoin(),
 		NodeKey1Bytes:    key,
 		NodeKey2Bytes:    key,
 		BitcoinKey1Bytes: key,

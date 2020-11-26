@@ -35,7 +35,7 @@ func testWumboChannels(net *lntest.NetworkHarness, t *harnessTest) {
 	// We'll send coins to the wumbo node, as it'll be the one imitating
 	// the channel funding.
 	ctxb := context.Background()
-	err = net.SendCoins(ctxb, btcutil.SatoshiPerBitcoin, wumboNode)
+	err = net.SendCoins(ctxb, btcutil.UnitsPerCoin(), wumboNode)
 	if err != nil {
 		t.Fatalf("unable to send coins to carol: %v", err)
 	}

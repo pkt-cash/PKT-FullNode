@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -74,18 +74,18 @@ func TestCoinSelect(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
-			outputValue: 0.5 * btcutil.SatoshiPerBitcoin,
+			outputValue: btcutil.Amount(0.5 * btcutil.UnitsPerCoinF()),
 
 			// The one and only input will be selected.
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
 			// Change will be what's left minus the fee.
-			expectedChange: 0.5*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, true),
+			expectedChange: btcutil.Amount(0.5*btcutil.UnitsPerCoinF()) - fundingFee(feeRate, 1, true),
 		},
 		{
 			// We have 1 BTC available, and we want to send 1 BTC.
@@ -96,11 +96,11 @@ func TestCoinSelect(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
-			outputValue: 1 * btcutil.SatoshiPerBitcoin,
+			outputValue: 1 * btcutil.UnitsPerCoin(),
 			expectErr:   true,
 		},
 		{
@@ -112,16 +112,16 @@ func TestCoinSelect(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
 			// We tune the output value by subtracting the expected
 			// fee and a small dust amount.
-			outputValue: 1*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, true) - dust,
+			outputValue: 1*btcutil.UnitsPerCoin() - fundingFee(feeRate, 1, true) - dust,
 
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
 
 			// Change will the dust.
@@ -136,16 +136,16 @@ func TestCoinSelect(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
 			// We tune the output value to be the maximum amount
 			// possible, leaving just enough for fees.
-			outputValue: 1*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, true),
+			outputValue: 1*btcutil.UnitsPerCoin() - fundingFee(feeRate, 1, true),
 
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
 			// We have just enough left to pay the fee, so there is
 			// nothing left for change.
@@ -238,17 +238,17 @@ func TestCoinSelectSubtractFees(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
-			spendValue: 1 * btcutil.SatoshiPerBitcoin,
+			spendValue: 1 * btcutil.UnitsPerCoin(),
 
 			// The one and only input will be selected.
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
-			expectedFundingAmt: 1*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, false),
+			expectedFundingAmt: 1*btcutil.UnitsPerCoin() - fundingFee(feeRate, 1, false),
 			expectedChange:     0,
 		},
 		{
@@ -259,18 +259,18 @@ func TestCoinSelectSubtractFees(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
-			spendValue: 0.5 * btcutil.SatoshiPerBitcoin,
+			spendValue: btcutil.Amount(0.5 * btcutil.UnitsPerCoinF()),
 
 			// The one and only input will be selected.
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
-			expectedFundingAmt: 0.5*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, true),
-			expectedChange:     0.5 * btcutil.SatoshiPerBitcoin,
+			expectedFundingAmt: btcutil.Amount(0.5*btcutil.UnitsPerCoinF()) - fundingFee(feeRate, 1, true),
+			expectedChange:     btcutil.Amount(0.5 * btcutil.UnitsPerCoinF()),
 		},
 		{
 			// The total funds available is below the dust limit
@@ -298,16 +298,16 @@ func TestCoinSelectSubtractFees(t *testing.T) {
 				{
 					TxOut: wire.TxOut{
 						PkScript: p2wkhScript,
-						Value:    1 * btcutil.SatoshiPerBitcoin,
+						Value:    1 * btcutil.UnitsPerCoinI64(),
 					},
 				},
 			},
-			spendValue: 1*btcutil.SatoshiPerBitcoin - dust,
+			spendValue: 1*btcutil.UnitsPerCoin() - dust,
 
 			expectedInput: []btcutil.Amount{
-				1 * btcutil.SatoshiPerBitcoin,
+				1 * btcutil.UnitsPerCoin(),
 			},
-			expectedFundingAmt: 1*btcutil.SatoshiPerBitcoin - fundingFee(feeRate, 1, false),
+			expectedFundingAmt: 1*btcutil.UnitsPerCoin() - fundingFee(feeRate, 1, false),
 			expectedChange:     0,
 		},
 		{

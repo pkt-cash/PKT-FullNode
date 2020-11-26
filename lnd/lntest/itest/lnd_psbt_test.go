@@ -32,7 +32,7 @@ func testPsbtChanFunding(net *lntest.NetworkHarness, t *harnessTest) {
 	dave, err := net.NewNode("dave", nil)
 	require.NoError(t.t, err)
 	defer shutdownAndAssert(net, t, dave)
-	err = net.SendCoins(ctxb, btcutil.SatoshiPerBitcoin, dave)
+	err = net.SendCoins(ctxb, btcutil.UnitsPerCoin(), dave)
 	if err != nil {
 		t.Fatalf("unable to send coins to dave: %v", err)
 	}

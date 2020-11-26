@@ -1750,7 +1750,7 @@ func TestPathInsufficientCapacity(t *testing.T) {
 	// though we have a 2-hop link.
 	target := graph.aliasMap["sophon"]
 
-	payAmt := lnwire.NewMSatFromSatoshis(btcutil.SatoshiPerBitcoin)
+	payAmt := lnwire.NewMSatFromSatoshis(btcutil.UnitsPerCoin())
 	_, err = dbFindPath(
 		graph.graph, nil, nil,
 		noRestrictions, testPathFindingConfig,

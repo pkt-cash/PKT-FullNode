@@ -155,7 +155,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 
 	// We set the max invoice amount to 100k BTC, which itself is several
 	// multiples off the current block reward.
-	maxInvoiceAmt := btcutil.Amount(btcutil.SatoshiPerBitcoin * 100000)
+	maxInvoiceAmt := btcutil.Amount(btcutil.UnitsPerCoin() * 100000)
 
 	switch {
 	// The value of the invoice must not be negative.

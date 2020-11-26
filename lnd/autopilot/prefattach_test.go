@@ -98,7 +98,7 @@ func TestPrefAttachmentSelectEmptyGraph(t *testing.T) {
 
 			// With the necessary state initialized, we'll now
 			// attempt to get the score for this one node.
-			const walletFunds = btcutil.SatoshiPerBitcoin
+			walletFunds := btcutil.UnitsPerCoin()
 			scores, err := prefAttach.NodeScores(graph, nil,
 				walletFunds, nodes)
 			if err != nil {
@@ -127,9 +127,7 @@ func TestPrefAttachmentSelectTwoVertexes(t *testing.T) {
 
 	prand.Seed(time.Now().Unix())
 
-	const (
-		maxChanSize = btcutil.Amount(btcutil.SatoshiPerBitcoin)
-	)
+	maxChanSize := btcutil.Amount(btcutil.UnitsPerCoin())
 
 	for _, graph := range chanGraphs {
 		success := t.Run(graph.name, func(t1 *testing.T) {
@@ -145,7 +143,7 @@ func TestPrefAttachmentSelectTwoVertexes(t *testing.T) {
 
 			// For this set, we'll load the memory graph with two
 			// nodes, and a random channel connecting them.
-			const chanCapacity = btcutil.SatoshiPerBitcoin
+			chanCapacity := btcutil.UnitsPerCoin()
 			edge1, edge2, err := graph.addRandChannel(nil, nil, chanCapacity)
 			if err != nil {
 				t1.Fatalf("unable to generate channel: %v", err)
@@ -227,9 +225,7 @@ func TestPrefAttachmentSelectGreedyAllocation(t *testing.T) {
 
 	prand.Seed(time.Now().Unix())
 
-	const (
-		maxChanSize = btcutil.Amount(btcutil.SatoshiPerBitcoin)
-	)
+	maxChanSize := btcutil.Amount(btcutil.UnitsPerCoin())
 
 	for _, graph := range chanGraphs {
 		success := t.Run(graph.name, func(t1 *testing.T) {
@@ -243,7 +239,7 @@ func TestPrefAttachmentSelectGreedyAllocation(t *testing.T) {
 
 			prefAttach := NewPrefAttachment()
 
-			const chanCapacity = btcutil.SatoshiPerBitcoin
+			chanCapacity := btcutil.UnitsPerCoin()
 
 			// Next, we'll add 3 nodes to the graph, creating an
 			// "open triangle topology".
@@ -326,7 +322,7 @@ func TestPrefAttachmentSelectGreedyAllocation(t *testing.T) {
 			// Imagine a few channels are being opened, and there's
 			// only 0.5 BTC left. That should leave us with channel
 			// candidates of that size.
-			const remBalance = btcutil.SatoshiPerBitcoin * 0.5
+			remBalance := btcutil.Amount(btcutil.UnitsPerCoinF() * 0.5)
 			scores, err = prefAttach.NodeScores(graph, nil,
 				remBalance, nodes)
 			if err != nil {
@@ -361,9 +357,7 @@ func TestPrefAttachmentSelectSkipNodes(t *testing.T) {
 
 	prand.Seed(time.Now().Unix())
 
-	const (
-		maxChanSize = btcutil.Amount(btcutil.SatoshiPerBitcoin)
-	)
+	maxChanSize := btcutil.Amount(btcutil.UnitsPerCoin())
 
 	for _, graph := range chanGraphs {
 		success := t.Run(graph.name, func(t1 *testing.T) {
@@ -379,7 +373,7 @@ func TestPrefAttachmentSelectSkipNodes(t *testing.T) {
 
 			// Next, we'll create a simple topology of two nodes,
 			// with a single channel connecting them.
-			const chanCapacity = btcutil.SatoshiPerBitcoin
+			chanCapacity := btcutil.UnitsPerCoin()
 			_, _, err = graph.addRandChannel(nil, nil,
 				chanCapacity)
 			if err != nil {

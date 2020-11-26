@@ -17,10 +17,9 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/chanacceptor"
@@ -37,6 +36,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -3171,7 +3171,7 @@ func TestFundingManagerFundAll(t *testing.T) {
 		{
 			AddressType: lnwallet.WitnessPubKey,
 			Value: btcutil.Amount(
-				0.05 * btcutil.SatoshiPerBitcoin,
+				0.05 * btcutil.UnitsPerCoinF(),
 			),
 			PkScript: mock.CoinPkScript,
 			OutPoint: wire.OutPoint{
@@ -3182,7 +3182,7 @@ func TestFundingManagerFundAll(t *testing.T) {
 		{
 			AddressType: lnwallet.WitnessPubKey,
 			Value: btcutil.Amount(
-				0.06 * btcutil.SatoshiPerBitcoin,
+				0.06 * btcutil.UnitsPerCoinF(),
 			),
 			PkScript: mock.CoinPkScript,
 			OutPoint: wire.OutPoint{
@@ -3200,7 +3200,7 @@ func TestFundingManagerFundAll(t *testing.T) {
 			// We will spend all the funds in the wallet, and
 			// expects no change output.
 			spendAmt: btcutil.Amount(
-				0.11 * btcutil.SatoshiPerBitcoin,
+				0.11 * btcutil.UnitsPerCoinF(),
 			),
 			change: false,
 		},
@@ -3208,7 +3208,7 @@ func TestFundingManagerFundAll(t *testing.T) {
 			// We spend a little less than the funds in the wallet,
 			// so a change output should be created.
 			spendAmt: btcutil.Amount(
-				0.10 * btcutil.SatoshiPerBitcoin,
+				0.10 * btcutil.UnitsPerCoinF(),
 			),
 			change: true,
 		},
@@ -3427,7 +3427,7 @@ func TestMaxChannelSizeConfig(t *testing.T) {
 
 	// Attempt to create a channel above the limit
 	// imposed by --maxchansize, which should be rejected.
-	initReq.localFundingAmt = btcutil.SatoshiPerBitcoin + 1
+	initReq.localFundingAmt = btcutil.UnitsPerCoin() + 1
 
 	// After processing the funding open message, bob should respond with
 	// an error rejecting the channel that exceeds size limit.
@@ -3471,7 +3471,7 @@ func TestWumboChannelConfig(t *testing.T) {
 
 	// We'll now attempt to create a channel above the wumbo mark, which
 	// should be rejected.
-	initReq.localFundingAmt = btcutil.SatoshiPerBitcoin
+	initReq.localFundingAmt = btcutil.UnitsPerCoin()
 
 	// After processing the funding open message, bob should respond with
 	// an error rejecting the channel.

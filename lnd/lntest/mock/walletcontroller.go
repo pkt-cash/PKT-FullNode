@@ -43,7 +43,7 @@ func (w *WalletController) FetchInputInfo(
 
 	utxo := &lnwallet.Utxo{
 		AddressType:   lnwallet.WitnessPubKey,
-		Value:         10 * btcutil.SatoshiPerBitcoin,
+		Value:         10 * btcutil.UnitsPerCoin(),
 		PkScript:      []byte("dummy"),
 		Confirmations: 1,
 		OutPoint:      *prevOut,
@@ -104,7 +104,7 @@ func (w *WalletController) ListUnspentWitness(minconfirms,
 	// Otherwise create one to return.
 	utxo := &lnwallet.Utxo{
 		AddressType: lnwallet.WitnessPubKey,
-		Value:       btcutil.Amount(10 * btcutil.SatoshiPerBitcoin),
+		Value:       btcutil.Amount(10 * btcutil.UnitsPerCoin()),
 		PkScript:    CoinPkScript,
 		OutPoint: wire.OutPoint{
 			Hash:  chainhash.Hash{},

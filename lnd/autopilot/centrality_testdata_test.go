@@ -48,7 +48,7 @@ func buildTestGraph(t *testing.T,
 		nodes[i] = key
 	}
 
-	const chanCapacity = btcutil.SatoshiPerBitcoin
+	chanCapacity := btcutil.UnitsPerCoin()
 	for u, neighbors := range desc.edges {
 		for _, v := range neighbors {
 			_, _, err := graph.addRandChannel(

@@ -62,7 +62,7 @@ func TestSetNodeScores(t *testing.T) {
 		q[nID] = struct{}{}
 	}
 	resp, err := h.NodeScores(
-		nil, nil, btcutil.Amount(btcutil.SatoshiPerBitcoin), q,
+		nil, nil, btcutil.Amount(btcutil.UnitsPerCoin()), q,
 	)
 	if err != nil {
 		t.Fatal(err)

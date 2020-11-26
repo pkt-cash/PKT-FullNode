@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -2216,8 +2216,8 @@ func TestLocalPaymentNoForwardingEvents(t *testing.T) {
 	// interacting with and asserting the state of the first end point for
 	// this test.
 	channels, cleanUp, _, err := createClusterChannels(
-		btcutil.SatoshiPerBitcoin*3,
-		btcutil.SatoshiPerBitcoin*5)
+		btcutil.UnitsPerCoin()*3,
+		btcutil.UnitsPerCoin()*5)
 	if err != nil {
 		t.Fatalf("unable to create channel: %v", err)
 	}
@@ -2230,7 +2230,7 @@ func TestLocalPaymentNoForwardingEvents(t *testing.T) {
 	}
 
 	// We'll now craft and send a payment from Alice to Bob.
-	amount := lnwire.NewMSatFromSatoshis(btcutil.SatoshiPerBitcoin)
+	amount := lnwire.NewMSatFromSatoshis(btcutil.UnitsPerCoin())
 	htlcAmt, totalTimelock, hops := generateHops(
 		amount, testStartingHeight, n.firstBobChannelLink,
 	)
@@ -2278,8 +2278,8 @@ func TestMultiHopPaymentForwardingEvents(t *testing.T) {
 
 	// First, we'll create our traditional three hop network.
 	channels, cleanUp, _, err := createClusterChannels(
-		btcutil.SatoshiPerBitcoin*3,
-		btcutil.SatoshiPerBitcoin*5)
+		btcutil.UnitsPerCoin()*3,
+		btcutil.UnitsPerCoin()*5)
 	if err != nil {
 		t.Fatalf("unable to create channel: %v", err)
 	}
@@ -2435,7 +2435,7 @@ func TestUpdateFailMalformedHTLCErrorConversion(t *testing.T) {
 
 	// First, we'll create our traditional three hop network.
 	channels, cleanUp, _, err := createClusterChannels(
-		btcutil.SatoshiPerBitcoin*3, btcutil.SatoshiPerBitcoin*5,
+		btcutil.UnitsPerCoin()*3, btcutil.UnitsPerCoin()*5,
 	)
 	if err != nil {
 		t.Fatalf("unable to create channel: %v", err)
@@ -2848,8 +2848,8 @@ func testHtcNotifier(t *testing.T, testOpts []serverOption, iterations int,
 	// First, we'll create our traditional three hop
 	// network.
 	channels, cleanUp, _, err := createClusterChannels(
-		btcutil.SatoshiPerBitcoin*3,
-		btcutil.SatoshiPerBitcoin*5)
+		btcutil.UnitsPerCoin()*3,
+		btcutil.UnitsPerCoin()*5)
 	if err != nil {
 		t.Fatalf("unable to create channel: %v", err)
 	}
@@ -2971,7 +2971,7 @@ func checkHtlcEvents(t *testing.T, events <-chan interface{},
 func (n *threeHopNetwork) sendThreeHopPayment(t *testing.T) (*lnwire.UpdateAddHTLC,
 	[]*hop.Payload) {
 
-	amount := lnwire.NewMSatFromSatoshis(btcutil.SatoshiPerBitcoin)
+	amount := lnwire.NewMSatFromSatoshis(btcutil.UnitsPerCoin())
 
 	htlcAmt, totalTimelock, hops := generateHops(amount, testStartingHeight,
 		n.firstBobChannelLink, n.carolChannelLink)

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type moreChansResp struct {
@@ -183,7 +183,7 @@ func setup(t *testing.T, initialChans []LocalChannel) (*testContext, func()) {
 
 	// We'll keep track of the funds available to the agent, to make sure
 	// it correctly uses this value when querying the ChannelBudget.
-	var availableFunds btcutil.Amount = 10 * btcutil.SatoshiPerBitcoin
+	var availableFunds btcutil.Amount = 10 * btcutil.UnitsPerCoin()
 
 	ctx := &testContext{
 		constraints:    constraints,
@@ -293,7 +293,7 @@ func TestAgentChannelOpenSignal(t *testing.T) {
 	// with a capacity of 1 BTC.
 	newChan := LocalChannel{
 		ChanID:  randChanID(),
-		Balance: btcutil.SatoshiPerBitcoin,
+		Balance: btcutil.UnitsPerCoin(),
 	}
 	testCtx.agent.OnChannelOpen(newChan)
 
@@ -347,7 +347,7 @@ func TestAgentHeuristicUpdateSignal(t *testing.T) {
 	respondMoreChans(t, testCtx,
 		moreChansResp{
 			numMore: 1,
-			amt:     1 * btcutil.SatoshiPerBitcoin,
+			amt:     1 * btcutil.UnitsPerCoin(),
 		},
 	)
 
@@ -403,7 +403,7 @@ func TestAgentChannelFailureSignal(t *testing.T) {
 
 	// First ensure the agent will attempt to open a new channel. Return
 	// that we need more channels, and have 5BTC to use.
-	respondMoreChans(t, testCtx, moreChansResp{1, 5 * btcutil.SatoshiPerBitcoin})
+	respondMoreChans(t, testCtx, moreChansResp{1, 5 * btcutil.UnitsPerCoin()})
 
 	// At this point, the agent should now be querying the heuristic to
 	// request attachment directives, return a fake so the agent will
@@ -422,7 +422,7 @@ func TestAgentChannelFailureSignal(t *testing.T) {
 	// At this point the agent will attempt to create a channel and fail.
 
 	// Now ensure that the controller loop is re-executed.
-	respondMoreChans(t, testCtx, moreChansResp{1, 5 * btcutil.SatoshiPerBitcoin})
+	respondMoreChans(t, testCtx, moreChansResp{1, 5 * btcutil.UnitsPerCoin()})
 	respondNodeScores(t, testCtx, map[NodeID]*NodeScore{})
 }
 
@@ -435,11 +435,11 @@ func TestAgentChannelCloseSignal(t *testing.T) {
 	initialChans := []LocalChannel{
 		{
 			ChanID:  randChanID(),
-			Balance: btcutil.SatoshiPerBitcoin,
+			Balance: btcutil.UnitsPerCoin(),
 		},
 		{
 			ChanID:  randChanID(),
-			Balance: btcutil.SatoshiPerBitcoin * 2,
+			Balance: btcutil.UnitsPerCoin() * 2,
 		},
 	}
 
@@ -495,7 +495,7 @@ func TestAgentBalanceUpdate(t *testing.T) {
 	// Next we'll send a new balance update signal to the agent, adding 5
 	// BTC to the amount of available funds.
 	testCtx.Lock()
-	testCtx.walletBalance += btcutil.SatoshiPerBitcoin * 5
+	testCtx.walletBalance += btcutil.UnitsPerCoin() * 5
 	testCtx.Unlock()
 
 	testCtx.agent.OnBalanceChange()
@@ -558,7 +558,7 @@ func TestAgentImmediateAttach(t *testing.T) {
 	respondMoreChans(t, testCtx,
 		moreChansResp{
 			numMore: numChans,
-			amt:     5 * btcutil.SatoshiPerBitcoin,
+			amt:     5 * btcutil.UnitsPerCoin(),
 		},
 	)
 
@@ -575,9 +575,9 @@ func TestAgentImmediateAttach(t *testing.T) {
 	for i := 0; i < numChans; i++ {
 		select {
 		case openChan := <-chanController.openChanSignals:
-			if openChan.amt != btcutil.SatoshiPerBitcoin {
+			if openChan.amt != btcutil.UnitsPerCoin() {
 				t.Fatalf("invalid chan amt: expected %v, got %v",
-					btcutil.SatoshiPerBitcoin, openChan.amt)
+					btcutil.UnitsPerCoin(), openChan.amt)
 			}
 			nodeID := NewNodeID(openChan.target)
 			_, ok := nodeKeys[nodeID]
@@ -628,7 +628,7 @@ func TestAgentPrivateChannels(t *testing.T) {
 	// budget of 5 BTC to do so.
 	resp := moreChansResp{
 		numMore: numChans,
-		amt:     5 * btcutil.SatoshiPerBitcoin,
+		amt:     5 * btcutil.UnitsPerCoin(),
 	}
 	respondMoreChans(t, testCtx, resp)
 
@@ -680,7 +680,7 @@ func TestAgentPendingChannelState(t *testing.T) {
 	respondMoreChans(t, testCtx,
 		moreChansResp{
 			numMore: 1,
-			amt:     btcutil.SatoshiPerBitcoin,
+			amt:     btcutil.UnitsPerCoin(),
 		},
 	)
 
@@ -712,7 +712,7 @@ func TestAgentPendingChannelState(t *testing.T) {
 	// we'll trigger a balance update in order to trigger a query to the
 	// heuristic.
 	testCtx.Lock()
-	testCtx.walletBalance += 0.4 * btcutil.SatoshiPerBitcoin
+	testCtx.walletBalance += btcutil.Amount(0.4 * btcutil.UnitsPerCoinF())
 	testCtx.Unlock()
 
 	testCtx.agent.OnBalanceChange()
@@ -745,7 +745,7 @@ func TestAgentPendingChannelState(t *testing.T) {
 	// We'll send across a response indicating that it *does* need more
 	// channels.
 	select {
-	case testCtx.constraints.moreChansResps <- moreChansResp{1, btcutil.SatoshiPerBitcoin}:
+	case testCtx.constraints.moreChansResps <- moreChansResp{1, btcutil.UnitsPerCoin()}:
 	case <-time.After(time.Second * 10):
 		t.Fatalf("need more chans wasn't queried in time")
 	}
@@ -1265,7 +1265,7 @@ func TestAgentChannelSizeAllocation(t *testing.T) {
 
 	// We'll return a response telling the agent to open 5 channels, with a
 	// total channel budget of 5 BTC.
-	var channelBudget btcutil.Amount = 5 * btcutil.SatoshiPerBitcoin
+	var channelBudget btcutil.Amount = 5 * btcutil.UnitsPerCoin()
 	numExistingChannels := 0
 	numNewChannels := 5
 	respondWithScores(
@@ -1336,7 +1336,7 @@ func TestAgentChannelSizeAllocation(t *testing.T) {
 	waitForNumChans(numNewChannels)
 
 	// Set the channel budget to 1.5 BTC.
-	channelBudget = btcutil.SatoshiPerBitcoin * 3 / 2
+	channelBudget = btcutil.UnitsPerCoin() * 3 / 2
 
 	// We'll return a response telling the agent to open 3 channels, with a
 	// total channel budget of 1.5 BTC.
@@ -1361,7 +1361,7 @@ func TestAgentChannelSizeAllocation(t *testing.T) {
 
 	// Finally check that we make maximum channels if we are well within
 	// our budget.
-	channelBudget = btcutil.SatoshiPerBitcoin * 5
+	channelBudget = btcutil.UnitsPerCoin() * 5
 	numNewChannels = 2
 	respondWithScores(
 		t, testCtx, channelBudget, numExistingChannels,

@@ -15,9 +15,9 @@ func TestConstraintsChannelBudget(t *testing.T) {
 
 	prand.Seed(time.Now().Unix())
 
+	maxChanSize := btcutil.Amount(btcutil.UnitsPerCoin())
 	const (
 		minChanSize = 0
-		maxChanSize = btcutil.Amount(btcutil.SatoshiPerBitcoin)
 
 		chanLimit = 3
 
@@ -61,7 +61,7 @@ func TestConstraintsChannelBudget(t *testing.T) {
 					Balance: btcutil.Amount(prand.Int31()),
 				},
 			},
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 10),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 10),
 			false,
 			0,
 			0,
@@ -73,14 +73,14 @@ func TestConstraintsChannelBudget(t *testing.T) {
 			[]LocalChannel{
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 			},
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 2),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 2),
 			false,
 			0,
 			0,
@@ -96,12 +96,12 @@ func TestConstraintsChannelBudget(t *testing.T) {
 			[]LocalChannel{
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 			},
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 9),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 9),
 			true,
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 4),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 4),
 			2,
 		},
 
@@ -116,16 +116,16 @@ func TestConstraintsChannelBudget(t *testing.T) {
 			[]LocalChannel{
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin * 3),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin() * 3),
 				},
 			},
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 10),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 10),
 			true,
-			btcutil.Amount(btcutil.SatoshiPerBitcoin * 3),
+			btcutil.Amount(btcutil.UnitsPerCoin() * 3),
 			1,
 		},
 
@@ -135,14 +135,14 @@ func TestConstraintsChannelBudget(t *testing.T) {
 			[]LocalChannel{
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 				{
 					ChanID:  randChanID(),
-					Balance: btcutil.Amount(btcutil.SatoshiPerBitcoin),
+					Balance: btcutil.Amount(btcutil.UnitsPerCoin()),
 				},
 			},
-			btcutil.Amount(btcutil.SatoshiPerBitcoin),
+			btcutil.Amount(btcutil.UnitsPerCoin()),
 			false,
 			0,
 			0,

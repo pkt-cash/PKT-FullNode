@@ -53,7 +53,7 @@ func testTopCentrality(t *testing.T, graph testGraph,
 			}
 		}
 
-		const chanSize = btcutil.SatoshiPerBitcoin
+		chanSize := btcutil.UnitsPerCoin()
 
 		// Attempt to get centrality scores and expect
 		// that the result equals with the expected set.

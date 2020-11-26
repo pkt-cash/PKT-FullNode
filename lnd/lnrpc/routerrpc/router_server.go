@@ -307,7 +307,7 @@ func (s *Server) EstimateRouteFee(ctx context.Context,
 	// Pick a fee limit
 	//
 	// TODO: Change this into behaviour that makes more sense.
-	feeLimit := lnwire.NewMSatFromSatoshis(btcutil.SatoshiPerBitcoin)
+	feeLimit := lnwire.NewMSatFromSatoshis(btcutil.UnitsPerCoin())
 
 	// Finally, we'll query for a route to the destination that can carry
 	// that target amount, we'll only request a single route. Set a

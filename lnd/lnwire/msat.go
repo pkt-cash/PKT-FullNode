@@ -30,6 +30,10 @@ func NewMSatFromSatoshis(sat btcutil.Amount) MilliSatoshi {
 	return MilliSatoshi(uint64(sat) * mSatScale)
 }
 
+func NewMSatFromSatoshisF(sat float64) MilliSatoshi {
+	return NewMSatFromSatoshis(btcutil.Amount(sat))
+}
+
 // ToBTC converts the target MilliSatoshi amount to its corresponding value
 // when expressed in BTC.
 func (m MilliSatoshi) ToBTC() float64 {

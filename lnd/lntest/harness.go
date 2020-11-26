@@ -14,17 +14,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -200,7 +200,7 @@ func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) error {
 
 			output := &wire.TxOut{
 				PkScript: addrScript,
-				Value:    btcutil.SatoshiPerBitcoin,
+				Value:    btcutil.UnitsPerCoinI64(),
 			}
 			_, err = n.Miner.SendOutputs([]*wire.TxOut{output}, 7500)
 			if err != nil {
@@ -221,7 +221,7 @@ func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) error {
 	}
 
 	// Now block until both wallets have fully synced up.
-	expectedBalance := int64(btcutil.SatoshiPerBitcoin * 10)
+	expectedBalance := int64(btcutil.UnitsPerCoin() * 10)
 	balReq := &lnrpc.WalletBalanceRequest{}
 	balanceTicker := time.NewTicker(time.Millisecond * 50)
 	defer balanceTicker.Stop()
