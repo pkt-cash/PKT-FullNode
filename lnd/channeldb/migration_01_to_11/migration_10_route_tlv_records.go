@@ -85,7 +85,7 @@ func MigrateRouteSerialization(tx kvdb.RwTx) error {
 
 	resultsKey := []byte("missioncontrol-results")
 	err = tx.DeleteTopLevelBucket(resultsKey)
-	if err != nil && err != kvdb.ErrBucketNotFound {
+	if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 		return err
 	}
 

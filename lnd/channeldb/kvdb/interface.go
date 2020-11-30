@@ -1,6 +1,7 @@
 package kvdb
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb" // Import to register backend.
 )
@@ -19,7 +20,7 @@ func Update(db Backend, f func(tx RwTx) error, reset func()) error {
 	}
 
 	reset()
-	return walletdb.Update(db, f)
+	return walletdb.Update(db, func(tx RwTx) er.R { return er.E(f(tx)) })
 }
 
 // View opens a database read transaction and executes the function f with the
@@ -38,7 +39,7 @@ func View(db Backend, f func(tx RTx) error, reset func()) error {
 	// retries transactions, we'll call the reset function here before View.
 	reset()
 
-	return walletdb.View(db, f)
+	return walletdb.View(db, func(tx RTx) er.R { return er.E(f(tx)) })
 }
 
 // Batch is identical to the Update call, but it attempts to combine several
