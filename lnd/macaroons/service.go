@@ -94,9 +94,9 @@ func NewService(dir, location string, statelessInit bool,
 		return nil, err
 	}
 
-	rootKeyStore, err := NewRootKeyStorage(macaroonDB)
-	if err != nil {
-		return nil, err
+	rootKeyStore, errr := NewRootKeyStorage(macaroonDB)
+	if errr != nil {
+		return nil, errr
 	}
 
 	macaroonParams := bakery.BakeryParams{

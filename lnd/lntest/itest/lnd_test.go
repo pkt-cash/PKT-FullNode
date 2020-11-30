@@ -10365,9 +10365,9 @@ out:
 	if err := net.DisconnectNodes(ctxt, net.Alice, net.Bob); err != nil {
 		t.Fatalf("unable to disconnect alice and bob: %v", err)
 	}
-	carol, err := net.NewNode("Carol", nil)
-	if err != nil {
-		t.Fatalf("unable to create new nodes: %v", err)
+	carol, errr := net.NewNode("Carol", nil)
+	if errr != nil {
+		t.Fatalf("unable to create new nodes: %v", errr)
 	}
 	defer shutdownAndAssert(net, t, carol)
 

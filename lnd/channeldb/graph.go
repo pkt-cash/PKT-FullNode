@@ -1154,12 +1154,12 @@ func (c *ChannelGraph) DisconnectBlockAtHeight(height uint32) ([]*ChannelEdgeInf
 		}
 
 		for _, k := range keys {
-			err = delChannelEdge(
+			errr := delChannelEdge(
 				edges, edgeIndex, chanIndex, zombieIndex, nodes,
 				k, false,
 			)
-			if err != nil && err != ErrEdgeNotFound {
-				return err
+			if errr != nil && errr != ErrEdgeNotFound {
+				return errr
 			}
 		}
 
@@ -2024,9 +2024,9 @@ func updateEdgePolicy(tx kvdb.RwTx, edge *ChannelEdgePolicy) (bool, error) {
 
 	// Finally, with the direction of the edge being updated
 	// identified, we update the on-disk edge representation.
-	err = putChanEdgePolicy(edges, nodes, edge, fromNode, toNode)
-	if err != nil {
-		return false, err
+	errr := putChanEdgePolicy(edges, nodes, edge, fromNode, toNode)
+	if errr != nil {
+		return false, errr
 	}
 
 	return isUpdate1, nil

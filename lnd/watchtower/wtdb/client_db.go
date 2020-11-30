@@ -1060,9 +1060,9 @@ func putClientSessionBody(sessions kvdb.RwBucket,
 	}
 
 	var b bytes.Buffer
-	err = session.Encode(&b)
-	if err != nil {
-		return err
+	errr := session.Encode(&b)
+	if errr != nil {
+		return errr
 	}
 
 	return sessionBkt.Put(cSessionBody, b.Bytes())

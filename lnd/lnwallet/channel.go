@@ -4799,9 +4799,9 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 	// sync now to ensure the revocation producer state is consistent with
 	// the current commitment height and also to advance the on-disk
 	// commitment chain.
-	err = lc.channelState.AdvanceCommitChainTail(fwdPkg, localPeerUpdates)
-	if err != nil {
-		return nil, nil, nil, nil, err
+	errr := lc.channelState.AdvanceCommitChainTail(fwdPkg, localPeerUpdates)
+	if errr != nil {
+		return nil, nil, nil, nil, errr
 	}
 
 	// Since they revoked the current lowest height in their commitment
@@ -5290,9 +5290,9 @@ func (lc *LightningChannel) getSignedCommitTx() (*wire.MsgTx, error) {
 	// With this, we then generate the full witness so the caller can
 	// broadcast a fully signed transaction.
 	lc.signDesc.SigHashes = txscript.NewTxSigHashes(commitTx)
-	ourSig, err := lc.Signer.SignOutputRaw(commitTx, lc.signDesc)
-	if err != nil {
-		return nil, err
+	ourSig, errr := lc.Signer.SignOutputRaw(commitTx, lc.signDesc)
+	if errr != nil {
+		return nil, errr
 	}
 
 	// With the final signature generated, create the witness stack

@@ -1487,12 +1487,12 @@ func initNeutrinoBackend(cfg *Config, chainDir string) (*neutrino.ChainService,
 			"database: %v", err)
 	}
 
-	headerStateAssertion, err := parseHeaderStateAssertion(
+	headerStateAssertion, errr := parseHeaderStateAssertion(
 		cfg.NeutrinoMode.AssertFilterHeader,
 	)
-	if err != nil {
+	if errr != nil {
 		db.Close()
-		return nil, nil, err
+		return nil, nil, errr
 	}
 
 	// With the database open, we can now create an instance of the

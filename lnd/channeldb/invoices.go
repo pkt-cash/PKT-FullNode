@@ -552,12 +552,12 @@ func (d *DB) AddInvoice(newInvoice *Invoice, paymentHash lntypes.Hash) (
 			invoiceNum = byteOrder.Uint32(invoiceCounter)
 		}
 
-		newIndex, err := putInvoice(
+		newIndex, errr := putInvoice(
 			invoices, invoiceIndex, payAddrIndex, addIndex,
 			newInvoice, invoiceNum, paymentHash,
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return errr
 		}
 
 		invoiceAddIndex = newIndex
@@ -938,20 +938,20 @@ func (d *DB) UpdateInvoice(ref InvoiceRef,
 
 		// Retrieve the invoice number for this invoice using the
 		// provided invoice reference.
-		invoiceNum, err := fetchInvoiceNumByRef(
+		invoiceNum, errr := fetchInvoiceNumByRef(
 			invoiceIndex, payAddrIndex, ref,
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return errr
 
 		}
 		payHash := ref.PayHash()
-		updatedInvoice, err = d.updateInvoice(
+		updatedInvoice, errr = d.updateInvoice(
 			payHash, invoices, settleIndex, invoiceNum,
 			callback,
 		)
 
-		return err
+		return errr
 	}, func() {
 		updatedInvoice = nil
 	})
@@ -1061,9 +1061,9 @@ func putInvoice(invoices, invoiceIndex, payAddrIndex, addIndex kvdb.RwBucket,
 	// Next, we'll obtain the next add invoice index (sequence
 	// number), so we can properly place this invoice within this
 	// event stream.
-	nextAddSeqNo, err := addIndex.NextSequence()
-	if err != nil {
-		return 0, err
+	nextAddSeqNo, errr := addIndex.NextSequence()
+	if errr != nil {
+		return 0, errr
 	}
 
 	// With the next sequence obtained, we'll updating the event series in

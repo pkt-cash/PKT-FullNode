@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -770,10 +770,11 @@ func TestPaymentRouteSerialization(t *testing.T) {
 				// duplicate payment hash bucket.
 				var payInfo *PaymentCreationInfo
 				if i < numPayments-1 {
-					payInfo, err = makeRandPaymentCreationInfo()
-					if err != nil {
+					var errr error
+					payInfo, errr = makeRandPaymentCreationInfo()
+					if errr != nil {
 						t.Fatalf("unable to create "+
-							"payment: %v", err)
+							"payment: %v", errr)
 					}
 				} else {
 					payInfo = oldPayments[0].Info
@@ -782,20 +783,20 @@ func TestPaymentRouteSerialization(t *testing.T) {
 				// Next, legacy encoded when needed, we'll
 				// serialize the info and the attempt.
 				var payInfoBytes bytes.Buffer
-				err = serializePaymentCreationInfo(
+				errr := serializePaymentCreationInfo(
 					&payInfoBytes, payInfo,
 				)
-				if err != nil {
+				if errr != nil {
 					t.Fatalf("unable to encode pay "+
-						"info: %v", err)
+						"info: %v", errr)
 				}
 				var payAttemptBytes bytes.Buffer
-				err = serializePaymentAttemptInfoLegacy(
+				errr = serializePaymentAttemptInfoLegacy(
 					&payAttemptBytes, &sharedPayAttempt,
 				)
-				if err != nil {
+				if errr != nil {
 					t.Fatalf("unable to encode payment attempt: "+
-						"%v", err)
+						"%v", errr)
 				}
 
 				// Before we write to disk, we'll need to fetch

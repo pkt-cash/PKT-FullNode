@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtmock"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 type mockPunisher struct {
@@ -126,10 +127,10 @@ func TestLookoutBreachMatching(t *testing.T) {
 
 	// Construct two distinct transactions, that will be used to test the
 	// breach hint matching.
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := wire.NewMsgTx(constants.TxVersion)
 	hash1 := tx.TxHash()
 
-	tx2 := wire.NewMsgTx(wire.TxVersion + 1)
+	tx2 := wire.NewMsgTx(constants.TxVersion + 1)
 	hash2 := tx2.TxHash()
 
 	if bytes.Equal(hash1[:], hash2[:]) {

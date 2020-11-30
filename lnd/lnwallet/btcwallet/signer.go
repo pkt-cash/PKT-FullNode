@@ -1,17 +1,18 @@
 package btcwallet
 
 import (
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // FetchInputInfo queries for the WalletController's knowledge of the passed
@@ -48,7 +49,7 @@ func (b *BtcWallet) FetchInputInfo(prevOut *wire.OutPoint) (*lnwallet.Utxo, erro
 // KeyLocator.
 func deriveFromKeyLoc(scopedMgr *waddrmgr.ScopedKeyManager,
 	addrmgrNs walletdb.ReadWriteBucket,
-	keyLoc keychain.KeyLocator) (*btcec.PrivateKey, error) {
+	keyLoc keychain.KeyLocator) (*btcec.PrivateKey, er.R) {
 
 	path := waddrmgr.DerivationPath{
 		Account: uint32(keyLoc.Family),
@@ -75,11 +76,10 @@ func (b *BtcWallet) deriveKeyByLocator(keyLoc keychain.KeyLocator) (*btcec.Priva
 	}
 
 	var key *btcec.PrivateKey
-	err = walletdb.Update(b.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(b.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-
 		key, err = deriveFromKeyLoc(scopedMgr, addrmgrNs, keyLoc)
-		if waddrmgr.IsError(err, waddrmgr.ErrAccountNotFound) {
+		if waddrmgr.ErrAccountNotFound.Is(err) {
 			// If we've reached this point, then the account
 			// doesn't yet exist, so we'll create it now to ensure
 			// we can sign.

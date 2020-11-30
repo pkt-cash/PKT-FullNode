@@ -199,8 +199,8 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 				Height: uint32(height),
 			}
 			url := "/v2/chainnotifier/register/blocks"
-			c, err := openWebSocket(a, url, "POST", req, nil)
-			require.Nil(t, err, "websocket")
+			c, errr := openWebSocket(a, url, "POST", req, nil)
+			require.Nil(t, errr, "websocket")
 			defer func() {
 				_ = c.WriteMessage(
 					websocket.CloseMessage,
@@ -292,12 +292,12 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			// This time we send the macaroon in the special header
 			// Sec-Websocket-Protocol which is the only header field
 			// available to browsers when opening a WebSocket.
-			mac, err := a.ReadMacaroon(
+			mac, errr := a.ReadMacaroon(
 				a.AdminMacPath(), defaultTimeout,
 			)
-			require.NoError(t, err, "read admin mac")
-			macBytes, err := mac.MarshalBinary()
-			require.NoError(t, err, "marshal admin mac")
+			require.NoError(t, errr, "read admin mac")
+			macBytes, errr := mac.MarshalBinary()
+			require.NoError(t, errr, "marshal admin mac")
 
 			customHeader := make(http.Header)
 			customHeader.Set(
@@ -306,10 +306,10 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 					hex.EncodeToString(macBytes),
 				),
 			)
-			c, err := openWebSocket(
+			c, errr := openWebSocket(
 				a, url, "POST", req, customHeader,
 			)
-			require.Nil(t, err, "websocket")
+			require.Nil(t, errr, "websocket")
 			defer func() {
 				_ = c.WriteMessage(
 					websocket.CloseMessage,

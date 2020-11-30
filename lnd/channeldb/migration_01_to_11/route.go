@@ -279,9 +279,10 @@ func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, error) {
 				hopData.NextAddress[:], nextHop,
 			)
 
-			payload, err = sphinx.NewHopPayload(&hopData, nil)
-			if err != nil {
-				return nil, err
+			var errr error
+			payload, errr = sphinx.NewHopPayload(&hopData, nil)
+			if errr != nil {
+				return nil, errr
 			}
 		} else {
 			// For non-legacy payloads, we'll need to pack the

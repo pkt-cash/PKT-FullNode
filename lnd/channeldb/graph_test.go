@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -3151,22 +3151,22 @@ func TestLightningNodeSigVerification(t *testing.T) {
 	}
 
 	// Create a LightningNode from the same private key.
-	db, cleanUp, err := MakeTestDB()
-	if err != nil {
-		t.Fatalf("unable to make test database: %v", err)
+	db, cleanUp, errr := MakeTestDB()
+	if errr != nil {
+		t.Fatalf("unable to make test database: %v", errr)
 	}
 	defer cleanUp()
 
-	node, err := createLightningNode(db, priv)
-	if err != nil {
-		t.Fatalf("unable to create node: %v", err)
+	node, errr := createLightningNode(db, priv)
+	if errr != nil {
+		t.Fatalf("unable to create node: %v", errr)
 	}
 
 	// And finally check that we can verify the same signature from the
 	// pubkey returned from the lightning node.
-	nodePub, err := node.PubKey()
-	if err != nil {
-		t.Fatalf("unable to get pubkey: %v", err)
+	nodePub, errr := node.PubKey()
+	if errr != nil {
+		t.Fatalf("unable to get pubkey: %v", errr)
 	}
 
 	if !sign.Verify(data[:], nodePub) {

@@ -34,9 +34,9 @@ func makeListener() (*Listener, *lnwire.NetAddress, error) {
 	addr := "localhost:0"
 
 	// Our listener will be local, and the connection remote.
-	listener, err := NewListener(localKeyECDH, addr)
-	if err != nil {
-		return nil, nil, err
+	listener, errr := NewListener(localKeyECDH, addr)
+	if errr != nil {
+		return nil, nil, errr
 	}
 
 	netAddr := &lnwire.NetAddress{

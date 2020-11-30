@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
@@ -28,6 +27,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/lnd/shachain"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -184,9 +184,9 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		return nil, nil, nil, err
 	}
 	bobPreimageProducer := shachain.NewRevocationProducer(*bobRoot)
-	bobFirstRevoke, err := bobPreimageProducer.AtIndex(0)
-	if err != nil {
-		return nil, nil, nil, err
+	bobFirstRevoke, errr := bobPreimageProducer.AtIndex(0)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	bobCommitPoint := input.ComputeCommitmentPoint(bobFirstRevoke[:])
 
@@ -195,44 +195,44 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		return nil, nil, nil, err
 	}
 	alicePreimageProducer := shachain.NewRevocationProducer(*aliceRoot)
-	aliceFirstRevoke, err := alicePreimageProducer.AtIndex(0)
-	if err != nil {
-		return nil, nil, nil, err
+	aliceFirstRevoke, errr := alicePreimageProducer.AtIndex(0)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, err := lnwallet.CreateCommitmentTxns(
+	aliceCommitTx, bobCommitTx, errr := lnwallet.CreateCommitmentTxns(
 		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
 		bobCommitPoint, *fundingTxIn, channeldb.SingleFunderTweaklessBit,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	alicePath, err := ioutil.TempDir("", "alicedb")
-	if err != nil {
-		return nil, nil, nil, err
+	alicePath, errr := ioutil.TempDir("", "alicedb")
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	dbAlice, err := channeldb.Open(alicePath)
-	if err != nil {
-		return nil, nil, nil, err
+	dbAlice, errr := channeldb.Open(alicePath)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	bobPath, err := ioutil.TempDir("", "bobdb")
-	if err != nil {
-		return nil, nil, nil, err
+	bobPath, errr := ioutil.TempDir("", "bobdb")
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	dbBob, err := channeldb.Open(bobPath)
-	if err != nil {
-		return nil, nil, nil, err
+	dbBob, errr := channeldb.Open(bobPath)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	estimator := chainfee.NewStaticEstimator(12500, 0)
-	feePerKw, err := estimator.EstimateFeePerKW(1)
-	if err != nil {
-		return nil, nil, nil, err
+	feePerKw, errr := estimator.EstimateFeePerKW(1)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	// TODO(roasbeef): need to factor in commit fee?
@@ -329,20 +329,20 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 	bobSigner := &mock.SingleSigner{Privkey: bobKeyPriv}
 
 	alicePool := lnwallet.NewSigPool(1, aliceSigner)
-	channelAlice, err := lnwallet.NewLightningChannel(
+	channelAlice, errr := lnwallet.NewLightningChannel(
 		aliceSigner, aliceChannelState, alicePool,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	_ = alicePool.Start()
 
 	bobPool := lnwallet.NewSigPool(1, bobSigner)
-	channelBob, err := lnwallet.NewLightningChannel(
+	channelBob, errr := lnwallet.NewLightningChannel(
 		bobSigner, bobChannelState, bobPool,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	_ = bobPool.Start()
 
@@ -356,12 +356,12 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		},
 	}
 
-	_, currentHeight, err := chainIO.GetBestBlock()
-	if err != nil {
-		return nil, nil, nil, err
+	_, currentHeight, errr := chainIO.GetBestBlock()
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	htlcSwitch, err := htlcswitch.New(htlcswitch.Config{
+	htlcSwitch, errr := htlcswitch.New(htlcswitch.Config{
 		DB:             dbAlice,
 		SwitchPackager: channeldb.NewSwitchPackager(),
 		Notifier:       notifier,
@@ -372,18 +372,18 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		AckEventTicker: ticker.New(
 			htlcswitch.DefaultAckInterval),
 	}, uint32(currentHeight))
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
-	if err = htlcSwitch.Start(); err != nil {
-		return nil, nil, nil, err
+	if errr = htlcSwitch.Start(); errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	nodeSignerAlice := netann.NewNodeSigner(aliceKeySigner)
 
 	const chanActiveTimeout = time.Minute
 
-	chanStatusMgr, err := netann.NewChanStatusManager(&netann.ChanStatusConfig{
+	chanStatusMgr, errr := netann.NewChanStatusManager(&netann.ChanStatusConfig{
 		ChanStatusSampleInterval: 30 * time.Second,
 		ChanEnableTimeout:        chanActiveTimeout,
 		ChanDisableTimeout:       2 * time.Minute,
@@ -394,16 +394,16 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		IsChannelActive:          htlcSwitch.HasActiveLink,
 		ApplyChannelUpdate:       func(*lnwire.ChannelUpdate) error { return nil },
 	})
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
-	if err = chanStatusMgr.Start(); err != nil {
-		return nil, nil, nil, err
+	if errr = chanStatusMgr.Start(); errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	errBuffer, err := queue.NewCircularBuffer(ErrorBufferSize)
-	if err != nil {
-		return nil, nil, nil, err
+	errBuffer, errr := queue.NewCircularBuffer(ErrorBufferSize)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	var pubKey [33]byte

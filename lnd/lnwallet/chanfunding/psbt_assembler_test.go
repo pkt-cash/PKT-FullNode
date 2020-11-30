@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -199,12 +199,12 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 	_, localPubkey := btcec.PrivKeyFromBytes(btcec.S256(), localPrivkey)
 	_, remotePubkey := btcec.PrivKeyFromBytes(btcec.S256(), remotePrivkey)
 	// Make sure the output script address is correct.
-	script, _, err := input.GenFundingPkScript(
+	script, _, errr := input.GenFundingPkScript(
 		localPubkey.SerializeCompressed(),
 		remotePubkey.SerializeCompressed(), int64(chanCapacity),
 	)
-	if err != nil {
-		t.Fatalf("error calculating script: %v", err)
+	if errr != nil {
+		t.Fatalf("error calculating script: %v", errr)
 	}
 	witnessScriptHash := sha256.Sum256(script)
 	addr, err := btcutil.NewAddressWitnessScriptHash(
@@ -217,9 +217,9 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 	// Now as the next step, create a new assembler/intent pair with a base
 	// PSBT to see that we can add an additional output to it.
 	a := NewPsbtAssembler(chanCapacity, pendingPsbt, &params, true)
-	intent, err := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
-	if err != nil {
-		t.Fatalf("error provisioning channel: %v", err)
+	intent, errr := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
+	if errr != nil {
+		t.Fatalf("error provisioning channel: %v", errr)
 	}
 	psbtIntent, ok := intent.(*PsbtIntent)
 	if !ok {
@@ -228,9 +228,9 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 	psbtIntent.BindKeys(
 		&keychain.KeyDescriptor{PubKey: localPubkey}, remotePubkey,
 	)
-	newAddr, amt, twoOutPsbt, err := psbtIntent.FundingParams()
-	if err != nil {
-		t.Fatalf("unable to get funding params: %v", err)
+	newAddr, amt, twoOutPsbt, errr := psbtIntent.FundingParams()
+	if errr != nil {
+		t.Fatalf("unable to get funding params: %v", errr)
 	}
 	if addr.EncodeAddress() != newAddr.EncodeAddress() {
 		t.Fatalf("unexpected address. got %s wanted %s", newAddr,

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -764,16 +764,17 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 	}()
 
 	var alreadyConnected bool
+	var errr error
 	select {
 	case alreadyConnected = <-connected:
-	case err = <-errChan:
+	case errr = <-errChan:
 	case <-a.quit:
 		return
 	}
 
-	if err != nil {
+	if errr != nil {
 		log.Warnf("Unable to connect to %x: %v",
-			pub.SerializeCompressed(), err)
+			pub.SerializeCompressed(), errr)
 
 		// Since we failed to connect to them, we'll mark them as
 		// failed so that we don't attempt to connect to them again.
@@ -810,10 +811,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 			return
 		}
 
-		err = a.cfg.DisconnectPeer(pub)
-		if err != nil {
+		errr = a.cfg.DisconnectPeer(pub)
+		if errr != nil {
 			log.Warnf("Unable to disconnect peer %x: %v",
-				pub.SerializeCompressed(), err)
+				pub.SerializeCompressed(), errr)
 		}
 
 		// Now that we have disconnected, we can remove this node from
@@ -835,10 +836,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 	a.pendingMtx.Unlock()
 
 	// We can then begin the funding workflow with this peer.
-	err = a.cfg.ChanController.OpenChannel(pub, directive.ChanAmt)
-	if err != nil {
+	errr = a.cfg.ChanController.OpenChannel(pub, directive.ChanAmt)
+	if errr != nil {
 		log.Warnf("Unable to open channel to %x of %v: %v",
-			pub.SerializeCompressed(), directive.ChanAmt, err)
+			pub.SerializeCompressed(), directive.ChanAmt, errr)
 
 		// As the attempt failed, we'll clear the peer from the set of
 		// pending opens and mark them as failed so we don't attempt to
@@ -859,10 +860,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 			return
 		}
 
-		err = a.cfg.DisconnectPeer(pub)
-		if err != nil {
+		errr = a.cfg.DisconnectPeer(pub)
+		if errr != nil {
 			log.Warnf("Unable to disconnect peer %x: %v",
-				pub.SerializeCompressed(), err)
+				pub.SerializeCompressed(), errr)
 		}
 	}
 

@@ -569,11 +569,11 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 		RevocationKey: revokePubKey,
 		ToRemoteKey:   bobPayKey,
 	}
-	commitmentTx, err := CreateCommitTx(
+	commitmentTx, errr := CreateCommitTx(
 		channelType, *fakeFundingTxIn, keyRing, aliceChanCfg,
 		bobChanCfg, channelBalance, channelBalance, 0,
 	)
-	if err != nil {
+	if errr != nil {
 		t.Fatalf("unable to create commitment transaction: %v", nil)
 	}
 
@@ -582,9 +582,9 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 
 	// We're testing an uncooperative close, output sweep, so construct a
 	// transaction which sweeps the funds to a random address.
-	targetOutput, err := input.CommitScriptUnencumbered(aliceKeyPub)
-	if err != nil {
-		t.Fatalf("unable to create target output: %v", err)
+	targetOutput, errr := input.CommitScriptUnencumbered(aliceKeyPub)
+	if errr != nil {
+		t.Fatalf("unable to create target output: %v", errr)
 	}
 	sweepTx := wire.NewMsgTx(2)
 	sweepTx.AddTxIn(wire.NewTxIn(&wire.OutPoint{
@@ -597,11 +597,11 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 	})
 
 	// First, we'll test spending with Alice's key after the timeout.
-	delayScript, err := input.CommitScriptToSelf(
+	delayScript, errr := input.CommitScriptToSelf(
 		csvTimeout, aliceDelayKey, revokePubKey,
 	)
-	if err != nil {
-		t.Fatalf("unable to generate alice delay script: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to generate alice delay script: %v", errr)
 	}
 	sweepTx.TxIn[0].Sequence = input.LockTimeToSequence(false, csvTimeout)
 	signDesc := &input.SignDescriptor{
@@ -617,11 +617,11 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
-	aliceWitnessSpend, err := input.CommitSpendTimeout(
+	aliceWitnessSpend, errr := input.CommitSpendTimeout(
 		aliceSelfOutputSigner, signDesc, sweepTx,
 	)
-	if err != nil {
-		t.Fatalf("unable to generate delay commit spend witness: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to generate delay commit spend witness: %v", errr)
 	}
 	sweepTx.TxIn[0].Witness = aliceWitnessSpend
 	vm, err := txscript.NewEngine(delayOutput.PkScript,
@@ -652,10 +652,10 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
-	bobWitnessSpend, err := input.CommitSpendRevoke(localSigner, signDesc,
+	bobWitnessSpend, errr := input.CommitSpendRevoke(localSigner, signDesc,
 		sweepTx)
-	if err != nil {
-		t.Fatalf("unable to generate revocation witness: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to generate revocation witness: %v", errr)
 	}
 	sweepTx.TxIn[0].Witness = bobWitnessSpend
 	vm, err = txscript.NewEngine(delayOutput.PkScript,
@@ -680,9 +680,9 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 
 	// Finally, we test bob sweeping his output as normal in the case that
 	// Alice broadcasts this commitment transaction.
-	bobScriptP2WKH, err := input.CommitScriptUnencumbered(bobPayKey)
-	if err != nil {
-		t.Fatalf("unable to create bob p2wkh script: %v", err)
+	bobScriptP2WKH, errr := input.CommitScriptUnencumbered(bobPayKey)
+	if errr != nil {
+		t.Fatalf("unable to create bob p2wkh script: %v", errr)
 	}
 	signDesc = &input.SignDescriptor{
 		KeyDesc: keychain.KeyDescriptor{
@@ -700,11 +700,11 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 	if !tweakless {
 		signDesc.SingleTweak = localCommitTweak
 	}
-	bobRegularSpend, err := input.CommitSpendNoDelay(
+	bobRegularSpend, errr := input.CommitSpendNoDelay(
 		localSigner, signDesc, sweepTx, tweakless,
 	)
-	if err != nil {
-		t.Fatalf("unable to create bob regular spend: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create bob regular spend: %v", errr)
 	}
 	sweepTx.TxIn[0].Witness = bobRegularSpend
 	vm, err = txscript.NewEngine(

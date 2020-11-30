@@ -618,9 +618,9 @@ func nextPaymentSequence(tx kvdb.RwTx) ([]byte, error) {
 		return nil, err
 	}
 
-	seq, err := payments.NextSequence()
-	if err != nil {
-		return nil, err
+	seq, errr := payments.NextSequence()
+	if errr != nil {
+		return nil, errr
 	}
 
 	b := make([]byte, 8)

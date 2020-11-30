@@ -1324,13 +1324,13 @@ func (l *LightningWallet) verifyFundingInputs(fundingTx *wire.MsgTx,
 			if err != nil {
 				return fmt.Errorf("cannot create script: %v", err)
 			}
-			output, err := l.Cfg.ChainIO.GetUtxo(
+			output, errr := l.Cfg.ChainIO.GetUtxo(
 				&txin.PreviousOutPoint,
 				pkScript.Script(), 0, l.quit,
 			)
 			if output == nil {
 				return fmt.Errorf("input to funding tx does "+
-					"not exist: %v", err)
+					"not exist: %v", errr)
 			}
 
 			// Ensure that the witness+sigScript combo is valid.

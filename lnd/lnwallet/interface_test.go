@@ -250,9 +250,9 @@ func loadTestCredits(miner *rpctest.Harness, w *lnwallet.LightningWallet,
 	if err != nil {
 		return fmt.Errorf("unable to create amt: %v", err)
 	}
-	expectedBalance, err := w.ConfirmedBalance(1)
-	if err != nil {
-		return err
+	expectedBalance, errr := w.ConfirmedBalance(1)
+	if errr != nil {
+		return errr
 	}
 	expectedBalance += btcutil.Amount(int64(satoshiPerOutput) * int64(numOutputs))
 	addrs := make([]btcutil.Address, 0, numOutputs)
@@ -423,9 +423,9 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 
 	// Alice initiates a channel funded with 5 BTC for each side, so 10 BTC
 	// total. She also generates 2 BTC in change.
-	feePerKw, err := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
-	if err != nil {
-		t.Fatalf("unable to query fee estimator: %v", err)
+	feePerKw, errr := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
+	if errr != nil {
+		t.Fatalf("unable to query fee estimator: %v", errr)
 	}
 	aliceReq := &lnwallet.InitFundingReserveMsg{
 		ChainHash:        chainHash,
@@ -438,9 +438,9 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 		PushMSat:         0,
 		Flags:            lnwire.FFAnnounceChannel,
 	}
-	aliceChanReservation, err := alice.InitChannelReservation(aliceReq)
-	if err != nil {
-		t.Fatalf("unable to initialize funding reservation: %v", err)
+	aliceChanReservation, errr := alice.InitChannelReservation(aliceReq)
+	if errr != nil {
+		t.Fatalf("unable to initialize funding reservation: %v", errr)
 	}
 	aliceChanReservation.SetNumConfsRequired(numReqConfs)
 	channelConstraints := &channeldb.ChannelConstraints{
@@ -451,11 +451,11 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 		MaxAcceptedHtlcs: input.MaxHTLCNumber / 2,
 		CsvDelay:         csvDelay,
 	}
-	err = aliceChanReservation.CommitConstraints(
+	errr = aliceChanReservation.CommitConstraints(
 		channelConstraints, defaultMaxLocalCsvDelay,
 	)
-	if err != nil {
-		t.Fatalf("unable to verify constraints: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to verify constraints: %v", errr)
 	}
 
 	// The channel reservation should now be populated with a multi-sig key
@@ -483,23 +483,23 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 		PushMSat:         0,
 		Flags:            lnwire.FFAnnounceChannel,
 	}
-	bobChanReservation, err := bob.InitChannelReservation(bobReq)
-	if err != nil {
-		t.Fatalf("bob unable to init channel reservation: %v", err)
+	bobChanReservation, errr := bob.InitChannelReservation(bobReq)
+	if errr != nil {
+		t.Fatalf("bob unable to init channel reservation: %v", errr)
 	}
-	err = bobChanReservation.CommitConstraints(
+	errr = bobChanReservation.CommitConstraints(
 		channelConstraints, defaultMaxLocalCsvDelay,
 	)
-	if err != nil {
-		t.Fatalf("unable to verify constraints: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to verify constraints: %v", errr)
 	}
 	bobChanReservation.SetNumConfsRequired(numReqConfs)
 
 	assertContributionInitPopulated(t, bobChanReservation.OurContribution())
 
-	err = bobChanReservation.ProcessContribution(aliceContribution)
-	if err != nil {
-		t.Fatalf("bob unable to process alice's contribution: %v", err)
+	errr = bobChanReservation.ProcessContribution(aliceContribution)
+	if errr != nil {
+		t.Fatalf("bob unable to process alice's contribution: %v", errr)
 	}
 	assertContributionInitPopulated(t, bobChanReservation.TheirContribution())
 
@@ -509,9 +509,9 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 	// Alice. After this phase, Alice should have all the necessary
 	// material required to craft the funding transaction and commitment
 	// transactions.
-	err = aliceChanReservation.ProcessContribution(bobContribution)
-	if err != nil {
-		t.Fatalf("alice unable to process bob's contribution: %v", err)
+	errr = aliceChanReservation.ProcessContribution(bobContribution)
+	if errr != nil {
+		t.Fatalf("alice unable to process bob's contribution: %v", errr)
 	}
 	assertContributionInitPopulated(t, aliceChanReservation.TheirContribution())
 
@@ -535,20 +535,20 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 
 	// To conclude, we'll consume first Alice's signatures with Bob, and
 	// then the other way around.
-	_, err = aliceChanReservation.CompleteReservation(
+	_, errr = aliceChanReservation.CompleteReservation(
 		bobFundingSigs, bobCommitSig,
 	)
-	if err != nil {
+	if errr != nil {
 		for _, in := range aliceChanReservation.FinalFundingTx().TxIn {
 			fmt.Println(in.PreviousOutPoint.String())
 		}
-		t.Fatalf("unable to consume alice's sigs: %v", err)
+		t.Fatalf("unable to consume alice's sigs: %v", errr)
 	}
-	_, err = bobChanReservation.CompleteReservation(
+	_, errr = bobChanReservation.CompleteReservation(
 		aliceFundingSigs, aliceCommitSig,
 	)
-	if err != nil {
-		t.Fatalf("unable to consume bob's sigs: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to consume bob's sigs: %v", errr)
 	}
 
 	// At this point, the funding tx should have been populated.
@@ -560,9 +560,9 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 	// The resulting active channel state should have been persisted to the
 	// DB.
 	fundingSha := fundingTx.TxHash()
-	aliceChannels, err := alice.Cfg.Database.FetchOpenChannels(bobPub)
-	if err != nil {
-		t.Fatalf("unable to retrieve channel from DB: %v", err)
+	aliceChannels, errr := alice.Cfg.Database.FetchOpenChannels(bobPub)
+	if errr != nil {
+		t.Fatalf("unable to retrieve channel from DB: %v", errr)
 	}
 	if !bytes.Equal(aliceChannels[0].FundingOutpoint.Hash[:], fundingSha[:]) {
 		t.Fatalf("channel state not properly saved")
@@ -570,9 +570,9 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 	if !aliceChannels[0].ChanType.IsDualFunder() {
 		t.Fatalf("channel not detected as dual funder")
 	}
-	bobChannels, err := bob.Cfg.Database.FetchOpenChannels(alicePub)
-	if err != nil {
-		t.Fatalf("unable to retrieve channel from DB: %v", err)
+	bobChannels, errr := bob.Cfg.Database.FetchOpenChannels(alicePub)
+	if errr != nil {
+		t.Fatalf("unable to retrieve channel from DB: %v", errr)
 	}
 	if !bytes.Equal(bobChannels[0].FundingOutpoint.Hash[:], fundingSha[:]) {
 		t.Fatalf("channel state not properly saved")
@@ -582,16 +582,16 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 	}
 
 	// Let Alice publish the funding transaction.
-	err = alice.PublishTransaction(fundingTx, "")
-	if err != nil {
-		t.Fatalf("unable to publish funding tx: %v", err)
+	errr = alice.PublishTransaction(fundingTx, "")
+	if errr != nil {
+		t.Fatalf("unable to publish funding tx: %v", errr)
 	}
 
 	// Mine a single block, the funding transaction should be included
 	// within this block.
-	err = waitForMempoolTx(miner, &fundingSha)
-	if err != nil {
-		t.Fatalf("tx not relayed to miner: %v", err)
+	errr = waitForMempoolTx(miner, &fundingSha)
+	if errr != nil {
+		t.Fatalf("tx not relayed to miner: %v", errr)
 	}
 	blockHashes, err := miner.Node.Generate(1)
 	if err != nil {
@@ -613,13 +613,13 @@ func testDualFundingReservationWorkflow(miner *rpctest.Harness,
 	assertReservationDeleted(bobChanReservation, t)
 
 	// Wait for wallets to catch up to prevent issues in subsequent tests.
-	err = waitForWalletSync(miner, alice)
-	if err != nil {
-		t.Fatalf("unable to sync alice: %v", err)
+	errr = waitForWalletSync(miner, alice)
+	if errr != nil {
+		t.Fatalf("unable to sync alice: %v", errr)
 	}
-	err = waitForWalletSync(miner, bob)
-	if err != nil {
-		t.Fatalf("unable to sync bob: %v", err)
+	errr = waitForWalletSync(miner, bob)
+	if errr != nil {
+		t.Fatalf("unable to sync bob: %v", errr)
 	}
 }
 
@@ -631,9 +631,9 @@ func testFundingTransactionLockedOutputs(miner *rpctest.Harness,
 	if err != nil {
 		t.Fatalf("unable to create amt: %v", err)
 	}
-	feePerKw, err := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
-	if err != nil {
-		t.Fatalf("unable to query fee estimator: %v", err)
+	feePerKw, errr := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
+	if errr != nil {
+		t.Fatalf("unable to query fee estimator: %v", errr)
 	}
 	req := &lnwallet.InitFundingReserveMsg{
 		ChainHash:        chainHash,
@@ -670,11 +670,11 @@ func testFundingTransactionLockedOutputs(miner *rpctest.Harness,
 		Flags:            lnwire.FFAnnounceChannel,
 		PendingChanID:    [32]byte{1, 2, 3, 4},
 	}
-	failedReservation, err := alice.InitChannelReservation(failedReq)
-	if err == nil {
+	failedReservation, errr := alice.InitChannelReservation(failedReq)
+	if errr == nil {
 		t.Fatalf("not error returned, should fail on coin selection")
 	}
-	if _, ok := err.(*chanfunding.ErrInsufficientFunds); !ok {
+	if _, ok := errr.(*chanfunding.ErrInsufficientFunds); !ok {
 		t.Fatalf("error not coinselect error: %v", err)
 	}
 	if failedReservation != nil {
@@ -801,14 +801,14 @@ func testReservationInitiatorBalanceBelowDustCancel(miner *rpctest.Harness,
 		Flags:            lnwire.FFAnnounceChannel,
 		CommitType:       lnwallet.CommitmentTypeTweakless,
 	}
-	_, err = alice.InitChannelReservation(req)
+	_, errr := alice.InitChannelReservation(req)
 	switch {
-	case err == nil:
+	case errr == nil:
 		t.Fatalf("initialization should have failed due to " +
 			"insufficient local amount")
 
-	case !strings.Contains(err.Error(), "funder balance too small"):
-		t.Fatalf("incorrect error: %v", err)
+	case !strings.Contains(errr.Error(), "funder balance too small"):
+		t.Fatalf("incorrect error: %v", errr)
 	}
 }
 
@@ -870,9 +870,9 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 		t.Fatalf("unable to create amt: %v", err)
 	}
 	pushAmt := lnwire.NewMSatFromSatoshis(btcutil.UnitsPerCoin())
-	feePerKw, err := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
-	if err != nil {
-		t.Fatalf("unable to query fee estimator: %v", err)
+	feePerKw, errr := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
+	if errr != nil {
+		t.Fatalf("unable to query fee estimator: %v", errr)
 	}
 	aliceReq := &lnwallet.InitFundingReserveMsg{
 		ChainHash:        chainHash,
@@ -888,9 +888,9 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 		CommitType:       commitType,
 		ChanFunder:       aliceChanFunder,
 	}
-	aliceChanReservation, err := alice.InitChannelReservation(aliceReq)
-	if err != nil {
-		t.Fatalf("unable to init channel reservation: %v", err)
+	aliceChanReservation, errr := alice.InitChannelReservation(aliceReq)
+	if errr != nil {
+		t.Fatalf("unable to init channel reservation: %v", errr)
 	}
 	aliceChanReservation.SetNumConfsRequired(numReqConfs)
 	channelConstraints := &channeldb.ChannelConstraints{
@@ -901,11 +901,11 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 		MaxAcceptedHtlcs: input.MaxHTLCNumber / 2,
 		CsvDelay:         csvDelay,
 	}
-	err = aliceChanReservation.CommitConstraints(
+	errr = aliceChanReservation.CommitConstraints(
 		channelConstraints, defaultMaxLocalCsvDelay,
 	)
-	if err != nil {
-		t.Fatalf("unable to verify constraints: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to verify constraints: %v", errr)
 	}
 
 	// Verify all contribution fields have been set properly, but only if
@@ -940,15 +940,15 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 		Flags:            lnwire.FFAnnounceChannel,
 		CommitType:       commitType,
 	}
-	bobChanReservation, err := bob.InitChannelReservation(bobReq)
-	if err != nil {
-		t.Fatalf("unable to create bob reservation: %v", err)
+	bobChanReservation, errr := bob.InitChannelReservation(bobReq)
+	if errr != nil {
+		t.Fatalf("unable to create bob reservation: %v", errr)
 	}
-	err = bobChanReservation.CommitConstraints(
+	errr = bobChanReservation.CommitConstraints(
 		channelConstraints, defaultMaxLocalCsvDelay,
 	)
-	if err != nil {
-		t.Fatalf("unable to verify constraints: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to verify constraints: %v", errr)
 	}
 	bobChanReservation.SetNumConfsRequired(numReqConfs)
 
@@ -958,16 +958,16 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 
 	// With his contribution generated, he can now process Alice's
 	// contribution.
-	err = bobChanReservation.ProcessSingleContribution(aliceContribution)
-	if err != nil {
-		t.Fatalf("bob unable to process alice's contribution: %v", err)
+	errr = bobChanReservation.ProcessSingleContribution(aliceContribution)
+	if errr != nil {
+		t.Fatalf("bob unable to process alice's contribution: %v", errr)
 	}
 	assertContributionInitPopulated(t, bobChanReservation.TheirContribution())
 
 	// Bob will next send over his contribution to Alice, we simulate this
 	// by having Alice immediately process his contribution.
-	err = aliceChanReservation.ProcessContribution(bobContribution)
-	if err != nil {
+	errr = aliceChanReservation.ProcessContribution(bobContribution)
+	if errr != nil {
 		t.Fatalf("alice unable to process bob's contribution")
 	}
 	assertContributionInitPopulated(t, bobChanReservation.TheirContribution())
@@ -1008,11 +1008,11 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 	// Next, Alice will send over her signature for Bob's commitment
 	// transaction, as well as the funding outpoint.
 	fundingPoint := aliceChanReservation.FundingOutpoint()
-	_, err = bobChanReservation.CompleteReservationSingle(
+	_, errr = bobChanReservation.CompleteReservationSingle(
 		fundingPoint, aliceCommitSig,
 	)
-	if err != nil {
-		t.Fatalf("bob unable to consume single reservation: %v", err)
+	if errr != nil {
+		t.Fatalf("bob unable to consume single reservation: %v", errr)
 	}
 
 	// Finally, we'll conclude the reservation process by sending over
@@ -1022,11 +1022,11 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 	if bobCommitSig == nil {
 		t.Fatalf("bob failed to generate commitment signature: %v", err)
 	}
-	_, err = aliceChanReservation.CompleteReservation(
+	_, errr = aliceChanReservation.CompleteReservation(
 		nil, bobCommitSig,
 	)
-	if err != nil {
-		t.Fatalf("alice unable to complete reservation: %v", err)
+	if errr != nil {
+		t.Fatalf("alice unable to complete reservation: %v", errr)
 	}
 
 	// If the caller provided an alternative way to obtain the funding tx,
@@ -1041,12 +1041,12 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 	// The resulting active channel state should have been persisted to the
 	// DB for both Alice and Bob.
 	fundingSha := fundingTx.TxHash()
-	aliceChannels, err := alice.Cfg.Database.FetchOpenChannels(bobPub)
-	if err != nil {
-		t.Fatalf("unable to retrieve channel from DB: %v", err)
+	aliceChannels, errr := alice.Cfg.Database.FetchOpenChannels(bobPub)
+	if errr != nil {
+		t.Fatalf("unable to retrieve channel from DB: %v", errr)
 	}
 	if len(aliceChannels) != 1 {
-		t.Fatalf("alice didn't save channel state: %v", err)
+		t.Fatalf("alice didn't save channel state: %v", errr)
 	}
 	if !bytes.Equal(aliceChannels[0].FundingOutpoint.Hash[:], fundingSha[:]) {
 		t.Fatalf("channel state not properly saved: %v vs %v",
@@ -1061,12 +1061,12 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 			channeldb.SingleFunderBit, aliceChannels[0].ChanType)
 	}
 
-	bobChannels, err := bob.Cfg.Database.FetchOpenChannels(alicePub)
-	if err != nil {
-		t.Fatalf("unable to retrieve channel from DB: %v", err)
+	bobChannels, errr := bob.Cfg.Database.FetchOpenChannels(alicePub)
+	if errr != nil {
+		t.Fatalf("unable to retrieve channel from DB: %v", errr)
 	}
 	if len(bobChannels) != 1 {
-		t.Fatalf("bob didn't save channel state: %v", err)
+		t.Fatalf("bob didn't save channel state: %v", errr)
 	}
 	if !bytes.Equal(bobChannels[0].FundingOutpoint.Hash[:], fundingSha[:]) {
 		t.Fatalf("channel state not properly saved: %v vs %v",
@@ -1082,16 +1082,16 @@ func testSingleFunderReservationWorkflow(miner *rpctest.Harness,
 	}
 
 	// Let Alice publish the funding transaction.
-	err = alice.PublishTransaction(fundingTx, "")
-	if err != nil {
-		t.Fatalf("unable to publish funding tx: %v", err)
+	errr = alice.PublishTransaction(fundingTx, "")
+	if errr != nil {
+		t.Fatalf("unable to publish funding tx: %v", errr)
 	}
 
 	// Mine a single block, the funding transaction should be included
 	// within this block.
-	err = waitForMempoolTx(miner, &fundingSha)
-	if err != nil {
-		t.Fatalf("tx not relayed to miner: %v", err)
+	errr = waitForMempoolTx(miner, &fundingSha)
+	if errr != nil {
+		t.Fatalf("tx not relayed to miner: %v", errr)
 	}
 	blockHashes, err := miner.Node.Generate(1)
 	if err != nil {
@@ -1182,15 +1182,15 @@ func testListTransactionDetails(miner *rpctest.Harness,
 	// blocks, and our end height, which is the chain tip. This query does
 	// not include unconfirmed transactions, since all of our transactions
 	// should be confirmed.
-	err = waitForWalletSync(miner, alice)
-	if err != nil {
-		t.Fatalf("Couldn't sync Alice's wallet: %v", err)
+	errr := waitForWalletSync(miner, alice)
+	if errr != nil {
+		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
-	txDetails, err := alice.ListTransactionDetails(
+	txDetails, errr := alice.ListTransactionDetails(
 		startHeight, chainTip,
 	)
-	if err != nil {
-		t.Fatalf("unable to fetch tx details: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to fetch tx details: %v", errr)
 	}
 
 	// This is a mapping from:
@@ -1276,35 +1276,35 @@ func testListTransactionDetails(miner *rpctest.Harness,
 		t.Fatalf("unable to make output script: %v", err)
 	}
 	burnOutput := wire.NewTxOut(outputAmt, outputScript)
-	burnTX, err := alice.SendOutputs(
+	burnTX, errr := alice.SendOutputs(
 		[]*wire.TxOut{burnOutput}, 2500, 1, labels.External,
 	)
-	if err != nil {
-		t.Fatalf("unable to create burn tx: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create burn tx: %v", errr)
 	}
 	burnTXID := burnTX.TxHash()
-	err = waitForMempoolTx(miner, &burnTXID)
-	if err != nil {
-		t.Fatalf("tx not relayed to miner: %v", err)
+	errr = waitForMempoolTx(miner, &burnTXID)
+	if errr != nil {
+		t.Fatalf("tx not relayed to miner: %v", errr)
 	}
 
 	// Before we mine the next block, we'll ensure that the above
 	// transaction shows up in the set of unconfirmed transactions returned
 	// by ListTransactionDetails.
-	err = waitForWalletSync(miner, alice)
-	if err != nil {
-		t.Fatalf("Couldn't sync Alice's wallet: %v", err)
+	errr = waitForWalletSync(miner, alice)
+	if errr != nil {
+		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
 
 	// Query our wallet for transactions from the chain tip, including
 	// unconfirmed transactions. The transaction above should be included
 	// with a confirmation height of 0, indicating that it has not been
 	// mined yet.
-	txDetails, err = alice.ListTransactionDetails(
+	txDetails, errr = alice.ListTransactionDetails(
 		chainTip, btcwallet.UnconfirmedHeight,
 	)
-	if err != nil {
-		t.Fatalf("unable to fetch tx details: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to fetch tx details: %v", errr)
 	}
 	var mempoolTxFound bool
 	for _, txDetail := range txDetails {
@@ -1353,15 +1353,15 @@ func testListTransactionDetails(miner *rpctest.Harness,
 	// shown as debiting from the wallet's balance. Start and end height
 	// are inclusive, so we use chainTip for both parameters to get only
 	// transactions from the last block.
-	err = waitForWalletSync(miner, alice)
-	if err != nil {
-		t.Fatalf("Couldn't sync Alice's wallet: %v", err)
+	errr = waitForWalletSync(miner, alice)
+	if errr != nil {
+		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
-	txDetails, err = alice.ListTransactionDetails(
+	txDetails, errr = alice.ListTransactionDetails(
 		chainTip, chainTip,
 	)
-	if err != nil {
-		t.Fatalf("unable to fetch tx details: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to fetch tx details: %v", errr)
 	}
 	var burnTxFound bool
 	for _, txDetail := range txDetails {
@@ -1399,18 +1399,18 @@ func testListTransactionDetails(miner *rpctest.Harness,
 		t.Fatalf("unable to mine block: %v", err)
 	}
 
-	err = waitForWalletSync(miner, alice)
-	if err != nil {
-		t.Fatalf("Couldn't sync Alice's wallet: %v", err)
+	errr = waitForWalletSync(miner, alice)
+	if errr != nil {
+		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
 
 	// Query for transactions only in the latest block. We do not expect
 	// any transactions to be returned.
-	txDetails, err = alice.ListTransactionDetails(
+	txDetails, errr = alice.ListTransactionDetails(
 		chainTip, chainTip,
 	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if errr != nil {
+		t.Fatalf("unexpected error: %v", errr)
 	}
 	if len(txDetails) != 0 {
 		t.Fatalf("expected 0 transactions, got: %v", len(txDetails))
@@ -2035,18 +2035,18 @@ func testSignOutputUsingTweaks(r *rpctest.Harness,
 			Value:    btcutil.UnitsPerCoinI64(),
 			PkScript: keyScript,
 		}
-		tx, err := alice.SendOutputs(
+		tx, errr := alice.SendOutputs(
 			[]*wire.TxOut{newOutput}, 2500, 1, labels.External,
 		)
-		if err != nil {
-			t.Fatalf("unable to create output: %v", err)
+		if errr != nil {
+			t.Fatalf("unable to create output: %v", errr)
 		}
 		txid := tx.TxHash()
 		// Query for the transaction generated above so we can located
 		// the index of our output.
-		err = waitForMempoolTx(r, &txid)
-		if err != nil {
-			t.Fatalf("tx not relayed to miner: %v", err)
+		errr = waitForMempoolTx(r, &txid)
+		if errr != nil {
+			t.Fatalf("tx not relayed to miner: %v", errr)
 		}
 		var outputIndex uint32
 		if bytes.Equal(tx.TxOut[0].PkScript, keyScript) {
@@ -2096,9 +2096,9 @@ func testSignOutputUsingTweaks(r *rpctest.Harness,
 		// With the descriptor created, we use it to generate a
 		// signature, then manually create a valid witness stack we'll
 		// use for signing.
-		spendSig, err := alice.Cfg.Signer.SignOutputRaw(sweepTx, signDesc)
-		if err != nil {
-			t.Fatalf("unable to generate signature: %v", err)
+		spendSig, errr := alice.Cfg.Signer.SignOutputRaw(sweepTx, signDesc)
+		if errr != nil {
+			t.Fatalf("unable to generate signature: %v", errr)
 		}
 		witness := make([][]byte, 2)
 		witness[0] = append(spendSig.Serialize(), byte(params.SigHashAll))
@@ -2134,15 +2134,15 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 	}
 
 	// Give wallet time to catch up.
-	err = waitForWalletSync(r, w)
-	if err != nil {
-		t.Fatalf("unable to sync wallet: %v", err)
+	errr := waitForWalletSync(r, w)
+	if errr != nil {
+		t.Fatalf("unable to sync wallet: %v", errr)
 	}
 
 	// Send some money from the miner to the wallet
-	err = loadTestCredits(r, w, 20, 4)
-	if err != nil {
-		t.Fatalf("unable to send money to lnwallet: %v", err)
+	errr = loadTestCredits(r, w, 20, 4)
+	if errr != nil {
+		t.Fatalf("unable to send money to lnwallet: %v", errr)
 	}
 
 	// Send some money from the wallet back to the miner.
@@ -2159,16 +2159,16 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 		Value:    1e8,
 		PkScript: script,
 	}
-	tx, err := w.SendOutputs(
+	tx, errr := w.SendOutputs(
 		[]*wire.TxOut{output}, 2500, 1, labels.External,
 	)
-	if err != nil {
-		t.Fatalf("unable to send outputs: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to send outputs: %v", errr)
 	}
 	txid := tx.TxHash()
-	err = waitForMempoolTx(r, &txid)
-	if err != nil {
-		t.Fatalf("tx not relayed to miner: %v", err)
+	errr = waitForMempoolTx(r, &txid)
+	if errr != nil {
+		t.Fatalf("tx not relayed to miner: %v", errr)
 	}
 	_, err = r.Node.Generate(50)
 	if err != nil {
@@ -2176,15 +2176,15 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 	}
 
 	// Give wallet time to catch up.
-	err = waitForWalletSync(r, w)
-	if err != nil {
-		t.Fatalf("unable to sync wallet: %v", err)
+	errr = waitForWalletSync(r, w)
+	if errr != nil {
+		t.Fatalf("unable to sync wallet: %v", errr)
 	}
 
 	// Get the original balance.
-	origBalance, err := w.ConfirmedBalance(1)
-	if err != nil {
-		t.Fatalf("unable to query for balance: %v", err)
+	origBalance, errr := w.ConfirmedBalance(1)
+	if errr != nil {
+		t.Fatalf("unable to query for balance: %v", errr)
 	}
 
 	// Now we cause a reorganization as follows.
@@ -2198,9 +2198,9 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 		t.Fatalf("unable to set up mining node: %v", err)
 	}
 	defer r2.TearDown()
-	newBalance, err := w.ConfirmedBalance(1)
-	if err != nil {
-		t.Fatalf("unable to query for balance: %v", err)
+	newBalance, errr := w.ConfirmedBalance(1)
+	if errr != nil {
+		t.Fatalf("unable to query for balance: %v", errr)
 	}
 	if origBalance != newBalance {
 		t.Fatalf("wallet balance incorrect, should have %v, "+
@@ -2283,16 +2283,16 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 		}
 
 		// Give wallet time to catch up.
-		err = waitForWalletSync(r, w)
-		if err != nil {
-			t.Fatalf("unable to sync wallet: %v", err)
+		errr = waitForWalletSync(r, w)
+		if errr != nil {
+			t.Fatalf("unable to sync wallet: %v", errr)
 		}
 	}
 
 	// Now we check that the wallet balance stays the same.
-	newBalance, err = w.ConfirmedBalance(1)
-	if err != nil {
-		t.Fatalf("unable to query for balance: %v", err)
+	newBalance, errr = w.ConfirmedBalance(1)
+	if errr != nil {
+		t.Fatalf("unable to query for balance: %v", errr)
 	}
 	if origBalance != newBalance {
 		t.Fatalf("wallet balance incorrect, should have %v, "+
@@ -3113,26 +3113,26 @@ func TestLightningWallet(t *testing.T) {
 
 	rpcConfig := miningNode.RPCConfig()
 
-	tempDir, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDir, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
-	db, err := channeldb.Open(tempDir)
-	if err != nil {
-		t.Fatalf("unable to create db: %v", err)
+	db, errr := channeldb.Open(tempDir)
+	if errr != nil {
+		t.Fatalf("unable to create db: %v", errr)
 	}
 	testCfg := chainntnfs.CacheConfig{
 		QueryDisable: false,
 	}
-	hintCache, err := chainntnfs.NewHeightHintCache(testCfg, db)
-	if err != nil {
-		t.Fatalf("unable to create height hint cache: %v", err)
+	hintCache, errr := chainntnfs.NewHeightHintCache(testCfg, db)
+	if errr != nil {
+		t.Fatalf("unable to create height hint cache: %v", errr)
 	}
-	chainNotifier, err := btcdnotify.New(
+	chainNotifier, errr := btcdnotify.New(
 		&rpcConfig, netParams, hintCache, hintCache,
 	)
-	if err != nil {
-		t.Fatalf("unable to create notifier: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create notifier: %v", errr)
 	}
 	if err := chainNotifier.Start(); err != nil {
 		t.Fatalf("unable to start notifier: %v", err)

@@ -18,18 +18,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/psbt"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/davecgh/go-spew/spew"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	proxy "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/psbt"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
@@ -70,6 +67,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/sweep"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
 	"github.com/pkt-cash/pktd/lnd/zpay32"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/tv42/zbase32"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
@@ -6674,11 +6674,11 @@ func (r *rpcServer) FundingStateStep(ctx context.Context,
 			return nil, fmt.Errorf("error parsing psbt: %v", err)
 		}
 
-		err = r.server.cc.Wallet.PsbtFundingVerify(
+		errr := r.server.cc.Wallet.PsbtFundingVerify(
 			pendingChanID, packet,
 		)
-		if err != nil {
-			return nil, err
+		if errr != nil {
+			return nil, errr
 		}
 
 	// If this is a transition to finalize the PSBT funding flow, we compare

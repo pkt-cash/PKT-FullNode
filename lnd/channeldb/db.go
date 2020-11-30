@@ -8,10 +8,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	mig "github.com/pkt-cash/pktd/lnd/channeldb/migration"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration12"
@@ -20,6 +18,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -925,19 +925,19 @@ func (d *DB) MarkChanFullyClosed(chanPoint *wire.OutPoint) error {
 		}
 
 		chanSummaryReader := bytes.NewReader(chanSummaryBytes)
-		chanSummary, err := deserializeCloseChannelSummary(
+		chanSummary, errr := deserializeCloseChannelSummary(
 			chanSummaryReader,
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return errr
 		}
 
 		chanSummary.IsPending = false
 
 		var newSummary bytes.Buffer
-		err = serializeChannelCloseSummary(&newSummary, chanSummary)
-		if err != nil {
-			return err
+		errr = serializeChannelCloseSummary(&newSummary, chanSummary)
+		if errr != nil {
+			return errr
 		}
 
 		err = closedChanBucket.Put(chanID, newSummary.Bytes())

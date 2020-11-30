@@ -451,9 +451,9 @@ func (*ChannelPackager) AddFwdPkg(tx kvdb.RwTx, fwdPkg *FwdPkg) error {
 	}
 
 	for i := range fwdPkg.Adds {
-		err = putLogUpdate(addBkt, uint16(i), &fwdPkg.Adds[i])
-		if err != nil {
-			return err
+		errr := putLogUpdate(addBkt, uint16(i), &fwdPkg.Adds[i])
+		if errr != nil {
+			return errr
 		}
 	}
 
@@ -469,16 +469,16 @@ func (*ChannelPackager) AddFwdPkg(tx kvdb.RwTx, fwdPkg *FwdPkg) error {
 	}
 
 	for i := range fwdPkg.SettleFails {
-		err = putLogUpdate(failSettleBkt, uint16(i), &fwdPkg.SettleFails[i])
-		if err != nil {
-			return err
+		errr := putLogUpdate(failSettleBkt, uint16(i), &fwdPkg.SettleFails[i])
+		if errr != nil {
+			return errr
 		}
 	}
 
 	var settleFailFilterBuf bytes.Buffer
-	err = fwdPkg.SettleFailFilter.Encode(&settleFailFilterBuf)
-	if err != nil {
-		return err
+	errr := fwdPkg.SettleFailFilter.Encode(&settleFailFilterBuf)
+	if errr != nil {
+		return errr
 	}
 
 	return heightBkt.Put(settleFailFilterKey, settleFailFilterBuf.Bytes())

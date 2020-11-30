@@ -89,7 +89,7 @@ func createChannelDB(dbPath string) error {
 		return err
 	}
 
-	err = kvdb.Update(bdb, func(tx kvdb.RwTx) error {
+	errr := kvdb.Update(bdb, func(tx kvdb.RwTx) error {
 		if _, err := tx.CreateTopLevelBucket(openChannelBucket); err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func createChannelDB(dbPath string) error {
 		}
 		return putMeta(meta, tx)
 	}, func() {})
-	if err != nil {
+	if errr != nil {
 		return fmt.Errorf("unable to create new channeldb")
 	}
 

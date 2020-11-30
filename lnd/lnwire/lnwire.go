@@ -10,12 +10,12 @@ import (
 
 	"net"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // MaxSliceLength is the maximum allowed length for any opaque byte slices in
@@ -636,9 +636,9 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 
 		var idxBytes [2]byte
-		_, err = io.ReadFull(r, idxBytes[:])
-		if err != nil {
-			return err
+		_, errr := io.ReadFull(r, idxBytes[:])
+		if errr != nil {
+			return errr
 		}
 		index := binary.BigEndian.Uint16(idxBytes[:])
 

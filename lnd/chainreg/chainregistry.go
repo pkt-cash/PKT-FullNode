@@ -565,11 +565,12 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 			// live fee estimates, rather than a statically coded
 			// value.
 			fallBackFeeRate := chainfee.SatPerKVByte(25 * 1000)
-			cc.FeeEstimator, err = chainfee.NewBtcdEstimator(
+			var errr error
+			cc.FeeEstimator, errr = chainfee.NewBtcdEstimator(
 				*rpcConfig, fallBackFeeRate.FeePerKWeight(),
 			)
-			if err != nil {
-				return nil, err
+			if errr != nil {
+				return nil, errr
 			}
 		}
 	default:

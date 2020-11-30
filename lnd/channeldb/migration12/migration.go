@@ -56,9 +56,9 @@ func MigrateInvoiceTLV(tx kvdb.RwTx) error {
 	// Write out each one under its original key using TLV.
 	for _, ki := range invoices {
 		var b bytes.Buffer
-		err = SerializeInvoice(&b, &ki.invoice)
-		if err != nil {
-			return err
+		errr := SerializeInvoice(&b, &ki.invoice)
+		if errr != nil {
+			return errr
 		}
 
 		err = invoiceB.Put(ki.key, b.Bytes())

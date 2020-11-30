@@ -803,11 +803,11 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 		// not, we'll mark our historical rescan as complete to ensure the
 		// outpoint's spend hint gets updated upon connected/disconnected
 		// blocks.
-		err = n.txNotifier.UpdateSpendDetails(
+		errr := n.txNotifier.UpdateSpendDetails(
 			ntfn.HistoricalDispatch.SpendRequest, spendDetails,
 		)
-		if err != nil {
-			chainntnfs.Log.Errorf("Failed to update spend details: %v", err)
+		if errr != nil {
+			chainntnfs.Log.Errorf("Failed to update spend details: %v", errr)
 			return
 		}
 	}()

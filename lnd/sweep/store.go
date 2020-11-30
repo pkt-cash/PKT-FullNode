@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -89,9 +89,9 @@ func NewSweeperStore(db kvdb.Backend, chainHash *chainhash.Hash) (
 
 		// Use non-existence of tx hashes bucket as a signal to migrate
 		// nursery finalized txes.
-		err = migrateTxHashes(tx, txHashesBucket, chainHash)
+		errr := migrateTxHashes(tx, txHashesBucket, chainHash)
 
-		return err
+		return errr
 	}, func() {})
 	if err != nil {
 		return nil, err

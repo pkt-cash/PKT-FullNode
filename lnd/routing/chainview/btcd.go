@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/lnd/channeldb"
 )
 
 // BtcdFilteredChainView is an implementation of the FilteredChainView
@@ -387,11 +387,11 @@ func (b *BtcdFilteredChainView) chainFilterer() {
 						"transactions", blockHash, i)
 					continue
 				}
-				decoded, err := decodeJSONBlock(
+				decoded, errr := decodeJSONBlock(
 					&rescanned[0], uint32(i))
-				if err != nil {
+				if errr != nil {
 					log.Errorf("Unable to decode block: %v",
-						err)
+						errr)
 					continue
 				}
 				b.blockQueue.Add(&blockEvent{

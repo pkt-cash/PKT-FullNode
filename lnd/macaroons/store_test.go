@@ -45,10 +45,10 @@ func openTestStore(t *testing.T, tempDir string) (func(),
 	)
 	require.NoError(t, err)
 
-	store, err := macaroons.NewRootKeyStorage(db)
-	if err != nil {
+	store, errr := macaroons.NewRootKeyStorage(db)
+	if errr != nil {
 		_ = db.Close()
-		t.Fatalf("Error creating root key store: %v", err)
+		t.Fatalf("Error creating root key store: %v", errr)
 	}
 
 	cleanup := func() {

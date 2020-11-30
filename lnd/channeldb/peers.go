@@ -64,13 +64,13 @@ func (d *DB) WriteFlapCounts(flapCounts map[route.Vertex]*FlapCount) error {
 			}
 
 			var b bytes.Buffer
-			err = serializeTime(&b, flapCount.LastFlap)
-			if err != nil {
-				return err
+			errr := serializeTime(&b, flapCount.LastFlap)
+			if errr != nil {
+				return errr
 			}
 
-			if err = WriteElement(&b, flapCount.Count); err != nil {
-				return err
+			if errr = WriteElement(&b, flapCount.Count); errr != nil {
+				return errr
 			}
 
 			err = peerBucket.Put(flapCountKey, b.Bytes())

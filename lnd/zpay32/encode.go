@@ -5,9 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -140,9 +140,9 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 		if err != nil {
 			return err
 		}
-		err = writeTaggedField(bufferBase32, fieldTypeD, base32)
-		if err != nil {
-			return err
+		errr := writeTaggedField(bufferBase32, fieldTypeD, base32)
+		if errr != nil {
+			return errr
 		}
 	}
 
@@ -192,10 +192,10 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 			return err
 		}
 
-		err = writeTaggedField(bufferBase32, fieldTypeF,
+		errr := writeTaggedField(bufferBase32, fieldTypeF,
 			append([]byte{version}, base32Addr...))
-		if err != nil {
-			return err
+		if errr != nil {
+			return errr
 		}
 	}
 
@@ -229,9 +229,9 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 			return err
 		}
 
-		err = writeTaggedField(bufferBase32, fieldTypeR, routeHintBase32)
-		if err != nil {
-			return err
+		errr := writeTaggedField(bufferBase32, fieldTypeR, routeHintBase32)
+		if errr != nil {
+			return errr
 		}
 	}
 
@@ -248,9 +248,9 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 				len(invoice.Destination.SerializeCompressed()))
 		}
 
-		err = writeTaggedField(bufferBase32, fieldTypeN, pubKeyBase32)
-		if err != nil {
-			return err
+		errr := writeTaggedField(bufferBase32, fieldTypeN, pubKeyBase32)
+		if errr != nil {
+			return errr
 		}
 	}
 	if invoice.PaymentAddr != nil {

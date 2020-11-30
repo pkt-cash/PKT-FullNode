@@ -1,14 +1,14 @@
 package chainreg
 
 import (
-	"github.com/pkt-cash/pktd/chaincfg"
-	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	bitcoinWire "github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/lnd/keychain"
 	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 	litecoinWire "github.com/ltcsuite/ltcd/wire"
+	"github.com/pkt-cash/pktd/chaincfg"
+	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
 	pktCfg "github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire/protocol"
 	pktProtocol "github.com/pkt-cash/pktd/wire/protocol"
 )
 
@@ -103,7 +103,7 @@ var PktMainNetParams = BitcoinNetParams{
 func ApplyPktParams(params *BitcoinNetParams) {
 	p := pktCfg.PktMainNetParams
 	params.Name = p.Name
-	params.Net = bitcoinWire.BitcoinNet(pktProtocol.BitcoinNet(p.Net))
+	params.Net = pktProtocol.BitcoinNet(p.Net)
 	params.DefaultPort = p.DefaultPort
 	params.CoinbaseMaturity = p.CoinbaseMaturity
 	copy(params.GenesisHash[:], p.GenesisHash[:])
@@ -141,7 +141,7 @@ func ApplyLitecoinParams(params *BitcoinNetParams,
 	litecoinParams *LitecoinNetParams) {
 
 	params.Name = litecoinParams.Name
-	params.Net = bitcoinWire.BitcoinNet(litecoinParams.Net)
+	params.Net = protocol.BitcoinNet(litecoinParams.Net)
 	params.DefaultPort = litecoinParams.DefaultPort
 	params.CoinbaseMaturity = litecoinParams.CoinbaseMaturity
 
@@ -180,7 +180,7 @@ func ApplyLitecoinParams(params *BitcoinNetParams,
 // parameter configuration.
 func IsTestnet(params *BitcoinNetParams) bool {
 	switch params.Params.Net {
-	case bitcoinWire.TestNet3, bitcoinWire.BitcoinNet(litecoinWire.TestNet4):
+	case protocol.BitcoinNet(litecoinWire.TestNet4):
 		return true
 	default:
 		return false

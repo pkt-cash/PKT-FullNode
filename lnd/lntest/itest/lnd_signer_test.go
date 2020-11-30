@@ -47,10 +47,10 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 
 	customizedKeyFamily := int32(keychain.KeyFamilyMultiSig)
 	customizedIndex := int32(1)
-	customizedPub, err := deriveCustomizedKey(
+	customizedPub, errr := deriveCustomizedKey(
 		ctxb, net.Alice, customizedKeyFamily, customizedIndex,
 	)
-	require.NoError(t.t, err, "failed to create customized pubkey")
+	require.NoError(t.t, errr, "failed to create customized pubkey")
 
 	// Test DeriveSharedKey with no optional arguments. It will result in
 	// performing an ECDH between the ephemeral key and the node's pubkey.

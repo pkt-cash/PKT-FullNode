@@ -7,11 +7,11 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // ContractResolutions is a wrapper struct around the two forms of resolutions
@@ -650,9 +650,9 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error
 			if err := binary.Write(&b, endian, true); err != nil {
 				return err
 			}
-			err = encodeCommitResolution(&b, c.CommitResolution)
-			if err != nil {
-				return err
+			errr := encodeCommitResolution(&b, c.CommitResolution)
+			if errr != nil {
+				return errr
 			}
 		}
 

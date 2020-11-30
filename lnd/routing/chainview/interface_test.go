@@ -553,10 +553,10 @@ func testFilterBlockDisconnected(node *rpctest.Harness,
 	}
 
 	// Init a chain view that has this node as its block source.
-	cleanUpFunc, reorgView, err := chainViewInit(reorgNode.RPCConfig(),
+	cleanUpFunc, reorgView, errr := chainViewInit(reorgNode.RPCConfig(),
 		reorgNode.P2PAddress())
-	if err != nil {
-		t.Fatalf("unable to create chain view: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create chain view: %v", errr)
 	}
 	defer func() {
 		if cleanUpFunc != nil {
@@ -564,8 +564,8 @@ func testFilterBlockDisconnected(node *rpctest.Harness,
 		}
 	}()
 
-	if err = reorgView.Start(); err != nil {
-		t.Fatalf("unable to start btcd chain view: %v", err)
+	if errr = reorgView.Start(); errr != nil {
+		t.Fatalf("unable to start btcd chain view: %v", errr)
 	}
 	defer reorgView.Stop()
 

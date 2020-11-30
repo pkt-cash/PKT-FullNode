@@ -112,9 +112,9 @@ func (w *WitnessCache) addWitnessEntries(wType WitnessType,
 			return err
 		}
 
-		witnessTypeBucketKey, err := wType.toDBKey()
-		if err != nil {
-			return err
+		witnessTypeBucketKey, errr := wType.toDBKey()
+		if errr != nil {
+			return errr
 		}
 		witnessTypeBucket, err := witnessBucket.CreateBucketIfNotExists(
 			witnessTypeBucketKey,
@@ -197,9 +197,9 @@ func (w *WitnessCache) deleteWitness(wType WitnessType, witnessKey []byte) error
 			return err
 		}
 
-		witnessTypeBucketKey, err := wType.toDBKey()
-		if err != nil {
-			return err
+		witnessTypeBucketKey, errr := wType.toDBKey()
+		if errr != nil {
+			return errr
 		}
 		witnessTypeBucket, err := witnessBucket.CreateBucketIfNotExists(
 			witnessTypeBucketKey,
@@ -221,9 +221,9 @@ func (w *WitnessCache) DeleteWitnessClass(wType WitnessType) error {
 			return err
 		}
 
-		witnessTypeBucketKey, err := wType.toDBKey()
-		if err != nil {
-			return err
+		witnessTypeBucketKey, errr := wType.toDBKey()
+		if errr != nil {
+			return errr
 		}
 
 		return witnessBucket.DeleteNestedBucket(witnessTypeBucketKey)

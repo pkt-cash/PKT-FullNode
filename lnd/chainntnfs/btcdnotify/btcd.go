@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/lnd/chainntnfs"
-	"github.com/pkt-cash/pktd/lnd/queue"
 )
 
 const (
@@ -630,11 +630,11 @@ func (b *BtcdNotifier) handleBlockConnected(epoch chainntnfs.BlockEpoch) error {
 	// We'll then extend the txNotifier's height with the information of
 	// this new block, which will handle all of the notification logic for
 	// us.
-	err = b.txNotifier.ConnectTip(
+	errr := b.txNotifier.ConnectTip(
 		&newBlock.hash, newBlock.height, newBlock.txns,
 	)
-	if err != nil {
-		return fmt.Errorf("unable to connect tip: %v", err)
+	if errr != nil {
+		return fmt.Errorf("unable to connect tip: %v", errr)
 	}
 
 	chainntnfs.Log.Infof("New block: height=%v, sha=%v", epoch.Height,

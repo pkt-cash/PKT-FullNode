@@ -11,15 +11,15 @@ import (
 	"os"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -201,9 +201,9 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 		return nil, nil, nil, err
 	}
 	bobPreimageProducer := shachain.NewRevocationProducer(*bobRoot)
-	bobFirstRevoke, err := bobPreimageProducer.AtIndex(0)
-	if err != nil {
-		return nil, nil, nil, err
+	bobFirstRevoke, errr := bobPreimageProducer.AtIndex(0)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	bobCommitPoint := input.ComputeCommitmentPoint(bobFirstRevoke[:])
 
@@ -212,44 +212,44 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 		return nil, nil, nil, err
 	}
 	alicePreimageProducer := shachain.NewRevocationProducer(*aliceRoot)
-	aliceFirstRevoke, err := alicePreimageProducer.AtIndex(0)
-	if err != nil {
-		return nil, nil, nil, err
+	aliceFirstRevoke, errr := alicePreimageProducer.AtIndex(0)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, err := CreateCommitmentTxns(
+	aliceCommitTx, bobCommitTx, errr := CreateCommitmentTxns(
 		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
 		bobCommitPoint, *fundingTxIn, chanType,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	alicePath, err := ioutil.TempDir("", "alicedb")
-	if err != nil {
-		return nil, nil, nil, err
+	alicePath, errr := ioutil.TempDir("", "alicedb")
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	dbAlice, err := channeldb.Open(alicePath)
-	if err != nil {
-		return nil, nil, nil, err
+	dbAlice, errr := channeldb.Open(alicePath)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	bobPath, err := ioutil.TempDir("", "bobdb")
-	if err != nil {
-		return nil, nil, nil, err
+	bobPath, errr := ioutil.TempDir("", "bobdb")
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
-	dbBob, err := channeldb.Open(bobPath)
-	if err != nil {
-		return nil, nil, nil, err
+	dbBob, errr := channeldb.Open(bobPath)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	estimator := chainfee.NewStaticEstimator(6000, 0)
-	feePerKw, err := estimator.EstimateFeePerKW(1)
-	if err != nil {
-		return nil, nil, nil, err
+	feePerKw, errr := estimator.EstimateFeePerKW(1)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	commitFee := calcStaticFee(chanType, 0)
 	var anchorAmt btcutil.Amount
@@ -332,36 +332,36 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 	// TODO(roasbeef): make mock version of pre-image store
 
 	alicePool := NewSigPool(1, aliceSigner)
-	channelAlice, err := NewLightningChannel(
+	channelAlice, errr := NewLightningChannel(
 		aliceSigner, aliceChannelState, alicePool,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	alicePool.Start()
 
 	obfuscator := createStateHintObfuscator(aliceChannelState)
 
 	bobPool := NewSigPool(1, bobSigner)
-	channelBob, err := NewLightningChannel(
+	channelBob, errr := NewLightningChannel(
 		bobSigner, bobChannelState, bobPool,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 	bobPool.Start()
 
-	err = SetStateNumHint(
+	errr = SetStateNumHint(
 		aliceCommitTx, 0, obfuscator,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
-	err = SetStateNumHint(
+	errr = SetStateNumHint(
 		bobCommitTx, 0, obfuscator,
 	)
-	if err != nil {
-		return nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	addr := &net.TCPAddr{
@@ -391,9 +391,9 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 
 	// Now that the channel are open, simulate the start of a session by
 	// having Alice and Bob extend their revocation windows to each other.
-	err = initRevocationWindows(channelAlice, channelBob)
-	if err != nil {
-		return nil, nil, nil, err
+	errr = initRevocationWindows(channelAlice, channelBob)
+	if errr != nil {
+		return nil, nil, nil, errr
 	}
 
 	return channelAlice, channelBob, cleanUpFunc, nil

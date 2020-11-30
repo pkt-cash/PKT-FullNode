@@ -5,13 +5,13 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -128,11 +128,12 @@ func (p *JusticeDescriptor) commitToRemoteInput() (*breachedInput, error) {
 
 		// Compute the witness script hash from the to-remote pubkey, which will
 		// be used to locate the input on the breach commitment transaction.
-		toRemoteScriptHash, err = input.CommitScriptUnencumbered(
+		var errr error
+		toRemoteScriptHash, errr = input.CommitScriptUnencumbered(
 			toRemotePubKey,
 		)
-		if err != nil {
-			return nil, err
+		if errr != nil {
+			return nil, errr
 		}
 	}
 

@@ -83,9 +83,9 @@ func (db *DB) addPayment(payment *outgoingPayment) error {
 		}
 
 		// Obtain the new unique sequence number for this payment.
-		paymentID, err := payments.NextSequence()
-		if err != nil {
-			return err
+		paymentID, errr := payments.NextSequence()
+		if errr != nil {
+			return errr
 		}
 
 		// We use BigEndian for keys as it orders keys in

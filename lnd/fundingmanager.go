@@ -7,13 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/chanacceptor"
@@ -31,6 +29,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 	"golang.org/x/crypto/salsa20"
 )
 
@@ -567,15 +567,15 @@ func (f *fundingManager) start() error {
 					labels.LabelTypeChannelOpen, nil,
 				)
 
-				err = f.cfg.PublishTransaction(
+				errr := f.cfg.PublishTransaction(
 					channel.FundingTxn, label,
 				)
-				if err != nil {
+				if errr != nil {
 					fndgLog.Errorf("Unable to rebroadcast "+
 						"funding tx %x for "+
 						"ChannelPoint(%v): %v",
 						fundingTxBuf.Bytes(),
-						channel.FundingOutpoint, err)
+						channel.FundingOutpoint, errr)
 				}
 			}
 		}
@@ -3525,8 +3525,8 @@ func (f *fundingManager) saveChannelOpeningState(chanPoint *wire.OutPoint,
 		}
 
 		var outpointBytes bytes.Buffer
-		if err = writeOutpoint(&outpointBytes, chanPoint); err != nil {
-			return err
+		if errr := writeOutpoint(&outpointBytes, chanPoint); errr != nil {
+			return errr
 		}
 
 		// Save state and the uint64 representation of the shortChanID

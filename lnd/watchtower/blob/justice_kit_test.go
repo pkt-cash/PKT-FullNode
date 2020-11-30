@@ -270,8 +270,8 @@ func testJusticeKitRemoteWitnessConstruction(
 	require.Nil(t, err)
 
 	// Convert the DER-encoded signature into a fixed-size sig.
-	commitToRemoteSig, err := lnwire.NewSigFromSignature(rawToRemoteSig)
-	require.Nil(t, err)
+	commitToRemoteSig, errr := lnwire.NewSigFromSignature(rawToRemoteSig)
+	require.Nil(t, errr)
 
 	// Populate the justice kit fields relevant to the to-remote output.
 	justiceKit := &blob.JusticeKit{
@@ -282,8 +282,8 @@ func testJusticeKitRemoteWitnessConstruction(
 
 	// Now, compute the to-remote witness script returned by the justice
 	// kit.
-	toRemoteScript, err := justiceKit.CommitToRemoteWitnessScript()
-	require.Nil(t, err)
+	toRemoteScript, errr := justiceKit.CommitToRemoteWitnessScript()
+	require.Nil(t, errr)
 
 	// Assert this is exactly the to-remote, compressed pubkey.
 	expToRemoteScript := test.expWitnessScript(toRemotePrivKey.PubKey())
@@ -291,8 +291,8 @@ func testJusticeKitRemoteWitnessConstruction(
 
 	// Next, compute the to-remote witness stack, which should be a p2wkh
 	// witness stack consisting solely of a signature.
-	toRemoteWitnessStack, err := justiceKit.CommitToRemoteWitnessStack()
-	require.Nil(t, err)
+	toRemoteWitnessStack, errr := justiceKit.CommitToRemoteWitnessStack()
+	require.Nil(t, errr)
 
 	// Compute the expected first element, by appending a sighash all byte
 	// to our raw DER-encoded signature.
@@ -312,8 +312,8 @@ func testJusticeKitRemoteWitnessConstruction(
 	// When trying to compute the witness script, this should now return
 	// ErrNoCommitToRemoteOutput since a valid pubkey could not be parsed
 	// from CommitToRemotePubKey.
-	_, err = justiceKit.CommitToRemoteWitnessScript()
-	require.Error(t, blob.ErrNoCommitToRemoteOutput, err)
+	_, errr = justiceKit.CommitToRemoteWitnessScript()
+	require.Error(t, blob.ErrNoCommitToRemoteOutput, errr)
 }
 
 // TestJusticeKitToLocalWitnessConstruction tests that a JusticeKit returns the
@@ -344,8 +344,8 @@ func TestJusticeKitToLocalWitnessConstruction(t *testing.T) {
 	require.Nil(t, err)
 
 	// Convert the DER-encoded signature into a fixed-size sig.
-	commitToLocalSig, err := lnwire.NewSigFromSignature(rawRevSig)
-	require.Nil(t, err)
+	commitToLocalSig, errr := lnwire.NewSigFromSignature(rawRevSig)
+	require.Nil(t, errr)
 
 	// Populate the justice kit with fields relevant to the to-local output.
 	justiceKit := &blob.JusticeKit{
@@ -357,21 +357,21 @@ func TestJusticeKitToLocalWitnessConstruction(t *testing.T) {
 
 	// Compute the expected to-local script, which is a function of the CSV
 	// delay, revocation pubkey and delay pubkey.
-	expToLocalScript, err := input.CommitScriptToSelf(
+	expToLocalScript, errr := input.CommitScriptToSelf(
 		csvDelay, delayPrivKey.PubKey(), revPrivKey.PubKey(),
 	)
-	require.Nil(t, err)
+	require.Nil(t, errr)
 
 	// Compute the to-local script that is returned by the justice kit.
-	toLocalScript, err := justiceKit.CommitToLocalWitnessScript()
-	require.Nil(t, err)
+	toLocalScript, errr := justiceKit.CommitToLocalWitnessScript()
+	require.Nil(t, errr)
 
 	// Assert that the expected to-local script matches the actual script.
 	require.Equal(t, expToLocalScript, toLocalScript)
 
 	// Next, compute the to-local witness stack returned by the justice kit.
-	toLocalWitnessStack, err := justiceKit.CommitToLocalRevokeWitnessStack()
-	require.Nil(t, err)
+	toLocalWitnessStack, errr := justiceKit.CommitToLocalRevokeWitnessStack()
+	require.Nil(t, errr)
 
 	// Compute the expected signature in the bottom element of the stack, by
 	// appending a sighash all flag to the raw DER signature.

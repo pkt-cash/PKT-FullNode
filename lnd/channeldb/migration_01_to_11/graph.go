@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -315,9 +315,9 @@ func updateEdgePolicy(tx kvdb.RwTx, edge *ChannelEdgePolicy) (bool, error) {
 
 	// Finally, with the direction of the edge being updated
 	// identified, we update the on-disk edge representation.
-	err = putChanEdgePolicy(edges, nodes, edge, fromNode, toNode)
-	if err != nil {
-		return false, err
+	errr := putChanEdgePolicy(edges, nodes, edge, fromNode, toNode)
+	if errr != nil {
+		return false, errr
 	}
 
 	return isUpdate1, nil

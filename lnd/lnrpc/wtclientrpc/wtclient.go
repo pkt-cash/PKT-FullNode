@@ -7,8 +7,8 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -164,12 +164,12 @@ func (c *WatchtowerClient) AddTower(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	addr, err := lncfg.ParseAddressString(
+	addr, errr := lncfg.ParseAddressString(
 		req.Address, strconv.Itoa(watchtower.DefaultPeerPort),
 		c.cfg.Resolver,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("invalid address %v: %v", req.Address, err)
+	if errr != nil {
+		return nil, fmt.Errorf("invalid address %v: %v", req.Address, errr)
 	}
 
 	towerAddr := &lnwire.NetAddress{
@@ -201,13 +201,14 @@ func (c *WatchtowerClient) RemoveTower(ctx context.Context,
 
 	var addr net.Addr
 	if req.Address != "" {
-		addr, err = lncfg.ParseAddressString(
+		var errr error
+		addr, errr = lncfg.ParseAddressString(
 			req.Address, strconv.Itoa(watchtower.DefaultPeerPort),
 			c.cfg.Resolver,
 		)
-		if err != nil {
+		if errr != nil {
 			return nil, fmt.Errorf("unable to parse tower "+
-				"address %v: %v", req.Address, err)
+				"address %v: %v", req.Address, errr)
 		}
 	}
 
@@ -253,9 +254,9 @@ func (c *WatchtowerClient) GetTowerInfo(ctx context.Context,
 		return nil, err
 	}
 
-	tower, err := c.cfg.Client.LookupTower(pubKey)
-	if err != nil {
-		return nil, err
+	tower, errr := c.cfg.Client.LookupTower(pubKey)
+	if errr != nil {
+		return nil, errr
 	}
 
 	return marshallTower(tower, req.IncludeSessions), nil

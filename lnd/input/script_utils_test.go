@@ -236,16 +236,16 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 	genCommitTx := func(confirmed bool) {
 		// Generate the raw HTLC redemption scripts, and its p2wsh
 		// counterpart.
-		htlcWitnessScript, err = SenderHTLCScript(
+		htlcWitnessScript, errr := SenderHTLCScript(
 			aliceLocalKey, bobLocalKey, revocationKey,
 			paymentHash[:], confirmed,
 		)
-		if err != nil {
-			t.Fatalf("unable to create htlc sender script: %v", err)
+		if errr != nil {
+			t.Fatalf("unable to create htlc sender script: %v", errr)
 		}
-		htlcPkScript, err = WitnessScriptHash(htlcWitnessScript)
-		if err != nil {
-			t.Fatalf("unable to create p2wsh htlc script: %v", err)
+		htlcPkScript, errr = WitnessScriptHash(htlcWitnessScript)
+		if errr != nil {
+			t.Fatalf("unable to create p2wsh htlc script: %v", errr)
 		}
 
 		// This will be Alice's commitment transaction. In this
@@ -637,16 +637,17 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 	genCommitTx := func(confirmed bool) {
 		// Generate the raw HTLC redemption scripts, and its p2wsh
 		// counterpart.
-		htlcWitnessScript, err = ReceiverHTLCScript(
+		var errr error
+		htlcWitnessScript, errr = ReceiverHTLCScript(
 			cltvTimeout, aliceLocalKey, bobLocalKey, revocationKey,
 			paymentHash[:], confirmed,
 		)
-		if err != nil {
-			t.Fatalf("unable to create htlc sender script: %v", err)
+		if errr != nil {
+			t.Fatalf("unable to create htlc sender script: %v", errr)
 		}
-		htlcPkScript, err = WitnessScriptHash(htlcWitnessScript)
-		if err != nil {
-			t.Fatalf("unable to create p2wsh htlc script: %v", err)
+		htlcPkScript, errr = WitnessScriptHash(htlcWitnessScript)
+		if errr != nil {
+			t.Fatalf("unable to create p2wsh htlc script: %v", errr)
 		}
 
 		// This will be Bob's commitment transaction. In this scenario Alice is
@@ -1038,14 +1039,14 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 	// Finally we'll generate the HTLC script itself that we'll be spending
 	// from. The revocation clause can be claimed by Alice, while Bob can
 	// sweep the output after a particular delay.
-	htlcWitnessScript, err := SecondLevelHtlcScript(revocationKey,
+	htlcWitnessScript, errr := SecondLevelHtlcScript(revocationKey,
 		delayKey, claimDelay)
-	if err != nil {
-		t.Fatalf("unable to create htlc script: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create htlc script: %v", errr)
 	}
-	htlcPkScript, err := WitnessScriptHash(htlcWitnessScript)
-	if err != nil {
-		t.Fatalf("unable to create htlc output: %v", err)
+	htlcPkScript, errr := WitnessScriptHash(htlcWitnessScript)
+	if errr != nil {
+		t.Fatalf("unable to create htlc output: %v", errr)
 	}
 
 	htlcOutput := &wire.TxOut{
@@ -1204,13 +1205,13 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 		Hash:  *txid,
 		Index: 0,
 	}
-	commitScript, err := CommitScriptToRemoteConfirmed(aliceKeyPub)
-	if err != nil {
-		t.Fatalf("unable to create htlc script: %v", err)
+	commitScript, errr := CommitScriptToRemoteConfirmed(aliceKeyPub)
+	if errr != nil {
+		t.Fatalf("unable to create htlc script: %v", errr)
 	}
-	commitPkScript, err := WitnessScriptHash(commitScript)
-	if err != nil {
-		t.Fatalf("unable to create htlc output: %v", err)
+	commitPkScript, errr := WitnessScriptHash(commitScript)
+	if errr != nil {
+		t.Fatalf("unable to create htlc output: %v", errr)
 	}
 
 	commitOutput := &wire.TxOut{
@@ -1325,13 +1326,13 @@ func TestSpendAnchor(t *testing.T) {
 
 	// Generate the anchor script that can be spent by Alice immediately,
 	// or by anyone after 16 blocks.
-	anchorScript, err := CommitScriptAnchor(aliceKeyPub)
-	if err != nil {
-		t.Fatalf("unable to create htlc script: %v", err)
+	anchorScript, errr := CommitScriptAnchor(aliceKeyPub)
+	if errr != nil {
+		t.Fatalf("unable to create htlc script: %v", errr)
 	}
-	anchorPkScript, err := WitnessScriptHash(anchorScript)
-	if err != nil {
-		t.Fatalf("unable to create htlc output: %v", err)
+	anchorPkScript, errr := WitnessScriptHash(anchorScript)
+	if errr != nil {
+		t.Fatalf("unable to create htlc output: %v", errr)
 	}
 
 	anchorOutput := &wire.TxOut{

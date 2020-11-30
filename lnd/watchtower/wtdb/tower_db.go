@@ -364,16 +364,16 @@ func (t *TowerDB) DeleteSession(target SessionID) error {
 
 			// If this was the last state update, we can also remove
 			// the hint that would map to an empty set.
-			err = isBucketEmpty(updatesForHint)
+			errr := isBucketEmpty(updatesForHint)
 			switch {
 
 			// Other updates exist for this hint, keep the bucket.
-			case err == errBucketNotEmpty:
+			case errr == errBucketNotEmpty:
 				continue
 
 			// Unexpected error.
-			case err != nil:
-				return err
+			case errr != nil:
+				return errr
 
 			// No more updates for this hint, prune hint bucket.
 			default:

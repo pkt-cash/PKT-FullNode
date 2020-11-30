@@ -54,9 +54,9 @@ func TestDecodeAcceptChannel(t *testing.T) {
 				t.Fatalf("cannot write message: %v", err)
 			}
 
-			msg, err := ReadMessage(buf, 0)
-			if err != nil {
-				t.Fatalf("cannot read message: %v", err)
+			msg, errr := ReadMessage(buf, 0)
+			if errr != nil {
+				t.Fatalf("cannot read message: %v", errr)
 			}
 
 			decoded := msg.(*AcceptChannel)
