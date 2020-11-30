@@ -228,7 +228,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		sweepTxSigHashes                *txscript.TxSigHashes
 		senderCommitTx, sweepTx         *wire.MsgTx
 		bobRecvrSig                     *btcec.Signature
-		bobSigHash                      txscript.SigHashType
+		bobSigHash                      params.SigHashType
 	)
 
 	// genCommitTx generates a commitment tx where the htlc output requires
@@ -287,7 +287,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 
 		bobSigHash = params.SigHashAll
 		if confirmed {
-			bobSigHash = txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
+			bobSigHash = params.SigHashSingle | params.SigHashAnyOneCanPay
 		}
 
 		// We'll also generate a signature on the sweep transaction above
@@ -631,7 +631,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		receiverCommitTx, sweepTx       *wire.MsgTx
 		sweepTxSigHashes                *txscript.TxSigHashes
 		aliceSenderSig                  *btcec.Signature
-		aliceSigHash                    txscript.SigHashType
+		aliceSigHash                    params.SigHashType
 	)
 
 	genCommitTx := func(confirmed bool) {
@@ -687,7 +687,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 
 		aliceSigHash = params.SigHashAll
 		if confirmed {
-			aliceSigHash = txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
+			aliceSigHash = params.SigHashSingle | params.SigHashAnyOneCanPay
 		}
 
 		// We'll also generate a signature on the sweep transaction above

@@ -10,7 +10,6 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -228,9 +227,9 @@ func CommitScriptToRemote(chanType channeldb.ChannelType,
 
 // HtlcSigHashType returns the sighash type to use for HTLC success and timeout
 // transactions given the channel type.
-func HtlcSigHashType(chanType channeldb.ChannelType) txscript.SigHashType {
+func HtlcSigHashType(chanType channeldb.ChannelType) params.SigHashType {
 	if chanType.HasAnchors() {
-		return txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
+		return params.SigHashSingle | params.SigHashAnyOneCanPay
 	}
 
 	return params.SigHashAll

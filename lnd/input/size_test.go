@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -237,7 +238,7 @@ func TestTxWeightEstimator(t *testing.T) {
 
 			signature := make([]byte, maxDERSignatureSize+1)
 			compressedPubKey := make([]byte, 33)
-			scriptSig, err := txscript.NewScriptBuilder().AddData(signature).
+			scriptSig, err := scriptbuilder.NewScriptBuilder().AddData(signature).
 				AddData(compressedPubKey).Script()
 			if err != nil {
 				t.Fatalf("Failed to generate scriptSig: %v", err)
@@ -266,7 +267,7 @@ func TestTxWeightEstimator(t *testing.T) {
 			signature := make([]byte, maxDERSignatureSize+1)
 			compressedPubKey := make([]byte, 33)
 			witness := wire.TxWitness{signature, compressedPubKey}
-			scriptSig, err := txscript.NewScriptBuilder().AddData(p2wkhScript).
+			scriptSig, err := scriptbuilder.NewScriptBuilder().AddData(p2wkhScript).
 				Script()
 			if err != nil {
 				t.Fatalf("Failed to generate scriptSig: %v", err)
@@ -279,7 +280,7 @@ func TestTxWeightEstimator(t *testing.T) {
 
 			witnessScript := make([]byte, 40)
 			witness := wire.TxWitness{witnessScript}
-			scriptSig, err := txscript.NewScriptBuilder().AddData(p2wshScript).
+			scriptSig, err := scriptbuilder.NewScriptBuilder().AddData(p2wshScript).
 				Script()
 			if err != nil {
 				t.Fatalf("Failed to generate scriptSig: %v", err)

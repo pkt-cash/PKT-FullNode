@@ -19,8 +19,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -3130,7 +3130,7 @@ func genMultiSigP2WSH(aPub, bPub []byte) ([]byte, error) {
 	}
 
 	// First, we'll generate the witness script for the multi-sig.
-	bldr := txscript.NewScriptBuilder()
+	bldr := scriptbuilder.NewScriptBuilder()
 	bldr.AddOp(opcode.OP_2)
 	bldr.AddData(aPub) // Add both pubkeys (sorted).
 	bldr.AddData(bPub)
@@ -3144,7 +3144,7 @@ func genMultiSigP2WSH(aPub, bPub []byte) ([]byte, error) {
 	// With the witness script generated, we'll now turn it into a p2sh
 	// script:
 	//  * OP_0 <sha256(script)>
-	bldr = txscript.NewScriptBuilder()
+	bldr = scriptbuilder.NewScriptBuilder()
 	bldr.AddOp(opcode.OP_0)
 	scriptHash := sha256.Sum256(witnessScript)
 	bldr.AddData(scriptHash[:])

@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -39,7 +40,7 @@ type Signature interface {
 // WitnessScriptHash generates a pay-to-witness-script-hash public key script
 // paying to a version 0 witness program paying to the passed redeem script.
 func WitnessScriptHash(witnessScript []byte) ([]byte, error) {
-	bldr := txscript.NewScriptBuilder()
+	bldr := scriptbuilder.NewScriptBuilder()
 
 	bldr.AddOp(opcode.OP_0)
 	scriptHash := sha256.Sum256(witnessScript)
@@ -62,7 +63,7 @@ func GenMultiSigScript(aPub, bPub []byte) ([]byte, error) {
 		aPub, bPub = bPub, aPub
 	}
 
-	bldr := txscript.NewScriptBuilder()
+	bldr := scriptbuilder.NewScriptBuilder()
 	bldr.AddOp(opcode.OP_2)
 	bldr.AddData(aPub) // Add both pubkeys (sorted).
 	bldr.AddData(bPub)
@@ -192,7 +193,7 @@ func SenderHTLCScript(senderHtlcKey, receiverHtlcKey,
 	revocationKey *btcec.PublicKey, paymentHash []byte,
 	confirmedSpend bool) ([]byte, error) {
 
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	// The opening operations are used to determine if this is the receiver
 	// of the HTLC attempting to sweep all the funds due to a contract
@@ -359,7 +360,7 @@ func SenderHtlcSpendRedeem(signer Signer, signDesc *SignDescriptor,
 // HTLC.  This script simply spends the multi-sig output using the
 // pre-generated HTLC timeout transaction.
 func SenderHtlcSpendTimeout(receiverSig Signature,
-	receiverSigHash txscript.SigHashType, signer Signer,
+	receiverSigHash params.SigHashType, signer Signer,
 	signDesc *SignDescriptor, htlcTimeoutTx *wire.MsgTx) (
 	wire.TxWitness, error) {
 
@@ -420,7 +421,7 @@ func ReceiverHTLCScript(cltvExpiry uint32, senderHtlcKey,
 	receiverHtlcKey, revocationKey *btcec.PublicKey,
 	paymentHash []byte, confirmedSpend bool) ([]byte, error) {
 
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	// The opening operations are used to determine if this is the sender
 	// of the HTLC attempting to sweep all the funds due to a contract
@@ -524,7 +525,7 @@ func ReceiverHTLCScript(cltvExpiry uint32, senderHtlcKey,
 // delay give the sender of the HTLC enough time to revoke the output if this
 // is a breach commitment transaction.
 func ReceiverHtlcSpendRedeem(senderSig Signature,
-	senderSigHash txscript.SigHashType, paymentPreimage []byte,
+	senderSigHash params.SigHashType, paymentPreimage []byte,
 	signer Signer, signDesc *SignDescriptor, htlcSuccessTx *wire.MsgTx) (
 	wire.TxWitness, error) {
 
@@ -671,7 +672,7 @@ func ReceiverHtlcSpendTimeout(signer Signer, signDesc *SignDescriptor,
 func SecondLevelHtlcScript(revocationKey, delayKey *btcec.PublicKey,
 	csvDelay uint32) ([]byte, error) {
 
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	// If this is the revocation clause for this script is to be executed,
 	// the spender will push a 1, forcing us to hit the true clause of this
@@ -845,7 +846,7 @@ func CommitScriptToSelf(csvTimeout uint32, selfKey, revokeKey *btcec.PublicKey) 
 	// have divulged the revocation hash, allowing them to homomorphically
 	// derive the proper private key which corresponds to the revoke public
 	// key.
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	builder.AddOp(opcode.OP_IF)
 
@@ -984,7 +985,7 @@ func CommitSpendNoDelay(signer Signer, signDesc *SignDescriptor,
 // p2wkh output spendable immediately, requiring no contestation period.
 func CommitScriptUnencumbered(key *btcec.PublicKey) ([]byte, error) {
 	// This script goes to the "other" party, and is spendable immediately.
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 	builder.AddOp(opcode.OP_0)
 	builder.AddData(btcutil.Hash160(key.SerializeCompressed()))
 
@@ -1002,7 +1003,7 @@ func CommitScriptUnencumbered(key *btcec.PublicKey) ([]byte, error) {
 //	<key> OP_CHECKSIGVERIFY
 //	1 OP_CHECKSEQUENCEVERIFY
 func CommitScriptToRemoteConfirmed(key *btcec.PublicKey) ([]byte, error) {
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	// Only the given key can spend the output.
 	builder.AddData(key.SerializeCompressed())
@@ -1055,7 +1056,7 @@ func CommitSpendToRemoteConfirmed(signer Signer, signDesc *SignDescriptor,
 //	  OP_16 OP_CSV
 //	OP_ENDIF
 func CommitScriptAnchor(key *btcec.PublicKey) ([]byte, error) {
-	builder := txscript.NewScriptBuilder()
+	builder := scriptbuilder.NewScriptBuilder()
 
 	// Spend immediately with key.
 	builder.AddData(key.SerializeCompressed())

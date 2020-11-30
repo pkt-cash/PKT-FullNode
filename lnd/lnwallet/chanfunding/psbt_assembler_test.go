@@ -25,7 +25,7 @@ var (
 	localPrivkey                  = []byte{1, 2, 3, 4, 5, 6}
 	remotePrivkey                 = []byte{6, 5, 4, 3, 2, 1}
 	chanCapacity   btcutil.Amount = 644000
-	params                        = chaincfg.RegressionNetParams
+	paramz                        = chaincfg.RegressionNetParams
 	defaultTimeout                = 50 * time.Millisecond
 )
 
@@ -35,7 +35,7 @@ func TestPsbtIntent(t *testing.T) {
 
 	// Create a simple assembler and ask it to provision a channel to get
 	// the funding intent.
-	a := NewPsbtAssembler(chanCapacity, nil, &params, true)
+	a := NewPsbtAssembler(chanCapacity, nil, &paramz, true)
 	intent, err := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
 	if err != nil {
 		t.Fatalf("error provisioning channel: %v", err)
@@ -73,14 +73,14 @@ func TestPsbtIntent(t *testing.T) {
 	}
 	witnessScriptHash := sha256.Sum256(script)
 	addr, err := btcutil.NewAddressWitnessScriptHash(
-		witnessScriptHash[:], &params,
+		witnessScriptHash[:], &paramz,
 	)
 	if err != nil {
 		t.Fatalf("unable to encode address: %v", err)
 	}
 	fundingAddr, amt, pendingPsbt, err := psbtIntent.FundingParams()
 	if err != nil {
-		t.Fatalf("unable to get funding params: %v", err)
+		t.Fatalf("unable to get funding paramz: %v", err)
 	}
 	if addr.EncodeAddress() != fundingAddr.EncodeAddress() {
 		t.Fatalf("unexpected address. got %s wanted %s", fundingAddr,
@@ -208,7 +208,7 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 	}
 	witnessScriptHash := sha256.Sum256(script)
 	addr, err := btcutil.NewAddressWitnessScriptHash(
-		witnessScriptHash[:], &params,
+		witnessScriptHash[:], &paramz,
 	)
 	if err != nil {
 		t.Fatalf("unable to encode address: %v", err)
@@ -216,7 +216,7 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 
 	// Now as the next step, create a new assembler/intent pair with a base
 	// PSBT to see that we can add an additional output to it.
-	a := NewPsbtAssembler(chanCapacity, pendingPsbt, &params, true)
+	a := NewPsbtAssembler(chanCapacity, pendingPsbt, &paramz, true)
 	intent, errr := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
 	if errr != nil {
 		t.Fatalf("error provisioning channel: %v", errr)
@@ -230,7 +230,7 @@ func TestPsbtIntentBasePsbt(t *testing.T) {
 	)
 	newAddr, amt, twoOutPsbt, errr := psbtIntent.FundingParams()
 	if errr != nil {
-		t.Fatalf("unable to get funding params: %v", errr)
+		t.Fatalf("unable to get funding paramz: %v", errr)
 	}
 	if addr.EncodeAddress() != newAddr.EncodeAddress() {
 		t.Fatalf("unexpected address. got %s wanted %s", newAddr,
@@ -374,7 +374,7 @@ func TestPsbtVerify(t *testing.T) {
 
 	// Create a simple assembler and ask it to provision a channel to get
 	// the funding intent.
-	a := NewPsbtAssembler(chanCapacity, nil, &params, true)
+	a := NewPsbtAssembler(chanCapacity, nil, &paramz, true)
 	intent, err := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
 	if err != nil {
 		t.Fatalf("error provisioning channel: %v", err)
@@ -397,7 +397,7 @@ func TestPsbtVerify(t *testing.T) {
 			psbtIntent.State = PsbtOutputKnown
 			_, amt, pendingPsbt, err := psbtIntent.FundingParams()
 			if err != nil {
-				t.Fatalf("unable to get funding params: %v", err)
+				t.Fatalf("unable to get funding paramz: %v", err)
 			}
 
 			err = tc.doVerify(amt, pendingPsbt, psbtIntent)
@@ -539,7 +539,7 @@ func TestPsbtFinalize(t *testing.T) {
 
 	// Create a simple assembler and ask it to provision a channel to get
 	// the funding intent.
-	a := NewPsbtAssembler(chanCapacity, nil, &params, true)
+	a := NewPsbtAssembler(chanCapacity, nil, &paramz, true)
 	intent, err := a.ProvisionChannel(&Request{LocalAmt: chanCapacity})
 	if err != nil {
 		t.Fatalf("error provisioning channel: %v", err)
@@ -562,7 +562,7 @@ func TestPsbtFinalize(t *testing.T) {
 			psbtIntent.State = PsbtOutputKnown
 			_, amt, pendingPsbt, err := psbtIntent.FundingParams()
 			if err != nil {
-				t.Fatalf("unable to get funding params: %v", err)
+				t.Fatalf("unable to get funding paramz: %v", err)
 			}
 
 			// We need to have a simulated transaction here that is

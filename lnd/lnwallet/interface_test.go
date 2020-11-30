@@ -46,6 +46,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
@@ -1544,7 +1545,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 	// We'll also ensure that the client is able to send our new
 	// notifications when we _create_ transactions ourselves that spend our
 	// own outputs.
-	b := txscript.NewScriptBuilder()
+	b := scriptbuilder.NewScriptBuilder()
 	b.AddOp(opcode.OP_RETURN)
 	outputScript, err := b.Script()
 	if err != nil {

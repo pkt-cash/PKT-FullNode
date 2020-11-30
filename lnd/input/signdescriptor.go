@@ -6,9 +6,10 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -68,7 +69,7 @@ type SignDescriptor struct {
 
 	// HashType is the target sighash type that should be used when
 	// generating the final sighash, and signature.
-	HashType txscript.SigHashType
+	HashType params.SigHashType
 
 	// SigHashes is the pre-computed sighash midstate to be used when
 	// generating the final sighash for signing.
@@ -220,7 +221,7 @@ func ReadSignDescriptor(r io.Reader, sd *SignDescriptor) error {
 	if _, err := io.ReadFull(r, hashType[:]); err != nil {
 		return err
 	}
-	sd.HashType = txscript.SigHashType(binary.BigEndian.Uint32(hashType[:]))
+	sd.HashType = params.SigHashType(binary.BigEndian.Uint32(hashType[:]))
 
 	return nil
 }
