@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 
 	"github.com/pkt-cash/pktd/pktwallet/snacl"
@@ -333,7 +334,7 @@ func (r *RootKeyStorage) GenerateNewRootKey() error {
 
 // Close closes the underlying database and zeroes the encryption key stored
 // in memory.
-func (r *RootKeyStorage) Close() error {
+func (r *RootKeyStorage) Close() er.R {
 	r.encKeyMtx.Lock()
 	defer r.encKeyMtx.Unlock()
 
