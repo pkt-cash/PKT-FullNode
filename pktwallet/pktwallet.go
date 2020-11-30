@@ -17,12 +17,12 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 
+	"github.com/arl/statsviz"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/rpc/legacyrpc"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-	"github.com/arl/statsviz"
 )
 
 var (
@@ -92,7 +92,8 @@ func walletMain() er.R {
 	}
 
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
+	// TODO(cjd): noFreelistSync ?
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, false, 250)
 
 	// Create and start HTTP server to serve wallet client connections.
 	// This will be updated with the wallet and chain server RPC client

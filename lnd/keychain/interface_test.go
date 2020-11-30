@@ -63,7 +63,7 @@ func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	loader := wallet.NewLoader(&chaincfg.SimNetParams, tempDir, true, 0)
+	loader := wallet.NewLoader(&chaincfg.SimNetParams, tempDir, "wallet.db", true, 0)
 
 	pass := []byte("test")
 

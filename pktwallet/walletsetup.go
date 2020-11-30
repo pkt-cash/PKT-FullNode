@@ -7,12 +7,13 @@ package main
 import (
 	"bufio"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire/protocol"
@@ -116,7 +117,8 @@ type WalletSetupCfg struct {
 // provided path.
 func createWallet(cfg *config) er.R {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
+	// TODO(cjd): noFreelistSync ?
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, false, 250)
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time

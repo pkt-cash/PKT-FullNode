@@ -61,8 +61,9 @@ type Loader struct {
 // recovery window is non-zero, the wallet will attempt to recovery addresses
 // starting from the last SyncedTo height.
 func NewLoader(chainParams *chaincfg.Params, dbDirPath, walletName string,
-	recoveryWindow uint32) *Loader {
+	noFreelistSync bool, recoveryWindow uint32) *Loader {
 
+	// TODO(cjd): noFreeListSync ?
 	return &Loader{
 		chainParams:    chainParams,
 		walletName:     walletName,

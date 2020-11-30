@@ -70,7 +70,7 @@ func createTestWalletWithPw(t *testing.T, pubPw, privPw []byte, dir string,
 
 	// Create a new test wallet that uses fast scrypt as KDF.
 	netDir := btcwallet.NetworkDir(dir, netParams)
-	loader := wallet.NewLoader(netParams, netDir, true, 0)
+	loader := wallet.NewLoader(netParams, netDir, "wallet.db", true, 0)
 	_, err := loader.CreateNewWallet(
 		pubPw, privPw, testSeed, time.Time{},
 	)

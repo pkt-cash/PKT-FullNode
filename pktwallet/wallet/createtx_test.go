@@ -43,7 +43,8 @@ func TestTxToOutputsDryRun(t *testing.T) {
 	pubPass := []byte("hello")
 	privPass := []byte("world")
 
-	loader := NewLoader(&chaincfg.TestNet3Params, dir, "wallet.db", 250)
+	// TODO(cjd): noFreelistSync ?
+	loader := NewLoader(&chaincfg.TestNet3Params, dir, "wallet.db", false, 250)
 	w, err := loader.CreateNewWallet(pubPass, privPass, []byte(hex.EncodeToString(seed)), nil)
 	if err != nil {
 		t.Fatalf("unable to create wallet: %v", err)

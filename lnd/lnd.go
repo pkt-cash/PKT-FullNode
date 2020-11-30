@@ -1264,7 +1264,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 			chainConfig.ChainDir, cfg.ActiveNetParams.Params,
 		)
 		loader := wallet.NewLoader(
-			cfg.ActiveNetParams.Params, netDir, !cfg.SyncFreelist,
+			cfg.ActiveNetParams.Params, netDir, "wallet.db", !cfg.SyncFreelist,
 			recoveryWindow,
 		)
 
