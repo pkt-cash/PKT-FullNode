@@ -315,9 +315,24 @@ func (b *BtcWallet) SendOutputs(outputs []*wire.TxOut,
 		return nil, lnwallet.ErrInvalidMinconf
 	}
 
-	return b.wallet.SendOutputs(
-		outputs, defaultAccount, minconf, feeSatPerKB, label,
-	)
+	tx, err := b.wallet.SendOutputs(base.CreateTxReq{
+		Outputs:     outputs,
+		Minconf:     minconf,
+		FeeSatPerKB: feeSatPerKB,
+		DryRun:      false,
+
+		// TODO(cjd): label is missing here
+
+		// TODO(cjd): Maybe change the defaults ?
+		ChangeAddress:   nil,
+		InputMinHeight:  0,
+		InputComparator: nil,
+		MaxInputs:       -1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tx.Tx, nil
 }
 
 // CreateSimpleTx creates a Bitcoin transaction paying to the specified
@@ -358,7 +373,18 @@ func (b *BtcWallet) CreateSimpleTx(outputs []*wire.TxOut,
 		}
 	}
 
-	return b.wallet.CreateSimpleTx(defaultAccount, outputs, 1, feeSatPerKB, dryRun)
+	return b.wallet.CreateSimpleTx(base.CreateTxReq{
+		Outputs:     outputs,
+		Minconf:     1,
+		FeeSatPerKB: feeSatPerKB,
+		DryRun:      dryRun,
+
+		// TODO(cjd): Maybe change the defaults ?
+		ChangeAddress:   nil,
+		InputMinHeight:  0,
+		InputComparator: nil,
+		MaxInputs:       -1,
+	})
 }
 
 // LockOutpoint marks an outpoint as locked meaning it will no longer be deemed
