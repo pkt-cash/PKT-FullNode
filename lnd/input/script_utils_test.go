@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // assertEngineExecution executes the VM returned by the newEngine closure,
@@ -284,7 +285,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 
 		sweepTxSigHashes = txscript.NewTxSigHashes(sweepTx)
 
-		bobSigHash = txscript.SigHashAll
+		bobSigHash = params.SigHashAll
 		if confirmed {
 			bobSigHash = txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
 		}
@@ -334,7 +335,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					DoubleTweak:   commitSecret,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -357,7 +358,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -383,7 +384,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -411,7 +412,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -440,7 +441,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -466,7 +467,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -497,7 +498,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -529,7 +530,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -683,7 +684,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		)
 		sweepTxSigHashes = txscript.NewTxSigHashes(sweepTx)
 
-		aliceSigHash = txscript.SigHashAll
+		aliceSigHash = params.SigHashAll
 		if confirmed {
 			aliceSigHash = txscript.SigHashSingle | txscript.SigHashAnyOneCanPay
 		}
@@ -733,7 +734,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -760,7 +761,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -786,7 +787,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					DoubleTweak:   commitSecret,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -814,7 +815,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -846,7 +847,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   bobCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -873,7 +874,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -896,7 +897,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -924,7 +925,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -953,7 +954,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 					SingleTweak:   aliceCommitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1075,7 +1076,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 					},
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1095,7 +1096,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 					DoubleTweak:   commitSecret,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1117,7 +1118,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 					SingleTweak:   commitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1138,7 +1139,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 					},
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1159,7 +1160,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 					SingleTweak:   commitTweak,
 					WitnessScript: htlcWitnessScript,
 					Output:        htlcOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1244,7 +1245,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 					},
 					WitnessScript: commitScript,
 					Output:        commitOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1266,7 +1267,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 					},
 					WitnessScript: commitScript,
 					Output:        commitOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}
@@ -1357,7 +1358,7 @@ func TestSpendAnchor(t *testing.T) {
 					},
 					WitnessScript: anchorScript,
 					Output:        anchorOutput,
-					HashType:      txscript.SigHashAll,
+					HashType:      params.SigHashAll,
 					SigHashes:     sweepTxSigHashes,
 					InputIndex:    0,
 				}

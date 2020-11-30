@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 func TestSignDescriptorSerialization(t *testing.T) {
@@ -62,7 +62,7 @@ func TestSignDescriptorSerialization(t *testing.T) {
 					0xac, // OP_CHECKSIG
 				},
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		},
 
 		// Test serializing a SignDescriptor with a nil-valued PrivateTweak
@@ -89,7 +89,7 @@ func TestSignDescriptorSerialization(t *testing.T) {
 					0xac, // OP_CHECKSIG
 				},
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		},
 	}
 

@@ -6,10 +6,11 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -562,7 +563,7 @@ var witnessSizeTests = []witnessSizeTest{
 			}
 
 			witness, err := input.SenderHtlcSpendTimeout(
-				&maxDERSignature{}, txscript.SigHashAll,
+				&maxDERSignature{}, params.SigHashAll,
 				&dummySigner{}, signDesc, testTx,
 			)
 			if err != nil {
@@ -589,7 +590,7 @@ var witnessSizeTests = []witnessSizeTest{
 			}
 
 			witness, err := input.SenderHtlcSpendTimeout(
-				&maxDERSignature{}, txscript.SigHashAll,
+				&maxDERSignature{}, params.SigHashAll,
 				&dummySigner{}, signDesc, testTx,
 			)
 			if err != nil {
@@ -786,7 +787,7 @@ var witnessSizeTests = []witnessSizeTest{
 			}
 
 			witness, err := input.ReceiverHtlcSpendRedeem(
-				&maxDERSignature{}, txscript.SigHashAll,
+				&maxDERSignature{}, params.SigHashAll,
 				testPreimage, &dummySigner{}, signDesc, testTx,
 			)
 			if err != nil {
@@ -816,7 +817,7 @@ var witnessSizeTests = []witnessSizeTest{
 			}
 
 			witness, err := input.ReceiverHtlcSpendRedeem(
-				&maxDERSignature{}, txscript.SigHashAll,
+				&maxDERSignature{}, params.SigHashAll,
 				testPreimage, &dummySigner{}, signDesc, testTx,
 			)
 			if err != nil {

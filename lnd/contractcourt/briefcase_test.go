@@ -10,15 +10,15 @@ import (
 
 	prand "math/rand"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -100,7 +100,7 @@ var (
 				0xac, // OP_CHECKSIG
 			},
 		},
-		HashType: txscript.SigHashAll,
+		HashType: params.SigHashAll,
 	}
 )
 

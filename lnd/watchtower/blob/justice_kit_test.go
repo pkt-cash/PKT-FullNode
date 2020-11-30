@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/stretchr/testify/require"
 )
 
@@ -297,7 +297,7 @@ func testJusticeKitRemoteWitnessConstruction(
 	// Compute the expected first element, by appending a sighash all byte
 	// to our raw DER-encoded signature.
 	rawToRemoteSigWithSigHash := append(
-		rawToRemoteSig.Serialize(), byte(txscript.SigHashAll),
+		rawToRemoteSig.Serialize(), byte(params.SigHashAll),
 	)
 
 	// Assert that the expected witness stack is returned.
@@ -376,7 +376,7 @@ func TestJusticeKitToLocalWitnessConstruction(t *testing.T) {
 	// Compute the expected signature in the bottom element of the stack, by
 	// appending a sighash all flag to the raw DER signature.
 	rawRevSigWithSigHash := append(
-		rawRevSig.Serialize(), byte(txscript.SigHashAll),
+		rawRevSig.Serialize(), byte(params.SigHashAll),
 	)
 
 	// Finally, validate against our expected witness stack.

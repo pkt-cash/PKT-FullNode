@@ -10,21 +10,22 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var zeroHash chainhash.Hash
@@ -1383,7 +1384,7 @@ func (lc *LightningChannel) createSignDesc() error {
 			PkScript: fundingPkScript,
 			Value:    int64(lc.channelState.Capacity),
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
 
@@ -2375,7 +2376,7 @@ func NewBreachRetribution(chanState *channeldb.OpenChannel, stateNum uint64,
 				PkScript: ourScript.PkScript,
 				Value:    int64(ourAmt),
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		}
 	}
 
@@ -2390,7 +2391,7 @@ func NewBreachRetribution(chanState *channeldb.OpenChannel, stateNum uint64,
 				PkScript: theirWitnessHash,
 				Value:    int64(theirAmt),
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		}
 	}
 
@@ -2442,7 +2443,7 @@ func NewBreachRetribution(chanState *channeldb.OpenChannel, stateNum uint64,
 					PkScript: htlcPkScript,
 					Value:    int64(htlc.Amt.ToSatoshis()),
 				},
-				HashType: txscript.SigHashAll,
+				HashType: params.SigHashAll,
 			},
 			OutPoint: wire.OutPoint{
 				Hash:  commitHash,
@@ -4357,7 +4358,7 @@ func (lc *LightningChannel) ReceiveNewCommitment(commitSig lnwire.Sig,
 	multiSigScript := lc.signDesc.WitnessScript
 	hashCache := txscript.NewTxSigHashes(localCommitTx)
 	sigHash, err := txscript.CalcWitnessSigHash(
-		multiSigScript, hashCache, txscript.SigHashAll,
+		multiSigScript, hashCache, params.SigHashAll,
 		localCommitTx, 0, int64(lc.channelState.Capacity),
 	)
 	if err != nil {
@@ -5449,7 +5450,7 @@ func NewUnilateralCloseSummary(chanState *channeldb.OpenChannel, signer input.Si
 					Value:    localBalance,
 					PkScript: selfScript.PkScript,
 				},
-				HashType: txscript.SigHashAll,
+				HashType: params.SigHashAll,
 			},
 			MaturityDelay: maturityDelay,
 		}
@@ -5636,7 +5637,7 @@ func newOutgoingHtlcResolution(signer input.Signer,
 					PkScript: htlcScriptHash,
 					Value:    int64(htlc.Amt.ToSatoshis()),
 				},
-				HashType: txscript.SigHashAll,
+				HashType: params.SigHashAll,
 			},
 			CsvDelay: HtlcSecondLevelInputSequence(chanType),
 		}, nil
@@ -5671,7 +5672,7 @@ func newOutgoingHtlcResolution(signer input.Signer,
 		Output: &wire.TxOut{
 			Value: int64(htlc.Amt.ToSatoshis()),
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		SigHashes:  txscript.NewTxSigHashes(timeoutTx),
 		InputIndex: 0,
 	}
@@ -5725,7 +5726,7 @@ func newOutgoingHtlcResolution(signer input.Signer,
 				PkScript: htlcSweepScriptHash,
 				Value:    int64(secondLevelOutputAmt),
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		},
 	}, nil
 }
@@ -5773,7 +5774,7 @@ func newIncomingHtlcResolution(signer input.Signer,
 					PkScript: htlcScriptHash,
 					Value:    int64(htlc.Amt.ToSatoshis()),
 				},
-				HashType: txscript.SigHashAll,
+				HashType: params.SigHashAll,
 			},
 			CsvDelay: HtlcSecondLevelInputSequence(chanType),
 		}, nil
@@ -5802,7 +5803,7 @@ func newIncomingHtlcResolution(signer input.Signer,
 		Output: &wire.TxOut{
 			Value: int64(htlc.Amt.ToSatoshis()),
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		SigHashes:  txscript.NewTxSigHashes(successTx),
 		InputIndex: 0,
 	}
@@ -5857,7 +5858,7 @@ func newIncomingHtlcResolution(signer input.Signer,
 				PkScript: htlcSweepScriptHash,
 				Value:    int64(secondLevelOutputAmt),
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		},
 	}, nil
 }
@@ -6125,7 +6126,7 @@ func NewLocalForceCloseSummary(chanState *channeldb.OpenChannel, signer input.Si
 					PkScript: delayScript,
 					Value:    int64(localBalance.ToSatoshis()),
 				},
-				HashType: txscript.SigHashAll,
+				HashType: params.SigHashAll,
 			},
 			MaturityDelay: csvTimeout,
 		}
@@ -6402,7 +6403,7 @@ func NewAnchorResolution(chanState *channeldb.OpenChannel,
 			PkScript: localAnchor.PkScript,
 			Value:    int64(anchorSize),
 		},
-		HashType: txscript.SigHashAll,
+		HashType: params.SigHashAll,
 	}
 
 	// Calculate commit tx weight. This commit tx doesn't yet include the

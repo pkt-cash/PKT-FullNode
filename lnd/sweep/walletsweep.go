@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -222,7 +223,7 @@ func CraftSweepAllTx(feeRate chainfee.SatPerKWeight, dustLimit btcutil.Amount,
 				PkScript: output.PkScript,
 				Value:    int64(output.Value),
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		}
 
 		pkScript := output.PkScript

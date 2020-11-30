@@ -6,11 +6,12 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 )
 
 var (
@@ -99,7 +100,7 @@ func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor
 
 		sigScript, err := txscript.SignatureScript(
 			tx, signDesc.InputIndex, signDesc.Output.PkScript,
-			txscript.SigHashAll, privKey, true,
+			params.SigHashAll, privKey, true,
 		)
 		if err != nil {
 			return nil, err
@@ -117,7 +118,7 @@ func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor
 
 		witnessScript, err := txscript.WitnessSignature(tx, signDesc.SigHashes,
 			signDesc.InputIndex, signDesc.Output.Value,
-			signDesc.Output.PkScript, txscript.SigHashAll, privKey, true)
+			signDesc.Output.PkScript, params.SigHashAll, privKey, true)
 		if err != nil {
 			return nil, err
 		}

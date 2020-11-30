@@ -6,14 +6,14 @@ import (
 	"io"
 	"sync"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -178,7 +178,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, error) {
 	// The output is on our local commitment if the script starts with
 	// OP_IF for the revocation clause. On the remote commitment it will
 	// either be a regular P2WKH or a simple sig spend with a CSV delay.
-	isLocalCommitTx := c.commitResolution.SelfOutputSignDesc.WitnessScript[0] == txscript.OP_IF
+	isLocalCommitTx := c.commitResolution.SelfOutputSignDesc.WitnessScript[0] == opcode.OP_IF
 	isDelayedOutput := c.commitResolution.MaturityDelay != 0
 
 	c.log.Debugf("isDelayedOutput=%v, isLocalCommitTx=%v", isDelayedOutput,

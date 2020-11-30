@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -100,7 +101,7 @@ func newChannelTestCtx(chanSize int64) (*channelTestCtx, error) {
 	sigHashes := txscript.NewTxSigHashes(commitTx)
 	aliceSigRaw, err := txscript.RawTxInWitnessSignature(
 		commitTx, sigHashes, 0, chanSize,
-		multiSigScript, txscript.SigHashAll, alicePriv,
+		multiSigScript, params.SigHashAll, alicePriv,
 	)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func newChannelTestCtx(chanSize int64) (*channelTestCtx, error) {
 
 	bobSigRaw, err := txscript.RawTxInWitnessSignature(
 		commitTx, sigHashes, 0, chanSize,
-		multiSigScript, txscript.SigHashAll, bobPriv,
+		multiSigScript, params.SigHashAll, bobPriv,
 	)
 	if err != nil {
 		return nil, err

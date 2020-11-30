@@ -4,12 +4,13 @@ import (
 	"math"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // FullIntent is an intent that is fully backed by the internal wallet. This
@@ -107,7 +108,7 @@ func (f *FullIntent) CompileFundingTx(extraInputs []*wire.TxIn,
 	// Next, sign all inputs that are ours, collecting the signatures in
 	// order of the inputs.
 	signDesc := input.SignDescriptor{
-		HashType:  txscript.SigHashAll,
+		HashType:  params.SigHashAll,
 		SigHashes: txscript.NewTxSigHashes(fundingTx),
 	}
 	for i, txIn := range fundingTx.TxIn {

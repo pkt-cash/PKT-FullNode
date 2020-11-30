@@ -14,13 +14,14 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -3130,11 +3131,11 @@ func genMultiSigP2WSH(aPub, bPub []byte) ([]byte, error) {
 
 	// First, we'll generate the witness script for the multi-sig.
 	bldr := txscript.NewScriptBuilder()
-	bldr.AddOp(txscript.OP_2)
+	bldr.AddOp(opcode.OP_2)
 	bldr.AddData(aPub) // Add both pubkeys (sorted).
 	bldr.AddData(bPub)
-	bldr.AddOp(txscript.OP_2)
-	bldr.AddOp(txscript.OP_CHECKMULTISIG)
+	bldr.AddOp(opcode.OP_2)
+	bldr.AddOp(opcode.OP_CHECKMULTISIG)
 	witnessScript, err := bldr.Script()
 	if err != nil {
 		return nil, err
@@ -3144,7 +3145,7 @@ func genMultiSigP2WSH(aPub, bPub []byte) ([]byte, error) {
 	// script:
 	//  * OP_0 <sha256(script)>
 	bldr = txscript.NewScriptBuilder()
-	bldr.AddOp(txscript.OP_0)
+	bldr.AddOp(opcode.OP_0)
 	scriptHash := sha256.Sum256(witnessScript)
 	bldr.AddData(scriptHash[:])
 

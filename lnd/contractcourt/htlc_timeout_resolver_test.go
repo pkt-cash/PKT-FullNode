@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -17,6 +15,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type mockWitnessBeacon struct {
@@ -141,7 +141,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			timeout:      true,
 			txToBroadcast: func() (*wire.MsgTx, error) {
 				witness, err := input.SenderHtlcSpendTimeout(
-					&mock.DummySignature{}, txscript.SigHashAll,
+					&mock.DummySignature{}, params.SigHashAll,
 					signer, fakeSignDesc, sweepTx,
 				)
 				if err != nil {
@@ -166,7 +166,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			timeout:      false,
 			txToBroadcast: func() (*wire.MsgTx, error) {
 				witness, err := input.ReceiverHtlcSpendRedeem(
-					&mock.DummySignature{}, txscript.SigHashAll,
+					&mock.DummySignature{}, params.SigHashAll,
 					fakePreimageBytes, signer, fakeSignDesc,
 					sweepTx,
 				)

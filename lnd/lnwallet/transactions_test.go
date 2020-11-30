@@ -16,10 +16,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -27,6 +25,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -613,7 +614,7 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 		Output: &wire.TxOut{
 			Value: int64(channelBalance),
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
 	aliceWitnessSpend, err := input.CommitSpendTimeout(
@@ -648,7 +649,7 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 		Output: &wire.TxOut{
 			Value: int64(channelBalance),
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
 	bobWitnessSpend, err := input.CommitSpendRevoke(localSigner, signDesc,
@@ -693,7 +694,7 @@ func testSpendValidation(t *testing.T, tweakless bool) {
 			Value:    int64(channelBalance),
 			PkScript: bobScriptP2WKH,
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		InputIndex: 0,
 	}
 	if !tweakless {

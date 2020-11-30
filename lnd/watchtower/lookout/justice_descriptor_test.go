@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -18,6 +16,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtmock"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -281,7 +282,7 @@ func testJusticeDescriptor(t *testing.T, blobType blob.Type) {
 		Output:        breachTxn.TxOut[0],
 		SigHashes:     hashCache,
 		InputIndex:    0,
-		HashType:      txscript.SigHashAll,
+		HashType:      params.SigHashAll,
 	}
 
 	// Create the sign descriptor used to sign for the to-remote input.
@@ -294,7 +295,7 @@ func testJusticeDescriptor(t *testing.T, blobType blob.Type) {
 		Output:        breachTxn.TxOut[1],
 		SigHashes:     hashCache,
 		InputIndex:    1,
-		HashType:      txscript.SigHashAll,
+		HashType:      params.SigHashAll,
 	}
 
 	// Verify that our test justice transaction is sane.
@@ -356,14 +357,14 @@ func testJusticeDescriptor(t *testing.T, blobType blob.Type) {
 	// Construct the test's to-local witness.
 	justiceTxn.TxIn[0].Witness = make([][]byte, 3)
 	justiceTxn.TxIn[0].Witness[0] = append(toLocalSigRaw.Serialize(),
-		byte(txscript.SigHashAll))
+		byte(params.SigHashAll))
 	justiceTxn.TxIn[0].Witness[1] = []byte{1}
 	justiceTxn.TxIn[0].Witness[2] = toLocalScript
 
 	// Construct the test's to-remote witness.
 	justiceTxn.TxIn[1].Witness = make([][]byte, 2)
 	justiceTxn.TxIn[1].Witness[0] = append(toRemoteSigRaw.Serialize(),
-		byte(txscript.SigHashAll))
+		byte(params.SigHashAll))
 	justiceTxn.TxIn[1].Witness[1] = toRemoteRedeemScript
 
 	// Assert that the watchtower derives the same justice txn.

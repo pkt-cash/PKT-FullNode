@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
@@ -23,6 +21,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtmock"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -245,7 +246,7 @@ func (c *mockChannel) createRemoteCommitTx(t *testing.T) {
 			},
 			WitnessScript: toLocalScript,
 			Output:        commitTxn.TxOut[outputIndex],
-			HashType:      txscript.SigHashAll,
+			HashType:      params.SigHashAll,
 		}
 		outputIndex++
 	}
@@ -264,7 +265,7 @@ func (c *mockChannel) createRemoteCommitTx(t *testing.T) {
 			},
 			WitnessScript: toRemoteScriptHash,
 			Output:        commitTxn.TxOut[outputIndex],
-			HashType:      txscript.SigHashAll,
+			HashType:      params.SigHashAll,
 		}
 		outputIndex++
 	}

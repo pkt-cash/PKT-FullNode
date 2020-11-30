@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // addConstraints defines the constraints to apply when adding an input.
@@ -369,7 +369,7 @@ func createWalletTxInput(utxo *lnwallet.Utxo) (input.Input, error) {
 			PkScript: utxo.PkScript,
 			Value:    int64(utxo.Value),
 		},
-		HashType: txscript.SigHashAll,
+		HashType: params.SigHashAll,
 	}
 
 	// A height hint doesn't need to be set, because we don't monitor these

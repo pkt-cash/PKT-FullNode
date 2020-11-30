@@ -44,6 +44,8 @@ import (
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
@@ -1543,7 +1545,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 	// notifications when we _create_ transactions ourselves that spend our
 	// own outputs.
 	b := txscript.NewScriptBuilder()
-	b.AddOp(txscript.OP_RETURN)
+	b.AddOp(opcode.OP_RETURN)
 	outputScript, err := b.Script()
 	if err != nil {
 		t.Fatalf("unable to make output script: %v", err)
@@ -1692,7 +1694,7 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 		},
 		WitnessScript: keyScript,
 		Output:        tx.TxOut[outputIndex],
-		HashType:      txscript.SigHashAll,
+		HashType:      params.SigHashAll,
 		SigHashes:     txscript.NewTxSigHashes(tx1),
 		InputIndex:    0, // Has only one input.
 	}
@@ -1704,7 +1706,7 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 		return nil, fmt.Errorf("unable to generate signature: %v", err)
 	}
 	witness := make([][]byte, 2)
-	witness[0] = append(spendSig.Serialize(), byte(txscript.SigHashAll))
+	witness[0] = append(spendSig.Serialize(), byte(params.SigHashAll))
 	witness[1] = fromPubKey.SerializeCompressed()
 	tx1.TxIn[0].Witness = witness
 
@@ -2078,7 +2080,7 @@ func testSignOutputUsingTweaks(r *rpctest.Harness,
 			},
 			WitnessScript: keyScript,
 			Output:        newOutput,
-			HashType:      txscript.SigHashAll,
+			HashType:      params.SigHashAll,
 			SigHashes:     txscript.NewTxSigHashes(sweepTx),
 			InputIndex:    0,
 		}
@@ -2099,7 +2101,7 @@ func testSignOutputUsingTweaks(r *rpctest.Harness,
 			t.Fatalf("unable to generate signature: %v", err)
 		}
 		witness := make([][]byte, 2)
-		witness[0] = append(spendSig.Serialize(), byte(txscript.SigHashAll))
+		witness[0] = append(spendSig.Serialize(), byte(params.SigHashAll))
 		witness[1] = tweakedKey.SerializeCompressed()
 		sweepTx.TxIn[0].Witness = witness
 
@@ -2750,7 +2752,7 @@ func testSignOutputCreateAccount(r *rpctest.Harness, w *lnwallet.LightningWallet
 		Output: &wire.TxOut{
 			Value: 1000,
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		SigHashes:  txscript.NewTxSigHashes(fakeTx),
 		InputIndex: 0,
 	}

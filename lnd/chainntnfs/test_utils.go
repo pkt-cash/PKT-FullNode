@@ -13,17 +13,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lightninglabs/neutrino"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-	"github.com/lightninglabs/neutrino"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -155,7 +156,7 @@ func CreateSpendTx(t *testing.T, prevOutPoint *wire.OutPoint,
 	spendingTx.AddTxOut(&wire.TxOut{Value: 1e8, PkScript: prevOutput.PkScript})
 
 	sigScript, err := txscript.SignatureScript(
-		spendingTx, 0, prevOutput.PkScript, txscript.SigHashAll,
+		spendingTx, 0, prevOutput.PkScript, params.SigHashAll,
 		privKey, true,
 	)
 	if err != nil {

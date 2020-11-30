@@ -9,15 +9,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -26,6 +24,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanvalidate"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -1240,7 +1241,7 @@ func (l *LightningWallet) handleChanPointReady(req *continueContributionMsg) {
 		WitnessScript: fundingWitnessScript,
 		KeyDesc:       ourKey,
 		Output:        fundingOutput,
-		HashType:      txscript.SigHashAll,
+		HashType:      params.SigHashAll,
 		SigHashes:     txscript.NewTxSigHashes(theirCommitTx),
 		InputIndex:    0,
 	}
@@ -1418,7 +1419,7 @@ func (l *LightningWallet) handleFundingCounterPartySigs(msg *addCounterPartySigs
 	channelValue := int64(res.partialState.Capacity)
 	hashCache := txscript.NewTxSigHashes(commitTx)
 	sigHash, err := txscript.CalcWitnessSigHash(
-		witnessScript, hashCache, txscript.SigHashAll, commitTx,
+		witnessScript, hashCache, params.SigHashAll, commitTx,
 		0, channelValue,
 	)
 	if err != nil {
@@ -1573,7 +1574,7 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 	}
 
 	sigHash, err := txscript.CalcWitnessSigHash(
-		witnessScript, hashCache, txscript.SigHashAll, ourCommitTx, 0,
+		witnessScript, hashCache, params.SigHashAll, ourCommitTx, 0,
 		channelValue,
 	)
 	if err != nil {
@@ -1609,7 +1610,7 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 			PkScript: p2wsh,
 			Value:    channelValue,
 		},
-		HashType:   txscript.SigHashAll,
+		HashType:   params.SigHashAll,
 		SigHashes:  txscript.NewTxSigHashes(theirCommitTx),
 		InputIndex: 0,
 	}

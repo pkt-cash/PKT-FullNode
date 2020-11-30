@@ -7,12 +7,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
@@ -22,6 +20,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtmock"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const csvDelay uint32 = 144
@@ -143,7 +144,7 @@ func genTaskTest(
 			Output: &wire.TxOut{
 				Value: toLocalAmt,
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		}
 		breachInfo.RemoteOutputSignDesc = toLocalSignDesc
 		breachTxn.AddTxOut(toLocalSignDesc.Output)
@@ -157,7 +158,7 @@ func genTaskTest(
 			Output: &wire.TxOut{
 				Value: toRemoteAmt,
 			},
-			HashType: txscript.SigHashAll,
+			HashType: params.SigHashAll,
 		}
 		breachInfo.LocalOutputSignDesc = toRemoteSignDesc
 		breachTxn.AddTxOut(toRemoteSignDesc.Output)
