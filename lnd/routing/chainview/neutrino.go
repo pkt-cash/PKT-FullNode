@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -33,7 +34,7 @@ type CfFilteredChainView struct {
 
 	// rescanErrChan is the channel that any errors encountered during the
 	// rescan will be sent over.
-	rescanErrChan <-chan error
+	rescanErrChan <-chan er.R
 
 	// blockEventQueue is the ordered queue used to keep the order
 	// of connected and disconnected blocks sent to the reader of the
@@ -61,7 +62,7 @@ func NewCfFilteredChainView(node *neutrino.ChainService) (*CfFilteredChainView, 
 	return &CfFilteredChainView{
 		blockQueue:    newBlockEventQueue(),
 		quit:          make(chan struct{}),
-		rescanErrChan: make(chan error),
+		rescanErrChan: make(chan er.R),
 		chainFilter:   make(map[wire.OutPoint][]byte),
 		p2pNode:       node,
 	}, nil
