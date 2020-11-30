@@ -1038,11 +1038,11 @@ func testOnchainFundRecovery(net *lntest.NetworkHarness, t *harnessTest) {
 	// After, we will generate and skip 9 P2WKH and NP2WKH addresses, and
 	// send another BTC to the subsequent 10th address in each derivation
 	// path.
-	restoreCheckBalance(2*btcutil.UnitsPerCoin(), 2, 1, skipAndSend(9))
+	restoreCheckBalance(2*btcutil.UnitsPerCoinI64(), 2, 1, skipAndSend(9))
 
 	// Check that using a recovery window of 9 does not find the two most
 	// recent txns.
-	restoreCheckBalance(2*btcutil.UnitsPerCoin(), 2, 9, nil)
+	restoreCheckBalance(2*btcutil.UnitsPerCoinI64(), 2, 9, nil)
 
 	// Extending our recovery window to 10 should find the most recent
 	// transactions, leaving the wallet with 4 BTC total. We should also
@@ -1050,11 +1050,11 @@ func testOnchainFundRecovery(net *lntest.NetworkHarness, t *harnessTest) {
 	//
 	// After, we will skip 19 more addrs, sending to the 20th address past
 	// our last found address, and repeat the same checks.
-	restoreCheckBalance(4*btcutil.UnitsPerCoin(), 4, 10, skipAndSend(19))
+	restoreCheckBalance(4*btcutil.UnitsPerCoinI64(), 4, 10, skipAndSend(19))
 
 	// Check that recovering with a recovery window of 19 fails to find the
 	// most recent transactions.
-	restoreCheckBalance(4*btcutil.UnitsPerCoin(), 4, 19, nil)
+	restoreCheckBalance(4*btcutil.UnitsPerCoinI64(), 4, 19, nil)
 
 	// Ensure that using a recovery window of 20 succeeds with all UTXOs
 	// found and the final balance reflected.
@@ -1067,8 +1067,8 @@ func testOnchainFundRecovery(net *lntest.NetworkHarness, t *harnessTest) {
 	// would've caught the bug earlier. Carol has received 6 BTC so far from
 	// the miner, we'll send 5 back to ensure all of her UTXOs get spent to
 	// avoid fee discrepancies and a change output is formed.
-	const minerAmt = 5 * btcutil.UnitsPerCoin()
-	const finalBalance = 6 * btcutil.UnitsPerCoin()
+	minerAmt := 5 * btcutil.UnitsPerCoinI64()
+	finalBalance := 6 * btcutil.UnitsPerCoinI64()
 	promptChangeAddr := func(node *lntest.HarnessNode) {
 		minerAddr, err := net.Miner.NewAddress()
 		if err != nil {
