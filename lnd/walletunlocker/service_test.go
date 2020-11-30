@@ -10,10 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/pktwallet/snacl"
-	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
-	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/lnd/aezeed"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -22,6 +20,9 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
 	"github.com/pkt-cash/pktd/lnd/walletunlocker"
+	"github.com/pkt-cash/pktd/pktwallet/snacl"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,7 +60,7 @@ func createTestWalletWithPw(t *testing.T, pubPw, privPw []byte, dir string,
 	// creating new wallet encryption keys.
 	fastScrypt := waddrmgr.FastScryptOptions
 	keyGen := func(passphrase *[]byte, config *waddrmgr.ScryptOptions) (
-		*snacl.SecretKey, error) {
+		*snacl.SecretKey, er.R) {
 
 		return snacl.NewSecretKey(
 			passphrase, fastScrypt.N, fastScrypt.R, fastScrypt.P,

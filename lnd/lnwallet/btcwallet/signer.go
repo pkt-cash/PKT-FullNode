@@ -134,7 +134,7 @@ func (b *BtcWallet) fetchPrivKey(keyDesc *keychain.KeyDescriptor) (*btcec.Privat
 	// this is actually an "empty" key locator. The legacy KeyLocator
 	// format failed to properly distinguish an empty key locator from the
 	// very first in the index (0, 0).IsEmpty() == true.
-	case waddrmgr.IsError(err, waddrmgr.ErrAddressNotFound) && emptyLocator:
+	case waddrmgr.ErrAddressNotFound.Is(err) && emptyLocator:
 		return b.deriveKeyByLocator(keyDesc.KeyLocator)
 
 	case err != nil:

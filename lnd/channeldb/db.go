@@ -202,7 +202,7 @@ func (db *DB) Update(f func(tx walletdb.ReadWriteTx) error, reset func()) error 
 	}
 
 	reset()
-	return walletdb.Update(db, f)
+	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R { return er.E(f(tx)) })
 }
 
 // View is a wrapper around walletdb.View which calls into the extended
@@ -217,7 +217,7 @@ func (db *DB) View(f func(tx walletdb.ReadTx) error, reset func()) error {
 	}
 
 	reset()
-	return walletdb.View(db, f)
+	return walletdb.View(db, func(tx walletdb.ReadTx) er.R { return er.E(f(tx)) })
 }
 
 // PrintStats calls into the extended backend if available. This call is needed
@@ -313,11 +313,11 @@ var topLevelBuckets = [][]byte{
 // Wipe completely deletes all saved state within all used buckets within the
 // database. The deletion is done in a single transaction, therefore this
 // operation is fully atomic.
-func (d *DB) Wipe() error {
+func (d *DB) Wipe() er.R {
 	return kvdb.Update(d, func(tx kvdb.RwTx) error {
 		for _, tlb := range topLevelBuckets {
 			err := tx.DeleteTopLevelBucket(tlb)
-			if err != nil && err != kvdb.ErrBucketNotFound {
+			if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 				return err
 			}
 		}
@@ -399,7 +399,7 @@ func fileExists(path string) bool {
 // currently active/open channels associated with the target nodeID. In the case
 // that no active channels are known to have been created with this node, then a
 // zero-length slice is returned.
-func (d *DB) FetchOpenChannels(nodeID *btcec.PublicKey) ([]*OpenChannel, error) {
+func (d *DB) FetchOpenChannels(nodeID *btcec.PublicKey) ([]*OpenChannel, er.R) {
 	var channels []*OpenChannel
 	err := kvdb.View(d, func(tx kvdb.RTx) error {
 		var err error

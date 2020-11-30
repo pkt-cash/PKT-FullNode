@@ -860,7 +860,7 @@ func (c *OpenChannel) fullSync(tx kvdb.RwTx) error {
 		chanPointBuf.Bytes(),
 	)
 	switch {
-	case err == kvdb.ErrBucketExists:
+	case kvdb.ErrBucketExists.Is(err):
 		// If this channel already exists, then in order to avoid
 		// overriding it, we'll return an error back up to the caller.
 		return ErrChanAlreadyExists

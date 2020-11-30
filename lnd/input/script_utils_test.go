@@ -69,7 +69,7 @@ func assertEngineExecution(t *testing.T, testNum int, valid bool,
 		}
 
 		debugBuf.WriteString(fmt.Sprintf("Stack: %v", vm.GetStack()))
-		debugBuf.WriteString(fmt.Sprintf("AltStack: %v", vm.GetAltStack()))
+		//debugBuf.WriteString(fmt.Sprintf("AltStack: %v", vm.GetAltStack()))
 	}
 
 	// If we get to this point the unexpected case was not reached

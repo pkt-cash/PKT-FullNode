@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
@@ -1210,7 +1211,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 			t.Fatalf("num confs incorrect, got %v expected %v",
 				txDetail.NumConfirmations, numBlocksMined)
 		}
-		if txDetail.Value != outputAmt {
+		if txDetail.Value != btcutil.Amount(outputAmt) {
 			t.Fatalf("tx value incorrect, got %v expected %v",
 				txDetail.Value, outputAmt)
 		}
@@ -1380,7 +1381,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 		// We assert that the value is greater than the amount we
 		// attempted to send, as the wallet should have paid some amount
 		// of network fees.
-		if txDetail.Value >= -outputAmt {
+		if int64(txDetail.Value) >= -outputAmt {
 			fmt.Println(spew.Sdump(txDetail))
 			t.Fatalf("tx value incorrect, got %v expected %v",
 				int64(txDetail.Value), -int64(outputAmt))
@@ -1449,7 +1450,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 						txDetail.NumConfirmations)
 					return
 				}
-				if txDetail.Value != outputAmt {
+				if int64(txDetail.Value) != outputAmt {
 					errCh1 <- fmt.Errorf("incorrect output amt, "+
 						"expected %v got %v", outputAmt,
 						txDetail.Value)
@@ -1517,7 +1518,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 					txDetail.Hash, 1, txDetail.NumConfirmations)
 				return
 			}
-			if txDetail.Value != outputAmt {
+			if int64(txDetail.Value) != outputAmt {
 				errCh2 <- fmt.Errorf("incorrect output amt, expected %v got %v in txid %s",
 					outputAmt, txDetail.Value, txDetail.Hash)
 				return
@@ -2267,13 +2268,10 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 		// Step 5: Reconnect the miners and wait for them to synchronize.
 		err = r2.Node.AddNode(r.P2PAddress(), rpcclient.ANAdd)
 		if err != nil {
-			switch err := err.(type) {
-			case *btcjson.RPCError:
-				if err.Code != -8 {
-					t.Fatalf("unable to connect mining "+
-						"nodes together: %v", err)
-				}
-			default:
+			if btcjson.ErrRPCInvalidParameter.Is(err) {
+				t.Fatalf("unable to connect mining "+
+					"nodes together: %v", err)
+			} else {
 				t.Fatalf("unable to connect mining nodes "+
 					"together: %v", err)
 			}
@@ -2873,7 +2871,7 @@ var walletTests = []walletTestCase{
 	},
 }
 
-func clearWalletStates(a, b *lnwallet.LightningWallet) error {
+func clearWalletStates(a, b *lnwallet.LightningWallet) er.R {
 	a.ResetReservations()
 	b.ResetReservations()
 
@@ -2887,7 +2885,7 @@ func clearWalletStates(a, b *lnwallet.LightningWallet) error {
 func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 	var found bool
 	var tx *btcutil.Tx
-	var err error
+	var err er.R
 	timeout := time.After(30 * time.Second)
 	for !found {
 		// Do a short wait
@@ -2901,12 +2899,8 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 		// Check for the harness' knowledge of the txid
 		tx, err = r.Node.GetRawTransaction(txid)
 		if err != nil {
-			switch e := err.(type) {
-			case *btcjson.RPCError:
-				if e.Code == btcjson.ErrRPCNoTxInfo {
-					continue
-				}
-			default:
+			if btcjson.ErrRPCNoTxInfo.Is(err) {
+				continue
 			}
 			return err
 		}
@@ -3434,7 +3428,7 @@ func runTests(t *testing.T, walletDriver *lnwallet.WalletDriver,
 		// node's chainstate to initial level, cleanly
 		// wipe buckets
 		if err := clearWalletStates(alice, bob); err !=
-			nil && err != kvdb.ErrBucketNotFound {
+			nil && !kvdb.ErrBucketNotFound.Is(err) {
 			t.Fatalf("unable to wipe wallet state: %v", err)
 		}
 	}

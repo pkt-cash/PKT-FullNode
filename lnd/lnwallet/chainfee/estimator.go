@@ -10,8 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/rpcclient"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/rpcclient"
 )
 
 const (
@@ -417,7 +418,7 @@ func (b *BitcoindEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, err
 	}
 
 	resp, err := b.bitcoindConn.RawRequest(
-		"estimatesmartfee", []json.RawMessage{target, mode},
+		"estimatesmartfee", []jsoniter.RawMessage{target, mode},
 	)
 	if err != nil {
 		return 0, err

@@ -1236,10 +1236,10 @@ func (f *fundingManager) handleFundingOpen(peer lnpeer.Peer,
 	// We'll also reject any requests to create channels until we're fully
 	// synced to the network as we won't be able to properly validate the
 	// confirmation of the funding transaction.
-	isSynced, _, err := f.cfg.Wallet.IsSynced()
-	if err != nil || !isSynced {
-		if err != nil {
-			fndgLog.Errorf("unable to query wallet: %v", err)
+	isSynced, _, errr := f.cfg.Wallet.IsSynced()
+	if errr != nil || !isSynced {
+		if errr != nil {
+			fndgLog.Errorf("unable to query wallet: %v", errr)
 		}
 		f.failFundingFlow(
 			peer, msg.PendingChannelID,
@@ -1329,10 +1329,10 @@ func (f *fundingManager) handleFundingOpen(peer lnpeer.Peer,
 		CommitType:       commitType,
 	}
 
-	reservation, err := f.cfg.Wallet.InitChannelReservation(req)
-	if err != nil {
-		fndgLog.Errorf("Unable to initialize reservation: %v", err)
-		f.failFundingFlow(peer, msg.PendingChannelID, err)
+	reservation, errr := f.cfg.Wallet.InitChannelReservation(req)
+	if errr != nil {
+		fndgLog.Errorf("Unable to initialize reservation: %v", errr)
+		f.failFundingFlow(peer, msg.PendingChannelID, errr)
 		return
 	}
 
@@ -1358,12 +1358,12 @@ func (f *fundingManager) handleFundingOpen(peer lnpeer.Peer,
 		MaxAcceptedHtlcs: msg.MaxAcceptedHTLCs,
 		CsvDelay:         msg.CsvDelay,
 	}
-	err = reservation.CommitConstraints(
+	errr = reservation.CommitConstraints(
 		channelConstraints, f.cfg.MaxLocalCSVDelay,
 	)
-	if err != nil {
-		fndgLog.Errorf("Unacceptable channel constraints: %v", err)
-		f.failFundingFlow(peer, msg.PendingChannelID, err)
+	if errr != nil {
+		fndgLog.Errorf("Unacceptable channel constraints: %v", errr)
+		f.failFundingFlow(peer, msg.PendingChannelID, errr)
 		return
 	}
 
@@ -1371,12 +1371,12 @@ func (f *fundingManager) handleFundingOpen(peer lnpeer.Peer,
 	// address if our node is configured to set shutdown addresses by default.
 	// We use the upfront shutdown script provided by our channel acceptor
 	// (if any) in lieu of user input.
-	shutdown, err := getUpfrontShutdownScript(
+	shutdown, errr := getUpfrontShutdownScript(
 		f.cfg.EnableUpfrontShutdown, peer, acceptorResp.UpfrontShutdown,
 		func() (lnwire.DeliveryAddress, error) {
-			addr, err := f.cfg.Wallet.NewAddress(lnwallet.WitnessPubKey, false)
-			if err != nil {
-				return nil, err
+			addr, errr := f.cfg.Wallet.NewAddress(lnwallet.WitnessPubKey, false)
+			if errr != nil {
+				return nil, errr
 			}
 			return txscript.PayToAddrScript(addr)
 		},
@@ -1480,10 +1480,10 @@ func (f *fundingManager) handleFundingOpen(peer lnpeer.Peer,
 		},
 		UpfrontShutdown: msg.UpfrontShutdownScript,
 	}
-	err = reservation.ProcessSingleContribution(remoteContribution)
-	if err != nil {
-		fndgLog.Errorf("unable to add contribution reservation: %v", err)
-		f.failFundingFlow(peer, msg.PendingChannelID, err)
+	errr = reservation.ProcessSingleContribution(remoteContribution)
+	if errr != nil {
+		fndgLog.Errorf("unable to add contribution reservation: %v", errr)
+		f.failFundingFlow(peer, msg.PendingChannelID, errr)
 		return
 	}
 

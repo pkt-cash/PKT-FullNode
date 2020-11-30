@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -37,6 +37,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -418,22 +419,23 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 
 	restoreAlice := func() (*lnwallet.LightningChannel, error) {
 		aliceStoredChannels, err := dbAlice.FetchOpenChannels(aliceKeyPub)
-		switch err {
-		case nil:
-		case kvdb.ErrDatabaseNotOpen:
-			dbAlice, err = channeldb.Open(dbAlice.Path())
-			if err != nil {
-				return nil, errors.Errorf("unable to reopen alice "+
-					"db: %v", err)
+		switch {
+		case err == nil:
+		case kvdb.ErrDatabaseNotOpen.Is(err):
+			var errr error
+			dbAlice, errr = channeldb.Open(dbAlice.Path())
+			if errr != nil {
+				return nil, er.Errorf("unable to reopen alice "+
+					"db: %v", errr)
 			}
 
 			aliceStoredChannels, err = dbAlice.FetchOpenChannels(aliceKeyPub)
 			if err != nil {
-				return nil, errors.Errorf("unable to fetch alice "+
+				return nil, er.Errorf("unable to fetch alice "+
 					"channel: %v", err)
 			}
 		default:
-			return nil, errors.Errorf("unable to fetch alice channel: "+
+			return nil, er.Errorf("unable to fetch alice channel: "+
 				"%v", err)
 		}
 
@@ -449,12 +451,12 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 			return nil, errors.New("unable to find stored alice channel")
 		}
 
-		newAliceChannel, err := lnwallet.NewLightningChannel(
+		newAliceChannel, errr := lnwallet.NewLightningChannel(
 			aliceSigner, aliceStoredChannel, alicePool,
 		)
-		if err != nil {
-			return nil, errors.Errorf("unable to create new channel: %v",
-				err)
+		if errr != nil {
+			return nil, er.Errorf("unable to create new channel: %v",
+				errr)
 		}
 
 		return newAliceChannel, nil
@@ -462,22 +464,22 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 
 	restoreBob := func() (*lnwallet.LightningChannel, error) {
 		bobStoredChannels, err := dbBob.FetchOpenChannels(bobKeyPub)
-		switch err {
-		case nil:
-		case kvdb.ErrDatabaseNotOpen:
-			dbBob, err = channeldb.Open(dbBob.Path())
-			if err != nil {
-				return nil, errors.Errorf("unable to reopen bob "+
-					"db: %v", err)
+		switch {
+		case err == nil:
+		case kvdb.ErrDatabaseNotOpen.Is(err):
+			dbBob, errr := channeldb.Open(dbBob.Path())
+			if errr != nil {
+				return nil, er.Errorf("unable to reopen bob "+
+					"db: %v", errr)
 			}
 
 			bobStoredChannels, err = dbBob.FetchOpenChannels(bobKeyPub)
 			if err != nil {
-				return nil, errors.Errorf("unable to fetch bob "+
+				return nil, er.Errorf("unable to fetch bob "+
 					"channel: %v", err)
 			}
 		default:
-			return nil, errors.Errorf("unable to fetch bob channel: "+
+			return nil, er.Errorf("unable to fetch bob channel: "+
 				"%v", err)
 		}
 
@@ -493,12 +495,12 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 			return nil, errors.New("unable to find stored bob channel")
 		}
 
-		newBobChannel, err := lnwallet.NewLightningChannel(
+		newBobChannel, errr := lnwallet.NewLightningChannel(
 			bobSigner, bobStoredChannel, bobPool,
 		)
-		if err != nil {
-			return nil, errors.Errorf("unable to create new channel: %v",
-				err)
+		if errr != nil {
+			return nil, er.Errorf("unable to create new channel: %v",
+				errr)
 		}
 		return newBobChannel, nil
 	}

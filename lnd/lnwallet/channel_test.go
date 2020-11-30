@@ -664,12 +664,12 @@ func testCommitHTLCSigTieBreak(t *testing.T, restart bool) {
 			t.Fatalf("unable to fetch channel: %v", err)
 		}
 
-		aliceChannelNew, err := NewLightningChannel(
+		aliceChannelNew, errr := NewLightningChannel(
 			aliceChannel.Signer, aliceChannels[0],
 			aliceChannel.sigPool,
 		)
-		if err != nil {
-			t.Fatalf("unable to create new channel: %v", err)
+		if errr != nil {
+			t.Fatalf("unable to create new channel: %v", errr)
 		}
 
 		aliceChannel = aliceChannelNew
@@ -3131,12 +3131,12 @@ func restartChannel(channelOld *LightningChannel) (*LightningChannel, error) {
 		return nil, err
 	}
 
-	channelNew, err := NewLightningChannel(
+	channelNew, errr := NewLightningChannel(
 		channelOld.Signer, nodeChannels[0],
 		channelOld.sigPool,
 	)
-	if err != nil {
-		return nil, err
+	if errr != nil {
+		return nil, errr
 	}
 
 	return channelNew, nil

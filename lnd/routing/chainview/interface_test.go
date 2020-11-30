@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
@@ -51,7 +52,7 @@ var (
 func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 	var found bool
 	var tx *btcutil.Tx
-	var err error
+	var err er.R
 	timeout := time.After(10 * time.Second)
 	for !found {
 		// Do a short wait
@@ -65,12 +66,8 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 		// Check for the harness' knowledge of the txid
 		tx, err = r.Node.GetRawTransaction(txid)
 		if err != nil {
-			switch e := err.(type) {
-			case *btcjson.RPCError:
-				if e.Code == btcjson.ErrRPCNoTxInfo {
-					continue
-				}
-			default:
+			if btcjson.ErrRPCNoTxInfo.Is(err) {
+				continue
 			}
 			return err
 		}

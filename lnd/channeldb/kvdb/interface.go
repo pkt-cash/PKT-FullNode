@@ -14,7 +14,7 @@ import (
 // returned. As callers may expect retries of the f closure (depending on the
 // database backend used), the reset function will be called before each retry
 // respectively.
-func Update(db Backend, f func(tx RwTx) error, reset func()) error {
+func Update(db Backend, f func(tx RwTx) error, reset func()) er.R {
 	if extendedDB, ok := db.(ExtendedBackend); ok {
 		return extendedDB.Update(f, reset)
 	}
@@ -30,7 +30,7 @@ func Update(db Backend, f func(tx RwTx) error, reset func()) error {
 // transaction and can be used to reset intermediate state. As callers may
 // expect retries of the f closure (depending on the database backend used), the
 // reset function will be called before each retry respectively.
-func View(db Backend, f func(tx RTx) error, reset func()) error {
+func View(db Backend, f func(tx RTx) error, reset func()) er.R {
 	if extendedDB, ok := db.(ExtendedBackend); ok {
 		return extendedDB.View(f, reset)
 	}
@@ -75,7 +75,7 @@ type ExtendedBackend interface {
 	// intermediate state. As callers may expect retries of the f closure
 	// (depending on the database backend used), the reset function will be
 	//called before each retry respectively.
-	View(f func(tx walletdb.ReadTx) error, reset func()) error
+	View(f func(tx walletdb.ReadTx) error, reset func()) er.R
 
 	// Update opens a database read/write transaction and executes the
 	// function f with the transaction passed as a parameter. After f exits,
@@ -85,7 +85,7 @@ type ExtendedBackend interface {
 	// the commit error is returned. As callers may expect retries of the f
 	// closure (depending on the database backend used), the reset function
 	// will be called before each retry respectively.
-	Update(f func(tx walletdb.ReadWriteTx) error, reset func()) error
+	Update(f func(tx walletdb.ReadWriteTx) error, reset func()) er.R
 }
 
 // Open opens an existing database for the specified type. The arguments are

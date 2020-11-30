@@ -370,7 +370,7 @@ func (b *BtcWallet) CreateSimpleTx(outputs []*wire.TxOut,
 //
 // This is a part of the WalletController interface.
 func (b *BtcWallet) LockOutpoint(o wire.OutPoint) {
-	b.wallet.LockOutpoint(o)
+	b.wallet.LockOutpoint(o, "locked-by-lnd")
 }
 
 // UnlockOutpoint unlocks a previously locked output, marking it eligible for
@@ -943,7 +943,7 @@ func (b *BtcWallet) GetRecoveryInfo() (bool, float64, error) {
 		// The wallet won't start until the backend is synced, thus the birthday
 		// block won't be set and this particular error will be returned. We'll
 		// catch this error and return a progress of 0 instead.
-		if waddrmgr.IsError(err, waddrmgr.ErrBirthdayBlockNotSet) {
+		if waddrmgr.ErrBirthdayBlockNotSet.Is(err) {
 			return isRecoveryMode, progress, nil
 		}
 

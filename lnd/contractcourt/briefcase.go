@@ -932,7 +932,7 @@ func (b *boltArbitratorLog) WipeHistory() error {
 		// Next, we'll delete any lingering contract state within the
 		// contracts bucket by removing the bucket itself.
 		err = scopeBucket.DeleteNestedBucket(contractsBucketKey)
-		if err != nil && err != kvdb.ErrBucketNotFound {
+		if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 			return err
 		}
 
@@ -945,7 +945,7 @@ func (b *boltArbitratorLog) WipeHistory() error {
 		// We'll delete any chain actions that are still stored by
 		// removing the enclosing bucket.
 		err = scopeBucket.DeleteNestedBucket(actionsBucketKey)
-		if err != nil && err != kvdb.ErrBucketNotFound {
+		if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 			return err
 		}
 

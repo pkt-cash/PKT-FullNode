@@ -2,13 +2,14 @@ package chainntnfs
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -601,11 +602,11 @@ type TxIndexConn interface {
 	// GetRawTransactionVerbose returns the transaction identified by the
 	// passed chain hash, and returns additional information such as the
 	// block that the transaction confirmed.
-	GetRawTransactionVerbose(*chainhash.Hash) (*btcjson.TxRawResult, error)
+	GetRawTransactionVerbose(*chainhash.Hash) (*btcjson.TxRawResult, er.R)
 
 	// GetBlockVerbose returns the block identified by the chain hash along
 	// with additional information such as the block's height in the chain.
-	GetBlockVerbose(*chainhash.Hash) (*btcjson.GetBlockVerboseResult, error)
+	GetBlockVerbose(*chainhash.Hash) (*btcjson.GetBlockVerboseResult, er.R)
 }
 
 // ConfDetailsFromTxIndex looks up whether a transaction is already included in
@@ -625,10 +626,8 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 		// within the index itself, then we can exit early. We'll also
 		// need to look at the error message returned as the error code
 		// is used for multiple errors.
-		jsonErr, ok := err.(*btcjson.RPCError)
-		if ok && jsonErr.Code == btcjson.ErrRPCNoTxInfo &&
-			strings.Contains(jsonErr.Message, txNotFoundErr) {
-
+		if btcjson.ErrRPCNoTxInfo.Is(err) &&
+			strings.Contains(err.Message(), txNotFoundErr) {
 			return nil, TxNotFoundIndex, nil
 		}
 
@@ -639,7 +638,7 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 
 	// Deserialize the hex-encoded transaction to include it in the
 	// confirmation details.
-	rawTx, err := hex.DecodeString(rawTxRes.Hex)
+	rawTx, err := util.DecodeHex(rawTxRes.Hex)
 	if err != nil {
 		return nil, TxNotFoundIndex,
 			fmt.Errorf("unable to deserialize tx %v: %v",

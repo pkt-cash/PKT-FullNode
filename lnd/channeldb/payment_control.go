@@ -195,8 +195,7 @@ func (p *PaymentControl) InitPayment(paymentHash lntypes.Hash,
 		// We'll delete any lingering HTLCs to start with, in case we
 		// are initializing a payment that was attempted earlier, but
 		// left in a state where we could retry.
-		err = bucket.DeleteNestedBucket(paymentHtlcsBucket)
-		if err != nil && err != kvdb.ErrBucketNotFound {
+		if err := bucket.DeleteNestedBucket(paymentHtlcsBucket); err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 			return err
 		}
 

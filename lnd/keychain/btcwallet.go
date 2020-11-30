@@ -339,7 +339,7 @@ func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
 
 		// If we reach this point, then we we're unable to derive the
 		// private key, so return an error back to the user.
-		return ErrCannotDerivePrivKey
+		return er.E(ErrCannotDerivePrivKey)
 	})
 	if err != nil {
 		return nil, err

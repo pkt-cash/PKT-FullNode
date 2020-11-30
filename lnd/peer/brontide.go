@@ -10,12 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/connmgr"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/pkt-cash/pktd/lnd/buffer"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
@@ -513,7 +514,7 @@ func (p *Brontide) Start() error {
 
 	msgs, err := p.loadActiveChannels(activeChans)
 	if err != nil {
-		return fmt.Errorf("unable to load channels: %v", err)
+		return er.Errorf("unable to load channels: %v", err)
 	}
 
 	p.startTime = time.Now()
@@ -593,7 +594,7 @@ func (p *Brontide) QuitSignal() <-chan struct{} {
 // messages that should be sent to the peer immediately, in case we have borked
 // channels that haven't been closed yet.
 func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
-	[]lnwire.Message, error) {
+	[]lnwire.Message, er.R) {
 
 	// Return a slice of messages to send to the peers in case the channel
 	// cannot be loaded normally.
@@ -604,7 +605,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			p.cfg.Signer, dbChan, p.cfg.SigPool,
 		)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		chanPoint := &dbChan.FundingOutpoint
@@ -646,7 +647,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 		graph := p.cfg.ChannelGraph
 		info, p1, p2, err := graph.FetchChannelEdgesByOutpoint(chanPoint)
 		if err != nil && err != channeldb.ErrEdgeNotFound {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		// We'll filter out our policy from the directional channel
@@ -706,7 +707,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			*chanPoint,
 		)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		err = p.addLink(
@@ -714,7 +715,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			true,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to add link %v to "+
+			return nil, er.Errorf("unable to add link %v to "+
 				"switch: %v", chanPoint, err)
 		}
 

@@ -11,8 +11,8 @@ import (
 
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/neutrino"
-	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 )
 
 var (
@@ -48,7 +48,7 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 				OutPoint: *op,
 				PkScript: pkScript,
 			}),
-			neutrino.StartBlock(&headerfs.BlockStamp{
+			neutrino.StartBlock(&waddrmgr.BlockStamp{
 				Height: int32(heightHint),
 			}),
 			neutrino.QuitChan(cancel),

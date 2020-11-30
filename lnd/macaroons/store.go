@@ -382,7 +382,7 @@ func (r *RootKeyStorage) ListMacaroonIDs(_ context.Context) ([][]byte, error) {
 
 		// appendRootKey is a function closure that appends root key ID
 		// to rootKeySlice.
-		appendRootKey := func(k, _ []byte) error {
+		appendRootKey := func(k, _ []byte) er.R {
 			// Only append when the key value is not encryptedKeyID.
 			if !bytes.Equal(k, encryptionKeyID) {
 				rootKeySlice = append(rootKeySlice, k)
