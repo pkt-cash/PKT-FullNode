@@ -10,12 +10,13 @@ import (
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/neutrino"
-	"github.com/pkt-cash/pktd/neutrino/headerfs"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -58,7 +59,7 @@ type NeutrinoNotifier struct {
 
 	blockEpochClients map[uint64]*blockEpochRegistration
 
-	rescanErr <-chan error
+	rescanErr <-chan er.R
 
 	chainUpdates *queue.ConcurrentQueue
 	txUpdates    *queue.ConcurrentQueue
@@ -97,7 +98,7 @@ func New(node *neutrino.ChainService, spendHintCache chainntnfs.SpendHintCache,
 		p2pNode:   node,
 		chainConn: &NeutrinoChainConn{node},
 
-		rescanErr: make(chan error),
+		rescanErr: make(chan er.R),
 
 		chainUpdates: queue.NewConcurrentQueue(10),
 		txUpdates:    queue.NewConcurrentQueue(10),
@@ -547,7 +548,8 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 			*blockHash, wire.GCSFilterRegular,
 			neutrino.NumRetries(5),
 			neutrino.OptimisticReverseBatch(),
-			neutrino.MaxBatchSize(int64(scanHeight-startHeight+1)),
+			// TODO(cjd): Maybe we want to implement MaxBatchSize in neutrino?
+			//neutrino.MaxBatchSize(int64(scanHeight-startHeight+1)),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to retrieve regular filter for "+
@@ -772,10 +774,10 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 
 		spendReport, err := n.p2pNode.GetUtxo(
 			neutrino.WatchInputs(inputToWatch),
-			neutrino.StartBlock(&headerfs.BlockStamp{
+			neutrino.StartBlock(&waddrmgr.BlockStamp{
 				Height: int32(ntfn.HistoricalDispatch.StartHeight),
 			}),
-			neutrino.EndBlock(&headerfs.BlockStamp{
+			neutrino.EndBlock(&waddrmgr.BlockStamp{
 				Height: int32(ntfn.HistoricalDispatch.EndHeight),
 			}),
 			neutrino.QuitChan(n.quit),
