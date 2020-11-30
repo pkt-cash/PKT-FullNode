@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/rpcclient"
-	"github.com/lightninglabs/neutrino"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/rpcclient"
 )
 
 // UnsafeStart starts the notifier with a specified best height and optional

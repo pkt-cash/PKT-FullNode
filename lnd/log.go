@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/pktlog"
-	"github.com/lightninglabs/neutrino"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/build"
@@ -41,6 +39,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/sweep"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktlog"
 	"google.golang.org/grpc"
 )
 

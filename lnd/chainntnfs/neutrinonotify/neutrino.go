@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/lnd/queue"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
-	"github.com/lightninglabs/neutrino"
-	"github.com/lightninglabs/neutrino/headerfs"
-	"github.com/pkt-cash/pktd/lnd/chainntnfs"
-	"github.com/pkt-cash/pktd/lnd/queue"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lightninglabs/neutrino"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/neutrino"
 )
 
 // createNewNotifier creates a new instance of the ChainNotifier interface

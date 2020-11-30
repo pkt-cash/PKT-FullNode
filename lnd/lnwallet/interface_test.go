@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/lightninglabs/neutrino"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -39,6 +38,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"

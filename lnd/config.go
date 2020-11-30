@@ -18,9 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil"
 	flags "github.com/jessevdk/go-flags"
-	"github.com/lightninglabs/neutrino"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
@@ -35,6 +34,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
 	"github.com/pkt-cash/pktd/lnd/routing"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/neutrino"
 )
 
 const (

@@ -5,13 +5,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/rpcclient"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
-	"github.com/lightninglabs/neutrino"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/rpcclient"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // CfFilteredChainView is an implementation of the FilteredChainView interface

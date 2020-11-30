@@ -13,12 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/chain"
-	"github.com/pkt-cash/pktd/pktwallet/wallet"
-	"github.com/lightninglabs/neutrino"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs/bitcoindnotify"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs/btcdnotify"
@@ -33,6 +29,10 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/chainview"
+	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/rpcclient"
 )
 
 // Config houses necessary fields that a chainControl instance needs to

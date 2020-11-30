@@ -26,8 +26,8 @@ import (
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 
-	"github.com/lightninglabs/neutrino"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/neutrino"
 )
 
 var (
