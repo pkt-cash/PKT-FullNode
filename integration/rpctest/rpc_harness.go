@@ -386,6 +386,14 @@ func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
 		blockVersion, blockTime, []wire.TxOut{})
 }
 
+// NewAddress returns a fresh address spendable by the Harness' internal
+// wallet.
+//
+// This function is safe for concurrent access.
+func (h *Harness) NewAddress() (btcutil.Address, error) {
+	return h.wallet.NewAddress()
+}
+
 // SendOutputs creates, signs, and finally broadcasts a transaction spending
 // the harness' available mature coinbase outputs creating new outputs
 // according to targetOutputs.
@@ -395,6 +403,17 @@ func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
 	feeRate btcutil.Amount) (*chainhash.Hash, error) {
 
 	return h.wallet.SendOutputs(targetOutputs, feeRate)
+}
+
+// SendOutputsWithoutChange creates and sends a transaction that pays to the
+// specified outputs while observing the passed fee rate and ignoring a change
+// output. The passed fee rate should be expressed in sat/b.
+//
+// This function is safe for concurrent access.
+func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+
+	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
 }
 
 // GenerateAndSubmitBlockWithCustomCoinbaseOutputs creates a block whose

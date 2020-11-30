@@ -21,6 +21,8 @@ const (
 	// ANAdd indicates the specified host should be added as a persistent
 	// peer.
 	ANAdd AddNodeCommand = "add"
+
+	ANRemove AddNodeCommand = "remove"
 )
 
 // String returns the AddNodeCommand in human-readable form.

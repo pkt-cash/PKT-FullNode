@@ -8,8 +8,8 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -413,4 +413,55 @@ func (c *Client) GetCFilterHeaderAsync(blockHash *chainhash.Hash,
 func (c *Client) GetCFilterHeader(blockHash *chainhash.Hash,
 	filterType wire.FilterType) (*wire.MsgCFHeaders, er.R) {
 	return c.GetCFilterHeaderAsync(blockHash, filterType).Receive()
+}
+
+// GetTxOut returns the transaction output info if it's unspent and
+// nil, otherwise.
+func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, error) {
+	return c.GetTxOutAsync(txHash, index, mempool).Receive()
+}
+
+// FutureGetBlockHeaderVerboseResult is a future promise to deliver the result of a
+// GetBlockAsync RPC invocation (or an applicable error).
+type FutureGetBlockHeaderVerboseResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// data structure of the blockheader requested from the server given its hash.
+func (r FutureGetBlockHeaderVerboseResult) Receive() (*btcjson.GetBlockHeaderVerboseResult, er.R) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a string.
+	var bh btcjson.GetBlockHeaderVerboseResult
+	errr := jsoniter.Unmarshal(res, &bh)
+	if errr != nil {
+		return nil, er.E(errr)
+	}
+
+	return &bh, nil
+}
+
+// GetBlockHeaderVerboseAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetBlockHeader for the blocking version and more details.
+func (c *Client) GetBlockHeaderVerboseAsync(blockHash *chainhash.Hash) FutureGetBlockHeaderVerboseResult {
+	hash := ""
+	if blockHash != nil {
+		hash = blockHash.String()
+	}
+
+	cmd := btcjson.NewGetBlockHeaderCmd(hash, btcjson.Bool(true))
+	return c.sendCmd(cmd)
+}
+
+// GetBlockHeaderVerbose returns a data structure with information about the
+// blockheader from the server given its hash.
+//
+// See GetBlockHeader to retrieve a blockheader instead.
+func (c *Client) GetBlockHeaderVerbose(blockHash *chainhash.Hash) (*btcjson.GetBlockHeaderVerboseResult, error) {
+	return c.GetBlockHeaderVerboseAsync(blockHash).Receive()
 }

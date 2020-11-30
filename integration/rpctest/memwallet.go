@@ -365,6 +365,16 @@ func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 	return addr, nil
 }
 
+// NewAddress returns a fresh address spendable by the wallet.
+//
+// This function is safe for concurrent access.
+func (m *memWallet) NewAddress() (btcutil.Address, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	return m.newAddress()
+}
+
 // fundTx attempts to fund a transaction sending amt bitcoin. The coins are
 // selected such that the final amount spent pays enough fees as dictated by the
 // passed fee rate. The passed fee rate should be expressed in

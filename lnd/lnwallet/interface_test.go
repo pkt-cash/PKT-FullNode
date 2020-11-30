@@ -1270,9 +1270,9 @@ func testListTransactionDetails(miner *rpctest.Harness,
 
 	// Next create a transaction paying to an output which isn't under the
 	// wallet's control.
-	minerAddr, err := miner.NewAddress()
-	if err != nil {
-		t.Fatalf("unable to generate address: %v", err)
+	minerAddr, errr := miner.NewAddress()
+	if errr != nil {
+		t.Fatalf("unable to generate address: %v", errr)
 	}
 	outputScript, err := txscript.PayToAddrScript(minerAddr)
 	if err != nil {
@@ -2150,9 +2150,9 @@ func testReorgWalletBalance(r *rpctest.Harness, w *lnwallet.LightningWallet,
 
 	// Send some money from the wallet back to the miner.
 	// Grab a fresh address from the miner to house this output.
-	minerAddr, err := r.NewAddress()
-	if err != nil {
-		t.Fatalf("unable to generate address for miner: %v", err)
+	minerAddr, errr := r.NewAddress()
+	if errr != nil {
+		t.Fatalf("unable to generate address for miner: %v", errr)
 	}
 	script, err := txscript.PayToAddrScript(minerAddr)
 	if err != nil {
