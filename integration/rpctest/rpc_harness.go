@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/protocol"
@@ -368,6 +369,32 @@ func (h *Harness) RPCConfig() rpcclient.ConnConfig {
 // harness instance.
 func (h *Harness) P2PAddress() string {
 	return h.node.config.listen
+}
+
+// GenerateAndSubmitBlock creates a block whose contents include the passed
+// transactions and submits it to the running simnet node. For generating
+// blocks with only a coinbase tx, callers can simply pass nil instead of
+// transactions to be mined. Additionally, a custom block version can be set by
+// the caller. A blockVersion of -1 indicates that the current default block
+// version should be used. An uninitialized time.Time should be used for the
+// blockTime parameter if one doesn't wish to set a custom time.
+//
+// This function is safe for concurrent access.
+func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
+	blockTime time.Time) (*btcutil.Block, error) {
+	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
+		blockVersion, blockTime, []wire.TxOut{})
+}
+
+// SendOutputs creates, signs, and finally broadcasts a transaction spending
+// the harness' available mature coinbase outputs creating new outputs
+// according to targetOutputs.
+//
+// This function is safe for concurrent access.
+func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+
+	return h.wallet.SendOutputs(targetOutputs, feeRate)
 }
 
 // GenerateAndSubmitBlockWithCustomCoinbaseOutputs creates a block whose
