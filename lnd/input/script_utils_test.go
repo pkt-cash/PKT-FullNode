@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 // assertEngineExecution executes the VM returned by the newEngine closure,
@@ -1259,7 +1260,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 		{
 			// Alice cannot spend output without sequence set.
 			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
-				sweepTx.TxIn[0].Sequence = wire.MaxTxInSequenceNum
+				sweepTx.TxIn[0].Sequence = constants.MaxTxInSequenceNum
 				sweepTxSigHashes := txscript.NewTxSigHashes(sweepTx)
 
 				signDesc := &SignDescriptor{
@@ -1350,7 +1351,7 @@ func TestSpendAnchor(t *testing.T) {
 		{
 			// Alice can spend immediately.
 			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
-				sweepTx.TxIn[0].Sequence = wire.MaxTxInSequenceNum
+				sweepTx.TxIn[0].Sequence = constants.MaxTxInSequenceNum
 				sweepTxSigHashes := txscript.NewTxSigHashes(sweepTx)
 
 				signDesc := &SignDescriptor{

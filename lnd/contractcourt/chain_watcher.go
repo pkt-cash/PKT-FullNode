@@ -7,17 +7,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 const (
@@ -571,7 +572,7 @@ func (c *chainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 		// sequence number that's finalized. This won't happen with
 		// regular commitment transactions due to the state hint
 		// encoding scheme.
-		if commitTxBroadcast.TxIn[0].Sequence == wire.MaxTxInSequenceNum {
+		if commitTxBroadcast.TxIn[0].Sequence == constants.MaxTxInSequenceNum {
 			// TODO(roasbeef): rare but possible, need itest case
 			// for
 			err := c.dispatchCooperativeClose(commitSpend)

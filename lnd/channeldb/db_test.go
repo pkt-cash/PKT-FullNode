@@ -10,15 +10,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 func TestOpenWithCreate(t *testing.T) {
@@ -213,7 +214,7 @@ func TestAddrsForNode(t *testing.T) {
 		t.Fatalf("unable to recv node pub: %v", err)
 	}
 	linkNode := cdb.NewLinkNode(
-		wire.MainNet, nodePub, anotherAddr,
+		protocol.MainNet, nodePub, anotherAddr,
 	)
 	if err := linkNode.Sync(); err != nil {
 		t.Fatalf("unable to sync link node: %v", err)

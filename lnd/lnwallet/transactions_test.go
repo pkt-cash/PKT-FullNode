@@ -28,6 +28,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/stretchr/testify/require"
 )
 
@@ -471,7 +472,7 @@ func TestCommitTxStateHint(t *testing.T) {
 				}
 			}
 
-			if sequence&wire.SequenceLockTimeDisabled == 0 {
+			if sequence&constants.SequenceLockTimeDisabled == 0 {
 				if !test.shouldFail {
 					t.Fatalf("Sequence locktime is NOT disabled when it should be")
 				}

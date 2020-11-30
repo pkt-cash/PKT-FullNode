@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
@@ -603,7 +604,7 @@ func TestBIP0068AndBIP0112Activation(t *testing.T) {
 		// bit it set. The transaction should be rejected as a result.
 		{
 			tx: makeTxCase(
-				blockchain.LockTimeToSequence(false, 1)|wire.SequenceLockTimeDisabled,
+				blockchain.LockTimeToSequence(false, 1)|constants.SequenceLockTimeDisabled,
 				2,
 			),
 			accept: false,

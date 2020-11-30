@@ -48,6 +48,7 @@ import (
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1664,7 +1665,7 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 	// If we want to create a tx that signals replacement, set its
 	// sequence number to the max one that signals replacement.
 	// Otherwise we just use the standard max sequence.
-	sequence := wire.MaxTxInSequenceNum
+	sequence := constants.MaxTxInSequenceNum
 	if rbf {
 		sequence = mempool.MaxRBFSequence
 	}

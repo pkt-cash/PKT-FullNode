@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // NetAddress represents information pertaining to the identity and network
@@ -28,7 +28,7 @@ type NetAddress struct {
 
 	// ChainNet is the Bitcoin network this node is associated with.
 	// TODO(roasbeef): make a slice in the future for multi-chain
-	ChainNet wire.BitcoinNet
+	ChainNet protocol.BitcoinNet
 }
 
 // A compile time assertion to ensure that NetAddress meets the net.Addr

@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/constants"
 )
 
 const (
@@ -180,7 +181,7 @@ func SetStateNumHint(commitTx *wire.MsgTx, stateNum uint64,
 
 	// Set the height bit of the sequence number in order to disable any
 	// sequence locks semantics.
-	commitTx.TxIn[0].Sequence = uint32(stateNum>>24) | wire.SequenceLockTimeDisabled
+	commitTx.TxIn[0].Sequence = uint32(stateNum>>24) | constants.SequenceLockTimeDisabled
 	commitTx.LockTime = uint32(stateNum&0xFFFFFF) | TimelockShift
 
 	return nil

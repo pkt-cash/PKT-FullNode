@@ -28,6 +28,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/shachain"
 	"github.com/pkt-cash/pktd/lnd/ticker"
 	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 const (
@@ -412,7 +413,7 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 	cfgAddr := &lnwire.NetAddress{
 		IdentityKey: aliceKeyPub,
 		Address:     aliceAddr,
-		ChainNet:    wire.SimNet,
+		ChainNet:    protocol.SimNet,
 	}
 
 	cfg := &Config{

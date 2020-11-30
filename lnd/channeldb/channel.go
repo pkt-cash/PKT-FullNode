@@ -13,14 +13,15 @@ import (
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 const (
@@ -1382,7 +1383,7 @@ func syncNewChannel(tx kvdb.RwTx, c *OpenChannel, addrs []net.Addr) error {
 	// Next, we need to establish a (possibly) new LinkNode relationship
 	// for this channel. The LinkNode metadata contains reachability,
 	// up-time, and service bits related information.
-	linkNode := c.Db.NewLinkNode(wire.MainNet, c.IdentityPub, addrs...)
+	linkNode := c.Db.NewLinkNode(protocol.MainNet, c.IdentityPub, addrs...)
 
 	// TODO(roasbeef): do away with link node all together?
 

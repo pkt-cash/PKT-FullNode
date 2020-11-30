@@ -9,7 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/wire/protocol"
 )
 
 var (
@@ -34,7 +34,7 @@ var (
 type LinkNode struct {
 	// Network indicates the Bitcoin network that the LinkNode advertises
 	// for incoming channel creation.
-	Network wire.BitcoinNet
+	Network protocol.BitcoinNet
 
 	// IdentityPub is the node's current identity public key. Any
 	// channel/topology related information received by this node MUST be
@@ -62,7 +62,7 @@ type LinkNode struct {
 
 // NewLinkNode creates a new LinkNode from the provided parameters, which is
 // backed by an instance of channeldb.
-func (db *DB) NewLinkNode(bitNet wire.BitcoinNet, pub *btcec.PublicKey,
+func (db *DB) NewLinkNode(bitNet protocol.BitcoinNet, pub *btcec.PublicKey,
 	addrs ...net.Addr) *LinkNode {
 
 	return &LinkNode{
@@ -287,7 +287,7 @@ func deserializeLinkNode(r io.Reader) (*LinkNode, error) {
 	if _, err := io.ReadFull(r, buf[:4]); err != nil {
 		return nil, err
 	}
-	node.Network = wire.BitcoinNet(byteOrder.Uint32(buf[:4]))
+	node.Network = protocol.BitcoinNet(byteOrder.Uint32(buf[:4]))
 
 	var pub [33]byte
 	if _, err := io.ReadFull(r, pub[:]); err != nil {
