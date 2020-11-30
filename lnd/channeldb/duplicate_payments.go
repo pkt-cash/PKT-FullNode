@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -222,17 +223,17 @@ func fetchDuplicatePayments(paymentHashBucket kvdb.RBucket) ([]*MPPayment,
 		return nil, nil
 	}
 
-	err := dup.ForEach(func(k, v []byte) error {
+	err := dup.ForEach(func(k, v []byte) er.R {
 		subBucket := dup.NestedReadBucket(k)
 		if subBucket == nil {
 			// We one bucket for each duplicate to be found.
-			return fmt.Errorf("non bucket element" +
+			return er.Errorf("non bucket element" +
 				"in duplicate bucket")
 		}
 
 		p, err := fetchDuplicatePayment(subBucket)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		payments = append(payments, p)

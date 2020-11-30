@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
@@ -428,6 +429,6 @@ func logMessage(peer Peer, msg wtwire.Message, read bool) {
 }
 
 // noDial is a dummy dial method passed to the server's connmgr.
-func noDial(_ net.Addr) (net.Conn, error) {
-	return nil, fmt.Errorf("watchtower cannot make outgoing conns")
+func noDial(_ net.Addr) (net.Conn, er.R) {
+	return nil, er.Errorf("watchtower cannot make outgoing conns")
 }

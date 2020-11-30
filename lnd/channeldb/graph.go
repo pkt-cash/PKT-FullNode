@@ -15,6 +15,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -230,11 +231,11 @@ func (c *ChannelGraph) ForEachChannel(cb func(*ChannelEdgeInfo, *ChannelEdgePoli
 		// For each edge pair within the edge index, we fetch each edge
 		// itself and also the node information in order to fully
 		// populated the object.
-		return edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) error {
+		return edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) er.R {
 			infoReader := bytes.NewReader(edgeInfoBytes)
 			edgeInfo, err := deserializeChanEdgeInfo(infoReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 			edgeInfo.db = c.db
 
@@ -242,13 +243,13 @@ func (c *ChannelGraph) ForEachChannel(cb func(*ChannelEdgeInfo, *ChannelEdgePoli
 				edgeIndex, edges, nodes, chanID, c.db,
 			)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// With both edges read, execute the call back. IF this
 			// function returns an error then the transaction will
 			// be aborted.
-			return cb(&edgeInfo, edge1, edge2)
+			return er.E(cb(&edgeInfo, edge1, edge2))
 		})
 	}, func() {})
 }
@@ -297,7 +298,7 @@ func (c *ChannelGraph) DisabledChannelIDs() ([]uint64, error) {
 
 		// We iterate over all disabled policies and we add each channel that
 		// has more than one disabled policy to disabledChanIDs array.
-		return disabledEdgePolicyIndex.ForEach(func(k, v []byte) error {
+		return disabledEdgePolicyIndex.ForEach(func(k, v []byte) er.R {
 			chanID := byteOrder.Uint64(k[:8])
 			_, edgeFound := chanEdgeFound[chanID]
 			if edgeFound {
@@ -336,7 +337,7 @@ func (c *ChannelGraph) ForEachNode(cb func(kvdb.RTx, *LightningNode) error) erro
 			return ErrGraphNotFound
 		}
 
-		return nodes.ForEach(func(pubKey, nodeBytes []byte) error {
+		return nodes.ForEach(func(pubKey, nodeBytes []byte) er.R {
 			// If this is the source key, then we skip this
 			// iteration as the value for this key is a pubKey
 			// rather than raw node information.
@@ -347,13 +348,13 @@ func (c *ChannelGraph) ForEachNode(cb func(kvdb.RTx, *LightningNode) error) erro
 			nodeReader := bytes.NewReader(nodeBytes)
 			node, err := deserializeLightningNode(nodeReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 			node.db = c.db
 
 			// Execute the callback, the transaction will abort if
 			// this returns an error.
-			return cb(tx, &node)
+			return er.E(cb(tx, &node))
 		})
 	}
 
@@ -1001,7 +1002,7 @@ func (c *ChannelGraph) pruneGraphNodes(nodes kvdb.RwBucket,
 	// in the graph. A node should only be removed once it has no more
 	// references in the graph.
 	nodeRefCounts := make(map[[33]byte]int)
-	err = nodes.ForEach(func(pubKey, nodeBytes []byte) error {
+	err = nodes.ForEach(func(pubKey, nodeBytes []byte) er.R {
 		// If this is the source key, then we skip this
 		// iteration as the value for this key is a pubKey
 		// rather than raw node information.
@@ -1026,7 +1027,7 @@ func (c *ChannelGraph) pruneGraphNodes(nodes kvdb.RwBucket,
 	// Next, we'll run through the edgeIndex which maps a channel ID to the
 	// edge info. We'll use this scan to populate our reference count map
 	// above.
-	err = edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) error {
+	err = edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) er.R {
 		// The first 66 bytes of the edge info contain the pubkeys of
 		// the nodes that this edge attaches. We'll extract them, and
 		// add them to the ref count map.
@@ -3196,20 +3197,20 @@ func (c *ChannelGraph) ChannelView() ([]EdgePoint, error) {
 		// Once we have the proper bucket, we'll range over each key
 		// (which is the channel point for the channel) and decode it,
 		// accumulating each entry.
-		return chanIndex.ForEach(func(chanPointBytes, chanID []byte) error {
+		return chanIndex.ForEach(func(chanPointBytes, chanID []byte) er.R {
 			chanPointReader := bytes.NewReader(chanPointBytes)
 
 			var chanPoint wire.OutPoint
 			err := readOutpoint(chanPointReader, &chanPoint)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			edgeInfo, err := fetchChanEdgeInfo(
 				edgeIndex, chanID,
 			)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			pkScript, err := genMultiSigP2WSH(
@@ -3217,7 +3218,7 @@ func (c *ChannelGraph) ChannelView() ([]EdgePoint, error) {
 				edgeInfo.BitcoinKey2Bytes[:],
 			)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			edgePoints = append(edgePoints, EdgePoint{
@@ -3353,7 +3354,7 @@ func (c *ChannelGraph) NumZombies() (uint64, error) {
 			return nil
 		}
 
-		return zombieIndex.ForEach(func(_, _ []byte) error {
+		return zombieIndex.ForEach(func(_, _ []byte) er.R {
 			numZombies++
 			return nil
 		})

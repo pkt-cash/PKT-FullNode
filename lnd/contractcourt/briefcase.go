@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -489,7 +490,7 @@ func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, erro
 			return err
 		}
 
-		return contractBucket.ForEach(func(resKey, resBytes []byte) error {
+		return contractBucket.ForEach(func(resKey, resBytes []byte) er.R {
 			if len(resKey) != resolverIDLen {
 				return nil
 			}
@@ -532,11 +533,11 @@ func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, erro
 				)
 
 			default:
-				return fmt.Errorf("unknown resolver type: %v", resType)
+				return er.Errorf("unknown resolver type: %v", resType)
 			}
 
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			contracts = append(contracts, res)
@@ -821,7 +822,7 @@ func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, error) {
 			return errNoActions
 		}
 
-		return actionsBucket.ForEach(func(action, htlcBytes []byte) error {
+		return actionsBucket.ForEach(func(action, htlcBytes []byte) er.R {
 			if htlcBytes == nil {
 				return nil
 			}
@@ -831,7 +832,7 @@ func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, error) {
 			htlcReader := bytes.NewReader(htlcBytes)
 			htlcs, err := channeldb.DeserializeHtlcs(htlcReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			actionsMap[chainAction] = htlcs

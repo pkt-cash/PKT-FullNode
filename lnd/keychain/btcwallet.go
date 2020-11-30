@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -145,20 +146,20 @@ func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error
 	)
 
 	db := b.wallet.Database()
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, err := b.keyScope()
-		if err != nil {
-			return err
+		scope, errr := b.keyScope()
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		err = b.createAccountIfNotExists(addrmgrNs, keyFam, scope)
-		if err != nil {
-			return err
+		errr = b.createAccountIfNotExists(addrmgrNs, keyFam, scope)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		addrs, err := scope.NextExternalAddresses(
@@ -172,7 +173,7 @@ func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error
 		// interface type, otherwise we can't manipulate it below.
 		addr, ok := addrs[0].(waddrmgr.ManagedPubKeyAddress)
 		if !ok {
-			return fmt.Errorf("address is not a managed pubkey " +
+			return er.Errorf("address is not a managed pubkey " +
 				"addr")
 		}
 
@@ -205,20 +206,20 @@ func (b *BtcWalletKeyRing) DeriveKey(keyLoc KeyLocator) (KeyDescriptor, error) {
 	var keyDesc KeyDescriptor
 
 	db := b.wallet.Database()
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, err := b.keyScope()
-		if err != nil {
-			return err
+		scope, errr := b.keyScope()
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		err = b.createAccountIfNotExists(addrmgrNs, keyLoc.Family, scope)
-		if err != nil {
-			return err
+		errr = b.createAccountIfNotExists(addrmgrNs, keyLoc.Family, scope)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		path := waddrmgr.DerivationPath{
@@ -253,22 +254,22 @@ func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
 	var key *btcec.PrivateKey
 
 	db := b.wallet.Database()
-	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, err := b.keyScope()
-		if err != nil {
-			return err
+		scope, errr := b.keyScope()
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		err = b.createAccountIfNotExists(
+		errr = b.createAccountIfNotExists(
 			addrmgrNs, keyDesc.Family, scope,
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// If the public key isn't set or they have a non-zero index,

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -515,9 +516,9 @@ func loadChannelFwdPkgs(tx kvdb.RTx, source lnwire.ShortChannelID) ([]*FwdPkg, e
 	}
 
 	var heights []uint64
-	if err := sourceBkt.ForEach(func(k, _ []byte) error {
+	if err := sourceBkt.ForEach(func(k, _ []byte) er.R {
 		if len(k) != 8 {
-			return ErrCorruptedFwdPkg
+			return er.E(ErrCorruptedFwdPkg)
 		}
 
 		heights = append(heights, byteOrder.Uint64(k))
@@ -651,10 +652,10 @@ func loadFwdPkg(fwdPkgBkt kvdb.RBucket, source lnwire.ShortChannelID,
 // them in order of the indexes they were written under.
 func loadHtlcs(bkt kvdb.RBucket) ([]LogUpdate, error) {
 	var htlcs []LogUpdate
-	if err := bkt.ForEach(func(_, v []byte) error {
+	if err := bkt.ForEach(func(_, v []byte) er.R {
 		var htlc LogUpdate
 		if err := htlc.Decode(bytes.NewReader(v)); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		htlcs = append(htlcs, htlc)

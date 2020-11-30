@@ -8,14 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/snacl"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
-	"github.com/davecgh/go-spew/spew"
 
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb" // Required in order to create the default database.
 )
@@ -89,7 +90,7 @@ func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, error) {
 	// the keys required for signing various contracts.
 	_, err = baseWallet.Manager.FetchScopedKeyManager(chainKeyScope)
 	if err != nil {
-		err := walletdb.Update(baseWallet.Database(), func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(baseWallet.Database(), func(tx walletdb.ReadWriteTx) er.R {
 			addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 			_, err := baseWallet.Manager.NewScopedKeyManager(

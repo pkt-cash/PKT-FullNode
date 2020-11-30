@@ -3,6 +3,7 @@ package migration12
 import (
 	"bytes"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -28,7 +29,7 @@ func MigrateInvoiceTLV(tx kvdb.RwTx) error {
 
 	// Read in all existing invoices using the old format.
 	var invoices []keyedInvoice
-	err := invoiceB.ForEach(func(k, v []byte) error {
+	err := invoiceB.ForEach(func(k, v []byte) er.R {
 		if v == nil {
 			return nil
 		}
@@ -36,7 +37,7 @@ func MigrateInvoiceTLV(tx kvdb.RwTx) error {
 		invoiceReader := bytes.NewReader(v)
 		invoice, err := LegacyDeserializeInvoice(invoiceReader)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Insert an empty feature vector on all old payments.

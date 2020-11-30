@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 )
@@ -691,16 +692,16 @@ func (p *PaymentControl) FetchInFlightPayments() ([]*InFlightPayment, error) {
 			return nil
 		}
 
-		return payments.ForEach(func(k, _ []byte) error {
+		return payments.ForEach(func(k, _ []byte) er.R {
 			bucket := payments.NestedReadBucket(k)
 			if bucket == nil {
-				return fmt.Errorf("non bucket element")
+				return er.Errorf("non bucket element")
 			}
 
 			// If the status is not InFlight, we can return early.
 			paymentStatus, err := fetchPaymentStatus(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			if paymentStatus != StatusInFlight {
@@ -712,7 +713,7 @@ func (p *PaymentControl) FetchInFlightPayments() ([]*InFlightPayment, error) {
 			// Get the CreationInfo.
 			inFlight.Info, err = fetchCreationInfo(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			inFlights = append(inFlights, inFlight)

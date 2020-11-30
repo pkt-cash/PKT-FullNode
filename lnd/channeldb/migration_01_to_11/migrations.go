@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -36,7 +37,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 	// Now that we know the bucket has been created, we'll iterate over the
 	// entire node bucket so we can add the (updateTime || nodePub) key
 	// into the node update index.
-	err = nodes.ForEach(func(nodePub, nodeInfo []byte) error {
+	err = nodes.ForEach(func(nodePub, nodeInfo []byte) er.R {
 		if len(nodePub) != 33 {
 			return nil
 		}
@@ -77,7 +78,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 
 	// We'll now run through each edge policy in the database, and update
 	// the index to ensure each edge has the proper record.
-	err = edges.ForEach(func(edgeKey, edgePolicyBytes []byte) error {
+	err = edges.ForEach(func(edgeKey, edgePolicyBytes []byte) er.R {
 		if len(edgeKey) != 41 {
 			return nil
 		}
@@ -92,7 +93,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 			edgePolicyReader, nodes,
 		)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		log.Tracef("Adding chan_id=%v to edge update index",
@@ -150,7 +151,7 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 	// ForEach loop is not safe.
 	var invoicesKeys [][]byte
 	var invoicesValues [][]byte
-	err = invoices.ForEach(func(invoiceNum, invoiceBytes []byte) error {
+	err = invoices.ForEach(func(invoiceNum, invoiceBytes []byte) er.R {
 		// If this is a sub bucket, then we'll skip it.
 		if invoiceBytes == nil {
 			return nil
@@ -167,9 +168,9 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 		invoiceBytesCopy = append(invoiceBytesCopy, padding...)
 
 		invoiceReader := bytes.NewReader(invoiceBytesCopy)
-		invoice, err := deserializeInvoiceLegacy(invoiceReader)
-		if err != nil {
-			return fmt.Errorf("unable to decode invoice: %v", err)
+		invoice, errr := deserializeInvoiceLegacy(invoiceReader)
+		if errr != nil {
+			return er.Errorf("unable to decode invoice: %v", errr)
 		}
 
 		// Now that we have the fully decoded invoice, we can update
@@ -178,13 +179,13 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 
 		// First, we'll get the new sequence in the addIndex in order
 		// to create the proper mapping.
-		nextAddSeqNo, err := addIndex.NextSequence()
-		if err != nil {
-			return err
+		nextAddSeqNo, errr := addIndex.NextSequence()
+		if errr != nil {
+			return er.E(errr)
 		}
 		var seqNoBytes [8]byte
 		byteOrder.PutUint64(seqNoBytes[:], nextAddSeqNo)
-		err = addIndex.Put(seqNoBytes[:], invoiceNum[:])
+		err := addIndex.Put(seqNoBytes[:], invoiceNum[:])
 		if err != nil {
 			return err
 		}
@@ -197,9 +198,9 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 		// so, then we'll also add it to the settle index.
 		var nextSettleSeqNo uint64
 		if invoice.Terms.State == ContractSettled {
-			nextSettleSeqNo, err = settleIndex.NextSequence()
-			if err != nil {
-				return err
+			nextSettleSeqNo, errr = settleIndex.NextSequence()
+			if errr != nil {
+				return er.E(errr)
 			}
 
 			var seqNoBytes [8]byte
@@ -226,8 +227,8 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 		// We've fully migrated an invoice, so we'll now update the
 		// invoice in-place.
 		var b bytes.Buffer
-		if err := serializeInvoiceLegacy(&b, &invoice); err != nil {
-			return err
+		if errr := serializeInvoiceLegacy(&b, &invoice); errr != nil {
+			return er.E(errr)
 		}
 
 		// Save the key and value pending update for after the ForEach
@@ -270,7 +271,7 @@ func MigrateInvoiceTimeSeriesOutgoingPayments(tx kvdb.RwTx) error {
 	// to modify them directly within the ForEach loop.
 	var paymentKeys [][]byte
 	var paymentValues [][]byte
-	err := payBucket.ForEach(func(payID, paymentBytes []byte) error {
+	err := payBucket.ForEach(func(payID, paymentBytes []byte) er.R {
 		log.Tracef("Migrating payment %x", payID[:])
 
 		// The internal invoices for each payment only contain a
@@ -307,7 +308,7 @@ func MigrateInvoiceTimeSeriesOutgoingPayments(tx kvdb.RwTx) error {
 		paymentReader := bytes.NewReader(paymentCopy)
 		_, err := deserializeOutgoingPayment(paymentReader)
 		if err != nil {
-			return fmt.Errorf("unable to deserialize payment: %v", err)
+			return er.Errorf("unable to deserialize payment: %v", err)
 		}
 
 		// Now that we know the modifications was successful, we'll
@@ -381,18 +382,18 @@ func MigrateEdgePolicies(tx kvdb.RwTx) error {
 	}
 
 	// Iterate over all channels and check both edge policies.
-	err := edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) error {
+	err := edgeIndex.ForEach(func(chanID, edgeInfoBytes []byte) er.R {
 		infoReader := bytes.NewReader(edgeInfoBytes)
 		edgeInfo, err := deserializeChanEdgeInfo(infoReader)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		for _, key := range [][]byte{edgeInfo.NodeKey1Bytes[:],
 			edgeInfo.NodeKey2Bytes[:]} {
 
 			if err := checkKey(edgeInfo.ChannelID, key); err != nil {
-				return err
+				return er.E(err)
 			}
 		}
 
@@ -426,7 +427,7 @@ func PaymentStatusesMigration(tx kvdb.RwTx) error {
 	if circuits != nil {
 		log.Infof("Marking all known circuits with status InFlight")
 
-		err = circuits.ForEach(func(k, v []byte) error {
+		err = circuits.ForEach(func(k, v []byte) er.R {
 			// Parse the first 8 bytes as the short chan ID for the
 			// circuit. We'll skip all short chan IDs are not
 			// locally initiated, which includes all non-zero short
@@ -462,7 +463,7 @@ func PaymentStatusesMigration(tx kvdb.RwTx) error {
 
 	// For each payment in the bucket, deserialize the payment and mark it
 	// as completed.
-	err = bucket.ForEach(func(k, v []byte) error {
+	err = bucket.ForEach(func(k, v []byte) er.R {
 		// Ignores if it is sub-bucket.
 		if v == nil {
 			return nil
@@ -471,7 +472,7 @@ func PaymentStatusesMigration(tx kvdb.RwTx) error {
 		r := bytes.NewReader(v)
 		payment, err := deserializeOutgoingPayment(r)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Calculate payment hash for current payment.
@@ -532,7 +533,7 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 	// update index. To do so, we'll gather all of the existing policies
 	// within the graph to re-populate them later on.
 	var edgeKeys [][]byte
-	err = edges.ForEach(func(edgeKey, edgePolicyBytes []byte) error {
+	err = edges.ForEach(func(edgeKey, edgePolicyBytes []byte) er.R {
 		// All valid entries are indexed by a public key (33 bytes)
 		// followed by a channel ID (8 bytes), so we'll skip any entries
 		// with keys that do not match this.
@@ -554,7 +555,7 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 	// Build the set of keys that we will remove from the edge update index.
 	// This will include all keys contained within the bucket.
 	var updateKeysToRemove [][]byte
-	err = edgeUpdateIndex.ForEach(func(updKey, _ []byte) error {
+	err = edgeUpdateIndex.ForEach(func(updKey, _ []byte) er.R {
 		updateKeysToRemove = append(updateKeysToRemove, updKey)
 		return nil
 	})
@@ -625,20 +626,20 @@ func MigrateOptionalChannelCloseSummaryFields(tx kvdb.RwTx) error {
 	// ForEach loop is not safe.
 	var closedChansKeys [][]byte
 	var closedChansValues [][]byte
-	err := closedChanBucket.ForEach(func(chanID, summary []byte) error {
+	err := closedChanBucket.ForEach(func(chanID, summary []byte) er.R {
 		r := bytes.NewReader(summary)
 
 		// Read the old (v6) format from the database.
 		c, err := deserializeCloseChannelSummaryV6(r)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Serialize using the new format, and put back into the
 		// bucket.
 		var b bytes.Buffer
 		if err := serializeChannelCloseSummary(&b, c); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Now that we know the modifications was successful, we'll
@@ -689,13 +690,13 @@ func MigrateGossipMessageStoreKeys(tx kvdb.RwTx) error {
 	// should only expect to find channel announcement signatures as that
 	// was the only support message type previously.
 	msgs := make(map[[33 + 8]byte]*lnwire.AnnounceSignatures)
-	err := messageStore.ForEach(func(k, v []byte) error {
+	err := messageStore.ForEach(func(k, v []byte) er.R {
 		var msgKey [33 + 8]byte
 		copy(msgKey[:], k)
 
 		msg := &lnwire.AnnounceSignatures{}
 		if err := msg.Decode(bytes.NewReader(v), 0); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		msgs[msgKey] = msg
@@ -780,7 +781,7 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		return pub, nil
 	}
 
-	err = oldPayments.ForEach(func(k, v []byte) error {
+	err = oldPayments.ForEach(func(k, v []byte) er.R {
 		// Ignores if it is sub-bucket.
 		if v == nil {
 			return nil
@@ -788,9 +789,9 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 
 		// Read the old payment format.
 		r := bytes.NewReader(v)
-		payment, err := deserializeOutgoingPayment(r)
-		if err != nil {
-			return err
+		payment, errr := deserializeOutgoingPayment(r)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Calculate payment hash from the payment preimage.
@@ -805,13 +806,13 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		}
 
 		var infoBuf bytes.Buffer
-		if err := serializePaymentCreationInfo(&infoBuf, c); err != nil {
-			return err
+		if errr := serializePaymentCreationInfo(&infoBuf, c); errr != nil {
+			return er.E(errr)
 		}
 
-		sourcePubKey, err := sourcePub()
-		if err != nil {
-			return err
+		sourcePubKey, errr := sourcePub()
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Do the same for the PaymentAttemptInfo.
@@ -847,8 +848,8 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		}
 
 		var attemptBuf bytes.Buffer
-		if err := serializePaymentAttemptInfoMigration9(&attemptBuf, s); err != nil {
-			return err
+		if errr := serializePaymentAttemptInfoMigration9(&attemptBuf, s); errr != nil {
+			return er.E(errr)
 		}
 
 		// Reuse the existing payment sequence number.
@@ -862,7 +863,7 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		// from a database containing duplicate payments to a payment
 		// hash. To keep this information, we store such duplicate
 		// payments in a sub-bucket.
-		if err == kvdb.ErrBucketExists {
+		if kvdb.ErrBucketExists.Is(err) {
 			pHashBucket := newPayments.NestedReadWriteBucket(paymentHash[:])
 
 			// Create a bucket for duplicate payments within this
@@ -923,13 +924,13 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 	// Now we delete the old buckets. Deleting the payment status buckets
 	// deletes all payment statuses other than Complete.
 	err = tx.DeleteTopLevelBucket(paymentStatusBucket)
-	if err != nil && err != kvdb.ErrBucketNotFound {
+	if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 		return err
 	}
 
 	// Finally delete the old payment bucket.
 	err = tx.DeleteTopLevelBucket(paymentBucket)
-	if err != nil && err != kvdb.ErrBucketNotFound {
+	if err != nil && !kvdb.ErrBucketNotFound.Is(err) {
 		return err
 	}
 

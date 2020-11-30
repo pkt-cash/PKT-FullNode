@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -32,7 +33,7 @@ func DumpDB(tx kvdb.RTx, rootKey []byte) error {
 
 func dumpBucket(bucket kvdb.RBucket) error {
 	fmt.Printf("map[string]interface{} {\n")
-	err := bucket.ForEach(func(k, v []byte) error {
+	err := bucket.ForEach(func(k, v []byte) er.R {
 		key := toString(k)
 		fmt.Printf("%v: ", key)
 
@@ -40,7 +41,7 @@ func dumpBucket(bucket kvdb.RBucket) error {
 		if subBucket != nil {
 			err := dumpBucket(subBucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 		} else {
 			fmt.Print(toHex(v))
@@ -142,7 +143,7 @@ func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) error {
 	}
 
 	keyCount := 0
-	err := bucket.ForEach(func(k, v []byte) error {
+	err := bucket.ForEach(func(k, v []byte) er.R {
 		keyCount++
 		return nil
 	})

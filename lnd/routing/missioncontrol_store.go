@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -94,10 +95,10 @@ func (b *missionControlStore) fetchAll() ([]*paymentResult, error) {
 		resultBucket := tx.ReadBucket(resultsKey)
 		results = make([]*paymentResult, 0)
 
-		return resultBucket.ForEach(func(k, v []byte) error {
+		return resultBucket.ForEach(func(k, v []byte) er.R {
 			result, err := deserializeResult(k, v)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			results = append(results, result)

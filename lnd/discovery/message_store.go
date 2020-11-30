@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -206,7 +207,7 @@ func (s *MessageStore) Messages() (map[[33]byte][]lnwire.Message, error) {
 			return ErrCorruptedMessageStore
 		}
 
-		return messageStore.ForEach(func(k, v []byte) error {
+		return messageStore.ForEach(func(k, v []byte) er.R {
 			var pubKey [33]byte
 			copy(pubKey[:], k[:33])
 
@@ -218,7 +219,7 @@ func (s *MessageStore) Messages() (map[[33]byte][]lnwire.Message, error) {
 				return nil
 			}
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			msgs[pubKey] = append(msgs[pubKey], msg)
@@ -283,7 +284,7 @@ func (s *MessageStore) Peers() (map[[33]byte]struct{}, error) {
 			return ErrCorruptedMessageStore
 		}
 
-		return messageStore.ForEach(func(k, _ []byte) error {
+		return messageStore.ForEach(func(k, _ []byte) er.R {
 			var pubKey [33]byte
 			copy(pubKey[:], k[:33])
 			peers[pubKey] = struct{}{}

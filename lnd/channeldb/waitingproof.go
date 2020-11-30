@@ -9,6 +9,7 @@ import (
 	"bytes"
 
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -133,7 +134,7 @@ func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
 		}
 
 		// Iterate over objects buckets.
-		return bucket.ForEach(func(k, v []byte) error {
+		return bucket.ForEach(func(k, v []byte) er.R {
 			// Skip buckets fields.
 			if v == nil {
 				return nil
@@ -142,10 +143,10 @@ func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
 			r := bytes.NewReader(v)
 			proof := &WaitingProof{}
 			if err := proof.Decode(r); err != nil {
-				return err
+				return er.E(err)
 			}
 
-			return cb(proof)
+			return er.E(cb(proof))
 		})
 	}, reset)
 }

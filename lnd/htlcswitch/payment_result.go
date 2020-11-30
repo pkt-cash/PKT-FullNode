@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -280,7 +281,7 @@ func (store *networkResultStore) cleanStore(keep map[uint64]struct{}) error {
 		// Iterate through the bucket, deleting all items not in the
 		// keep map.
 		var toClean [][]byte
-		if err := networkResults.ForEach(func(k, _ []byte) error {
+		if err := networkResults.ForEach(func(k, _ []byte) er.R {
 			pid := binary.BigEndian.Uint64(k)
 			if _, ok := keep[pid]; ok {
 				return nil

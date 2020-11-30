@@ -8,6 +8,7 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -456,10 +457,10 @@ func (c *ClientDB) ListTowers() ([]*Tower, error) {
 			return ErrUninitializedDB
 		}
 
-		return towerBucket.ForEach(func(towerIDBytes, _ []byte) error {
+		return towerBucket.ForEach(func(towerIDBytes, _ []byte) er.R {
 			tower, err := getTower(towerBucket, towerIDBytes)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 			towers = append(towers, tower)
 			return nil
@@ -605,14 +606,14 @@ func listClientSessions(sessions kvdb.RBucket,
 	id *TowerID) (map[SessionID]*ClientSession, error) {
 
 	clientSessions := make(map[SessionID]*ClientSession)
-	err := sessions.ForEach(func(k, _ []byte) error {
+	err := sessions.ForEach(func(k, _ []byte) er.R {
 		// We'll load the full client session since the client will need
 		// the CommittedUpdates and AckedUpdates on startup to resume
 		// committed updates and compute the highest known commit height
 		// for each channel.
 		session, err := getClientSession(sessions, k)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Filter out any sessions that don't correspond to the given
@@ -642,14 +643,14 @@ func (c *ClientDB) FetchChanSummaries() (ChannelSummaries, error) {
 			return ErrUninitializedDB
 		}
 
-		return chanSummaries.ForEach(func(k, v []byte) error {
+		return chanSummaries.ForEach(func(k, v []byte) er.R {
 			var chanID lnwire.ChannelID
 			copy(chanID[:], k)
 
 			var summary ClientChanSummary
 			err := summary.Decode(bytes.NewReader(v))
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			summaries[chanID] = summary
@@ -993,11 +994,11 @@ func getClientSessionCommits(sessions kvdb.RBucket,
 		return committedUpdates, nil
 	}
 
-	err := sessionCommits.ForEach(func(k, v []byte) error {
+	err := sessionCommits.ForEach(func(k, v []byte) er.R {
 		var committedUpdate CommittedUpdate
 		err := committedUpdate.Decode(bytes.NewReader(v))
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		committedUpdate.SeqNum = byteOrder.Uint16(k)
 
@@ -1029,13 +1030,13 @@ func getClientSessionAcks(sessions kvdb.RBucket,
 		return ackedUpdates, nil
 	}
 
-	err := sessionAcks.ForEach(func(k, v []byte) error {
+	err := sessionAcks.ForEach(func(k, v []byte) er.R {
 		seqNum := byteOrder.Uint16(k)
 
 		var backupID BackupID
 		err := backupID.Decode(bytes.NewReader(v))
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		ackedUpdates[seqNum] = backupID

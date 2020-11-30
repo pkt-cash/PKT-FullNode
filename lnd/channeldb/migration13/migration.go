@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -60,7 +61,7 @@ func MigrateMPP(tx kvdb.RwTx) error {
 	}
 
 	var paymentKeys [][]byte
-	err := paymentsBucket.ForEach(func(k, v []byte) error {
+	err := paymentsBucket.ForEach(func(k, v []byte) er.R {
 		paymentKeys = append(paymentKeys, k)
 		return nil
 	})

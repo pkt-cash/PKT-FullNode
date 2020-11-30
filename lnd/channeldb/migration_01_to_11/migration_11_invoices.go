@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"io"
 
+	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11/zpay32"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
-	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // MigrateInvoices adds invoice htlcs and a separate cltv delta field to the
@@ -29,7 +30,7 @@ func MigrateInvoices(tx kvdb.RwTx) error {
 	// the corresponding invoice. Store those keys first, because it isn't
 	// safe to modify the bucket inside a ForEach loop.
 	var invoiceKeys [][]byte
-	err := invoiceB.ForEach(func(k, v []byte) error {
+	err := invoiceB.ForEach(func(k, v []byte) er.R {
 		if v == nil {
 			return nil
 		}

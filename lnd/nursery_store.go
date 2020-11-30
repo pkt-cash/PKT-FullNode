@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 //	              Overview of Nursery Store Storage Hierarchy
@@ -613,7 +614,7 @@ func (ns *nurseryStore) FetchPreschools() ([]kidOutput, error) {
 		// Construct a list of all channels in the channel index that
 		// are currently being tracked by the nursery store.
 		var activeChannels [][]byte
-		if err := chanIndex.ForEach(func(chanBytes, _ []byte) error {
+		if err := chanIndex.ForEach(func(chanBytes, _ []byte) er.R {
 			activeChannels = append(activeChannels, chanBytes)
 			return nil
 		}); err != nil {
@@ -739,11 +740,11 @@ func (ns *nurseryStore) ListChannels() ([]wire.OutPoint, error) {
 			return nil
 		}
 
-		return chanIndex.ForEach(func(chanBytes, _ []byte) error {
+		return chanIndex.ForEach(func(chanBytes, _ []byte) er.R {
 			var chanPoint wire.OutPoint
 			err := readOutpoint(bytes.NewReader(chanBytes), &chanPoint)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			activeChannels = append(activeChannels, chanPoint)
@@ -1201,7 +1202,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 	// buckets identified by a channel point, thus we first create list of
 	// channels contained in this height bucket.
 	var channelsAtHeight [][]byte
-	if err := hghtBucket.ForEach(func(chanBytes, v []byte) error {
+	if err := hghtBucket.ForEach(func(chanBytes, v []byte) er.R {
 		if v == nil {
 			channelsAtHeight = append(channelsAtHeight, chanBytes)
 		}
@@ -1281,12 +1282,15 @@ func (ns *nurseryStore) forChanOutputs(tx kvdb.RTx, chanPoint *wire.OutPoint,
 		return ErrContractNotFound
 	}
 
-	return chanBucket.ForEach(callback)
+	return chanBucket.ForEach(func(a, b []byte) er.R {
+		return er.E(callback(a, b))
+	})
 }
 
 // errBucketNotEmpty signals that an attempt to prune a particular
 // bucket failed because it still has active outputs.
-var errBucketNotEmpty = errors.New("bucket is not empty, cannot be pruned")
+var errBucketNotEmpty = er.GenericErrorType.CodeWithDetail("errBucketNotEmpty",
+	"bucket is not empty, cannot be pruned")
 
 // removeOutputFromHeight will delete the given output from the specified
 // height-channel bucket, and attempt to prune the upstream directories if they
@@ -1321,16 +1325,16 @@ func (ns *nurseryStore) removeOutputFromHeight(tx kvdb.RwTx, height uint32,
 	// Try to remove the channel-height bucket if it this was the last
 	// output in the bucket.
 	err := removeBucketIfEmpty(hghtBucket, chanBuffer.Bytes())
-	if err != nil && err != errBucketNotEmpty {
+	if err != nil && !errBucketNotEmpty.Is(err) {
 		return err
-	} else if err == errBucketNotEmpty {
+	} else if errBucketNotEmpty.Is(err) {
 		return nil
 	}
 
 	// Attempt to prune the height bucket matching the kid output's
 	// confirmation height in case that was the last height-chan bucket.
 	pruned, err := ns.pruneHeight(tx, height)
-	if err != nil && err != errBucketNotEmpty {
+	if err != nil && !errBucketNotEmpty.Is(err) {
 		return err
 	} else if err == nil && pruned {
 		utxnLog.Infof("Height bucket %d pruned", height)
@@ -1343,7 +1347,7 @@ func (ns *nurseryStore) removeOutputFromHeight(tx kvdb.RwTx, height uint32,
 // all active outputs at this height have been removed from their respective
 // height-channel buckets. The returned boolean value indicated whether or not
 // this invocation successfully pruned the height bucket.
-func (ns *nurseryStore) pruneHeight(tx kvdb.RwTx, height uint32) (bool, error) {
+func (ns *nurseryStore) pruneHeight(tx kvdb.RwTx, height uint32) (bool, er.R) {
 	// Fetch the existing height index and height bucket.
 	_, hghtIndex, hghtBucket := ns.getHeightBucketPathWrite(tx, height)
 	if hghtBucket == nil {
@@ -1353,7 +1357,7 @@ func (ns *nurseryStore) pruneHeight(tx kvdb.RwTx, height uint32) (bool, error) {
 	// Iterate over all channels stored at this block height. We will
 	// attempt to remove each one if they are empty, keeping track of the
 	// number of height-channel buckets that still have active outputs.
-	if err := hghtBucket.ForEach(func(chanBytes, v []byte) error {
+	if err := hghtBucket.ForEach(func(chanBytes, v []byte) er.R {
 		// Skip the finalized txn key if it still exists from a previous
 		// db version.
 		if v != nil {
@@ -1364,7 +1368,7 @@ func (ns *nurseryStore) pruneHeight(tx kvdb.RwTx, height uint32) (bool, error) {
 		// located above.
 		hghtChanBucket := hghtBucket.NestedReadWriteBucket(chanBytes)
 		if hghtChanBucket == nil {
-			return errors.New("unable to find height-channel bucket")
+			return er.New("unable to find height-channel bucket")
 		}
 
 		return isBucketEmpty(hghtChanBucket)
@@ -1390,7 +1394,7 @@ func (ns *nurseryStore) pruneHeight(tx kvdb.RwTx, height uint32) (bool, error) {
 
 // removeBucketIfEmpty attempts to delete a bucket specified by name from the
 // provided parent bucket.
-func removeBucketIfEmpty(parent kvdb.RwBucket, bktName []byte) error {
+func removeBucketIfEmpty(parent kvdb.RwBucket, bktName []byte) er.R {
 	// Attempt to fetch the named bucket from its parent.
 	bkt := parent.NestedReadWriteBucket(bktName)
 	if bkt == nil {
@@ -1408,7 +1412,7 @@ func removeBucketIfEmpty(parent kvdb.RwBucket, bktName []byte) error {
 
 // removeBucketIfExists safely deletes the named bucket by first checking
 // that it exists in the parent bucket.
-func removeBucketIfExists(parent kvdb.RwBucket, bktName []byte) error {
+func removeBucketIfExists(parent kvdb.RwBucket, bktName []byte) er.R {
 	// Attempt to fetch the named bucket from its parent.
 	bkt := parent.NestedReadWriteBucket(bktName)
 	if bkt == nil {
@@ -1421,9 +1425,9 @@ func removeBucketIfExists(parent kvdb.RwBucket, bktName []byte) error {
 
 // isBucketEmpty returns errBucketNotEmpty if the bucket has a non-zero number
 // of children.
-func isBucketEmpty(parent kvdb.RBucket) error {
-	return parent.ForEach(func(_, _ []byte) error {
-		return errBucketNotEmpty
+func isBucketEmpty(parent kvdb.RBucket) er.R {
+	return parent.ForEach(func(_, _ []byte) er.R {
+		return errBucketNotEmpty.Default()
 	})
 }
 

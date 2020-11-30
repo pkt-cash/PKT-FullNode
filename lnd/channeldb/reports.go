@@ -5,11 +5,12 @@ import (
 	"errors"
 	"io"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/tlv"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -231,19 +232,19 @@ func (d DB) FetchChannelReports(chainHash chainhash.Hash,
 
 		// Run through each resolution and add it to our set of
 		// resolutions.
-		return resolvers.ForEach(func(k, v []byte) error {
+		return resolvers.ForEach(func(k, v []byte) er.R {
 			// Deserialize the contents of our field.
 			r := bytes.NewReader(v)
 			report, err := deserializeReport(r)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// Once we have read our values out, set the outpoint
 			// on the report using the key.
 			r = bytes.NewReader(k)
 			if err := ReadElement(r, &report.OutPoint); err != nil {
-				return err
+				return er.E(err)
 			}
 
 			reports = append(reports, report)

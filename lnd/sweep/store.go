@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/wire"
@@ -132,7 +133,7 @@ func migrateTxHashes(tx kvdb.RwTx, txHashesBucket kvdb.RwBucket,
 	}
 
 	// Retrieve all heights.
-	err := hghtIndex.ForEach(func(k, v []byte) error {
+	err := hghtIndex.ForEach(func(k, v []byte) er.R {
 		heightBucket := hghtIndex.NestedReadWriteBucket(k)
 		if heightBucket == nil {
 			return nil
@@ -263,7 +264,7 @@ func (s *sweeperStore) ListSweeps() ([]chainhash.Hash, error) {
 			return errNoTxHashesBucket
 		}
 
-		return txHashesBucket.ForEach(func(resKey, _ []byte) error {
+		return txHashesBucket.ForEach(func(resKey, _ []byte) er.R {
 			txid, err := chainhash.NewHash(resKey)
 			if err != nil {
 				return err

@@ -16,6 +16,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -2248,7 +2249,7 @@ func TestChannelEdgePruningUpdateIndexDeletion(t *testing.T) {
 			}
 
 			var numEntries int
-			err := edgeUpdateIndex.ForEach(func(k, v []byte) error {
+			err := edgeUpdateIndex.ForEach(func(k, v []byte) er.R {
 				numEntries++
 				return nil
 			})
@@ -2263,10 +2264,10 @@ func TestChannelEdgePruningUpdateIndexDeletion(t *testing.T) {
 					numEntries)
 			}
 
-			return edgeUpdateIndex.ForEach(func(k, _ []byte) error {
+			return edgeUpdateIndex.ForEach(func(k, _ []byte) er.R {
 				t := byteOrder.Uint64(k[:8])
 				if _, ok := timestampSet[t]; !ok {
-					return fmt.Errorf("found unexpected "+
+					return er.Errorf("found unexpected "+
 						"timestamp "+"%d", t)
 				}
 

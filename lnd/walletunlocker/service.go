@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/lnd/aezeed"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
 var (
@@ -96,7 +97,7 @@ type WalletUnlockMsg struct {
 
 	// UnloadWallet is a function for unloading the wallet, which should
 	// be called on shutdown.
-	UnloadWallet func() error
+	UnloadWallet func() er.R
 
 	// StatelessInit signals that the user requested the daemon to be
 	// initialized stateless, which means no unencrypted macaroons should be

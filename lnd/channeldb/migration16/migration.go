@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -125,22 +126,22 @@ func getPaymentIndexList(tx kvdb.RTx) ([]paymentIndex, error) {
 	}
 
 	var indexList []paymentIndex
-	err := paymentsBucket.ForEach(func(k, v []byte) error {
+	err := paymentsBucket.ForEach(func(k, v []byte) er.R {
 		// Get the bucket which contains the payment, fail if the key
 		// does not have a bucket.
 		bucket := paymentsBucket.NestedReadBucket(k)
 		if bucket == nil {
-			return fmt.Errorf("non bucket element in " +
+			return er.Errorf("non bucket element in " +
 				"payments bucket")
 		}
 		seqBytes := bucket.Get(paymentSequenceKey)
 		if seqBytes == nil {
-			return fmt.Errorf("nil sequence number bytes")
+			return er.Errorf("nil sequence number bytes")
 		}
 
 		seqNrs, err := fetchSequenceNumbers(bucket)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Create an index object with our payment hash and sequence
@@ -180,7 +181,7 @@ func fetchSequenceNumbers(paymentBucket kvdb.RBucket) ([][]byte, error) {
 	// If we do have duplicated, they are keyed by sequence number, so we
 	// iterate through the duplicates bucket and add them to our set of
 	// sequence numbers.
-	if err := duplicates.ForEach(func(k, v []byte) error {
+	if err := duplicates.ForEach(func(k, v []byte) er.R {
 		sequenceNumbers = append(sequenceNumbers, k)
 		return nil
 	}); err != nil {

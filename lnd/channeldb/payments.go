@@ -9,13 +9,14 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/tlv"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -241,18 +242,18 @@ func (db *DB) FetchPayments() ([]*MPPayment, error) {
 			return nil
 		}
 
-		return paymentsBucket.ForEach(func(k, v []byte) error {
+		return paymentsBucket.ForEach(func(k, v []byte) er.R {
 			bucket := paymentsBucket.NestedReadBucket(k)
 			if bucket == nil {
 				// We only expect sub-buckets to be found in
 				// this top-level bucket.
-				return fmt.Errorf("non bucket element in " +
+				return er.Errorf("non bucket element in " +
 					"payments bucket")
 			}
 
 			p, err := fetchPayment(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			payments = append(payments, p)
@@ -263,7 +264,7 @@ func (db *DB) FetchPayments() ([]*MPPayment, error) {
 			// available.
 			duplicatePayments, err := fetchDuplicatePayments(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			payments = append(payments, duplicatePayments...)
@@ -379,7 +380,7 @@ func fetchPayment(bucket kvdb.RBucket) (*MPPayment, error) {
 func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, error) {
 	htlcs := make([]HTLCAttempt, 0)
 
-	err := bucket.ForEach(func(k, _ []byte) error {
+	err := bucket.ForEach(func(k, _ []byte) er.R {
 		aid := byteOrder.Uint64(k)
 		htlcBucket := bucket.NestedReadBucket(k)
 
@@ -387,7 +388,7 @@ func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, error) {
 			htlcBucket,
 		)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		attemptInfo.AttemptID = aid
 
@@ -398,13 +399,13 @@ func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, error) {
 		// Settle info might be nil.
 		htlc.Settle, err = fetchHtlcSettleInfo(htlcBucket)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Failure info might be nil.
 		htlc.Failure, err = fetchHtlcFailInfo(htlcBucket)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		htlcs = append(htlcs, htlc)
@@ -637,16 +638,16 @@ func fetchPaymentWithSequenceNumber(tx kvdb.RTx, paymentHash lntypes.Hash,
 	}
 
 	var duplicatePayment *MPPayment
-	err = dup.ForEach(func(k, v []byte) error {
+	err = dup.ForEach(func(k, v []byte) er.R {
 		subBucket := dup.NestedReadBucket(k)
 		if subBucket == nil {
 			// We one bucket for each duplicate to be found.
-			return ErrNoDuplicateNestedBucket
+			return er.E(ErrNoDuplicateNestedBucket)
 		}
 
 		seqBytes := subBucket.Get(duplicatePaymentSequenceKey)
 		if seqBytes == nil {
-			return err
+			return er.E(err)
 		}
 
 		// If this duplicate payment is not the sequence number we are
@@ -657,7 +658,7 @@ func fetchPaymentWithSequenceNumber(tx kvdb.RTx, paymentHash lntypes.Hash,
 
 		duplicatePayment, err = fetchDuplicatePayment(subBucket)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		return nil
@@ -693,12 +694,12 @@ func (db *DB) DeletePayments() error {
 			// payments that need to be deleted.
 			deleteIndexes [][]byte
 		)
-		err := payments.ForEach(func(k, _ []byte) error {
+		err := payments.ForEach(func(k, _ []byte) er.R {
 			bucket := payments.NestedReadWriteBucket(k)
 			if bucket == nil {
 				// We only expect sub-buckets to be found in
 				// this top-level bucket.
-				return fmt.Errorf("non bucket element in " +
+				return er.Errorf("non bucket element in " +
 					"payments bucket")
 			}
 
@@ -706,7 +707,7 @@ func (db *DB) DeletePayments() error {
 			// the payment information, so we return early.
 			paymentStatus, err := fetchPaymentStatus(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// If the status is InFlight, we cannot safely delete
@@ -722,7 +723,7 @@ func (db *DB) DeletePayments() error {
 			// payment, including duplicates.
 			seqNrs, err := fetchSequenceNumbers(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			deleteIndexes = append(deleteIndexes, seqNrs...)
@@ -772,7 +773,7 @@ func fetchSequenceNumbers(paymentBucket kvdb.RBucket) ([][]byte, error) {
 	// If we do have duplicated, they are keyed by sequence number, so we
 	// iterate through the duplicates bucket and add them to our set of
 	// sequence numbers.
-	if err := duplicates.ForEach(func(k, v []byte) error {
+	if err := duplicates.ForEach(func(k, v []byte) er.R {
 		sequenceNumbers = append(sequenceNumbers, k)
 		return nil
 	}); err != nil {

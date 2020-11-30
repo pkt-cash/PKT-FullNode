@@ -8,12 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/psbt"
+	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	base "github.com/pkt-cash/pktd/pktwallet/wallet"
@@ -21,9 +23,8 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
-	"github.com/pkt-cash/pktd/lnd/keychain"
-	"github.com/pkt-cash/pktd/lnd/lnwallet"
-	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -170,7 +171,7 @@ func (b *BtcWallet) Start() error {
 		// If the scope hasn't yet been created (it wouldn't been
 		// loaded by default if it was), then we'll manually create the
 		// scope for the first time ourselves.
-		err := walletdb.Update(b.db, func(tx walletdb.ReadWriteTx) error {
+		err := walletdb.Update(b.db, func(tx walletdb.ReadWriteTx) er.R {
 			addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
 			_, err := b.wallet.Manager.NewScopedKeyManager(
@@ -928,8 +929,8 @@ func (b *BtcWallet) GetRecoveryInfo() (bool, float64, error) {
 
 	// Query the wallet's birthday block height from db.
 	var birthdayBlock waddrmgr.BlockStamp
-	err := walletdb.View(b.db, func(tx walletdb.ReadTx) error {
-		var err error
+	err := walletdb.View(b.db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
 		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		birthdayBlock, _, err = b.wallet.Manager.BirthdayBlock(addrmgrNs)
 		if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -364,16 +365,16 @@ func (t *TowerDB) DeleteSession(target SessionID) error {
 
 			// If this was the last state update, we can also remove
 			// the hint that would map to an empty set.
-			errr := isBucketEmpty(updatesForHint)
+			err = isBucketEmpty(updatesForHint)
 			switch {
 
 			// Other updates exist for this hint, keep the bucket.
-			case errr == errBucketNotEmpty:
+			case errBucketNotEmpty.Is(err):
 				continue
 
 			// Unexpected error.
-			case errr != nil:
-				return errr
+			case err != nil:
+				return err
 
 			// No more updates for this hint, prune hint bucket.
 			default:
@@ -418,7 +419,7 @@ func (t *TowerDB) QueryMatches(breachHints []blob.BreachHint) ([]Match, error) {
 
 			// Otherwise, iterate through all (session id, update)
 			// pairs, creating a Match for each.
-			err := updatesForHint.ForEach(func(k, v []byte) error {
+			err := updatesForHint.ForEach(func(k, v []byte) er.R {
 				// Load the session via the session id for this
 				// update. The session info contains further
 				// instructions for how to process the state
@@ -432,7 +433,7 @@ func (t *TowerDB) QueryMatches(breachHints []blob.BreachHint) ([]Match, error) {
 					return nil
 
 				case err != nil:
-					return err
+					return er.E(err)
 				}
 
 				// Decode the state update containing the
@@ -440,7 +441,7 @@ func (t *TowerDB) QueryMatches(breachHints []blob.BreachHint) ([]Match, error) {
 				update := &SessionStateUpdate{}
 				err = update.Decode(bytes.NewReader(v))
 				if err != nil {
-					return err
+					return er.E(err)
 				}
 
 				var id SessionID
@@ -570,7 +571,7 @@ func getHintsForSession(updateIndex kvdb.RBucket,
 	}
 
 	var hints []blob.BreachHint
-	err := sessionHints.ForEach(func(k, _ []byte) error {
+	err := sessionHints.ForEach(func(k, _ []byte) er.R {
 		if len(k) != blob.BreachHintSize {
 			return nil
 		}
@@ -632,11 +633,11 @@ func getLookoutEpoch(bkt kvdb.RBucket) *chainntnfs.BlockEpoch {
 
 // errBucketNotEmpty is a helper error returned when testing whether a bucket is
 // empty or not.
-var errBucketNotEmpty = errors.New("bucket not empty")
+var errBucketNotEmpty = er.GenericErrorType.CodeWithDetail("errBucketNotEmpty", "bucket not empty")
 
 // isBucketEmpty returns errBucketNotEmpty if the bucket is not empty.
-func isBucketEmpty(bkt kvdb.RBucket) error {
-	return bkt.ForEach(func(_, _ []byte) error {
-		return errBucketNotEmpty
+func isBucketEmpty(bkt kvdb.RBucket) er.R {
+	return bkt.ForEach(func(_, _ []byte) er.R {
+		return errBucketNotEmpty.Default()
 	})
 }

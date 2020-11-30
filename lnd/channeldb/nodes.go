@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -220,7 +221,7 @@ func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, error) {
 	}
 
 	var linkNodes []*LinkNode
-	err := nodeMetaBucket.ForEach(func(k, v []byte) error {
+	err := nodeMetaBucket.ForEach(func(k, v []byte) er.R {
 		if v == nil {
 			return nil
 		}
@@ -228,7 +229,7 @@ func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, error) {
 		nodeReader := bytes.NewReader(v)
 		linkNode, err := deserializeLinkNode(nodeReader)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		linkNodes = append(linkNodes, linkNode)

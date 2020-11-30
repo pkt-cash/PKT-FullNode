@@ -17,13 +17,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/connmgr"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/go-errors/errors"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/brontide"
@@ -69,6 +68,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -326,9 +327,9 @@ func parseAddr(address string, netCfg tor.Net) (net.Addr, error) {
 // noiseDial is a factory function which creates a connmgr compliant dialing
 // function by returning a closure which includes the server's identity key.
 func noiseDial(idKey keychain.SingleKeyECDH,
-	netCfg tor.Net, timeout time.Duration) func(net.Addr) (net.Conn, error) {
+	netCfg tor.Net, timeout time.Duration) func(net.Addr) (net.Conn, er.R) {
 
-	return func(a net.Addr) (net.Conn, error) {
+	return func(a net.Addr) (net.Conn, er.R) {
 		lnAddr := a.(*lnwire.NetAddress)
 		return brontide.Dial(idKey, lnAddr, timeout, netCfg.Dial)
 	}

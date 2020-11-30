@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	mig "github.com/pkt-cash/pktd/lnd/channeldb/migration"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration12"
@@ -435,7 +436,7 @@ func (db *DB) fetchOpenChannels(tx kvdb.RTx,
 	// Next, we'll need to go down an additional layer in order to retrieve
 	// the channels for each chain the node knows of.
 	var channels []*OpenChannel
-	err := nodeChanBucket.ForEach(func(chainHash, v []byte) error {
+	err := nodeChanBucket.ForEach(func(chainHash, v []byte) er.R {
 		// If there's a value, it's not a bucket so ignore it.
 		if v != nil {
 			return nil
@@ -445,7 +446,7 @@ func (db *DB) fetchOpenChannels(tx kvdb.RTx,
 		// that so we can extract all the channels.
 		chainBucket := nodeChanBucket.NestedReadBucket(chainHash)
 		if chainBucket == nil {
-			return fmt.Errorf("unable to read bucket for chain=%x",
+			return er.Errorf("unable to read bucket for chain=%x",
 				chainHash[:])
 		}
 
@@ -453,7 +454,7 @@ func (db *DB) fetchOpenChannels(tx kvdb.RTx,
 		// all the active channels related to this node.
 		nodeChannels, err := db.fetchNodeChannels(chainBucket)
 		if err != nil {
-			return fmt.Errorf("unable to read channel for "+
+			return er.Errorf("unable to read channel for "+
 				"chain_hash=%x, node_key=%x: %v",
 				chainHash[:], pub, err)
 		}
@@ -474,7 +475,7 @@ func (db *DB) fetchNodeChannels(chainBucket kvdb.RBucket) ([]*OpenChannel, error
 
 	// A node may have channels on several chains, so for each known chain,
 	// we'll extract all the channels.
-	err := chainBucket.ForEach(func(chanPoint, v []byte) error {
+	err := chainBucket.ForEach(func(chanPoint, v []byte) er.R {
 		// If there's a value, it's not a bucket so ignore it.
 		if v != nil {
 			return nil
@@ -487,11 +488,11 @@ func (db *DB) fetchNodeChannels(chainBucket kvdb.RBucket) ([]*OpenChannel, error
 		var outPoint wire.OutPoint
 		err := readOutpoint(bytes.NewReader(chanPoint), &outPoint)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		oChannel, err := fetchOpenChannel(chanBucket, &outPoint)
 		if err != nil {
-			return fmt.Errorf("unable to read channel data for "+
+			return er.Errorf("unable to read channel data for "+
 				"chan_point=%v: %v", outPoint, err)
 		}
 		oChannel.Db = db
@@ -538,7 +539,7 @@ func (d *DB) FetchChannel(chanPoint wire.OutPoint) (*OpenChannel, error) {
 		// Within the node channel bucket, are the set of node pubkeys
 		// we have channels with, we don't know the entire set, so
 		// we'll check them all.
-		return openChanBucket.ForEach(func(nodePub, v []byte) error {
+		return openChanBucket.ForEach(func(nodePub, v []byte) er.R {
 			// Ensure that this is a key the same size as a pubkey,
 			// and also that it leads directly to a bucket.
 			if len(nodePub) != 33 || v != nil {
@@ -552,7 +553,7 @@ func (d *DB) FetchChannel(chanPoint wire.OutPoint) (*OpenChannel, error) {
 
 			// The next layer down is all the chains that this node
 			// has channels on with us.
-			return nodeChanBucket.ForEach(func(chainHash, v []byte) error {
+			return nodeChanBucket.ForEach(func(chainHash, v []byte) er.R {
 				// If there's a value, it's not a bucket so
 				// ignore it.
 				if v != nil {
@@ -563,7 +564,7 @@ func (d *DB) FetchChannel(chanPoint wire.OutPoint) (*OpenChannel, error) {
 					chainHash,
 				)
 				if chainBucket == nil {
-					return fmt.Errorf("unable to read "+
+					return er.Errorf("unable to read "+
 						"bucket for chain=%x", chainHash[:])
 				}
 
@@ -580,7 +581,7 @@ func (d *DB) FetchChannel(chanPoint wire.OutPoint) (*OpenChannel, error) {
 					chanBucket, &chanPoint,
 				)
 				if err != nil {
-					return err
+					return er.E(err)
 				}
 
 				targetChan = channel
@@ -701,13 +702,13 @@ func fetchChannels(d *DB, filters ...fetchChannelsFilter) ([]*OpenChannel, error
 
 		// Finally for each node public key in the bucket, fetch all
 		// the channels related to this particular node.
-		return nodeMetaBucket.ForEach(func(k, v []byte) error {
+		return nodeMetaBucket.ForEach(func(k, v []byte) er.R {
 			nodeChanBucket := openChanBucket.NestedReadBucket(k)
 			if nodeChanBucket == nil {
 				return nil
 			}
 
-			return nodeChanBucket.ForEach(func(chainHash, v []byte) error {
+			return nodeChanBucket.ForEach(func(chainHash, v []byte) er.R {
 				// If there's a value, it's not a bucket so
 				// ignore it.
 				if v != nil {
@@ -721,13 +722,13 @@ func fetchChannels(d *DB, filters ...fetchChannelsFilter) ([]*OpenChannel, error
 					chainHash,
 				)
 				if chainBucket == nil {
-					return fmt.Errorf("unable to read "+
+					return er.Errorf("unable to read "+
 						"bucket for chain=%x", chainHash[:])
 				}
 
 				nodeChans, err := d.fetchNodeChannels(chainBucket)
 				if err != nil {
-					return fmt.Errorf("unable to read "+
+					return er.Errorf("unable to read "+
 						"channel for chain_hash=%x, "+
 						"node_key=%x: %v", chainHash[:], k, err)
 				}
@@ -783,11 +784,11 @@ func (d *DB) FetchClosedChannels(pendingOnly bool) ([]*ChannelCloseSummary, erro
 			return ErrNoClosedChannels
 		}
 
-		return closeBucket.ForEach(func(chanID []byte, summaryBytes []byte) error {
+		return closeBucket.ForEach(func(chanID []byte, summaryBytes []byte) er.R {
 			summaryReader := bytes.NewReader(summaryBytes)
 			chanSummary, err := deserializeCloseChannelSummary(summaryReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// If the query specified to only include pending

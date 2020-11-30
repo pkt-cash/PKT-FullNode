@@ -8,6 +8,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -749,7 +750,7 @@ func (d *DB) ScanInvoices(
 			return nil
 		}
 
-		return invoiceIndex.ForEach(func(k, v []byte) error {
+		return invoiceIndex.ForEach(func(k, v []byte) er.R {
 			// Skip the special numInvoicesKey as that does not
 			// point to a valid invoice.
 			if bytes.Equal(k, numInvoicesKey) {
@@ -762,13 +763,13 @@ func (d *DB) ScanInvoices(
 
 			invoice, err := fetchInvoice(v, invoices)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			var paymentHash lntypes.Hash
 			copy(paymentHash[:], k)
 
-			return scanFunc(paymentHash, &invoice)
+			return er.E(scanFunc(paymentHash, &invoice))
 		})
 	}, reset)
 }

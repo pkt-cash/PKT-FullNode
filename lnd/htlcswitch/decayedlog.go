@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -213,7 +214,7 @@ func (d *DecayedLog) gcExpiredHashes(height uint32) (uint32, error) {
 		}
 
 		var expiredCltv [][]byte
-		if err := sharedHashes.ForEach(func(k, v []byte) error {
+		if err := sharedHashes.ForEach(func(k, v []byte) er.R {
 			// Deserialize the CLTV value for this entry.
 			cltv := uint32(binary.BigEndian.Uint32(v))
 

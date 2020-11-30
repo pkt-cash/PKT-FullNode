@@ -8,12 +8,13 @@ import (
 	"io"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -1428,14 +1429,14 @@ func (rs *retributionStore) ForAll(cb func(*retributionInfo) error,
 		// Otherwise, we fetch each serialized retribution info,
 		// deserialize it, and execute the passed in callback function
 		// on it.
-		return retBucket.ForEach(func(_, retBytes []byte) error {
+		return retBucket.ForEach(func(_, retBytes []byte) er.R {
 			ret := &retributionInfo{}
 			err := ret.Decode(bytes.NewBuffer(retBytes))
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
-			return cb(ret)
+			return er.E(cb(ret))
 		})
 	}, reset)
 }

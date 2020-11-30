@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tlv"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -260,18 +261,18 @@ func (db *DB) FetchPayments() ([]*Payment, error) {
 			return nil
 		}
 
-		return paymentsBucket.ForEach(func(k, v []byte) error {
+		return paymentsBucket.ForEach(func(k, v []byte) er.R {
 			bucket := paymentsBucket.NestedReadBucket(k)
 			if bucket == nil {
 				// We only expect sub-buckets to be found in
 				// this top-level bucket.
-				return fmt.Errorf("non bucket element in " +
+				return er.Errorf("non bucket element in " +
 					"payments bucket")
 			}
 
 			p, err := fetchPayment(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			payments = append(payments, p)
@@ -285,18 +286,18 @@ func (db *DB) FetchPayments() ([]*Payment, error) {
 				return nil
 			}
 
-			return dup.ForEach(func(k, v []byte) error {
+			return dup.ForEach(func(k, v []byte) er.R {
 				subBucket := dup.NestedReadBucket(k)
 				if subBucket == nil {
 					// We one bucket for each duplicate to
 					// be found.
-					return fmt.Errorf("non bucket element" +
+					return er.Errorf("non bucket element" +
 						"in duplicate bucket")
 				}
 
 				p, err := fetchPayment(subBucket)
 				if err != nil {
-					return err
+					return er.E(err)
 				}
 
 				payments = append(payments, p)

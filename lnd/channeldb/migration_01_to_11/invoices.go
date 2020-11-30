@@ -7,11 +7,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tlv"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -261,7 +262,7 @@ func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, error) {
 		// Iterate through the entire key space of the top-level
 		// invoice bucket. If key with a non-nil value stores the next
 		// invoice ID which maps to the corresponding invoice.
-		return invoiceB.ForEach(func(k, v []byte) error {
+		return invoiceB.ForEach(func(k, v []byte) er.R {
 			if v == nil {
 				return nil
 			}
@@ -269,7 +270,7 @@ func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, error) {
 			invoiceReader := bytes.NewReader(v)
 			invoice, err := deserializeInvoice(invoiceReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			if pendingOnly &&

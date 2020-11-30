@@ -7,6 +7,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -110,7 +111,7 @@ func (db *DB) fetchAllPayments() ([]*outgoingPayment, error) {
 			return ErrNoPaymentsCreated
 		}
 
-		return bucket.ForEach(func(k, v []byte) error {
+		return bucket.ForEach(func(k, v []byte) er.R {
 			// If the value is nil, then we ignore it as it may be
 			// a sub-bucket.
 			if v == nil {
@@ -120,7 +121,7 @@ func (db *DB) fetchAllPayments() ([]*outgoingPayment, error) {
 			r := bytes.NewReader(v)
 			payment, err := deserializeOutgoingPayment(r)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			payments = append(payments, payment)
@@ -385,18 +386,18 @@ func (db *DB) fetchPaymentsMigration9() ([]*Payment, error) {
 			return nil
 		}
 
-		return paymentsBucket.ForEach(func(k, v []byte) error {
+		return paymentsBucket.ForEach(func(k, v []byte) er.R {
 			bucket := paymentsBucket.NestedReadBucket(k)
 			if bucket == nil {
 				// We only expect sub-buckets to be found in
 				// this top-level bucket.
-				return fmt.Errorf("non bucket element in " +
+				return er.Errorf("non bucket element in " +
 					"payments bucket")
 			}
 
 			p, err := fetchPaymentMigration9(bucket)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			payments = append(payments, p)
@@ -410,18 +411,18 @@ func (db *DB) fetchPaymentsMigration9() ([]*Payment, error) {
 				return nil
 			}
 
-			return dup.ForEach(func(k, v []byte) error {
+			return dup.ForEach(func(k, v []byte) er.R {
 				subBucket := dup.NestedReadBucket(k)
 				if subBucket == nil {
 					// We one bucket for each duplicate to
 					// be found.
-					return fmt.Errorf("non bucket element" +
+					return er.Errorf("non bucket element" +
 						"in duplicate bucket")
 				}
 
 				p, err := fetchPaymentMigration9(subBucket)
 				if err != nil {
-					return err
+					return er.E(err)
 				}
 
 				payments = append(payments, p)

@@ -22,6 +22,7 @@ import (
 
 	proxy "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
@@ -1107,7 +1108,7 @@ type WalletUnlockParams struct {
 
 	// UnloadWallet is a function for unloading the wallet, which should
 	// be called on shutdown.
-	UnloadWallet func() error
+	UnloadWallet func() er.R
 
 	// StatelessInit signals that the user requested the daemon to be
 	// initialized stateless, which means no unencrypted macaroons should be
@@ -1504,16 +1505,17 @@ func initNeutrinoBackend(cfg *Config, chainDir string) (*neutrino.ChainService,
 		ChainParams:  *cfg.ActiveNetParams.Params,
 		AddPeers:     cfg.NeutrinoMode.AddPeers,
 		ConnectPeers: cfg.NeutrinoMode.ConnectPeers,
-		Dialer: func(addr net.Addr) (net.Conn, error) {
-			return cfg.net.Dial(
+		Dialer: func(addr net.Addr) (net.Conn, er.R) {
+			c, e := cfg.net.Dial(
 				addr.Network(), addr.String(),
 				cfg.ConnectionTimeout,
 			)
+			return c, er.E(e)
 		},
-		NameResolver: func(host string) ([]net.IP, error) {
+		NameResolver: func(host string) ([]net.IP, er.R) {
 			addrs, err := cfg.net.LookupHost(host)
 			if err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 
 			ips := make([]net.IP, 0, len(addrs))

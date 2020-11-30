@@ -7,6 +7,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
@@ -252,10 +253,10 @@ func (cm *circuitMap) restoreMemState() error {
 			return ErrCorruptedCircuitMap
 		}
 
-		if err := circuitBkt.ForEach(func(_, v []byte) error {
+		if err := circuitBkt.ForEach(func(_, v []byte) er.R {
 			circuit, err := cm.decodeCircuit(v)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			circuit.LoadedFromDisk = true
@@ -274,7 +275,7 @@ func (cm *circuitMap) restoreMemState() error {
 		}
 
 		var strayKeystones []Keystone
-		if err := keystoneBkt.ForEach(func(k, v []byte) error {
+		if err := keystoneBkt.ForEach(func(k, v []byte) er.R {
 			var (
 				inKey  CircuitKey
 				outKey = &CircuitKey{}
@@ -282,10 +283,10 @@ func (cm *circuitMap) restoreMemState() error {
 
 			// Decode the incoming and outgoing circuit keys.
 			if err := inKey.SetBytes(v); err != nil {
-				return err
+				return er.E(err)
 			}
 			if err := outKey.SetBytes(k); err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// Retrieve the pending circuit, set its keystone, then

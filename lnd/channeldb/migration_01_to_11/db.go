@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -186,11 +187,11 @@ func (d *DB) FetchClosedChannels(pendingOnly bool) ([]*ChannelCloseSummary, erro
 			return ErrNoClosedChannels
 		}
 
-		return closeBucket.ForEach(func(chanID []byte, summaryBytes []byte) error {
+		return closeBucket.ForEach(func(chanID []byte, summaryBytes []byte) er.R {
 			summaryReader := bytes.NewReader(summaryBytes)
 			chanSummary, err := deserializeCloseChannelSummary(summaryReader)
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			// If the query specified to only include pending

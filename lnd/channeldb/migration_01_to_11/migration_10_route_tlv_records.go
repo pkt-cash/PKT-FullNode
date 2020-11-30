@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -21,7 +22,7 @@ func MigrateRouteSerialization(tx kvdb.RwTx) error {
 	// ForEach, we'll need to collect all the known payment hashes in
 	// memory first.
 	var payHashes [][]byte
-	err := rootPaymentBucket.ForEach(func(k, v []byte) error {
+	err := rootPaymentBucket.ForEach(func(k, v []byte) er.R {
 		if v != nil {
 			return nil
 		}
@@ -58,7 +59,7 @@ func MigrateRouteSerialization(tx kvdb.RwTx) error {
 		// Otherwise, we'll now iterate through all the duplicate pay
 		// hashes and migrate those.
 		var dupSeqNos [][]byte
-		err = dupBucket.ForEach(func(k, v []byte) error {
+		err = dupBucket.ForEach(func(k, v []byte) er.R {
 			dupSeqNos = append(dupSeqNos, k)
 			return nil
 		})

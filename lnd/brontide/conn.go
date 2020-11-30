@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
@@ -35,14 +36,14 @@ var _ net.Conn = (*Conn)(nil)
 // public key. In the case of a handshake failure, the connection is closed and
 // a non-nil error is returned.
 func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
-	timeout time.Duration, dialer tor.DialFunc) (*Conn, error) {
+	timeout time.Duration, dialer tor.DialFunc) (*Conn, er.R) {
 
 	ipAddr := netAddr.Address.String()
 	var conn net.Conn
 	var err error
 	conn, err = dialer("tcp", ipAddr, timeout)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	b := &Conn{
@@ -54,11 +55,11 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	actOne, err := b.noise.GenActOne()
 	if err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 	if _, err := conn.Write(actOne[:]); err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// We'll ensure that we get ActTwo from the remote peer in a timely
@@ -67,7 +68,7 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	err = conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
 	if err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// If the first act was successful (we know that address is actually
@@ -77,11 +78,11 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	var actTwo [ActTwoSize]byte
 	if _, err := io.ReadFull(conn, actTwo[:]); err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 	if err := b.noise.RecvActTwo(actTwo); err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Finally, complete the handshake by sending over our encrypted static
@@ -89,11 +90,11 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	actThree, err := b.noise.GenActThree()
 	if err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 	if _, err := conn.Write(actThree[:]); err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// We'll reset the deadline as it's no longer critical beyond the
@@ -101,7 +102,7 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	err = conn.SetReadDeadline(time.Time{})
 	if err != nil {
 		b.conn.Close()
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return b, nil
