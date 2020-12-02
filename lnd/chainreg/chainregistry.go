@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +14,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
-	"github.com/pkt-cash/pktd/lnd/chainntnfs/bitcoindnotify"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs/btcdnotify"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs/neutrinonotify"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -327,140 +324,6 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		// Get our best block as a health check.
 		cc.HealthCheck = func() error {
 			_, _, err := walletConfig.ChainSource.GetBestBlock()
-			return err
-		}
-
-	case "bitcoind", "litecoind":
-		var bitcoindMode *lncfg.Bitcoind
-		switch {
-		case cfg.Bitcoin.Active:
-			bitcoindMode = cfg.BitcoindMode
-		case cfg.Litecoin.Active:
-			bitcoindMode = cfg.LitecoindMode
-		}
-		// Otherwise, we'll be speaking directly via RPC and ZMQ to a
-		// bitcoind node. If the specified host for the btcd/ltcd RPC
-		// server already has a port specified, then we use that
-		// directly. Otherwise, we assume the default port according to
-		// the selected chain parameters.
-		var bitcoindHost string
-		if strings.Contains(bitcoindMode.RPCHost, ":") {
-			bitcoindHost = bitcoindMode.RPCHost
-		} else {
-			// The RPC ports specified in chainparams.go assume
-			// btcd, which picks a different port so that btcwallet
-			// can use the same RPC port as bitcoind. We convert
-			// this back to the btcwallet/bitcoind port.
-			rpcPort, err := strconv.Atoi(cfg.ActiveNetParams.RPCPort)
-			if err != nil {
-				return nil, err
-			}
-			rpcPort -= 2
-			bitcoindHost = fmt.Sprintf("%v:%d",
-				bitcoindMode.RPCHost, rpcPort)
-			if (cfg.Bitcoin.Active && cfg.Bitcoin.RegTest) ||
-				(cfg.Litecoin.Active && cfg.Litecoin.RegTest) {
-				conn, err := net.Dial("tcp", bitcoindHost)
-				if err != nil || conn == nil {
-					if cfg.Bitcoin.Active && cfg.Bitcoin.RegTest {
-						rpcPort = 18443
-					} else if cfg.Litecoin.Active && cfg.Litecoin.RegTest {
-						rpcPort = 19443
-					}
-					bitcoindHost = fmt.Sprintf("%v:%d",
-						bitcoindMode.RPCHost,
-						rpcPort)
-				} else {
-					conn.Close()
-				}
-			}
-		}
-
-		// Establish the connection to bitcoind and create the clients
-		// required for our relevant subsystems.
-		bitcoindConn, err := chain.NewBitcoindConn(
-			cfg.ActiveNetParams.Params, bitcoindHost,
-			bitcoindMode.RPCUser, bitcoindMode.RPCPass,
-			bitcoindMode.ZMQPubRawBlock, bitcoindMode.ZMQPubRawTx,
-			5*time.Second,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := bitcoindConn.Start(); err != nil {
-			return nil, fmt.Errorf("unable to connect to bitcoind: "+
-				"%v", err)
-		}
-
-		cc.ChainNotifier = bitcoindnotify.New(
-			bitcoindConn, cfg.ActiveNetParams.Params, hintCache, hintCache,
-		)
-		cc.ChainView = chainview.NewBitcoindFilteredChainView(bitcoindConn)
-		walletConfig.ChainSource = bitcoindConn.NewBitcoindClient()
-
-		// If we're not in regtest mode, then we'll attempt to use a
-		// proper fee estimator for testnet.
-		rpcConfig := &rpcclient.ConnConfig{
-			Host:                 bitcoindHost,
-			User:                 bitcoindMode.RPCUser,
-			Pass:                 bitcoindMode.RPCPass,
-			DisableConnectOnNew:  true,
-			DisableAutoReconnect: false,
-			DisableTLS:           true,
-			HTTPPostMode:         true,
-		}
-		if cfg.Bitcoin.Active && !cfg.Bitcoin.RegTest {
-			log.Infof("Initializing bitcoind backed fee estimator in "+
-				"%s mode", bitcoindMode.EstimateMode)
-
-			// Finally, we'll re-initialize the fee estimator, as
-			// if we're using bitcoind as a backend, then we can
-			// use live fee estimates, rather than a statically
-			// coded value.
-			fallBackFeeRate := chainfee.SatPerKVByte(25 * 1000)
-			cc.FeeEstimator, err = chainfee.NewBitcoindEstimator(
-				*rpcConfig, bitcoindMode.EstimateMode,
-				fallBackFeeRate.FeePerKWeight(),
-			)
-			if err != nil {
-				return nil, err
-			}
-		} else if cfg.Litecoin.Active && !cfg.Litecoin.RegTest {
-			log.Infof("Initializing litecoind backed fee estimator in "+
-				"%s mode", bitcoindMode.EstimateMode)
-
-			// Finally, we'll re-initialize the fee estimator, as
-			// if we're using litecoind as a backend, then we can
-			// use live fee estimates, rather than a statically
-			// coded value.
-			fallBackFeeRate := chainfee.SatPerKVByte(25 * 1000)
-			cc.FeeEstimator, err = chainfee.NewBitcoindEstimator(
-				*rpcConfig, bitcoindMode.EstimateMode,
-				fallBackFeeRate.FeePerKWeight(),
-			)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// We need to use some apis that are not exposed by btcwallet,
-		// for a health check function so we create an ad-hoc bitcoind
-		// connection.
-		chainConn, err := rpcclient.New(rpcConfig, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		// The api we will use for our health check depends on the
-		// bitcoind version.
-		cmd, err := getBitcoindHealthCheckCmd(chainConn)
-		if err != nil {
-			return nil, err
-		}
-
-		cc.HealthCheck = func() error {
-			_, err := chainConn.RawRequest(cmd, nil)
 			return err
 		}
 

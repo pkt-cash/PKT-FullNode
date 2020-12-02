@@ -6,10 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -32,7 +30,6 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/labels"
-	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
@@ -3259,64 +3256,6 @@ func runTests(t *testing.T, walletDriver *lnwallet.WalletDriver,
 			bobClient = chain.NewNeutrinoClient(
 				netParams, bobChain,
 			)
-
-		case "bitcoind":
-			// Start a bitcoind instance.
-			tempBitcoindDir, err := ioutil.TempDir("", "bitcoind")
-			if err != nil {
-				t.Fatalf("unable to create temp directory: %v", err)
-			}
-			zmqBlockHost := "ipc:///" + tempBitcoindDir + "/blocks.socket"
-			zmqTxHost := "ipc:///" + tempBitcoindDir + "/tx.socket"
-			defer os.RemoveAll(tempBitcoindDir)
-			rpcPort := rand.Int()%(65536-1024) + 1024
-			bitcoind := exec.Command(
-				"bitcoind",
-				"-datadir="+tempBitcoindDir,
-				"-regtest",
-				"-connect="+miningNode.P2PAddress(),
-				"-txindex",
-				"-rpcauth=weks:469e9bb14ab2360f8e226efed5ca6f"+
-					"d$507c670e800a95284294edb5773b05544b"+
-					"220110063096c221be9933c82d38e1",
-				fmt.Sprintf("-rpcport=%d", rpcPort),
-				"-disablewallet",
-				"-zmqpubrawblock="+zmqBlockHost,
-				"-zmqpubrawtx="+zmqTxHost,
-			)
-			err = bitcoind.Start()
-			if err != nil {
-				t.Fatalf("couldn't start bitcoind: %v", err)
-			}
-			defer bitcoind.Wait()
-			defer bitcoind.Process.Kill()
-
-			// Wait for the bitcoind instance to start up.
-
-			host := fmt.Sprintf("127.0.0.1:%d", rpcPort)
-			var chainConn *chain.BitcoindConn
-			err = wait.NoError(func() error {
-				chainConn, err = chain.NewBitcoindConn(
-					netParams, host, "weks", "weks",
-					zmqBlockHost, zmqTxHost,
-					100*time.Millisecond,
-				)
-				if err != nil {
-					return err
-				}
-
-				return chainConn.Start()
-			}, 10*time.Second)
-			if err != nil {
-				t.Fatalf("unable to establish connection to "+
-					"bitcoind: %v", err)
-			}
-			defer chainConn.Stop()
-
-			// Create a btcwallet bitcoind client for both Alice and
-			// Bob.
-			aliceClient = chainConn.NewBitcoindClient()
-			bobClient = chainConn.NewBitcoindClient()
 		default:
 			t.Fatalf("unknown chain driver: %v", backEnd)
 		}

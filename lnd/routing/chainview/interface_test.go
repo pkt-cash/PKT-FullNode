@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -19,7 +17,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
-	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb" // Required to register the boltdb walletdb implementation.
 	"github.com/pkt-cash/pktd/rpcclient"
@@ -767,74 +764,6 @@ var interfaceImpls = []struct {
 	name          string
 	chainViewInit chainViewInitFunc
 }{
-	{
-		name: "bitcoind_zmq",
-		chainViewInit: func(_ rpcclient.ConnConfig, p2pAddr string) (func(), FilteredChainView, error) {
-			// Start a bitcoind instance.
-			tempBitcoindDir, err := ioutil.TempDir("", "bitcoind")
-			if err != nil {
-				return nil, nil, err
-			}
-			zmqBlockHost := "ipc:///" + tempBitcoindDir + "/blocks.socket"
-			zmqTxHost := "ipc:///" + tempBitcoindDir + "/tx.socket"
-			cleanUp1 := func() {
-				os.RemoveAll(tempBitcoindDir)
-			}
-			rpcPort := rand.Int()%(65536-1024) + 1024
-			bitcoind := exec.Command(
-				"bitcoind",
-				"-datadir="+tempBitcoindDir,
-				"-regtest",
-				"-connect="+p2pAddr,
-				"-txindex",
-				"-rpcauth=weks:469e9bb14ab2360f8e226efed5ca6f"+
-					"d$507c670e800a95284294edb5773b05544b"+
-					"220110063096c221be9933c82d38e1",
-				fmt.Sprintf("-rpcport=%d", rpcPort),
-				"-disablewallet",
-				"-zmqpubrawblock="+zmqBlockHost,
-				"-zmqpubrawtx="+zmqTxHost,
-			)
-			err = bitcoind.Start()
-			if err != nil {
-				cleanUp1()
-				return nil, nil, err
-			}
-			cleanUp2 := func() {
-				bitcoind.Process.Kill()
-				bitcoind.Wait()
-				cleanUp1()
-			}
-
-			// Wait for the bitcoind instance to start up.
-			time.Sleep(time.Second)
-
-			host := fmt.Sprintf("127.0.0.1:%d", rpcPort)
-			chainConn, err := chain.NewBitcoindConn(
-				&chaincfg.RegressionNetParams, host, "weks",
-				"weks", zmqBlockHost, zmqTxHost,
-				100*time.Millisecond,
-			)
-			if err != nil {
-				return cleanUp2, nil, fmt.Errorf("unable to "+
-					"establish connection to bitcoind: %v",
-					err)
-			}
-			if err := chainConn.Start(); err != nil {
-				return cleanUp2, nil, fmt.Errorf("unable to "+
-					"establish connection to bitcoind: %v",
-					err)
-			}
-			cleanUp3 := func() {
-				chainConn.Stop()
-				cleanUp2()
-			}
-
-			chainView := NewBitcoindFilteredChainView(chainConn)
-
-			return cleanUp3, chainView, nil
-		},
-	},
 	{
 		name: "p2p_neutrino",
 		chainViewInit: func(_ rpcclient.ConnConfig, p2pAddr string) (func(), FilteredChainView, error) {

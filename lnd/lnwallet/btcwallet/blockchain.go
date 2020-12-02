@@ -1,7 +1,6 @@
 package btcwallet
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -96,31 +95,6 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 		return &wire.TxOut{
 			Value:    int64(amt),
 			PkScript: addr.ScriptAddress(),
-		}, nil
-
-	case *chain.BitcoindClient:
-		txout, err := backend.GetTxOut(&op.Hash, op.Index, false)
-		if err != nil {
-			return nil, err
-		} else if txout == nil {
-			return nil, ErrOutputSpent
-		}
-
-		pkScript, err := hex.DecodeString(txout.ScriptPubKey.Hex)
-		if err != nil {
-			return nil, err
-		}
-
-		// Sadly, gettxout returns the output value in BTC instead of
-		// satoshis.
-		amt, err := btcutil.NewAmount(txout.Value)
-		if err != nil {
-			return nil, err
-		}
-
-		return &wire.TxOut{
-			Value:    int64(amt),
-			PkScript: pkScript,
 		}, nil
 
 	default:
