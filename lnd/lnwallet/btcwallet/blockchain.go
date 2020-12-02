@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 
@@ -80,21 +82,20 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 			return nil, ErrOutputSpent
 		}
 
-		pkScript, err := hex.DecodeString(txout.ScriptPubKey.Hex)
+		addr, err := btcutil.DecodeAddress(txout.Address, b.netParams)
 		if err != nil {
 			return nil, err
 		}
 
-		// We'll ensure we properly convert the amount given in BTC to
-		// satoshis.
-		amt, err := btcutil.NewAmount(txout.Value)
-		if err != nil {
-			return nil, err
+		i, errr := strconv.ParseInt(txout.Svalue, 10, 64)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
+		amt := btcutil.Amount(i)
 
 		return &wire.TxOut{
 			Value:    int64(amt),
-			PkScript: pkScript,
+			PkScript: addr.ScriptAddress(),
 		}, nil
 
 	case *chain.BitcoindClient:
@@ -138,7 +139,7 @@ func (b *BtcWallet) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) 
 // given height.
 //
 // This method is a part of the lnwallet.BlockChainIO interface.
-func (b *BtcWallet) GetBlockHash(blockHeight int64) (*chainhash.Hash, error) {
+func (b *BtcWallet) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	return b.chain.GetBlockHash(blockHeight)
 }
 

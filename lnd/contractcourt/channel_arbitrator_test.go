@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -22,6 +22,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -180,7 +181,7 @@ func (*mockChainIO) GetUtxo(op *wire.OutPoint, _ []byte,
 	return nil, nil
 }
 
-func (*mockChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, error) {
+func (*mockChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	return nil, nil
 }
 

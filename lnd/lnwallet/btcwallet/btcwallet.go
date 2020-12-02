@@ -111,7 +111,7 @@ func New(cfg Config) (*BtcWallet, error) {
 			// set up.
 			wallet, err = loader.CreateNewWallet(
 				pubPass, cfg.PrivatePass, cfg.HdSeed,
-				cfg.Birthday,
+				cfg.Birthday, nil,
 			)
 			if err != nil {
 				return nil, err

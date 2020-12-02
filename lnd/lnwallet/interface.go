@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
-	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
-	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
+	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // AddressType is an enum-like type which denotes the possible address types
@@ -366,7 +367,7 @@ type BlockChainIO interface {
 
 	// GetBlockHash returns the hash of the block in the best blockchain
 	// at the given height.
-	GetBlockHash(blockHeight int64) (*chainhash.Hash, error)
+	GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R)
 
 	// GetBlock returns the block in the main chain identified by the given
 	// hash.

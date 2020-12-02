@@ -417,7 +417,7 @@ func (c *Client) GetCFilterHeader(blockHash *chainhash.Hash,
 
 // GetTxOut returns the transaction output info if it's unspent and
 // nil, otherwise.
-func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, error) {
+func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, er.R) {
 	return c.GetTxOutAsync(txHash, index, mempool).Receive()
 }
 
@@ -462,6 +462,123 @@ func (c *Client) GetBlockHeaderVerboseAsync(blockHash *chainhash.Hash) FutureGet
 // blockheader from the server given its hash.
 //
 // See GetBlockHeader to retrieve a blockheader instead.
-func (c *Client) GetBlockHeaderVerbose(blockHash *chainhash.Hash) (*btcjson.GetBlockHeaderVerboseResult, error) {
+func (c *Client) GetBlockHeaderVerbose(blockHash *chainhash.Hash) (*btcjson.GetBlockHeaderVerboseResult, er.R) {
 	return c.GetBlockHeaderVerboseAsync(blockHash).Receive()
+}
+
+// FutureRescanBlocksResult is a future promise to deliver the result of a
+// RescanBlocksAsync RPC invocation (or an applicable error).
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+type FutureRescanBlocksResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// discovered rescanblocks data.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (r FutureRescanBlocksResult) Receive() ([]btcjson.RescannedBlock, er.R) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var rescanBlocksResult []btcjson.RescannedBlock
+	err = er.E(jsoniter.Unmarshal(res, &rescanBlocksResult))
+	if err != nil {
+		return nil, err
+	}
+
+	return rescanBlocksResult, nil
+}
+
+// RescanBlocksAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See RescanBlocks for the blocking version and more details.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) RescanBlocksAsync(blockHashes []chainhash.Hash) FutureRescanBlocksResult {
+	strBlockHashes := make([]string, len(blockHashes))
+	for i := range blockHashes {
+		strBlockHashes[i] = blockHashes[i].String()
+	}
+
+	cmd := btcjson.NewRescanBlocksCmd(strBlockHashes)
+	return c.sendCmd(cmd)
+}
+
+// RescanBlocks rescans the blocks identified by blockHashes, in order, using
+// the client's loaded transaction filter.  The blocks do not need to be on the
+// main chain, but they do need to be adjacent to each other.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) RescanBlocks(blockHashes []chainhash.Hash) ([]btcjson.RescannedBlock, er.R) {
+	return c.RescanBlocksAsync(blockHashes).Receive()
+}
+
+// GetBlockVerboseAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetBlockVerbose for the blocking version and more details.
+func (c *Client) GetBlockVerboseAsync(blockHash *chainhash.Hash) FutureGetBlockVerboseResult {
+	hash := ""
+	if blockHash != nil {
+		hash = blockHash.String()
+	}
+	// From the bitcoin-cli getblock documentation:
+	// "If verbosity is 1, returns an Object with information about block ."
+	cmd := btcjson.NewGetBlockCmd(hash, btcjson.Bool(true), btcjson.Bool(false))
+	return c.sendCmd(cmd)
+}
+
+// GetBlockVerbose returns a data structure from the server with information
+// about a block given its hash.
+//
+// See GetBlockVerboseTx to retrieve transaction data structures as well.
+// See GetBlock to retrieve a raw block instead.
+func (c *Client) GetBlockVerbose(blockHash *chainhash.Hash) (*btcjson.GetBlockVerboseResult, er.R) {
+	return c.GetBlockVerboseAsync(blockHash).Receive()
+}
+
+// FutureEstimateFeeResult is a future promise to deliver the result of a
+// EstimateFeeAsync RPC invocation (or an applicable error).
+type FutureEstimateFeeResult chan *response
+
+// Receive waits for the response promised by the future and returns the info
+// provided by the server.
+func (r FutureEstimateFeeResult) Receive() (float64, er.R) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return -1, err
+	}
+
+	// Unmarshal result as a getinfo result object.
+	var fee float64
+	err = er.E(jsoniter.Unmarshal(res, &fee))
+	if err != nil {
+		return -1, err
+	}
+
+	return fee, nil
+}
+
+// EstimateFeeAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See EstimateFee for the blocking version and more details.
+func (c *Client) EstimateFeeAsync(numBlocks int64) FutureEstimateFeeResult {
+	cmd := btcjson.NewEstimateFeeCmd(numBlocks)
+	return c.sendCmd(cmd)
+}
+
+// EstimateFee provides an estimated fee  in bitcoins per kilobyte.
+func (c *Client) EstimateFee(numBlocks int64) (float64, er.R) {
+	return c.EstimateFeeAsync(numBlocks).Receive()
 }

@@ -398,14 +398,14 @@ func SupportedNotifiers() []string {
 // functions that require it.
 type ChainConn interface {
 	// GetBlockHeader returns the block header for a hash.
-	GetBlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, error)
+	GetBlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, er.R)
 
 	// GetBlockHeaderVerbose returns the verbose block header for a hash.
 	GetBlockHeaderVerbose(blockHash *chainhash.Hash) (
-		*btcjson.GetBlockHeaderVerboseResult, error)
+		*btcjson.GetBlockHeaderVerboseResult, er.R)
 
 	// GetBlockHash returns the hash from a block height.
-	GetBlockHash(blockHeight int64) (*chainhash.Hash, error)
+	GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R)
 }
 
 // GetCommonBlockAncestorHeight takes in:
@@ -414,17 +414,17 @@ type ChainConn interface {
 // It returns the height of the nearest common ancestor between the two hashes,
 // or an error
 func GetCommonBlockAncestorHeight(chainConn ChainConn, reorgHash,
-	chainHash chainhash.Hash) (int32, error) {
+	chainHash chainhash.Hash) (int32, er.R) {
 
 	for reorgHash != chainHash {
 		reorgHeader, err := chainConn.GetBlockHeader(&reorgHash)
 		if err != nil {
-			return 0, fmt.Errorf("unable to get header for hash=%v: %v",
+			return 0, er.Errorf("unable to get header for hash=%v: %v",
 				reorgHash, err)
 		}
 		chainHeader, err := chainConn.GetBlockHeader(&chainHash)
 		if err != nil {
-			return 0, fmt.Errorf("unable to get header for hash=%v: %v",
+			return 0, er.Errorf("unable to get header for hash=%v: %v",
 				chainHash, err)
 		}
 		reorgHash = reorgHeader.PrevBlock
@@ -433,7 +433,7 @@ func GetCommonBlockAncestorHeight(chainConn ChainConn, reorgHash,
 
 	verboseHeader, err := chainConn.GetBlockHeaderVerbose(&chainHash)
 	if err != nil {
-		return 0, fmt.Errorf("unable to get verbose header for hash=%v: %v",
+		return 0, er.Errorf("unable to get verbose header for hash=%v: %v",
 			chainHash, err)
 	}
 
@@ -505,7 +505,7 @@ func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
 		Log.Infof("Block disconnected from main chain: "+
 			"height=%v, sha=%v", height, newBestBlock.Hash)
 
-		err = txNotifier.DisconnectTip(uint32(height))
+		err = er.E(txNotifier.DisconnectTip(uint32(height)))
 		if err != nil {
 			return newBestBlock, fmt.Errorf("unable to "+
 				" disconnect tip for height=%d: %v",
@@ -553,11 +553,12 @@ func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 				"common ancestor: %v", err)
 		}
 
-		currBestBlock, err = RewindChain(chainConn, txNotifier,
+		var errr error
+		currBestBlock, errr = RewindChain(chainConn, txNotifier,
 			currBestBlock, startingHeight)
-		if err != nil {
+		if errr != nil {
 			return currBestBlock, nil, fmt.Errorf("unable to "+
-				"rewind chain: %v", err)
+				"rewind chain: %v", errr)
 		}
 	}
 

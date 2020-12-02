@@ -72,7 +72,7 @@ func createTestWalletWithPw(t *testing.T, pubPw, privPw []byte, dir string,
 	netDir := btcwallet.NetworkDir(dir, netParams)
 	loader := wallet.NewLoader(netParams, netDir, "wallet.db", true, 0)
 	_, err := loader.CreateNewWallet(
-		pubPw, privPw, testSeed, time.Time{},
+		pubPw, privPw, testSeed, time.Time{}, nil,
 	)
 	require.NoError(t, err)
 	err = loader.UnloadWallet()

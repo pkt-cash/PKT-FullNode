@@ -1016,14 +1016,14 @@ type NeutrinoChainConn struct {
 }
 
 // GetBlockHeader returns the block header for a hash.
-func (n *NeutrinoChainConn) GetBlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+func (n *NeutrinoChainConn) GetBlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, er.R) {
 	return n.p2pNode.GetBlockHeader(blockHash)
 }
 
 // GetBlockHeaderVerbose returns a verbose block header result for a hash. This
 // result only contains the height with a nil hash.
 func (n *NeutrinoChainConn) GetBlockHeaderVerbose(blockHash *chainhash.Hash) (
-	*btcjson.GetBlockHeaderVerboseResult, error) {
+	*btcjson.GetBlockHeaderVerboseResult, er.R) {
 
 	height, err := n.p2pNode.GetBlockHeight(blockHash)
 	if err != nil {
@@ -1034,6 +1034,6 @@ func (n *NeutrinoChainConn) GetBlockHeaderVerbose(blockHash *chainhash.Hash) (
 }
 
 // GetBlockHash returns the hash from a block height.
-func (n *NeutrinoChainConn) GetBlockHash(blockHeight int64) (*chainhash.Hash, error) {
+func (n *NeutrinoChainConn) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	return n.p2pNode.GetBlockHash(blockHeight)
 }

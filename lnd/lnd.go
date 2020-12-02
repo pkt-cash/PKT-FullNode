@@ -1272,7 +1272,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 		// the wallet, then pass it back to avoid unlocking it again.
 		birthday := cipherSeed.BirthdayTime()
 		newWallet, err := loader.CreateNewWallet(
-			password, password, cipherSeed.Entropy[:], birthday,
+			password, password, cipherSeed.Entropy[:], birthday, nil,
 		)
 		if err != nil {
 			// Don't leave the file open in case the new wallet

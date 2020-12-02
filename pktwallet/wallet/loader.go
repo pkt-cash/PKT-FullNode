@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -116,7 +117,7 @@ func WalletDbPath(netDir, walletName string) string {
 // passphrases.  The seed is optional.  If non-nil, addresses are derived from
 // this seed.  If nil, a secure random seed is generated.
 func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase []byte,
-	seedInput []byte, seed *seedwords.Seed) (*Wallet, er.R) {
+	seedInput []byte, seedBirthday time.Time, seed *seedwords.Seed) (*Wallet, er.R) {
 
 	defer l.mu.Unlock()
 	l.mu.Lock()
@@ -145,7 +146,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase []byte,
 	}
 
 	// Initialize the newly created database for the wallet before opening.
-	err = Create(db, pubPassphrase, privPassphrase, seedInput, seed, l.chainParams)
+	err = Create(db, pubPassphrase, privPassphrase, seedInput, seedBirthday, seed, l.chainParams)
 	if err != nil {
 		return nil, err
 	}

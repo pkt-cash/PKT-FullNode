@@ -8,11 +8,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/wire"
 
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -736,9 +737,9 @@ func (r *ChannelRouter) syncGraphWithChain() error {
 		if err != nil {
 			return err
 		}
-		filterBlock, err := r.cfg.ChainView.FilterBlock(nextHash)
-		if err != nil {
-			return err
+		filterBlock, errr := r.cfg.ChainView.FilterBlock(nextHash)
+		if errr != nil {
+			return errr
 		}
 
 		// We're only interested in all prior outputs that have been
@@ -1423,9 +1424,9 @@ func (r *ChannelRouter) fetchFundingTx(
 	if err != nil {
 		return nil, err
 	}
-	fundingBlock, err := r.cfg.Chain.GetBlock(blockHash)
-	if err != nil {
-		return nil, err
+	fundingBlock, errr := r.cfg.Chain.GetBlock(blockHash)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// As a sanity check, ensure that the advertised transaction index is

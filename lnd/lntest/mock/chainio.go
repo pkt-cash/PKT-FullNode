@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
@@ -24,7 +25,7 @@ func (c *ChainIO) GetUtxo(op *wire.OutPoint, _ []byte,
 }
 
 // GetBlockHash currently returns dummy values.
-func (c *ChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, error) {
+func (c *ChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	return nil, nil
 }
 

@@ -278,7 +278,7 @@ func createWallet(cfg *config) er.R {
 	if tty {
 		fmt.Println("Creating the wallet...")
 	}
-	w, werr := loader.CreateNewWallet(pubPass, privPass, seedInput, seed)
+	w, werr := loader.CreateNewWallet(pubPass, privPass, seedInput, time.Now(), seed)
 	if werr != nil {
 		return werr
 	}
@@ -331,7 +331,7 @@ func createSimulationWallet(cfg *config) er.R {
 	}
 
 	// Create the wallet.
-	err = wallet.Create(db, pubPass, privPass, nil, seed, activeNet.Params)
+	err = wallet.Create(db, pubPass, privPass, nil, time.Time{}, seed, activeNet.Params)
 	if err != nil {
 		return err
 	}

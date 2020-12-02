@@ -8,9 +8,10 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 	"fmt"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -1224,4 +1225,49 @@ func (c *Client) LoadTxFilterAsync(reload bool, addresses []btcutil.Address,
 // and requires a websocket connection.
 func (c *Client) LoadTxFilter(reload bool, addresses []btcutil.Address, outPoints []wire.OutPoint) er.R {
 	return c.LoadTxFilterAsync(reload, addresses, outPoints).Receive()
+}
+
+// NotifySpentAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See NotifySpent for the blocking version and more details.
+//
+// NOTE: This is a btcd extension and requires a websocket connection.
+//
+// Deprecated: Use LoadTxFilterAsync instead.
+func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentResult {
+	// Not supported in HTTP POST mode.
+	if c.config.HTTPPostMode {
+		return newFutureError(ErrWebsocketsRequired.Default())
+	}
+
+	// Ignore the notification if the client is not interested in
+	// notifications.
+	if c.ntfnHandlers == nil {
+		return newNilFutureResult()
+	}
+
+	ops := make([]btcjson.OutPoint, 0, len(outpoints))
+	for _, outpoint := range outpoints {
+		ops = append(ops, newOutPointFromWire(outpoint))
+	}
+	cmd := btcjson.NewNotifySpentCmd(ops)
+	return c.sendCmd(cmd)
+}
+
+// NotifySpent registers the client to receive notifications when the passed
+// transaction outputs are spent.  The notifications are delivered to the
+// notification handlers associated with the client.  Calling this function has
+// no effect if there are no notification handlers and will result in an error
+// if the client is configured to run in HTTP POST mode.
+//
+// The notifications delivered as a result of this call will be via
+// OnRedeemingTx.
+//
+// NOTE: This is a btcd extension and requires a websocket connection.
+//
+// Deprecated: Use LoadTxFilter instead.
+func (c *Client) NotifySpent(outpoints []*wire.OutPoint) er.R {
+	return c.NotifySpentAsync(outpoints).Receive()
 }

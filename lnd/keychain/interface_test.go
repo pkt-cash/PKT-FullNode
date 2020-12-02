@@ -68,7 +68,7 @@ func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, error) {
 	pass := []byte("test")
 
 	baseWallet, err := loader.CreateNewWallet(
-		pass, pass, testHDSeed[:], time.Time{},
+		pass, pass, testHDSeed[:], time.Time{}, nil,
 	)
 	if err != nil {
 		return nil, nil, err

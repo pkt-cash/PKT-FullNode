@@ -10,17 +10,18 @@ import (
 
 	prand "math/rand"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/chainview"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -162,13 +163,13 @@ func (m *mockChain) GetTransaction(txid *chainhash.Hash) (*wire.MsgTx, error) {
 	return nil, nil
 }
 
-func (m *mockChain) GetBlockHash(blockHeight int64) (*chainhash.Hash, error) {
+func (m *mockChain) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	m.RLock()
 	defer m.RUnlock()
 
 	hash, ok := m.blockIndex[uint32(blockHeight)]
 	if !ok {
-		return nil, fmt.Errorf("can't find block hash, for "+
+		return nil, er.Errorf("can't find block hash, for "+
 			"height %v", blockHeight)
 	}
 

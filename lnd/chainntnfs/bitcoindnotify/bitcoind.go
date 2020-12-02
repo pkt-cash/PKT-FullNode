@@ -7,14 +7,14 @@ import (
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/queue"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -626,9 +626,9 @@ func (b *BitcoindNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 	// for `dispatch` will be returned if we are required to perform a
 	// manual scan for the confirmation. Otherwise the notifier will begin
 	// watching at tip for the transaction to confirm.
-	ntfn, err := b.txNotifier.RegisterSpend(outpoint, pkScript, heightHint)
-	if err != nil {
-		return nil, err
+	ntfn, errr := b.txNotifier.RegisterSpend(outpoint, pkScript, heightHint)
+	if errr != nil {
+		return nil, errr
 	}
 
 	// We'll then request the backend to notify us when it has detected the
@@ -710,8 +710,7 @@ func (b *BitcoindNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 	if err != nil {
 		// Avoid returning an error if the transaction was not found to
 		// proceed with fallback methods.
-		jsonErr, ok := err.(*btcjson.RPCError)
-		if !ok || jsonErr.Code != btcjson.ErrRPCNoTxInfo {
+		if !btcjson.ErrRPCNoTxInfo.Is(err) {
 			return nil, fmt.Errorf("unable to query for txid %v: %v",
 				outpoint.Hash, err)
 		}
