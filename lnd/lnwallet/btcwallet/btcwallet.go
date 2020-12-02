@@ -253,10 +253,6 @@ func (b *BtcWallet) NewAddress(t lnwallet.AddressType, change bool) (btcutil.Add
 		return nil, fmt.Errorf("unknown address type")
 	}
 
-	if change {
-		return b.wallet.NewChangeAddress(defaultAccount, keyScope)
-	}
-
 	return b.wallet.NewAddress(defaultAccount, keyScope)
 }
 
