@@ -8,9 +8,8 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -33,18 +32,15 @@ import (
 // order wallet created them, but there is no guaranteed synchronization between
 // different clients.
 type NotificationServer struct {
-	transactions   []chan *TransactionNotifications
-	currentTxNtfn  *TransactionNotifications // coalesce this since wallet does not add mined txs together
-	spentness      map[uint32][]chan *SpentnessNotifications
-	accountClients []chan *AccountNotification
-	mu             sync.Mutex // Only protects registered client channels
-	wallet         *Wallet    // smells like hacks
+	transactions  []chan *TransactionNotifications
+	currentTxNtfn *TransactionNotifications // coalesce this since wallet does not add mined txs together
+	mu            sync.Mutex                // Only protects registered client channels
+	wallet        *Wallet                   // smells like hacks
 }
 
 func newNotificationServer(wallet *Wallet) *NotificationServer {
 	return &NotificationServer{
-		spentness: make(map[uint32][]chan *SpentnessNotifications),
-		wallet:    wallet,
+		wallet: wallet,
 	}
 }
 
@@ -259,6 +255,70 @@ func (s *NotificationServer) notifyMinedTransaction(dbtx walletdb.ReadTx, detail
 		append(txs, makeTxSummary(dbtx, s.wallet, details))
 }
 
+func (s *NotificationServer) notifyAttachedBlock(dbtx walletdb.ReadTx, block *wtxmgr.BlockMeta) {
+	if s.currentTxNtfn == nil {
+		s.currentTxNtfn = &TransactionNotifications{}
+	}
+
+	// Add block details if it wasn't already included for previously
+	// notified mined transactions.
+	n := len(s.currentTxNtfn.AttachedBlocks)
+	if n == 0 || *s.currentTxNtfn.AttachedBlocks[n-1].Hash != block.Hash {
+		s.currentTxNtfn.AttachedBlocks = append(s.currentTxNtfn.AttachedBlocks, Block{
+			Hash:      &block.Hash,
+			Height:    block.Height,
+			Timestamp: block.Time.Unix(),
+		})
+	}
+
+	// For now (until notification coalescing isn't necessary) just use
+	// chain length to determine if this is the new best block.
+	if s.wallet.ChainSynced() {
+		if len(s.currentTxNtfn.DetachedBlocks) >= len(s.currentTxNtfn.AttachedBlocks) {
+			return
+		}
+	}
+
+	defer s.mu.Unlock()
+	s.mu.Lock()
+	clients := s.transactions
+	if len(clients) == 0 {
+		s.currentTxNtfn = nil
+		return
+	}
+
+	// The UnminedTransactions field is intentionally not set.  Since the
+	// hashes of all detached blocks are reported, and all transactions
+	// moved from a mined block back to unconfirmed are either in the
+	// UnminedTransactionHashes slice or don't exist due to conflicting with
+	// a mined transaction in the new best chain, there is no possiblity of
+	// a new, previously unseen transaction appearing in unconfirmed.
+
+	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+	unminedHashes, err := s.wallet.TxStore.UnminedTxHashes(txmgrNs)
+	if err != nil {
+		log.Errorf("Cannot fetch unmined transaction hashes: %v", err)
+		return
+	}
+	s.currentTxNtfn.UnminedTransactionHashes = unminedHashes
+
+	bals := make(map[uint32]btcutil.Amount)
+	for _, b := range s.currentTxNtfn.AttachedBlocks {
+		relevantAccounts(s.wallet, bals, b.Transactions)
+	}
+	err = totalBalances(dbtx, s.wallet, bals)
+	if err != nil {
+		log.Errorf("Cannot determine balances for relevant accounts: %v", err)
+		return
+	}
+	s.currentTxNtfn.NewBalances = flattenBalanceMap(bals)
+
+	for _, c := range clients {
+		c <- s.currentTxNtfn
+	}
+	s.currentTxNtfn = nil
+}
+
 // TransactionNotifications is a notification of changes to the wallet's
 // transaction set and the current chain tip that wallet is considered to be
 // synced with.  All transactions added to the blockchain are organized by the
@@ -334,60 +394,52 @@ type AccountBalance struct {
 	TotalBalance btcutil.Amount
 }
 
-// SpentnessNotifications is a notification that is fired for transaction
-// outputs controlled by some account's keys.  The notification may be about a
-// newly added unspent transaction output or that a previously unspent output is
-// now spent.  When spent, the notification includes the spending transaction's
-// hash and input index.
-type SpentnessNotifications struct {
-	hash  *chainhash.Hash
-	index uint32
+// TransactionNotificationsClient receives TransactionNotifications from the
+// NotificationServer over the channel C.
+type TransactionNotificationsClient struct {
+	C      <-chan *TransactionNotifications
+	server *NotificationServer
 }
 
-// notifyUnspentOutput notifies registered clients of a new unspent output that
-// is controlled by the wallet.
-func (s *NotificationServer) notifyUnspentOutput(account uint32, hash *chainhash.Hash, index uint32) {
-	defer s.mu.Unlock()
+// TransactionNotifications returns a client for receiving
+// TransactionNotifiations notifications over a channel.  The channel is
+// unbuffered.
+//
+// When finished, the Done method should be called on the client to disassociate
+// it from the server.
+func (s *NotificationServer) TransactionNotifications() TransactionNotificationsClient {
+	c := make(chan *TransactionNotifications)
 	s.mu.Lock()
-	clients := s.spentness[account]
-	if len(clients) == 0 {
-		return
-	}
-	n := &SpentnessNotifications{
-		hash:  hash,
-		index: index,
-	}
-	for _, c := range clients {
-		c <- n
+	s.transactions = append(s.transactions, c)
+	s.mu.Unlock()
+	return TransactionNotificationsClient{
+		C:      c,
+		server: s,
 	}
 }
 
-// AccountNotification contains properties regarding an account, such as its
-// name and the number of derived and imported keys.  When any of these
-// properties change, the notification is fired.
-type AccountNotification struct {
-	AccountNumber    uint32
-	AccountName      string
-	ExternalKeyCount uint32
-	InternalKeyCount uint32
-	ImportedKeyCount uint32
-}
-
-func (s *NotificationServer) notifyAccountProperties(props *waddrmgr.AccountProperties) {
-	defer s.mu.Unlock()
-	s.mu.Lock()
-	clients := s.accountClients
-	if len(clients) == 0 {
-		return
-	}
-	n := &AccountNotification{
-		AccountNumber:    props.AccountNumber,
-		AccountName:      props.AccountName,
-		ExternalKeyCount: props.ExternalKeyCount,
-		InternalKeyCount: props.InternalKeyCount,
-		ImportedKeyCount: props.ImportedKeyCount,
-	}
-	for _, c := range clients {
-		c <- n
-	}
+// Done deregisters the client from the server and drains any remaining
+// messages.  It must be called exactly once when the client is finished
+// receiving notifications.
+func (c *TransactionNotificationsClient) Done() {
+	go func() {
+		// Drain notifications until the client channel is removed from
+		// the server and closed.
+		for range c.C {
+		}
+	}()
+	go func() {
+		s := c.server
+		s.mu.Lock()
+		clients := s.transactions
+		for i, ch := range clients {
+			if c.C == ch {
+				clients[i] = clients[len(clients)-1]
+				s.transactions = clients[:len(clients)-1]
+				close(ch)
+				break
+			}
+		}
+		s.mu.Unlock()
+	}()
 }

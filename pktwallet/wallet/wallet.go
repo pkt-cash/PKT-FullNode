@@ -1036,7 +1036,6 @@ func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcuti
 	// to satisfy the query. Notify the rpc server about the new address.
 	if props != nil {
 		w.watch.WatchAddr(addr)
-		w.NtfnServer.notifyAccountProperties(props)
 	}
 
 	return addr, nil
@@ -1522,6 +1521,145 @@ func (w *Wallet) ListAllTransactions() ([]btcjson.ListTransactionsResult, er.R) 
 	return txList, err
 }
 
+// BlockIdentifier identifies a block by either a height or a hash.
+type BlockIdentifier struct {
+	height int32
+	hash   *chainhash.Hash
+}
+
+// NewBlockIdentifierFromHeight constructs a BlockIdentifier for a block height.
+func NewBlockIdentifierFromHeight(height int32) *BlockIdentifier {
+	return &BlockIdentifier{height: height}
+}
+
+// NewBlockIdentifierFromHash constructs a BlockIdentifier for a block hash.
+func NewBlockIdentifierFromHash(hash *chainhash.Hash) *BlockIdentifier {
+	return &BlockIdentifier{hash: hash}
+}
+
+// GetTransactionsResult is the result of the wallet's GetTransactions method.
+// See GetTransactions for more details.
+type GetTransactionsResult struct {
+	MinedTransactions   []Block
+	UnminedTransactions []TransactionSummary
+}
+
+// GetTransactions returns transaction results between a starting and ending
+// block.  Blocks in the block range may be specified by either a height or a
+// hash.
+//
+// Because this is a possibly lenghtly operation, a cancel channel is provided
+// to cancel the task.  If this channel unblocks, the results created thus far
+// will be returned.
+//
+// Transaction results are organized by blocks in ascending order and unmined
+// transactions in an unspecified order.  Mined transactions are saved in a
+// Block structure which records properties about the block.
+func (w *Wallet) GetTransactions(
+	startBlock, endBlock *BlockIdentifier,
+	cancel <-chan struct{},
+) (*GetTransactionsResult, er.R) {
+	var start, end int32 = 0, -1
+
+	w.chainClientLock.Lock()
+	chainClient := w.chainClient
+	w.chainClientLock.Unlock()
+
+	// TODO: Fetching block heights by their hashes is inherently racy
+	// because not all block headers are saved but when they are for SPV the
+	// db can be queried directly without this.
+	if startBlock != nil {
+		if startBlock.hash == nil {
+			start = startBlock.height
+		} else {
+			if chainClient == nil {
+				return nil, er.New("no chain server client")
+			}
+			switch client := chainClient.(type) {
+			case *chain.RPCClient:
+				startHeader, err := client.GetBlockHeaderVerbose(
+					startBlock.hash,
+				)
+				if err != nil {
+					return nil, err
+				}
+				start = startHeader.Height
+			case *chain.NeutrinoClient:
+				var err er.R
+				start, err = client.GetBlockHeight(startBlock.hash)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	if endBlock != nil {
+		if endBlock.hash == nil {
+			end = endBlock.height
+		} else {
+			if chainClient == nil {
+				return nil, er.New("no chain server client")
+			}
+			switch client := chainClient.(type) {
+			case *chain.RPCClient:
+				endHeader, err := client.GetBlockHeaderVerbose(
+					endBlock.hash,
+				)
+				if err != nil {
+					return nil, err
+				}
+				end = endHeader.Height
+			case *chain.NeutrinoClient:
+				var err er.R
+				end, err = client.GetBlockHeight(endBlock.hash)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	var res GetTransactionsResult
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
+			// TODO: probably should make RangeTransactions not reuse the
+			// details backing array memory.
+			dets := make([]wtxmgr.TxDetails, len(details))
+			copy(dets, details)
+			details = dets
+
+			txs := make([]TransactionSummary, 0, len(details))
+			for i := range details {
+				txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
+			}
+
+			if details[0].Block.Height != -1 {
+				blockHash := details[0].Block.Hash
+				res.MinedTransactions = append(res.MinedTransactions, Block{
+					Hash:         &blockHash,
+					Height:       details[0].Block.Height,
+					Timestamp:    details[0].Block.Time.Unix(),
+					Transactions: txs,
+				})
+			} else {
+				res.UnminedTransactions = txs
+			}
+
+			select {
+			case <-cancel:
+				return true, nil
+			default:
+				return false, nil
+			}
+		}
+
+		return w.TxStore.RangeTransactions(txmgrNs, start, end, rangeFn)
+	})
+	return &res, err
+}
+
 // ListUnspent returns a slice of objects representing the unspent wallet
 // transactions fitting the given criteria. The confirmations will be more than
 // minconf, less than maxconf and if addresses is populated only the addresses
@@ -1733,7 +1871,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 
 	// Attempt to import private key into wallet.
 	var addr btcutil.Address
-	var props *waddrmgr.AccountProperties
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		maddr, err := manager.ImportPrivateKey(addrmgrNs, wif, bs)
@@ -1741,12 +1878,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 			return err
 		}
 		addr = maddr.Address()
-		props, err = manager.AccountProperties(
-			addrmgrNs, waddrmgr.ImportedAddrAccount,
-		)
-		if err != nil {
-			return err
-		}
 
 		// We'll only update our birthday with the new one if it is
 		// before our current one. Otherwise, if we do, we can
@@ -1796,8 +1927,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 
 	addrStr := addr.EncodeAddress()
 	log.Infof("Imported payment address %s", addrStr)
-
-	w.NtfnServer.notifyAccountProperties(props)
 
 	// Return the payment address string of the imported private key.
 	return addrStr, nil
@@ -1919,14 +2048,11 @@ func (w *Wallet) SortedActivePaymentAddresses() ([]string, er.R) {
 func (w *Wallet) NewAddress(account uint32,
 	scope waddrmgr.KeyScope) (btcutil.Address, er.R) {
 
-	var (
-		addr  btcutil.Address
-		props *waddrmgr.AccountProperties
-	)
+	var addr btcutil.Address
 	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		var err er.R
-		addr, props, err = w.newAddress(addrmgrNs, account, scope)
+		addr, _, err = w.newAddress(addrmgrNs, account, scope)
 		return err
 	})
 	if err != nil {
@@ -1935,8 +2061,6 @@ func (w *Wallet) NewAddress(account uint32,
 
 	// Notify the rpc server about the newly created address.
 	w.watch.WatchAddr(addr)
-
-	w.NtfnServer.notifyAccountProperties(props)
 
 	return addr, nil
 }
@@ -2781,13 +2905,21 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 				continue
 			}
 			addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
+			hash := b.header.BlockHash()
 			if err := w.Manager.SetSyncedTo(addrmgrNs, &waddrmgr.BlockStamp{
 				Height:    b.height,
-				Hash:      b.header.BlockHash(),
+				Hash:      hash,
 				Timestamp: b.header.Timestamp,
 			}); err != nil {
 				return err
 			}
+			w.NtfnServer.notifyAttachedBlock(dbtx, &wtxmgr.BlockMeta{
+				Block: wtxmgr.Block{
+					Hash:   hash,
+					Height: b.height,
+				},
+				Time: b.header.Timestamp,
+			})
 		}
 		return nil
 	})
@@ -3135,9 +3267,6 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	}
 
 	w.NtfnServer = newNotificationServer(w)
-	w.TxStore.NotifyUnspent = func(hash *chainhash.Hash, index uint32) {
-		w.NtfnServer.notifyUnspentOutput(0, hash, index)
-	}
 
 	return w, nil
 }
