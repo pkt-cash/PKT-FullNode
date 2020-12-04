@@ -46,7 +46,6 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
-	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
@@ -13410,7 +13409,7 @@ func testSweepAllCoins(net *lntest.NetworkHarness, t *harnessTest) {
 
 	// Our error will be wrapped in a rpc error, so we check that it
 	// contains the error we expect.
-	if !strings.Contains(err.Error(), wallet.ErrTxLabelExists.Error()) {
+	if !strings.Contains(err.Error(), "ErrTxLabelExists") {
 		t.Fatalf("expected: label exists, got: %v", err)
 	}
 

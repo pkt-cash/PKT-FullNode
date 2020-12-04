@@ -60,6 +60,17 @@ var (
 	ErrWalletShuttingDown = Err.CodeWithDetail("ErrWalletShuttingDown",
 		"wallet shutting down")
 
+	// ErrUnknownTransaction is returned when an attempt is made to label
+	// a transaction that is not known to the wallet.
+	ErrUnknownTransaction = Err.CodeWithDetail("ErrUnknownTransaction",
+		"cannot label transaction not known to wallet")
+
+	// ErrTxLabelExists is returned when a transaction already has a label
+	// and an attempt has been made to label it without setting overwrite
+	// to true.
+	ErrTxLabelExists = Err.CodeWithDetail("ErrTxLabelExists",
+		"transaction already labelled")
+
 	// Namespace bucket keys.
 	waddrmgrNamespaceKey = []byte("waddrmgr")
 	wtxmgrNamespaceKey   = []byte("wtxmgr")
@@ -324,7 +335,7 @@ func (w *Wallet) SetChainSynced(synced bool) {
 // activeData returns the currently-active receiving addresses and all unspent
 // outputs.  This is primarely intended to provide the parameters for a
 // rescan request.
-func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
+func (w *Wallet) activeData(dbtx walletdb.ReadWriteTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -336,6 +347,16 @@ func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.C
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Before requesting the list of spendable UTXOs, we'll delete any
+	// expired output locks.
+	err = w.TxStore.DeleteExpiredLockedOutputs(
+		dbtx.ReadWriteBucket(wtxmgrNamespaceKey),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 	return addrs, unspent, err
 }
@@ -438,7 +459,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	//func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
 	var addrs []btcutil.Address
 	var credits []wtxmgr.Credit
-	if err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
+	if err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		addrs, credits, err = w.activeData(dbtx)
 		return err
 	}); err != nil {
@@ -596,6 +617,7 @@ type (
 		InputMinHeight  int
 		InputComparator utils.Comparator
 		MaxInputs       int
+		Label           string
 	}
 	createTxRequest struct {
 		req  CreateTxReq
@@ -1039,6 +1061,58 @@ func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, er.R) {
 	return pubKey, err
 }
 
+// LabelTransaction adds a label to the transaction with the hash provided. The
+// call will fail if the label is too long, or if the transaction already has
+// a label and the overwrite boolean is not set.
+func (w *Wallet) LabelTransaction(hash chainhash.Hash, label string,
+	overwrite bool) er.R {
+
+	// Check that the transaction is known to the wallet, and fail if it is
+	// unknown. If the transaction is known, check whether it already has
+	// a label.
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+
+		dbTx, err := w.TxStore.TxDetails(txmgrNs, &hash)
+		if err != nil {
+			return err
+		}
+
+		// If the transaction looked up is nil, it was not found. We
+		// do not allow labelling of unknown transactions so we fail.
+		if dbTx == nil {
+			return ErrUnknownTransaction.Default()
+		}
+
+		_, err = wtxmgr.FetchTxLabel(txmgrNs, hash)
+		return err
+	})
+
+	switch {
+	// If no labels have been written yet, we can silence the error.
+	// Likewise if there is no label, we do not need to do any overwrite
+	// checks.
+	case wtxmgr.ErrNoLabelBucket.Is(err):
+	case wtxmgr.ErrTxLabelNotFound.Is(err):
+
+	// If we successfully looked up a label, fail if the overwrite param
+	// is not set.
+	case err == nil:
+		if !overwrite {
+			return ErrTxLabelExists.Default()
+		}
+
+	// In another unrelated error occurred, return it.
+	default:
+		return err
+	}
+
+	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.PutTxLabel(txmgrNs, hash, label)
+	})
+}
+
 // PrivKeyForAddress looks up the associated private key for a P2PKH or P2PK
 // address.
 func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) {
@@ -1057,6 +1131,22 @@ func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) 
 		return err
 	})
 	return privKey, err
+}
+
+// HaveAddress returns whether the wallet is the owner of the address a.
+func (w *Wallet) HaveAddress(a btcutil.Address) (bool, er.R) {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		_, err := w.Manager.Address(addrmgrNs, a)
+		return err
+	})
+	if err == nil {
+		return true, nil
+	}
+	if waddrmgr.ErrAddressNotFound.Is(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 // AccountOfAddress finds the account that an address is associated with.
@@ -1770,6 +1860,42 @@ func (w *Wallet) LockedOutpoints() []btcjson.LockedUnspent {
 	return locked
 }
 
+// LeaseOutput locks an output to the given ID, preventing it from being
+// available for coin selection. The absolute time of the lock's expiration is
+// returned. The expiration of the lock can be extended by successive
+// invocations of this call.
+//
+// Outputs can be unlocked before their expiration through `UnlockOutput`.
+// Otherwise, they are unlocked lazily through calls which iterate through all
+// known outputs, e.g., `CalculateBalance`, `ListUnspent`.
+//
+// If the output is not known, ErrUnknownOutput is returned. If the output has
+// already been locked to a different ID, then ErrOutputAlreadyLocked is
+// returned.
+//
+// NOTE: This differs from LockOutpoint in that outputs are locked for a limited
+// amount of time and their locks are persisted to disk.
+func (w *Wallet) LeaseOutput(id wtxmgr.LockID, op wire.OutPoint) (time.Time, er.R) {
+	var expiry time.Time
+	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		var err er.R
+		expiry, err = w.TxStore.LockOutput(ns, id, op)
+		return err
+	})
+	return expiry, err
+}
+
+// ReleaseOutput unlocks an output, allowing it to be available for coin
+// selection if it remains unspent. The ID should match the one used to
+// originally lock the output.
+func (w *Wallet) ReleaseOutput(id wtxmgr.LockID, op wire.OutPoint) er.R {
+	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.UnlockOutput(ns, id, op)
+	})
+}
+
 // SortedActivePaymentAddresses returns a slice of all active payment
 // addresses in a wallet.
 func (w *Wallet) SortedActivePaymentAddresses() ([]string, er.R) {
@@ -1940,7 +2066,7 @@ func (w *Wallet) SendOutputs(txr CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 		return createdTx, nil
 	}
 
-	txHash, err := w.reliablyPublishTransaction(createdTx.Tx)
+	txHash, err := w.reliablyPublishTransaction(createdTx.Tx, txr.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -2116,12 +2242,22 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 	return signErrors, err
 }
 
+// PublishTransaction sends the transaction to the consensus RPC server so it
+// can be propagated to other nodes and eventually mined.
+//
+// This function is unstable and will be removed once syncing code is moved out
+// of the wallet.
+func (w *Wallet) PublishTransaction(tx *wire.MsgTx, label string) er.R {
+	_, err := w.reliablyPublishTransaction(tx, label)
+	return err
+}
+
 // reliablyPublishTransaction is a superset of publishTransaction which contains
 // the primary logic required for publishing a transaction, updating the
 // relevant database state, and finally possible removing the transaction from
 // the database (along with cleaning up all inputs used, and outputs created) if
 // the transaction is rejected by the backend.
-func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
+func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx, label string) (*chainhash.Hash, er.R) {
 	// We need to addRelevantTx this transaction so the user's next tx won't just keep
 	// on trying to spend the same money over and over, but it will get flushed on restarts
 	// because if the tx is invalid, the wallet would otherwise just remember it forever.
@@ -2130,7 +2266,19 @@ func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er
 		return nil, err
 	}
 	err = walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
-		return w.addRelevantTx(dbTx, txRec, nil)
+		if err := w.addRelevantTx(dbTx, txRec, nil); err != nil {
+			return err
+		}
+
+		// If the tx label is empty, we can return early.
+		if len(label) == 0 {
+			return nil
+		}
+
+		// If there is a label we should write, get the namespace key
+		// and record it in the tx store.
+		txmgrNs := dbTx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.PutTxLabel(txmgrNs, tx.TxHash(), label)
 	})
 	if err != nil {
 		return nil, err

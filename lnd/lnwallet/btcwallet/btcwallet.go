@@ -316,8 +316,7 @@ func (b *BtcWallet) SendOutputs(outputs []*wire.TxOut,
 		Minconf:     minconf,
 		FeeSatPerKB: feeSatPerKB,
 		DryRun:      false,
-
-		// TODO(cjd): label is missing here
+		Label:       label,
 
 		// TODO(cjd): Maybe change the defaults ?
 		ChangeAddress:   nil,
@@ -374,6 +373,7 @@ func (b *BtcWallet) CreateSimpleTx(outputs []*wire.TxOut,
 		Minconf:     1,
 		FeeSatPerKB: feeSatPerKB,
 		DryRun:      dryRun,
+		Label:       "",
 
 		// TODO(cjd): Maybe change the defaults ?
 		ChangeAddress:   nil,
@@ -417,12 +417,12 @@ func (b *BtcWallet) UnlockOutpoint(o wire.OutPoint) {
 //
 // NOTE: This method requires the global coin selection lock to be held.
 func (b *BtcWallet) LeaseOutput(id wtxmgr.LockID, op wire.OutPoint) (time.Time,
-	error) {
+	er.R) {
 
 	// Make sure we don't attempt to double lock an output that's been
 	// locked by the in-memory implementation.
 	if b.wallet.LockedOutpoint(op) {
-		return time.Time{}, wtxmgr.ErrOutputAlreadyLocked
+		return time.Time{}, wtxmgr.ErrOutputAlreadyLocked.Default()
 	}
 
 	return b.wallet.LeaseOutput(id, op)
@@ -509,28 +509,8 @@ func (b *BtcWallet) ListUnspentWitness(minConfs, maxConfs int32) (
 // (currently ErrDoubleSpend). If the transaction is already published to the
 // network (either in the mempool or chain) no error will be returned.
 func (b *BtcWallet) PublishTransaction(tx *wire.MsgTx, label string) error {
-	if err := b.wallet.PublishTransaction(tx, label); err != nil {
-
-		// If we failed to publish the transaction, check whether we
-		// got an error of known type.
-		switch err.(type) {
-
-		// If the wallet reports a double spend, convert it to our
-		// internal ErrDoubleSpend and return.
-		case *base.ErrDoubleSpend:
-			return lnwallet.ErrDoubleSpend
-
-		// If the wallet reports a replacement error, return
-		// ErrDoubleSpend, as we currently are never attempting to
-		// replace transactions.
-		case *base.ErrReplacement:
-			return lnwallet.ErrDoubleSpend
-
-		default:
-			return err
-		}
-	}
-	return nil
+	// TODO(cjd): ErrDoubleSpend will never happen w/ Neutrino
+	return b.wallet.PublishTransaction(tx, label)
 }
 
 // LabelTransaction adds a label to a transaction. If the tx already

@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
+	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
@@ -132,7 +133,7 @@ func (w *WalletController) UnlockOutpoint(o wire.OutPoint) {}
 
 // LeaseOutput returns the current time and a nil error.
 func (w *WalletController) LeaseOutput(wtxmgr.LockID, wire.OutPoint) (time.Time,
-	error) {
+	er.R) {
 
 	return time.Now(), nil
 }

@@ -64,12 +64,14 @@ var _ [32]byte = chainhash.Hash{}
 var (
 	bucketBlocks         = []byte("b")
 	bucketTxRecords      = []byte("t")
+	bucketTxLabels       = []byte("l")
 	bucketCredits        = []byte("c")
 	bucketUnspent        = []byte("u")
 	bucketDebits         = []byte("d")
 	bucketUnmined        = []byte("m")
 	bucketUnminedCredits = []byte("mc")
 	bucketUnminedInputs  = []byte("mi")
+	bucketLockedOutputs  = []byte("lo")
 )
 
 // Root (namespace) bucket keys
@@ -1186,6 +1188,123 @@ func deleteRawUnminedInput(ns walletdb.ReadWriteBucket, outPointKey []byte,
 	return nil
 }
 
+// serializeLockedOutput serializes the value of a locked output.
+func serializeLockedOutput(id LockID, expiry time.Time) []byte {
+	var v [len(id) + 8]byte
+	copy(v[:len(id)], id[:])
+	byteOrder.PutUint64(v[len(id):], uint64(expiry.Unix()))
+	return v[:]
+}
+
+// deserializeLockedOutput deserializes the value of a locked output.
+func deserializeLockedOutput(v []byte) (LockID, time.Time) {
+	var id LockID
+	copy(id[:], v[:len(id)])
+	expiry := time.Unix(int64(byteOrder.Uint64(v[len(id):])), 0)
+	return id, expiry
+}
+
+// isLockedOutput determines whether an output is locked. If it is, its assigned
+// ID is returned, along with its absolute expiration time. If the output lock
+// exists, but its expiration has been met, then the output is considered
+// unlocked.
+func isLockedOutput(ns walletdb.ReadBucket, op wire.OutPoint,
+	timeNow time.Time) (LockID, time.Time, bool) {
+
+	// The bucket may not exist, indicating that no outputs have ever been
+	// locked, so we can just return now.
+	lockedOutputs := ns.NestedReadBucket(bucketLockedOutputs)
+	if lockedOutputs == nil {
+		return LockID{}, time.Time{}, false
+	}
+
+	// Retrieve the output lock, if any, and extract the relevant fields.
+	k := canonicalOutPoint(&op.Hash, op.Index)
+	v := lockedOutputs.Get(k)
+	if v == nil {
+		return LockID{}, time.Time{}, false
+	}
+	lockID, expiry := deserializeLockedOutput(v)
+
+	// If the output lock has already expired, delete it now.
+	if !timeNow.Before(expiry) {
+		return LockID{}, time.Time{}, false
+	}
+
+	return lockID, expiry, true
+}
+
+// lockOutput creates a lock for `duration` over an output assigned to the `id`,
+// preventing it from becoming eligible for coin selection.
+func lockOutput(ns walletdb.ReadWriteBucket, id LockID, op wire.OutPoint,
+	expiry time.Time) er.R {
+
+	// Create the corresponding bucket if necessary.
+	lockedOutputs, err := ns.CreateBucketIfNotExists(bucketLockedOutputs)
+	if err != nil {
+		str := "failed to create locked outputs bucket"
+		return storeError(ErrDatabase, str, err)
+	}
+
+	// Store a mapping of outpoint -> (id, expiry).
+	k := canonicalOutPoint(&op.Hash, op.Index)
+	v := serializeLockedOutput(id, expiry)
+
+	if err := lockedOutputs.Put(k, v[:]); err != nil {
+		str := fmt.Sprintf("%s: put failed for %v", bucketLockedOutputs,
+			op)
+		return storeError(ErrDatabase, str, err)
+	}
+
+	return nil
+}
+
+// unlockOutput removes a lock over an output, making it eligible for coin
+// selection if still unspent.
+func unlockOutput(ns walletdb.ReadWriteBucket, op wire.OutPoint) er.R {
+	// The bucket may not exist, indicating that no outputs have ever been
+	// locked, so we can just return now.
+	lockedOutputs := ns.NestedReadWriteBucket(bucketLockedOutputs)
+	if lockedOutputs == nil {
+		return nil
+	}
+
+	// Delete the key-value pair representing the output lock.
+	k := canonicalOutPoint(&op.Hash, op.Index)
+	if err := lockedOutputs.Delete(k); err != nil {
+		str := fmt.Sprintf("%s: delete failed for %v",
+			bucketLockedOutputs, op)
+		return storeError(ErrDatabase, str, err)
+	}
+
+	return nil
+}
+
+// forEachLockedOutput iterates over all existing locked outputs and invokes the
+// callback `f` for each.
+func forEachLockedOutput(ns walletdb.ReadBucket,
+	f func(wire.OutPoint, LockID, time.Time)) er.R {
+
+	// The bucket may not exist, indicating that no outputs have ever been
+	// locked, so we can just return now.
+	lockedOutputs := ns.NestedReadBucket(bucketLockedOutputs)
+	if lockedOutputs == nil {
+		return nil
+	}
+
+	return lockedOutputs.ForEach(func(k, v []byte) er.R {
+		var op wire.OutPoint
+		if err := readCanonicalOutPoint(k, &op); err != nil {
+			return err
+		}
+		lockID, expiry := deserializeLockedOutput(v)
+
+		f(op, lockID, expiry)
+
+		return nil
+	})
+}
+
 // openStore opens an existing transaction store from the passed namespace.
 func openStore(ns walletdb.ReadBucket) er.R {
 	version, err := fetchVersion(ns)
@@ -1273,6 +1392,10 @@ func createBuckets(ns walletdb.ReadWriteBucket) er.R {
 		str := "failed to create unmined inputs bucket"
 		return storeError(ErrDatabase, str, err)
 	}
+	if _, err := ns.CreateBucket(bucketLockedOutputs); err != nil {
+		str := "failed to create locked outputs bucket"
+		return storeError(ErrDatabase, str, err)
+	}
 
 	return nil
 }
@@ -1310,6 +1433,10 @@ func deleteBuckets(ns walletdb.ReadWriteBucket) er.R {
 	}
 	if err := ns.DeleteNestedBucket(bucketUnminedInputs); err != nil {
 		str := "failed to delete unmined inputs bucket"
+		return storeError(ErrDatabase, str, err)
+	}
+	if err := ns.DeleteNestedBucket(bucketLockedOutputs); err != nil {
+		str := "failed to delete locked outputs bucket"
 		return storeError(ErrDatabase, str, err)
 	}
 

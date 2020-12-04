@@ -1198,6 +1198,7 @@ func sendOutputs(
 		DryRun:         dryRun,
 		InputMinHeight: inputMinHeight,
 		MaxInputs:      maxInputs,
+		Label:          "",
 	}
 	if inputMinHeight > 0 {
 		// TODO(cjd): Ideally we would expose the comparator choice to the
