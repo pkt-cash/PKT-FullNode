@@ -149,7 +149,7 @@ func (b *BtcWallet) fetchPrivKey(keyDesc *keychain.KeyDescriptor) (*btcec.Privat
 // passed sign descriptor and may perform a mapping on the passed private key
 // in order to utilize the tweaks, if populated.
 func maybeTweakPrivKey(signDesc *input.SignDescriptor,
-	privKey *btcec.PrivateKey) (*btcec.PrivateKey, error) {
+	privKey *btcec.PrivateKey) (*btcec.PrivateKey, er.R) {
 
 	var retPriv *btcec.PrivateKey
 	switch {
@@ -220,7 +220,7 @@ func (b *BtcWallet) ComputeInputScript(tx *wire.MsgTx,
 	// If a tweak (single or double) is specified, then we'll need to use
 	// this tweak to derive the final private key to be used for signing
 	// this output.
-	privKeyTweaker := func(k *btcec.PrivateKey) (*btcec.PrivateKey, error) {
+	privKeyTweaker := func(k *btcec.PrivateKey) (*btcec.PrivateKey, er.R) {
 		return maybeTweakPrivKey(signDesc, k)
 	}
 

@@ -871,6 +871,22 @@ func (w *Wallet) ChangePrivatePassphrase(oldPass, newPass []byte) er.R {
 	return <-err
 }
 
+// ChangePassphrases modifies the public and private passphrase of the wallet
+// atomically.
+func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
+	privateNew []byte) er.R {
+
+	err := make(chan er.R, 1)
+	w.changePassphrases <- changePassphrasesRequest{
+		publicOld:  publicOld,
+		publicNew:  publicNew,
+		privateOld: privateOld,
+		privateNew: privateNew,
+		err:        err,
+	}
+	return <-err
+}
+
 // AccountAddresses returns the addresses for every created address for an
 // account.
 func (w *Wallet) AccountAddresses(account uint32) (addrs []btcutil.Address, err er.R) {

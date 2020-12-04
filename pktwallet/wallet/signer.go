@@ -7,6 +7,7 @@ package wallet
 import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
@@ -16,7 +17,7 @@ import (
 
 // PrivKeyTweaker is a function type that can be used to pass in a callback for
 // tweaking a private key before it's used to sign an input.
-type PrivKeyTweaker func(*btcec.PrivateKey) (*btcec.PrivateKey, error)
+type PrivKeyTweaker func(*btcec.PrivateKey) (*btcec.PrivateKey, er.R)
 
 // ComputeInputScript generates a complete InputScript for the passed
 // transaction with the signature as defined within the passed SignDescriptor.
@@ -25,7 +26,7 @@ type PrivKeyTweaker func(*btcec.PrivateKey) (*btcec.PrivateKey, error)
 func (w *Wallet) ComputeInputScript(tx *wire.MsgTx, output *wire.TxOut,
 	inputIndex int, sigHashes *txscript.TxSigHashes,
 	hashType params.SigHashType, tweaker PrivKeyTweaker) (wire.TxWitness,
-	[]byte, error) {
+	[]byte, er.R) {
 
 	// First make sure we can sign for the input by making sure the script
 	// in the UTXO belongs to our wallet and we have the private key for it.
