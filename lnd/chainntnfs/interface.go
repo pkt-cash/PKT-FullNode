@@ -2,7 +2,6 @@ package chainntnfs
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -17,7 +16,7 @@ import (
 var (
 	// ErrChainNotifierShuttingDown is used when we are trying to
 	// measure a spend notification when notifier is already stopped.
-	ErrChainNotifierShuttingDown = errors.New("chain notifier shutting down")
+	ErrChainNotifierShuttingDown = Err.CodeWithDetail("ErrChainNotifierShuttingDown", "chain notifier shutting down")
 )
 
 // TxConfStatus denotes the status of a transaction's lookup.
@@ -98,7 +97,7 @@ type ChainNotifier interface {
 	// NOTE: Dispatching notifications to multiple clients subscribed to
 	// the same (txid, numConfs) tuple MUST be supported.
 	RegisterConfirmationsNtfn(txid *chainhash.Hash, pkScript []byte,
-		numConfs, heightHint uint32) (*ConfirmationEvent, error)
+		numConfs, heightHint uint32) (*ConfirmationEvent, er.R)
 
 	// RegisterSpendNtfn registers an intent to be notified once the target
 	// outpoint is successfully spent within a transaction. The script that
@@ -121,7 +120,7 @@ type ChainNotifier interface {
 	// NOTE: Dispatching notifications to multiple clients subscribed to a
 	// spend of the same outpoint MUST be supported.
 	RegisterSpendNtfn(outpoint *wire.OutPoint, pkScript []byte,
-		heightHint uint32) (*SpendEvent, error)
+		heightHint uint32) (*SpendEvent, er.R)
 
 	// RegisterBlockEpochNtfn registers an intent to be notified of each
 	// new block connected to the tip of the main chain. The returned
@@ -134,11 +133,11 @@ type ChainNotifier interface {
 	// of block notifications for the missed blocks. If they do not provide
 	// one, then a notification will be dispatched immediately for the
 	// current tip of the chain upon a successful registration.
-	RegisterBlockEpochNtfn(*BlockEpoch) (*BlockEpochEvent, error)
+	RegisterBlockEpochNtfn(*BlockEpoch) (*BlockEpochEvent, er.R)
 
 	// Start the ChainNotifier. Once started, the implementation should be
 	// ready, and able to receive notification registrations from clients.
-	Start() error
+	Start() er.R
 
 	// Started returns true if this instance has been started, and false otherwise.
 	Started() bool
@@ -147,7 +146,7 @@ type ChainNotifier interface {
 	// should disallow any future requests from potential clients.
 	// Additionally, all pending client notifications will be canceled
 	// by closing the related channels on the *Event's.
-	Stop() error
+	Stop() er.R
 }
 
 // TxConfirmation carries some additional block-level details of the exact
@@ -337,7 +336,7 @@ type NotifierDriver struct {
 	// a variadic number of interface parameters in order to provide
 	// initialization flexibility, thereby accommodating several potential
 	// ChainNotifier implementations.
-	New func(args ...interface{}) (ChainNotifier, error)
+	New func(args ...interface{}) (ChainNotifier, er.R)
 }
 
 var (
@@ -365,12 +364,12 @@ func RegisteredNotifiers() []*NotifierDriver {
 // been registered, an error is returned.
 //
 // NOTE: This function is safe for concurrent access.
-func RegisterNotifier(driver *NotifierDriver) error {
+func RegisterNotifier(driver *NotifierDriver) er.R {
 	registerMtx.Lock()
 	defer registerMtx.Unlock()
 
 	if _, ok := notifiers[driver.NotifierType]; ok {
-		return fmt.Errorf("notifier already registered")
+		return er.Errorf("notifier already registered")
 	}
 
 	notifiers[driver.NotifierType] = driver
@@ -448,7 +447,7 @@ func GetCommonBlockAncestorHeight(chainConn ChainConn, reorgHash,
 // best block has been reorged out of the chain, rewind to the common ancestor
 // and return blocks starting right after the common ancestor.
 func GetClientMissedBlocks(chainConn ChainConn, clientBestBlock *BlockEpoch,
-	notifierBestHeight int32, backendStoresReorgs bool) ([]BlockEpoch, error) {
+	notifierBestHeight int32, backendStoresReorgs bool) ([]BlockEpoch, er.R) {
 
 	startingHeight := clientBestBlock.Height
 	if backendStoresReorgs {
@@ -458,7 +457,7 @@ func GetClientMissedBlocks(chainConn ChainConn, clientBestBlock *BlockEpoch,
 		hashAtBestHeight, err := chainConn.GetBlockHash(
 			int64(clientBestBlock.Height))
 		if err != nil {
-			return nil, fmt.Errorf("unable to find blockhash for "+
+			return nil, er.Errorf("unable to find blockhash for "+
 				"height=%d: %v", clientBestBlock.Height, err)
 		}
 
@@ -466,7 +465,7 @@ func GetClientMissedBlocks(chainConn ChainConn, clientBestBlock *BlockEpoch,
 			chainConn, *clientBestBlock.Hash, *hashAtBestHeight,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to find common ancestor: "+
+			return nil, er.Errorf("unable to find common ancestor: "+
 				"%v", err)
 		}
 	}
@@ -477,7 +476,7 @@ func GetClientMissedBlocks(chainConn ChainConn, clientBestBlock *BlockEpoch,
 		chainConn, startingHeight+1, notifierBestHeight+1,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get missed blocks: %v", err)
+		return nil, er.Errorf("unable to get missed blocks: %v", err)
 	}
 
 	return missedBlocks, nil
@@ -487,7 +486,7 @@ func GetClientMissedBlocks(chainConn ChainConn, clientBestBlock *BlockEpoch,
 // has no effect if given a height greater than or equal to our current best
 // known height. It returns the new best block for the notifier.
 func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
-	currBestBlock BlockEpoch, targetHeight int32) (BlockEpoch, error) {
+	currBestBlock BlockEpoch, targetHeight int32) (BlockEpoch, er.R) {
 
 	newBestBlock := BlockEpoch{
 		Height: currBestBlock.Height,
@@ -497,7 +496,7 @@ func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
 	for height := currBestBlock.Height; height > targetHeight; height-- {
 		hash, err := chainConn.GetBlockHash(int64(height - 1))
 		if err != nil {
-			return newBestBlock, fmt.Errorf("unable to "+
+			return newBestBlock, er.Errorf("unable to "+
 				"find blockhash for disconnected height=%d: %v",
 				height, err)
 		}
@@ -505,9 +504,9 @@ func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
 		Log.Infof("Block disconnected from main chain: "+
 			"height=%v, sha=%v", height, newBestBlock.Hash)
 
-		err = er.E(txNotifier.DisconnectTip(uint32(height)))
+		err = txNotifier.DisconnectTip(uint32(height))
 		if err != nil {
-			return newBestBlock, fmt.Errorf("unable to "+
+			return newBestBlock, er.Errorf("unable to "+
 				" disconnect tip for height=%d: %v",
 				height, err)
 		}
@@ -529,7 +528,7 @@ func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
 // current best block is returned.
 func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 	currBestBlock BlockEpoch, newHeight int32,
-	backendStoresReorgs bool) (BlockEpoch, []BlockEpoch, error) {
+	backendStoresReorgs bool) (BlockEpoch, []BlockEpoch, er.R) {
 
 	startingHeight := currBestBlock.Height
 
@@ -540,7 +539,7 @@ func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 		hashAtBestHeight, err :=
 			chainConn.GetBlockHash(int64(currBestBlock.Height))
 		if err != nil {
-			return currBestBlock, nil, fmt.Errorf("unable to find "+
+			return currBestBlock, nil, er.Errorf("unable to find "+
 				"blockhash for height=%d: %v",
 				currBestBlock.Height, err)
 		}
@@ -549,16 +548,15 @@ func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 			chainConn, *currBestBlock.Hash, *hashAtBestHeight,
 		)
 		if err != nil {
-			return currBestBlock, nil, fmt.Errorf("unable to find "+
+			return currBestBlock, nil, er.Errorf("unable to find "+
 				"common ancestor: %v", err)
 		}
 
-		var errr error
-		currBestBlock, errr = RewindChain(chainConn, txNotifier,
+		currBestBlock, err = RewindChain(chainConn, txNotifier,
 			currBestBlock, startingHeight)
-		if errr != nil {
-			return currBestBlock, nil, fmt.Errorf("unable to "+
-				"rewind chain: %v", errr)
+		if err != nil {
+			return currBestBlock, nil, er.Errorf("unable to "+
+				"rewind chain: %v", err)
 		}
 	}
 
@@ -566,7 +564,7 @@ func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 	// right after our best block, to avoid a redundant notification.
 	missedBlocks, err := getMissedBlocks(chainConn, startingHeight+1, newHeight)
 	if err != nil {
-		return currBestBlock, nil, fmt.Errorf("unable to get missed "+
+		return currBestBlock, nil, er.Errorf("unable to get missed "+
 			"blocks: %v", err)
 	}
 
@@ -576,11 +574,11 @@ func HandleMissedBlocks(chainConn ChainConn, txNotifier *TxNotifier,
 // getMissedBlocks returns a slice of blocks: [startingHeight, endingHeight)
 // fetched from the chain.
 func getMissedBlocks(chainConn ChainConn, startingHeight,
-	endingHeight int32) ([]BlockEpoch, error) {
+	endingHeight int32) ([]BlockEpoch, er.R) {
 
 	numMissedBlocks := endingHeight - startingHeight
 	if numMissedBlocks < 0 {
-		return nil, fmt.Errorf("starting height %d is greater than "+
+		return nil, er.Errorf("starting height %d is greater than "+
 			"ending height %d", startingHeight, endingHeight)
 	}
 
@@ -588,7 +586,7 @@ func getMissedBlocks(chainConn ChainConn, startingHeight,
 	for height := startingHeight; height < endingHeight; height++ {
 		hash, err := chainConn.GetBlockHash(int64(height))
 		if err != nil {
-			return nil, fmt.Errorf("unable to find blockhash for "+
+			return nil, er.Errorf("unable to find blockhash for "+
 				"height=%d: %v", height, err)
 		}
 		missedBlocks = append(missedBlocks,
@@ -617,7 +615,7 @@ type TxIndexConn interface {
 // be TxFoundIndex. Otherwise TxNotFoundIndex is returned. If the tx is found
 // in a block its confirmation details are also returned.
 func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
-	txNotFoundErr string) (*TxConfirmation, TxConfStatus, error) {
+	txNotFoundErr string) (*TxConfirmation, TxConfStatus, er.R) {
 
 	// If the transaction has some or all of its confirmations required,
 	// then we may be able to dispatch it immediately.
@@ -633,7 +631,7 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 		}
 
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to query for txid %v: %v",
+			er.Errorf("unable to query for txid %v: %v",
 				r.TxID, err)
 	}
 
@@ -642,13 +640,13 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 	rawTx, err := util.DecodeHex(rawTxRes.Hex)
 	if err != nil {
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to deserialize tx %v: %v",
+			er.Errorf("unable to deserialize tx %v: %v",
 				r.TxID, err)
 	}
 	var tx wire.MsgTx
 	if err := tx.Deserialize(bytes.NewReader(rawTx)); err != nil {
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to deserialize tx %v: %v",
+			er.Errorf("unable to deserialize tx %v: %v",
 				r.TxID, err)
 	}
 
@@ -656,7 +654,7 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 	// txid and pkscript.
 	if !r.MatchesTx(&tx) {
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to locate tx %v", r.TxID)
+			er.Errorf("unable to locate tx %v", r.TxID)
 	}
 
 	// Make sure we actually retrieved a transaction that is included in a
@@ -672,13 +670,13 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 	blockHash, err := chainhash.NewHashFromStr(rawTxRes.BlockHash)
 	if err != nil {
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to get block hash %v for "+
+			er.Errorf("unable to get block hash %v for "+
 				"historical dispatch: %v", rawTxRes.BlockHash, err)
 	}
 	block, err := chainConn.GetBlockVerbose(blockHash)
 	if err != nil {
 		return nil, TxNotFoundIndex,
-			fmt.Errorf("unable to get block with hash %v for "+
+			er.Errorf("unable to get block with hash %v for "+
 				"historical dispatch: %v", blockHash, err)
 	}
 
@@ -700,6 +698,6 @@ func ConfDetailsFromTxIndex(chainConn TxIndexConn, r ConfRequest,
 
 	// We return an error because we should have found the transaction
 	// within the block, but didn't.
-	return nil, TxNotFoundIndex, fmt.Errorf("unable to locate "+
+	return nil, TxNotFoundIndex, er.Errorf("unable to locate "+
 		"tx %v in block %v", r.TxID, blockHash)
 }

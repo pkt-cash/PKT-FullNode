@@ -38,7 +38,7 @@ type inputSet []input.Input
 // dust limit are returned.
 func generateInputPartitionings(sweepableInputs []txInput,
 	relayFeePerKW, feePerKW chainfee.SatPerKWeight,
-	maxInputsPerTx int, wallet Wallet) ([]inputSet, error) {
+	maxInputsPerTx int, wallet Wallet) ([]inputSet, er.R) {
 
 	// Sort input by yield. We will start constructing input sets starting
 	// with the highest yield inputs. This is to prevent the construction
@@ -58,7 +58,7 @@ func generateInputPartitionings(sweepableInputs []txInput,
 	for _, input := range sweepableInputs {
 		size, _, err := input.WitnessType().SizeUpperBound()
 		if err != nil {
-			return nil, fmt.Errorf(
+			return nil, er.Errorf(
 				"failed adding input weight: %v", err)
 		}
 
@@ -134,7 +134,7 @@ func generateInputPartitionings(sweepableInputs []txInput,
 // createSweepTx builds a signed tx spending the inputs to a the output script.
 func createSweepTx(inputs []input.Input, outputPkScript []byte,
 	currentBlockHeight uint32, feePerKw chainfee.SatPerKWeight,
-	dustLimit btcutil.Amount, signer input.Signer) (*wire.MsgTx, error) {
+	dustLimit btcutil.Amount, signer input.Signer) (*wire.MsgTx, er.R) {
 
 	inputs, estimator := getWeightEstimate(inputs, feePerKw)
 
@@ -169,7 +169,7 @@ func createSweepTx(inputs []input.Input, outputPkScript []byte,
 			// If another input commits to a different locktime,
 			// they cannot be combined in the same transcation.
 			if locktime != -1 && locktime != int32(lt) {
-				return nil, fmt.Errorf("incompatible locktime")
+				return nil, er.Errorf("incompatible locktime")
 			}
 
 			locktime = int32(lt)
@@ -193,7 +193,7 @@ func createSweepTx(inputs []input.Input, outputPkScript []byte,
 
 		if lt, ok := o.RequiredLockTime(); ok {
 			if locktime != -1 && locktime != int32(lt) {
-				return nil, fmt.Errorf("incompatible locktime")
+				return nil, er.Errorf("incompatible locktime")
 			}
 
 			locktime = int32(lt)
@@ -238,7 +238,7 @@ func createSweepTx(inputs []input.Input, outputPkScript []byte,
 
 	// With all the inputs in place, use each output's unique input script
 	// function to generate the final witness required for spending.
-	addInputScript := func(idx int, tso input.Input) error {
+	addInputScript := func(idx int, tso input.Input) er.R {
 		inputScript, err := tso.CraftInputScript(
 			signer, sweepTx, hashCache, idx,
 		)

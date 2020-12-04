@@ -1,10 +1,9 @@
 package routerrpc
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -12,13 +11,14 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.routerrpc")
 	// ErrFwdNotExists is an error returned when the caller tries to resolve
 	// a forward that doesn't exist anymore.
-	ErrFwdNotExists = errors.New("forward does not exist")
+	ErrFwdNotExists = Err.CodeWithDetail("ErrFwdNotExists", "forward does not exist")
 
 	// ErrMissingPreimage is an error returned when the caller tries to settle
 	// a forward and doesn't provide a preimage.
-	ErrMissingPreimage = errors.New("missing preimage")
+	ErrMissingPreimage = Err.CodeWithDetail("ErrMissingPreimage", "missing preimage")
 )
 
 // forwardInterceptor is a helper struct that handles the lifecycle of an rpc
@@ -64,7 +64,7 @@ func newForwardInterceptor(server *Server, stream Router_HtlcInterceptorServer) 
 // to read from the client stream.
 // To coordinate all this and make sure it is safe for concurrent access all
 // packets are sent to the main where they are handled.
-func (r *forwardInterceptor) run() error {
+func (r *forwardInterceptor) run() er.R {
 	// make sure we disconnect and resolves all remaining packets if any.
 	defer r.onDisconnect()
 
@@ -74,7 +74,7 @@ func (r *forwardInterceptor) run() error {
 	defer interceptableForwarder.SetInterceptor(nil)
 
 	// start a go routine that reads client resolutions.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	resolutionRequests := make(chan *ForwardHtlcInterceptResponse)
 	r.wg.Add(1)
 	go r.readClientResponses(resolutionRequests, errChan)
@@ -145,7 +145,7 @@ func (r *forwardInterceptor) readClientResponses(
 
 // holdAndForwardToClient forwards the intercepted htlc to the client.
 func (r *forwardInterceptor) holdAndForwardToClient(
-	forward htlcswitch.InterceptedForward) error {
+	forward htlcswitch.InterceptedForward) er.R {
 
 	htlc := forward.Packet()
 	inKey := htlc.IncomingCircuit
@@ -172,7 +172,7 @@ func (r *forwardInterceptor) holdAndForwardToClient(
 
 // resolveFromClient handles a resolution arrived from the client.
 func (r *forwardInterceptor) resolveFromClient(
-	in *ForwardHtlcInterceptResponse) error {
+	in *ForwardHtlcInterceptResponse) er.R {
 
 	circuitKey := channeldb.CircuitKey{
 		ChanID: lnwire.NewShortChanIDFromInt(in.IncomingCircuitKey.ChanId),
@@ -181,7 +181,7 @@ func (r *forwardInterceptor) resolveFromClient(
 	var interceptedForward htlcswitch.InterceptedForward
 	interceptedForward, ok := r.holdForwards[circuitKey]
 	if !ok {
-		return ErrFwdNotExists
+		return ErrFwdNotExists.Default()
 	}
 	delete(r.holdForwards, circuitKey)
 
@@ -192,7 +192,7 @@ func (r *forwardInterceptor) resolveFromClient(
 		return interceptedForward.Fail()
 	case ResolveHoldForwardAction_SETTLE:
 		if in.Preimage == nil {
-			return ErrMissingPreimage
+			return ErrMissingPreimage.Default()
 		}
 		preimage, err := lntypes.MakePreimage(in.Preimage)
 		if err != nil {
@@ -200,7 +200,7 @@ func (r *forwardInterceptor) resolveFromClient(
 		}
 		return interceptedForward.Settle(preimage)
 	default:
-		return fmt.Errorf("unrecognized resolve action %v", in.Action)
+		return er.Errorf("unrecognized resolve action %v", in.Action)
 	}
 }
 

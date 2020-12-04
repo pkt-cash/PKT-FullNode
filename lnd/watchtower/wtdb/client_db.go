@@ -2,8 +2,6 @@ package wtdb
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"math"
 	"net"
 
@@ -55,64 +53,64 @@ var (
 
 	// ErrTowerNotFound signals that the target tower was not found in the
 	// database.
-	ErrTowerNotFound = errors.New("tower not found")
+	ErrTowerNotFound = Err.CodeWithDetail("ErrTowerNotFound", "tower not found")
 
 	// ErrTowerUnackedUpdates is an error returned when we attempt to mark a
 	// tower's sessions as inactive, but one of its sessions has unacked
 	// updates.
-	ErrTowerUnackedUpdates = errors.New("tower has unacked updates")
+	ErrTowerUnackedUpdates = Err.CodeWithDetail("ErrTowerUnackedUpdates", "tower has unacked updates")
 
 	// ErrCorruptClientSession signals that the client session's on-disk
 	// structure deviates from what is expected.
-	ErrCorruptClientSession = errors.New("client session corrupted")
+	ErrCorruptClientSession = Err.CodeWithDetail("ErrCorruptClientSession", "client session corrupted")
 
 	// ErrClientSessionAlreadyExists signals an attempt to reinsert a client
 	// session that has already been created.
-	ErrClientSessionAlreadyExists = errors.New(
+	ErrClientSessionAlreadyExists = er.New(
 		"client session already exists",
 	)
 
 	// ErrChannelAlreadyRegistered signals a duplicate attempt to register a
 	// channel with the client database.
-	ErrChannelAlreadyRegistered = errors.New("channel already registered")
+	ErrChannelAlreadyRegistered = Err.CodeWithDetail("ErrChannelAlreadyRegistered", "channel already registered")
 
 	// ErrChannelNotRegistered signals a channel has not yet been registered
 	// in the client database.
-	ErrChannelNotRegistered = errors.New("channel not registered")
+	ErrChannelNotRegistered = Err.CodeWithDetail("ErrChannelNotRegistered", "channel not registered")
 
 	// ErrClientSessionNotFound signals that the requested client session
 	// was not found in the database.
-	ErrClientSessionNotFound = errors.New("client session not found")
+	ErrClientSessionNotFound = Err.CodeWithDetail("ErrClientSessionNotFound", "client session not found")
 
 	// ErrUpdateAlreadyCommitted signals that the chosen sequence number has
 	// already been committed to an update with a different breach hint.
-	ErrUpdateAlreadyCommitted = errors.New("update already committed")
+	ErrUpdateAlreadyCommitted = Err.CodeWithDetail("ErrUpdateAlreadyCommitted", "update already committed")
 
 	// ErrCommitUnorderedUpdate signals the client tried to commit a
 	// sequence number other than the next unallocated sequence number.
-	ErrCommitUnorderedUpdate = errors.New("update seqnum not monotonic")
+	ErrCommitUnorderedUpdate = Err.CodeWithDetail("ErrCommitUnorderedUpdate", "update seqnum not monotonic")
 
 	// ErrCommittedUpdateNotFound signals that the tower tried to ACK a
 	// sequence number that has not yet been allocated by the client.
-	ErrCommittedUpdateNotFound = errors.New("committed update not found")
+	ErrCommittedUpdateNotFound = Err.CodeWithDetail("ErrCommittedUpdateNotFound", "committed update not found")
 
 	// ErrUnallocatedLastApplied signals that the tower tried to provide a
 	// LastApplied value greater than any allocated sequence number.
-	ErrUnallocatedLastApplied = errors.New("tower echoed last appiled " +
+	ErrUnallocatedLastApplied = er.New("tower echoed last appiled " +
 		"greater than allocated seqnum")
 
 	// ErrNoReservedKeyIndex signals that a client session could not be
 	// created because no session key index was reserved.
-	ErrNoReservedKeyIndex = errors.New("key index not reserved")
+	ErrNoReservedKeyIndex = Err.CodeWithDetail("ErrNoReservedKeyIndex", "key index not reserved")
 
 	// ErrIncorrectKeyIndex signals that the client session could not be
 	// created because session key index differs from the reserved key
 	// index.
-	ErrIncorrectKeyIndex = errors.New("incorrect key index")
+	ErrIncorrectKeyIndex = Err.CodeWithDetail("ErrIncorrectKeyIndex", "incorrect key index")
 
 	// ErrLastTowerAddr is an error returned when the last address of a
 	// watchtower is attempted to be removed.
-	ErrLastTowerAddr = errors.New("cannot remove last tower address")
+	ErrLastTowerAddr = Err.CodeWithDetail("ErrLastTowerAddr", "cannot remove last tower address")
 )
 
 // ClientDB is single database providing a persistent storage engine for the
@@ -129,7 +127,7 @@ type ClientDB struct {
 // migrations will be applied before returning. Any attempt to open a database
 // with a version number higher that the latest version will fail to prevent
 // accidental reversion.
-func OpenClientDB(dbPath string) (*ClientDB, error) {
+func OpenClientDB(dbPath string) (*ClientDB, er.R) {
 	bdb, firstInit, err := createDBIfNotExist(dbPath, clientDBName)
 	if err != nil {
 		return nil, err
@@ -162,7 +160,7 @@ func OpenClientDB(dbPath string) (*ClientDB, error) {
 
 // initClientDBBuckets creates all top-level buckets required to handle database
 // operations required by the latest version.
-func initClientDBBuckets(tx kvdb.RwTx) error {
+func initClientDBBuckets(tx kvdb.RwTx) er.R {
 	buckets := [][]byte{
 		cSessionKeyIndexBkt,
 		cChanSummaryBkt,
@@ -191,9 +189,9 @@ func (c *ClientDB) bdb() kvdb.Backend {
 // Version returns the database's current version number.
 //
 // NOTE: Part of the versionedDB interface.
-func (c *ClientDB) Version() (uint32, error) {
+func (c *ClientDB) Version() (uint32, er.R) {
 	var version uint32
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		var err error
 		version, err = getDBVersion(tx)
 		return err
@@ -208,7 +206,7 @@ func (c *ClientDB) Version() (uint32, error) {
 }
 
 // Close closes the underlying database.
-func (c *ClientDB) Close() error {
+func (c *ClientDB) Close() er.R {
 	return c.db.Close()
 }
 
@@ -217,20 +215,20 @@ func (c *ClientDB) Close() error {
 // storage costs of the public key when used by multiple sessions. If the tower
 // already exists, the address is appended to the list of all addresses used to
 // that tower previously and its corresponding sessions are marked as active.
-func (c *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*Tower, error) {
+func (c *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*Tower, er.R) {
 	var towerPubKey [33]byte
 	copy(towerPubKey[:], lnAddr.IdentityKey.SerializeCompressed())
 
 	var tower *Tower
-	err := kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		towerIndex := tx.ReadWriteBucket(cTowerIndexBkt)
 		if towerIndex == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		towers := tx.ReadWriteBucket(cTowerBkt)
 		if towers == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// Check if the tower index already knows of this pubkey.
@@ -257,7 +255,7 @@ func (c *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*Tower, error) {
 			// can avoid the linear lookup.
 			sessions := tx.ReadWriteBucket(cSessionBkt)
 			if sessions == nil {
-				return ErrUninitializedDB
+				return ErrUninitializedDB.Default()
 			}
 			towerID := TowerIDFromBytes(towerIDBytes)
 			towerSessions, err := listClientSessions(
@@ -316,15 +314,15 @@ func (c *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*Tower, error) {
 // any sessions at all, it'll be completely removed from the database.
 //
 // NOTE: An error is not returned if the tower doesn't exist.
-func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
-	return kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) er.R {
+	return kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		towers := tx.ReadWriteBucket(cTowerBkt)
 		if towers == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 		towerIndex := tx.ReadWriteBucket(cTowerIndexBkt)
 		if towerIndex == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// Don't return an error if the watchtower doesn't exist to act
@@ -346,7 +344,7 @@ func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 			// Towers should always have at least one address saved.
 			tower.RemoveAddress(addr)
 			if len(tower.Addresses) == 0 {
-				return ErrLastTowerAddr
+				return ErrLastTowerAddr.Default()
 			}
 
 			return putTower(towers, tower)
@@ -359,7 +357,7 @@ func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 		// the linear lookup.
 		sessions := tx.ReadWriteBucket(cSessionBkt)
 		if sessions == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 		towerID := TowerIDFromBytes(towerIDBytes)
 		towerSessions, err := listClientSessions(sessions, &towerID)
@@ -381,7 +379,7 @@ func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 		// restarts.
 		for _, session := range towerSessions {
 			if len(session.CommittedUpdates) > 0 {
-				return ErrTowerUnackedUpdates
+				return ErrTowerUnackedUpdates.Default()
 			}
 			err := markSessionStatus(
 				sessions, session, CSessionInactive,
@@ -396,12 +394,12 @@ func (c *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 }
 
 // LoadTowerByID retrieves a tower by its tower ID.
-func (c *ClientDB) LoadTowerByID(towerID TowerID) (*Tower, error) {
+func (c *ClientDB) LoadTowerByID(towerID TowerID) (*Tower, er.R) {
 	var tower *Tower
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		towers := tx.ReadBucket(cTowerBkt)
 		if towers == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		var err error
@@ -418,21 +416,21 @@ func (c *ClientDB) LoadTowerByID(towerID TowerID) (*Tower, error) {
 }
 
 // LoadTower retrieves a tower by its public key.
-func (c *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*Tower, error) {
+func (c *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*Tower, er.R) {
 	var tower *Tower
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		towers := tx.ReadBucket(cTowerBkt)
 		if towers == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 		towerIndex := tx.ReadBucket(cTowerIndexBkt)
 		if towerIndex == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		towerIDBytes := towerIndex.Get(pubKey.SerializeCompressed())
 		if towerIDBytes == nil {
-			return ErrTowerNotFound
+			return ErrTowerNotFound.Default()
 		}
 
 		var err error
@@ -449,12 +447,12 @@ func (c *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*Tower, error) {
 }
 
 // ListTowers retrieves the list of towers available within the database.
-func (c *ClientDB) ListTowers() ([]*Tower, error) {
+func (c *ClientDB) ListTowers() ([]*Tower, er.R) {
 	var towers []*Tower
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		towerBucket := tx.ReadBucket(cTowerBkt)
 		if towerBucket == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		return towerBucket.ForEach(func(towerIDBytes, _ []byte) er.R {
@@ -480,12 +478,12 @@ func (c *ClientDB) ListTowers() ([]*Tower, error) {
 // CreateClientSession is invoked for that tower and index, at which point a new
 // index for that tower can be reserved. Multiple calls to this method before
 // CreateClientSession is invoked should return the same index.
-func (c *ClientDB) NextSessionKeyIndex(towerID TowerID) (uint32, error) {
+func (c *ClientDB) NextSessionKeyIndex(towerID TowerID) (uint32, er.R) {
 	var index uint32
-	err := kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		keyIndex := tx.ReadWriteBucket(cSessionKeyIndexBkt)
 		if keyIndex == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// Check the session key index to see if a key has already been
@@ -509,7 +507,7 @@ func (c *ClientDB) NextSessionKeyIndex(towerID TowerID) (uint32, error) {
 		// overlap from occurring until then. This also prevents us from
 		// overflowing uint32s.
 		if index64 > math.MaxInt32 {
-			return fmt.Errorf("exhausted session key indexes")
+			return er.Errorf("exhausted session key indexes")
 		}
 
 		index = uint32(index64)
@@ -531,37 +529,37 @@ func (c *ClientDB) NextSessionKeyIndex(towerID TowerID) (uint32, error) {
 
 // CreateClientSession records a newly negotiated client session in the set of
 // active sessions. The session can be identified by its SessionID.
-func (c *ClientDB) CreateClientSession(session *ClientSession) error {
-	return kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+func (c *ClientDB) CreateClientSession(session *ClientSession) er.R {
+	return kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		keyIndexes := tx.ReadWriteBucket(cSessionKeyIndexBkt)
 		if keyIndexes == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		sessions := tx.ReadWriteBucket(cSessionBkt)
 		if sessions == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// Check that  client session with this session id doesn't
 		// already exist.
 		existingSessionBytes := sessions.NestedReadWriteBucket(session.ID[:])
 		if existingSessionBytes != nil {
-			return ErrClientSessionAlreadyExists
+			return ErrClientSessionAlreadyExists.Default()
 		}
 
 		// Check that this tower has a reserved key index.
 		towerIDBytes := session.TowerID.Bytes()
 		keyIndexBytes := keyIndexes.Get(towerIDBytes)
 		if len(keyIndexBytes) != 4 {
-			return ErrNoReservedKeyIndex
+			return ErrNoReservedKeyIndex.Default()
 		}
 
 		// Assert that the key index of the inserted session matches the
 		// reserved session key index.
 		index := byteOrder.Uint32(keyIndexBytes)
 		if index != session.KeyIndex {
-			return ErrIncorrectKeyIndex
+			return ErrIncorrectKeyIndex.Default()
 		}
 
 		// Remove the key index reservation.
@@ -579,12 +577,12 @@ func (c *ClientDB) CreateClientSession(session *ClientSession) error {
 // ListClientSessions returns the set of all client sessions known to the db. An
 // optional tower ID can be used to filter out any client sessions in the
 // response that do not correspond to this tower.
-func (c *ClientDB) ListClientSessions(id *TowerID) (map[SessionID]*ClientSession, error) {
+func (c *ClientDB) ListClientSessions(id *TowerID) (map[SessionID]*ClientSession, er.R) {
 	var clientSessions map[SessionID]*ClientSession
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		sessions := tx.ReadBucket(cSessionBkt)
 		if sessions == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 		var err error
 		clientSessions, err = listClientSessions(sessions, id)
@@ -603,7 +601,7 @@ func (c *ClientDB) ListClientSessions(id *TowerID) (map[SessionID]*ClientSession
 // optional tower ID can be used to filter out any client sessions in the
 // response that do not correspond to this tower.
 func listClientSessions(sessions kvdb.RBucket,
-	id *TowerID) (map[SessionID]*ClientSession, error) {
+	id *TowerID) (map[SessionID]*ClientSession, er.R) {
 
 	clientSessions := make(map[SessionID]*ClientSession)
 	err := sessions.ForEach(func(k, _ []byte) er.R {
@@ -635,12 +633,12 @@ func listClientSessions(sessions kvdb.RBucket,
 
 // FetchChanSummaries loads a mapping from all registered channels to their
 // channel summaries.
-func (c *ClientDB) FetchChanSummaries() (ChannelSummaries, error) {
+func (c *ClientDB) FetchChanSummaries() (ChannelSummaries, er.R) {
 	var summaries map[lnwire.ChannelID]ClientChanSummary
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		chanSummaries := tx.ReadBucket(cChanSummaryBkt)
 		if chanSummaries == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		return chanSummaries.ForEach(func(k, v []byte) er.R {
@@ -673,12 +671,12 @@ func (c *ClientDB) FetchChanSummaries() (ChannelSummaries, error) {
 // to contain more info to allow the client efficiently request historical
 // states to be backed up under the client's active policy.
 func (c *ClientDB) RegisterChannel(chanID lnwire.ChannelID,
-	sweepPkScript []byte) error {
+	sweepPkScript []byte) er.R {
 
-	return kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		chanSummaries := tx.ReadWriteBucket(cChanSummaryBkt)
 		if chanSummaries == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		_, err := getChanSummary(chanSummaries, chanID)
@@ -686,10 +684,10 @@ func (c *ClientDB) RegisterChannel(chanID lnwire.ChannelID,
 
 		// Summary already exists.
 		case err == nil:
-			return ErrChannelAlreadyRegistered
+			return ErrChannelAlreadyRegistered.Default()
 
 		// Channel is not registered, proceed with registration.
-		case err == ErrChannelNotRegistered:
+		case ErrChannelNotRegistered.Is(err):
 
 		// Unexpected error.
 		default:
@@ -708,7 +706,7 @@ func (c *ClientDB) RegisterChannel(chanID lnwire.ChannelID,
 // commit height) tuple was ineligible for being backed up under the current
 // policy. This state can be retried later under a different policy.
 func (c *ClientDB) MarkBackupIneligible(chanID lnwire.ChannelID,
-	commitHeight uint64) error {
+	commitHeight uint64) er.R {
 
 	return nil
 }
@@ -716,13 +714,13 @@ func (c *ClientDB) MarkBackupIneligible(chanID lnwire.ChannelID,
 // CommitUpdate persists the CommittedUpdate provided in the slot for (session,
 // seqNum). This allows the client to retransmit this update on startup.
 func (c *ClientDB) CommitUpdate(id *SessionID,
-	update *CommittedUpdate) (uint16, error) {
+	update *CommittedUpdate) (uint16, er.R) {
 
 	var lastApplied uint16
-	err := kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		sessions := tx.ReadWriteBucket(cSessionBkt)
 		if sessions == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// We'll only load the ClientSession body for performance, since
@@ -763,7 +761,7 @@ func (c *ClientDB) CommitUpdate(id *SessionID,
 			// If an existing committed update has a different hint,
 			// we'll reject this newer update.
 			if dbUpdate.Hint != update.Hint {
-				return ErrUpdateAlreadyCommitted
+				return ErrUpdateAlreadyCommitted.Default()
 			}
 
 			// Otherwise, capture the last applied value and
@@ -775,7 +773,7 @@ func (c *ClientDB) CommitUpdate(id *SessionID,
 		// There's no committed update for this sequence number, ensure
 		// that we are committing the next unallocated one.
 		if update.SeqNum != session.SeqNum+1 {
-			return ErrCommitUnorderedUpdate
+			return ErrCommitUnorderedUpdate.Default()
 		}
 
 		// Increment the session's sequence number and store the updated
@@ -823,12 +821,12 @@ func (c *ClientDB) CommitUpdate(id *SessionID,
 // removes the update from the set of committed updates, and validates the
 // lastApplied value returned from the tower.
 func (c *ClientDB) AckUpdate(id *SessionID, seqNum uint16,
-	lastApplied uint16) error {
+	lastApplied uint16) er.R {
 
-	return kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		sessions := tx.ReadWriteBucket(cSessionBkt)
 		if sessions == nil {
-			return ErrUninitializedDB
+			return ErrUninitializedDB.Default()
 		}
 
 		// We'll only load the ClientSession body for performance, since
@@ -843,13 +841,13 @@ func (c *ClientDB) AckUpdate(id *SessionID, seqNum uint16,
 		// If the tower has acked a sequence number beyond our highest
 		// sequence number, fail.
 		if lastApplied > session.SeqNum {
-			return ErrUnallocatedLastApplied
+			return ErrUnallocatedLastApplied.Default()
 		}
 
 		// If the tower acked with a lower sequence number than it gave
 		// us prior, fail.
 		if lastApplied < session.TowerLastApplied {
-			return ErrLastAppliedReversion
+			return ErrLastAppliedReversion.Default()
 		}
 
 		// TODO(conner): split out seqnum and last applied own bucket to
@@ -870,7 +868,7 @@ func (c *ClientDB) AckUpdate(id *SessionID, seqNum uint16,
 		// be a corresponding committed update to remove.
 		sessionCommits := sessionBkt.NestedReadWriteBucket(cSessionCommits)
 		if sessionCommits == nil {
-			return ErrCommittedUpdateNotFound
+			return ErrCommittedUpdateNotFound.Default()
 		}
 
 		var seqNumBuf [2]byte
@@ -880,7 +878,7 @@ func (c *ClientDB) AckUpdate(id *SessionID, seqNum uint16,
 		// number.
 		committedUpdateBytes := sessionCommits.Get(seqNumBuf[:])
 		if committedUpdateBytes == nil {
-			return ErrCommittedUpdateNotFound
+			return ErrCommittedUpdateNotFound.Default()
 		}
 
 		var committedUpdate CommittedUpdate
@@ -924,17 +922,17 @@ func (c *ClientDB) AckUpdate(id *SessionID, seqNum uint16,
 // the CommittedUpdates or AckUpdates associated with the session. If the caller
 // requires this info, use getClientSession.
 func getClientSessionBody(sessions kvdb.RBucket,
-	idBytes []byte) (*ClientSession, error) {
+	idBytes []byte) (*ClientSession, er.R) {
 
 	sessionBkt := sessions.NestedReadBucket(idBytes)
 	if sessionBkt == nil {
-		return nil, ErrClientSessionNotFound
+		return nil, ErrClientSessionNotFound.Default()
 	}
 
 	// Should never have a sessionBkt without also having its body.
 	sessionBody := sessionBkt.Get(cSessionBody)
 	if sessionBody == nil {
-		return nil, ErrCorruptClientSession
+		return nil, ErrCorruptClientSession.Default()
 	}
 
 	var session ClientSession
@@ -952,7 +950,7 @@ func getClientSessionBody(sessions kvdb.RBucket,
 // session id. This method populates the CommittedUpdates and AckUpdates in
 // addition to the ClientSession's body.
 func getClientSession(sessions kvdb.RBucket,
-	idBytes []byte) (*ClientSession, error) {
+	idBytes []byte) (*ClientSession, er.R) {
 
 	session, err := getClientSessionBody(sessions, idBytes)
 	if err != nil {
@@ -980,7 +978,7 @@ func getClientSession(sessions kvdb.RBucket,
 // getClientSessionCommits retrieves all committed updates for the session
 // identified by the serialized session id.
 func getClientSessionCommits(sessions kvdb.RBucket,
-	idBytes []byte) ([]CommittedUpdate, error) {
+	idBytes []byte) ([]CommittedUpdate, er.R) {
 
 	// Can't fail because client session body has already been read.
 	sessionBkt := sessions.NestedReadBucket(idBytes)
@@ -1016,7 +1014,7 @@ func getClientSessionCommits(sessions kvdb.RBucket,
 // getClientSessionAcks retrieves all acked updates for the session identified
 // by the serialized session id.
 func getClientSessionAcks(sessions kvdb.RBucket,
-	idBytes []byte) (map[uint16]BackupID, error) {
+	idBytes []byte) (map[uint16]BackupID, er.R) {
 
 	// Can't fail because client session body has already been read.
 	sessionBkt := sessions.NestedReadBucket(idBytes)
@@ -1053,7 +1051,7 @@ func getClientSessionAcks(sessions kvdb.RBucket,
 // putClientSessionBody stores the body of the ClientSession (everything but the
 // CommittedUpdates and AckedUpdates).
 func putClientSessionBody(sessions kvdb.RwBucket,
-	session *ClientSession) error {
+	session *ClientSession) er.R {
 
 	sessionBkt, err := sessions.CreateBucketIfNotExists(session.ID[:])
 	if err != nil {
@@ -1072,7 +1070,7 @@ func putClientSessionBody(sessions kvdb.RwBucket,
 // markSessionStatus updates the persisted state of the session to the new
 // status.
 func markSessionStatus(sessions kvdb.RwBucket, session *ClientSession,
-	status CSessionStatus) error {
+	status CSessionStatus) er.R {
 
 	session.Status = status
 	return putClientSessionBody(sessions, session)
@@ -1080,11 +1078,11 @@ func markSessionStatus(sessions kvdb.RwBucket, session *ClientSession,
 
 // getChanSummary loads a ClientChanSummary for the passed chanID.
 func getChanSummary(chanSummaries kvdb.RBucket,
-	chanID lnwire.ChannelID) (*ClientChanSummary, error) {
+	chanID lnwire.ChannelID) (*ClientChanSummary, er.R) {
 
 	chanSummaryBytes := chanSummaries.Get(chanID[:])
 	if chanSummaryBytes == nil {
-		return nil, ErrChannelNotRegistered
+		return nil, ErrChannelNotRegistered.Default()
 	}
 
 	var summary ClientChanSummary
@@ -1098,7 +1096,7 @@ func getChanSummary(chanSummaries kvdb.RBucket,
 
 // putChanSummary stores a ClientChanSummary for the passed chanID.
 func putChanSummary(chanSummaries kvdb.RwBucket, chanID lnwire.ChannelID,
-	summary *ClientChanSummary) error {
+	summary *ClientChanSummary) er.R {
 
 	var b bytes.Buffer
 	err := summary.Encode(&b)
@@ -1110,10 +1108,10 @@ func putChanSummary(chanSummaries kvdb.RwBucket, chanID lnwire.ChannelID,
 }
 
 // getTower loads a Tower identified by its serialized tower id.
-func getTower(towers kvdb.RBucket, id []byte) (*Tower, error) {
+func getTower(towers kvdb.RBucket, id []byte) (*Tower, er.R) {
 	towerBytes := towers.Get(id)
 	if towerBytes == nil {
-		return nil, ErrTowerNotFound
+		return nil, ErrTowerNotFound.Default()
 	}
 
 	var tower Tower
@@ -1128,7 +1126,7 @@ func getTower(towers kvdb.RBucket, id []byte) (*Tower, error) {
 }
 
 // putTower stores a Tower identified by its serialized tower id.
-func putTower(towers kvdb.RwBucket, tower *Tower) error {
+func putTower(towers kvdb.RwBucket, tower *Tower) er.R {
 	var b bytes.Buffer
 	err := tower.Encode(&b)
 	if err != nil {

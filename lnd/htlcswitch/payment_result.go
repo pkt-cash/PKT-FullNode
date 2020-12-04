@@ -3,7 +3,6 @@ package htlcswitch
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
 	"sync"
 
@@ -22,11 +21,11 @@ var (
 
 	// ErrPaymentIDNotFound is an error returned if the given paymentID is
 	// not found.
-	ErrPaymentIDNotFound = errors.New("paymentID not found")
+	ErrPaymentIDNotFound = Err.CodeWithDetail("ErrPaymentIDNotFound", "paymentID not found")
 
 	// ErrPaymentIDAlreadyExists is returned if we try to write a pending
 	// payment whose paymentID already exists.
-	ErrPaymentIDAlreadyExists = errors.New("paymentID already exists")
+	ErrPaymentIDAlreadyExists = Err.CodeWithDetail("ErrPaymentIDAlreadyExists", "paymentID already exists")
 )
 
 // PaymentResult wraps a decoded result received from the network after a
@@ -61,7 +60,7 @@ type networkResult struct {
 }
 
 // serializeNetworkResult serializes the networkResult.
-func serializeNetworkResult(w io.Writer, n *networkResult) error {
+func serializeNetworkResult(w io.Writer, n *networkResult) er.R {
 	if _, err := lnwire.WriteMessage(w, n.msg, 0); err != nil {
 		return err
 	}
@@ -70,7 +69,7 @@ func serializeNetworkResult(w io.Writer, n *networkResult) error {
 }
 
 // deserializeNetworkResult deserializes the networkResult.
-func deserializeNetworkResult(r io.Reader) (*networkResult, error) {
+func deserializeNetworkResult(r io.Reader) (*networkResult, er.R) {
 	var (
 		err error
 	)
@@ -121,7 +120,7 @@ func newNetworkResultStore(db *channeldb.DB) *networkResultStore {
 // storeResult stores the networkResult for the given paymentID, and
 // notifies any subscribers.
 func (store *networkResultStore) storeResult(paymentID uint64,
-	result *networkResult) error {
+	result *networkResult) er.R {
 
 	// We get a mutex for this payment ID. This is needed to ensure
 	// consistency between the database state and the subscribers in case
@@ -138,7 +137,7 @@ func (store *networkResultStore) storeResult(paymentID uint64,
 	var paymentIDBytes [8]byte
 	binary.BigEndian.PutUint64(paymentIDBytes[:], paymentID)
 
-	err := kvdb.Batch(store.db.Backend, func(tx kvdb.RwTx) error {
+	err := kvdb.Batch(store.db.Backend, func(tx kvdb.RwTx) er.R {
 		networkResults, err := tx.CreateTopLevelBucket(
 			networkResultStoreBucketKey,
 		)
@@ -168,7 +167,7 @@ func (store *networkResultStore) storeResult(paymentID uint64,
 // payment ID. It returns a channel on which the result will be delivered when
 // ready.
 func (store *networkResultStore) subscribeResult(paymentID uint64) (
-	<-chan *networkResult, error) {
+	<-chan *networkResult, er.R) {
 
 	// We get a mutex for this payment ID. This is needed to ensure
 	// consistency between the database state and the subscribers in case
@@ -181,14 +180,14 @@ func (store *networkResultStore) subscribeResult(paymentID uint64) (
 		resultChan = make(chan *networkResult, 1)
 	)
 
-	err := kvdb.View(store.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(store.db, func(tx kvdb.RTx) er.R {
 		var err error
 		result, err = fetchResult(tx, paymentID)
 		switch {
 
 		// Result not yet available, we will notify once a result is
 		// available.
-		case err == ErrPaymentIDNotFound:
+		case ErrPaymentIDNotFound.Is(err):
 			return nil
 
 		case err != nil:
@@ -226,10 +225,10 @@ func (store *networkResultStore) subscribeResult(paymentID uint64) (
 // getResult attempts to immediately fetch the result for the given pid from
 // the store. If no result is available, ErrPaymentIDNotFound is returned.
 func (store *networkResultStore) getResult(pid uint64) (
-	*networkResult, error) {
+	*networkResult, er.R) {
 
 	var result *networkResult
-	err := kvdb.View(store.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(store.db, func(tx kvdb.RTx) er.R {
 		var err error
 		result, err = fetchResult(tx, pid)
 		return err
@@ -243,19 +242,19 @@ func (store *networkResultStore) getResult(pid uint64) (
 	return result, nil
 }
 
-func fetchResult(tx kvdb.RTx, pid uint64) (*networkResult, error) {
+func fetchResult(tx kvdb.RTx, pid uint64) (*networkResult, er.R) {
 	var paymentIDBytes [8]byte
 	binary.BigEndian.PutUint64(paymentIDBytes[:], pid)
 
 	networkResults := tx.ReadBucket(networkResultStoreBucketKey)
 	if networkResults == nil {
-		return nil, ErrPaymentIDNotFound
+		return nil, ErrPaymentIDNotFound.Default()
 	}
 
 	// Check whether a result is already available.
 	resultBytes := networkResults.Get(paymentIDBytes[:])
 	if resultBytes == nil {
-		return nil, ErrPaymentIDNotFound
+		return nil, ErrPaymentIDNotFound.Default()
 	}
 
 	// Decode the result we found.
@@ -269,8 +268,8 @@ func fetchResult(tx kvdb.RTx, pid uint64) (*networkResult, error) {
 // should be taken to ensure no new payment attempts are being made
 // concurrently while this process is ongoing, as its result might end up being
 // deleted.
-func (store *networkResultStore) cleanStore(keep map[uint64]struct{}) error {
-	return kvdb.Update(store.db.Backend, func(tx kvdb.RwTx) error {
+func (store *networkResultStore) cleanStore(keep map[uint64]struct{}) er.R {
+	return kvdb.Update(store.db.Backend, func(tx kvdb.RwTx) er.R {
 		networkResults, err := tx.CreateTopLevelBucket(
 			networkResultStoreBucketKey,
 		)

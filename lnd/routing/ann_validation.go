@@ -15,7 +15,7 @@ import (
 // ValidateChannelAnn validates the channel announcement message and checks
 // that node signatures covers the announcement message, and that the bitcoin
 // signatures covers the node keys.
-func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
+func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) er.R {
 	// First, we'll compute the digest (h) which is to be signed by each of
 	// the keys included within the node announcement message. This hash
 	// digest includes all the keys, so the (up to 4 signatures) will
@@ -37,7 +37,7 @@ func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
 		return err
 	}
 	if !bitcoinSig1.Verify(dataHash, bitcoinKey1) {
-		return errors.New("can't verify first bitcoin signature")
+		return er.New("can't verify first bitcoin signature")
 	}
 
 	// If that checks out, then we'll verify that the second bitcoin
@@ -52,7 +52,7 @@ func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
 		return err
 	}
 	if !bitcoinSig2.Verify(dataHash, bitcoinKey2) {
-		return errors.New("can't verify second bitcoin signature")
+		return er.New("can't verify second bitcoin signature")
 	}
 
 	// Both node signatures attached should indeed be a valid signature
@@ -66,7 +66,7 @@ func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
 		return err
 	}
 	if !nodeSig1.Verify(dataHash, nodeKey1) {
-		return errors.New("can't verify data in first node signature")
+		return er.New("can't verify data in first node signature")
 	}
 
 	nodeSig2, err := a.NodeSig2.ToSignature()
@@ -78,7 +78,7 @@ func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
 		return err
 	}
 	if !nodeSig2.Verify(dataHash, nodeKey2) {
-		return errors.New("can't verify data in second node signature")
+		return er.New("can't verify data in second node signature")
 	}
 
 	return nil
@@ -88,7 +88,7 @@ func ValidateChannelAnn(a *lnwire.ChannelAnnouncement) error {
 // ValidateNodeAnn validates the node announcement by ensuring that the
 // attached signature is needed a signature of the node announcement under the
 // specified node public key.
-func ValidateNodeAnn(a *lnwire.NodeAnnouncement) error {
+func ValidateNodeAnn(a *lnwire.NodeAnnouncement) er.R {
 	// Reconstruct the data of announcement which should be covered by the
 	// signature so we can verify the signature shortly below
 	data, err := a.DataToSign()
@@ -127,7 +127,7 @@ func ValidateNodeAnn(a *lnwire.NodeAnnouncement) error {
 // signed by the node's private key, and (2) that the announcement's message
 // flags and optional fields are sane.
 func ValidateChannelUpdateAnn(pubKey *btcec.PublicKey, capacity btcutil.Amount,
-	a *lnwire.ChannelUpdate) error {
+	a *lnwire.ChannelUpdate) er.R {
 
 	if err := validateOptionalFields(capacity, a); err != nil {
 		return err
@@ -139,11 +139,11 @@ func ValidateChannelUpdateAnn(pubKey *btcec.PublicKey, capacity btcutil.Amount,
 // VerifyChannelUpdateSignature verifies that the channel update message was
 // signed by the party with the given node public key.
 func VerifyChannelUpdateSignature(msg *lnwire.ChannelUpdate,
-	pubKey *btcec.PublicKey) error {
+	pubKey *btcec.PublicKey) er.R {
 
 	data, err := msg.DataToSign()
 	if err != nil {
-		return fmt.Errorf("unable to reconstruct message data: %v", err)
+		return er.Errorf("unable to reconstruct message data: %v", err)
 	}
 	dataHash := chainhash.DoubleHashB(data)
 
@@ -153,7 +153,7 @@ func VerifyChannelUpdateSignature(msg *lnwire.ChannelUpdate,
 	}
 
 	if !nodeSig.Verify(dataHash, pubKey) {
-		return fmt.Errorf("invalid signature for channel update %v",
+		return er.Errorf("invalid signature for channel update %v",
 			spew.Sdump(msg))
 	}
 
@@ -163,7 +163,7 @@ func VerifyChannelUpdateSignature(msg *lnwire.ChannelUpdate,
 // validateOptionalFields validates a channel update's message flags and
 // corresponding update fields.
 func validateOptionalFields(capacity btcutil.Amount,
-	msg *lnwire.ChannelUpdate) error {
+	msg *lnwire.ChannelUpdate) er.R {
 
 	if msg.MessageFlags.HasMaxHtlc() {
 		maxHtlc := msg.HtlcMaximumMsat

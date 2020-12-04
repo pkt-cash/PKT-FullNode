@@ -1,12 +1,12 @@
 package chanacceptor
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chancloser"
@@ -17,7 +17,7 @@ import (
 // TestValidateAcceptorResponse test validation of acceptor responses.
 func TestValidateAcceptorResponse(t *testing.T) {
 	var (
-		customError = errors.New("custom error")
+		customError = er.New("custom error")
 		validAddr   = "bcrt1qwrmq9uca0t3dy9t9wtuq5tm4405r7tfzyqn9pp"
 		addr, _     = chancloser.ParseUpfrontShutdownAddress(
 			validAddr, &chaincfg.TestNet3Params,
@@ -29,19 +29,19 @@ func TestValidateAcceptorResponse(t *testing.T) {
 		dustLimit   btcutil.Amount
 		response    lnrpc.ChannelAcceptResponse
 		accept      bool
-		acceptorErr error
-		error       error
+		acceptorErr er.R
+		error       er.R
 		shutdown    lnwire.DeliveryAddress
 	}{
 		{
 			name: "accepted with error",
 			response: lnrpc.ChannelAcceptResponse{
 				Accept: true,
-				Error:  customError.Error(),
+				Error:  customError.String(),
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
-			error:       errAcceptWithError,
+			acceptorErr: errChannelRejected.Default(),
+			error:       errAcceptWithError.Default(),
 		},
 		{
 			name: "custom error too long",
@@ -50,8 +50,8 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				Error:  strings.Repeat(" ", maxErrorLength+1),
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
-			error:       errCustomLength,
+			acceptorErr: errChannelRejected.Default(),
+			error:       errCustomLength.Default(),
 		},
 		{
 			name: "accepted",
@@ -68,7 +68,7 @@ func TestValidateAcceptorResponse(t *testing.T) {
 			name: "rejected with error",
 			response: lnrpc.ChannelAcceptResponse{
 				Accept: false,
-				Error:  customError.Error(),
+				Error:  customError.String(),
 			},
 			accept:      false,
 			acceptorErr: customError,
@@ -80,7 +80,7 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				Accept: false,
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
+			acceptorErr: errChannelRejected.Default(),
 			error:       nil,
 		},
 		{
@@ -90,8 +90,8 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				UpfrontShutdown: "invalid addr",
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
-			error:       errInvalidUpfrontShutdown,
+			acceptorErr: errChannelRejected.Default(),
+			error:       errInvalidUpfrontShutdown.Default(),
 		},
 		{
 			name:      "reserve too low",
@@ -101,8 +101,8 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				ReserveSat: 10,
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
-			error:       errInsufficientReserve,
+			acceptorErr: errChannelRejected.Default(),
+			error:       errInsufficientReserve.Default(),
 		},
 		{
 			name:      "max htlcs too high",
@@ -112,8 +112,8 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				MaxHtlcCount: 1 + input.MaxHTLCNumber/2,
 			},
 			accept:      false,
-			acceptorErr: errChannelRejected,
-			error:       errMaxHtlcTooHigh,
+			acceptorErr: errChannelRejected.Default(),
+			error:       errMaxHtlcTooHigh.Default(),
 		},
 	}
 
@@ -131,8 +131,8 @@ func TestValidateAcceptorResponse(t *testing.T) {
 				test.dustLimit, test.response,
 			)
 			require.Equal(t, test.accept, accept)
-			require.Equal(t, test.acceptorErr, acceptErr)
-			require.Equal(t, test.error, err)
+			require.True(t, er.FuzzyEquals(test.acceptorErr, acceptErr))
+			require.True(t, er.FuzzyEquals(test.error, err))
 			require.Equal(t, test.shutdown, shutdown)
 		})
 	}

@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channelnotifier"
 	"github.com/pkt-cash/pktd/lnd/clock"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,16 +69,16 @@ func newChanEventStoreTestCtx(t *testing.T) *chanEventStoreTestCtx {
 
 	cfg := &Config{
 		Clock: testCtx.clock,
-		SubscribeChannelEvents: func() (subscribe.Subscription, error) {
+		SubscribeChannelEvents: func() (subscribe.Subscription, er.R) {
 			return testCtx.channelSubscription, nil
 		},
-		SubscribePeerEvents: func() (subscribe.Subscription, error) {
+		SubscribePeerEvents: func() (subscribe.Subscription, er.R) {
 			return testCtx.peerSubscription, nil
 		},
-		GetOpenChannels: func() ([]*channeldb.OpenChannel, error) {
+		GetOpenChannels: func() ([]*channeldb.OpenChannel, er.R) {
 			return nil, nil
 		},
-		WriteFlapCount: func(updates map[route.Vertex]*channeldb.FlapCount) error {
+		WriteFlapCount: func(updates map[route.Vertex]*channeldb.FlapCount) er.R {
 			// Send our whole update map into the test context's
 			// updates channel. The test will need to assert flap
 			// count updated or this send will timeout.
@@ -89,10 +91,10 @@ func newChanEventStoreTestCtx(t *testing.T) *chanEventStoreTestCtx {
 
 			return nil
 		},
-		ReadFlapCount: func(peer route.Vertex) (*channeldb.FlapCount, error) {
+		ReadFlapCount: func(peer route.Vertex) (*channeldb.FlapCount, er.R) {
 			count, ok := testCtx.flapUpdates[peer]
 			if !ok {
-				return nil, channeldb.ErrNoPeerBucket
+				return nil, channeldb.ErrNoPeerBucket.Default()
 			}
 
 			return count, nil
@@ -107,7 +109,7 @@ func newChanEventStoreTestCtx(t *testing.T) *chanEventStoreTestCtx {
 
 // start starts the test context's event store.
 func (c *chanEventStoreTestCtx) start() {
-	require.NoError(c.t, c.store.Start())
+	util.RequireNoErr(c.t, c.store.Start())
 }
 
 // stop stops the channel event store's subscribe servers and the store itself.
@@ -152,7 +154,7 @@ func (c *chanEventStoreTestCtx) newChannel() (route.Vertex, *btcec.PublicKey,
 
 	// Create vertex from our pubkey.
 	vertex, err := route.NewVertexFromBytes(pubKey.SerializeCompressed())
-	require.NoError(c.t, err)
+	util.RequireNoErr(c.t, err)
 
 	// Create a channel point using our channel index, then increment it.
 	chanPoint := wire.OutPoint{

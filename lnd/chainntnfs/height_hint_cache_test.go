@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,9 +24,9 @@ func initHintCache(t *testing.T) *HeightHintCache {
 func initHintCacheWithConfig(t *testing.T, cfg CacheConfig) *HeightHintCache {
 	t.Helper()
 
-	tempDir, err := ioutil.TempDir("", "kek")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDir, errr := ioutil.TempDir("", "kek")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 	db, err := channeldb.Open(tempDir)
 	if err != nil {
@@ -53,7 +53,7 @@ func TestHeightHintCacheConfirms(t *testing.T) {
 	copy(unknownHash[:], bytes.Repeat([]byte{0x01}, 32))
 	unknownConfRequest := ConfRequest{TxID: unknownHash}
 	_, err := hintCache.QueryConfirmHint(unknownConfRequest)
-	if err != ErrConfirmHintNotFound {
+	if !ErrConfirmHintNotFound.Is(err) {
 		t.Fatalf("expected ErrConfirmHintNotFound, got: %v", err)
 	}
 
@@ -96,7 +96,7 @@ func TestHeightHintCacheConfirms(t *testing.T) {
 	// to find a hint for any of them.
 	for _, confRequest := range confRequests {
 		_, err := hintCache.QueryConfirmHint(confRequest)
-		if err != ErrConfirmHintNotFound {
+		if !ErrConfirmHintNotFound.Is(err) {
 			t.Fatalf("expected ErrConfirmHintNotFound, got :%v", err)
 		}
 	}
@@ -114,7 +114,7 @@ func TestHeightHintCacheSpends(t *testing.T) {
 	unknownOutPoint := wire.OutPoint{Index: 1}
 	unknownSpendRequest := SpendRequest{OutPoint: unknownOutPoint}
 	_, err := hintCache.QuerySpendHint(unknownSpendRequest)
-	if err != ErrSpendHintNotFound {
+	if !ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("expected ErrSpendHintNotFound, got: %v", err)
 	}
 
@@ -157,7 +157,7 @@ func TestHeightHintCacheSpends(t *testing.T) {
 	// not to find a hint for any of them.
 	for _, spendRequest := range spendRequests {
 		_, err = hintCache.QuerySpendHint(spendRequest)
-		if err != ErrSpendHintNotFound {
+		if !ErrSpendHintNotFound.Is(err) {
 			t.Fatalf("expected ErrSpendHintNotFound, got: %v", err)
 		}
 	}

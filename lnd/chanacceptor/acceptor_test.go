@@ -1,19 +1,19 @@
 package chanacceptor
 
 import (
-	"errors"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chancloser"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const testTimeout = time.Second
@@ -36,7 +36,7 @@ type channelAcceptorCtx struct {
 
 	// errChan is a channel that the error the channel acceptor exits with
 	// is sent into.
-	errChan chan error
+	errChan chan er.R
 
 	// quit is a channel that can be used to shutdown the channel acceptor
 	// and return errShuttingDown.
@@ -50,7 +50,7 @@ func newChanAcceptorCtx(t *testing.T, acceptCallCount int,
 		t:           t,
 		extRequests: make(chan []byte, acceptCallCount),
 		responses:   responses,
-		errChan:     make(chan error),
+		errChan:     make(chan er.R),
 		quit:        make(chan struct{}),
 	}
 
@@ -63,7 +63,7 @@ func newChanAcceptorCtx(t *testing.T, acceptCallCount int,
 }
 
 // sendRequest mocks sending a request to the channel acceptor.
-func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) error {
+func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) er.R {
 	select {
 	case c.extRequests <- request.PendingChanId:
 
@@ -76,7 +76,7 @@ func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) er
 
 // receiveResponse mocks sending of a response from the channel acceptor.
 func (c *channelAcceptorCtx) receiveResponse() (*lnrpc.ChannelAcceptResponse,
-	error) {
+	er.R) {
 
 	select {
 	case id := <-c.extRequests:
@@ -90,12 +90,12 @@ func (c *channelAcceptorCtx) receiveResponse() (*lnrpc.ChannelAcceptResponse,
 
 	case <-time.After(testTimeout):
 		c.t.Fatalf("timeout receiving request")
-		return nil, errors.New("receiveResponse timeout")
+		return nil, er.New("receiveResponse timeout")
 
 	// Exit if our test acceptor closes the done channel, which indicates
 	// that the acceptor is shutting down.
 	case <-c.acceptor.done:
-		return nil, errors.New("acceptor shutting down")
+		return nil, er.New("acceptor shutting down")
 	}
 }
 
@@ -165,7 +165,7 @@ func TestMultipleAcceptClients(t *testing.T) {
 	testUpfront, err := chancloser.ParseUpfrontShutdownAddress(
 		testAddr, &chaincfg.TestNet3Params,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	var (
 		chan1 = &lnwire.OpenChannel{
@@ -178,7 +178,7 @@ func TestMultipleAcceptClients(t *testing.T) {
 			PendingChannelID: [32]byte{3},
 		}
 
-		customError = errors.New("go away")
+		customError = er.New("go away")
 
 		// Queries is a map of the channel IDs we will query Accept
 		// with, and the set of outcomes we expect.
@@ -187,7 +187,7 @@ func TestMultipleAcceptClients(t *testing.T) {
 				true, nil, testUpfront, 1, 2, 3, 4, 5, 6,
 			),
 			chan2: NewChannelAcceptResponse(
-				false, errChannelRejected, nil, 0, 0, 0,
+				false, errChannelRejected.Default(), nil, 0, 0, 0,
 				0, 0, 0,
 			),
 			chan3: NewChannelAcceptResponse(
@@ -216,7 +216,7 @@ func TestMultipleAcceptClients(t *testing.T) {
 			chan3.PendingChannelID: {
 				PendingChanId: chan3.PendingChannelID[:],
 				Accept:        false,
-				Error:         customError.Error(),
+				Error:         customError.String(),
 			},
 		}
 	)
@@ -245,7 +245,7 @@ func TestInvalidResponse(t *testing.T) {
 			{
 				PendingChannelID: chan1,
 			}: NewChannelAcceptResponse(
-				false, errChannelRejected, nil, 0, 0,
+				false, errChannelRejected.Default(), nil, 0, 0,
 				0, 0, 0, 0,
 			),
 		}
@@ -288,7 +288,7 @@ func TestInvalidReserve(t *testing.T) {
 				PendingChannelID: chan1,
 				DustLimit:        dustLimit,
 			}: NewChannelAcceptResponse(
-				false, errChannelRejected, nil, 0, 0,
+				false, errChannelRejected.Default(), nil, 0, 0,
 				0, reserve, 0, 0,
 			),
 		}

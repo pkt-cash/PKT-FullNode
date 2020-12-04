@@ -3,10 +3,11 @@ package sweep
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -113,7 +114,7 @@ type mockWallet struct {
 }
 
 func (m *mockWallet) ListUnspentWitness(minconfirms, maxconfirms int32) (
-	[]*lnwallet.Utxo, error) {
+	[]*lnwallet.Utxo, er.R) {
 
 	return []*lnwallet.Utxo{
 		{
@@ -189,7 +190,7 @@ func TestTxInputSetRequiredOutput(t *testing.T) {
 	// input to it.
 	dummyInput := createP2WKHInput(1000)
 	weight := set.weightEstimate(false)
-	require.NoError(t, weight.add(dummyInput))
+	util.RequireNoErr(t, weight.add(dummyInput))
 
 	// Now we add a an input that is large enough to pay the fee for the
 	// transaction without a change output, but not large enough to afford
@@ -211,7 +212,7 @@ func TestTxInputSetRequiredOutput(t *testing.T) {
 	// Get another weight estimate, this time with a change output, and
 	// figure out how much we must add to afford a change output.
 	weight = set.weightEstimate(true)
-	require.NoError(t, weight.add(dummyInput))
+	util.RequireNoErr(t, weight.add(dummyInput))
 
 	// We add what is left to reach this value.
 	extraInput2 := weight.fee() - extraInput1 + 100
@@ -234,7 +235,7 @@ func TestTxInputSetRequiredOutput(t *testing.T) {
 	// Finally we add an input that should push the change output above the
 	// dust limit.
 	weight = set.weightEstimate(true)
-	require.NoError(t, weight.add(dummyInput))
+	util.RequireNoErr(t, weight.add(dummyInput))
 
 	// We expect the change to everything that is left after paying the tx
 	// fee.

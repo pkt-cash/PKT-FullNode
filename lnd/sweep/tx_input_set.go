@@ -314,7 +314,7 @@ func (t *txInputSet) addPositiveYieldInputs(sweepableInputs []txInput) {
 
 // tryAddWalletInputsIfNeeded retrieves utxos from the wallet and tries adding as
 // many as required to bring the tx output value above the given minimum.
-func (t *txInputSet) tryAddWalletInputsIfNeeded() error {
+func (t *txInputSet) tryAddWalletInputsIfNeeded() er.R {
 	// If we've already have enough to pay the transaction fees and have at
 	// least one output materialize, no action is needed.
 	if t.enoughInput() {
@@ -352,7 +352,7 @@ func (t *txInputSet) tryAddWalletInputsIfNeeded() error {
 
 // createWalletTxInput converts a wallet utxo into an object that can be added
 // to the other inputs to sweep.
-func createWalletTxInput(utxo *lnwallet.Utxo) (input.Input, error) {
+func createWalletTxInput(utxo *lnwallet.Utxo) (input.Input, er.R) {
 	var witnessType input.WitnessType
 	switch utxo.AddressType {
 	case lnwallet.WitnessPubKey:
@@ -360,7 +360,7 @@ func createWalletTxInput(utxo *lnwallet.Utxo) (input.Input, error) {
 	case lnwallet.NestedWitnessPubKey:
 		witnessType = input.NestedWitnessKeyHash
 	default:
-		return nil, fmt.Errorf("unknown address type %v",
+		return nil, er.Errorf("unknown address type %v",
 			utxo.AddressType)
 	}
 

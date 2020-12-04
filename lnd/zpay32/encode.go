@@ -3,17 +3,17 @@ package zpay32
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // Encode takes the given MessageSigner and returns a string encoding this
 // invoice signed by the node key of the signer.
-func (invoice *Invoice) Encode(signer MessageSigner) (string, error) {
+func (invoice *Invoice) Encode(signer MessageSigner) (string, er.R) {
 	// First check that this invoice is valid before starting the encoding.
 	if err := validateInvoice(invoice); err != nil {
 		return "", err
@@ -29,20 +29,20 @@ func (invoice *Invoice) Encode(signer MessageSigner) (string, error) {
 	// can fit into fewer groups we add leading zero groups, if it is too
 	// big we fail early, as there is not possible to encode it.
 	if len(timestampBase32) > timestampBase32Len {
-		return "", fmt.Errorf("timestamp too big: %d",
+		return "", er.Errorf("timestamp too big: %d",
 			invoice.Timestamp.Unix())
 	}
 
 	// Add zero bytes to the first timestampBase32Len-len(timestampBase32)
 	// groups, then add the non-zero groups.
 	zeroes := make([]byte, timestampBase32Len-len(timestampBase32))
-	_, err := bufferBase32.Write(zeroes)
-	if err != nil {
-		return "", fmt.Errorf("unable to write to buffer: %v", err)
+	_, errr := bufferBase32.Write(zeroes)
+	if errr != nil {
+		return "", er.Errorf("unable to write to buffer: %v", errr)
 	}
-	_, err = bufferBase32.Write(timestampBase32)
-	if err != nil {
-		return "", fmt.Errorf("unable to write to buffer: %v", err)
+	_, errr = bufferBase32.Write(timestampBase32)
+	if errr != nil {
+		return "", er.Errorf("unable to write to buffer: %v", errr)
 	}
 
 	// We now write the tagged fields to the buffer, which will fill the
@@ -90,14 +90,14 @@ func (invoice *Invoice) Encode(signer MessageSigner) (string, error) {
 	if invoice.Destination != nil {
 		signature, err := sig.ToSignature()
 		if err != nil {
-			return "", fmt.Errorf("unable to deserialize "+
+			return "", er.Errorf("unable to deserialize "+
 				"signature: %v", err)
 		}
 
 		hash := chainhash.HashB(toSign)
 		valid := signature.Verify(hash, invoice.Destination)
 		if !valid {
-			return "", fmt.Errorf("signature does not match " +
+			return "", er.Errorf("signature does not match " +
 				"provided pubkey")
 		}
 	}
@@ -118,7 +118,7 @@ func (invoice *Invoice) Encode(signer MessageSigner) (string, error) {
 	// Before returning, check that the bech32 encoded string is not greater
 	// than our largest supported invoice size.
 	if len(b32) > maxInvoiceLength {
-		return "", ErrInvoiceTooLarge
+		return "", ErrInvoiceTooLarge.Default()
 	}
 
 	return b32, nil
@@ -126,7 +126,7 @@ func (invoice *Invoice) Encode(signer MessageSigner) (string, error) {
 
 // writeTaggedFields writes the non-nil tagged fields of the Invoice to the
 // base32 buffer.
-func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
+func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) er.R {
 	if invoice.PaymentHash != nil {
 		err := writeBytes32(bufferBase32, fieldTypeP, *invoice.PaymentHash)
 		if err != nil {
@@ -184,7 +184,7 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 		case *btcutil.AddressWitnessScriptHash:
 			version = addr.WitnessVersion()
 		default:
-			return fmt.Errorf("unknown fallback address type")
+			return er.Errorf("unknown fallback address type")
 		}
 		base32Addr, err := bech32.ConvertBits(
 			invoice.FallbackAddr.ScriptAddress(), 8, 5, true)
@@ -244,7 +244,7 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 		}
 
 		if len(pubKeyBase32) != pubKeyBase32Len {
-			return fmt.Errorf("invalid pubkey length: %d",
+			return er.Errorf("invalid pubkey length: %d",
 				len(invoice.Destination.SerializeCompressed()))
 		}
 
@@ -279,7 +279,7 @@ func writeTaggedFields(bufferBase32 *bytes.Buffer, invoice *Invoice) error {
 
 // writeBytes32 encodes a 32-byte array as base32 and writes it to bufferBase32
 // under the passed fieldType.
-func writeBytes32(bufferBase32 *bytes.Buffer, fieldType byte, b [32]byte) error {
+func writeBytes32(bufferBase32 *bytes.Buffer, fieldType byte, b [32]byte) er.R {
 	// Convert 32 byte hash to 52 5-bit groups.
 	base32, err := bech32.ConvertBits(b[:], 8, 5, true)
 	if err != nil {
@@ -292,7 +292,7 @@ func writeBytes32(bufferBase32 *bytes.Buffer, fieldType byte, b [32]byte) error 
 // writeTaggedField takes the type of a tagged data field, and the data of
 // the tagged field (encoded in base32), and writes the type, length and data
 // to the buffer.
-func writeTaggedField(bufferBase32 *bytes.Buffer, dataType byte, data []byte) error {
+func writeTaggedField(bufferBase32 *bytes.Buffer, dataType byte, data []byte) er.R {
 	// Length must be exactly 10 bits, so add leading zero groups if
 	// needed.
 	lenBase32 := uint64ToBase32(uint64(len(data)))
@@ -301,21 +301,21 @@ func writeTaggedField(bufferBase32 *bytes.Buffer, dataType byte, data []byte) er
 	}
 
 	if len(lenBase32) != 2 {
-		return fmt.Errorf("data length too big to fit within 10 bits: %d",
+		return er.Errorf("data length too big to fit within 10 bits: %d",
 			len(data))
 	}
 
 	err := bufferBase32.WriteByte(dataType)
 	if err != nil {
-		return fmt.Errorf("unable to write to buffer: %v", err)
+		return er.Errorf("unable to write to buffer: %v", err)
 	}
 	_, err = bufferBase32.Write(lenBase32)
 	if err != nil {
-		return fmt.Errorf("unable to write to buffer: %v", err)
+		return er.Errorf("unable to write to buffer: %v", err)
 	}
 	_, err = bufferBase32.Write(data)
 	if err != nil {
-		return fmt.Errorf("unable to write to buffer: %v", err)
+		return er.Errorf("unable to write to buffer: %v", err)
 	}
 
 	return nil

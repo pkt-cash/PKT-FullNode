@@ -1,18 +1,18 @@
 package lnwire
 
 import (
-	"encoding/hex"
 	"net"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 func TestNetAddressDisplay(t *testing.T) {
 	t.Parallel()
 
 	pubKeyStr := "036a0c5ea35df8a528b98edf6f290b28676d51d0fe202b073fe677612a39c0aa09"
-	pubHex, err := hex.DecodeString(pubKeyStr)
+	pubHex, err := util.DecodeHex(pubKeyStr)
 	if err != nil {
 		t.Fatalf("unable to decode str: %v", err)
 	}

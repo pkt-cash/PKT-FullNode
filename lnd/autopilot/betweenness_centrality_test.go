@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,7 +14,7 @@ func TestBetweennessCentralityMetricConstruction(t *testing.T) {
 
 	for _, workers := range failing {
 		m, err := NewBetweennessCentralityMetric(workers)
-		require.Error(
+		util.RequireErr(
 			t, err, "construction must fail with <= 0 workers",
 		)
 		require.Nil(t, m)
@@ -21,7 +22,7 @@ func TestBetweennessCentralityMetricConstruction(t *testing.T) {
 
 	for _, workers := range ok {
 		m, err := NewBetweennessCentralityMetric(workers)
-		require.NoError(
+		util.RequireNoErr(
 			t, err, "construction must succeed with >= 1 workers",
 		)
 		require.NotNil(t, m)
@@ -31,7 +32,7 @@ func TestBetweennessCentralityMetricConstruction(t *testing.T) {
 // Tests that empty graph results in empty centrality result.
 func TestBetweennessCentralityEmptyGraph(t *testing.T) {
 	centralityMetric, err := NewBetweennessCentralityMetric(1)
-	require.NoError(
+	util.RequireNoErr(
 		t, err,
 		"construction must succeed with positive number of workers",
 	)
@@ -39,14 +40,14 @@ func TestBetweennessCentralityEmptyGraph(t *testing.T) {
 	for _, chanGraph := range chanGraphs {
 		graph, cleanup, err := chanGraph.genFunc()
 		success := t.Run(chanGraph.name, func(t1 *testing.T) {
-			require.NoError(t, err, "unable to create graph")
+			util.RequireNoErr(t, err, "unable to create graph")
 
 			if cleanup != nil {
 				defer cleanup()
 			}
 
 			err := centralityMetric.Refresh(graph)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 
 			centrality := centralityMetric.GetMetric(false)
 			require.Equal(t, 0, len(centrality))
@@ -82,7 +83,7 @@ func TestBetweennessCentralityWithNonEmptyGraph(t *testing.T) {
 		for _, chanGraph := range chanGraphs {
 			numWorkers := numWorkers
 			graph, cleanup, err := chanGraph.genFunc()
-			require.NoError(t, err, "unable to create graph")
+			util.RequireNoErr(t, err, "unable to create graph")
 
 			if cleanup != nil {
 				defer cleanup()
@@ -96,7 +97,7 @@ func TestBetweennessCentralityWithNonEmptyGraph(t *testing.T) {
 				metric, err := NewBetweennessCentralityMetric(
 					numWorkers,
 				)
-				require.NoError(
+				util.RequireNoErr(
 					t, err,
 					"construction must succeed with "+
 						"positive number of workers",
@@ -107,7 +108,7 @@ func TestBetweennessCentralityWithNonEmptyGraph(t *testing.T) {
 				)
 
 				err = metric.Refresh(graph)
-				require.NoError(t, err)
+				util.RequireNoErr(t, err)
 
 				for _, expected := range tests {
 					expected := expected

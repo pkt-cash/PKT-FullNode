@@ -1,11 +1,11 @@
 package lnwallet
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -14,18 +14,18 @@ import (
 // ReservationErrors will not be sent to the remote in case of a failed channel
 // reservation, as they may contain private information.
 type ReservationError struct {
-	error
+	er.R
 }
 
 // A compile time check to ensure ReservationError implements the error
 // interface.
-var _ error = (*ReservationError)(nil)
+var _ er.R = (*ReservationError)(nil)
 
 // ErrZeroCapacity returns an error indicating the funder attempted to put zero
 // funds into the channel.
 func ErrZeroCapacity() ReservationError {
 	return ReservationError{
-		errors.New("zero channel funds"),
+		er.New("zero channel funds"),
 	}
 }
 
@@ -34,7 +34,7 @@ func ErrZeroCapacity() ReservationError {
 func ErrChainMismatch(knownChain,
 	unknownChain *chainhash.Hash) ReservationError {
 	return ReservationError{
-		fmt.Errorf("unknown chain=%v, supported chain=%v",
+		er.Errorf("unknown chain=%v, supported chain=%v",
 			unknownChain, knownChain),
 	}
 }
@@ -44,7 +44,7 @@ func ErrChainMismatch(knownChain,
 func ErrFunderBalanceDust(commitFee, funderBalance,
 	minBalance int64) ReservationError {
 	return ReservationError{
-		fmt.Errorf("funder balance too small (%v) with fee=%v sat, "+
+		er.Errorf("funder balance too small (%v) with fee=%v sat, "+
 			"minimum=%v sat required", funderBalance,
 			commitFee, minBalance),
 	}
@@ -54,7 +54,7 @@ func ErrFunderBalanceDust(commitFee, funderBalance,
 // large to be accepted, along with the current max.
 func ErrCsvDelayTooLarge(remoteDelay, maxDelay uint16) ReservationError {
 	return ReservationError{
-		fmt.Errorf("CSV delay too large: %v, max is %v",
+		er.Errorf("CSV delay too large: %v, max is %v",
 			remoteDelay, maxDelay),
 	}
 }
@@ -63,7 +63,7 @@ func ErrCsvDelayTooLarge(remoteDelay, maxDelay uint16) ReservationError {
 // the remote is requiring is too small to be accepted.
 func ErrChanReserveTooSmall(reserve, dustLimit btcutil.Amount) ReservationError {
 	return ReservationError{
-		fmt.Errorf("channel reserve of %v sat is too small, min is %v "+
+		er.Errorf("channel reserve of %v sat is too small, min is %v "+
 			"sat", int64(reserve), int64(dustLimit)),
 	}
 }
@@ -73,7 +73,7 @@ func ErrChanReserveTooSmall(reserve, dustLimit btcutil.Amount) ReservationError 
 func ErrChanReserveTooLarge(reserve,
 	maxReserve btcutil.Amount) ReservationError {
 	return ReservationError{
-		fmt.Errorf("channel reserve is too large: %v sat, max "+
+		er.Errorf("channel reserve is too large: %v sat, max "+
 			"is %v sat", int64(reserve), int64(maxReserve)),
 	}
 }
@@ -82,7 +82,7 @@ func ErrChanReserveTooLarge(reserve,
 // FundingOpen request for a channel with non-zero push amount while
 // they have 'rejectpush' enabled.
 func ErrNonZeroPushAmount() ReservationError {
-	return ReservationError{errors.New("non-zero push amounts are disabled")}
+	return ReservationError{er.New("non-zero push amounts are disabled")}
 }
 
 // ErrMinHtlcTooLarge returns an error indicating that the MinHTLC value the
@@ -90,7 +90,7 @@ func ErrNonZeroPushAmount() ReservationError {
 func ErrMinHtlcTooLarge(minHtlc,
 	maxMinHtlc lnwire.MilliSatoshi) ReservationError {
 	return ReservationError{
-		fmt.Errorf("minimum HTLC value is too large: %v, max is %v",
+		er.Errorf("minimum HTLC value is too large: %v, max is %v",
 			minHtlc, maxMinHtlc),
 	}
 }
@@ -99,7 +99,7 @@ func ErrMinHtlcTooLarge(minHtlc,
 // flight' value the remote required is too large to be accepted.
 func ErrMaxHtlcNumTooLarge(maxHtlc, maxMaxHtlc uint16) ReservationError {
 	return ReservationError{
-		fmt.Errorf("maxHtlcs is too large: %d, max is %d",
+		er.Errorf("maxHtlcs is too large: %d, max is %d",
 			maxHtlc, maxMaxHtlc),
 	}
 }
@@ -108,7 +108,7 @@ func ErrMaxHtlcNumTooLarge(maxHtlc, maxMaxHtlc uint16) ReservationError {
 // flight' value the remote required is too small to be accepted.
 func ErrMaxHtlcNumTooSmall(maxHtlc, minMaxHtlc uint16) ReservationError {
 	return ReservationError{
-		fmt.Errorf("maxHtlcs is too small: %d, min is %d",
+		er.Errorf("maxHtlcs is too small: %d, min is %d",
 			maxHtlc, minMaxHtlc),
 	}
 }
@@ -118,16 +118,16 @@ func ErrMaxHtlcNumTooSmall(maxHtlc, minMaxHtlc uint16) ReservationError {
 func ErrMaxValueInFlightTooSmall(maxValInFlight,
 	minMaxValInFlight lnwire.MilliSatoshi) ReservationError {
 	return ReservationError{
-		fmt.Errorf("maxValueInFlight too small: %v, min is %v",
+		er.Errorf("maxValueInFlight too small: %v, min is %v",
 			maxValInFlight, minMaxValInFlight),
 	}
 }
 
 // ErrNumConfsTooLarge returns an error indicating that the number of
 // confirmations required for a channel is too large.
-func ErrNumConfsTooLarge(numConfs, maxNumConfs uint32) error {
+func ErrNumConfsTooLarge(numConfs, maxNumConfs uint32) er.R {
 	return ReservationError{
-		fmt.Errorf("minimum depth of %d is too large, max is %d",
+		er.Errorf("minimum depth of %d is too large, max is %d",
 			numConfs, maxNumConfs),
 	}
 }
@@ -137,7 +137,7 @@ func ErrNumConfsTooLarge(numConfs, maxNumConfs uint32) error {
 // configured value for the min channel size we'll accept.
 func ErrChanTooSmall(chanSize, minChanSize btcutil.Amount) ReservationError {
 	return ReservationError{
-		fmt.Errorf("chan size of %v is below min chan size of %v",
+		er.Errorf("chan size of %v is below min chan size of %v",
 			chanSize, minChanSize),
 	}
 }
@@ -147,7 +147,7 @@ func ErrChanTooSmall(chanSize, minChanSize btcutil.Amount) ReservationError {
 // configured value for the max channel size we'll accept.
 func ErrChanTooLarge(chanSize, maxChanSize btcutil.Amount) ReservationError {
 	return ReservationError{
-		fmt.Errorf("chan size of %v exceeds maximum chan size of %v",
+		er.Errorf("chan size of %v exceeds maximum chan size of %v",
 			chanSize, maxChanSize),
 	}
 }

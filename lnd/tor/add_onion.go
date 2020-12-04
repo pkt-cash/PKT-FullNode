@@ -1,16 +1,17 @@
 package tor
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
 	// ErrNoPrivateKey is an error returned by the OnionStore.PrivateKey
 	// method when a private key hasn't yet been stored.
-	ErrNoPrivateKey = errors.New("private key not found")
+	ErrNoPrivateKey = er.GenericErrorType.CodeWithDetail("ErrNoPrivateKey", "private key not found")
 )
 
 // OnionType denotes the type of the onion service.
@@ -29,14 +30,14 @@ const (
 type OnionStore interface {
 	// StorePrivateKey stores the private key according to the
 	// implementation of the OnionStore interface.
-	StorePrivateKey(OnionType, []byte) error
+	StorePrivateKey(OnionType, []byte) er.R
 
 	// PrivateKey retrieves a stored private key. If it is not found, then
 	// ErrNoPrivateKey should be returned.
-	PrivateKey(OnionType) ([]byte, error)
+	PrivateKey(OnionType) ([]byte, er.R)
 
 	// DeletePrivateKey securely removes the private key from the store.
-	DeletePrivateKey(OnionType) error
+	DeletePrivateKey(OnionType) er.R
 }
 
 // OnionFile is a file-based implementation of the OnionStore interface that
@@ -60,21 +61,21 @@ func NewOnionFile(privateKeyPath string, privateKeyPerm os.FileMode) *OnionFile 
 }
 
 // StorePrivateKey stores the private key at its expected path.
-func (f *OnionFile) StorePrivateKey(_ OnionType, privateKey []byte) error {
+func (f *OnionFile) StorePrivateKey(_ OnionType, privateKey []byte) er.R {
 	return ioutil.WriteFile(f.privateKeyPath, privateKey, f.privateKeyPerm)
 }
 
 // PrivateKey retrieves the private key from its expected path. If the file does
 // not exist, then ErrNoPrivateKey is returned.
-func (f *OnionFile) PrivateKey(_ OnionType) ([]byte, error) {
+func (f *OnionFile) PrivateKey(_ OnionType) ([]byte, er.R) {
 	if _, err := os.Stat(f.privateKeyPath); os.IsNotExist(err) {
-		return nil, ErrNoPrivateKey
+		return nil, ErrNoPrivateKey.Default()
 	}
 	return ioutil.ReadFile(f.privateKeyPath)
 }
 
 // DeletePrivateKey removes the file containing the private key.
-func (f *OnionFile) DeletePrivateKey(_ OnionType) error {
+func (f *OnionFile) DeletePrivateKey(_ OnionType) er.R {
 	return os.Remove(f.privateKeyPath)
 }
 
@@ -106,7 +107,7 @@ type AddOnionConfig struct {
 // AddOnion creates an onion service and returns its onion address. Once
 // created, the new onion service will remain active until the connection
 // between the controller and the Tor server is closed.
-func (c *Controller) AddOnion(cfg AddOnionConfig) (*OnionAddr, error) {
+func (c *Controller) AddOnion(cfg AddOnionConfig) (*OnionAddr, er.R) {
 	// Before sending the request to create an onion service to the Tor
 	// server, we'll make sure that it supports V3 onion services if that
 	// was the type requested.
@@ -193,7 +194,7 @@ func (c *Controller) AddOnion(cfg AddOnionConfig) (*OnionAddr, error) {
 	replyParams := parseTorReply(reply)
 	serviceID, ok := replyParams["ServiceID"]
 	if !ok {
-		return nil, errors.New("service id not found in reply")
+		return nil, er.New("service id not found in reply")
 	}
 
 	// If a new onion service was created and an onion store was provided,
@@ -202,7 +203,7 @@ func (c *Controller) AddOnion(cfg AddOnionConfig) (*OnionAddr, error) {
 	if privateKey, ok := replyParams["PrivateKey"]; cfg.Store != nil && ok {
 		err := cfg.Store.StorePrivateKey(cfg.Type, []byte(privateKey))
 		if err != nil {
-			return nil, fmt.Errorf("unable to write private key "+
+			return nil, er.Errorf("unable to write private key "+
 				"to file: %v", err)
 		}
 	}

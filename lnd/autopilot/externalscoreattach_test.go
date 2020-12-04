@@ -5,11 +5,12 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 )
 
 // randKey returns a random public key.
-func randKey() (*btcec.PublicKey, error) {
+func randKey() (*btcec.PublicKey, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err

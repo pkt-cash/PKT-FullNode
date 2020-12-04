@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +50,7 @@ func TestPersistReport(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			db, cleanup, err := MakeTestDB()
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 			defer cleanup()
 
 			channelOutpoint := testChanPoint1
@@ -70,12 +71,12 @@ func TestPersistReport(t *testing.T) {
 			err = db.PutResolverReport(
 				nil, testChainHash, &channelOutpoint, report,
 			)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 
 			reports, err := db.FetchChannelReports(
 				testChainHash, &channelOutpoint,
 			)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 			require.Equal(t, report, reports[0])
 		})
 	}
@@ -86,7 +87,7 @@ func TestPersistReport(t *testing.T) {
 // of the existing bucket.
 func TestFetchChannelReadBucket(t *testing.T) {
 	db, cleanup, err := MakeTestDB()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	defer cleanup()
 
 	channelOutpoint := testChanPoint1
@@ -113,19 +114,19 @@ func TestFetchChannelReadBucket(t *testing.T) {
 	err = db.PutResolverReport(
 		nil, testChainHash, &channelOutpoint, report,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Now that the channel bucket exists, we expect the channel to be
 	// successfully fetched, with no reports.
 	reports, err := db.FetchChannelReports(testChainHash, &testChanPoint1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, report, reports[0])
 }
 
 // TestFetchChannelWriteBucket tests the creation of missing buckets when
 // retrieving the reports bucket.
 func TestFetchChannelWriteBucket(t *testing.T) {
-	createReportsBucket := func(tx kvdb.RwTx) (kvdb.RwBucket, error) {
+	createReportsBucket := func(tx kvdb.RwTx) (kvdb.RwBucket, er.R) {
 		return tx.CreateTopLevelBucket(closedChannelBucket)
 	}
 
@@ -140,31 +141,31 @@ func TestFetchChannelWriteBucket(t *testing.T) {
 
 		var chanPointBuf bytes.Buffer
 		err := writeOutpoint(&chanPointBuf, &testChanPoint1)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		return chainHash.CreateBucketIfNotExists(chanPointBuf.Bytes())
 	}
 
 	tests := []struct {
 		name  string
-		setup func(tx kvdb.RwTx) error
+		setup func(tx kvdb.RwTx) er.R
 	}{
 		{
 			name: "no existing buckets",
-			setup: func(tx kvdb.RwTx) error {
+			setup: func(tx kvdb.RwTx) er.R {
 				return nil
 			},
 		},
 		{
 			name: "reports bucket exists",
-			setup: func(tx kvdb.RwTx) error {
+			setup: func(tx kvdb.RwTx) er.R {
 				_, err := createReportsBucket(tx)
 				return err
 			},
 		},
 		{
 			name: "chainhash bucket exists",
-			setup: func(tx kvdb.RwTx) error {
+			setup: func(tx kvdb.RwTx) er.R {
 				reports, err := createReportsBucket(tx)
 				if err != nil {
 					return err
@@ -176,7 +177,7 @@ func TestFetchChannelWriteBucket(t *testing.T) {
 		},
 		{
 			name: "channel bucket exists",
-			setup: func(tx kvdb.RwTx) error {
+			setup: func(tx kvdb.RwTx) er.R {
 				reports, err := createReportsBucket(tx)
 				if err != nil {
 					return err
@@ -198,21 +199,21 @@ func TestFetchChannelWriteBucket(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			db, cleanup, err := MakeTestDB()
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 			defer cleanup()
 
 			// Update our db to the starting state we expect.
 			err = kvdb.Update(db, test.setup, func() {})
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 
 			// Try to get our report bucket.
-			err = kvdb.Update(db, func(tx kvdb.RwTx) error {
+			err = kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 				_, err := fetchReportWriteBucket(
 					tx, testChainHash, &testChanPoint1,
 				)
 				return err
 			}, func() {})
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 		})
 	}
 }

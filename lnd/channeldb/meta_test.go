@@ -59,7 +59,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration func(d *DB),
 			if dryRun && r != ErrDryRunMigrationOK {
 				t.Fatalf("expected dry run migration OK")
 			}
-			err = errors.New(r)
+			err = er.New(r)
 		}
 
 		if err == nil && shouldFail {
@@ -126,11 +126,11 @@ func TestOrderOfMigrations(t *testing.T) {
 	versions := []version{
 		{0, nil},
 		{1, nil},
-		{2, func(tx kvdb.RwTx) error {
+		{2, func(tx kvdb.RwTx) er.R {
 			appliedMigration = 2
 			return nil
 		}},
-		{3, func(tx kvdb.RwTx) error {
+		{3, func(tx kvdb.RwTx) er.R {
 			appliedMigration = 3
 			return nil
 		}},
@@ -202,7 +202,7 @@ func TestMigrationWithPanic(t *testing.T) {
 	beforeMigrationFunc := func(d *DB) {
 		// Insert data in database and in order then make sure that the
 		// key isn't changes in case of panic or fail.
-		err := kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -217,7 +217,7 @@ func TestMigrationWithPanic(t *testing.T) {
 
 	// Create migration function which changes the initially created data and
 	// throw the panic, in this case we pretending that something goes.
-	migrationWithPanic := func(tx kvdb.RwTx) error {
+	migrationWithPanic := func(tx kvdb.RwTx) er.R {
 		bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 		if err != nil {
 			return err
@@ -238,7 +238,7 @@ func TestMigrationWithPanic(t *testing.T) {
 			t.Fatal("migration panicked but version is changed")
 		}
 
-		err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -246,7 +246,7 @@ func TestMigrationWithPanic(t *testing.T) {
 
 			value := bucket.Get(keyPrefix)
 			if !bytes.Equal(value, beforeMigration) {
-				return errors.New("migration failed but data is " +
+				return er.New("migration failed but data is " +
 					"changed")
 			}
 
@@ -276,7 +276,7 @@ func TestMigrationWithFatal(t *testing.T) {
 	afterMigration := []byte("aftermigration")
 
 	beforeMigrationFunc := func(d *DB) {
-		err := kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -292,14 +292,14 @@ func TestMigrationWithFatal(t *testing.T) {
 	// Create migration function which changes the initially created data and
 	// return the error, in this case we pretending that something goes
 	// wrong.
-	migrationWithFatal := func(tx kvdb.RwTx) error {
+	migrationWithFatal := func(tx kvdb.RwTx) er.R {
 		bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 		if err != nil {
 			return err
 		}
 
 		bucket.Put(keyPrefix, afterMigration)
-		return errors.New("some error")
+		return er.New("some error")
 	}
 
 	// Check that version of database and initial data wasn't changed.
@@ -313,7 +313,7 @@ func TestMigrationWithFatal(t *testing.T) {
 			t.Fatal("migration failed but version is changed")
 		}
 
-		err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -321,7 +321,7 @@ func TestMigrationWithFatal(t *testing.T) {
 
 			value := bucket.Get(keyPrefix)
 			if !bytes.Equal(value, beforeMigration) {
-				return errors.New("migration failed but data is " +
+				return er.New("migration failed but data is " +
 					"changed")
 			}
 
@@ -352,7 +352,7 @@ func TestMigrationWithoutErrors(t *testing.T) {
 
 	// Populate database with initial data.
 	beforeMigrationFunc := func(d *DB) {
-		err := kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -366,7 +366,7 @@ func TestMigrationWithoutErrors(t *testing.T) {
 	}
 
 	// Create migration function which changes the initially created data.
-	migrationWithoutErrors := func(tx kvdb.RwTx) error {
+	migrationWithoutErrors := func(tx kvdb.RwTx) er.R {
 		bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 		if err != nil {
 			return err
@@ -388,7 +388,7 @@ func TestMigrationWithoutErrors(t *testing.T) {
 				"successfully applied migration")
 		}
 
-		err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			bucket, err := tx.CreateTopLevelBucket(bucketPrefix)
 			if err != nil {
 				return err
@@ -396,7 +396,7 @@ func TestMigrationWithoutErrors(t *testing.T) {
 
 			value := bucket.Get(keyPrefix)
 			if !bytes.Equal(value, afterMigration) {
-				return errors.New("migration wasn't applied " +
+				return er.New("migration wasn't applied " +
 					"properly")
 			}
 
@@ -442,7 +442,7 @@ func TestMigrationReversion(t *testing.T) {
 
 	// Update the database metadata to point to one more than the highest
 	// known version.
-	err = kvdb.Update(cdb, func(tx kvdb.RwTx) error {
+	err = kvdb.Update(cdb, func(tx kvdb.RwTx) er.R {
 		newMeta := &Meta{
 			DbVersionNumber: getLatestDBVersion(dbVersions) + 1,
 		}
@@ -481,7 +481,7 @@ func TestMigrationDryRun(t *testing.T) {
 
 	// Check that version of database version is not modified.
 	afterMigrationFunc := func(d *DB) {
-		err := kvdb.View(d, func(tx kvdb.RTx) error {
+		err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 			meta, err := d.FetchMeta(nil)
 			if err != nil {
 				t.Fatal(err)
@@ -501,7 +501,7 @@ func TestMigrationDryRun(t *testing.T) {
 	applyMigration(t,
 		beforeMigrationFunc,
 		afterMigrationFunc,
-		func(kvdb.RwTx) error { return nil },
+		func(kvdb.RwTx) er.R { return nil },
 		true,
 		true)
 }

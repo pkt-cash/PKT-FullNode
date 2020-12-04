@@ -132,7 +132,7 @@ func (t *backupTask) inputs() map[wire.OutPoint]input.Input {
 // SessionInfo's policy. If no error is returned, the task has been bound to the
 // session and can be queued to upload to the tower. Otherwise, the bind failed
 // and should be rescheduled with a different session.
-func (t *backupTask) bindSession(session *wtdb.ClientSessionBody) error {
+func (t *backupTask) bindSession(session *wtdb.ClientSessionBody) er.R {
 	// First we'll begin by deriving a weight estimate for the justice
 	// transaction. The final weight can be different depending on whether
 	// the watchtower is taking a reward.
@@ -186,7 +186,7 @@ func (t *backupTask) bindSession(session *wtdb.ClientSessionBody) error {
 // required pieces from signatures, witness scripts, etc are then packaged into
 // a JusticeKit and encrypted using the breach transaction's key.
 func (t *backupTask) craftSessionPayload(
-	signer input.Signer) (blob.BreachHint, []byte, error) {
+	signer input.Signer) (blob.BreachHint, []byte, er.R) {
 
 	var hint blob.BreachHint
 

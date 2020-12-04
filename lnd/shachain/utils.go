@@ -1,8 +1,8 @@
 package shachain
 
 import (
-	"encoding/hex"
-
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -48,10 +48,10 @@ func countTrailingZeros(index index) uint8 {
 // hashFromString takes a hex-encoded string as input and creates an instance of
 // chainhash.Hash. The chainhash.NewHashFromStr function not suitable because
 // it reverse the given hash.
-func hashFromString(s string) (*chainhash.Hash, error) {
+func hashFromString(s string) (*chainhash.Hash, er.R) {
 	// Return an error if hash string is too long.
 	if len(s) > chainhash.MaxHashStringSize {
-		return nil, chainhash.ErrHashStrSize
+		return nil, chainhash.ErrHashStrSize.Default()
 	}
 
 	// Hex decoder expects the hash to be a multiple of two.
@@ -60,7 +60,7 @@ func hashFromString(s string) (*chainhash.Hash, error) {
 	}
 
 	// Convert string hash to bytes.
-	buf, err := hex.DecodeString(s)
+	buf, err := util.DecodeHex(s)
 	if err != nil {
 		return nil, err
 	}

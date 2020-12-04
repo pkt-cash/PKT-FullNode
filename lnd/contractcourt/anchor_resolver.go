@@ -80,7 +80,7 @@ func (c *anchorResolver) ResolverKey() []byte {
 }
 
 // Resolve offers the anchor output to the sweeper and waits for it to be swept.
-func (c *anchorResolver) Resolve() (ContractResolver, error) {
+func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 	// Attempt to update the sweep parameters to the post-confirmation
 	// situation. We don't want to force sweep anymore, because the anchor
 	// lost its special purpose to get the commitment confirmed. It is just
@@ -201,8 +201,8 @@ func (c *anchorResolver) report() *ContractReport {
 	return &reportCopy
 }
 
-func (c *anchorResolver) Encode(w io.Writer) error {
-	return errors.New("serialization not supported")
+func (c *anchorResolver) Encode(w io.Writer) er.R {
+	return er.New("serialization not supported")
 }
 
 // A compile time assertion to ensure anchorResolver meets the

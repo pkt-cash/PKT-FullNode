@@ -1,13 +1,13 @@
 package chanbackup
 
 import (
-	"fmt"
 	"net"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type mockChannelSource struct {
@@ -25,9 +25,9 @@ func newMockChannelSource() *mockChannelSource {
 	}
 }
 
-func (m *mockChannelSource) FetchAllChannels() ([]*channeldb.OpenChannel, error) {
+func (m *mockChannelSource) FetchAllChannels() ([]*channeldb.OpenChannel, er.R) {
 	if m.failQuery {
-		return nil, fmt.Errorf("fail")
+		return nil, er.Errorf("fail")
 	}
 
 	chans := make([]*channeldb.OpenChannel, 0, len(m.chans))
@@ -38,14 +38,14 @@ func (m *mockChannelSource) FetchAllChannels() ([]*channeldb.OpenChannel, error)
 	return chans, nil
 }
 
-func (m *mockChannelSource) FetchChannel(chanPoint wire.OutPoint) (*channeldb.OpenChannel, error) {
+func (m *mockChannelSource) FetchChannel(chanPoint wire.OutPoint) (*channeldb.OpenChannel, er.R) {
 	if m.failQuery {
-		return nil, fmt.Errorf("fail")
+		return nil, er.Errorf("fail")
 	}
 
 	channel, ok := m.chans[chanPoint]
 	if !ok {
-		return nil, fmt.Errorf("can't find chan")
+		return nil, er.Errorf("can't find chan")
 	}
 
 	return channel, nil
@@ -58,9 +58,9 @@ func (m *mockChannelSource) addAddrsForNode(nodePub *btcec.PublicKey, addrs []ne
 	m.addrs[nodeKey] = addrs
 }
 
-func (m *mockChannelSource) AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, error) {
+func (m *mockChannelSource) AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, er.R) {
 	if m.failQuery {
-		return nil, fmt.Errorf("fail")
+		return nil, er.Errorf("fail")
 	}
 
 	var nodeKey [33]byte
@@ -68,7 +68,7 @@ func (m *mockChannelSource) AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, 
 
 	addrs, ok := m.addrs[nodeKey]
 	if !ok {
-		return nil, fmt.Errorf("can't find addr")
+		return nil, er.Errorf("can't find addr")
 	}
 
 	return addrs, nil

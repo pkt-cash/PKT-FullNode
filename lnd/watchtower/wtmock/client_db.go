@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 )
@@ -43,7 +44,7 @@ func NewClientDB() *ClientDB {
 // storage costs of the public key when used by multiple sessions. If the tower
 // already exists, the address is appended to the list of all addresses used to
 // that tower previously and its corresponding sessions are marked as active.
-func (m *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*wtdb.Tower, error) {
+func (m *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*wtdb.Tower, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -87,7 +88,7 @@ func (m *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*wtdb.Tower, error) {
 // any sessions at all, it'll be completely removed from the database.
 //
 // NOTE: An error is not returned if the tower doesn't exist.
-func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
+func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) er.R {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -102,7 +103,7 @@ func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 	if addr != nil {
 		tower.RemoveAddress(addr)
 		if len(tower.Addresses) == 0 {
-			return wtdb.ErrLastTowerAddr
+			return wtdb.ErrLastTowerAddr.Default()
 		}
 		m.towers[tower.ID] = tower
 		return nil
@@ -122,7 +123,7 @@ func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 
 	for id, session := range towerSessions {
 		if len(session.CommittedUpdates) > 0 {
-			return wtdb.ErrTowerUnackedUpdates
+			return wtdb.ErrTowerUnackedUpdates.Default()
 		}
 		session.Status = wtdb.CSessionInactive
 		m.activeSessions[id] = *session
@@ -132,7 +133,7 @@ func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
 }
 
 // LoadTower retrieves a tower by its public key.
-func (m *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*wtdb.Tower, error) {
+func (m *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*wtdb.Tower, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.loadTower(pubKey)
@@ -141,24 +142,24 @@ func (m *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*wtdb.Tower, error) {
 // loadTower retrieves a tower by its public key.
 //
 // NOTE: This method requires the database's lock to be acquired.
-func (m *ClientDB) loadTower(pubKey *btcec.PublicKey) (*wtdb.Tower, error) {
+func (m *ClientDB) loadTower(pubKey *btcec.PublicKey) (*wtdb.Tower, er.R) {
 	var towerPK towerPK
 	copy(towerPK[:], pubKey.SerializeCompressed())
 
 	towerID, ok := m.towerIndex[towerPK]
 	if !ok {
-		return nil, wtdb.ErrTowerNotFound
+		return nil, wtdb.ErrTowerNotFound.Default()
 	}
 	tower, ok := m.towers[towerID]
 	if !ok {
-		return nil, wtdb.ErrTowerNotFound
+		return nil, wtdb.ErrTowerNotFound.Default()
 	}
 
 	return copyTower(tower), nil
 }
 
 // LoadTowerByID retrieves a tower by its tower ID.
-func (m *ClientDB) LoadTowerByID(towerID wtdb.TowerID) (*wtdb.Tower, error) {
+func (m *ClientDB) LoadTowerByID(towerID wtdb.TowerID) (*wtdb.Tower, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -166,11 +167,11 @@ func (m *ClientDB) LoadTowerByID(towerID wtdb.TowerID) (*wtdb.Tower, error) {
 		return copyTower(tower), nil
 	}
 
-	return nil, wtdb.ErrTowerNotFound
+	return nil, wtdb.ErrTowerNotFound.Default()
 }
 
 // ListTowers retrieves the list of towers available within the database.
-func (m *ClientDB) ListTowers() ([]*wtdb.Tower, error) {
+func (m *ClientDB) ListTowers() ([]*wtdb.Tower, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -185,7 +186,7 @@ func (m *ClientDB) ListTowers() ([]*wtdb.Tower, error) {
 // MarkBackupIneligible records that particular commit height is ineligible for
 // backup. This allows the client to track which updates it should not attempt
 // to retry after startup.
-func (m *ClientDB) MarkBackupIneligible(chanID lnwire.ChannelID, commitHeight uint64) error {
+func (m *ClientDB) MarkBackupIneligible(chanID lnwire.ChannelID, commitHeight uint64) er.R {
 	return nil
 }
 
@@ -193,7 +194,7 @@ func (m *ClientDB) MarkBackupIneligible(chanID lnwire.ChannelID, commitHeight ui
 // optional tower ID can be used to filter out any client sessions in the
 // response that do not correspond to this tower.
 func (m *ClientDB) ListClientSessions(
-	tower *wtdb.TowerID) (map[wtdb.SessionID]*wtdb.ClientSession, error) {
+	tower *wtdb.TowerID) (map[wtdb.SessionID]*wtdb.ClientSession, er.R) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -204,7 +205,7 @@ func (m *ClientDB) ListClientSessions(
 // optional tower ID can be used to filter out any client sessions in the
 // response that do not correspond to this tower.
 func (m *ClientDB) listClientSessions(
-	tower *wtdb.TowerID) (map[wtdb.SessionID]*wtdb.ClientSession, error) {
+	tower *wtdb.TowerID) (map[wtdb.SessionID]*wtdb.ClientSession, er.R) {
 
 	sessions := make(map[wtdb.SessionID]*wtdb.ClientSession)
 	for _, session := range m.activeSessions {
@@ -220,24 +221,24 @@ func (m *ClientDB) listClientSessions(
 
 // CreateClientSession records a newly negotiated client session in the set of
 // active sessions. The session can be identified by its SessionID.
-func (m *ClientDB) CreateClientSession(session *wtdb.ClientSession) error {
+func (m *ClientDB) CreateClientSession(session *wtdb.ClientSession) er.R {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Ensure that we aren't overwriting an existing session.
 	if _, ok := m.activeSessions[session.ID]; ok {
-		return wtdb.ErrClientSessionAlreadyExists
+		return wtdb.ErrClientSessionAlreadyExists.Default()
 	}
 
 	// Ensure that a session key index has been reserved for this tower.
 	keyIndex, ok := m.indexes[session.TowerID]
 	if !ok {
-		return wtdb.ErrNoReservedKeyIndex
+		return wtdb.ErrNoReservedKeyIndex.Default()
 	}
 
 	// Ensure that the session's index matches the reserved index.
 	if keyIndex != session.KeyIndex {
-		return wtdb.ErrIncorrectKeyIndex
+		return wtdb.ErrIncorrectKeyIndex.Default()
 	}
 
 	// Remove the key index reservation for this tower. Once committed, this
@@ -266,7 +267,7 @@ func (m *ClientDB) CreateClientSession(session *wtdb.ClientSession) error {
 // CreateClientSession is invoked for that tower and index, at which point a new
 // index for that tower can be reserved. Multiple calls to this method before
 // CreateClientSession is invoked should return the same index.
-func (m *ClientDB) NextSessionKeyIndex(towerID wtdb.TowerID) (uint32, error) {
+func (m *ClientDB) NextSessionKeyIndex(towerID wtdb.TowerID) (uint32, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -284,7 +285,7 @@ func (m *ClientDB) NextSessionKeyIndex(towerID wtdb.TowerID) (uint32, error) {
 // CommitUpdate persists the CommittedUpdate provided in the slot for (session,
 // seqNum). This allows the client to retransmit this update on startup.
 func (m *ClientDB) CommitUpdate(id *wtdb.SessionID,
-	update *wtdb.CommittedUpdate) (uint16, error) {
+	update *wtdb.CommittedUpdate) (uint16, er.R) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -325,26 +326,26 @@ func (m *ClientDB) CommitUpdate(id *wtdb.SessionID,
 // AckUpdate persists an acknowledgment for a given (session, seqnum) pair. This
 // removes the update from the set of committed updates, and validates the
 // lastApplied value returned from the tower.
-func (m *ClientDB) AckUpdate(id *wtdb.SessionID, seqNum, lastApplied uint16) error {
+func (m *ClientDB) AckUpdate(id *wtdb.SessionID, seqNum, lastApplied uint16) er.R {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Fail if session doesn't exist.
 	session, ok := m.activeSessions[*id]
 	if !ok {
-		return wtdb.ErrClientSessionNotFound
+		return wtdb.ErrClientSessionNotFound.Default()
 	}
 
 	// Ensure the returned last applied value does not exceed the highest
 	// allocated sequence number.
 	if lastApplied > session.SeqNum {
-		return wtdb.ErrUnallocatedLastApplied
+		return wtdb.ErrUnallocatedLastApplied.Default()
 	}
 
 	// Ensure the last applied value isn't lower than a previous one sent by
 	// the tower.
 	if lastApplied < session.TowerLastApplied {
-		return wtdb.ErrLastAppliedReversion
+		return wtdb.ErrLastAppliedReversion.Default()
 	}
 
 	// Retrieve the committed update, failing if none is found. We should
@@ -369,12 +370,12 @@ func (m *ClientDB) AckUpdate(id *wtdb.SessionID, seqNum, lastApplied uint16) err
 		return nil
 	}
 
-	return wtdb.ErrCommittedUpdateNotFound
+	return wtdb.ErrCommittedUpdateNotFound.Default()
 }
 
 // FetchChanSummaries loads a mapping from all registered channels to their
 // channel summaries.
-func (m *ClientDB) FetchChanSummaries() (wtdb.ChannelSummaries, error) {
+func (m *ClientDB) FetchChanSummaries() (wtdb.ChannelSummaries, er.R) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -394,13 +395,13 @@ func (m *ClientDB) FetchChanSummaries() (wtdb.ChannelSummaries, error) {
 // to contain more info to allow the client efficiently request historical
 // states to be backed up under the client's active policy.
 func (m *ClientDB) RegisterChannel(chanID lnwire.ChannelID,
-	sweepPkScript []byte) error {
+	sweepPkScript []byte) er.R {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if _, ok := m.summaries[chanID]; ok {
-		return wtdb.ErrChannelAlreadyRegistered
+		return wtdb.ErrChannelAlreadyRegistered.Default()
 	}
 
 	m.summaries[chanID] = wtdb.ClientChanSummary{

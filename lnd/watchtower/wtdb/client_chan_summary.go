@@ -22,11 +22,11 @@ type ClientChanSummary struct {
 }
 
 // Encode writes the ClientChanSummary to the passed io.Writer.
-func (s *ClientChanSummary) Encode(w io.Writer) error {
+func (s *ClientChanSummary) Encode(w io.Writer) er.R {
 	return WriteElement(w, s.SweepPkScript)
 }
 
 // Decode reads a ClientChanSummary form the passed io.Reader.
-func (s *ClientChanSummary) Decode(r io.Reader) error {
+func (s *ClientChanSummary) Decode(r io.Reader) er.R {
 	return ReadElement(r, &s.SweepPkScript)
 }

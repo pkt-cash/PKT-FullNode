@@ -6,9 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 var (
@@ -83,7 +84,7 @@ type ForwardingEvent struct {
 // encodeForwardingEvent writes out the target forwarding event to the passed
 // io.Writer, using the expected DB format. Note that the timestamp isn't
 // serialized as this will be the key value within the bucket.
-func encodeForwardingEvent(w io.Writer, f *ForwardingEvent) error {
+func encodeForwardingEvent(w io.Writer, f *ForwardingEvent) er.R {
 	return WriteElements(
 		w, f.IncomingChanID, f.OutgoingChanID, f.AmtIn, f.AmtOut,
 	)
@@ -93,7 +94,7 @@ func encodeForwardingEvent(w io.Writer, f *ForwardingEvent) error {
 // forwarding event into the target ForwardingEvent. Note that the timestamp
 // won't be decoded, as the caller is expected to set this due to the bucket
 // structure of the forwarding log.
-func decodeForwardingEvent(r io.Reader, f *ForwardingEvent) error {
+func decodeForwardingEvent(r io.Reader, f *ForwardingEvent) er.R {
 	return ReadElements(
 		r, &f.IncomingChanID, &f.OutgoingChanID, &f.AmtIn, &f.AmtOut,
 	)
@@ -102,7 +103,7 @@ func decodeForwardingEvent(r io.Reader, f *ForwardingEvent) error {
 // AddForwardingEvents adds a series of forwarding events to the database.
 // Before inserting, the set of events will be sorted according to their
 // timestamp. This ensures that all writes to disk are sequential.
-func (f *ForwardingLog) AddForwardingEvents(events []ForwardingEvent) error {
+func (f *ForwardingLog) AddForwardingEvents(events []ForwardingEvent) er.R {
 	// Before we create the database transaction, we'll ensure that the set
 	// of forwarding events are properly sorted according to their
 	// timestamp and that no duplicate timestamps exist to avoid collisions
@@ -111,7 +112,7 @@ func (f *ForwardingLog) AddForwardingEvents(events []ForwardingEvent) error {
 
 	var timestamp [8]byte
 
-	return kvdb.Batch(f.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(f.db.Backend, func(tx kvdb.RwTx) er.R {
 		// First, we'll fetch the bucket that stores our time series
 		// log.
 		logBucket, err := tx.CreateTopLevelBucket(
@@ -139,7 +140,7 @@ func (f *ForwardingLog) AddForwardingEvents(events []ForwardingEvent) error {
 // database, the timestamp is incremented in nanosecond intervals until a "free"
 // slot is found.
 func storeEvent(bucket walletdb.ReadWriteBucket, event ForwardingEvent,
-	timestampScratchSpace []byte) error {
+	timestampScratchSpace []byte) er.R {
 
 	// First, we'll serialize this timestamp into our
 	// timestamp buffer.
@@ -227,7 +228,7 @@ type ForwardingLogTimeSlice struct {
 // the number of events to be returned.
 //
 // TODO(roasbeef): rename?
-func (f *ForwardingLog) Query(q ForwardingEventQuery) (ForwardingLogTimeSlice, error) {
+func (f *ForwardingLog) Query(q ForwardingEventQuery) (ForwardingLogTimeSlice, er.R) {
 	var resp ForwardingLogTimeSlice
 
 	// If the user provided an index offset, then we'll not know how many
@@ -236,12 +237,12 @@ func (f *ForwardingLog) Query(q ForwardingEventQuery) (ForwardingLogTimeSlice, e
 	recordsToSkip := q.IndexOffset
 	recordOffset := q.IndexOffset
 
-	err := kvdb.View(f.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(f.db, func(tx kvdb.RTx) er.R {
 		// If the bucket wasn't found, then there aren't any events to
 		// be returned.
 		logBucket := tx.ReadBucket(forwardingLogBucket)
 		if logBucket == nil {
-			return ErrNoForwardingEvents
+			return ErrNoForwardingEvents.Default()
 		}
 
 		// We'll be using a cursor to seek into the database, so we'll
@@ -300,7 +301,7 @@ func (f *ForwardingLog) Query(q ForwardingEventQuery) (ForwardingLogTimeSlice, e
 			ForwardingEventQuery: q,
 		}
 	})
-	if err != nil && err != ErrNoForwardingEvents {
+	if err != nil && !ErrNoForwardingEvents.Is(err) {
 		return ForwardingLogTimeSlice{}, err
 	}
 

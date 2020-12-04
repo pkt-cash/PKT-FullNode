@@ -62,7 +62,7 @@ func TestManager(t *testing.T) {
 	}
 
 	propagateChanPolicyUpdate := func(
-		edgesToUpdate []discovery.EdgeWithInfo) error {
+		edgesToUpdate []discovery.EdgeWithInfo) er.R {
 
 		if len(edgesToUpdate) != 1 {
 			t.Fatal("unexpected number of edges to update")
@@ -89,7 +89,7 @@ func TestManager(t *testing.T) {
 	}
 
 	forAllOutgoingChannels := func(cb func(*channeldb.ChannelEdgeInfo,
-		*channeldb.ChannelEdgePolicy) error) error {
+		*channeldb.ChannelEdgePolicy) error) er.R {
 
 		return cb(
 			&channeldb.ChannelEdgeInfo{

@@ -19,7 +19,7 @@ type mockSigner struct {
 }
 
 func (m *mockSigner) SignMessage(pk *btcec.PublicKey,
-	msg []byte) (input.Signature, error) {
+	msg []byte) (input.Signature, er.R) {
 
 	if m.err != nil {
 		return nil, m.err
@@ -36,7 +36,7 @@ var (
 
 	pubKey = privKey.PubKey()
 
-	errFailedToSign = errors.New("unable to sign message")
+	errFailedToSign = er.New("unable to sign message")
 )
 
 type updateDisableTest struct {
@@ -94,7 +94,7 @@ var updateDisableTests = []updateDisableTest{
 		name:      "invalid sig from signer",
 		startTime: time.Now(),
 		signer:    &mockSigner{}, // returns a nil signature
-		expErr:    errors.New("cannot decode empty signature"),
+		expErr:    er.New("cannot decode empty signature"),
 	},
 }
 

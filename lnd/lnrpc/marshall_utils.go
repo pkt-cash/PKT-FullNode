@@ -2,20 +2,19 @@ package lnrpc
 
 import (
 	"encoding/hex"
-	"errors"
-	fmt "fmt"
 
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 var (
 	// ErrSatMsatMutualExclusive is returned when both a sat and an msat
 	// amount are set.
-	ErrSatMsatMutualExclusive = errors.New(
+	ErrSatMsatMutualExclusive = er.New(
 		"sat and msat arguments are mutually exclusive",
 	)
 )
@@ -48,9 +47,9 @@ func CalculateFeeLimit(feeLimit *FeeLimit,
 }
 
 // UnmarshallAmt returns a strong msat type for a sat/msat pair of rpc fields.
-func UnmarshallAmt(amtSat, amtMsat int64) (lnwire.MilliSatoshi, error) {
+func UnmarshallAmt(amtSat, amtMsat int64) (lnwire.MilliSatoshi, er.R) {
 	if amtSat != 0 && amtMsat != 0 {
-		return 0, ErrSatMsatMutualExclusive
+		return 0, ErrSatMsatMutualExclusive.Default()
 	}
 
 	if amtSat != 0 {
@@ -62,17 +61,17 @@ func UnmarshallAmt(amtSat, amtMsat int64) (lnwire.MilliSatoshi, error) {
 
 // ParseConfs validates the minimum and maximum confirmation arguments of a
 // ListUnspent request.
-func ParseConfs(min, max int32) (int32, int32, error) {
+func ParseConfs(min, max int32) (int32, int32, er.R) {
 	switch {
 	// Ensure that the user didn't attempt to specify a negative number of
 	// confirmations, as that isn't possible.
 	case min < 0:
-		return 0, 0, fmt.Errorf("min confirmations must be >= 0")
+		return 0, 0, er.Errorf("min confirmations must be >= 0")
 
 	// We'll also ensure that the min number of confs is strictly less than
 	// or equal to the max number of confs for sanity.
 	case min > max:
-		return 0, 0, fmt.Errorf("max confirmations must be >= min " +
+		return 0, 0, er.Errorf("max confirmations must be >= min " +
 			"confirmations")
 
 	default:
@@ -82,7 +81,7 @@ func ParseConfs(min, max int32) (int32, int32, error) {
 
 // MarshalUtxos translates a []*lnwallet.Utxo into a []*lnrpc.Utxo.
 func MarshalUtxos(utxos []*lnwallet.Utxo, activeNetParams *chaincfg.Params) (
-	[]*Utxo, error) {
+	[]*Utxo, er.R) {
 
 	res := make([]*Utxo, 0, len(utxos))
 	for _, utxo := range utxos {
@@ -101,7 +100,7 @@ func MarshalUtxos(utxos []*lnwallet.Utxo, activeNetParams *chaincfg.Params) (
 			continue
 
 		default:
-			return nil, fmt.Errorf("invalid utxo address type")
+			return nil, er.Errorf("invalid utxo address type")
 		}
 
 		// Now that we know we have a proper mapping to an address,
@@ -134,7 +133,7 @@ func MarshalUtxos(utxos []*lnwallet.Utxo, activeNetParams *chaincfg.Params) (
 		// an error in our mapping, and we'll return an error back to
 		// the user.
 		if len(outAddresses) != 1 {
-			return nil, fmt.Errorf("an output was unexpectedly " +
+			return nil, er.Errorf("an output was unexpectedly " +
 				"multisig")
 		}
 		utxoResp.Address = outAddresses[0].String()

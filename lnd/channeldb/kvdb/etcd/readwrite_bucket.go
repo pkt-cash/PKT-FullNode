@@ -5,6 +5,7 @@ package etcd
 import (
 	"strconv"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -39,7 +40,7 @@ func (b *readWriteBucket) NestedReadBucket(key []byte) walletdb.ReadBucket {
 // the bucket. This includes nested buckets, in which case the value
 // is nil, but it does not include the key/value pairs within those
 // nested buckets.
-func (b *readWriteBucket) ForEach(cb func(k, v []byte) error) error {
+func (b *readWriteBucket) ForEach(cb func(k, v []byte) er.R) er.R {
 	prefix := string(b.id)
 
 	// Get the first matching key that is in the bucket.
@@ -117,14 +118,14 @@ func (b *readWriteBucket) NestedReadWriteBucket(key []byte) walletdb.ReadWriteBu
 }
 
 // assertNoValue checks if the value for the passed key exists.
-func (b *readWriteBucket) assertNoValue(key []byte) error {
+func (b *readWriteBucket) assertNoValue(key []byte) er.R {
 	val, err := b.tx.stm.Get(string(makeValueKey(b.id, key)))
 	if err != nil {
 		return err
 	}
 
 	if val != nil {
-		return walletdb.ErrIncompatibleValue
+		return walletdb.ErrIncompatibleValue.Default()
 	}
 
 	return nil
@@ -137,10 +138,10 @@ func (b *readWriteBucket) assertNoValue(key []byte) error {
 // implementation.  Other errors are possible depending on the
 // implementation.
 func (b *readWriteBucket) CreateBucket(key []byte) (
-	walletdb.ReadWriteBucket, error) {
+	walletdb.ReadWriteBucket, er.R) {
 
 	if len(key) == 0 {
-		return nil, walletdb.ErrBucketNameRequired
+		return nil, walletdb.ErrBucketNameRequired.Default()
 	}
 
 	// Check if the bucket already exists.
@@ -152,7 +153,7 @@ func (b *readWriteBucket) CreateBucket(key []byte) (
 	}
 
 	if isValidBucketID(bucketVal) {
-		return nil, walletdb.ErrBucketExists
+		return nil, walletdb.ErrBucketExists.Default()
 	}
 
 	if err := b.assertNoValue(key); err != nil {
@@ -174,10 +175,10 @@ func (b *readWriteBucket) CreateBucket(key []byte) (
 // if the key value is otherwise invalid for the particular database
 // backend.  Other errors are possible depending on the implementation.
 func (b *readWriteBucket) CreateBucketIfNotExists(key []byte) (
-	walletdb.ReadWriteBucket, error) {
+	walletdb.ReadWriteBucket, er.R) {
 
 	if len(key) == 0 {
-		return nil, walletdb.ErrBucketNameRequired
+		return nil, walletdb.ErrBucketNameRequired.Default()
 	}
 
 	// Check for the bucket and create if it doesn't exist.
@@ -206,10 +207,10 @@ func (b *readWriteBucket) CreateBucketIfNotExists(key []byte) (
 // DeleteNestedBucket deletes the nested bucket and its sub-buckets
 // pointed to by the passed key. All values in the bucket and sub-buckets
 // will be deleted as well.
-func (b *readWriteBucket) DeleteNestedBucket(key []byte) error {
+func (b *readWriteBucket) DeleteNestedBucket(key []byte) er.R {
 	// TODO shouldn't empty key return ErrBucketNameRequired ?
 	if len(key) == 0 {
-		return walletdb.ErrIncompatibleValue
+		return walletdb.ErrIncompatibleValue.Default()
 	}
 
 	// Get the bucket first.
@@ -221,7 +222,7 @@ func (b *readWriteBucket) DeleteNestedBucket(key []byte) error {
 	}
 
 	if !isValidBucketID(bucketVal) {
-		return walletdb.ErrBucketNotFound
+		return walletdb.ErrBucketNotFound.Default()
 	}
 
 	// Enqueue the top level bucket id.
@@ -230,7 +231,7 @@ func (b *readWriteBucket) DeleteNestedBucket(key []byte) error {
 	// Traverse the buckets breadth first.
 	for len(queue) != 0 {
 		if !isValidBucketID(queue[0]) {
-			return walletdb.ErrBucketNotFound
+			return walletdb.ErrBucketNotFound.Default()
 		}
 
 		id := queue[0]
@@ -267,9 +268,9 @@ func (b *readWriteBucket) DeleteNestedBucket(key []byte) error {
 
 // Put updates the value for the passed key.
 // Returns ErrKeyRequred if te passed key is empty.
-func (b *readWriteBucket) Put(key, value []byte) error {
+func (b *readWriteBucket) Put(key, value []byte) er.R {
 	if len(key) == 0 {
-		return walletdb.ErrKeyRequired
+		return walletdb.ErrKeyRequired.Default()
 	}
 
 	val, err := b.tx.stm.Get(string(makeBucketKey(b.id, key)))
@@ -278,7 +279,7 @@ func (b *readWriteBucket) Put(key, value []byte) error {
 	}
 
 	if val != nil {
-		return walletdb.ErrIncompatibleValue
+		return walletdb.ErrIncompatibleValue.Default()
 	}
 
 	// Update the transaction with the new value.
@@ -289,12 +290,12 @@ func (b *readWriteBucket) Put(key, value []byte) error {
 
 // Delete deletes the key/value pointed to by the passed key.
 // Returns ErrKeyRequred if the passed key is empty.
-func (b *readWriteBucket) Delete(key []byte) error {
+func (b *readWriteBucket) Delete(key []byte) er.R {
 	if key == nil {
 		return nil
 	}
 	if len(key) == 0 {
-		return walletdb.ErrKeyRequired
+		return walletdb.ErrKeyRequired.Default()
 	}
 
 	// Update the transaction to delete the key/value.
@@ -316,14 +317,14 @@ func (b *readWriteBucket) Tx() walletdb.ReadWriteTx {
 // NextSequence returns an autoincrementing sequence number for this bucket.
 // Note that this is not a thread safe function and as such it must not be used
 // for synchronization.
-func (b *readWriteBucket) NextSequence() (uint64, error) {
+func (b *readWriteBucket) NextSequence() (uint64, er.R) {
 	seq := b.Sequence() + 1
 
 	return seq, b.SetSequence(seq)
 }
 
 // SetSequence updates the sequence number for the bucket.
-func (b *readWriteBucket) SetSequence(v uint64) error {
+func (b *readWriteBucket) SetSequence(v uint64) er.R {
 	// Convert the number to string.
 	val := strconv.FormatUint(v, 10)
 

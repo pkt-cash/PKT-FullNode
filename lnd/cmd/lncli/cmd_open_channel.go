@@ -189,7 +189,7 @@ var openChannelCommand = cli.Command{
 	Action: actionDecorator(openChannel),
 }
 
-func openChannel(ctx *cli.Context) error {
+func openChannel(ctx *cli.Context) er.R {
 	// TODO(roasbeef): add deadline to context
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
@@ -219,21 +219,21 @@ func openChannel(ctx *cli.Context) error {
 
 	switch {
 	case ctx.IsSet("node_key"):
-		nodePubHex, err := hex.DecodeString(ctx.String("node_key"))
+		nodePubHex, err := util.DecodeHex(ctx.String("node_key"))
 		if err != nil {
-			return fmt.Errorf("unable to decode node public key: %v", err)
+			return er.Errorf("unable to decode node public key: %v", err)
 		}
 		req.NodePubkey = nodePubHex
 
 	case args.Present():
-		nodePubHex, err := hex.DecodeString(args.First())
+		nodePubHex, err := util.DecodeHex(args.First())
 		if err != nil {
-			return fmt.Errorf("unable to decode node public key: %v", err)
+			return er.Errorf("unable to decode node public key: %v", err)
 		}
 		args = args.Tail()
 		req.NodePubkey = nodePubHex
 	default:
-		return fmt.Errorf("node id argument missing")
+		return er.Errorf("node id argument missing")
 	}
 
 	// As soon as we can confirm that the node's node_key was set, rather
@@ -265,11 +265,11 @@ func openChannel(ctx *cli.Context) error {
 	case args.Present():
 		req.LocalFundingAmount, err = strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode local amt: %v", err)
+			return er.Errorf("unable to decode local amt: %v", err)
 		}
 		args = args.Tail()
 	default:
-		return fmt.Errorf("local amt argument missing")
+		return er.Errorf("local amt argument missing")
 	}
 
 	if ctx.IsSet("push_amt") {
@@ -277,7 +277,7 @@ func openChannel(ctx *cli.Context) error {
 	} else if args.Present() {
 		req.PushSat, err = strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode push amt: %v", err)
+			return er.Errorf("unable to decode push amt: %v", err)
 		}
 	}
 
@@ -289,7 +289,7 @@ func openChannel(ctx *cli.Context) error {
 		return openChannelPsbt(ctx, client, req)
 	}
 	if !ctx.Bool("psbt") && ctx.Bool("no_publish") {
-		return fmt.Errorf("the --no_publish flag can only be used in " +
+		return er.Errorf("the --no_publish flag can only be used in " +
 			"combination with the --psbt flag")
 	}
 
@@ -338,7 +338,7 @@ func openChannel(ctx *cli.Context) error {
 //     |  |-------channel open------------->|
 //     |                                    |
 func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
-	req *lnrpc.OpenChannelRequest) error {
+	req *lnrpc.OpenChannelRequest) er.R {
 
 	var (
 		pendingChanID [32]byte
@@ -364,14 +364,14 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 	if basePsbt != "" {
 		basePsbtBytes, err = base64.StdEncoding.DecodeString(basePsbt)
 		if err != nil {
-			return fmt.Errorf("error parsing base PSBT: %v", err)
+			return er.Errorf("error parsing base PSBT: %v", err)
 		}
 	}
 
 	// Generate a new, random pending channel ID that we'll use as the main
 	// identifier when sending update messages to the RPC server.
 	if _, err := rand.Read(pendingChanID[:]); err != nil {
-		return fmt.Errorf("unable to generate random chan ID: %v", err)
+		return er.Errorf("unable to generate random chan ID: %v", err)
 	}
 	fmt.Printf("Starting PSBT funding flow with pending channel ID %x.\n",
 		pendingChanID)
@@ -421,7 +421,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 	// explicitly capture the signal.
 	stream, err := client.OpenChannel(ctxc, req)
 	if err != nil {
-		return fmt.Errorf("opening stream to server failed: %v", err)
+		return er.Errorf("opening stream to server failed: %v", err)
 	}
 
 	if err := signal.Intercept(); err != nil {
@@ -436,11 +436,11 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 			// Recv blocks until a message or error arrives.
 			resp, err := stream.Recv()
 			if err == io.EOF {
-				srvErr <- fmt.Errorf("lnd shutting down: %v",
+				srvErr <- er.Errorf("lnd shutting down: %v",
 					err)
 				return
 			} else if err != nil {
-				srvErr <- fmt.Errorf("got error from server: "+
+				srvErr <- er.Errorf("got error from server: "+
 					"%v", err)
 				return
 			}
@@ -511,14 +511,14 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 				return nil
 			}
 			if err != nil {
-				return fmt.Errorf("reading from console "+
+				return er.Errorf("reading from console "+
 					"failed: %v", err)
 			}
 			fundedPsbt, err := base64.StdEncoding.DecodeString(
 				strings.TrimSpace(psbtBase64),
 			)
 			if err != nil {
-				return fmt.Errorf("base64 decode failed: %v",
+				return er.Errorf("base64 decode failed: %v",
 					err)
 			}
 			verifyMsg := &lnrpc.FundingTransitionMsg{
@@ -531,7 +531,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 			}
 			err = sendFundingState(ctxc, ctx, verifyMsg)
 			if err != nil {
-				return fmt.Errorf("verifying PSBT by lnd "+
+				return er.Errorf("verifying PSBT by lnd "+
 					"failed: %v", err)
 			}
 
@@ -545,7 +545,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 				return nil
 			}
 			if err != nil {
-				return fmt.Errorf("reading from console "+
+				return er.Errorf("reading from console "+
 					"failed: %v", err)
 			}
 			finalizeMsg, err := finalizeMsgFromString(
@@ -559,7 +559,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 			}
 			err = sendFundingState(ctxc, ctx, transitionMsg)
 			if err != nil {
-				return fmt.Errorf("finalizing PSBT funding "+
+				return er.Errorf("finalizing PSBT funding "+
 					"flow failed: %v", err)
 			}
 
@@ -585,7 +585,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 }
 
 // printChanOpen prints the channel point of the channel open message.
-func printChanOpen(update *lnrpc.OpenStatusUpdate_ChanOpen) error {
+func printChanOpen(update *lnrpc.OpenStatusUpdate_ChanOpen) er.R {
 	channelPoint := update.ChanOpen.ChannelPoint
 
 	// A channel point's funding txid can be get/set as a
@@ -621,7 +621,7 @@ func printChanOpen(update *lnrpc.OpenStatusUpdate_ChanOpen) error {
 
 // printChanPending prints the funding transaction ID of the channel pending
 // message.
-func printChanPending(update *lnrpc.OpenStatusUpdate_ChanPending) error {
+func printChanPending(update *lnrpc.OpenStatusUpdate_ChanPending) er.R {
 	txid, err := chainhash.NewHash(update.ChanPending.Txid)
 	if err != nil {
 		return err
@@ -637,7 +637,7 @@ func printChanPending(update *lnrpc.OpenStatusUpdate_ChanPending) error {
 
 // readLine reads a line from standard in but does not block in case of a
 // system interrupt like syscall.SIGINT (Ctrl+C).
-func readLine(quit chan struct{}) (string, error) {
+func readLine(quit chan struct{}) (string, er.R) {
 	msg := make(chan string, 1)
 
 	// In a normal console, reading from stdin won't signal EOF when the
@@ -664,13 +664,13 @@ func readLine(quit chan struct{}) (string, error) {
 
 // checkPsbtFlags make sure a request to open a channel doesn't set any
 // parameters that are incompatible with the PSBT funding flow.
-func checkPsbtFlags(req *lnrpc.OpenChannelRequest) error {
+func checkPsbtFlags(req *lnrpc.OpenChannelRequest) er.R {
 	if req.MinConfs != defaultUtxoMinConf || req.SpendUnconfirmed {
-		return fmt.Errorf("specifying minimum confirmations for PSBT " +
+		return er.Errorf("specifying minimum confirmations for PSBT " +
 			"funding is not supported")
 	}
 	if req.TargetConf != 0 || req.SatPerByte != 0 {
-		return fmt.Errorf("setting fee estimation parameters not " +
+		return er.Errorf("setting fee estimation parameters not " +
 			"supported for PSBT funding")
 	}
 	return nil
@@ -681,7 +681,7 @@ func checkPsbtFlags(req *lnrpc.OpenChannelRequest) error {
 // than the default macaroon timeout, then we cannot use a single client
 // connection.
 func sendFundingState(cancelCtx context.Context, cliCtx *cli.Context,
-	msg *lnrpc.FundingTransitionMsg) error {
+	msg *lnrpc.FundingTransitionMsg) er.R {
 
 	client, cleanUp := getClient(cliCtx)
 	defer cleanUp()
@@ -694,16 +694,16 @@ func sendFundingState(cancelCtx context.Context, cliCtx *cli.Context,
 // from either a hex encoded raw wire transaction or a base64 encoded PSBT
 // packet.
 func finalizeMsgFromString(tx string,
-	pendingChanID []byte) (*lnrpc.FundingTransitionMsg_PsbtFinalize, error) {
+	pendingChanID []byte) (*lnrpc.FundingTransitionMsg_PsbtFinalize, er.R) {
 
-	rawTx, err := hex.DecodeString(strings.TrimSpace(tx))
+	rawTx, err := util.DecodeHex(strings.TrimSpace(tx))
 	if err == nil {
 		// Hex decoding succeeded so we assume we have a raw wire format
 		// transaction. Let's submit that instead of a PSBT packet.
 		tx := &wire.MsgTx{}
 		err := tx.Deserialize(bytes.NewReader(rawTx))
 		if err != nil {
-			return nil, fmt.Errorf("deserializing as raw wire "+
+			return nil, er.Errorf("deserializing as raw wire "+
 				"transaction failed: %v", err)
 		}
 		return &lnrpc.FundingTransitionMsg_PsbtFinalize{
@@ -718,7 +718,7 @@ func finalizeMsgFromString(tx string,
 	// a base64 encoded PSBT packet.
 	psbtBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(tx))
 	if err != nil {
-		return nil, fmt.Errorf("base64 decode failed: %v", err)
+		return nil, er.Errorf("base64 decode failed: %v", err)
 	}
 	return &lnrpc.FundingTransitionMsg_PsbtFinalize{
 		PsbtFinalize: &lnrpc.FundingPsbtFinalize{

@@ -2,7 +2,6 @@ package channeldb
 
 import (
 	"bytes"
-	"errors"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -32,11 +31,11 @@ var (
 var (
 	// ErrNoChainHashBucket is returned when we have not created a bucket
 	// for the current chain hash.
-	ErrNoChainHashBucket = errors.New("no chain hash bucket")
+	ErrNoChainHashBucket = Err.CodeWithDetail("ErrNoChainHashBucket", "no chain hash bucket")
 
 	// ErrNoChannelSummaries is returned when a channel is not found in the
 	// chain hash bucket.
-	ErrNoChannelSummaries = errors.New("channel bucket not found")
+	ErrNoChannelSummaries = Err.CodeWithDetail("ErrNoChannelSummaries", "channel bucket not found")
 
 	amountType    tlv.Type = 1
 	resolverType  tlv.Type = 2
@@ -123,9 +122,9 @@ type ResolverReport struct {
 // PutResolverReport creates and commits a transaction that is used to write a
 // resolver report to disk.
 func (d *DB) PutResolverReport(tx kvdb.RwTx, chainHash chainhash.Hash,
-	channelOutpoint *wire.OutPoint, report *ResolverReport) error {
+	channelOutpoint *wire.OutPoint, report *ResolverReport) er.R {
 
-	putReportFunc := func(tx kvdb.RwTx) error {
+	putReportFunc := func(tx kvdb.RwTx) er.R {
 		return putReport(tx, chainHash, channelOutpoint, report)
 	}
 
@@ -141,7 +140,7 @@ func (d *DB) PutResolverReport(tx kvdb.RwTx, chainHash chainhash.Hash,
 
 // putReport puts a report in the bucket provided, with its outpoint as its key.
 func putReport(tx kvdb.RwTx, chainHash chainhash.Hash,
-	channelOutpoint *wire.OutPoint, report *ResolverReport) error {
+	channelOutpoint *wire.OutPoint, report *ResolverReport) er.R {
 
 	channelBucket, err := fetchReportWriteBucket(
 		tx, chainHash, channelOutpoint,
@@ -174,7 +173,7 @@ func putReport(tx kvdb.RwTx, chainHash chainhash.Hash,
 
 // serializeReport serialized a report using a TLV stream to allow for optional
 // fields.
-func serializeReport(w io.Writer, report *ResolverReport) error {
+func serializeReport(w io.Writer, report *ResolverReport) er.R {
 	amt := uint64(report.Amount)
 	resolver := uint8(report.ResolverType)
 	outcome := uint8(report.ResolverOutcome)
@@ -211,11 +210,11 @@ func serializeReport(w io.Writer, report *ResolverReport) error {
 
 // FetchChannelReports fetches the set of reports for a channel.
 func (d DB) FetchChannelReports(chainHash chainhash.Hash,
-	outPoint *wire.OutPoint) ([]*ResolverReport, error) {
+	outPoint *wire.OutPoint) ([]*ResolverReport, er.R) {
 
 	var reports []*ResolverReport
 
-	if err := kvdb.View(d, func(tx kvdb.RTx) error {
+	if err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchReportReadBucket(
 			tx, chainHash, outPoint,
 		)
@@ -263,7 +262,7 @@ func (d DB) FetchChannelReports(chainHash chainhash.Hash,
 // deserializeReport gets a resolver report from a tlv stream. The outpoint on
 // the resolver will not be set because we key reports by their outpoint, and
 // this function reads only the values saved in the stream.
-func deserializeReport(r io.Reader) (*ResolverReport, error) {
+func deserializeReport(r io.Reader) (*ResolverReport, er.R) {
 	var (
 		resolver, outcome uint8
 		amt               uint64
@@ -306,7 +305,7 @@ func deserializeReport(r io.Reader) (*ResolverReport, error) {
 // top level bucket. If the channel's bucket does not yet exist, it will be
 // created.
 func fetchReportWriteBucket(tx kvdb.RwTx, chainHash chainhash.Hash,
-	outPoint *wire.OutPoint) (kvdb.RwBucket, error) {
+	outPoint *wire.OutPoint) (kvdb.RwBucket, er.R) {
 
 	// Get the channel close summary bucket.
 	closedBucket := tx.ReadWriteBucket(closeSummaryBucket)
@@ -328,7 +327,7 @@ func fetchReportWriteBucket(tx kvdb.RwTx, chainHash chainhash.Hash,
 // fetchReportReadBucket returns a read channel bucket within the reports
 // top level bucket. If any bucket along the way does not exist, it will error.
 func fetchReportReadBucket(tx kvdb.RTx, chainHash chainhash.Hash,
-	outPoint *wire.OutPoint) (kvdb.RBucket, error) {
+	outPoint *wire.OutPoint) (kvdb.RBucket, er.R) {
 
 	// First fetch the top level channel close summary bucket.
 	closeBucket := tx.ReadBucket(closeSummaryBucket)
@@ -336,7 +335,7 @@ func fetchReportReadBucket(tx kvdb.RTx, chainHash chainhash.Hash,
 	// Next we get the chain hash bucket for our current chain.
 	chainHashBucket := closeBucket.NestedReadBucket(chainHash[:])
 	if chainHashBucket == nil {
-		return nil, ErrNoChainHashBucket
+		return nil, ErrNoChainHashBucket.Default()
 	}
 
 	// With the bucket for the node and chain fetched, we can now go down
@@ -348,7 +347,7 @@ func fetchReportReadBucket(tx kvdb.RTx, chainHash chainhash.Hash,
 
 	chanBucket := chainHashBucket.NestedReadBucket(chanPointBuf.Bytes())
 	if chanBucket == nil {
-		return nil, ErrNoChannelSummaries
+		return nil, ErrNoChannelSummaries.Default()
 	}
 
 	return chanBucket, nil

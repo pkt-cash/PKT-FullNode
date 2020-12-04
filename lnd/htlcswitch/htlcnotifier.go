@@ -77,7 +77,7 @@ func NewHtlcNotifier(now func() time.Time) *HtlcNotifier {
 
 // Start starts the HtlcNotifier and all goroutines it needs to consume
 // events and provide subscriptions to clients.
-func (h *HtlcNotifier) Start() error {
+func (h *HtlcNotifier) Start() er.R {
 	var err error
 	h.started.Do(func() {
 		log.Trace("HtlcNotifier starting")
@@ -97,7 +97,7 @@ func (h *HtlcNotifier) Stop() {
 
 // SubscribeHtlcEvents returns a subscribe.Client that will receive updates
 // any time the server is made aware of a new event.
-func (h *HtlcNotifier) SubscribeHtlcEvents() (*subscribe.Client, error) {
+func (h *HtlcNotifier) SubscribeHtlcEvents() (*subscribe.Client, er.R) {
 	return h.ntfnServer.Subscribe()
 }
 

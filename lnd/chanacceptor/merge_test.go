@@ -3,6 +3,7 @@ package chanacceptor
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +30,7 @@ func TestMergeResponse(t *testing.T) {
 		current ChannelAcceptResponse
 		new     ChannelAcceptResponse
 		merged  ChannelAcceptResponse
-		err     error
+		err     er.R
 	}{
 		{
 			name:    "same response",
@@ -174,7 +175,7 @@ func TestMergeResponse(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			resp, err := mergeResponse(test.current, test.new)
-			require.Equal(t, test.err, err)
+			require.True(t, er.FuzzyEquals(test.err, err))
 
 			// If we expect an error, exit early rather than compare
 			// our result.

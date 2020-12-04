@@ -2,12 +2,12 @@ package contractcourt
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -48,7 +48,7 @@ func (m *mockWitnessBeacon) LookupPreimage(payhash lntypes.Hash) (lntypes.Preima
 	return preimage, true
 }
 
-func (m *mockWitnessBeacon) AddPreimages(preimages ...lntypes.Preimage) error {
+func (m *mockWitnessBeacon) AddPreimages(preimages ...lntypes.Preimage) er.R {
 	m.newPreimages <- preimages
 	return nil
 }
@@ -106,7 +106,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 		// transaction that should spend the HTLC output. Test authors
 		// can use this to customize the witness used when spending to
 		// trigger various redemption cases.
-		txToBroadcast func() (*wire.MsgTx, error)
+		txToBroadcast func() (*wire.MsgTx, er.R)
 
 		// outcome is the resolver outcome that we expect to be reported
 		// once the contract is fully resolved.
@@ -118,7 +118,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			name:         "timeout remote tx",
 			remoteCommit: true,
 			timeout:      true,
-			txToBroadcast: func() (*wire.MsgTx, error) {
+			txToBroadcast: func() (*wire.MsgTx, er.R) {
 				witness, err := input.ReceiverHtlcSpendTimeout(
 					signer, fakeSignDesc, sweepTx,
 					fakeTimeout,
@@ -139,7 +139,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			name:         "timeout local tx",
 			remoteCommit: false,
 			timeout:      true,
-			txToBroadcast: func() (*wire.MsgTx, error) {
+			txToBroadcast: func() (*wire.MsgTx, er.R) {
 				witness, err := input.SenderHtlcSpendTimeout(
 					&mock.DummySignature{}, params.SigHashAll,
 					signer, fakeSignDesc, sweepTx,
@@ -164,7 +164,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			name:         "success remote tx",
 			remoteCommit: true,
 			timeout:      false,
-			txToBroadcast: func() (*wire.MsgTx, error) {
+			txToBroadcast: func() (*wire.MsgTx, er.R) {
 				witness, err := input.ReceiverHtlcSpendRedeem(
 					&mock.DummySignature{}, params.SigHashAll,
 					fakePreimageBytes, signer, fakeSignDesc,
@@ -187,7 +187,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 			name:         "success local tx",
 			remoteCommit: false,
 			timeout:      false,
-			txToBroadcast: func() (*wire.MsgTx, error) {
+			txToBroadcast: func() (*wire.MsgTx, er.R) {
 				witness, err := input.SenderHtlcSpendRedeem(
 					signer, fakeSignDesc, sweepTx,
 					fakePreimageBytes,
@@ -225,14 +225,14 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 				IncubateOutputs: func(wire.OutPoint,
 					*lnwallet.OutgoingHtlcResolution,
 					*lnwallet.IncomingHtlcResolution,
-					uint32) error {
+					uint32) er.R {
 
 					incubateChan <- struct{}{}
 					return nil
 				},
-				DeliverResolutionMsg: func(msgs ...ResolutionMsg) error {
+				DeliverResolutionMsg: func(msgs ...ResolutionMsg) er.R {
 					if len(msgs) != 1 {
-						return fmt.Errorf("expected 1 "+
+						return er.Errorf("expected 1 "+
 							"resolution msg, instead got %v",
 							len(msgs))
 					}
@@ -242,7 +242,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 				},
 			},
 			PutResolverReport: func(_ kvdb.RwTx,
-				_ *channeldb.ResolverReport) error {
+				_ *channeldb.ResolverReport) er.R {
 
 				return nil
 			},
@@ -251,7 +251,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 		cfg := ResolverConfig{
 			ChannelArbitratorConfig: chainCfg,
 			Checkpoint: func(_ ContractResolver,
-				reports ...*channeldb.ResolverReport) error {
+				reports ...*channeldb.ResolverReport) er.R {
 
 				checkPointChan <- struct{}{}
 

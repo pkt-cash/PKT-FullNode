@@ -4,6 +4,7 @@ import (
 	"runtime"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // TopCentrality is a simple greedy technique to create connections to nodes
@@ -52,7 +53,7 @@ func (g *TopCentrality) Name() string {
 // slow for large graphs.
 func (g *TopCentrality) NodeScores(graph ChannelGraph, chans []LocalChannel,
 	chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	// Calculate betweenness centrality for the whole graph.
 	if err := g.centralityMetric.Refresh(graph); err != nil {

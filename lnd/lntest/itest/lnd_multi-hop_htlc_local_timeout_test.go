@@ -4,15 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,7 +67,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	_, err = alice.RouterClient.SendPaymentV2(
 		ctx, &routerrpc.SendPaymentRequest{
@@ -78,15 +79,15 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Verify that all nodes in the path now have two HTLC's with the
 	// proper parameters.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, dustPayHash, payHash)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Increase the fee estimate so that the following force close tx will
 	// be cpfp'ed.
@@ -100,7 +101,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 		uint32(finalCltvDelta - lncfg.DefaultOutgoingBroadcastDelta),
 	)
 	_, err = net.Miner.Node.Generate(numBlocks)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Bob's force close transaction should now be found in the mempool. If
 	// there are anchors, we also expect Bob's anchor sweep.
@@ -110,11 +111,11 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	}
 
 	bobFundingTxid, err := lnd.GetChanPointFundingTxid(bobChanPoint)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	_, err = waitForNTxsInMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	closeTx := getSpendingTxInMempool(
 		t, net.Miner.Node, minerMempoolTimeout, wire.OutPoint{
 			Hash:  *bobFundingTxid,
@@ -130,10 +131,10 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	// that we sent earlier. This means Alice should now only have a single
 	// HTLC on her channel.
 	nodes = []*lntest.HarnessNode{alice}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// With the closing transaction confirmed, we should expect Bob's HTLC
 	// timeout transaction to be broadcast due to the expiry being reached.
@@ -141,7 +142,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	txes, err := getNTxsFromMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Lookup the timeout transaction that is expected to spend from the
 	// closing tx. We distinguish it from a possibly anchor sweep by value.
@@ -168,7 +169,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 
 	// Check that the sweep spends from the mined commitment.
 	txes, err = getNTxsFromMempool(net.Miner.Node, 1, minerMempoolTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	assertAllTxesSpendFrom(t, txes, closeTxid)
 
 	// Bob's pending channel report should show that he has a commitment
@@ -177,7 +178,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 	pendingChanResp, err := bob.PendingChannels(ctxt, pendingChansRequest)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	require.NotZero(t.t, len(pendingChanResp.PendingForceClosingChannels))
 	forceCloseChan := pendingChanResp.PendingForceClosingChannels[0]
@@ -204,29 +205,29 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	// Therefore, at this point, there should be no active HTLC's on the
 	// commitment transaction from Alice -> Bob.
 	nodes = []*lntest.HarnessNode{alice}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertNumActiveHtlcs(nodes, 0)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// At this point, Bob should show that the pending HTLC has advanced to
 	// the second stage and is to be swept.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	pendingChanResp, err = bob.PendingChannels(ctxt, pendingChansRequest)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	forceCloseChan = pendingChanResp.PendingForceClosingChannels[0]
 	require.Equal(t.t, uint32(2), forceCloseChan.PendingHtlcs[0].Stage)
 
 	// Next, we'll mine a final block that should confirm the second-layer
 	// sweeping transaction.
 	_, err = net.Miner.Node.Generate(1)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Once this transaction has been confirmed, Bob should detect that he
 	// no longer has any pending channels.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(ctxt, bob, 0, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Coop close channel, expect no anchors.
 	ctxt, _ = context.WithTimeout(ctxb, channelCloseTimeout)

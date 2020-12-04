@@ -7,8 +7,6 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -18,9 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -348,7 +347,7 @@ type failingRetributionStore struct {
 
 	rs RetributionStore
 
-	nextAddErr error
+	nextAddErr er.R
 
 	restart func() RetributionStore
 }
@@ -368,9 +367,9 @@ func newFailingRetributionStore(
 
 // FailNextAdd instructs the retribution store to return the provided error. If
 // the error is nil, a generic default will be used.
-func (frs *failingRetributionStore) FailNextAdd(err error) {
+func (frs *failingRetributionStore) FailNextAdd(err er.R) {
 	if err == nil {
-		err = errors.New("retribution store failed")
+		err = er.New("retribution store failed")
 	}
 
 	frs.mu.Lock()
@@ -386,7 +385,7 @@ func (frs *failingRetributionStore) Restart() {
 
 // Add forwards the call to the underlying retribution store, unless this Add
 // has been previously instructed to fail.
-func (frs *failingRetributionStore) Add(retInfo *retributionInfo) error {
+func (frs *failingRetributionStore) Add(retInfo *retributionInfo) er.R {
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
 
@@ -399,7 +398,7 @@ func (frs *failingRetributionStore) Add(retInfo *retributionInfo) error {
 	return frs.rs.Add(retInfo)
 }
 
-func (frs *failingRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, error) {
+func (frs *failingRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, er.R) {
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
 
@@ -407,7 +406,7 @@ func (frs *failingRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, 
 }
 
 func (frs *failingRetributionStore) Finalize(chanPoint *wire.OutPoint,
-	finalTx *wire.MsgTx) error {
+	finalTx *wire.MsgTx) er.R {
 
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
@@ -416,7 +415,7 @@ func (frs *failingRetributionStore) Finalize(chanPoint *wire.OutPoint,
 }
 
 func (frs *failingRetributionStore) GetFinalizedTxn(
-	chanPoint *wire.OutPoint) (*wire.MsgTx, error) {
+	chanPoint *wire.OutPoint) (*wire.MsgTx, er.R) {
 
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
@@ -424,15 +423,15 @@ func (frs *failingRetributionStore) GetFinalizedTxn(
 	return frs.rs.GetFinalizedTxn(chanPoint)
 }
 
-func (frs *failingRetributionStore) Remove(key *wire.OutPoint) error {
+func (frs *failingRetributionStore) Remove(key *wire.OutPoint) er.R {
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
 
 	return frs.rs.Remove(key)
 }
 
-func (frs *failingRetributionStore) ForAll(cb func(*retributionInfo) error,
-	reset func()) error {
+func (frs *failingRetributionStore) ForAll(cb func(*retributionInfo) er.R,
+	reset func()) er.R {
 
 	frs.mu.Lock()
 	defer frs.mu.Unlock()
@@ -441,14 +440,14 @@ func (frs *failingRetributionStore) ForAll(cb func(*retributionInfo) error,
 }
 
 // Parse the pubkeys in the breached outputs.
-func initBreachedOutputs() error {
+func initBreachedOutputs() er.R {
 	for i := range breachedOutputs {
 		bo := &breachedOutputs[i]
 
 		// Parse the sign descriptor's pubkey.
 		pubkey, err := btcec.ParsePubKey(breachKeys[i], btcec.S256())
 		if err != nil {
-			return fmt.Errorf("unable to parse pubkey: %v",
+			return er.Errorf("unable to parse pubkey: %v",
 				breachKeys[i])
 		}
 		bo.signDesc.KeyDesc.PubKey = pubkey
@@ -549,7 +548,7 @@ func newMockRetributionStore() *mockRetributionStore {
 	}
 }
 
-func (rs *mockRetributionStore) Add(retInfo *retributionInfo) error {
+func (rs *mockRetributionStore) Add(retInfo *retributionInfo) er.R {
 	rs.mu.Lock()
 	rs.state[retInfo.chanPoint] = copyRetInfo(retInfo)
 	rs.mu.Unlock()
@@ -557,7 +556,7 @@ func (rs *mockRetributionStore) Add(retInfo *retributionInfo) error {
 	return nil
 }
 
-func (rs *mockRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, error) {
+func (rs *mockRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, er.R) {
 	rs.mu.Lock()
 	_, ok := rs.state[*chanPoint]
 	rs.mu.Unlock()
@@ -566,7 +565,7 @@ func (rs *mockRetributionStore) IsBreached(chanPoint *wire.OutPoint) (bool, erro
 }
 
 func (rs *mockRetributionStore) Finalize(chanPoint *wire.OutPoint,
-	finalTx *wire.MsgTx) error {
+	finalTx *wire.MsgTx) er.R {
 
 	rs.mu.Lock()
 	rs.finalTxs[*chanPoint] = finalTx
@@ -576,7 +575,7 @@ func (rs *mockRetributionStore) Finalize(chanPoint *wire.OutPoint,
 }
 
 func (rs *mockRetributionStore) GetFinalizedTxn(
-	chanPoint *wire.OutPoint) (*wire.MsgTx, error) {
+	chanPoint *wire.OutPoint) (*wire.MsgTx, er.R) {
 
 	rs.mu.Lock()
 	finalTx := rs.finalTxs[*chanPoint]
@@ -585,7 +584,7 @@ func (rs *mockRetributionStore) GetFinalizedTxn(
 	return finalTx, nil
 }
 
-func (rs *mockRetributionStore) Remove(key *wire.OutPoint) error {
+func (rs *mockRetributionStore) Remove(key *wire.OutPoint) er.R {
 	rs.mu.Lock()
 	delete(rs.state, *key)
 	delete(rs.finalTxs, *key)
@@ -594,8 +593,8 @@ func (rs *mockRetributionStore) Remove(key *wire.OutPoint) error {
 	return nil
 }
 
-func (rs *mockRetributionStore) ForAll(cb func(*retributionInfo) error,
-	reset func()) error {
+func (rs *mockRetributionStore) ForAll(cb func(*retributionInfo) er.R,
+	reset func()) er.R {
 
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
@@ -653,12 +652,12 @@ func TestMockRetributionStore(t *testing.T) {
 	}
 }
 
-func makeTestChannelDB() (*channeldb.DB, func(), error) {
+func makeTestChannelDB() (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	cleanUp := func() {
@@ -719,7 +718,7 @@ func TestChannelDBRetributionStore(t *testing.T) {
 // elements emitted from the store.
 func countRetributions(t *testing.T, rs RetributionStore) int {
 	count := 0
-	err := rs.ForAll(func(_ *retributionInfo) error {
+	err := rs.ForAll(func(_ *retributionInfo) er.R {
 		count++
 		return nil
 	}, func() {
@@ -931,14 +930,14 @@ restartCheck:
 	// Iterate through the stored retributions, checking to see if we have
 	// an equivalent retribution in the test vector. This will return an
 	// error unless all persisted retributions exist in the test vector.
-	if err := frs.ForAll(func(ret *retributionInfo) error {
+	if err := frs.ForAll(func(ret *retributionInfo) er.R {
 		// Fetch the retribution information from the test vector. If
 		// the entry does not exist, the test returns an error.
 		if exRetInfo, ok := retributionMap[ret.chanPoint]; ok {
 			// Compare the presented retribution information with
 			// the expected value, fail if they are inconsistent.
 			if !reflect.DeepEqual(ret, &exRetInfo) {
-				return fmt.Errorf("unexpected retribution "+
+				return er.Errorf("unexpected retribution "+
 					"retrieved from db --\n"+
 					"want: %#v\ngot: %#v", exRetInfo, ret,
 				)
@@ -950,7 +949,7 @@ restartCheck:
 			foundSet[ret.chanPoint] = struct{}{}
 
 		} else {
-			return fmt.Errorf("unknown retribution retrieved "+
+			return er.Errorf("unknown retribution retrieved "+
 				"from db: %v", ret)
 		}
 
@@ -1060,7 +1059,7 @@ func TestBreachHandoffSuccess(t *testing.T) {
 	// observer to exit.
 	breach := &ContractBreachEvent{
 		ChanPoint:  *chanPoint,
-		ProcessACK: make(chan error, 1),
+		ProcessACK: make(chan er.R, 1),
 		BreachRetribution: &lnwallet.BreachRetribution{
 			BreachTransaction: bobClose.CloseTx,
 			LocalOutputSignDesc: &input.SignDescriptor{
@@ -1092,7 +1091,7 @@ func TestBreachHandoffSuccess(t *testing.T) {
 	// this event.
 	breach = &ContractBreachEvent{
 		ChanPoint:  *chanPoint,
-		ProcessACK: make(chan error, 1),
+		ProcessACK: make(chan er.R, 1),
 		BreachRetribution: &lnwallet.BreachRetribution{
 			BreachTransaction: bobClose.CloseTx,
 			LocalOutputSignDesc: &input.SignDescriptor{
@@ -1141,7 +1140,7 @@ func TestBreachHandoffFail(t *testing.T) {
 	chanPoint := alice.ChanPoint
 	breach := &ContractBreachEvent{
 		ChanPoint:  *chanPoint,
-		ProcessACK: make(chan error, 1),
+		ProcessACK: make(chan er.R, 1),
 		BreachRetribution: &lnwallet.BreachRetribution{
 			BreachTransaction: bobClose.CloseTx,
 			LocalOutputSignDesc: &input.SignDescriptor{
@@ -1181,7 +1180,7 @@ func TestBreachHandoffFail(t *testing.T) {
 	// observer to exit. This time we are allowing the handoff to succeed.
 	breach = &ContractBreachEvent{
 		ChanPoint:  *chanPoint,
-		ProcessACK: make(chan error, 1),
+		ProcessACK: make(chan er.R, 1),
 		BreachRetribution: &lnwallet.BreachRetribution{
 			BreachTransaction: bobClose.CloseTx,
 			LocalOutputSignDesc: &input.SignDescriptor{
@@ -1381,7 +1380,7 @@ func testBreachSpends(t *testing.T, test breachTest) {
 
 	// Make PublishTransaction always return ErrDoubleSpend to begin with.
 	publErr = lnwallet.ErrDoubleSpend
-	brar.cfg.PublishTransaction = func(tx *wire.MsgTx, _ string) error {
+	brar.cfg.PublishTransaction = func(tx *wire.MsgTx, _ string) er.R {
 		publMtx.Lock()
 		err := publErr
 		publMtx.Unlock()
@@ -1400,7 +1399,7 @@ func testBreachSpends(t *testing.T, test breachTest) {
 
 	breach := &ContractBreachEvent{
 		ChanPoint:         *chanPoint,
-		ProcessACK:        make(chan error, 1),
+		ProcessACK:        make(chan er.R, 1),
 		BreachRetribution: retribution,
 	}
 	contractBreaches <- breach
@@ -1591,14 +1590,14 @@ func assertBrarCleanup(t *testing.T, brar *breachArbiter,
 
 	t.Helper()
 
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		isBreached, err := brar.IsBreached(chanPoint)
 		if err != nil {
 			return err
 		}
 
 		if isBreached {
-			return fmt.Errorf("channel %v still breached",
+			return er.Errorf("channel %v still breached",
 				chanPoint)
 		}
 
@@ -1619,11 +1618,11 @@ func assertBrarCleanup(t *testing.T, brar *breachArbiter,
 			}
 
 			// Still pending.
-			return fmt.Errorf("channel %v still pending "+
+			return er.Errorf("channel %v still pending "+
 				"close", chanPoint)
 		}
 
-		return fmt.Errorf("channel %v not closed", chanPoint)
+		return er.Errorf("channel %v not closed", chanPoint)
 
 	}, time.Second)
 	if err != nil {
@@ -1671,7 +1670,7 @@ func assertNotPendingClosed(t *testing.T, c *lnwallet.LightningChannel) {
 // createTestArbiter instantiates a breach arbiter with a failing retribution
 // store, so that controlled failures can be tested.
 func createTestArbiter(t *testing.T, contractBreaches chan *ContractBreachEvent,
-	db *channeldb.DB) (*breachArbiter, func(), error) {
+	db *channeldb.DB) (*breachArbiter, func(), er.R) {
 
 	// Create a failing retribution store, that wraps a normal one.
 	store := newFailingRetributionStore(func() RetributionStore {
@@ -1688,11 +1687,11 @@ func createTestArbiter(t *testing.T, contractBreaches chan *ContractBreachEvent,
 		CloseLink:          func(_ *wire.OutPoint, _ htlcswitch.ChannelCloseType) {},
 		DB:                 db,
 		Estimator:          chainfee.NewStaticEstimator(12500, 0),
-		GenSweepScript:     func() ([]byte, error) { return nil, nil },
+		GenSweepScript:     func() ([]byte, er.R) { return nil, nil },
 		ContractBreaches:   contractBreaches,
 		Signer:             signer,
 		Notifier:           notifier,
-		PublishTransaction: func(_ *wire.MsgTx, _ string) error { return nil },
+		PublishTransaction: func(_ *wire.MsgTx, _ string) er.R { return nil },
 		Store:              store,
 	})
 
@@ -1711,7 +1710,7 @@ func createTestArbiter(t *testing.T, contractBreaches chan *ContractBreachEvent,
 // createInitChannels creates two initialized test channels funded with 10 BTC,
 // with 5 BTC allocated to each side. Within the channel, Alice is the
 // initiator.
-func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwallet.LightningChannel, func(), error) {
+func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwallet.LightningChannel, func(), er.R) {
 
 	aliceKeyPriv, aliceKeyPub := btcec.PrivKeyFromBytes(btcec.S256(),
 		alicesPrivKey)
@@ -1863,7 +1862,7 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 	}
 
 	var chanIDBytes [8]byte
-	if _, err := io.ReadFull(crand.Reader, chanIDBytes[:]); err != nil {
+	if _, err := util.ReadFull(crand.Reader, chanIDBytes[:]); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -1966,7 +1965,7 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 // commitment state machines.
 //
 // TODO(conner) remove code duplication
-func initRevocationWindows(chanA, chanB *lnwallet.LightningChannel, windowSize int) error {
+func initRevocationWindows(chanA, chanB *lnwallet.LightningChannel, windowSize int) er.R {
 	aliceNextRevoke, err := chanA.NextRevocationKey()
 	if err != nil {
 		return err
@@ -2008,7 +2007,7 @@ func createHTLC(data int, amount lnwire.MilliSatoshi) (*lnwire.UpdateAddHTLC, [3
 // commitment state machines to transition to a new state locking in any
 // pending updates.
 // TODO(conner) remove code duplication
-func forceStateTransition(chanA, chanB *lnwallet.LightningChannel) error {
+func forceStateTransition(chanA, chanB *lnwallet.LightningChannel) er.R {
 	aliceSig, aliceHtlcSigs, _, err := chanA.SignNextCommitment()
 	if err != nil {
 		return err

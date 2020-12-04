@@ -284,7 +284,7 @@ func TestFetchChannel(t *testing.T) {
 	}
 }
 
-func genRandomChannelShell() (*ChannelShell, error) {
+func genRandomChannelShell() (*ChannelShell, er.R) {
 	var testPriv [32]byte
 	if _, err := rand.Read(testPriv[:]); err != nil {
 		return nil, err

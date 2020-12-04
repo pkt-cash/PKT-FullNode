@@ -65,7 +65,7 @@ func (f *FullIntent) BindKeys(localKey *keychain.KeyDescriptor,
 // returns, the Intent is assumed to be complete, as the output can be created
 // at any point.
 func (f *FullIntent) CompileFundingTx(extraInputs []*wire.TxIn,
-	extraOutputs []*wire.TxOut) (*wire.MsgTx, error) {
+	extraOutputs []*wire.TxOut) (*wire.MsgTx, er.R) {
 
 	// Create a blank, fresh transaction. Soon to be a complete funding
 	// transaction which will allow opening a lightning channel.
@@ -217,13 +217,13 @@ func NewWalletAssembler(cfg WalletConfig) *WalletAssembler {
 // MUST be called.
 //
 // NOTE: This is a part of the chanfunding.Assembler interface.
-func (w *WalletAssembler) ProvisionChannel(r *Request) (Intent, error) {
+func (w *WalletAssembler) ProvisionChannel(r *Request) (Intent, er.R) {
 	var intent Intent
 
 	// We hold the coin select mutex while querying for outputs, and
 	// performing coin selection in order to avoid inadvertent double
 	// spends across funding transactions.
-	err := w.cfg.CoinSelectLocker.WithCoinSelectLock(func() error {
+	err := w.cfg.CoinSelectLocker.WithCoinSelectLock(func() er.R {
 		log.Infof("Performing funding tx coin selection using %v "+
 			"sat/kw as fee rate", int64(r.FeeRate))
 

@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/lnd"
@@ -142,7 +142,7 @@ func openChannelStream(ctx context.Context, t *harnessTest,
 	// prevents us from erroring out when trying to create a channel while
 	// the node is starting up.
 	var chanOpenUpdate lnrpc.Lightning_OpenChannelClient
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		var err error
 		chanOpenUpdate, err = net.OpenChannel(ctx, alice, bob, p)
 		return err
@@ -383,7 +383,7 @@ func assertChannelClosed(ctx context.Context, t *harnessTest,
 // waitForChannelPendingForceClose waits for the node to report that the
 // channel is pending force close, and that the UTXO nursery is aware of it.
 func waitForChannelPendingForceClose(ctx context.Context,
-	node *lntest.HarnessNode, fundingChanPoint *lnrpc.ChannelPoint) error {
+	node *lntest.HarnessNode, fundingChanPoint *lnrpc.ChannelPoint) er.R {
 
 	txid, err := lnd.GetChanPointFundingTxid(fundingChanPoint)
 	if err != nil {
@@ -395,13 +395,13 @@ func waitForChannelPendingForceClose(ctx context.Context,
 		Index: fundingChanPoint.OutputIndex,
 	}
 
-	return wait.NoError(func() error {
+	return wait.NoError(func() er.R {
 		pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 		pendingChanResp, err := node.PendingChannels(
 			ctx, pendingChansRequest,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to get pending channels: %v",
+			return er.Errorf("unable to get pending channels: %v",
 				err)
 		}
 
@@ -413,7 +413,7 @@ func waitForChannelPendingForceClose(ctx context.Context,
 		// We must wait until the UTXO nursery has received the channel
 		// and is aware of its maturity height.
 		if forceClose.MaturityHeight == 0 {
-			return fmt.Errorf("channel had maturity height of 0")
+			return er.Errorf("channel had maturity height of 0")
 		}
 
 		return nil
@@ -428,20 +428,20 @@ type lnrpcForceCloseChannel = lnrpc.PendingChannelsResponse_ForceClosedChannel
 // number of channels in state pending force close.
 func waitForNumChannelPendingForceClose(ctx context.Context,
 	node *lntest.HarnessNode, expectedNum int,
-	perChanCheck func(channel *lnrpcForceCloseChannel) error) error {
+	perChanCheck func(channel *lnrpcForceCloseChannel) error) er.R {
 
-	return wait.NoError(func() error {
+	return wait.NoError(func() er.R {
 		resp, err := node.PendingChannels(
 			ctx, &lnrpc.PendingChannelsRequest{},
 		)
 		if err != nil {
-			return fmt.Errorf("unable to get pending channels: %v",
+			return er.Errorf("unable to get pending channels: %v",
 				err)
 		}
 
 		forceCloseChans := resp.PendingForceClosingChannels
 		if len(forceCloseChans) != expectedNum {
-			return fmt.Errorf("bob should have %d pending "+
+			return er.Errorf("bob should have %d pending "+
 				"force close channels but has %d", expectedNum,
 				len(forceCloseChans))
 		}
@@ -490,7 +490,7 @@ func cleanupForceClose(t *harnessTest, net *lntest.NetworkHarness,
 // numOpenChannelsPending sends an RPC request to a node to get a count of the
 // node's channels that are currently in a pending state (with a broadcast, but
 // not confirmed funding transaction).
-func numOpenChannelsPending(ctxt context.Context, node *lntest.HarnessNode) (int, error) {
+func numOpenChannelsPending(ctxt context.Context, node *lntest.HarnessNode) (int, er.R) {
 	pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 	resp, err := node.PendingChannels(ctxt, pendingChansRequest)
 	if err != nil {
@@ -504,28 +504,28 @@ func numOpenChannelsPending(ctxt context.Context, node *lntest.HarnessNode) (int
 func assertNumOpenChannelsPending(ctxt context.Context, t *harnessTest,
 	alice, bob *lntest.HarnessNode, expected int) {
 
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		aliceNumChans, err := numOpenChannelsPending(ctxt, alice)
 		if err != nil {
-			return fmt.Errorf("error fetching alice's node (%v) "+
+			return er.Errorf("error fetching alice's node (%v) "+
 				"pending channels %v", alice.NodeID, err)
 		}
 		bobNumChans, err := numOpenChannelsPending(ctxt, bob)
 		if err != nil {
-			return fmt.Errorf("error fetching bob's node (%v) "+
+			return er.Errorf("error fetching bob's node (%v) "+
 				"pending channels %v", bob.NodeID, err)
 		}
 
 		aliceStateCorrect := aliceNumChans == expected
 		if !aliceStateCorrect {
-			return fmt.Errorf("number of pending channels for "+
+			return er.Errorf("number of pending channels for "+
 				"alice incorrect. expected %v, got %v",
 				expected, aliceNumChans)
 		}
 
 		bobStateCorrect := bobNumChans == expected
 		if !bobStateCorrect {
-			return fmt.Errorf("number of pending channels for bob "+
+			return er.Errorf("number of pending channels for bob "+
 				"incorrect. expected %v, got %v", expected,
 				bobNumChans)
 		}
@@ -603,7 +603,7 @@ func shutdownAndAssert(net *lntest.NetworkHarness, t *harnessTest,
 // does not return until all payments successfully complete without errors.
 func completePaymentRequests(ctx context.Context, client lnrpc.LightningClient,
 	routerClient routerrpc.RouterClient, paymentRequests []string,
-	awaitResponse bool) error {
+	awaitResponse bool) er.R {
 
 	// We start by getting the current state of the client's channels. This
 	// is needed to ensure the payments actually have been committed before
@@ -616,7 +616,7 @@ func completePaymentRequests(ctx context.Context, client lnrpc.LightningClient,
 	}
 
 	// send sends a payment and returns an error if it doesn't succeeded.
-	send := func(payReq string) error {
+	send := func(payReq string) er.R {
 		ctxc, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -637,14 +637,14 @@ func completePaymentRequests(ctx context.Context, client lnrpc.LightningClient,
 			return err
 		}
 		if resp.Status != lnrpc.Payment_SUCCEEDED {
-			return errors.New(resp.FailureReason)
+			return er.New(resp.FailureReason)
 		}
 
 		return nil
 	}
 
 	// Launch all payments simultaneously.
-	results := make(chan error)
+	results := make(chan er.R)
 	for _, payReq := range paymentRequests {
 		payReqCopy := payReq
 		go func() {
@@ -724,7 +724,7 @@ func makeFakePayHash(t *harnessTest) []byte {
 // createPayReqs is a helper method that will create a slice of payment
 // requests for the given node.
 func createPayReqs(node *lntest.HarnessNode, paymentAmt btcutil.Amount,
-	numInvoices int) ([]string, [][]byte, []*lnrpc.Invoice, error) {
+	numInvoices int) ([]string, [][]byte, []*lnrpc.Invoice, er.R) {
 
 	payReqs := make([]string, numInvoices)
 	rHashes := make([][]byte, numInvoices)
@@ -733,7 +733,7 @@ func createPayReqs(node *lntest.HarnessNode, paymentAmt btcutil.Amount,
 		preimage := make([]byte, 32)
 		_, err := rand.Read(preimage)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("unable to generate "+
+			return nil, nil, nil, er.Errorf("unable to generate "+
 				"preimage: %v", err)
 		}
 		invoice := &lnrpc.Invoice{
@@ -746,7 +746,7 @@ func createPayReqs(node *lntest.HarnessNode, paymentAmt btcutil.Amount,
 		)
 		resp, err := node.AddInvoice(ctxt, invoice)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("unable to add "+
+			return nil, nil, nil, er.Errorf("unable to add "+
 				"invoice: %v", err)
 		}
 
@@ -760,7 +760,7 @@ func createPayReqs(node *lntest.HarnessNode, paymentAmt btcutil.Amount,
 // getChanInfo is a helper method for getting channel info for a node's sole
 // channel.
 func getChanInfo(ctx context.Context, node *lntest.HarnessNode) (
-	*lnrpc.Channel, error) {
+	*lnrpc.Channel, er.R) {
 
 	req := &lnrpc.ListChannelsRequest{}
 	channelInfo, err := node.ListChannels(ctx, req)
@@ -768,7 +768,7 @@ func getChanInfo(ctx context.Context, node *lntest.HarnessNode) (
 		return nil, err
 	}
 	if len(channelInfo.Channels) != 1 {
-		return nil, fmt.Errorf("node should only have a single "+
+		return nil, er.Errorf("node should only have a single "+
 			"channel, instead it has %v", len(channelInfo.Channels))
 	}
 
@@ -1174,7 +1174,7 @@ func (c commitType) calcStaticFee(numHTLCs int) btcutil.Amount {
 // channelCommitType retrieves the active channel commitment type for the given
 // chan point.
 func channelCommitType(node *lntest.HarnessNode,
-	chanPoint *lnrpc.ChannelPoint) (commitType, error) {
+	chanPoint *lnrpc.ChannelPoint) (commitType, er.R) {
 
 	ctxb := context.Background()
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
@@ -1182,7 +1182,7 @@ func channelCommitType(node *lntest.HarnessNode,
 	req := &lnrpc.ListChannelsRequest{}
 	channels, err := node.ListChannels(ctxt, req)
 	if err != nil {
-		return 0, fmt.Errorf("listchannels failed: %v", err)
+		return 0, er.Errorf("listchannels failed: %v", err)
 	}
 
 	for _, c := range channels.Channels {
@@ -1205,7 +1205,7 @@ func channelCommitType(node *lntest.HarnessNode,
 		}
 	}
 
-	return 0, fmt.Errorf("channel point %v not found", chanPoint)
+	return 0, er.Errorf("channel point %v not found", chanPoint)
 }
 
 // assertChannelBalanceResp makes a ChannelBalance request and checks the
@@ -1229,7 +1229,7 @@ func getChannelBalance(t *harnessTest,
 	req := &lnrpc.ChannelBalanceRequest{}
 	resp, err := node.ChannelBalance(ctxt, req)
 
-	require.NoError(t.t, err, "unable to get node's balance")
+	util.RequireNoErr(t.t, err, "unable to get node's balance")
 	return resp
 }
 
@@ -1239,7 +1239,7 @@ func getChannelBalance(t *harnessTest,
 // channel closure.
 func basicChannelFundingTest(t *harnessTest, net *lntest.NetworkHarness,
 	alice *lntest.HarnessNode, bob *lntest.HarnessNode,
-	fundingShim *lnrpc.FundingShim) (*lnrpc.Channel, *lnrpc.Channel, func(), error) {
+	fundingShim *lnrpc.FundingShim) (*lnrpc.Channel, *lnrpc.Channel, func(), er.R) {
 
 	chanAmt := lnd.MaxBtcFundingAmount
 	pushAmt := btcutil.Amount(100000)
@@ -1289,18 +1289,18 @@ func basicChannelFundingTest(t *harnessTest, net *lntest.NetworkHarness,
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err := alice.WaitForNetworkChannelOpen(ctxt, chanPoint)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("alice didn't report "+
+		return nil, nil, nil, er.Errorf("alice didn't report "+
 			"channel: %v", err)
 	}
 	err = bob.WaitForNetworkChannelOpen(ctxt, chanPoint)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("bob didn't report "+
+		return nil, nil, nil, er.Errorf("bob didn't report "+
 			"channel: %v", err)
 	}
 
 	cType, err := channelCommitType(alice, chanPoint)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("unable to get channel "+
+		return nil, nil, nil, er.Errorf("unable to get channel "+
 			"type: %v", err)
 	}
 
@@ -1317,12 +1317,12 @@ func basicChannelFundingTest(t *harnessTest, net *lntest.NetworkHarness,
 	req := &lnrpc.ListChannelsRequest{}
 	aliceChannel, err := alice.ListChannels(context.Background(), req)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("unable to obtain chan: %v", err)
+		return nil, nil, nil, er.Errorf("unable to obtain chan: %v", err)
 	}
 
 	bobChannel, err := bob.ListChannels(context.Background(), req)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("unable to obtain chan: %v", err)
+		return nil, nil, nil, er.Errorf("unable to obtain chan: %v", err)
 	}
 
 	closeChan := func() {
@@ -1890,31 +1890,31 @@ func assertChannelPolicy(t *harnessTest, node *lntest.HarnessNode,
 }
 
 // checkChannelPolicy checks that the policy matches the expected one.
-func checkChannelPolicy(policy, expectedPolicy *lnrpc.RoutingPolicy) error {
+func checkChannelPolicy(policy, expectedPolicy *lnrpc.RoutingPolicy) er.R {
 	if policy.FeeBaseMsat != expectedPolicy.FeeBaseMsat {
-		return fmt.Errorf("expected base fee %v, got %v",
+		return er.Errorf("expected base fee %v, got %v",
 			expectedPolicy.FeeBaseMsat, policy.FeeBaseMsat)
 	}
 	if policy.FeeRateMilliMsat != expectedPolicy.FeeRateMilliMsat {
-		return fmt.Errorf("expected fee rate %v, got %v",
+		return er.Errorf("expected fee rate %v, got %v",
 			expectedPolicy.FeeRateMilliMsat,
 			policy.FeeRateMilliMsat)
 	}
 	if policy.TimeLockDelta != expectedPolicy.TimeLockDelta {
-		return fmt.Errorf("expected time lock delta %v, got %v",
+		return er.Errorf("expected time lock delta %v, got %v",
 			expectedPolicy.TimeLockDelta,
 			policy.TimeLockDelta)
 	}
 	if policy.MinHtlc != expectedPolicy.MinHtlc {
-		return fmt.Errorf("expected min htlc %v, got %v",
+		return er.Errorf("expected min htlc %v, got %v",
 			expectedPolicy.MinHtlc, policy.MinHtlc)
 	}
 	if policy.MaxHtlcMsat != expectedPolicy.MaxHtlcMsat {
-		return fmt.Errorf("expected max htlc %v, got %v",
+		return er.Errorf("expected max htlc %v, got %v",
 			expectedPolicy.MaxHtlcMsat, policy.MaxHtlcMsat)
 	}
 	if policy.Disabled != expectedPolicy.Disabled {
-		return errors.New("edge should be disabled but isn't")
+		return er.New("edge should be disabled but isn't")
 	}
 
 	return nil
@@ -2373,7 +2373,7 @@ func testUpdateChannelPolicy(net *lntest.NetworkHarness, t *harnessTest) {
 // waitForNodeBlockHeight queries the node for its current block height until
 // it reaches the passed height.
 func waitForNodeBlockHeight(ctx context.Context, node *lntest.HarnessNode,
-	height int32) error {
+	height int32) er.R {
 	var predErr error
 	err := wait.Predicate(func() bool {
 		ctxt, _ := context.WithTimeout(ctx, 10*time.Second)
@@ -2384,7 +2384,7 @@ func waitForNodeBlockHeight(ctx context.Context, node *lntest.HarnessNode,
 		}
 
 		if int32(info.BlockHeight) != height {
-			predErr = fmt.Errorf("expected block height to "+
+			predErr = er.Errorf("expected block height to "+
 				"be %v, was %v", height, info.BlockHeight)
 			return false
 		}
@@ -2406,20 +2406,20 @@ func assertMinerBlockHeightDelta(t *harnessTest,
 	err := wait.Predicate(func() bool {
 		_, tempMinerHeight, err := tempMiner.Node.GetBestBlock()
 		if err != nil {
-			predErr = fmt.Errorf("unable to get current "+
+			predErr = er.Errorf("unable to get current "+
 				"blockheight %v", err)
 			return false
 		}
 
 		_, minerHeight, err := miner.Node.GetBestBlock()
 		if err != nil {
-			predErr = fmt.Errorf("unable to get current "+
+			predErr = er.Errorf("unable to get current "+
 				"blockheight %v", err)
 			return false
 		}
 
 		if tempMinerHeight != minerHeight+delta {
-			predErr = fmt.Errorf("expected new miner(%d) to be %d "+
+			predErr = er.Errorf("expected new miner(%d) to be %d "+
 				"blocks ahead of original miner(%d)",
 				tempMinerHeight, delta, minerHeight)
 			return false
@@ -2454,16 +2454,16 @@ func testOpenChannelAfterReorg(net *lntest.NetworkHarness, t *harnessTest) {
 		tempLogDir, logFilename,
 		harnessNetParams, &rpcclient.NotificationHandlers{},
 	)
-	require.NoError(t.t, err, "failed to create temp miner")
+	util.RequireNoErr(t.t, err, "failed to create temp miner")
 	defer func() {
-		require.NoError(
+		util.RequireNoErr(
 			t.t, tempMinerCleanUp(),
 			"failed to clean up temp miner",
 		)
 	}()
 
 	// Setup the temp miner
-	require.NoError(
+	util.RequireNoErr(
 		t.t, tempMiner.SetUp(false, 0), "unable to set up mining node",
 	)
 
@@ -2649,13 +2649,13 @@ func testOpenChannelAfterReorg(net *lntest.NetworkHarness, t *harnessTest) {
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		chanGraph, err = net.Alice.DescribeGraph(ctxt, req)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for alice's routing table: %v", err)
+			predErr = er.Errorf("unable to query for alice's routing table: %v", err)
 			return false
 		}
 
 		numEdges = len(chanGraph.Edges)
 		if numEdges != 0 {
-			predErr = fmt.Errorf("expected to find no edge in the graph, found %d",
+			predErr = er.Errorf("expected to find no edge in the graph, found %d",
 				numEdges)
 			return false
 		}
@@ -2909,7 +2909,7 @@ func testChannelFundingPersistence(net *lntest.NetworkHarness, t *harnessTest) {
 
 	// Get the height that our transaction confirmed at.
 	_, height, err := net.Miner.Node.GetBestBlock()
-	require.NoError(t.t, err, "could not get best block")
+	util.RequireNoErr(t.t, err, "could not get best block")
 
 	// Restart both nodes to test that the appropriate state has been
 	// persisted and that both nodes recover gracefully.
@@ -3019,7 +3019,7 @@ func findTxAtHeight(ctx context.Context, t *harnessTest, height int32,
 			EndHeight:   height,
 		},
 	)
-	require.NoError(t.t, err, "could not get transactions")
+	util.RequireNoErr(t.t, err, "could not get transactions")
 
 	for _, tx := range txns.Transactions {
 		if tx.TxHash == target {
@@ -3197,7 +3197,7 @@ func testChannelUnsettledBalance(net *lntest.NetworkHarness, t *harnessTest) {
 	}
 
 	cType, err := channelCommitType(net.Alice, chanPointAlice)
-	require.NoError(t.t, err, "unable to get channel type")
+	util.RequireNoErr(t.t, err, "unable to get channel type")
 
 	// Check alice's channel balance, which should have zero remote and zero
 	// pending balance.
@@ -3215,7 +3215,7 @@ func testChannelUnsettledBalance(net *lntest.NetworkHarness, t *harnessTest) {
 
 	// Simulateneously send numInvoices payments from Alice to Carol.
 	carolPubKey := carol.PubKey[:]
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	for i := 0; i < numInvoices; i++ {
 		go func() {
 			ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
@@ -3263,7 +3263,7 @@ func testChannelUnsettledBalance(net *lntest.NetworkHarness, t *harnessTest) {
 
 			// Check that UnsettledBalance is what we expect.
 			if int(chanInfo.UnsettledBalance) != expectedBalance {
-				unsettledErr = fmt.Errorf("unsettled balance failed "+
+				unsettledErr = er.Errorf("unsettled balance failed "+
 					"expected: %v, received: %v", expectedBalance,
 					chanInfo.UnsettledBalance)
 				return false
@@ -3305,7 +3305,7 @@ func testChannelUnsettledBalance(net *lntest.NetworkHarness, t *harnessTest) {
 // findForceClosedChannel searches a pending channel response for a particular
 // channel, returning the force closed channel upon success.
 func findForceClosedChannel(pendingChanResp *lnrpc.PendingChannelsResponse,
-	op *wire.OutPoint) (*lnrpc.PendingChannelsResponse_ForceClosedChannel, error) {
+	op *wire.OutPoint) (*lnrpc.PendingChannelsResponse_ForceClosedChannel, er.R) {
 
 	for _, forceClose := range pendingChanResp.PendingForceClosingChannels {
 		if forceClose.Channel.ChannelPoint == op.String() {
@@ -3313,13 +3313,13 @@ func findForceClosedChannel(pendingChanResp *lnrpc.PendingChannelsResponse,
 		}
 	}
 
-	return nil, errors.New("channel not marked as force closed")
+	return nil, er.New("channel not marked as force closed")
 }
 
 // findWaitingCloseChannel searches a pending channel response for a particular
 // channel, returning the waiting close channel upon success.
 func findWaitingCloseChannel(pendingChanResp *lnrpc.PendingChannelsResponse,
-	op *wire.OutPoint) (*lnrpc.PendingChannelsResponse_WaitingCloseChannel, error) {
+	op *wire.OutPoint) (*lnrpc.PendingChannelsResponse_WaitingCloseChannel, er.R) {
 
 	for _, waitingClose := range pendingChanResp.WaitingCloseChannels {
 		if waitingClose.Channel.ChannelPoint == op.String() {
@@ -3327,20 +3327,20 @@ func findWaitingCloseChannel(pendingChanResp *lnrpc.PendingChannelsResponse,
 		}
 	}
 
-	return nil, errors.New("channel not marked as waiting close")
+	return nil, er.New("channel not marked as waiting close")
 }
 
 func checkCommitmentMaturity(
 	forceClose *lnrpc.PendingChannelsResponse_ForceClosedChannel,
-	maturityHeight uint32, blocksTilMaturity int32) error {
+	maturityHeight uint32, blocksTilMaturity int32) er.R {
 
 	if forceClose.MaturityHeight != maturityHeight {
-		return fmt.Errorf("expected commitment maturity height to be "+
+		return er.Errorf("expected commitment maturity height to be "+
 			"%d, found %d instead", maturityHeight,
 			forceClose.MaturityHeight)
 	}
 	if forceClose.BlocksTilMaturity != blocksTilMaturity {
-		return fmt.Errorf("expected commitment blocks til maturity to "+
+		return er.Errorf("expected commitment blocks til maturity to "+
 			"be %d, found %d instead", blocksTilMaturity,
 			forceClose.BlocksTilMaturity)
 	}
@@ -3352,10 +3352,10 @@ func checkCommitmentMaturity(
 // proper number of htlcs.
 func checkPendingChannelNumHtlcs(
 	forceClose *lnrpc.PendingChannelsResponse_ForceClosedChannel,
-	expectedNumHtlcs int) error {
+	expectedNumHtlcs int) er.R {
 
 	if len(forceClose.PendingHtlcs) != expectedNumHtlcs {
-		return fmt.Errorf("expected force closed channel to have %d "+
+		return er.Errorf("expected force closed channel to have %d "+
 			"pending htlcs, found %d instead", expectedNumHtlcs,
 			len(forceClose.PendingHtlcs))
 	}
@@ -3366,10 +3366,10 @@ func checkPendingChannelNumHtlcs(
 // checkNumForceClosedChannels checks that a pending channel response has the
 // expected number of force closed channels.
 func checkNumForceClosedChannels(pendingChanResp *lnrpc.PendingChannelsResponse,
-	expectedNumChans int) error {
+	expectedNumChans int) er.R {
 
 	if len(pendingChanResp.PendingForceClosingChannels) != expectedNumChans {
-		return fmt.Errorf("expected to find %d force closed channels, "+
+		return er.Errorf("expected to find %d force closed channels, "+
 			"got %d", expectedNumChans,
 			len(pendingChanResp.PendingForceClosingChannels))
 	}
@@ -3380,10 +3380,10 @@ func checkNumForceClosedChannels(pendingChanResp *lnrpc.PendingChannelsResponse,
 // checkNumWaitingCloseChannels checks that a pending channel response has the
 // expected number of channels waiting for closing tx to confirm.
 func checkNumWaitingCloseChannels(pendingChanResp *lnrpc.PendingChannelsResponse,
-	expectedNumChans int) error {
+	expectedNumChans int) er.R {
 
 	if len(pendingChanResp.WaitingCloseChannels) != expectedNumChans {
-		return fmt.Errorf("expected to find %d channels waiting "+
+		return er.Errorf("expected to find %d channels waiting "+
 			"closure, got %d", expectedNumChans,
 			len(pendingChanResp.WaitingCloseChannels))
 	}
@@ -3396,20 +3396,20 @@ func checkNumWaitingCloseChannels(pendingChanResp *lnrpc.PendingChannelsResponse
 // maturity, and the maturity height.
 func checkPendingHtlcStageAndMaturity(
 	forceClose *lnrpc.PendingChannelsResponse_ForceClosedChannel,
-	stage, maturityHeight uint32, blocksTillMaturity int32) error {
+	stage, maturityHeight uint32, blocksTillMaturity int32) er.R {
 
 	for _, pendingHtlc := range forceClose.PendingHtlcs {
 		if pendingHtlc.Stage != stage {
-			return fmt.Errorf("expected pending htlc to be stage "+
+			return er.Errorf("expected pending htlc to be stage "+
 				"%d, found %d", stage, pendingHtlc.Stage)
 		}
 		if pendingHtlc.MaturityHeight != maturityHeight {
-			return fmt.Errorf("expected pending htlc maturity "+
+			return er.Errorf("expected pending htlc maturity "+
 				"height to be %d, instead has %d",
 				maturityHeight, pendingHtlc.MaturityHeight)
 		}
 		if pendingHtlc.BlocksTilMaturity != blocksTillMaturity {
-			return fmt.Errorf("expected pending htlc blocks til "+
+			return er.Errorf("expected pending htlc blocks til "+
 				"maturity to be %d, instead has %d",
 				blocksTillMaturity,
 				pendingHtlc.BlocksTilMaturity)
@@ -3717,7 +3717,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 		totalWeight += blockchain.GetTransactionWeight(utx)
 
 		fee, err := getTxFee(net.Miner.Node, tx)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 		totalFee += int64(fee)
 	}
 	feeRate := totalFee * 1000 / totalWeight
@@ -3755,13 +3755,13 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 
 	// Now that the commitment has been confirmed, the channel should be
 	// marked as force closed.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		pendingChanResp, err := alice.PendingChannels(
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to query for pending "+
+			return er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 		}
 
@@ -3788,7 +3788,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 		// limbo. For anchors, we expect the anchor amount to be
 		// recovered.
 		if forceClose.LimboBalance == 0 {
-			return errors.New("all funds should still be in " +
+			return er.New("all funds should still be in " +
 				"limbo")
 		}
 		expectedRecoveredBalance := int64(0)
@@ -3796,7 +3796,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			expectedRecoveredBalance = anchorSize
 		}
 		if forceClose.RecoveredBalance != expectedRecoveredBalance {
-			return errors.New("no funds should yet be shown " +
+			return er.New("no funds should yet be shown " +
 				"as recovered")
 		}
 
@@ -3864,13 +3864,13 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 	// Alice should see the channel in her set of pending force closed
 	// channels with her funds still in limbo.
 	var aliceBalance int64
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		pendingChanResp, err := alice.PendingChannels(
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to query for pending "+
+			return er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 		}
 
@@ -3903,7 +3903,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 
 		// All funds should still be shown in limbo.
 		if forceClose.LimboBalance == 0 {
-			return errors.New("all funds should still be in " +
+			return er.New("all funds should still be in " +
 				"limbo")
 		}
 		expectedRecoveredBalance := int64(0)
@@ -3911,7 +3911,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			expectedRecoveredBalance = anchorSize
 		}
 		if forceClose.RecoveredBalance != expectedRecoveredBalance {
-			return errors.New("no funds should yet be shown " +
+			return er.New("no funds should yet be shown " +
 				"as recovered")
 		}
 
@@ -4013,7 +4013,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -4044,7 +4044,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			return false
 		}
 		if forceClose.LimboBalance == 0 {
-			predErr = fmt.Errorf("expected funds in limbo, found 0")
+			predErr = er.Errorf("expected funds in limbo, found 0")
 			return false
 		}
 
@@ -4078,13 +4078,13 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 
 	// Alice should now see the channel in her set of pending force closed
 	// channels with one pending HTLC.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		pendingChanResp, err := alice.PendingChannels(
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to query for pending "+
+			return er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 		}
 
@@ -4118,7 +4118,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 		// All htlc outputs are still left in limbo, so it should be
 		// non-zero as well.
 		if forceClose.LimboBalance == 0 {
-			return errors.New("htlc funds should still be in " +
+			return er.New("htlc funds should still be in " +
 				"limbo")
 		}
 
@@ -4260,7 +4260,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -4277,7 +4277,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 		}
 
 		if forceClose.LimboBalance == 0 {
-			predErr = fmt.Errorf("htlc funds should still be in limbo")
+			predErr = er.Errorf("htlc funds should still be in limbo")
 			return false
 		}
 
@@ -4386,7 +4386,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -4435,7 +4435,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -4449,7 +4449,7 @@ func channelForceClosureTest(net *lntest.NetworkHarness, t *harnessTest,
 		// that pending channels does not report any money still in
 		// limbo.
 		if pendingChanResp.TotalLimboBalance != 0 {
-			predErr = errors.New("no user funds should be left " +
+			predErr = er.New("no user funds should be left " +
 				"in limbo after incubation")
 			return false
 		}
@@ -4498,7 +4498,7 @@ func findCommitAndAnchor(t *harnessTest, net *lntest.NetworkHarness,
 	for _, tx := range sweepTxns {
 		txHash := tx.TxHash()
 		sweepTx, err := net.Miner.Node.GetRawTransaction(&txHash)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 
 		// We expect our commitment sweep to have a single input, and,
 		// our anchor sweep to have more inputs (because the wallet
@@ -4544,7 +4544,7 @@ func assertReports(ctxb context.Context, t *harnessTest,
 	closed, err := node.ClosedChannels(
 		ctxt, &lnrpc.ClosedChannelsRequest{},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	var resolutions []*lnrpc.Resolution
 	for _, close := range closed.Channels {
@@ -4578,7 +4578,7 @@ func assertSweepFound(ctx context.Context, t *testing.T, node *lntest.HarnessNod
 			Verbose: verbose,
 		},
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	var found bool
 	if verbose {
@@ -4629,8 +4629,8 @@ func findSweepInDetails(t *testing.T, sweepTxid string,
 //
 // NOTE: This method assumes that each node only has one channel, and it is the
 // channel used to send the payment.
-func assertAmountSent(amt btcutil.Amount, sndr, rcvr *lntest.HarnessNode) func() error {
-	return func() error {
+func assertAmountSent(amt btcutil.Amount, sndr, rcvr *lntest.HarnessNode) func() er.R {
+	return func() er.R {
 		// Both channels should also have properly accounted from the
 		// amount that has been sent/received over the channel.
 		listReq := &lnrpc.ListChannelsRequest{}
@@ -4638,12 +4638,12 @@ func assertAmountSent(amt btcutil.Amount, sndr, rcvr *lntest.HarnessNode) func()
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		sndrListChannels, err := sndr.ListChannels(ctxt, listReq)
 		if err != nil {
-			return fmt.Errorf("unable to query for %s's channel "+
+			return er.Errorf("unable to query for %s's channel "+
 				"list: %v", sndr.Name(), err)
 		}
 		sndrSatoshisSent := sndrListChannels.Channels[0].TotalSatoshisSent
 		if sndrSatoshisSent != int64(amt) {
-			return fmt.Errorf("%s's satoshis sent is incorrect "+
+			return er.Errorf("%s's satoshis sent is incorrect "+
 				"got %v, expected %v", sndr.Name(),
 				sndrSatoshisSent, amt)
 		}
@@ -4651,12 +4651,12 @@ func assertAmountSent(amt btcutil.Amount, sndr, rcvr *lntest.HarnessNode) func()
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		rcvrListChannels, err := rcvr.ListChannels(ctxt, listReq)
 		if err != nil {
-			return fmt.Errorf("unable to query for %s's channel "+
+			return er.Errorf("unable to query for %s's channel "+
 				"list: %v", rcvr.Name(), err)
 		}
 		rcvrSatoshisReceived := rcvrListChannels.Channels[0].TotalSatoshisReceived
 		if rcvrSatoshisReceived != int64(amt) {
-			return fmt.Errorf("%s's satoshis received is "+
+			return er.Errorf("%s's satoshis received is "+
 				"incorrect got %v, expected %v", rcvr.Name(),
 				rcvrSatoshisReceived, amt)
 		}
@@ -5238,12 +5238,12 @@ func assertAmountPaid(t *harnessTest, channelName string,
 	amountReceived int64) {
 	ctxb := context.Background()
 
-	checkAmountPaid := func() error {
+	checkAmountPaid := func() er.R {
 		listReq := &lnrpc.ListChannelsRequest{}
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		resp, err := node.ListChannels(ctxt, listReq)
 		if err != nil {
-			return fmt.Errorf("unable to for node's "+
+			return er.Errorf("unable to for node's "+
 				"channels: %v", err)
 		}
 		for _, channel := range resp.Channels {
@@ -5252,14 +5252,14 @@ func assertAmountPaid(t *harnessTest, channelName string,
 			}
 
 			if channel.TotalSatoshisSent != amountSent {
-				return fmt.Errorf("%v: incorrect amount"+
+				return er.Errorf("%v: incorrect amount"+
 					" sent: %v != %v", channelName,
 					channel.TotalSatoshisSent,
 					amountSent)
 			}
 			if channel.TotalSatoshisReceived !=
 				amountReceived {
-				return fmt.Errorf("%v: incorrect amount"+
+				return er.Errorf("%v: incorrect amount"+
 					" received: %v != %v",
 					channelName,
 					channel.TotalSatoshisReceived,
@@ -5268,7 +5268,7 @@ func assertAmountPaid(t *harnessTest, channelName string,
 
 			return nil
 		}
-		return fmt.Errorf("channel not found")
+		return er.Errorf("channel not found")
 	}
 
 	// As far as HTLC inclusion in commitment transaction might be
@@ -5521,8 +5521,8 @@ func testSingleHopSendToRouteCase(net *lntest.NetworkHarness, t *harnessTest,
 	}
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
-	require.NoError(t.t, waitForNodeBlockHeight(ctxt, carol, minerHeight))
-	require.NoError(t.t, waitForNodeBlockHeight(ctxt, dave, minerHeight))
+	util.RequireNoErr(t.t, waitForNodeBlockHeight(ctxt, carol, minerHeight))
+	util.RequireNoErr(t.t, waitForNodeBlockHeight(ctxt, dave, minerHeight))
 
 	// Query for routes to pay from Carol to Dave using the default CLTV
 	// config.
@@ -6171,13 +6171,13 @@ func testUnannouncedChannels(net *lntest.NetworkHarness, t *harnessTest) {
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		chanGraph, err = net.Alice.DescribeGraph(ctxt, req)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query alice's graph: %v", err)
+			predErr = er.Errorf("unable to query alice's graph: %v", err)
 			return false
 		}
 
 		numEdges = len(chanGraph.Edges)
 		if numEdges != 1 {
-			predErr = fmt.Errorf("expected to find 1 announced edge in "+
+			predErr = er.Errorf("expected to find 1 announced edge in "+
 				"the graph, found %d", numEdges)
 			return false
 		}
@@ -6499,37 +6499,37 @@ func testPrivateChannels(net *lntest.NetworkHarness, t *harnessTest) {
 	err = wait.Predicate(func() bool {
 		aliceChans := numChannels(net.Alice, true)
 		if aliceChans != 4 {
-			predErr = fmt.Errorf("expected Alice to know 4 edges, "+
+			predErr = er.Errorf("expected Alice to know 4 edges, "+
 				"had %v", aliceChans)
 			return false
 		}
 		alicePubChans := numChannels(net.Alice, false)
 		if alicePubChans != 3 {
-			predErr = fmt.Errorf("expected Alice to know 3 public edges, "+
+			predErr = er.Errorf("expected Alice to know 3 public edges, "+
 				"had %v", alicePubChans)
 			return false
 		}
 		bobChans := numChannels(net.Bob, true)
 		if bobChans != 3 {
-			predErr = fmt.Errorf("expected Bob to know 3 edges, "+
+			predErr = er.Errorf("expected Bob to know 3 edges, "+
 				"had %v", bobChans)
 			return false
 		}
 		carolChans := numChannels(carol, true)
 		if carolChans != 4 {
-			predErr = fmt.Errorf("expected Carol to know 4 edges, "+
+			predErr = er.Errorf("expected Carol to know 4 edges, "+
 				"had %v", carolChans)
 			return false
 		}
 		carolPubChans := numChannels(carol, false)
 		if carolPubChans != 3 {
-			predErr = fmt.Errorf("expected Carol to know 3 public edges, "+
+			predErr = er.Errorf("expected Carol to know 3 public edges, "+
 				"had %v", carolPubChans)
 			return false
 		}
 		daveChans := numChannels(dave, true)
 		if daveChans != 3 {
-			predErr = fmt.Errorf("expected Dave to know 3 edges, "+
+			predErr = er.Errorf("expected Dave to know 3 edges, "+
 				"had %v", daveChans)
 			return false
 		}
@@ -6693,7 +6693,7 @@ func testInvoiceRoutingHints(net *lntest.NetworkHarness, t *harnessTest) {
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		resp, err := net.Alice.AddInvoice(ctxt, invoice)
 		if err != nil {
-			predErr = fmt.Errorf("unable to add invoice: %v", err)
+			predErr = er.Errorf("unable to add invoice: %v", err)
 			return false
 		}
 
@@ -6705,13 +6705,13 @@ func testInvoiceRoutingHints(net *lntest.NetworkHarness, t *harnessTest) {
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		decoded, err = net.Alice.DecodePayReq(ctxt, payReq)
 		if err != nil {
-			predErr = fmt.Errorf("unable to decode payment "+
+			predErr = er.Errorf("unable to decode payment "+
 				"request: %v", err)
 			return false
 		}
 
 		if len(decoded.RouteHints) != 1 {
-			predErr = fmt.Errorf("expected one route hint, got %d",
+			predErr = er.Errorf("expected one route hint, got %d",
 				len(decoded.RouteHints))
 			return false
 		}
@@ -7296,40 +7296,40 @@ func subscribeChannelNotifications(ctxb context.Context, t *harnessTest,
 // expected type.
 func verifyCloseUpdate(chanUpdate *lnrpc.ChannelEventUpdate,
 	closeType lnrpc.ChannelCloseSummary_ClosureType,
-	closeInitiator lnrpc.Initiator) error {
+	closeInitiator lnrpc.Initiator) er.R {
 
 	// We should receive one inactive and one closed notification
 	// for each channel.
 	switch update := chanUpdate.Channel.(type) {
 	case *lnrpc.ChannelEventUpdate_InactiveChannel:
 		if chanUpdate.Type != lnrpc.ChannelEventUpdate_INACTIVE_CHANNEL {
-			return fmt.Errorf("update type mismatch: expected %v, got %v",
+			return er.Errorf("update type mismatch: expected %v, got %v",
 				lnrpc.ChannelEventUpdate_INACTIVE_CHANNEL,
 				chanUpdate.Type)
 		}
 	case *lnrpc.ChannelEventUpdate_ClosedChannel:
 		if chanUpdate.Type !=
 			lnrpc.ChannelEventUpdate_CLOSED_CHANNEL {
-			return fmt.Errorf("update type mismatch: expected %v, got %v",
+			return er.Errorf("update type mismatch: expected %v, got %v",
 				lnrpc.ChannelEventUpdate_CLOSED_CHANNEL,
 				chanUpdate.Type)
 		}
 
 		if update.ClosedChannel.CloseType != closeType {
-			return fmt.Errorf("channel closure type "+
+			return er.Errorf("channel closure type "+
 				"mismatch: expected %v, got %v",
 				closeType,
 				update.ClosedChannel.CloseType)
 		}
 
 		if update.ClosedChannel.CloseInitiator != closeInitiator {
-			return fmt.Errorf("expected close intiator: %v, got: %v",
+			return er.Errorf("expected close intiator: %v, got: %v",
 				closeInitiator,
 				update.ClosedChannel.CloseInitiator)
 		}
 
 	default:
-		return fmt.Errorf("channel update channel of wrong type, "+
+		return er.Errorf("channel update channel of wrong type, "+
 			"expected closed channel, got %T",
 			update)
 	}
@@ -7371,7 +7371,7 @@ func testBasicChannelCreationAndUpdates(net *lntest.NetworkHarness, t *harnessTe
 	// each receive an open and an active notification for each channel.
 	var numChannelUpds int
 	const totalNtfns = 3 * numChannels
-	verifyOpenUpdatesReceived := func(sub channelSubscription) error {
+	verifyOpenUpdatesReceived := func(sub channelSubscription) er.R {
 		numChannelUpds = 0
 		for numChannelUpds < totalNtfns {
 			select {
@@ -7379,34 +7379,34 @@ func testBasicChannelCreationAndUpdates(net *lntest.NetworkHarness, t *harnessTe
 				switch update.Type {
 				case lnrpc.ChannelEventUpdate_PENDING_OPEN_CHANNEL:
 					if numChannelUpds%3 != 0 {
-						return fmt.Errorf("expected " +
+						return er.Errorf("expected " +
 							"open or active" +
 							"channel ntfn, got pending open " +
 							"channel ntfn instead")
 					}
 				case lnrpc.ChannelEventUpdate_OPEN_CHANNEL:
 					if numChannelUpds%3 != 1 {
-						return fmt.Errorf("expected " +
+						return er.Errorf("expected " +
 							"pending open or active" +
 							"channel ntfn, got open" +
 							"channel ntfn instead")
 					}
 				case lnrpc.ChannelEventUpdate_ACTIVE_CHANNEL:
 					if numChannelUpds%3 != 2 {
-						return fmt.Errorf("expected " +
+						return er.Errorf("expected " +
 							"pending open or open" +
 							"channel ntfn, got active " +
 							"channel ntfn instead")
 					}
 				default:
-					return fmt.Errorf("update type mismatch: "+
+					return er.Errorf("update type mismatch: "+
 						"expected open or active channel "+
 						"notification, got: %v",
 						update.Type)
 				}
 				numChannelUpds++
 			case <-time.After(time.Second * 10):
-				return fmt.Errorf("timeout waiting for channel "+
+				return er.Errorf("timeout waiting for channel "+
 					"notifications, only received %d/%d "+
 					"chanupds", numChannelUpds,
 					totalNtfns)
@@ -7440,7 +7440,7 @@ func testBasicChannelCreationAndUpdates(net *lntest.NetworkHarness, t *harnessTe
 	// receive the correct channel updates in order.
 	verifyCloseUpdatesReceived := func(sub channelSubscription,
 		forceType lnrpc.ChannelCloseSummary_ClosureType,
-		closeInitiator lnrpc.Initiator) error {
+		closeInitiator lnrpc.Initiator) er.R {
 
 		// Ensure one inactive and one closed notification is received for each
 		// closed channel.
@@ -7470,7 +7470,7 @@ func testBasicChannelCreationAndUpdates(net *lntest.NetworkHarness, t *harnessTe
 			case err := <-sub.errChan:
 				return err
 			case <-time.After(time.Second * 10):
-				return fmt.Errorf("timeout waiting "+
+				return er.Errorf("timeout waiting "+
 					"for channel notifications, only "+
 					"received %d/%d chanupds",
 					numChannelUpds, 2*numChannels)
@@ -7623,7 +7623,7 @@ func testMaxPendingChannels(net *lntest.NetworkHarness, t *harnessTest) {
 // getNTxsFromMempool polls until finding the desired number of transactions in
 // the provided miner's mempool and returns the full transactions to the caller.
 func getNTxsFromMempool(miner *rpcclient.Client, n int,
-	timeout time.Duration) ([]*wire.MsgTx, error) {
+	timeout time.Duration) ([]*wire.MsgTx, er.R) {
 
 	txids, err := waitForNTxsInMempool(miner, n, timeout)
 	if err != nil {
@@ -7642,7 +7642,7 @@ func getNTxsFromMempool(miner *rpcclient.Client, n int,
 }
 
 // getTxFee retrieves parent transactions and reconstructs the fee paid.
-func getTxFee(miner *rpcclient.Client, tx *wire.MsgTx) (btcutil.Amount, error) {
+func getTxFee(miner *rpcclient.Client, tx *wire.MsgTx) (btcutil.Amount, er.R) {
 	var balance btcutil.Amount
 	for _, in := range tx.TxIn {
 		parentHash := in.PreviousOutPoint.Hash
@@ -7738,13 +7738,13 @@ func testFailingChannel(net *lntest.NetworkHarness, t *harnessTest) {
 		pendingChanResp, err := net.Alice.PendingChannels(ctxt,
 			pendingChansRequest)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
 		n := len(pendingChanResp.WaitingCloseChannels)
 		if n != 1 {
-			predErr = fmt.Errorf("Expected to find %d channels "+
+			predErr = er.Errorf("Expected to find %d channels "+
 				"waiting close, found %d", 1, n)
 			return false
 		}
@@ -7768,19 +7768,19 @@ func testFailingChannel(net *lntest.NetworkHarness, t *harnessTest) {
 		pendingChanResp, err := net.Alice.PendingChannels(ctxt,
 			pendingChansRequest)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
 		n := len(pendingChanResp.WaitingCloseChannels)
 		if n != 0 {
-			predErr = fmt.Errorf("Expected to find %d channels "+
+			predErr = er.Errorf("Expected to find %d channels "+
 				"waiting close, found %d", 0, n)
 			return false
 		}
 		n = len(pendingChanResp.PendingForceClosingChannels)
 		if n != 1 {
-			predErr = fmt.Errorf("expected to find %d channel "+
+			predErr = er.Errorf("expected to find %d channel "+
 				"pending force close, found %d", 1, n)
 			return false
 		}
@@ -7796,13 +7796,13 @@ func testFailingChannel(net *lntest.NetworkHarness, t *harnessTest) {
 		pendingChanResp, err := carol.PendingChannels(ctxt,
 			pendingChansRequest)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
 		n := len(pendingChanResp.PendingForceClosingChannels)
 		if n != 1 {
-			predErr = fmt.Errorf("expected to find %d channel "+
+			predErr = er.Errorf("expected to find %d channel "+
 				"pending force close, found %d", 1, n)
 			return false
 		}
@@ -7844,13 +7844,13 @@ func testFailingChannel(net *lntest.NetworkHarness, t *harnessTest) {
 		pendingChanResp, err := net.Alice.PendingChannels(ctxt,
 			pendingChansRequest)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
 		n := len(pendingChanResp.PendingForceClosingChannels)
 		if n != 0 {
-			predErr = fmt.Errorf("expected to find %d channel "+
+			predErr = er.Errorf("expected to find %d channel "+
 				"pending force close, found %d", 0, n)
 			return false
 		}
@@ -8065,7 +8065,7 @@ func testGarbageCollectLinkNodes(net *lntest.NetworkHarness, t *harnessTest) {
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -8080,7 +8080,7 @@ func testGarbageCollectLinkNodes(net *lntest.NetworkHarness, t *harnessTest) {
 			ctxt, pendingChansRequest,
 		)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
@@ -8215,7 +8215,7 @@ func testRevokedCloseRetribution(net *lntest.NetworkHarness, t *harnessTest) {
 			t.Fatalf("unable to get bob's channel info: %v", err)
 		}
 		if bChan.LocalBalance != 30000 {
-			predErr = fmt.Errorf("bob's balance is incorrect, "+
+			predErr = er.Errorf("bob's balance is incorrect, "+
 				"got %v, expected %v", bChan.LocalBalance,
 				30000)
 			return false
@@ -8269,7 +8269,7 @@ func testRevokedCloseRetribution(net *lntest.NetworkHarness, t *harnessTest) {
 	// which has the *prior* channel state over his current most up to date
 	// state. With this, we essentially force Bob to travel back in time
 	// within the channel's history.
-	if err = net.RestartNode(net.Bob, func() error {
+	if err = net.RestartNode(net.Bob, func() er.R {
 		return lntest.CopyAll(net.Bob.DBDir(), bobTempDbPath)
 	}); err != nil {
 		t.Fatalf("unable to restart node: %v", err)
@@ -8522,7 +8522,7 @@ func testRevokedCloseRetributionZeroValueRemoteOutput(net *lntest.NetworkHarness
 	// which has the *prior* channel state over his current most up to date
 	// state. With this, we essentially force Carol to travel back in time
 	// within the channel's history.
-	if err = net.RestartNode(carol, func() error {
+	if err = net.RestartNode(carol, func() er.R {
 		return lntest.CopyAll(carol.DBDir(), carolTempDbPath)
 	}); err != nil {
 		t.Fatalf("unable to restart node: %v", err)
@@ -8854,7 +8854,7 @@ func testRevokedCloseRetributionRemoteHodl(net *lntest.NetworkHarness,
 	// which has the *prior* channel state over her current most up to date
 	// state. With this, we essentially force Carol to travel back in time
 	// within the channel's history.
-	if err = net.RestartNode(carol, func() error {
+	if err = net.RestartNode(carol, func() er.R {
 		return lntest.CopyAll(carol.DBDir(), carolTempDbPath)
 	}); err != nil {
 		t.Fatalf("unable to restart node: %v", err)
@@ -8932,11 +8932,11 @@ func testRevokedCloseRetributionRemoteHodl(net *lntest.NetworkHarness,
 	// expected inputs in the justice tx.
 	var predErr error
 	var justiceTxid *chainhash.Hash
-	errNotFound := errors.New("justice tx not found")
-	findJusticeTx := func() (*chainhash.Hash, error) {
+	errNotFound := er.New("justice tx not found")
+	findJusticeTx := func() (*chainhash.Hash, er.R) {
 		mempool, err := net.Miner.Node.GetRawMempool()
 		if err != nil {
-			return nil, fmt.Errorf("unable to get mempool from "+
+			return nil, er.Errorf("unable to get mempool from "+
 				"miner: %v", err)
 		}
 
@@ -8945,7 +8945,7 @@ func testRevokedCloseRetributionRemoteHodl(net *lntest.NetworkHarness,
 			// of inputs.
 			tx, err := net.Miner.Node.GetRawTransaction(txid)
 			if err != nil {
-				return nil, fmt.Errorf("unable to query for "+
+				return nil, er.Errorf("unable to query for "+
 					"txs: %v", err)
 			}
 
@@ -9246,7 +9246,7 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 
 	// Wait until the backup has been accepted by the watchtower before
 	// shutting down Dave.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 		defer cancel()
 		bkpStats, err := dave.WatchtowerClient.Stats(ctxt, &wtclientrpc.StatsRequest{})
@@ -9255,10 +9255,10 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 
 		}
 		if bkpStats == nil {
-			return errors.New("no active backup sessions")
+			return er.New("no active backup sessions")
 		}
 		if bkpStats.NumBackups == 0 {
-			return errors.New("no backups accepted")
+			return er.New("no backups accepted")
 		}
 
 		return nil
@@ -9278,7 +9278,7 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 	// which has the *prior* channel state over his current most up to date
 	// state. With this, we essentially force Carol to travel back in time
 	// within the channel's history.
-	if err = net.RestartNode(carol, func() error {
+	if err = net.RestartNode(carol, func() er.R {
 		return lntest.CopyAll(carol.DBDir(), carolTempDbPath)
 	}); err != nil {
 		t.Fatalf("unable to restart node: %v", err)
@@ -9393,7 +9393,7 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 		}
 
 		if willyBalResp.ConfirmedBalance != 0 {
-			predErr = fmt.Errorf("Expected Willy to have no funds "+
+			predErr = er.Errorf("Expected Willy to have no funds "+
 				"after justice transaction was mined, found %v",
 				willyBalResp)
 			return false
@@ -9422,7 +9422,7 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 		}
 
 		if daveBalResp.LocalBalance.Sat != 0 {
-			predErr = fmt.Errorf("Dave should end up with zero "+
+			predErr = er.Errorf("Dave should end up with zero "+
 				"channel balance, instead has %d",
 				daveBalResp.LocalBalance.Sat)
 			return false
@@ -9445,7 +9445,7 @@ func testRevokedCloseRetributionAltruistWatchtower(net *lntest.NetworkHarness,
 		}
 
 		if daveBalResp.ConfirmedBalance <= davePreSweepBalance {
-			predErr = fmt.Errorf("Dave should have more than %d "+
+			predErr = er.Errorf("Dave should have more than %d "+
 				"after sweep, instead has %d",
 				davePreSweepBalance,
 				daveBalResp.ConfirmedBalance)
@@ -9475,19 +9475,19 @@ func assertNumPendingChannels(t *harnessTest, node *lntest.HarnessNode,
 		pendingChanResp, err := node.PendingChannels(ctxt,
 			pendingChansRequest)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for pending "+
+			predErr = er.Errorf("unable to query for pending "+
 				"channels: %v", err)
 			return false
 		}
 		n := len(pendingChanResp.WaitingCloseChannels)
 		if n != expWaitingClose {
-			predErr = fmt.Errorf("Expected to find %d channels "+
+			predErr = er.Errorf("Expected to find %d channels "+
 				"waiting close, found %d", expWaitingClose, n)
 			return false
 		}
 		n = len(pendingChanResp.PendingForceClosingChannels)
 		if n != expPendingForceClose {
-			predErr = fmt.Errorf("expected to find %d channel "+
+			predErr = er.Errorf("expected to find %d channel "+
 				"pending force close, found %d", expPendingForceClose, n)
 			return false
 		}
@@ -9675,7 +9675,7 @@ func testDataLossProtection(net *lntest.NetworkHarness, t *harnessTest) {
 	// the node will be unaware of the new state updates. The returned
 	// function can be used to restart the node in this state.
 	timeTravel := func(node *lntest.HarnessNode) (func() error,
-		*lnrpc.ChannelPoint, int64, error) {
+		*lnrpc.ChannelPoint, int64, er.R) {
 
 		// We must let the node communicate with Carol before they are
 		// able to open channel, so we connect them.
@@ -9739,7 +9739,7 @@ func testDataLossProtection(net *lntest.NetworkHarness, t *harnessTest) {
 				t.Fatalf("unable to get channel info: %v", err)
 			}
 			if bChan.LocalBalance != 30000 {
-				predErr = fmt.Errorf("balance is incorrect, "+
+				predErr = er.Errorf("balance is incorrect, "+
 					"got %v, expected %v",
 					bChan.LocalBalance, 30000)
 				return false
@@ -9794,7 +9794,7 @@ func testDataLossProtection(net *lntest.NetworkHarness, t *harnessTest) {
 		// current most up to date state. With this, we essentially
 		// force the node to travel back in time within the channel's
 		// history.
-		if err = net.RestartNode(node, func() error {
+		if err = net.RestartNode(node, func() er.R {
 			return lntest.CopyAll(node.DBDir(), tempDbPath)
 		}); err != nil {
 			t.Fatalf("unable to restart node: %v", err)
@@ -9934,17 +9934,17 @@ func testDataLossProtection(net *lntest.NetworkHarness, t *harnessTest) {
 	mineBlocks(t, net, 1, 1)
 	assertNodeNumChannels(t, dave, 0)
 
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		daveBalResp, err := dave.WalletBalance(ctxt, balReq)
 		if err != nil {
-			return fmt.Errorf("unable to get dave's balance: %v",
+			return er.Errorf("unable to get dave's balance: %v",
 				err)
 		}
 
 		daveBalance := daveBalResp.ConfirmedBalance
 		if daveBalance <= daveStartingBalance {
-			return fmt.Errorf("expected dave to have balance "+
+			return er.Errorf("expected dave to have balance "+
 				"above %d, intead had %v", daveStartingBalance,
 				daveBalance)
 		}
@@ -9970,7 +9970,7 @@ func assertNodeNumChannels(t *harnessTest, node *lntest.HarnessNode,
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		chanInfo, err := node.ListChannels(ctxt, req)
 		if err != nil {
-			predErr = fmt.Errorf("unable to query for node's "+
+			predErr = er.Errorf("unable to query for node's "+
 				"channels: %v", err)
 			return false
 		}
@@ -9979,7 +9979,7 @@ func assertNodeNumChannels(t *harnessTest, node *lntest.HarnessNode,
 		// channels.
 		num := len(chanInfo.Channels)
 		if num != numChannels {
-			predErr = fmt.Errorf("expected %v channels, got %v",
+			predErr = er.Errorf("expected %v channels, got %v",
 				numChannels, num)
 			return false
 		}
@@ -10685,7 +10685,7 @@ func testAsyncPayments(net *lntest.NetworkHarness, t *harnessTest) {
 	// Simultaneously send payments from Alice to Bob using of Bob's payment
 	// hashes generated above.
 	now := time.Now()
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	statusChan := make(chan *lnrpc.Payment)
 	for i := 0; i < numInvoices; i++ {
 		payReq := bobPayReqs[i]
@@ -10867,7 +10867,7 @@ func testBidirectionalAsyncPayments(net *lntest.NetworkHarness, t *harnessTest) 
 
 	// Send payments from Alice to Bob and from Bob to Alice in async
 	// manner.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	statusChan := make(chan *lnrpc.Payment)
 
 	send := func(node *lntest.HarnessNode, payReq string) {
@@ -10965,7 +10965,7 @@ func testBidirectionalAsyncPayments(net *lntest.NetworkHarness, t *harnessTest) 
 
 // assertActiveHtlcs makes sure all the passed nodes have the _exact_ HTLCs
 // matching payHashes on _all_ their channels.
-func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) error {
+func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) er.R {
 	ctxb := context.Background()
 
 	req := &lnrpc.ListChannelsRequest{}
@@ -10973,7 +10973,7 @@ func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) error {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		nodeChans, err := node.ListChannels(ctxt, req)
 		if err != nil {
-			return fmt.Errorf("unable to get node chans: %v", err)
+			return er.Errorf("unable to get node chans: %v", err)
 		}
 
 		for _, channel := range nodeChans.Channels {
@@ -10982,14 +10982,14 @@ func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) error {
 			for _, htlc := range channel.PendingHtlcs {
 				_, ok := htlcHashes[string(htlc.HashLock)]
 				if ok {
-					return fmt.Errorf("duplicate HashLock")
+					return er.Errorf("duplicate HashLock")
 				}
 				htlcHashes[string(htlc.HashLock)] = struct{}{}
 			}
 
 			// Channel should have exactly the payHashes active.
 			if len(payHashes) != len(htlcHashes) {
-				return fmt.Errorf("node %x had %v htlcs active, "+
+				return er.Errorf("node %x had %v htlcs active, "+
 					"expected %v", node.PubKey[:],
 					len(htlcHashes), len(payHashes))
 			}
@@ -10999,7 +10999,7 @@ func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) error {
 				if _, ok := htlcHashes[string(payHash)]; ok {
 					continue
 				}
-				return fmt.Errorf("node %x didn't have the "+
+				return er.Errorf("node %x didn't have the "+
 					"payHash %v active", node.PubKey[:],
 					payHash)
 			}
@@ -11010,7 +11010,7 @@ func assertActiveHtlcs(nodes []*lntest.HarnessNode, payHashes ...[]byte) error {
 }
 
 func assertNumActiveHtlcsChanPoint(node *lntest.HarnessNode,
-	chanPoint wire.OutPoint, numHtlcs int) error {
+	chanPoint wire.OutPoint, numHtlcs int) er.R {
 	ctxb := context.Background()
 
 	req := &lnrpc.ListChannelsRequest{}
@@ -11026,16 +11026,16 @@ func assertNumActiveHtlcsChanPoint(node *lntest.HarnessNode,
 		}
 
 		if len(channel.PendingHtlcs) != numHtlcs {
-			return fmt.Errorf("expected %v active HTLCs, got %v",
+			return er.Errorf("expected %v active HTLCs, got %v",
 				numHtlcs, len(channel.PendingHtlcs))
 		}
 		return nil
 	}
 
-	return fmt.Errorf("channel point %v not found", chanPoint)
+	return er.Errorf("channel point %v not found", chanPoint)
 }
 
-func assertNumActiveHtlcs(nodes []*lntest.HarnessNode, numHtlcs int) error {
+func assertNumActiveHtlcs(nodes []*lntest.HarnessNode, numHtlcs int) er.R {
 	ctxb := context.Background()
 
 	req := &lnrpc.ListChannelsRequest{}
@@ -11048,7 +11048,7 @@ func assertNumActiveHtlcs(nodes []*lntest.HarnessNode, numHtlcs int) error {
 
 		for _, channel := range nodeChans.Channels {
 			if len(channel.PendingHtlcs) != numHtlcs {
-				return fmt.Errorf("expected %v HTLCs, got %v",
+				return er.Errorf("expected %v HTLCs, got %v",
 					numHtlcs, len(channel.PendingHtlcs))
 			}
 		}
@@ -13627,14 +13627,14 @@ func testHoldInvoicePersistence(net *lntest.NetworkHarness, t *harnessTest) {
 
 	// The payments should now show up in Alice's ListInvoices, with a zero
 	// preimage, indicating they are not yet settled.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		req := &lnrpc.ListPaymentsRequest{
 			IncludeIncomplete: true,
 		}
 		ctxt, _ = context.WithTimeout(ctxt, defaultTimeout)
 		paymentsResp, err := net.Alice.ListPayments(ctxt, req)
 		if err != nil {
-			return fmt.Errorf("error when obtaining payments: %v",
+			return er.Errorf("error when obtaining payments: %v",
 				err)
 		}
 
@@ -13661,14 +13661,14 @@ func testHoldInvoicePersistence(net *lntest.NetworkHarness, t *harnessTest) {
 			// We wait for the payment attempt to have been
 			// properly recorded in the DB.
 			if len(payment.Htlcs) == 0 {
-				return fmt.Errorf("no attempt recorded")
+				return er.Errorf("no attempt recorded")
 			}
 
 			delete(payHashes, payment.PaymentHash)
 		}
 
 		if len(payHashes) != 0 {
-			return fmt.Errorf("payhash not found in response")
+			return er.Errorf("payhash not found in response")
 		}
 
 		return nil
@@ -13863,24 +13863,24 @@ func testExternalFundingChanPoint(net *lntest.NetworkHarness, t *harnessTest) {
 	// First, we'll create two new nodes that we'll use to open channel
 	// between for this test.
 	carol, err := net.NewNode("carol", nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	defer shutdownAndAssert(net, t, carol)
 
 	dave, err := net.NewNode("dave", nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	defer shutdownAndAssert(net, t, dave)
 
 	// Carol will be funding the channel, so we'll send some coins over to
 	// her and ensure they have enough confirmations before we proceed.
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 	err = net.SendCoins(ctxt, btcutil.UnitsPerCoin(), carol)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Before we start the test, we'll ensure both sides are connected to
 	// the funding flow can properly be executed.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = net.EnsureConnected(ctxt, carol, dave)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// At this point, we're ready to simulate our external channel funding
 	// flow. To start with, we'll create a pending channel with a shim for
@@ -13914,7 +13914,7 @@ func testExternalFundingChanPoint(net *lntest.NetworkHarness, t *harnessTest) {
 	carolChan, daveChan, _, err := basicChannelFundingTest(
 		t, net, carol, dave, fundingShim2,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Both channels should be marked as frozen with the proper thaw
 	// height.
@@ -13936,13 +13936,13 @@ func testExternalFundingChanPoint(net *lntest.NetworkHarness, t *harnessTest) {
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	resp, err := dave.AddInvoice(ctxt, invoice)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = completePaymentRequests(
 		ctxt, carol, carol.RouterClient, []string{resp.PaymentRequest},
 		true,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that the channels are open, and we've confirmed that they're
 	// operational, we'll now ensure that the channels are frozen as
@@ -13974,13 +13974,13 @@ func testExternalFundingChanPoint(net *lntest.NetworkHarness, t *harnessTest) {
 		ChannelPoint:           chanPoint1,
 		PendingFundingShimOnly: true,
 	})
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	_, err = dave.AbandonChannel(ctxt, &lnrpc.AbandonChannelRequest{
 		ChannelPoint:           chanPoint1,
 		PendingFundingShimOnly: true,
 	})
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// It should now not appear in the pending channels anymore.
 	assertNumOpenChannelsPending(ctxt, t, carol, dave, 0)
@@ -13999,9 +13999,9 @@ func deriveFundingShim(net *lntest.NetworkHarness, t *harnessTest,
 		KeyIndex:  keyIndex,
 	}
 	carolFundingKey, err := carol.WalletKitClient.DeriveKey(ctxb, keyLoc)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	daveFundingKey, err := dave.WalletKitClient.DeriveKey(ctxb, keyLoc)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that we have the multi-sig keys for each party, we can manually
 	// construct the funding transaction. We'll instruct the backend to
@@ -14012,7 +14012,7 @@ func deriveFundingShim(net *lntest.NetworkHarness, t *harnessTest,
 		carolFundingKey.RawKeyBytes, daveFundingKey.RawKeyBytes,
 		int64(chanSize),
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	var txid *chainhash.Hash
 	targetOutputs := []*wire.TxOut{fundingOutput}
@@ -14020,10 +14020,10 @@ func deriveFundingShim(net *lntest.NetworkHarness, t *harnessTest,
 		txid, err = net.Miner.SendOutputsWithoutChange(
 			targetOutputs, 5,
 		)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 	} else {
 		tx, err := net.Miner.CreateTransaction(targetOutputs, 5, false)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 
 		txHash := tx.TxHash()
 		txid = &txHash
@@ -14034,7 +14034,7 @@ func deriveFundingShim(net *lntest.NetworkHarness, t *harnessTest,
 	// be used to track this new funding type.
 	var pendingChanID [32]byte
 	_, err = rand.Read(pendingChanID[:])
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that we have the pending channel ID, Dave (our responder) will
 	// register the intent to receive a new channel funding workflow using
@@ -14068,7 +14068,7 @@ func deriveFundingShim(net *lntest.NetworkHarness, t *harnessTest,
 			ShimRegister: fundingShim,
 		},
 	})
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// If we attempt to register the same shim (has the same pending chan
 	// ID), then we should get an error.
@@ -14106,25 +14106,25 @@ func sendAndAssertSuccess(t *harnessTest, node *lntest.HarnessNode,
 	defer cancel()
 
 	var result *lnrpc.Payment
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		stream, err := node.RouterClient.SendPaymentV2(ctx, req)
 		if err != nil {
-			return fmt.Errorf("unable to send payment: %v", err)
+			return er.Errorf("unable to send payment: %v", err)
 		}
 
 		result, err = getPaymentResult(stream)
 		if err != nil {
-			return fmt.Errorf("unable to get payment result: %v",
+			return er.Errorf("unable to get payment result: %v",
 				err)
 		}
 
 		if result.Status != lnrpc.Payment_SUCCEEDED {
-			return fmt.Errorf("payment failed: %v", result.Status)
+			return er.Errorf("payment failed: %v", result.Status)
 		}
 
 		return nil
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	return result
 }
@@ -14162,7 +14162,7 @@ func sendAndAssertFailure(t *harnessTest, node *lntest.HarnessNode,
 
 // getPaymentResult reads a final result from the stream and returns it.
 func getPaymentResult(stream routerrpc.Router_SendPaymentV2Client) (
-	*lnrpc.Payment, error) {
+	*lnrpc.Payment, er.R) {
 
 	for {
 		payment, err := stream.Recv()
@@ -14186,7 +14186,7 @@ func TestLightningNetworkDaemon(t *testing.T) {
 
 	// Parse testing flags that influence our test execution.
 	logDir := lntest.GetLogDir()
-	require.NoError(t, os.MkdirAll(logDir, 0700))
+	util.RequireNoErr(t, os.MkdirAll(logDir, 0700))
 	testCases, trancheIndex, trancheOffset := getTestCaseSplitTranche()
 	lntest.ApplyPortOffset(uint32(trancheIndex) * 1000)
 
@@ -14210,9 +14210,9 @@ func TestLightningNetworkDaemon(t *testing.T) {
 		minerLogDir, "output_btcd_miner.log",
 		harnessNetParams, &rpcclient.NotificationHandlers{},
 	)
-	require.NoError(t, err, "failed to create new miner")
+	util.RequireNoErr(t, err, "failed to create new miner")
 	defer func() {
-		require.NoError(t, minerCleanUp(), "failed to clean up miner")
+		util.RequireNoErr(t, minerCleanUp(), "failed to clean up miner")
 	}()
 
 	// Start a chain backend.
@@ -14223,7 +14223,7 @@ func TestLightningNetworkDaemon(t *testing.T) {
 		ht.Fatalf("unable to start backend: %v", err)
 	}
 	defer func() {
-		require.NoError(
+		util.RequireNoErr(
 			t, cleanUp(), "failed to clean up chain backend",
 		)
 	}()
@@ -14236,7 +14236,7 @@ func TestLightningNetworkDaemon(t *testing.T) {
 	}
 
 	// Connect chainbackend to miner.
-	require.NoError(
+	util.RequireNoErr(
 		t, chainBackend.ConnectMiner(), "failed to connect to miner",
 	)
 
@@ -14296,18 +14296,18 @@ func TestLightningNetworkDaemon(t *testing.T) {
 			)
 
 			err = lndHarness.SetUp(cleanTestCaseName, aliceBobArgs)
-			require.NoError(t1,
+			util.RequireNoErr(t1,
 				err, "unable to set up test lightning network",
 			)
 			defer func() {
-				require.NoError(t1, lndHarness.TearDown())
+				util.RequireNoErr(t1, lndHarness.TearDown())
 			}()
 
 			err = lndHarness.EnsureConnected(
 				context.Background(), lndHarness.Alice,
 				lndHarness.Bob,
 			)
-			require.NoError(t1,
+			util.RequireNoErr(t1,
 				err, "unable to connect alice to bob",
 			)
 
@@ -14317,10 +14317,10 @@ func TestLightningNetworkDaemon(t *testing.T) {
 			)
 
 			err = lndHarness.Alice.AddToLog(logLine)
-			require.NoError(t1, err, "unable to add to log")
+			util.RequireNoErr(t1, err, "unable to add to log")
 
 			err = lndHarness.Bob.AddToLog(logLine)
-			require.NoError(t1, err, "unable to add to log")
+			util.RequireNoErr(t1, err, "unable to add to log")
 
 			// Start every test with the default static fee estimate.
 			lndHarness.SetFeeEstimate(12500)

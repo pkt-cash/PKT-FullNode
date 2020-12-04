@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -111,7 +113,7 @@ func makePaymentCircuit(hash *[32]byte, pkt *htlcPacket) PaymentCircuit {
 }
 
 // Encode writes a PaymentCircuit to the provided io.Writer.
-func (c *PaymentCircuit) Encode(w io.Writer) error {
+func (c *PaymentCircuit) Encode(w io.Writer) er.R {
 	if err := c.AddRef.Encode(w); err != nil {
 		return err
 	}
@@ -120,19 +122,19 @@ func (c *PaymentCircuit) Encode(w io.Writer) error {
 		return err
 	}
 
-	if _, err := w.Write(c.PaymentHash[:]); err != nil {
+	if _, err := util.Write(w, c.PaymentHash[:]); err != nil {
 		return err
 	}
 
 	var scratch [8]byte
 
 	binary.BigEndian.PutUint64(scratch[:], uint64(c.IncomingAmount))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
 	binary.BigEndian.PutUint64(scratch[:], uint64(c.OutgoingAmount))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
@@ -142,7 +144,7 @@ func (c *PaymentCircuit) Encode(w io.Writer) error {
 		encrypterType = c.ErrorEncrypter.Type()
 	}
 
-	err := binary.Write(w, binary.BigEndian, encrypterType)
+	err := util.WriteBin(w, binary.BigEndian, encrypterType)
 	if err != nil {
 		return err
 	}
@@ -156,7 +158,7 @@ func (c *PaymentCircuit) Encode(w io.Writer) error {
 }
 
 // Decode reads a PaymentCircuit from the provided io.Reader.
-func (c *PaymentCircuit) Decode(r io.Reader) error {
+func (c *PaymentCircuit) Decode(r io.Reader) er.R {
 	if err := c.AddRef.Decode(r); err != nil {
 		return err
 	}
@@ -165,19 +167,19 @@ func (c *PaymentCircuit) Decode(r io.Reader) error {
 		return err
 	}
 
-	if _, err := io.ReadFull(r, c.PaymentHash[:]); err != nil {
+	if _, err := util.ReadFull(r, c.PaymentHash[:]); err != nil {
 		return err
 	}
 
 	var scratch [8]byte
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return err
 	}
 	c.IncomingAmount = lnwire.MilliSatoshi(
 		binary.BigEndian.Uint64(scratch[:]))
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return err
 	}
 	c.OutgoingAmount = lnwire.MilliSatoshi(
@@ -185,7 +187,7 @@ func (c *PaymentCircuit) Decode(r io.Reader) error {
 
 	// Read the encrypter type used for this circuit.
 	var encrypterType hop.EncrypterType
-	err := binary.Read(r, binary.BigEndian, &encrypterType)
+	err := util.ReadBin(r, binary.BigEndian, &encrypterType)
 	if err != nil {
 		return err
 	}

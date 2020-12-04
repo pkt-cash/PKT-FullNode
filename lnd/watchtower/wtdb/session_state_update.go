@@ -29,7 +29,7 @@ type SessionStateUpdate struct {
 }
 
 // Encode serializes the state update into the provided io.Writer.
-func (u *SessionStateUpdate) Encode(w io.Writer) error {
+func (u *SessionStateUpdate) Encode(w io.Writer) er.R {
 	return WriteElements(w,
 		u.ID,
 		u.SeqNum,
@@ -40,7 +40,7 @@ func (u *SessionStateUpdate) Encode(w io.Writer) error {
 }
 
 // Decode deserializes the target state update from the provided io.Reader.
-func (u *SessionStateUpdate) Decode(r io.Reader) error {
+func (u *SessionStateUpdate) Decode(r io.Reader) er.R {
 	return ReadElements(r,
 		&u.ID,
 		&u.SeqNum,

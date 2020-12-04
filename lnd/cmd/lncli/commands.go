@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,13 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/lightninglabs/protobuf-hex-display/json"
 	"github.com/lightninglabs/protobuf-hex-display/jsonpb"
 	"github.com/lightninglabs/protobuf-hex-display/proto"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -69,8 +69,8 @@ func printRespJSON(resp proto.Message) {
 
 // actionDecorator is used to add additional information and error handling
 // to command actions.
-func actionDecorator(f func(*cli.Context) error) func(*cli.Context) error {
-	return func(c *cli.Context) error {
+func actionDecorator(f func(*cli.Context) error) func(*cli.Context) er.R {
+	return func(c *cli.Context) er.R {
 		if err := f(c); err != nil {
 			s, ok := status.FromError(err)
 
@@ -84,7 +84,7 @@ func actionDecorator(f func(*cli.Context) error) func(*cli.Context) error {
 			if s.Code() == codes.Unimplemented &&
 				(c.Command.Name == "create" ||
 					c.Command.Name == "unlock") {
-				return fmt.Errorf("Wallet is already unlocked")
+				return er.Errorf("Wallet is already unlocked")
 			}
 
 			// lnd might be active, but not possible to contact
@@ -94,7 +94,7 @@ func actionDecorator(f func(*cli.Context) error) func(*cli.Context) error {
 			// WalletUnlocker server active) and most likely this
 			// is because of an encrypted wallet.
 			if ok && s.Code() == codes.Unimplemented {
-				return fmt.Errorf("Wallet is encrypted. " +
+				return er.Errorf("Wallet is encrypted. " +
 					"Please unlock using 'lncli unlock', " +
 					"or set password using 'lncli create'" +
 					" if this is the first time starting " +
@@ -118,7 +118,7 @@ var newAddressCommand = cli.Command{
 	Action: actionDecorator(newAddress),
 }
 
-func newAddress(ctx *cli.Context) error {
+func newAddress(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -133,7 +133,7 @@ func newAddress(ctx *cli.Context) error {
 	case "np2wkh":
 		addrType = lnrpc.AddressType_NESTED_PUBKEY_HASH
 	default:
-		return fmt.Errorf("invalid address type %v, support address type "+
+		return er.Errorf("invalid address type %v, support address type "+
 			"are: p2wkh and np2wkh", stringAddrType)
 	}
 
@@ -171,7 +171,7 @@ var estimateFeeCommand = cli.Command{
 	Action: actionDecorator(estimateFees),
 }
 
-func estimateFees(ctx *cli.Context) error {
+func estimateFees(ctx *cli.Context) er.R {
 	var amountToAddr map[string]int64
 
 	jsonMap := ctx.Args().First()
@@ -254,7 +254,7 @@ var sendCoinsCommand = cli.Command{
 	Action: actionDecorator(sendCoins),
 }
 
-func sendCoins(ctx *cli.Context) error {
+func sendCoins(ctx *cli.Context) er.R {
 	var (
 		addr string
 		amt  int64
@@ -268,7 +268,7 @@ func sendCoins(ctx *cli.Context) error {
 	}
 
 	if ctx.IsSet("conf_target") && ctx.IsSet("sat_per_byte") {
-		return fmt.Errorf("either conf_target or sat_per_byte should be " +
+		return er.Errorf("either conf_target or sat_per_byte should be " +
 			"set, but not both")
 	}
 
@@ -279,7 +279,7 @@ func sendCoins(ctx *cli.Context) error {
 		addr = args.First()
 		args = args.Tail()
 	default:
-		return fmt.Errorf("Address argument missing")
+		return er.Errorf("Address argument missing")
 	}
 
 	switch {
@@ -288,14 +288,14 @@ func sendCoins(ctx *cli.Context) error {
 	case args.Present():
 		amt, err = strconv.ParseInt(args.First(), 10, 64)
 	case !ctx.Bool("sweepall"):
-		return fmt.Errorf("Amount argument missing")
+		return er.Errorf("Amount argument missing")
 	}
 	if err != nil {
-		return fmt.Errorf("unable to decode amount: %v", err)
+		return er.Errorf("unable to decode amount: %v", err)
 	}
 
 	if amt != 0 && ctx.Bool("sweepall") {
-		return fmt.Errorf("amount cannot be set if attempting to " +
+		return er.Errorf("amount cannot be set if attempting to " +
 			"sweep all coins out of the wallet")
 	}
 
@@ -361,7 +361,7 @@ var listUnspentCommand = cli.Command{
 	Action: actionDecorator(listUnspent),
 }
 
-func listUnspent(ctx *cli.Context) error {
+func listUnspent(ctx *cli.Context) er.R {
 	var (
 		minConfirms int64
 		maxConfirms int64
@@ -370,7 +370,7 @@ func listUnspent(ctx *cli.Context) error {
 	args := ctx.Args()
 
 	if ctx.IsSet("max_confs") && !ctx.IsSet("min_confs") {
-		return fmt.Errorf("max_confs cannot be set without " +
+		return er.Errorf("max_confs cannot be set without " +
 			"min_confs being set")
 	}
 
@@ -480,7 +480,7 @@ var sendManyCommand = cli.Command{
 	Action: actionDecorator(sendMany),
 }
 
-func sendMany(ctx *cli.Context) error {
+func sendMany(ctx *cli.Context) er.R {
 	var amountToAddr map[string]int64
 
 	jsonMap := ctx.Args().First()
@@ -489,7 +489,7 @@ func sendMany(ctx *cli.Context) error {
 	}
 
 	if ctx.IsSet("conf_target") && ctx.IsSet("sat_per_byte") {
-		return fmt.Errorf("either conf_target or sat_per_byte should be " +
+		return er.Errorf("either conf_target or sat_per_byte should be " +
 			"set, but not both")
 	}
 
@@ -545,7 +545,7 @@ var connectCommand = cli.Command{
 	Action: actionDecorator(connectPeer),
 }
 
-func connectPeer(ctx *cli.Context) error {
+func connectPeer(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -553,7 +553,7 @@ func connectPeer(ctx *cli.Context) error {
 	targetAddress := ctx.Args().First()
 	splitAddr := strings.Split(targetAddress, "@")
 	if len(splitAddr) != 2 {
-		return fmt.Errorf("target address expected in format: " +
+		return er.Errorf("target address expected in format: " +
 			"pubkey@host:port")
 	}
 
@@ -591,7 +591,7 @@ var disconnectCommand = cli.Command{
 	Action: actionDecorator(disconnectPeer),
 }
 
-func disconnectPeer(ctx *cli.Context) error {
+func disconnectPeer(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -603,7 +603,7 @@ func disconnectPeer(ctx *cli.Context) error {
 	case ctx.Args().Present():
 		pubKey = ctx.Args().First()
 	default:
-		return fmt.Errorf("must specify target public key")
+		return er.Errorf("must specify target public key")
 	}
 
 	req := &lnrpc.DisconnectPeerRequest{
@@ -688,7 +688,7 @@ var closeChannelCommand = cli.Command{
 	Action: actionDecorator(closeChannel),
 }
 
-func closeChannel(ctx *cli.Context) error {
+func closeChannel(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -749,7 +749,7 @@ func closeChannel(ctx *cli.Context) error {
 // network. The block boolean is used to determine if we should block until the
 // closing transaction receives all of its required confirmations.
 func executeChannelClose(client lnrpc.LightningClient, req *lnrpc.CloseChannelRequest,
-	txidChan chan<- string, block bool) error {
+	txidChan chan<- string, block bool) er.R {
 
 	stream, err := client.CloseChannel(context.Background(), req)
 	if err != nil {
@@ -833,18 +833,18 @@ var closeAllChannelsCommand = cli.Command{
 	Action: actionDecorator(closeAllChannels),
 }
 
-func closeAllChannels(ctx *cli.Context) error {
+func closeAllChannels(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
 	listReq := &lnrpc.ListChannelsRequest{}
 	openChannels, err := client.ListChannels(context.Background(), listReq)
 	if err != nil {
-		return fmt.Errorf("unable to fetch open channels: %v", err)
+		return er.Errorf("unable to fetch open channels: %v", err)
 	}
 
 	if len(openChannels.Channels) == 0 {
-		return errors.New("no open channels to close")
+		return er.New("no open channels to close")
 	}
 
 	var channelsToClose []*lnrpc.Channel
@@ -1043,7 +1043,7 @@ var abandonChannelCommand = cli.Command{
 	Action: actionDecorator(abandonChannel),
 }
 
-func abandonChannel(ctx *cli.Context) error {
+func abandonChannel(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 
 	client, cleanUp := getClient(ctx)
@@ -1075,7 +1075,7 @@ func abandonChannel(ctx *cli.Context) error {
 
 // parseChannelPoint parses a funding txid and output index from the command
 // line. Both named options as well as unnamed parameters are supported.
-func parseChannelPoint(ctx *cli.Context) (*lnrpc.ChannelPoint, error) {
+func parseChannelPoint(ctx *cli.Context) (*lnrpc.ChannelPoint, er.R) {
 	channelPoint := &lnrpc.ChannelPoint{}
 
 	args := ctx.Args()
@@ -1091,7 +1091,7 @@ func parseChannelPoint(ctx *cli.Context) (*lnrpc.ChannelPoint, error) {
 		}
 		args = args.Tail()
 	default:
-		return nil, fmt.Errorf("funding txid argument missing")
+		return nil, er.Errorf("funding txid argument missing")
 	}
 
 	switch {
@@ -1100,7 +1100,7 @@ func parseChannelPoint(ctx *cli.Context) (*lnrpc.ChannelPoint, error) {
 	case args.Present():
 		index, err := strconv.ParseUint(args.First(), 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("unable to decode output index: %v", err)
+			return nil, er.Errorf("unable to decode output index: %v", err)
 		}
 		channelPoint.OutputIndex = uint32(index)
 	default:
@@ -1123,7 +1123,7 @@ var listPeersCommand = cli.Command{
 	Action: actionDecorator(listPeers),
 }
 
-func listPeers(ctx *cli.Context) error {
+func listPeers(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1149,7 +1149,7 @@ var walletBalanceCommand = cli.Command{
 	Action:   actionDecorator(walletBalance),
 }
 
-func walletBalance(ctx *cli.Context) error {
+func walletBalance(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1172,7 +1172,7 @@ var channelBalanceCommand = cli.Command{
 	Action: actionDecorator(channelBalance),
 }
 
-func channelBalance(ctx *cli.Context) error {
+func channelBalance(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1193,7 +1193,7 @@ var getInfoCommand = cli.Command{
 	Action: actionDecorator(getInfo),
 }
 
-func getInfo(ctx *cli.Context) error {
+func getInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1214,7 +1214,7 @@ var getRecoveryInfoCommand = cli.Command{
 	Action: actionDecorator(getRecoveryInfo),
 }
 
-func getRecoveryInfo(ctx *cli.Context) error {
+func getRecoveryInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1236,7 +1236,7 @@ var pendingChannelsCommand = cli.Command{
 	Action:   actionDecorator(pendingChannels),
 }
 
-func pendingChannels(ctx *cli.Context) error {
+func pendingChannels(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1283,7 +1283,7 @@ var listChannelsCommand = cli.Command{
 	Action: actionDecorator(listChannels),
 }
 
-func listChannels(ctx *cli.Context) error {
+func listChannels(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1296,7 +1296,7 @@ func listChannels(ctx *cli.Context) error {
 	if len(peer) > 0 {
 		pk, err := route.NewVertexFromStr(peer)
 		if err != nil {
-			return fmt.Errorf("invalid --peer pubkey: %v", err)
+			return er.Errorf("invalid --peer pubkey: %v", err)
 		}
 
 		peerKey = pk[:]
@@ -1358,7 +1358,7 @@ var closedChannelsCommand = cli.Command{
 	Action: actionDecorator(closedChannels),
 }
 
-func closedChannels(ctx *cli.Context) error {
+func closedChannels(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1399,7 +1399,7 @@ var describeGraphCommand = cli.Command{
 	Action: actionDecorator(describeGraph),
 }
 
-func describeGraph(ctx *cli.Context) error {
+func describeGraph(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -1424,7 +1424,7 @@ var getNodeMetricsCommand = cli.Command{
 	Action:      actionDecorator(getNodeMetrics),
 }
 
-func getNodeMetrics(ctx *cli.Context) error {
+func getNodeMetrics(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -1486,7 +1486,7 @@ var listPaymentsCommand = cli.Command{
 	Action: actionDecorator(listPayments),
 }
 
-func listPayments(ctx *cli.Context) error {
+func listPayments(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -1522,7 +1522,7 @@ var getChanInfoCommand = cli.Command{
 	Action: actionDecorator(getChanInfo),
 }
 
-func getChanInfo(ctx *cli.Context) error {
+func getChanInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1538,10 +1538,10 @@ func getChanInfo(ctx *cli.Context) error {
 	case ctx.Args().Present():
 		chanID, err = strconv.ParseInt(ctx.Args().First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("error parsing chan_id: %s", err)
+			return er.Errorf("error parsing chan_id: %s", err)
 		}
 	default:
-		return fmt.Errorf("chan_id argument missing")
+		return er.Errorf("chan_id argument missing")
 	}
 
 	req := &lnrpc.ChanInfoRequest{
@@ -1578,7 +1578,7 @@ var getNodeInfoCommand = cli.Command{
 	Action: actionDecorator(getNodeInfo),
 }
 
-func getNodeInfo(ctx *cli.Context) error {
+func getNodeInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1592,7 +1592,7 @@ func getNodeInfo(ctx *cli.Context) error {
 	case args.Present():
 		pubKey = args.First()
 	default:
-		return fmt.Errorf("pub_key argument missing")
+		return er.Errorf("pub_key argument missing")
 	}
 
 	req := &lnrpc.NodeInfoRequest{
@@ -1654,7 +1654,7 @@ var queryRoutesCommand = cli.Command{
 	Action: actionDecorator(queryRoutes),
 }
 
-func queryRoutes(ctx *cli.Context) error {
+func queryRoutes(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1674,7 +1674,7 @@ func queryRoutes(ctx *cli.Context) error {
 		dest = args.First()
 		args = args.Tail()
 	default:
-		return fmt.Errorf("dest argument missing")
+		return er.Errorf("dest argument missing")
 	}
 
 	switch {
@@ -1683,10 +1683,10 @@ func queryRoutes(ctx *cli.Context) error {
 	case args.Present():
 		amt, err = strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode amt argument: %v", err)
+			return er.Errorf("unable to decode amt argument: %v", err)
 		}
 	default:
-		return fmt.Errorf("amt argument missing")
+		return er.Errorf("amt argument missing")
 	}
 
 	feeLimit, err := retrieveFeeLimitLegacy(ctx)
@@ -1716,10 +1716,10 @@ func queryRoutes(ctx *cli.Context) error {
 // retrieveFeeLimitLegacy retrieves the fee limit based on the different fee
 // limit flags passed. This function will eventually disappear in favor of
 // retrieveFeeLimit and the new payment rpc.
-func retrieveFeeLimitLegacy(ctx *cli.Context) (*lnrpc.FeeLimit, error) {
+func retrieveFeeLimitLegacy(ctx *cli.Context) (*lnrpc.FeeLimit, er.R) {
 	switch {
 	case ctx.IsSet("fee_limit") && ctx.IsSet("fee_limit_percent"):
-		return nil, fmt.Errorf("either fee_limit or fee_limit_percent " +
+		return nil, er.Errorf("either fee_limit or fee_limit_percent " +
 			"can be set, but not both")
 	case ctx.IsSet("fee_limit"):
 		return &lnrpc.FeeLimit{
@@ -1730,7 +1730,7 @@ func retrieveFeeLimitLegacy(ctx *cli.Context) (*lnrpc.FeeLimit, error) {
 	case ctx.IsSet("fee_limit_percent"):
 		feeLimitPercent := ctx.Int64("fee_limit_percent")
 		if feeLimitPercent < 0 {
-			return nil, errors.New("negative fee limit percentage " +
+			return nil, er.New("negative fee limit percentage " +
 				"provided")
 		}
 		return &lnrpc.FeeLimit{
@@ -1755,7 +1755,7 @@ var getNetworkInfoCommand = cli.Command{
 	Action: actionDecorator(getNetworkInfo),
 }
 
-func getNetworkInfo(ctx *cli.Context) error {
+func getNetworkInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1791,7 +1791,7 @@ var debugLevelCommand = cli.Command{
 	Action: actionDecorator(debugLevel),
 }
 
-func debugLevel(ctx *cli.Context) error {
+func debugLevel(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1843,7 +1843,7 @@ var listChainTxnsCommand = cli.Command{
 	Action: actionDecorator(listChainTxns),
 }
 
-func listChainTxns(ctx *cli.Context) error {
+func listChainTxns(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1875,7 +1875,7 @@ var stopCommand = cli.Command{
 	Action: actionDecorator(stopDaemon),
 }
 
-func stopDaemon(ctx *cli.Context) error {
+func stopDaemon(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1907,7 +1907,7 @@ var signMessageCommand = cli.Command{
 	Action: actionDecorator(signMessage),
 }
 
-func signMessage(ctx *cli.Context) error {
+func signMessage(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1920,7 +1920,7 @@ func signMessage(ctx *cli.Context) error {
 	case ctx.Args().Present():
 		msg = []byte(ctx.Args().First())
 	default:
-		return fmt.Errorf("msg argument missing")
+		return er.Errorf("msg argument missing")
 	}
 
 	resp, err := client.SignMessage(ctxb, &lnrpc.SignMessageRequest{Msg: msg})
@@ -1956,7 +1956,7 @@ var verifyMessageCommand = cli.Command{
 	Action: actionDecorator(verifyMessage),
 }
 
-func verifyMessage(ctx *cli.Context) error {
+func verifyMessage(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -1975,7 +1975,7 @@ func verifyMessage(ctx *cli.Context) error {
 		msg = []byte(ctx.Args().First())
 		args = args.Tail()
 	default:
-		return fmt.Errorf("msg argument missing")
+		return er.Errorf("msg argument missing")
 	}
 
 	switch {
@@ -1984,7 +1984,7 @@ func verifyMessage(ctx *cli.Context) error {
 	case args.Present():
 		sig = args.First()
 	default:
-		return fmt.Errorf("signature argument missing")
+		return er.Errorf("signature argument missing")
 	}
 
 	req := &lnrpc.VerifyMessageRequest{Msg: msg, Signature: sig}
@@ -2007,7 +2007,7 @@ var feeReportCommand = cli.Command{
 	Action: actionDecorator(feeReport),
 }
 
-func feeReport(ctx *cli.Context) error {
+func feeReport(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2075,21 +2075,21 @@ var updateChannelPolicyCommand = cli.Command{
 	Action: actionDecorator(updateChannelPolicy),
 }
 
-func parseChanPoint(s string) (*lnrpc.ChannelPoint, error) {
+func parseChanPoint(s string) (*lnrpc.ChannelPoint, er.R) {
 	split := strings.Split(s, ":")
 	if len(split) != 2 {
-		return nil, fmt.Errorf("expecting chan_point to be in format of: " +
+		return nil, er.Errorf("expecting chan_point to be in format of: " +
 			"txid:index")
 	}
 
 	index, err := strconv.ParseInt(split[1], 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode output index: %v", err)
+		return nil, er.Errorf("unable to decode output index: %v", err)
 	}
 
 	txid, err := chainhash.NewHashFromStr(split[0])
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse hex string: %v", err)
+		return nil, er.Errorf("unable to parse hex string: %v", err)
 	}
 
 	return &lnrpc.ChannelPoint{
@@ -2100,7 +2100,7 @@ func parseChanPoint(s string) (*lnrpc.ChannelPoint, error) {
 	}, nil
 }
 
-func updateChannelPolicy(ctx *cli.Context) error {
+func updateChannelPolicy(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2119,11 +2119,11 @@ func updateChannelPolicy(ctx *cli.Context) error {
 	case args.Present():
 		baseFee, err = strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode base_fee_msat: %v", err)
+			return er.Errorf("unable to decode base_fee_msat: %v", err)
 		}
 		args = args.Tail()
 	default:
-		return fmt.Errorf("base_fee_msat argument missing")
+		return er.Errorf("base_fee_msat argument missing")
 	}
 
 	switch {
@@ -2132,12 +2132,12 @@ func updateChannelPolicy(ctx *cli.Context) error {
 	case args.Present():
 		feeRate, err = strconv.ParseFloat(args.First(), 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode fee_rate: %v", err)
+			return er.Errorf("unable to decode fee_rate: %v", err)
 		}
 
 		args = args.Tail()
 	default:
-		return fmt.Errorf("fee_rate argument missing")
+		return er.Errorf("fee_rate argument missing")
 	}
 
 	switch {
@@ -2146,13 +2146,13 @@ func updateChannelPolicy(ctx *cli.Context) error {
 	case args.Present():
 		timeLockDelta, err = strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode time_lock_delta: %v",
+			return er.Errorf("unable to decode time_lock_delta: %v",
 				err)
 		}
 
 		args = args.Tail()
 	default:
-		return fmt.Errorf("time_lock_delta argument missing")
+		return er.Errorf("time_lock_delta argument missing")
 	}
 
 	var (
@@ -2170,7 +2170,7 @@ func updateChannelPolicy(ctx *cli.Context) error {
 	if chanPointStr != "" {
 		chanPoint, err = parseChanPoint(chanPointStr)
 		if err != nil {
-			return fmt.Errorf("unable to parse chan point: %v", err)
+			return er.Errorf("unable to parse chan point: %v", err)
 		}
 	}
 
@@ -2251,7 +2251,7 @@ var forwardingHistoryCommand = cli.Command{
 	Action: actionDecorator(forwardingHistory),
 }
 
-func forwardingHistory(ctx *cli.Context) error {
+func forwardingHistory(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2275,7 +2275,7 @@ func forwardingHistory(ctx *cli.Context) error {
 		startTime = uint64(now.Add(-time.Hour * 24).Unix())
 	}
 	if err != nil {
-		return fmt.Errorf("unable to decode start_time: %v", err)
+		return er.Errorf("unable to decode start_time: %v", err)
 	}
 
 	switch {
@@ -2288,7 +2288,7 @@ func forwardingHistory(ctx *cli.Context) error {
 		endTime = uint64(now.Unix())
 	}
 	if err != nil {
-		return fmt.Errorf("unable to decode end_time: %v", err)
+		return er.Errorf("unable to decode end_time: %v", err)
 	}
 
 	switch {
@@ -2297,7 +2297,7 @@ func forwardingHistory(ctx *cli.Context) error {
 	case args.Present():
 		i, err := strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode index_offset: %v", err)
+			return er.Errorf("unable to decode index_offset: %v", err)
 		}
 		indexOffset = uint32(i)
 		args = args.Tail()
@@ -2309,7 +2309,7 @@ func forwardingHistory(ctx *cli.Context) error {
 	case args.Present():
 		m, err := strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return fmt.Errorf("unable to decode max_events: %v", err)
+			return er.Errorf("unable to decode max_events: %v", err)
 		}
 		maxEvents = uint32(m)
 		args = args.Tail()
@@ -2383,7 +2383,7 @@ var exportChanBackupCommand = cli.Command{
 	Action: actionDecorator(exportChanBackup),
 }
 
-func exportChanBackup(ctx *cli.Context) error {
+func exportChanBackup(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2408,7 +2408,7 @@ func exportChanBackup(ctx *cli.Context) error {
 		chanPointStr = args.First()
 
 	case !ctx.IsSet("all"):
-		return fmt.Errorf("must specify chan_point if --all isn't set")
+		return er.Errorf("must specify chan_point if --all isn't set")
 	}
 
 	if chanPointStr != "" {
@@ -2449,7 +2449,7 @@ func exportChanBackup(ctx *cli.Context) error {
 	}
 
 	if !ctx.IsSet("all") {
-		return fmt.Errorf("if a channel isn't specified, -all must be")
+		return er.Errorf("if a channel isn't specified, -all must be")
 	}
 
 	chanBackup, err := client.ExportAllChannelBackups(
@@ -2528,7 +2528,7 @@ var verifyChanBackupCommand = cli.Command{
 	Action: actionDecorator(verifyChanBackup),
 }
 
-func verifyChanBackup(ctx *cli.Context) error {
+func verifyChanBackup(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2612,16 +2612,16 @@ var restoreChanBackupCommand = cli.Command{
 
 // errMissingChanBackup is an error returned when we attempt to parse a channel
 // backup from a CLI command and it is missing.
-var errMissingChanBackup = errors.New("missing channel backup")
+var errMissingChanBackup = er.New("missing channel backup")
 
-func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, error) {
+func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, er.R) {
 	switch {
 	case ctx.IsSet("single_backup"):
-		packedBackup, err := hex.DecodeString(
+		packedBackup, err := util.DecodeHex(
 			ctx.String("single_backup"),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to decode single packed "+
+			return nil, er.Errorf("unable to decode single packed "+
 				"backup: %v", err)
 		}
 
@@ -2638,11 +2638,11 @@ func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, error)
 		}, nil
 
 	case ctx.IsSet("multi_backup"):
-		packedMulti, err := hex.DecodeString(
+		packedMulti, err := util.DecodeHex(
 			ctx.String("multi_backup"),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to decode multi packed "+
+			return nil, er.Errorf("unable to decode multi packed "+
 				"backup: %v", err)
 		}
 
@@ -2655,7 +2655,7 @@ func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, error)
 	case ctx.IsSet("multi_file"):
 		packedMulti, err := ioutil.ReadFile(ctx.String("multi_file"))
 		if err != nil {
-			return nil, fmt.Errorf("unable to decode multi packed "+
+			return nil, er.Errorf("unable to decode multi packed "+
 				"backup: %v", err)
 		}
 
@@ -2670,7 +2670,7 @@ func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, error)
 	}
 }
 
-func restoreChanBackup(ctx *cli.Context) error {
+func restoreChanBackup(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -2692,7 +2692,7 @@ func restoreChanBackup(ctx *cli.Context) error {
 
 	_, err = client.RestoreChannelBackups(ctxb, &req)
 	if err != nil {
-		return fmt.Errorf("unable to restore chan backups: %v", err)
+		return er.Errorf("unable to restore chan backups: %v", err)
 	}
 
 	return nil

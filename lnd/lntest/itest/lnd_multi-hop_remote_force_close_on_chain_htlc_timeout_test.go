@@ -2,13 +2,12 @@ package itest
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
-	"github.com/stretchr/testify/require"
 )
 
 // testMultiHopRemoteForceCloseOnChainHtlcTimeout tests that if we extend a
@@ -55,15 +54,15 @@ func testMultiHopRemoteForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Once the HTLC has cleared, all the nodes in our mini network should
 	// show that the HTLC has been locked in.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Increase the fee estimate so that the following force close tx will
 	// be cpfp'ed.
@@ -83,7 +82,7 @@ func testMultiHopRemoteForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 	// Carol has gone directly to chain.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(ctxt, bob, 1, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Bob can sweep his output immediately. If there is an anchor, Bob will
 	// sweep that as well.
@@ -95,39 +94,39 @@ func testMultiHopRemoteForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 	_, err = waitForNTxsInMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Next, we'll mine enough blocks for the HTLC to expire. At this
 	// point, Bob should hand off the output to his internal utxo nursery,
 	// which will broadcast a sweep transaction.
 	numBlocks := padCLTV(finalCltvDelta - 1)
 	_, err = net.Miner.Node.Generate(numBlocks)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// If we check Bob's pending channel report, it should show that he has
 	// a single HTLC that's now in the second stage, as skip the initial
 	// first stage since this is a direct HTLC.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(
-		ctxt, bob, 1, func(c *lnrpcForceCloseChannel) error {
+		ctxt, bob, 1, func(c *lnrpcForceCloseChannel) er.R {
 			if len(c.PendingHtlcs) != 1 {
-				return fmt.Errorf("bob should have pending " +
+				return er.Errorf("bob should have pending " +
 					"htlc but doesn't")
 			}
 
 			if c.PendingHtlcs[0].Stage != 2 {
-				return fmt.Errorf("bob's htlc should have "+
+				return er.Errorf("bob's htlc should have "+
 					"advanced to the second stage: %v", err)
 			}
 
 			return nil
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We need to generate an additional block to trigger the sweep.
 	_, err = net.Miner.Node.Generate(1)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Bob's sweeping transaction should now be found in the mempool at
 	// this point.
@@ -142,9 +141,9 @@ func testMultiHopRemoteForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 		// TODO(halseth): can we use waitForChannelPendingForceClose to
 		// avoid this hack?
 		_, err = net.Miner.Node.Generate(1)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 		sweepTx, err = waitForTxInMempool(net.Miner.Node, minerMempoolTimeout)
-		require.NoError(t.t, err)
+		util.RequireNoErr(t.t, err)
 	}
 
 	// If we mine an additional block, then this should confirm Bob's
@@ -156,17 +155,17 @@ func testMultiHopRemoteForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 	// cancel back that HTLC. As a result, Alice should not know of any
 	// active HTLC's.
 	nodes = []*lntest.HarnessNode{alice}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertNumActiveHtlcs(nodes, 0)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now we'll check Bob's pending channel report. Since this was Carol's
 	// commitment, he doesn't have to wait for any CSV delays. As a result,
 	// he should show no additional pending transactions.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(ctxt, bob, 0, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We'll close out the test by closing the channel from Alice to Bob,
 	// and then shutting down the new node we created as its no longer

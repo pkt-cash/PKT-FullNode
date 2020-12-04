@@ -13,7 +13,7 @@ import (
 // session info is known about the session id. If an existing session is found,
 // the reward address is returned in case the client lost our reply.
 func (s *Server) handleCreateSession(peer Peer, id *wtdb.SessionID,
-	req *wtwire.CreateSession) error {
+	req *wtwire.CreateSession) er.R {
 
 	// TODO(conner): validate accept against policy
 
@@ -133,7 +133,7 @@ func (s *Server) handleCreateSession(peer Peer, id *wtdb.SessionID,
 // Otherwise, this method returns a connection error to ensure we don't continue
 // communication with the client.
 func (s *Server) replyCreateSession(peer Peer, id *wtdb.SessionID,
-	code wtwire.ErrorCode, lastApplied uint16, data []byte) error {
+	code wtwire.ErrorCode, lastApplied uint16, data []byte) er.R {
 
 	if s.cfg.NoAckCreateSession {
 		return &connFailure{

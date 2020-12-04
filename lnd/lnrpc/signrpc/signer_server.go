@@ -94,7 +94,7 @@ var _ SignerServer = (*Server)(nil)
 // method. If the macaroons we need aren't found in the filepath, then we'll
 // create them on start up. If we're unable to locate, or create the macaroons
 // we need, then we'll return with an error.
-func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, er.R) {
 	// If the path of the signer macaroon wasn't generated, then we'll
 	// assume that it's found at the default network directory.
 	if cfg.SignerMacPath == "" {
@@ -144,14 +144,14 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
 // Start launches any helper goroutines required for the rpcServer to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	return nil
 }
 
@@ -169,7 +169,7 @@ func (s *Server) Name() string {
 // requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterSignerServer(grpcServer, s)
@@ -186,7 +186,7 @@ func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (s *Server) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -209,19 +209,19 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 // provides an invalid transaction, then we'll return with an error.
 //
 // NOTE: The resulting signature should be void of a sighash byte.
-func (s *Server) SignOutputRaw(ctx context.Context, in *SignReq) (*SignResp, error) {
+func (s *Server) SignOutputRaw(ctx context.Context, in *SignReq) (*SignResp, er.R) {
 
 	switch {
 	// If the client doesn't specify a transaction, then there's nothing to
 	// sign, so we'll exit early.
 	case len(in.RawTxBytes) == 0:
-		return nil, fmt.Errorf("a transaction to sign MUST be " +
+		return nil, er.Errorf("a transaction to sign MUST be " +
 			"passed in")
 
 	// If the client doesn't tell us *how* to sign the transaction, then we
 	// can't sign anything, so we'll exit early.
 	case len(in.SignDescs) == 0:
-		return nil, fmt.Errorf("at least one SignDescs MUST be " +
+		return nil, er.Errorf("at least one SignDescs MUST be " +
 			"passed in")
 	}
 
@@ -233,7 +233,7 @@ func (s *Server) SignOutputRaw(ctx context.Context, in *SignReq) (*SignResp, err
 	)
 	txReader := bytes.NewReader(in.RawTxBytes)
 	if err := txToSign.Deserialize(txReader); err != nil {
-		return nil, fmt.Errorf("unable to decode tx: %v", err)
+		return nil, er.Errorf("unable to decode tx: %v", err)
 	}
 
 	sigHashCache := txscript.NewTxSigHashes(&txToSign)
@@ -283,7 +283,7 @@ func (s *Server) SignOutputRaw(ctx context.Context, in *SignReq) (*SignResp, err
 		if len(signDesc.WitnessScript) == 0 {
 			// TODO(roasbeef): if regualr p2wkh, then at times
 			// internally we allow script to go by
-			return nil, fmt.Errorf("witness script MUST be " +
+			return nil, er.Errorf("witness script MUST be " +
 				"specified")
 		}
 
@@ -348,19 +348,19 @@ func (s *Server) SignOutputRaw(ctx context.Context, in *SignReq) (*SignResp, err
 // only items of the SignDescriptor that need to be populated are pkScript in
 // the TxOut field, the value in that same field, and finally the input index.
 func (s *Server) ComputeInputScript(ctx context.Context,
-	in *SignReq) (*InputScriptResp, error) {
+	in *SignReq) (*InputScriptResp, er.R) {
 
 	switch {
 	// If the client doesn't specify a transaction, then there's nothing to
 	// sign, so we'll exit early.
 	case len(in.RawTxBytes) == 0:
-		return nil, fmt.Errorf("a transaction to sign MUST be " +
+		return nil, er.Errorf("a transaction to sign MUST be " +
 			"passed in")
 
 	// If the client doesn't tell us *how* to sign the transaction, then we
 	// can't sign anything, so we'll exit early.
 	case len(in.SignDescs) == 0:
-		return nil, fmt.Errorf("at least one SignDescs MUST be " +
+		return nil, er.Errorf("at least one SignDescs MUST be " +
 			"passed in")
 	}
 
@@ -369,7 +369,7 @@ func (s *Server) ComputeInputScript(ctx context.Context,
 	var txToSign wire.MsgTx
 	txReader := bytes.NewReader(in.RawTxBytes)
 	if err := txToSign.Deserialize(txReader); err != nil {
-		return nil, fmt.Errorf("unable to decode tx: %v", err)
+		return nil, er.Errorf("unable to decode tx: %v", err)
 	}
 
 	sigHashCache := txscript.NewTxSigHashes(&txToSign)
@@ -418,13 +418,13 @@ func (s *Server) ComputeInputScript(ctx context.Context,
 // SignMessage signs a message with the key specified in the key locator. The
 // returned signature is fixed-size LN wire format encoded.
 func (s *Server) SignMessage(ctx context.Context,
-	in *SignMessageReq) (*SignMessageResp, error) {
+	in *SignMessageReq) (*SignMessageResp, er.R) {
 
 	if in.Msg == nil {
-		return nil, fmt.Errorf("a message to sign MUST be passed in")
+		return nil, er.Errorf("a message to sign MUST be passed in")
 	}
 	if in.KeyLoc == nil {
-		return nil, fmt.Errorf("a key locator MUST be passed in")
+		return nil, er.Errorf("a key locator MUST be passed in")
 	}
 
 	// Describe the private key we'll be using for signing.
@@ -443,11 +443,11 @@ func (s *Server) SignMessage(ctx context.Context,
 	// format after.
 	sig, err := s.cfg.KeyRing.SignDigest(keyDescriptor, digest)
 	if err != nil {
-		return nil, fmt.Errorf("can't sign the hash: %v", err)
+		return nil, er.Errorf("can't sign the hash: %v", err)
 	}
 	wireSig, err := lnwire.NewSigFromSignature(sig)
 	if err != nil {
-		return nil, fmt.Errorf("can't convert to wire format: %v", err)
+		return nil, er.Errorf("can't convert to wire format: %v", err)
 	}
 	return &SignMessageResp{
 		Signature: wireSig.ToSignatureBytes(),
@@ -457,31 +457,31 @@ func (s *Server) SignMessage(ctx context.Context,
 // VerifyMessage verifies a signature over a message using the public key
 // provided. The signature must be fixed-size LN wire format encoded.
 func (s *Server) VerifyMessage(ctx context.Context,
-	in *VerifyMessageReq) (*VerifyMessageResp, error) {
+	in *VerifyMessageReq) (*VerifyMessageResp, er.R) {
 
 	if in.Msg == nil {
-		return nil, fmt.Errorf("a message to verify MUST be passed in")
+		return nil, er.Errorf("a message to verify MUST be passed in")
 	}
 	if in.Signature == nil {
-		return nil, fmt.Errorf("a signature to verify MUST be passed " +
+		return nil, er.Errorf("a signature to verify MUST be passed " +
 			"in")
 	}
 	if in.Pubkey == nil {
-		return nil, fmt.Errorf("a pubkey to verify MUST be passed in")
+		return nil, er.Errorf("a pubkey to verify MUST be passed in")
 	}
 	pubkey, err := btcec.ParsePubKey(in.Pubkey, btcec.S256())
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
+		return nil, er.Errorf("unable to parse pubkey: %v", err)
 	}
 
 	// The signature must be fixed-size LN wire format encoded.
 	wireSig, err := lnwire.NewSigFromRawSignature(in.Signature)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode signature: %v", err)
+		return nil, er.Errorf("failed to decode signature: %v", err)
 	}
 	sig, err := wireSig.ToSignature()
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert from wire format: %v",
+		return nil, er.Errorf("failed to convert from wire format: %v",
 			err)
 	}
 
@@ -502,27 +502,27 @@ func (s *Server) VerifyMessage(ctx context.Context,
 // The resulting shared public key is serialized in the compressed format and
 // hashed with sha256, resulting in the final key length of 256bit.
 func (s *Server) DeriveSharedKey(_ context.Context, in *SharedKeyRequest) (
-	*SharedKeyResponse, error) {
+	*SharedKeyResponse, er.R) {
 
 	// Check that EphemeralPubkey is valid.
 	ephemeralPubkey, err := parseRawKeyBytes(in.EphemeralPubkey)
 	if err != nil {
-		return nil, fmt.Errorf("error in ephemeral pubkey: %v", err)
+		return nil, er.Errorf("error in ephemeral pubkey: %v", err)
 	}
 	if ephemeralPubkey == nil {
-		return nil, fmt.Errorf("must provide ephemeral pubkey")
+		return nil, er.Errorf("must provide ephemeral pubkey")
 	}
 
 	// Check for backward compatibility. The caller either specifies the old
 	// key_loc field, or the new key_desc field, but not both.
 	if in.KeyDesc != nil && in.KeyLoc != nil {
-		return nil, fmt.Errorf("use either key_desc or key_loc")
+		return nil, er.Errorf("use either key_desc or key_loc")
 	}
 
 	// When key_desc is used, the key_desc.key_loc is expected as the caller
 	// needs to specify the KeyFamily.
 	if in.KeyDesc != nil && in.KeyDesc.KeyLoc == nil {
-		return nil, fmt.Errorf("when setting key_desc the field " +
+		return nil, er.Errorf("when setting key_desc the field " +
 			"key_desc.key_loc must also be set")
 	}
 
@@ -547,7 +547,7 @@ func (s *Server) DeriveSharedKey(_ context.Context, in *SharedKeyRequest) (
 	// Check the caller is using either the key index or the raw public key
 	// to perform the ECDH, we can't have both.
 	if rawKeyBytes != nil && keyLoc.KeyIndex != 0 {
-		return nil, fmt.Errorf("use either raw_key_bytes or key_index")
+		return nil, er.Errorf("use either raw_key_bytes or key_index")
 	}
 
 	// Check the raw public key is valid. Notice that if the rawKeyBytes is
@@ -555,7 +555,7 @@ func (s *Server) DeriveSharedKey(_ context.Context, in *SharedKeyRequest) (
 	// *btcec.PublicKey is returned instead.
 	pk, err := parseRawKeyBytes(rawKeyBytes)
 	if err != nil {
-		return nil, fmt.Errorf("error in raw pubkey: %v", err)
+		return nil, er.Errorf("error in raw pubkey: %v", err)
 	}
 
 	// Create a key descriptor. When the KeyIndex is not specified, it uses
@@ -573,7 +573,7 @@ func (s *Server) DeriveSharedKey(_ context.Context, in *SharedKeyRequest) (
 	// compressed shared point.
 	sharedKeyHash, err := s.cfg.KeyRing.ECDH(keyDescriptor, ephemeralPubkey)
 	if err != nil {
-		err := fmt.Errorf("unable to derive shared key: %v", err)
+		err := er.Errorf("unable to derive shared key: %v", err)
 		log.Error(err)
 		return nil, err
 	}
@@ -584,7 +584,7 @@ func (s *Server) DeriveSharedKey(_ context.Context, in *SharedKeyRequest) (
 // parseRawKeyBytes checks that the provided raw public key is valid and returns
 // the public key. A nil public key is returned if the length of the rawKeyBytes
 // is zero.
-func parseRawKeyBytes(rawKeyBytes []byte) (*btcec.PublicKey, error) {
+func parseRawKeyBytes(rawKeyBytes []byte) (*btcec.PublicKey, er.R) {
 	switch {
 
 	case len(rawKeyBytes) == 33:
@@ -601,7 +601,7 @@ func parseRawKeyBytes(rawKeyBytes []byte) (*btcec.PublicKey, error) {
 	default:
 		// If the user provided a raw key, but it's of the
 		// wrong length, then we'll return with an error.
-		return nil, fmt.Errorf("pubkey must be " +
+		return nil, er.Errorf("pubkey must be " +
 			"serialized in compressed format if " +
 			"specified")
 	}

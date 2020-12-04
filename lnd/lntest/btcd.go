@@ -55,12 +55,12 @@ func (b BtcdBackendConfig) GenArgs() []string {
 }
 
 // ConnectMiner is called to establish a connection to the test miner.
-func (b BtcdBackendConfig) ConnectMiner() error {
+func (b BtcdBackendConfig) ConnectMiner() er.R {
 	return b.harness.Node.Node(btcjson.NConnect, b.minerAddr, &temp)
 }
 
 // DisconnectMiner is called to disconnect the miner.
-func (b BtcdBackendConfig) DisconnectMiner() error {
+func (b BtcdBackendConfig) DisconnectMiner() er.R {
 	return b.harness.Node.Node(btcjson.NDisconnect, b.minerAddr, &temp)
 }
 
@@ -73,7 +73,7 @@ func (b BtcdBackendConfig) Name() string {
 // that node. miner should be set to the P2P address of the miner to connect
 // to.
 func NewBackend(miner string, netParams *chaincfg.Params) (
-	*BtcdBackendConfig, func() error, error) {
+	*BtcdBackendConfig, func() error, er.R) {
 
 	baseLogDir := fmt.Sprintf(logDirPattern, GetLogDir())
 	args := []string{
@@ -90,11 +90,11 @@ func NewBackend(miner string, netParams *chaincfg.Params) (
 	}
 	chainBackend, err := rpctest.New(netParams, nil, args)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create btcd node: %v", err)
+		return nil, nil, er.Errorf("unable to create btcd node: %v", err)
 	}
 
 	if err := chainBackend.SetUp(false, 0); err != nil {
-		return nil, nil, fmt.Errorf("unable to set up btcd backend: %v", err)
+		return nil, nil, er.Errorf("unable to set up btcd backend: %v", err)
 	}
 
 	bd := &BtcdBackendConfig{
@@ -103,7 +103,7 @@ func NewBackend(miner string, netParams *chaincfg.Params) (
 		minerAddr: miner,
 	}
 
-	cleanUp := func() error {
+	cleanUp := func() er.R {
 		var errStr string
 		if err := chainBackend.TearDown(); err != nil {
 			errStr += err.Error() + "\n"
@@ -125,7 +125,7 @@ func NewBackend(miner string, netParams *chaincfg.Params) (
 			)
 		}
 		if errStr != "" {
-			return errors.New(errStr)
+			return er.New(errStr)
 		}
 		return nil
 	}

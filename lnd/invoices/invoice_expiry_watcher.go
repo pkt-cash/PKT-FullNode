@@ -1,10 +1,10 @@
 package invoices
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -42,7 +42,7 @@ type InvoiceExpiryWatcher struct {
 	clock clock.Clock
 
 	// cancelInvoice is a template method that cancels an expired invoice.
-	cancelInvoice func(lntypes.Hash, bool) error
+	cancelInvoice func(lntypes.Hash, bool) er.R
 
 	// expiryQueue holds invoiceExpiry items and is used to find the next
 	// invoice to expire.
@@ -72,13 +72,13 @@ func NewInvoiceExpiryWatcher(clock clock.Clock) *InvoiceExpiryWatcher {
 // expects a cancellation function passed that will be use to cancel expired
 // invoices by their payment hash.
 func (ew *InvoiceExpiryWatcher) Start(
-	cancelInvoice func(lntypes.Hash, bool) error) error {
+	cancelInvoice func(lntypes.Hash, bool) error) er.R {
 
 	ew.Lock()
 	defer ew.Unlock()
 
 	if ew.started {
-		return fmt.Errorf("InvoiceExpiryWatcher already started")
+		return er.Errorf("InvoiceExpiryWatcher already started")
 	}
 
 	ew.started = true

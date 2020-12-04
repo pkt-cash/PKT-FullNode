@@ -477,7 +477,7 @@ func DefaultConfig() Config {
 // 	2) Pre-parse the command line to check for an alternative config file
 // 	3) Load configuration file overwriting defaults with any specified options
 // 	4) Parse CLI options and overwrite/add any specified options
-func LoadConfig() (*Config, error) {
+func LoadConfig() (*Config, er.R) {
 	// Pre-parse the command line options to pick up an alternative config
 	// file.
 	preCfg := DefaultConfig()
@@ -548,7 +548,7 @@ func LoadConfig() (*Config, error) {
 // ValidateConfig check the given configuration to be sane. This makes sure no
 // illegal values or combination of values are set. All file system paths are
 // normalized. The cleaned up config is returned on success.
-func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
+func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 	// If the provided lnd directory is not the default, we'll modify the
 	// path to all of the files and directories that will live within it.
 	lndDir := CleanAndExpandPath(cfg.LndDir)
@@ -571,7 +571,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	}
 
 	funcName := "loadConfig"
-	makeDirectory := func(dir string) error {
+	makeDirectory := func(dir string) er.R {
 		err := os.MkdirAll(dir, 0700)
 		if err != nil {
 			// Show a nicer error message if it's because a symlink
@@ -581,12 +581,12 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 				link, lerr := os.Readlink(e.Path)
 				if lerr == nil {
 					str := "is symlink %s -> %s mounted?"
-					err = fmt.Errorf(str, e.Path, link)
+					err = er.Errorf(str, e.Path, link)
 				}
 			}
 
 			str := "%s: Failed to create lnd directory: %v"
-			err := fmt.Errorf(str, funcName, err)
+			err := er.Errorf(str, funcName, err)
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return err
 		}
@@ -635,37 +635,37 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// any of the autopilot params.
 	if cfg.Autopilot.MaxChannels < 0 {
 		str := "%s: autopilot.maxchannels must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.Allocation < 0 {
 		str := "%s: autopilot.allocation must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.MinChannelSize < 0 {
 		str := "%s: autopilot.minchansize must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.MaxChannelSize < 0 {
 		str := "%s: autopilot.maxchansize must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.MinConfs < 0 {
 		str := "%s: autopilot.minconfs must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.ConfTarget < 1 {
 		str := "%s: autopilot.conftarget must be positive"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
@@ -699,7 +699,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// Ensure that the user specified values for the min and max channel
 	// size make sense.
 	if cfg.MaxChanSize < cfg.MinChanSize {
-		return nil, fmt.Errorf("invalid channel size parameters: "+
+		return nil, er.Errorf("invalid channel size parameters: "+
 			"max channel size %v, must be no less than min chan size %v",
 			cfg.MaxChanSize, cfg.MinChanSize,
 		)
@@ -708,7 +708,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// Don't allow superflous --maxchansize greater than
 	// BOLT 02 soft-limit for non-wumbo channel
 	if !cfg.ProtocolOptions.Wumbo() && cfg.MaxChanSize > int64(MaxFundingAmount) {
-		return nil, fmt.Errorf("invalid channel size parameters: "+
+		return nil, er.Errorf("invalid channel size parameters: "+
 			"maximum channel size %v is greater than maximum non-wumbo"+
 			" channel size %v",
 			cfg.MaxChanSize, MaxFundingAmount,
@@ -717,7 +717,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 
 	// Ensure a valid max channel fee allocation was set.
 	if cfg.MaxChannelFeeAllocation <= 0 || cfg.MaxChannelFeeAllocation > 1 {
-		return nil, fmt.Errorf("invalid max channel fee allocation: "+
+		return nil, er.Errorf("invalid max channel fee allocation: "+
 			"%v, must be within (0, 1]",
 			cfg.MaxChannelFeeAllocation)
 	}
@@ -759,15 +759,15 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	if cfg.Tor.SOCKS == cfg.Tor.Control {
 		str := "%s: tor.socks and tor.control can not use " +
 			"the same host:port"
-		return nil, fmt.Errorf(str, funcName)
+		return nil, er.Errorf(str, funcName)
 	}
 
 	switch {
 	case cfg.Tor.V2 && cfg.Tor.V3:
-		return nil, errors.New("either tor.v2 or tor.v3 can be set, " +
+		return nil, er.New("either tor.v2 or tor.v3 can be set, " +
 			"but not both")
 	case cfg.DisableListen && (cfg.Tor.V2 || cfg.Tor.V3):
-		return nil, errors.New("listening must be enabled when " +
+		return nil, er.New("listening must be enabled when " +
 			"enabling inbound connections over Tor")
 	}
 
@@ -811,11 +811,11 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	}
 
 	if cfg.DisableListen && cfg.NAT {
-		return nil, errors.New("NAT traversal cannot be used when " +
+		return nil, er.New("NAT traversal cannot be used when " +
 			"listening is disabled")
 	}
 	if cfg.NAT && len(cfg.ExternalHosts) != 0 {
-		return nil, errors.New("NAT support and externalhosts are " +
+		return nil, er.New("NAT support and externalhosts are " +
 			"mutually exclusive, only one should be selected")
 	}
 
@@ -825,12 +825,12 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	case cfg.Litecoin.Active && cfg.Bitcoin.Active:
 		str := "%s: Currently both Bitcoin and Litecoin cannot be " +
 			"active together"
-		return nil, fmt.Errorf(str, funcName)
+		return nil, er.Errorf(str, funcName)
 
 	// Either Bitcoin must be active, or Litecoin must be active.
 	// Otherwise, we don't know which chain we're on.
 	case !cfg.Bitcoin.Active && !cfg.Litecoin.Active && !cfg.Pkt.Active:
-		return nil, fmt.Errorf("%s: either bitcoin.active or "+
+		return nil, er.Errorf("%s: either bitcoin.active or "+
 			"litecoin.active must be set to 1 (true)", funcName)
 
 	case cfg.Pkt.Active:
@@ -868,7 +868,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 			str := "%s: The mainnet, testnet, and simnet params " +
 				"can't be used together -- choose one of the " +
 				"three"
-			err := fmt.Errorf(str, funcName)
+			err := er.Errorf(str, funcName)
 			return nil, err
 		}
 
@@ -877,7 +877,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 		if numNets == 0 {
 			str := "%s: either --litecoin.mainnet, or " +
 				"litecoin.testnet must be specified"
-			err := fmt.Errorf(str, funcName)
+			err := er.Errorf(str, funcName)
 			return nil, err
 		}
 
@@ -892,26 +892,26 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 			err := parseRPCParams(cfg.Litecoin, cfg.LtcdMode,
 				chainreg.LitecoinChain, funcName, cfg.ActiveNetParams)
 			if err != nil {
-				err := fmt.Errorf("unable to load RPC "+
+				err := er.Errorf("unable to load RPC "+
 					"credentials for ltcd: %v", err)
 				return nil, err
 			}
 		case "litecoind":
 			if cfg.Litecoin.SimNet {
-				return nil, fmt.Errorf("%s: litecoind does not "+
+				return nil, er.Errorf("%s: litecoind does not "+
 					"support simnet", funcName)
 			}
 			err := parseRPCParams(cfg.Litecoin, cfg.LitecoindMode,
 				chainreg.LitecoinChain, funcName, cfg.ActiveNetParams)
 			if err != nil {
-				err := fmt.Errorf("unable to load RPC "+
+				err := er.Errorf("unable to load RPC "+
 					"credentials for litecoind: %v", err)
 				return nil, err
 			}
 		default:
 			str := "%s: only ltcd and litecoind mode supported for " +
 				"litecoin at this time"
-			return nil, fmt.Errorf(str, funcName)
+			return nil, er.Errorf(str, funcName)
 		}
 
 		cfg.Litecoin.ChainDir = filepath.Join(cfg.DataDir,
@@ -948,7 +948,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 			str := "%s: The mainnet, testnet, regtest, and " +
 				"simnet params can't be used together -- " +
 				"choose one of the four"
-			err := fmt.Errorf(str, funcName)
+			err := er.Errorf(str, funcName)
 			return nil, err
 		}
 
@@ -958,7 +958,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 			str := "%s: either --bitcoin.mainnet, or " +
 				"bitcoin.testnet, bitcoin.simnet, or bitcoin.regtest " +
 				"must be specified"
-			err := fmt.Errorf(str, funcName)
+			err := er.Errorf(str, funcName)
 			return nil, err
 		}
 
@@ -974,13 +974,13 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 				cfg.ActiveNetParams,
 			)
 			if err != nil {
-				err := fmt.Errorf("unable to load RPC "+
+				err := er.Errorf("unable to load RPC "+
 					"credentials for btcd: %v", err)
 				return nil, err
 			}
 		case "bitcoind":
 			if cfg.Bitcoin.SimNet {
-				return nil, fmt.Errorf("%s: bitcoind does not "+
+				return nil, er.Errorf("%s: bitcoind does not "+
 					"support simnet", funcName)
 			}
 
@@ -989,7 +989,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 				cfg.ActiveNetParams,
 			)
 			if err != nil {
-				err := fmt.Errorf("unable to load RPC "+
+				err := er.Errorf("unable to load RPC "+
 					"credentials for bitcoind: %v", err)
 				return nil, err
 			}
@@ -999,7 +999,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 		default:
 			str := "%s: only btcd, bitcoind, and neutrino mode " +
 				"supported for bitcoin at this time"
-			return nil, fmt.Errorf(str, funcName)
+			return nil, er.Errorf(str, funcName)
 		}
 
 		cfg.Bitcoin.ChainDir = filepath.Join(cfg.DataDir,
@@ -1015,25 +1015,25 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// any of the autopilot params.
 	if cfg.Autopilot.MaxChannels < 0 {
 		str := "%s: autopilot.maxchannels must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.Allocation < 0 {
 		str := "%s: autopilot.allocation must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.MinChannelSize < 0 {
 		str := "%s: autopilot.minchansize must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 	if cfg.Autopilot.MaxChannelSize < 0 {
 		str := "%s: autopilot.maxchansize must be non-negative"
-		err := fmt.Errorf(str, funcName)
+		err := er.Errorf(str, funcName)
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
@@ -1052,7 +1052,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 		profilePort, err := strconv.Atoi(cfg.Profile)
 		if err != nil || profilePort < 1024 || profilePort > 65535 {
 			str := "%s: The profile port must be between 1024 and 65535"
-			err := fmt.Errorf(str, funcName)
+			err := er.Errorf(str, funcName)
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			_, _ = fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, err
@@ -1103,7 +1103,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// A log writer must be passed in, otherwise we can't function and would
 	// run into a panic later on.
 	if cfg.LogWriter == nil {
-		return nil, fmt.Errorf("log writer missing in config")
+		return nil, er.Errorf("log writer missing in config")
 	}
 
 	// Special show command to list supported subsystems and exit.
@@ -1121,7 +1121,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	)
 	if err != nil {
 		str := "%s: log rotation setup failed: %v"
-		err = fmt.Errorf(str, funcName, err.Error())
+		err = er.Errorf(str, funcName, err.Error())
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
@@ -1129,7 +1129,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// Parse, validate, and set debug log level(s).
 	err = build.ParseAndSetDebugLevels(cfg.DebugLevel, cfg.LogWriter)
 	if err != nil {
-		err = fmt.Errorf("%s: %v", funcName, err.Error())
+		err = er.Errorf("%s: %v", funcName, err.Error())
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, err
@@ -1236,7 +1236,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 		// that.
 		for _, p2pListener := range cfg.Listeners {
 			if lncfg.IsUnix(p2pListener) {
-				err := fmt.Errorf("unix socket addresses cannot be "+
+				err := er.Errorf("unix socket addresses cannot be "+
 					"used for the p2p connection listener: %s",
 					p2pListener)
 				return nil, err
@@ -1247,7 +1247,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// Ensure that the specified minimum backoff is below or equal to the
 	// maximum backoff.
 	if cfg.MinBackoff > cfg.MaxBackoff {
-		return nil, fmt.Errorf("maxbackoff must be greater than " +
+		return nil, er.Errorf("maxbackoff must be greater than " +
 			"minbackoff")
 	}
 
@@ -1263,7 +1263,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// than the protocol maximum.
 	maxRemoteHtlcs := uint16(input.MaxHTLCNumber / 2)
 	if cfg.DefaultRemoteMaxHtlcs > maxRemoteHtlcs {
-		return nil, fmt.Errorf("default-remote-max-htlcs (%v) must be "+
+		return nil, er.Errorf("default-remote-max-htlcs (%v) must be "+
 			"less than %v", cfg.DefaultRemoteMaxHtlcs,
 			maxRemoteHtlcs)
 	}
@@ -1285,7 +1285,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, error) {
 	// the wallet.
 	_, err = parseHexColor(cfg.Color)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse node color: %v", err)
+		return nil, er.Errorf("unable to parse node color: %v", err)
 	}
 
 	// All good, return the sanitized result.
@@ -1332,7 +1332,7 @@ func CleanAndExpandPath(path string) string {
 
 func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 	net chainreg.ChainCode, funcName string,
-	netParams chainreg.BitcoinNetParams) error { // nolint:unparam
+	netParams chainreg.BitcoinNetParams) er.R { // nolint:unparam
 
 	// First, we'll check our node config to make sure the RPC parameters
 	// were set correctly. We'll also determine the path to the conf file
@@ -1361,7 +1361,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 		// If only ONE of RPCUser or RPCPass is set, we assume the
 		// user did that unintentionally.
 		if conf.RPCUser != "" || conf.RPCPass != "" {
-			return fmt.Errorf("please set both or neither of "+
+			return er.Errorf("please set both or neither of "+
 				"%[1]v.rpcuser, %[1]v.rpcpass", daemonName)
 		}
 
@@ -1410,7 +1410,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 		if conf.RPCUser != "" || conf.RPCPass != "" ||
 			conf.ZMQPubRawBlock != "" || conf.ZMQPubRawTx != "" {
 
-			return fmt.Errorf("please set all or none of "+
+			return er.Errorf("please set all or none of "+
 				"%[1]v.rpcuser, %[1]v.rpcpass, "+
 				"%[1]v.zmqpubrawblock, %[1]v.zmqpubrawtx",
 				daemonName)
@@ -1423,7 +1423,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 	if cConfig.SimNet {
 		str := "%v: rpcuser and rpcpass must be set to your btcd " +
 			"node's RPC parameters for simnet mode"
-		return fmt.Errorf(str, funcName)
+		return er.Errorf(str, funcName)
 	}
 
 	fmt.Println("Attempting automatic RPC configuration to " + daemonName)
@@ -1434,7 +1434,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 		nConf := nodeConfig.(*lncfg.Btcd)
 		rpcUser, rpcPass, err := extractBtcdRPCParams(confFile)
 		if err != nil {
-			return fmt.Errorf("unable to extract RPC credentials:"+
+			return er.Errorf("unable to extract RPC credentials:"+
 				" %v, cannot start w/o RPC connection",
 				err)
 		}
@@ -1444,7 +1444,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 		rpcUser, rpcPass, zmqBlockHost, zmqTxHost, err :=
 			extractBitcoindRPCParams(netParams.Params.Name, confFile)
 		if err != nil {
-			return fmt.Errorf("unable to extract RPC credentials:"+
+			return er.Errorf("unable to extract RPC credentials:"+
 				" %v, cannot start w/o RPC connection",
 				err)
 		}
@@ -1459,7 +1459,7 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 // extractBtcdRPCParams attempts to extract the RPC credentials for an existing
 // btcd instance. The passed path is expected to be the location of btcd's
 // application data directory on the target system.
-func extractBtcdRPCParams(btcdConfigPath string) (string, string, error) {
+func extractBtcdRPCParams(btcdConfigPath string) (string, string, er.R) {
 	// First, we'll open up the btcd configuration file found at the target
 	// destination.
 	btcdConfigFile, err := os.Open(btcdConfigPath)
@@ -1484,7 +1484,7 @@ func extractBtcdRPCParams(btcdConfigPath string) (string, string, error) {
 	}
 	userSubmatches := rpcUserRegexp.FindSubmatch(configContents)
 	if userSubmatches == nil {
-		return "", "", fmt.Errorf("unable to find rpcuser in config")
+		return "", "", er.Errorf("unable to find rpcuser in config")
 	}
 
 	// Similarly, we'll use another regular expression to find the set
@@ -1496,7 +1496,7 @@ func extractBtcdRPCParams(btcdConfigPath string) (string, string, error) {
 	}
 	passSubmatches := rpcPassRegexp.FindSubmatch(configContents)
 	if passSubmatches == nil {
-		return "", "", fmt.Errorf("unable to find rpcuser in config")
+		return "", "", er.Errorf("unable to find rpcuser in config")
 	}
 
 	return string(userSubmatches[1]), string(passSubmatches[1]), nil
@@ -1508,7 +1508,7 @@ func extractBtcdRPCParams(btcdConfigPath string) (string, string, error) {
 // for a cookie first, optionally following the datadir configuration option in
 // the bitcoin.conf. If it doesn't find one, it looks for rpcuser/rpcpassword.
 func extractBitcoindRPCParams(networkName string,
-	bitcoindConfigPath string) (string, string, string, string, error) {
+	bitcoindConfigPath string) (string, string, string, string, er.R) {
 
 	// First, we'll open up the bitcoind configuration file found at the
 	// target destination.
@@ -1535,7 +1535,7 @@ func extractBitcoindRPCParams(networkName string,
 	}
 	zmqBlockHostSubmatches := zmqBlockHostRE.FindSubmatch(configContents)
 	if len(zmqBlockHostSubmatches) < 2 {
-		return "", "", "", "", fmt.Errorf("unable to find " +
+		return "", "", "", "", er.Errorf("unable to find " +
 			"zmqpubrawblock in config")
 	}
 	zmqTxHostRE, err := regexp.Compile(`(?m)^\s*zmqpubrawtx\s*=\s*([^\s]+)`)
@@ -1544,7 +1544,7 @@ func extractBitcoindRPCParams(networkName string,
 	}
 	zmqTxHostSubmatches := zmqTxHostRE.FindSubmatch(configContents)
 	if len(zmqTxHostSubmatches) < 2 {
-		return "", "", "", "", errors.New("unable to find zmqpubrawtx " +
+		return "", "", "", "", er.New("unable to find zmqpubrawtx " +
 			"in config")
 	}
 	zmqBlockHost := string(zmqBlockHostSubmatches[1])
@@ -1593,7 +1593,7 @@ func extractBitcoindRPCParams(networkName string,
 	}
 	userSubmatches := rpcUserRegexp.FindSubmatch(configContents)
 	if userSubmatches == nil {
-		return "", "", "", "", fmt.Errorf("unable to find rpcuser in " +
+		return "", "", "", "", er.Errorf("unable to find rpcuser in " +
 			"config")
 	}
 
@@ -1606,7 +1606,7 @@ func extractBitcoindRPCParams(networkName string,
 	}
 	passSubmatches := rpcPassRegexp.FindSubmatch(configContents)
 	if passSubmatches == nil {
-		return "", "", "", "", fmt.Errorf("unable to find rpcpassword " +
+		return "", "", "", "", er.Errorf("unable to find rpcpassword " +
 			"in config")
 	}
 
@@ -1616,9 +1616,9 @@ func extractBitcoindRPCParams(networkName string,
 
 // checkZMQOptions ensures that the provided addresses to use as the hosts for
 // ZMQ rawblock and rawtx notifications are different.
-func checkZMQOptions(zmqBlockHost, zmqTxHost string) error {
+func checkZMQOptions(zmqBlockHost, zmqTxHost string) er.R {
 	if zmqBlockHost == zmqTxHost {
-		return errors.New("zmqpubrawblock and zmqpubrawtx must be set " +
+		return er.New("zmqpubrawblock and zmqpubrawtx must be set " +
 			"to different addresses")
 	}
 
@@ -1626,13 +1626,13 @@ func checkZMQOptions(zmqBlockHost, zmqTxHost string) error {
 }
 
 // checkEstimateMode ensures that the provided estimate mode is legal.
-func checkEstimateMode(estimateMode string) error {
+func checkEstimateMode(estimateMode string) er.R {
 	for _, mode := range bitcoindEstimateModes {
 		if estimateMode == mode {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("estimatemode must be one of the following: %v",
+	return er.Errorf("estimatemode must be one of the following: %v",
 		bitcoindEstimateModes[:])
 }

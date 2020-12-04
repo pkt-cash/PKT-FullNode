@@ -45,7 +45,7 @@ func (a *AMP) ChildIndex() uint16 {
 }
 
 // AMPEncoder writes the AMP record to the provided io.Writer.
-func AMPEncoder(w io.Writer, val interface{}, buf *[8]byte) error {
+func AMPEncoder(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if v, ok := val.(*AMP); ok {
 		if err := tlv.EBytes32(w, &v.rootShare, buf); err != nil {
 			return err
@@ -73,7 +73,7 @@ const (
 )
 
 // AMPDecoder reads the AMP record from the provided io.Reader.
-func AMPDecoder(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func AMPDecoder(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if v, ok := val.(*AMP); ok && minAMPLength <= l && l <= maxAMPLength {
 		if err := tlv.DBytes32(r, &v.rootShare, buf, 32); err != nil {
 			return err

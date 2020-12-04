@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -47,7 +47,11 @@ type HopData struct {
 
 // Encode writes the serialized version of the target HopData into the passed
 // io.Writer.
-func (hd *HopData) Encode(w io.Writer) error {
+func (hd *HopData) Encode(w io.Writer) er.R {
+	return er.E(hd.encode(w))
+}
+
+func (hd *HopData) encode(w io.Writer) error {
 	if _, err := w.Write(hd.Realm[:]); err != nil {
 		return err
 	}
@@ -73,7 +77,11 @@ func (hd *HopData) Encode(w io.Writer) error {
 
 // Decodes populates the target HopData with the contents of a serialized
 // HopData packed into the passed io.Reader.
-func (hd *HopData) Decode(r io.Reader) error {
+func (hd *HopData) Decode(r io.Reader) er.R {
+	return er.E(hd.decode(r))
+}
+
+func (hd *HopData) decode(r io.Reader) error {
 	if _, err := io.ReadFull(r, hd.Realm[:]); err != nil {
 		return err
 	}
@@ -135,7 +143,7 @@ type HopPayload struct {
 // instructions for a hop, and a set of optional opaque extra onion bytes to
 // drop off at the target hop. If both values are not specified, then an error
 // is returned.
-func NewHopPayload(hopData *HopData, eob []byte) (HopPayload, error) {
+func NewHopPayload(hopData *HopData, eob []byte) (HopPayload, er.R) {
 	var (
 		h HopPayload
 		b bytes.Buffer
@@ -145,11 +153,11 @@ func NewHopPayload(hopData *HopData, eob []byte) (HopPayload, error) {
 	// specified by the caller.
 	switch {
 	case hopData == nil && len(eob) == 0:
-		return h, fmt.Errorf("either hop data or eob must " +
+		return h, er.Errorf("either hop data or eob must " +
 			"be specified")
 
 	case hopData != nil && len(eob) > 0:
-		return h, fmt.Errorf("cannot provide both hop data AND an eob")
+		return h, er.Errorf("cannot provide both hop data AND an eob")
 
 	}
 
@@ -199,7 +207,11 @@ func (hp *HopPayload) NumBytes() int {
 }
 
 // Encode encodes the hop payload into the passed writer.
-func (hp *HopPayload) Encode(w io.Writer) error {
+func (hp *HopPayload) Encode(w io.Writer) er.R {
+	return er.E(hp.encode(w))
+}
+
+func (hp *HopPayload) encode(w io.Writer) error {
 	switch hp.Type {
 
 	// For the legacy payload, we don't need to add any additional bytes as
@@ -230,7 +242,7 @@ func (hp *HopPayload) Encode(w io.Writer) error {
 
 // Decode unpacks an encoded HopPayload from the passed reader into the target
 // HopPayload.
-func (hp *HopPayload) Decode(r io.Reader) error {
+func (hp *HopPayload) Decode(r io.Reader) er.R {
 	bufReader := bufio.NewReader(r)
 
 	// In order to properly parse the payload, we'll need to check the
@@ -238,7 +250,7 @@ func (hp *HopPayload) Decode(r io.Reader) error {
 	// it from the buffer.
 	peekByte, err := bufReader.Peek(1)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	var payloadSize uint32
@@ -258,7 +270,7 @@ func (hp *HopPayload) Decode(r io.Reader) error {
 		var b [8]byte
 		varInt, err := ReadVarInt(bufReader, &b)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		payloadSize = uint32(varInt)
@@ -271,10 +283,10 @@ func (hp *HopPayload) Decode(r io.Reader) error {
 	// TODO(roasbeef): can avoid all these copies
 	hp.Payload = make([]byte, payloadSize)
 	if _, err := io.ReadFull(bufReader, hp.Payload[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	if _, err := io.ReadFull(bufReader, hp.HMAC[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -285,7 +297,7 @@ func (hp *HopPayload) Decode(r io.Reader) error {
 // This method also returns the left over EOB that remain after the hop data
 // has been parsed. Callers may want to map this blob into something more
 // concrete.
-func (hp *HopPayload) HopData() (*HopData, error) {
+func (hp *HopPayload) HopData() (*HopData, er.R) {
 	payloadReader := bytes.NewBuffer(hp.Payload)
 
 	// If this isn't the "base" realm, then we can't extract the expected

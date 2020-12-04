@@ -4,25 +4,29 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (
+	Err = er.NewErrorType("lnd.chanvalidate")
 	// ErrInvalidOutPoint is returned when the ChanLocator is unable to
 	// find the target outpoint.
-	ErrInvalidOutPoint = fmt.Errorf("output meant to create channel cannot " +
+	ErrInvalidOutPoint = Err.CodeWithDetail("ErrInvalidOutPoint", "output meant to create channel cannot "+
 		"be found")
 
 	// ErrWrongPkScript is returned when the alleged funding transaction is
 	// found to have an incorrect pkSript.
-	ErrWrongPkScript = fmt.Errorf("wrong pk script")
+	ErrWrongPkScript = Err.CodeWithDetail("ErrWrongPkScript",
+		"wrong pk script")
 
 	// ErrInvalidSize is returned when the alleged funding transaction
 	// output has the wrong size (channel capacity).
-	ErrInvalidSize = fmt.Errorf("channel has wrong size")
+	ErrInvalidSize = Err.CodeWithDetail("ErrInvalidSize",
+		"channel has wrong size")
 )
 
 // ErrScriptValidateError is returned when Script VM validation fails for an
@@ -37,7 +41,7 @@ func (e *ErrScriptValidateError) Error() string {
 }
 
 // Unwrap returns the underlying wrapped VM execution failure error.
-func (e *ErrScriptValidateError) Unwrap() error {
+func (e *ErrScriptValidateError) Unwrap() er.R {
 	return e.err
 }
 
@@ -51,7 +55,7 @@ type ChanLocator interface {
 	// which uniquely identifies the output which creates the channel. If
 	// the target output cannot be found, or cannot exist on the funding
 	// transaction, then an error is to be returned.
-	Locate(*wire.MsgTx) (*wire.TxOut, *wire.OutPoint, error)
+	Locate(*wire.MsgTx) (*wire.TxOut, *wire.OutPoint, er.R)
 }
 
 // OutPointChanLocator is an implementation of the ChanLocator that can be used
@@ -66,18 +70,18 @@ type OutPointChanLocator struct {
 //
 // NOTE: Part of the ChanLocator interface.
 func (o *OutPointChanLocator) Locate(fundingTx *wire.MsgTx) (
-	*wire.TxOut, *wire.OutPoint, error) {
+	*wire.TxOut, *wire.OutPoint, er.R) {
 
 	// If the expected index is greater than the amount of output in the
 	// transaction, then we'll reject this channel as it's invalid.
 	if int(o.ChanPoint.Index) >= len(fundingTx.TxOut) {
-		return nil, nil, ErrInvalidOutPoint
+		return nil, nil, ErrInvalidOutPoint.Default()
 	}
 
 	// As an extra sanity check, we'll also ensure the txid hash matches.
 	fundingHash := fundingTx.TxHash()
 	if !bytes.Equal(fundingHash[:], o.ChanPoint.Hash[:]) {
-		return nil, nil, ErrInvalidOutPoint
+		return nil, nil, ErrInvalidOutPoint.Default()
 	}
 
 	return fundingTx.TxOut[o.ChanPoint.Index], &o.ChanPoint, nil
@@ -96,13 +100,13 @@ type ShortChanIDChanLocator struct {
 //
 // NOTE: Part of the ChanLocator interface.
 func (s *ShortChanIDChanLocator) Locate(fundingTx *wire.MsgTx) (
-	*wire.TxOut, *wire.OutPoint, error) {
+	*wire.TxOut, *wire.OutPoint, er.R) {
 
 	// If the expected index is greater than the amount of output in the
 	// transaction, then we'll reject this channel as it's invalid.
 	outputIndex := s.ID.TxPosition
 	if int(outputIndex) >= len(fundingTx.TxOut) {
-		return nil, nil, ErrInvalidOutPoint
+		return nil, nil, ErrInvalidOutPoint.Default()
 	}
 
 	chanPoint := wire.OutPoint{
@@ -152,7 +156,7 @@ type Context struct {
 // alleged channel is well formed, and spendable (if the optional CommitCtx is
 // specified).  If this method returns an error, then the alleged channel is
 // invalid and should be abandoned immediately.
-func Validate(ctx *Context) (*wire.OutPoint, error) {
+func Validate(ctx *Context) (*wire.OutPoint, er.R) {
 	// First, we'll attempt to locate the target outpoint in the funding
 	// transaction. If this returns an error, then we know that the
 	// outpoint doesn't actually exist, so we'll exit early.
@@ -167,7 +171,7 @@ func Validate(ctx *Context) (*wire.OutPoint, error) {
 	// invalid.
 	fundingScript := fundingOutput.PkScript
 	if !bytes.Equal(ctx.MultiSigPkScript, fundingScript) {
-		return nil, ErrWrongPkScript
+		return nil, ErrWrongPkScript.Default()
 	}
 
 	// If there's no commitment context, then we're done here as this is a
@@ -180,7 +184,7 @@ func Validate(ctx *Context) (*wire.OutPoint, error) {
 	// created output against our expected size of the channel.
 	fundingValue := fundingOutput.Value
 	if btcutil.Amount(fundingValue) != ctx.CommitCtx.Value {
-		return nil, ErrInvalidSize
+		return nil, ErrInvalidSize.Default()
 	}
 
 	// If we reach this point, then all other checks have succeeded, so

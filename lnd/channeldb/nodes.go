@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/wire/protocol"
 )
@@ -76,7 +77,7 @@ func (db *DB) NewLinkNode(bitNet protocol.BitcoinNet, pub *btcec.PublicKey,
 
 // UpdateLastSeen updates the last time this node was directly encountered on
 // the Lightning Network.
-func (l *LinkNode) UpdateLastSeen(lastSeen time.Time) error {
+func (l *LinkNode) UpdateLastSeen(lastSeen time.Time) er.R {
 	l.LastSeen = lastSeen
 
 	return l.Sync()
@@ -84,7 +85,7 @@ func (l *LinkNode) UpdateLastSeen(lastSeen time.Time) error {
 
 // AddAddress appends the specified TCP address to the list of known addresses
 // this node is/was known to be reachable at.
-func (l *LinkNode) AddAddress(addr net.Addr) error {
+func (l *LinkNode) AddAddress(addr net.Addr) er.R {
 	for _, a := range l.Addresses {
 		if a.String() == addr.String() {
 			return nil
@@ -98,14 +99,14 @@ func (l *LinkNode) AddAddress(addr net.Addr) error {
 
 // Sync performs a full database sync which writes the current up-to-date data
 // within the struct to the database.
-func (l *LinkNode) Sync() error {
+func (l *LinkNode) Sync() er.R {
 
 	// Finally update the database by storing the link node and updating
 	// any relevant indexes.
-	return kvdb.Update(l.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(l.db, func(tx kvdb.RwTx) er.R {
 		nodeMetaBucket := tx.ReadWriteBucket(nodeInfoBucket)
 		if nodeMetaBucket == nil {
-			return ErrLinkNodesNotFound
+			return ErrLinkNodesNotFound.Default()
 		}
 
 		return putLinkNode(nodeMetaBucket, l)
@@ -115,7 +116,7 @@ func (l *LinkNode) Sync() error {
 // putLinkNode serializes then writes the encoded version of the passed link
 // node into the nodeMetaBucket. This function is provided in order to allow
 // the ability to re-use a database transaction across many operations.
-func putLinkNode(nodeMetaBucket kvdb.RwBucket, l *LinkNode) error {
+func putLinkNode(nodeMetaBucket kvdb.RwBucket, l *LinkNode) er.R {
 	// First serialize the LinkNode into its raw-bytes encoding.
 	var b bytes.Buffer
 	if err := serializeLinkNode(&b, l); err != nil {
@@ -130,16 +131,16 @@ func putLinkNode(nodeMetaBucket kvdb.RwBucket, l *LinkNode) error {
 
 // DeleteLinkNode removes the link node with the given identity from the
 // database.
-func (db *DB) DeleteLinkNode(identity *btcec.PublicKey) error {
-	return kvdb.Update(db, func(tx kvdb.RwTx) error {
+func (db *DB) DeleteLinkNode(identity *btcec.PublicKey) er.R {
+	return kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 		return db.deleteLinkNode(tx, identity)
 	}, func() {})
 }
 
-func (db *DB) deleteLinkNode(tx kvdb.RwTx, identity *btcec.PublicKey) error {
+func (db *DB) deleteLinkNode(tx kvdb.RwTx, identity *btcec.PublicKey) er.R {
 	nodeMetaBucket := tx.ReadWriteBucket(nodeInfoBucket)
 	if nodeMetaBucket == nil {
-		return ErrLinkNodesNotFound
+		return ErrLinkNodesNotFound.Default()
 	}
 
 	pubKey := identity.SerializeCompressed()
@@ -149,9 +150,9 @@ func (db *DB) deleteLinkNode(tx kvdb.RwTx, identity *btcec.PublicKey) error {
 // FetchLinkNode attempts to lookup the data for a LinkNode based on a target
 // identity public key. If a particular LinkNode for the passed identity public
 // key cannot be found, then ErrNodeNotFound if returned.
-func (db *DB) FetchLinkNode(identity *btcec.PublicKey) (*LinkNode, error) {
+func (db *DB) FetchLinkNode(identity *btcec.PublicKey) (*LinkNode, er.R) {
 	var linkNode *LinkNode
-	err := kvdb.View(db, func(tx kvdb.RTx) error {
+	err := kvdb.View(db, func(tx kvdb.RTx) er.R {
 		node, err := fetchLinkNode(tx, identity)
 		if err != nil {
 			return err
@@ -166,12 +167,12 @@ func (db *DB) FetchLinkNode(identity *btcec.PublicKey) (*LinkNode, error) {
 	return linkNode, err
 }
 
-func fetchLinkNode(tx kvdb.RTx, targetPub *btcec.PublicKey) (*LinkNode, error) {
+func fetchLinkNode(tx kvdb.RTx, targetPub *btcec.PublicKey) (*LinkNode, er.R) {
 	// First fetch the bucket for storing node metadata, bailing out early
 	// if it hasn't been created yet.
 	nodeMetaBucket := tx.ReadBucket(nodeInfoBucket)
 	if nodeMetaBucket == nil {
-		return nil, ErrLinkNodesNotFound
+		return nil, ErrLinkNodesNotFound.Default()
 	}
 
 	// If a link node for that particular public key cannot be located,
@@ -179,7 +180,7 @@ func fetchLinkNode(tx kvdb.RTx, targetPub *btcec.PublicKey) (*LinkNode, error) {
 	pubKey := targetPub.SerializeCompressed()
 	nodeBytes := nodeMetaBucket.Get(pubKey)
 	if nodeBytes == nil {
-		return nil, ErrNodeNotFound
+		return nil, ErrNodeNotFound.Default()
 	}
 
 	// Finally, decode and allocate a fresh LinkNode object to be returned
@@ -192,9 +193,9 @@ func fetchLinkNode(tx kvdb.RTx, targetPub *btcec.PublicKey) (*LinkNode, error) {
 
 // FetchAllLinkNodes starts a new database transaction to fetch all nodes with
 // whom we have active channels with.
-func (db *DB) FetchAllLinkNodes() ([]*LinkNode, error) {
+func (db *DB) FetchAllLinkNodes() ([]*LinkNode, er.R) {
 	var linkNodes []*LinkNode
-	err := kvdb.View(db, func(tx kvdb.RTx) error {
+	err := kvdb.View(db, func(tx kvdb.RTx) er.R {
 		nodes, err := db.fetchAllLinkNodes(tx)
 		if err != nil {
 			return err
@@ -214,10 +215,10 @@ func (db *DB) FetchAllLinkNodes() ([]*LinkNode, error) {
 
 // fetchAllLinkNodes uses an existing database transaction to fetch all nodes
 // with whom we have active channels with.
-func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, error) {
+func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, er.R) {
 	nodeMetaBucket := tx.ReadBucket(nodeInfoBucket)
 	if nodeMetaBucket == nil {
-		return nil, ErrLinkNodesNotFound
+		return nil, ErrLinkNodesNotFound.Default()
 	}
 
 	var linkNodes []*LinkNode
@@ -242,28 +243,28 @@ func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, error) {
 	return linkNodes, nil
 }
 
-func serializeLinkNode(w io.Writer, l *LinkNode) error {
+func serializeLinkNode(w io.Writer, l *LinkNode) er.R {
 	var buf [8]byte
 
 	byteOrder.PutUint32(buf[:4], uint32(l.Network))
-	if _, err := w.Write(buf[:4]); err != nil {
+	if _, err := util.Write(w, buf[:4]); err != nil {
 		return err
 	}
 
 	serializedID := l.IdentityPub.SerializeCompressed()
-	if _, err := w.Write(serializedID); err != nil {
+	if _, err := util.Write(w, serializedID); err != nil {
 		return err
 	}
 
 	seenUnix := uint64(l.LastSeen.Unix())
 	byteOrder.PutUint64(buf[:], seenUnix)
-	if _, err := w.Write(buf[:]); err != nil {
+	if _, err := util.Write(w, buf[:]); err != nil {
 		return err
 	}
 
 	numAddrs := uint32(len(l.Addresses))
 	byteOrder.PutUint32(buf[:4], numAddrs)
-	if _, err := w.Write(buf[:4]); err != nil {
+	if _, err := util.Write(w, buf[:4]); err != nil {
 		return err
 	}
 
@@ -276,7 +277,7 @@ func serializeLinkNode(w io.Writer, l *LinkNode) error {
 	return nil
 }
 
-func deserializeLinkNode(r io.Reader) (*LinkNode, error) {
+func deserializeLinkNode(r io.Reader) (*LinkNode, er.R) {
 	var (
 		err error
 		buf [8]byte
@@ -284,13 +285,13 @@ func deserializeLinkNode(r io.Reader) (*LinkNode, error) {
 
 	node := &LinkNode{}
 
-	if _, err := io.ReadFull(r, buf[:4]); err != nil {
+	if _, err := util.ReadFull(r, buf[:4]); err != nil {
 		return nil, err
 	}
 	node.Network = protocol.BitcoinNet(byteOrder.Uint32(buf[:4]))
 
 	var pub [33]byte
-	if _, err := io.ReadFull(r, pub[:]); err != nil {
+	if _, err := util.ReadFull(r, pub[:]); err != nil {
 		return nil, err
 	}
 	node.IdentityPub, err = btcec.ParsePubKey(pub[:], btcec.S256())
@@ -298,12 +299,12 @@ func deserializeLinkNode(r io.Reader) (*LinkNode, error) {
 		return nil, err
 	}
 
-	if _, err := io.ReadFull(r, buf[:]); err != nil {
+	if _, err := util.ReadFull(r, buf[:]); err != nil {
 		return nil, err
 	}
 	node.LastSeen = time.Unix(int64(byteOrder.Uint64(buf[:])), 0)
 
-	if _, err := io.ReadFull(r, buf[:4]); err != nil {
+	if _, err := util.ReadFull(r, buf[:4]); err != nil {
 		return nil, err
 	}
 	numAddrs := byteOrder.Uint32(buf[:4])

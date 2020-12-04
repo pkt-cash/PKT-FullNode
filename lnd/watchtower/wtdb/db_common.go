@@ -2,10 +2,10 @@ package wtdb
 
 import (
 	"encoding/binary"
-	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -25,10 +25,10 @@ var (
 
 	// ErrUninitializedDB signals that top-level buckets for the database
 	// have not been initialized.
-	ErrUninitializedDB = errors.New("db not initialized")
+	ErrUninitializedDB = Err.CodeWithDetail("ErrUninitializedDB", "db not initialized")
 
 	// ErrNoDBVersion signals that the database contains no version info.
-	ErrNoDBVersion = errors.New("db has no version")
+	ErrNoDBVersion = Err.CodeWithDetail("ErrNoDBVersion", "db has no version")
 
 	// byteOrder is the default endianness used when serializing integers.
 	byteOrder = binary.BigEndian
@@ -49,7 +49,7 @@ func fileExists(path string) bool {
 // one doesn't exist. The boolean returned indicates if the database did not
 // exist before, or if it has been created but no version metadata exists within
 // it.
-func createDBIfNotExist(dbPath, name string) (kvdb.Backend, bool, error) {
+func createDBIfNotExist(dbPath, name string) (kvdb.Backend, bool, er.R) {
 	path := filepath.Join(dbPath, name)
 
 	// If the database file doesn't exist, this indicates we much initialize
@@ -77,7 +77,7 @@ func createDBIfNotExist(dbPath, name string) (kvdb.Backend, bool, error) {
 	// set firstInit to true so that we can treat is initialize the bucket.
 	if !firstInit {
 		var metadataExists bool
-		errr := kvdb.View(bdb, func(tx kvdb.RTx) error {
+		errr := kvdb.View(bdb, func(tx kvdb.RTx) er.R {
 			metadataExists = tx.ReadBucket(metadataBkt) != nil
 			return nil
 		}, func() {

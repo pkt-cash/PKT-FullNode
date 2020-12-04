@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // AcceptChannel is the message Bob sends to Alice after she initiates the
@@ -103,7 +104,7 @@ var _ Message = (*AcceptChannel)(nil)
 // protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *AcceptChannel) Encode(w io.Writer, pver uint32) error {
+func (a *AcceptChannel) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		a.PendingChannelID[:],
 		a.DustLimit,
@@ -128,7 +129,7 @@ func (a *AcceptChannel) Encode(w io.Writer, pver uint32) error {
 // defined by the passed protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *AcceptChannel) Decode(r io.Reader, pver uint32) error {
+func (a *AcceptChannel) Decode(r io.Reader, pver uint32) er.R {
 	// Read all the mandatory fields in the accept message.
 	err := ReadElements(r,
 		a.PendingChannelID[:],
@@ -153,7 +154,7 @@ func (a *AcceptChannel) Decode(r io.Reader, pver uint32) error {
 	// Check for the optional upfront shutdown script field. If it is not there,
 	// silence the EOF error.
 	err = ReadElement(r, &a.UpfrontShutdownScript)
-	if err != nil && err != io.EOF {
+	if err != nil && er.Wrapped(err) != io.EOF {
 		return err
 	}
 	return nil

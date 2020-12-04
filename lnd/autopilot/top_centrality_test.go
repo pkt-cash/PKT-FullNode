@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +62,7 @@ func testTopCentrality(t *testing.T, graph testGraph,
 			graph, channels, chanSize, nodes,
 		)
 
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, expected, scores)
 	}
 }
@@ -89,7 +90,7 @@ func TestTopCentrality(t *testing.T) {
 			t.Parallel()
 
 			graph, cleanup, err := chanGraph.genFunc()
-			require.NoError(t, err, "unable to create graph")
+			util.RequireNoErr(t, err, "unable to create graph")
 			if cleanup != nil {
 				defer cleanup()
 			}

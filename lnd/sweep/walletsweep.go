@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
@@ -45,13 +46,13 @@ func (p FeePreference) String() string {
 // value is chosen based on the two free parameters as one, or both of them can
 // be zero.
 func DetermineFeePerKw(feeEstimator chainfee.Estimator,
-	feePref FeePreference) (chainfee.SatPerKWeight, error) {
+	feePref FeePreference) (chainfee.SatPerKWeight, er.R) {
 
 	switch {
 	// If both values are set, then we'll return an error as we require a
 	// strict directive.
 	case feePref.FeeRate != 0 && feePref.ConfTarget != 0:
-		return 0, fmt.Errorf("only FeeRate or ConfTarget should " +
+		return 0, er.Errorf("only FeeRate or ConfTarget should " +
 			"be set for FeePreferences")
 
 	// If the target number of confirmations is set, then we'll use that to
@@ -61,7 +62,7 @@ func DetermineFeePerKw(feeEstimator chainfee.Estimator,
 			uint32(feePref.ConfTarget),
 		)
 		if err != nil {
-			return 0, fmt.Errorf("unable to query fee "+
+			return 0, er.Errorf("unable to query fee "+
 				"estimator: %v", err)
 		}
 
@@ -89,7 +90,7 @@ func DetermineFeePerKw(feeEstimator chainfee.Estimator,
 			defaultNumBlocksEstimate,
 		)
 		if err != nil {
-			return 0, fmt.Errorf("unable to query fee estimator: "+
+			return 0, er.Errorf("unable to query fee estimator: "+
 				"%v", err)
 		}
 
@@ -102,7 +103,7 @@ func DetermineFeePerKw(feeEstimator chainfee.Estimator,
 type UtxoSource interface {
 	// ListUnspentWitness returns all UTXOs from the source that have
 	// between minConfs and maxConfs number of confirmations.
-	ListUnspentWitness(minConfs, maxConfs int32) ([]*lnwallet.Utxo, error)
+	ListUnspentWitness(minConfs, maxConfs int32) ([]*lnwallet.Utxo, er.R)
 }
 
 // CoinSelectionLocker is an interface that allows the caller to perform an
@@ -116,7 +117,7 @@ type CoinSelectionLocker interface {
 	// proceeding while the closure is executing. This can be seen as the
 	// ability to execute a function closure under an exclusive coin
 	// selection lock.
-	WithCoinSelectLock(func() error) error
+	WithCoinSelectLock(func() error) er.R
 }
 
 // OutpointLocker allows a caller to lock/unlock an outpoint. When locked, the
@@ -158,7 +159,7 @@ func CraftSweepAllTx(feeRate chainfee.SatPerKWeight, dustLimit btcutil.Amount,
 	blockHeight uint32, deliveryAddr btcutil.Address,
 	coinSelectLocker CoinSelectionLocker, utxoSource UtxoSource,
 	outpointLocker OutpointLocker, feeEstimator chainfee.Estimator,
-	signer input.Signer) (*WalletSweepPackage, error) {
+	signer input.Signer) (*WalletSweepPackage, er.R) {
 
 	// TODO(roasbeef): turn off ATPL as well when available?
 
@@ -178,7 +179,7 @@ func CraftSweepAllTx(feeRate chainfee.SatPerKWeight, dustLimit btcutil.Amount,
 	// selection takes place while we fetch and lock all outputs the wallet
 	// knows of.  Otherwise, it may be possible for a new funding flow to
 	// lock an output while we fetch the set of unspent witnesses.
-	err := coinSelectLocker.WithCoinSelectLock(func() error {
+	err := coinSelectLocker.WithCoinSelectLock(func() er.R {
 		// Now that we can be sure that no other coin selection
 		// operations are going on, we can grab a clean snapshot of the
 		// current UTXO state of the wallet.
@@ -205,7 +206,7 @@ func CraftSweepAllTx(feeRate chainfee.SatPerKWeight, dustLimit btcutil.Amount,
 		// in case we had any lingering outputs.
 		unlockOutputs()
 
-		return nil, fmt.Errorf("unable to fetch+lock wallet "+
+		return nil, er.Errorf("unable to fetch+lock wallet "+
 			"utxos: %v", err)
 	}
 
@@ -249,7 +250,7 @@ func CraftSweepAllTx(feeRate chainfee.SatPerKWeight, dustLimit btcutil.Amount,
 		default:
 			unlockOutputs()
 
-			return nil, fmt.Errorf("unable to sweep coins, "+
+			return nil, er.Errorf("unable to sweep coins, "+
 				"unknown script: %x", pkScript[:])
 		}
 

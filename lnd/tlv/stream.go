@@ -2,10 +2,11 @@ package tlv
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
 	"math"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // MaxRecordSize is the maximum size of a particular record that will be parsed
@@ -16,11 +17,11 @@ const MaxRecordSize = 65535 // 65KB
 
 // ErrStreamNotCanonical signals that a decoded stream does not contain records
 // sorting by monotonically-increasing type.
-var ErrStreamNotCanonical = errors.New("tlv stream is not canonical")
+var ErrStreamNotCanonical = Err.CodeWithDetail("ErrStreamNotCanonical", "tlv stream is not canonical")
 
 // ErrRecordTooLarge signals that a decoded record has a length that is too
 // long to parse.
-var ErrRecordTooLarge = errors.New("record is too large")
+var ErrRecordTooLarge = Err.CodeWithDetail("ErrRecordTooLarge", "record is too large")
 
 // Stream defines a TLV stream that can be used for encoding or decoding a set
 // of TLV Records.
@@ -31,7 +32,7 @@ type Stream struct {
 
 // NewStream creates a new TLV Stream given an encoding codec, a decoding codec,
 // and a set of known records.
-func NewStream(records ...Record) (*Stream, error) {
+func NewStream(records ...Record) (*Stream, er.R) {
 	// Assert that the ordering of the Records is canonical and appear in
 	// ascending order of type.
 	var (
@@ -40,7 +41,7 @@ func NewStream(records ...Record) (*Stream, error) {
 	)
 	for _, record := range records {
 		if overflow || record.typ < min {
-			return nil, ErrStreamNotCanonical
+			return nil, ErrStreamNotCanonical.Default()
 		}
 		if record.encoder == nil {
 			record.encoder = ENOP
@@ -82,7 +83,7 @@ func MustNewStream(records ...Record) *Stream {
 // An error is returned if the io.Writer fails to accept bytes from the
 // encoding, and nothing else. The ordering of the Records is asserted upon the
 // creation of a Stream, and thus the output will be by definition canonical.
-func (s *Stream) Encode(w io.Writer) error {
+func (s *Stream) Encode(w io.Writer) er.R {
 	// Iterate through all known records, if any, serializing each record's
 	// type, length and value.
 	for i := range s.records {
@@ -134,7 +135,7 @@ func (s *Stream) Encode(w io.Writer) error {
 // We permit an io.EOF error only when reading the type byte which signals that
 // the last record was read cleanly and we should stop parsing. All other io.EOF
 // or io.ErrUnexpectedEOF errors are returned.
-func (s *Stream) Decode(r io.Reader) error {
+func (s *Stream) Decode(r io.Reader) er.R {
 	_, err := s.decode(r, nil)
 	return err
 }
@@ -142,14 +143,14 @@ func (s *Stream) Decode(r io.Reader) error {
 // DecodeWithParsedTypes is identical to Decode, but if successful, returns a
 // TypeMap containing the types of all records that were decoded or ignored from
 // the stream.
-func (s *Stream) DecodeWithParsedTypes(r io.Reader) (TypeMap, error) {
+func (s *Stream) DecodeWithParsedTypes(r io.Reader) (TypeMap, er.R) {
 	return s.decode(r, make(TypeMap))
 }
 
 // decode is a helper function that performs the basis of stream decoding. If
 // the caller needs the set of parsed types, it must provide an initialized
 // parsedTypes, otherwise the returned TypeMap will be nil.
-func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
+func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, er.R) {
 	var (
 		typ       Type
 		min       Type
@@ -182,7 +183,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
 		// encodings that have duplicate records or from accepting an
 		// unsorted series.
 		if overflow || typ < min {
-			return nil, ErrStreamNotCanonical
+			return nil, ErrStreamNotCanonical.Default()
 		}
 
 		// Read the varint length.
@@ -192,7 +193,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
 		// We'll convert any EOFs to ErrUnexpectedEOF, since this
 		// results in an invalid record.
 		case err == io.EOF:
-			return nil, io.ErrUnexpectedEOF
+			return nil, io.ErrUnexpectedEOF.Default()
 
 		// Other unexpected errors.
 		case err != nil:
@@ -204,7 +205,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
 		// unbounded amount of memory when decoding variable-sized
 		// fields.
 		if length > MaxRecordSize {
-			return nil, ErrRecordTooLarge
+			return nil, ErrRecordTooLarge.Default()
 		}
 
 		// Search the records known to the stream for this type. We'll
@@ -224,7 +225,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
 			// We'll convert any EOFs to ErrUnexpectedEOF, since this
 			// results in an invalid record.
 			case err == io.EOF:
-				return nil, io.ErrUnexpectedEOF
+				return nil, io.ErrUnexpectedEOF.Default()
 
 			// Other unexpected errors.
 			case err != nil:
@@ -255,7 +256,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, error) {
 			// We'll convert any EOFs to ErrUnexpectedEOF, since this
 			// results in an invalid record.
 			case err == io.EOF:
-				return nil, io.ErrUnexpectedEOF
+				return nil, io.ErrUnexpectedEOF.Default()
 
 			// Other unexpected errors.
 			case err != nil:

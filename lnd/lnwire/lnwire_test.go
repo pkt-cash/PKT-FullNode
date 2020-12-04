@@ -3,7 +3,6 @@ package lnwire
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"image/color"
 	"math"
 	"math/big"
@@ -14,16 +13,18 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
-	shaHash1Bytes, _ = hex.DecodeString("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+	shaHash1Bytes, _ = util.DecodeHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 	shaHash1, _      = chainhash.NewHash(shaHash1Bytes)
 	outpoint1        = wire.NewOutPoint(shaHash1, 0)
 	testSig          = &btcec.Signature{
@@ -45,7 +46,7 @@ func randAlias(r *rand.Rand) NodeAlias {
 	return a
 }
 
-func randPubKey() (*btcec.PublicKey, error) {
+func randPubKey() (*btcec.PublicKey, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func randPubKey() (*btcec.PublicKey, error) {
 	return priv.PubKey(), nil
 }
 
-func randRawKey() ([33]byte, error) {
+func randRawKey() ([33]byte, er.R) {
 	var n [33]byte
 
 	priv, err := btcec.NewPrivateKey(btcec.S256())
@@ -67,13 +68,13 @@ func randRawKey() ([33]byte, error) {
 	return n, nil
 }
 
-func randDeliveryAddress(r *rand.Rand) (DeliveryAddress, error) {
+func randDeliveryAddress(r *rand.Rand) (DeliveryAddress, er.R) {
 	// Generate size minimum one. Empty scripts should be tested specifically.
 	size := r.Intn(deliveryAddressMaxSize) + 1
 	da := DeliveryAddress(make([]byte, size))
 
 	_, err := r.Read(da)
-	return da, err
+	return da, er.E(err)
 }
 
 func randRawFeatureVector(r *rand.Rand) *RawFeatureVector {
@@ -86,15 +87,15 @@ func randRawFeatureVector(r *rand.Rand) *RawFeatureVector {
 	return featureVec
 }
 
-func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, error) {
+func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [4]byte
 	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	addrIP := net.IP(ip[:])
@@ -103,15 +104,15 @@ func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, error) {
 	return &net.TCPAddr{IP: addrIP, Port: addrPort}, nil
 }
 
-func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, error) {
+func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [16]byte
 	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	addrIP := net.IP(ip[:])
@@ -120,15 +121,15 @@ func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, error) {
 	return &net.TCPAddr{IP: addrIP, Port: addrPort}, nil
 }
 
-func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
+func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V2DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	onionService := tor.Base32Encoding.EncodeToString(serviceID[:])
@@ -138,15 +139,15 @@ func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
 	return &tor.OnionAddr{OnionService: onionService, Port: addrPort}, nil
 }
 
-func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
+func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V3DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	onionService := tor.Base32Encoding.EncodeToString(serviceID[:])
@@ -156,7 +157,7 @@ func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
 	return &tor.OnionAddr{OnionService: onionService, Port: addrPort}, nil
 }
 
-func randAddrs(r *rand.Rand) ([]net.Addr, error) {
+func randAddrs(r *rand.Rand) ([]net.Addr, er.R) {
 	tcp4Addr, err := randTCP4Addr(r)
 	if err != nil {
 		return nil, err
@@ -333,7 +334,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				return
 			}
 
-			var err error
+			var err er.R
 			req.FundingKey, err = randPubKey()
 			if err != nil {
 				t.Fatalf("unable to generate key: %v", err)
@@ -394,7 +395,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				return
 			}
 
-			var err error
+			var err er.R
 			req.FundingKey, err = randPubKey()
 			if err != nil {
 				t.Fatalf("unable to generate key: %v", err)
@@ -453,7 +454,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			}
 			req.FundingPoint.Index = uint32(r.Int31()) % math.MaxUint16
 
-			var err error
+			var err er.R
 			req.CommitSig, err = NewSigFromSignature(testSig)
 			if err != nil {
 				t.Fatalf("unable to parse sig: %v", err)
@@ -464,15 +465,16 @@ func TestLightningWireProtocol(t *testing.T) {
 		},
 		MsgFundingSigned: func(v []reflect.Value, r *rand.Rand) {
 			var c [32]byte
-			_, err := r.Read(c[:])
-			if err != nil {
-				t.Fatalf("unable to generate chan id: %v", err)
+			_, errr := r.Read(c[:])
+			if errr != nil {
+				t.Fatalf("unable to generate chan id: %v", errr)
 				return
 			}
 
 			req := FundingSigned{
 				ChanID: ChannelID(c),
 			}
+			var err er.R
 			req.CommitSig, err = NewSigFromSignature(testSig)
 			if err != nil {
 				t.Fatalf("unable to parse sig: %v", err)
@@ -503,7 +505,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			req := ClosingSigned{
 				FeeSatoshis: btcutil.Amount(r.Int63()),
 			}
-			var err error
+			var err er.R
 			req.Signature, err = NewSigFromSignature(testSig)
 			if err != nil {
 				t.Fatalf("unable to parse sig: %v", err)
@@ -524,7 +526,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				return
 			}
 
-			var err error
+			var err er.R
 			req.CommitSig, err = NewSigFromSignature(testSig)
 			if err != nil {
 				t.Fatalf("unable to parse sig: %v", err)
@@ -558,7 +560,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				t.Fatalf("unable to generate bytes: %v", err)
 				return
 			}
-			var err error
+			var err er.R
 			req.NextRevocationKey, err = randPubKey()
 			if err != nil {
 				t.Fatalf("unable to generate key: %v", err)
@@ -568,7 +570,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			v[0] = reflect.ValueOf(*req)
 		},
 		MsgChannelAnnouncement: func(v []reflect.Value, r *rand.Rand) {
-			var err error
+			var err er.R
 			req := ChannelAnnouncement{
 				ShortChannelID: NewShortChanIDFromInt(uint64(r.Int63())),
 				Features:       randRawFeatureVector(r),
@@ -633,7 +635,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			v[0] = reflect.ValueOf(req)
 		},
 		MsgNodeAnnouncement: func(v []reflect.Value, r *rand.Rand) {
-			var err error
+			var err er.R
 			req := NodeAnnouncement{
 				Features:  randRawFeatureVector(r),
 				Timestamp: uint32(r.Int31()),
@@ -675,7 +677,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			v[0] = reflect.ValueOf(req)
 		},
 		MsgChannelUpdate: func(v []reflect.Value, r *rand.Rand) {
-			var err error
+			var err er.R
 
 			msgFlags := ChanUpdateMsgFlags(r.Int31())
 			maxHtlc := MilliSatoshi(r.Int63())
@@ -724,7 +726,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			v[0] = reflect.ValueOf(req)
 		},
 		MsgAnnounceSignatures: func(v []reflect.Value, r *rand.Rand) {
-			var err error
+			var err er.R
 			req := AnnounceSignatures{
 				ShortChannelID: NewShortChanIDFromInt(uint64(r.Int63())),
 			}
@@ -769,12 +771,12 @@ func TestLightningWireProtocol(t *testing.T) {
 			// additional fields so we can test our ability to
 			// properly parse, and write out the optional fields.
 			if r.Int()%2 == 0 {
-				_, err := r.Read(req.LastRemoteCommitSecret[:])
-				if err != nil {
-					t.Fatalf("unable to read commit secret: %v", err)
+				_, errr := r.Read(req.LastRemoteCommitSecret[:])
+				if errr != nil {
+					t.Fatalf("unable to read commit secret: %v", errr)
 					return
 				}
-
+				var err er.R
 				req.LocalUnrevokedCommitPoint, err = randPubKey()
 				if err != nil {
 					t.Fatalf("unable to generate key: %v", err)

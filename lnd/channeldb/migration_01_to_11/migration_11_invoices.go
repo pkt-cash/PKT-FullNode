@@ -2,12 +2,11 @@ package migration_01_to_11
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"io"
 
 	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11/zpay32"
@@ -17,7 +16,7 @@ import (
 
 // MigrateInvoices adds invoice htlcs and a separate cltv delta field to the
 // invoices.
-func MigrateInvoices(tx kvdb.RwTx) error {
+func MigrateInvoices(tx kvdb.RwTx) er.R {
 	log.Infof("Migrating invoices to new invoice format")
 
 	invoiceB := tx.ReadWriteBucket(invoiceBucket)
@@ -71,7 +70,7 @@ func MigrateInvoices(tx kvdb.RwTx) error {
 		}
 
 		if invoice.Terms.State == ContractAccepted {
-			return fmt.Errorf("cannot upgrade with invoice(s) " +
+			return er.Errorf("cannot upgrade with invoice(s) " +
 				"in accepted state, see release notes")
 		}
 
@@ -89,7 +88,7 @@ func MigrateInvoices(tx kvdb.RwTx) error {
 			}
 		}
 		if payReq == nil {
-			return fmt.Errorf("cannot decode payreq")
+			return er.Errorf("cannot decode payreq")
 		}
 		invoice.FinalCltvDelta = int32(payReq.MinFinalCLTVExpiry())
 		invoice.Expiry = payReq.Expiry()
@@ -111,8 +110,8 @@ func MigrateInvoices(tx kvdb.RwTx) error {
 	return nil
 }
 
-func deserializeInvoiceLegacy(r io.Reader) (Invoice, error) {
-	var err error
+func deserializeInvoiceLegacy(r io.Reader) (Invoice, er.R) {
+	var err er.R
 	invoice := Invoice{}
 
 	// TODO(roasbeef): use read full everywhere
@@ -135,7 +134,7 @@ func deserializeInvoiceLegacy(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.CreationDate.UnmarshalBinary(birthBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
 	settledBytes, err := wire.ReadVarBytes(r, 0, 300, "settled")
@@ -143,29 +142,29 @@ func deserializeInvoiceLegacy(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.SettleDate.UnmarshalBinary(settledBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
-	if _, err := io.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
+	if _, err := util.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
 		return invoice, err
 	}
 	var scratch [8]byte
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return invoice, err
 	}
 	invoice.Terms.Value = lnwire.MilliSatoshi(byteOrder.Uint64(scratch[:]))
 
-	if err := binary.Read(r, byteOrder, &invoice.Terms.State); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.Terms.State); err != nil {
 		return invoice, err
 	}
 
-	if err := binary.Read(r, byteOrder, &invoice.AddIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AddIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.SettleIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.SettleIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.AmtPaid); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AmtPaid); err != nil {
 		return invoice, err
 	}
 
@@ -174,7 +173,7 @@ func deserializeInvoiceLegacy(r io.Reader) (Invoice, error) {
 
 // serializeInvoiceLegacy serializes an invoice in the format of the previous db
 // version.
-func serializeInvoiceLegacy(w io.Writer, i *Invoice) error {
+func serializeInvoiceLegacy(w io.Writer, i *Invoice) er.R {
 	if err := wire.WriteVarBytes(w, 0, i.Memo[:]); err != nil {
 		return err
 	}
@@ -185,45 +184,45 @@ func serializeInvoiceLegacy(w io.Writer, i *Invoice) error {
 		return err
 	}
 
-	birthBytes, err := i.CreationDate.MarshalBinary()
-	if err != nil {
-		return err
+	birthBytes, errr := i.CreationDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	if err := wire.WriteVarBytes(w, 0, birthBytes); err != nil {
 		return err
 	}
 
-	settleBytes, err := i.SettleDate.MarshalBinary()
-	if err != nil {
-		return err
+	settleBytes, errr := i.SettleDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	if err := wire.WriteVarBytes(w, 0, settleBytes); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(i.Terms.PaymentPreimage[:]); err != nil {
+	if _, err := util.Write(w, i.Terms.PaymentPreimage[:]); err != nil {
 		return err
 	}
 
 	var scratch [8]byte
 	byteOrder.PutUint64(scratch[:], uint64(i.Terms.Value))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, i.Terms.State); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.Terms.State); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, i.AddIndex); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.AddIndex); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, i.SettleIndex); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.SettleIndex); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, int64(i.AmtPaid)); err != nil {
+	if err := util.WriteBin(w, byteOrder, int64(i.AmtPaid)); err != nil {
 		return err
 	}
 

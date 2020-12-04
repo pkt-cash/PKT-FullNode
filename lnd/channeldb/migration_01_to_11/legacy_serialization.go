@@ -2,13 +2,15 @@ package migration_01_to_11
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // deserializeCloseChannelSummaryV6 reads the v6 database format for
 // ChannelCloseSummary.
 //
 // NOTE: deprecated, only for migration.
-func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, error) {
+func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, er.R) {
 	c := &ChannelCloseSummary{}
 
 	err := ReadElements(r,
@@ -24,7 +26,7 @@ func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, error)
 	// any of the additional optional fields.
 	err = ReadElements(r, &c.RemoteCurrentRevocation)
 	switch {
-	case err == io.EOF:
+	case er.Wrapped(err) == io.EOF:
 		return c, nil
 
 	// If we got a non-eof error, then we know there's an actually issue.
@@ -44,7 +46,7 @@ func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, error)
 	// the same technique to read the field, only if there's still data
 	// left in the buffer.
 	err = ReadElements(r, &c.RemoteNextRevocation)
-	if err != nil && err != io.EOF {
+	if err != nil && er.Wrapped(err) != io.EOF {
 		// If we got a non-eof error, then we know there's an actually
 		// issue. Otherwise, it may have been the case that this
 		// summary didn't have the set of optional fields.

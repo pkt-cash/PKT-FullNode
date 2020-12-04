@@ -368,7 +368,7 @@ func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 // NewAddress returns a fresh address spendable by the wallet.
 //
 // This function is safe for concurrent access.
-func (m *memWallet) NewAddress() (btcutil.Address, error) {
+func (m *memWallet) NewAddress() (btcutil.Address, er.R) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -452,7 +452,7 @@ func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
 // while observing the passed fee rate. The passed fee rate should be expressed
 // in satoshis-per-byte.
 func (m *memWallet) SendOutputs(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	tx, err := m.CreateTransaction(outputs, feeRate, true)
 	if err != nil {
@@ -466,7 +466,7 @@ func (m *memWallet) SendOutputs(outputs []*wire.TxOut,
 // specified outputs while observing the passed fee rate and ignoring a change
 // output. The passed fee rate should be expressed in sat/b.
 func (m *memWallet) SendOutputsWithoutChange(outputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	tx, err := m.CreateTransaction(outputs, feeRate, false)
 	if err != nil {

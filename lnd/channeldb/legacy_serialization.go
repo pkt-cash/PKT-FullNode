@@ -8,7 +8,7 @@ import (
 // ChannelCloseSummary.
 //
 // NOTE: deprecated, only for migration.
-func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, error) {
+func deserializeCloseChannelSummaryV6(r io.Reader) (*ChannelCloseSummary, er.R) {
 	c := &ChannelCloseSummary{}
 
 	err := ReadElements(r,

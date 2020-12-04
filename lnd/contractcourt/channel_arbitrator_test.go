@@ -1,7 +1,6 @@
 package contractcourt
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -52,13 +51,13 @@ type mockArbitratorLog struct {
 // interface.
 var _ ArbitratorLog = (*mockArbitratorLog)(nil)
 
-func (b *mockArbitratorLog) CurrentState(kvdb.RTx) (ArbitratorState, error) {
+func (b *mockArbitratorLog) CurrentState(kvdb.RTx) (ArbitratorState, er.R) {
 	return b.state, nil
 }
 
-func (b *mockArbitratorLog) CommitState(s ArbitratorState) error {
+func (b *mockArbitratorLog) CommitState(s ArbitratorState) er.R {
 	if b.failCommit && s == b.failCommitState {
-		return fmt.Errorf("intentional commit error at state %v",
+		return er.Errorf("intentional commit error at state %v",
 			b.failCommitState)
 	}
 	b.state = s
@@ -82,7 +81,7 @@ func (b *mockArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver,
 }
 
 func (b *mockArbitratorLog) InsertUnresolvedContracts(_ []*channeldb.ResolverReport,
-	resolvers ...ContractResolver) error {
+	resolvers ...ContractResolver) er.R {
 
 	b.Lock()
 	for _, resolver := range resolvers {
@@ -98,7 +97,7 @@ func (b *mockArbitratorLog) InsertUnresolvedContracts(_ []*channeldb.ResolverRep
 }
 
 func (b *mockArbitratorLog) SwapContract(oldContract,
-	newContract ContractResolver) error {
+	newContract ContractResolver) er.R {
 
 	b.Lock()
 	delete(b.resolvers, oldContract)
@@ -108,7 +107,7 @@ func (b *mockArbitratorLog) SwapContract(oldContract,
 	return nil
 }
 
-func (b *mockArbitratorLog) ResolveContract(res ContractResolver) error {
+func (b *mockArbitratorLog) ResolveContract(res ContractResolver) er.R {
 	b.Lock()
 	delete(b.resolvers, res)
 	b.Unlock()
@@ -116,15 +115,15 @@ func (b *mockArbitratorLog) ResolveContract(res ContractResolver) error {
 	return nil
 }
 
-func (b *mockArbitratorLog) LogContractResolutions(c *ContractResolutions) error {
+func (b *mockArbitratorLog) LogContractResolutions(c *ContractResolutions) er.R {
 	if b.failLog {
-		return fmt.Errorf("intentional log failure")
+		return er.Errorf("intentional log failure")
 	}
 	b.resolutions = c
 	return nil
 }
 
-func (b *mockArbitratorLog) FetchContractResolutions() (*ContractResolutions, error) {
+func (b *mockArbitratorLog) FetchContractResolutions() (*ContractResolutions, er.R) {
 	if b.failFetch != nil {
 		return nil, b.failFetch
 	}
@@ -132,20 +131,20 @@ func (b *mockArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 	return b.resolutions, nil
 }
 
-func (b *mockArbitratorLog) FetchChainActions() (ChainActionMap, error) {
+func (b *mockArbitratorLog) FetchChainActions() (ChainActionMap, er.R) {
 	return nil, nil
 }
 
-func (b *mockArbitratorLog) InsertConfirmedCommitSet(c *CommitSet) error {
+func (b *mockArbitratorLog) InsertConfirmedCommitSet(c *CommitSet) er.R {
 	b.commitSet = c
 	return nil
 }
 
-func (b *mockArbitratorLog) FetchConfirmedCommitSet(kvdb.RTx) (*CommitSet, error) {
+func (b *mockArbitratorLog) FetchConfirmedCommitSet(kvdb.RTx) (*CommitSet, er.R) {
 	return b.commitSet, nil
 }
 
-func (b *mockArbitratorLog) WipeHistory() error {
+func (b *mockArbitratorLog) WipeHistory() er.R {
 	return nil
 }
 
@@ -158,7 +157,7 @@ type testArbLog struct {
 	newStates chan ArbitratorState
 }
 
-func (t *testArbLog) CommitState(s ArbitratorState) error {
+func (t *testArbLog) CommitState(s ArbitratorState) er.R {
 	if err := t.ArbitratorLog.CommitState(s); err != nil {
 		return err
 	}
@@ -172,12 +171,12 @@ type mockChainIO struct{}
 
 var _ lnwallet.BlockChainIO = (*mockChainIO)(nil)
 
-func (*mockChainIO) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (*mockChainIO) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	return nil, 0, nil
 }
 
 func (*mockChainIO) GetUtxo(op *wire.OutPoint, _ []byte,
-	heightHint uint32, _ <-chan struct{}) (*wire.TxOut, error) {
+	heightHint uint32, _ <-chan struct{}) (*wire.TxOut, er.R) {
 	return nil, nil
 }
 
@@ -185,7 +184,7 @@ func (*mockChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 	return nil, nil
 }
 
-func (*mockChainIO) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (*mockChainIO) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	return nil, nil
 }
 
@@ -262,7 +261,7 @@ func (c *chanArbTestCtx) AssertState(expected ArbitratorState) {
 // place, in order to simulate proper persistence of the log. The caller can
 // optionally provide a restart closure which will be executed before the
 // resolver is started again, but after it is created.
-func (c *chanArbTestCtx) Restart(restartClosure func(*chanArbTestCtx)) (*chanArbTestCtx, error) {
+func (c *chanArbTestCtx) Restart(restartClosure func(*chanArbTestCtx)) (*chanArbTestCtx, er.R) {
 	if err := c.chanArb.Stop(); err != nil {
 		return nil, err
 	}
@@ -301,7 +300,7 @@ func withMarkClosed(markClosed func(*channeldb.ChannelCloseSummary,
 // contains a channel arbitrator with default values. These values can be
 // changed by providing options which overwrite the default config.
 func createTestChannelArbitrator(t *testing.T, log ArbitratorLog,
-	opts ...testChanArbOption) (*chanArbTestCtx, error) {
+	opts ...testChanArbOption) (*chanArbTestCtx, er.R) {
 
 	chanPoint := wire.OutPoint{}
 	shortChanID := lnwire.ShortChannelID{}
@@ -319,10 +318,10 @@ func createTestChannelArbitrator(t *testing.T, log ArbitratorLog,
 	mockSweeper := newMockSweeper()
 	chainArbCfg := ChainArbitratorConfig{
 		ChainIO: chainIO,
-		PublishTx: func(*wire.MsgTx, string) error {
+		PublishTx: func(*wire.MsgTx, string) er.R {
 			return nil
 		},
-		DeliverResolutionMsg: func(msgs ...ResolutionMsg) error {
+		DeliverResolutionMsg: func(msgs ...ResolutionMsg) er.R {
 			resolutionChan <- msgs
 			return nil
 		},
@@ -335,7 +334,7 @@ func createTestChannelArbitrator(t *testing.T, log ArbitratorLog,
 		},
 		IncubateOutputs: func(wire.OutPoint,
 			*lnwallet.OutgoingHtlcResolution,
-			*lnwallet.IncomingHtlcResolution, uint32) error {
+			*lnwallet.IncomingHtlcResolution, uint32) er.R {
 
 			incubateChan <- struct{}{}
 			return nil
@@ -359,23 +358,23 @@ func createTestChannelArbitrator(t *testing.T, log ArbitratorLog,
 	arbCfg := &ChannelArbitratorConfig{
 		ChanPoint:   chanPoint,
 		ShortChanID: shortChanID,
-		MarkChannelResolved: func() error {
+		MarkChannelResolved: func() er.R {
 			resolvedChan <- struct{}{}
 			return nil
 		},
 		Channel: &mockChannel{},
-		MarkCommitmentBroadcasted: func(_ *wire.MsgTx, _ bool) error {
+		MarkCommitmentBroadcasted: func(_ *wire.MsgTx, _ bool) er.R {
 			return nil
 		},
 		MarkChannelClosed: func(*channeldb.ChannelCloseSummary,
-			...channeldb.ChannelStatus) error {
+			...channeldb.ChannelStatus) er.R {
 			return nil
 		},
 		IsPendingClose:        false,
 		ChainArbitratorConfig: chainArbCfg,
 		ChainEvents:           chanEvents,
 		PutResolverReport: func(_ kvdb.RwTx,
-			_ *channeldb.ResolverReport) error {
+			_ *channeldb.ResolverReport) er.R {
 
 			return nil
 		},
@@ -461,7 +460,7 @@ func TestChannelArbitratorCooperativeClose(t *testing.T) {
 	closeInfos := make(chan *channeldb.ChannelCloseSummary)
 	chanArbCtx.chanArb.cfg.MarkChannelClosed = func(
 		closeInfo *channeldb.ChannelCloseSummary,
-		statuses ...channeldb.ChannelStatus) error {
+		statuses ...channeldb.ChannelStatus) er.R {
 
 		closeInfos <- closeInfo
 		return nil
@@ -573,13 +572,13 @@ func TestChannelArbitratorLocalForceClose(t *testing.T) {
 	// We create a channel we can use to pause the ChannelArbitrator at the
 	// point where it broadcasts the close tx, and check its state.
 	stateChan := make(chan ArbitratorState)
-	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) error {
+	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) er.R {
 		// When the force close tx is being broadcasted, check that the
 		// state is correct at that point.
 		select {
 		case stateChan <- chanArb.state:
 		case <-chanArb.quit:
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 		return nil
 	}
@@ -996,13 +995,13 @@ func TestChannelArbitratorLocalForceCloseRemoteConfirmed(t *testing.T) {
 	// Create a channel we can use to assert the state when it publishes
 	// the close tx.
 	stateChan := make(chan ArbitratorState)
-	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) error {
+	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) er.R {
 		// When the force close tx is being broadcasted, check that the
 		// state is correct at that point.
 		select {
 		case stateChan <- chanArb.state:
 		case <-chanArb.quit:
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 		return nil
 	}
@@ -1104,15 +1103,15 @@ func TestChannelArbitratorLocalForceDoubleSpend(t *testing.T) {
 
 	// Return ErrDoubleSpend when attempting to publish the tx.
 	stateChan := make(chan ArbitratorState)
-	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) error {
+	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) er.R {
 		// When the force close tx is being broadcasted, check that the
 		// state is correct at that point.
 		select {
 		case stateChan <- chanArb.state:
 		case <-chanArb.quit:
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
-		return lnwallet.ErrDoubleSpend
+		return lnwallet.ErrDoubleSpend.Default()
 	}
 
 	errChan := make(chan error, 1)
@@ -1244,9 +1243,9 @@ func TestChannelArbitratorPersistence(t *testing.T) {
 	// attempting to close the channel.
 	log.failLog = false
 	chanArb.cfg.MarkChannelClosed = func(*channeldb.ChannelCloseSummary,
-		...channeldb.ChannelStatus) error {
+		...channeldb.ChannelStatus) er.R {
 
-		return fmt.Errorf("intentional close error")
+		return er.Errorf("intentional close error")
 	}
 
 	// Send a new remote force close event.
@@ -1272,7 +1271,7 @@ func TestChannelArbitratorPersistence(t *testing.T) {
 	chanArbCtx.AssertState(StateDefault)
 
 	// Now make fetching the resolutions fail.
-	log.failFetch = fmt.Errorf("intentional fetch failure")
+	log.failFetch = er.Errorf("intentional fetch failure")
 	chanArb.cfg.ChainEvents.RemoteUnilateralClosure <- &RemoteUnilateralCloseInfo{
 		UnilateralCloseSummary: uniClose,
 	}
@@ -1335,15 +1334,15 @@ func TestChannelArbitratorForceCloseBreachedChannel(t *testing.T) {
 
 	// We start by attempting a local force close. We'll return an
 	// unexpected publication error, causing the state machine to halt.
-	expErr := errors.New("intentional publication error")
+	expErr := er.New("intentional publication error")
 	stateChan := make(chan ArbitratorState)
-	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) error {
+	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) er.R {
 		// When the force close tx is being broadcasted, check that the
 		// state is correct at that point.
 		select {
 		case stateChan <- chanArb.state:
 		case <-chanArb.quit:
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 		return expErr
 	}
@@ -1498,7 +1497,7 @@ func TestChannelArbitratorCommitFailure(t *testing.T) {
 		closed := make(chan struct{})
 		chanArb.cfg.MarkChannelClosed = func(
 			*channeldb.ChannelCloseSummary,
-			...channeldb.ChannelStatus) error {
+			...channeldb.ChannelStatus) er.R {
 			close(closed)
 			return nil
 		}
@@ -2032,7 +2031,7 @@ func TestRemoteCloseInitiator(t *testing.T) {
 			// Mock marking the channel as closed, we only care
 			// about setting of channel status.
 			mockMarkClosed := func(_ *channeldb.ChannelCloseSummary,
-				statuses ...channeldb.ChannelStatus) error {
+				statuses ...channeldb.ChannelStatus) er.R {
 				for _, status := range statuses {
 					err := alice.State().ApplyChanStatus(status)
 					if err != nil {
@@ -2259,9 +2258,9 @@ func TestChannelArbitratorAnchors(t *testing.T) {
 // putResolverReportInChannel returns a put report function which will pipe
 // reports into the channel provided.
 func putResolverReportInChannel(reports chan *channeldb.ResolverReport) func(
-	_ kvdb.RwTx, report *channeldb.ResolverReport) error {
+	_ kvdb.RwTx, report *channeldb.ResolverReport) er.R {
 
-	return func(_ kvdb.RwTx, report *channeldb.ResolverReport) error {
+	return func(_ kvdb.RwTx, report *channeldb.ResolverReport) er.R {
 		reports <- report
 		return nil
 	}
@@ -2293,7 +2292,7 @@ func (m *mockChannel) NewAnchorResolutions() ([]*lnwallet.AnchorResolution,
 	return m.anchorResolutions, nil
 }
 
-func (m *mockChannel) ForceCloseChan() (*lnwallet.LocalForceCloseSummary, error) {
+func (m *mockChannel) ForceCloseChan() (*lnwallet.LocalForceCloseSummary, er.R) {
 	summary := &lnwallet.LocalForceCloseSummary{
 		CloseTx:         &wire.MsgTx{},
 		HtlcResolutions: &lnwallet.HtlcResolutions{},

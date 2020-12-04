@@ -1,12 +1,12 @@
 package chanbackup
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // LiveChannelSource is an interface that allows us to query for the set of
@@ -14,15 +14,15 @@ import (
 // commitment transaction broadcast.
 type LiveChannelSource interface {
 	// FetchAllChannels returns all known live channels.
-	FetchAllChannels() ([]*channeldb.OpenChannel, error)
+	FetchAllChannels() ([]*channeldb.OpenChannel, er.R)
 
 	// FetchChannel attempts to locate a live channel identified by the
 	// passed chanPoint.
-	FetchChannel(chanPoint wire.OutPoint) (*channeldb.OpenChannel, error)
+	FetchChannel(chanPoint wire.OutPoint) (*channeldb.OpenChannel, er.R)
 
 	// AddrsForNode returns all known addresses for the target node public
 	// key.
-	AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, error)
+	AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, er.R)
 }
 
 // assembleChanBackup attempts to assemble a static channel backup for the
@@ -30,7 +30,7 @@ type LiveChannelSource interface {
 // the channel, as well as addressing information so we can find the peer and
 // reconnect to them to initiate the protocol.
 func assembleChanBackup(chanSource LiveChannelSource,
-	openChan *channeldb.OpenChannel) (*Single, error) {
+	openChan *channeldb.OpenChannel) (*Single, er.R) {
 
 	log.Debugf("Crafting backup for ChannelPoint(%v)",
 		openChan.FundingOutpoint)
@@ -51,7 +51,7 @@ func assembleChanBackup(chanSource LiveChannelSource,
 // the target channel identified by its channel point. If we're unable to find
 // the target channel, then an error will be returned.
 func FetchBackupForChan(chanPoint wire.OutPoint,
-	chanSource LiveChannelSource) (*Single, error) {
+	chanSource LiveChannelSource) (*Single, er.R) {
 
 	// First, we'll query the channel source to see if the channel is known
 	// and open within the database.
@@ -59,14 +59,14 @@ func FetchBackupForChan(chanPoint wire.OutPoint,
 	if err != nil {
 		// If we can't find the channel, then we return with an error,
 		// as we have nothing to  backup.
-		return nil, fmt.Errorf("unable to find target channel")
+		return nil, er.Errorf("unable to find target channel")
 	}
 
 	// Once we have the target channel, we can assemble the backup using
 	// the source to obtain any extra information that we may need.
 	staticChanBackup, err := assembleChanBackup(chanSource, targetChan)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create chan backup: %v", err)
+		return nil, er.Errorf("unable to create chan backup: %v", err)
 	}
 
 	return staticChanBackup, nil
@@ -74,7 +74,7 @@ func FetchBackupForChan(chanPoint wire.OutPoint,
 
 // FetchStaticChanBackups will return a plaintext static channel back up for
 // all known active/open channels within the passed channel source.
-func FetchStaticChanBackups(chanSource LiveChannelSource) ([]Single, error) {
+func FetchStaticChanBackups(chanSource LiveChannelSource) ([]Single, er.R) {
 	// First, we'll query the backup source for information concerning all
 	// currently open and available channels.
 	openChans, err := chanSource.FetchAllChannels()

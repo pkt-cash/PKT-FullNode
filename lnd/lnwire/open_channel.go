@@ -4,8 +4,9 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // FundingFlag represents the possible bit mask values for the ChannelFlags
@@ -139,7 +140,7 @@ var _ Message = (*OpenChannel)(nil)
 // protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (o *OpenChannel) Encode(w io.Writer, pver uint32) error {
+func (o *OpenChannel) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		o.ChainHash[:],
 		o.PendingChannelID[:],
@@ -168,7 +169,7 @@ func (o *OpenChannel) Encode(w io.Writer, pver uint32) error {
 // defined by the passed protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (o *OpenChannel) Decode(r io.Reader, pver uint32) error {
+func (o *OpenChannel) Decode(r io.Reader, pver uint32) er.R {
 	if err := ReadElements(r,
 		o.ChainHash[:],
 		o.PendingChannelID[:],
@@ -195,7 +196,7 @@ func (o *OpenChannel) Decode(r io.Reader, pver uint32) error {
 	// Check for the optional upfront shutdown script field. If it is not there,
 	// silence the EOF error.
 	err := ReadElement(r, &o.UpfrontShutdownScript)
-	if err != nil && err != io.EOF {
+	if err != nil && er.Wrapped(err) != io.EOF {
 		return err
 	}
 

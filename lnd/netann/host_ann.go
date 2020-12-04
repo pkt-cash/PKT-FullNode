@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/ticker"
 )
@@ -19,7 +20,7 @@ type HostAnnouncerConfig struct {
 
 	// LookupHost performs DNS resolution on a given host and returns its
 	// addresses.
-	LookupHost func(string) (net.Addr, error)
+	LookupHost func(string) (net.Addr, er.R)
 
 	// AdvertisedIPs is the set of IPs that we've already announced with
 	// our current NodeAnnouncement. This set will be constructed to avoid
@@ -30,7 +31,7 @@ type HostAnnouncerConfig struct {
 	// Lightning node. The first set of addresses is the new set of
 	// addresses that we should advertise, while the other set are the
 	// stale addresses that we should no longer advertise.
-	AnnounceNewIPs func([]net.Addr, map[string]struct{}) error
+	AnnounceNewIPs func([]net.Addr, map[string]struct{}) er.R
 }
 
 // HostAnnouncer is a sub-system that allows a user to specify a set of hosts
@@ -56,7 +57,7 @@ func NewHostAnnouncer(cfg HostAnnouncerConfig) *HostAnnouncer {
 }
 
 // Start starts the HostAnnouncer.
-func (h *HostAnnouncer) Start() error {
+func (h *HostAnnouncer) Start() er.R {
 	h.startOnce.Do(func() {
 		h.wg.Add(1)
 		go h.hostWatcher()
@@ -66,7 +67,7 @@ func (h *HostAnnouncer) Start() error {
 }
 
 // Stop signals the HostAnnouncer for a graceful stop.
-func (h *HostAnnouncer) Stop() error {
+func (h *HostAnnouncer) Stop() er.R {
 	h.stopOnce.Do(func() {
 		close(h.quit)
 		h.wg.Wait()
@@ -168,13 +169,13 @@ func (h *HostAnnouncer) hostWatcher() {
 // announcement on disk. It returns the updated node announcement given a set
 // of updates to be applied to the current node announcement.
 type NodeAnnUpdater func(refresh bool, modifier ...NodeAnnModifier,
-) (lnwire.NodeAnnouncement, error)
+) (lnwire.NodeAnnouncement, er.R)
 
 // IPAnnouncer is a factory function that generates a new function that uses
 // the passed annUpdater function to to announce new IP changes for a given
 // host.
-func IPAnnouncer(annUpdater NodeAnnUpdater) func([]net.Addr, map[string]struct{}) error {
-	return func(newAddrs []net.Addr, oldAddrs map[string]struct{}) error {
+func IPAnnouncer(annUpdater NodeAnnUpdater) func([]net.Addr, map[string]struct{}) er.R {
+	return func(newAddrs []net.Addr, oldAddrs map[string]struct{}) er.R {
 		_, err := annUpdater(true, func(currentNodeAnn *lnwire.NodeAnnouncement) {
 			// To ensure we don't duplicate any addresses, we'll
 			// filter out the same of addresses we should no longer

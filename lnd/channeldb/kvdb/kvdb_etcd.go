@@ -15,7 +15,7 @@ const TestBackend = EtcdBackendName
 // GetEtcdBackend returns an etcd backend configured according to the
 // passed etcdConfig.
 func GetEtcdBackend(ctx context.Context, prefix string,
-	etcdConfig *EtcdConfig) (Backend, error) {
+	etcdConfig *EtcdConfig) (Backend, er.R) {
 
 	// Config translation is needed here in order to keep the
 	// etcd package fully independent from the rest of the source tree.
@@ -36,7 +36,7 @@ func GetEtcdBackend(ctx context.Context, prefix string,
 
 // GetEtcdTestBackend creates an embedded etcd backend for testing
 // storig the database at the passed path.
-func GetEtcdTestBackend(path, name string) (Backend, func(), error) {
+func GetEtcdTestBackend(path, name string) (Backend, func(), er.R) {
 	empty := func() {}
 
 	config, cleanup, err := etcd.NewEmbeddedEtcdInstance(path)

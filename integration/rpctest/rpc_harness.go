@@ -381,7 +381,7 @@ func (h *Harness) P2PAddress() string {
 //
 // This function is safe for concurrent access.
 func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
-	blockTime time.Time) (*btcutil.Block, error) {
+	blockTime time.Time) (*btcutil.Block, er.R) {
 	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
 		blockVersion, blockTime, []wire.TxOut{})
 }
@@ -390,7 +390,7 @@ func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
 // wallet.
 //
 // This function is safe for concurrent access.
-func (h *Harness) NewAddress() (btcutil.Address, error) {
+func (h *Harness) NewAddress() (btcutil.Address, er.R) {
 	return h.wallet.NewAddress()
 }
 
@@ -400,7 +400,7 @@ func (h *Harness) NewAddress() (btcutil.Address, error) {
 //
 // This function is safe for concurrent access.
 func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	return h.wallet.SendOutputs(targetOutputs, feeRate)
 }
@@ -411,7 +411,7 @@ func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
 
 	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
 }

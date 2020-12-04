@@ -30,7 +30,7 @@ func TestRequestRoute(t *testing.T) {
 
 			return nil, nil
 		},
-		func() (routingGraph, func(), error) {
+		func() (routingGraph, func(), er.R) {
 			return &sessionGraph{}, func() {}, nil
 		},
 		&MissionControl{cfg: &MissionControlConfig{}},
@@ -44,7 +44,7 @@ func TestRequestRoute(t *testing.T) {
 	session.pathFinder = func(
 		g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		source, target route.Vertex, amt lnwire.MilliSatoshi,
-		finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, error) {
+		finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, er.R) {
 
 		// We expect find path to receive a cltv limit excluding the
 		// final cltv delta (including the block padding).

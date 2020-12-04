@@ -1,16 +1,16 @@
 package subscribe
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/queue"
 )
 
 // ErrServerShuttingDown is an error returned in case the server is in the
 // process of shutting down.
-var ErrServerShuttingDown = errors.New("subscription server shutting down")
+var ErrServerShuttingDown = er.GenericErrorType.CodeWithDetail("ErrServerShuttingDown", "subscription server shutting down")
 
 // Client is used to get notified about updates the caller has subscribed to,
 type Client struct {
@@ -88,7 +88,7 @@ func NewServer() *Server {
 
 // Start starts the Server, making it ready to accept subscriptions and
 // updates.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	if !atomic.CompareAndSwapUint32(&s.started, 0, 1) {
 		return nil
 	}
@@ -100,7 +100,7 @@ func (s *Server) Start() error {
 }
 
 // Stop stops the server.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	if !atomic.CompareAndSwapUint32(&s.stopped, 0, 1) {
 		return nil
 	}
@@ -113,7 +113,7 @@ func (s *Server) Stop() error {
 
 // Subscribe returns a Client that will receive updates any time the Server is
 // made aware of a new event.
-func (s *Server) Subscribe() (*Client, error) {
+func (s *Server) Subscribe() (*Client, er.R) {
 	// We'll first atomically obtain the next ID for this client from the
 	// incrementing client ID counter.
 	clientID := atomic.AddUint64(&s.clientCounter, 1)
@@ -143,7 +143,7 @@ func (s *Server) Subscribe() (*Client, error) {
 		client:   client,
 	}:
 	case <-s.quit:
-		return nil, ErrServerShuttingDown
+		return nil, ErrServerShuttingDown.Default()
 	}
 
 	return client, nil
@@ -151,13 +151,13 @@ func (s *Server) Subscribe() (*Client, error) {
 
 // SendUpdate is called to send the passed update to all currently active
 // subscription clients.
-func (s *Server) SendUpdate(update interface{}) error {
+func (s *Server) SendUpdate(update interface{}) er.R {
 
 	select {
 	case s.updates <- update:
 		return nil
 	case <-s.quit:
-		return ErrServerShuttingDown
+		return ErrServerShuttingDown.Default()
 	}
 }
 

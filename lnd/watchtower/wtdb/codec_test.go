@@ -11,11 +11,12 @@ import (
 	"testing/quick"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 )
 
-func randPubKey() (*btcec.PublicKey, error) {
+func randPubKey() (*btcec.PublicKey, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err
@@ -24,7 +25,7 @@ func randPubKey() (*btcec.PublicKey, error) {
 	return priv.PubKey(), nil
 }
 
-func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, error) {
+func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [4]byte
 	if _, err := r.Read(ip[:]); err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, error) {
 	return &net.TCPAddr{IP: addrIP, Port: addrPort}, nil
 }
 
-func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, error) {
+func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [16]byte
 	if _, err := r.Read(ip[:]); err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, error) {
 	return &net.TCPAddr{IP: addrIP, Port: addrPort}, nil
 }
 
-func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
+func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V2DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
 	return &tor.OnionAddr{OnionService: onionService, Port: addrPort}, nil
 }
 
-func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
+func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V3DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, error) {
 	return &tor.OnionAddr{OnionService: onionService, Port: addrPort}, nil
 }
 
-func randAddrs(r *rand.Rand) ([]net.Addr, error) {
+func randAddrs(r *rand.Rand) ([]net.Addr, er.R) {
 	tcp4Addr, err := randTCP4Addr(r)
 	if err != nil {
 		return nil, err
@@ -120,8 +121,8 @@ func randAddrs(r *rand.Rand) ([]net.Addr, error) {
 
 // dbObject is abstract object support encoding and decoding.
 type dbObject interface {
-	Encode(io.Writer) error
-	Decode(io.Reader) error
+	Encode(io.Writer) er.R
+	Decode(io.Reader) er.R
 }
 
 // TestCodec serializes and deserializes wtdb objects in order to test that that

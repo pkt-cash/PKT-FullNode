@@ -54,12 +54,12 @@ func (b BitcoindBackendConfig) GenArgs() []string {
 }
 
 // ConnectMiner is called to establish a connection to the test miner.
-func (b BitcoindBackendConfig) ConnectMiner() error {
+func (b BitcoindBackendConfig) ConnectMiner() er.R {
 	return b.rpcClient.AddNode(b.minerAddr, rpcclient.ANAdd)
 }
 
 // DisconnectMiner is called to disconnect the miner.
-func (b BitcoindBackendConfig) DisconnectMiner() error {
+func (b BitcoindBackendConfig) DisconnectMiner() er.R {
 	return b.rpcClient.AddNode(b.minerAddr, rpcclient.ANRemove)
 }
 
@@ -71,11 +71,11 @@ func (b BitcoindBackendConfig) Name() string {
 // newBackend starts a bitcoind node with the given extra parameters and returns
 // a BitcoindBackendConfig for that node.
 func newBackend(miner string, netParams *chaincfg.Params, extraArgs []string) (
-	*BitcoindBackendConfig, func() error, error) {
+	*BitcoindBackendConfig, func() error, er.R) {
 
 	baseLogDir := fmt.Sprintf(logDirPattern, GetLogDir())
 	if netParams != &chaincfg.RegressionNetParams {
-		return nil, nil, fmt.Errorf("only regtest supported")
+		return nil, nil, er.Errorf("only regtest supported")
 	}
 
 	if err := os.MkdirAll(baseLogDir, 0700); err != nil {
@@ -90,7 +90,7 @@ func newBackend(miner string, netParams *chaincfg.Params, extraArgs []string) (
 	tempBitcoindDir, err := ioutil.TempDir("", "bitcoind")
 	if err != nil {
 		return nil, nil,
-			fmt.Errorf("unable to create temp directory: %v", err)
+			er.Errorf("unable to create temp directory: %v", err)
 	}
 
 	zmqBlockAddr := fmt.Sprintf("tcp://127.0.0.1:%d", nextAvailablePort())
@@ -119,10 +119,10 @@ func newBackend(miner string, netParams *chaincfg.Params, extraArgs []string) (
 			fmt.Printf("unable to remote temp dir %v: %v",
 				tempBitcoindDir, err)
 		}
-		return nil, nil, fmt.Errorf("couldn't start bitcoind: %v", err)
+		return nil, nil, er.Errorf("couldn't start bitcoind: %v", err)
 	}
 
-	cleanUp := func() error {
+	cleanUp := func() er.R {
 		_ = bitcoind.Process.Kill()
 		_ = bitcoind.Wait()
 
@@ -148,7 +148,7 @@ func newBackend(miner string, netParams *chaincfg.Params, extraArgs []string) (
 			)
 		}
 		if errStr != "" {
-			return errors.New(errStr)
+			return er.New(errStr)
 		}
 		return nil
 	}
@@ -173,7 +173,7 @@ func newBackend(miner string, netParams *chaincfg.Params, extraArgs []string) (
 	client, err := rpcclient.New(&rpcCfg, nil)
 	if err != nil {
 		_ = cleanUp()
-		return nil, nil, fmt.Errorf("unable to create rpc client: %v",
+		return nil, nil, er.Errorf("unable to create rpc client: %v",
 			err)
 	}
 

@@ -3,11 +3,10 @@ package htlcswitch
 import (
 	"bytes"
 	"container/list"
-	"errors"
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -15,11 +14,11 @@ import (
 var (
 	// ErrMailBoxShuttingDown is returned when the mailbox is interrupted by
 	// a shutdown request.
-	ErrMailBoxShuttingDown = errors.New("mailbox is shutting down")
+	ErrMailBoxShuttingDown = Err.CodeWithDetail("ErrMailBoxShuttingDown", "mailbox is shutting down")
 
 	// ErrPacketAlreadyExists signals that an attempt to add a packet failed
 	// because it already exists in the mailbox.
-	ErrPacketAlreadyExists = errors.New("mailbox already has packet")
+	ErrPacketAlreadyExists = Err.CodeWithDetail("ErrPacketAlreadyExists", "mailbox already has packet")
 )
 
 // MailBox is an interface which represents a concurrent-safe, in-order
@@ -29,10 +28,10 @@ var (
 // should be implemented in a non-blocking manner.
 type MailBox interface {
 	// AddMessage appends a new message to the end of the message queue.
-	AddMessage(msg lnwire.Message) error
+	AddMessage(msg lnwire.Message) er.R
 
 	// AddPacket appends a new message to the end of the packet queue.
-	AddPacket(pkt *htlcPacket) error
+	AddPacket(pkt *htlcPacket) er.R
 
 	// HasPacket queries the packets for a circuit key, this is used to drop
 	// packets bound for the switch that already have a queued response.
@@ -61,10 +60,10 @@ type MailBox interface {
 	PacketOutBox() chan *htlcPacket
 
 	// Clears any pending wire messages from the inbox.
-	ResetMessages() error
+	ResetMessages() er.R
 
 	// Reset the packet head to point at the first element in the list.
-	ResetPackets() error
+	ResetPackets() er.R
 
 	// Start starts the mailbox and any goroutines it needs to operate
 	// properly.
@@ -81,12 +80,12 @@ type mailBoxConfig struct {
 
 	// fetchUpdate retreives the most recent channel update for the channel
 	// this mailbox belongs to.
-	fetchUpdate func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, error)
+	fetchUpdate func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, er.R)
 
 	// forwardPackets send a varidic number of htlcPackets to the switch to
 	// be routed. A quit channel should be provided so that the call can
 	// properly exit during shutdown.
-	forwardPackets func(chan struct{}, ...*htlcPacket) error
+	forwardPackets func(chan struct{}, ...*htlcPacket) er.R
 
 	// clock is a time source for the mailbox.
 	clock clock.Clock
@@ -184,32 +183,32 @@ func (m *memoryMailBox) Start() {
 }
 
 // ResetMessages blocks until all buffered wire messages are cleared.
-func (m *memoryMailBox) ResetMessages() error {
+func (m *memoryMailBox) ResetMessages() er.R {
 	msgDone := make(chan struct{})
 	select {
 	case m.msgReset <- msgDone:
 		return m.signalUntilReset(wireCourier, msgDone)
 	case <-m.quit:
-		return ErrMailBoxShuttingDown
+		return ErrMailBoxShuttingDown.Default()
 	}
 }
 
 // ResetPackets blocks until the head of packets buffer is reset, causing the
 // packets to be redelivered in order.
-func (m *memoryMailBox) ResetPackets() error {
+func (m *memoryMailBox) ResetPackets() er.R {
 	pktDone := make(chan struct{})
 	select {
 	case m.pktReset <- pktDone:
 		return m.signalUntilReset(pktCourier, pktDone)
 	case <-m.quit:
-		return ErrMailBoxShuttingDown
+		return ErrMailBoxShuttingDown.Default()
 	}
 }
 
 // signalUntilReset strobes the condition variable for the specified inbox type
 // until receiving a response that the mailbox has processed a reset.
 func (m *memoryMailBox) signalUntilReset(cType courierType,
-	done chan struct{}) error {
+	done chan struct{}) er.R {
 
 	for {
 
@@ -226,7 +225,7 @@ func (m *memoryMailBox) signalUntilReset(cType courierType,
 		case <-done:
 			return nil
 		case <-m.quit:
-			return ErrMailBoxShuttingDown
+			return ErrMailBoxShuttingDown.Default()
 		}
 	}
 }
@@ -546,7 +545,7 @@ func (m *memoryMailBox) mailCourier(cType courierType) {
 //
 // NOTE: This method is safe for concrete use and part of the MailBox
 // interface.
-func (m *memoryMailBox) AddMessage(msg lnwire.Message) error {
+func (m *memoryMailBox) AddMessage(msg lnwire.Message) er.R {
 	// First, we'll lock the condition, and add the message to the end of
 	// the wire message inbox.
 	m.wireCond.L.Lock()
@@ -564,7 +563,7 @@ func (m *memoryMailBox) AddMessage(msg lnwire.Message) error {
 //
 // NOTE: This method is safe for concrete use and part of the MailBox
 // interface.
-func (m *memoryMailBox) AddPacket(pkt *htlcPacket) error {
+func (m *memoryMailBox) AddPacket(pkt *htlcPacket) er.R {
 	m.pktCond.L.Lock()
 	switch htlc := pkt.htlc.(type) {
 
@@ -572,7 +571,7 @@ func (m *memoryMailBox) AddPacket(pkt *htlcPacket) error {
 	case *lnwire.UpdateFulfillHTLC, *lnwire.UpdateFailHTLC:
 		if _, ok := m.repIndex[pkt.inKey()]; ok {
 			m.pktCond.L.Unlock()
-			return ErrPacketAlreadyExists
+			return ErrPacketAlreadyExists.Default()
 		}
 
 		entry := m.repPkts.PushBack(pkt)
@@ -585,7 +584,7 @@ func (m *memoryMailBox) AddPacket(pkt *htlcPacket) error {
 	case *lnwire.UpdateAddHTLC:
 		if _, ok := m.addIndex[pkt.inKey()]; ok {
 			m.pktCond.L.Unlock()
-			return ErrPacketAlreadyExists
+			return ErrPacketAlreadyExists.Default()
 		}
 
 		entry := m.addPkts.PushBack(&pktWithExpiry{
@@ -599,7 +598,7 @@ func (m *memoryMailBox) AddPacket(pkt *htlcPacket) error {
 
 	default:
 		m.pktCond.L.Unlock()
-		return fmt.Errorf("unknown htlc type: %T", htlc)
+		return er.Errorf("unknown htlc type: %T", htlc)
 	}
 	m.pktCond.L.Unlock()
 
@@ -736,11 +735,11 @@ type mailOrchConfig struct {
 	// forwardPackets send a varidic number of htlcPackets to the switch to
 	// be routed. A quit channel should be provided so that the call can
 	// properly exit during shutdown.
-	forwardPackets func(chan struct{}, ...*htlcPacket) error
+	forwardPackets func(chan struct{}, ...*htlcPacket) er.R
 
 	// fetchUpdate retreives the most recent channel update for the channel
 	// this mailbox belongs to.
-	fetchUpdate func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, error)
+	fetchUpdate func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, er.R)
 
 	// clock is a time source for the generated mailboxes.
 	clock clock.Clock
@@ -843,7 +842,7 @@ func (mo *mailOrchestrator) BindLiveShortChanID(mailbox MailBox,
 // Otherwise the packet is recorded as unclaimed, and will be delivered to the
 // mailbox upon the subsequent call to BindLiveShortChanID.
 func (mo *mailOrchestrator) Deliver(
-	sid lnwire.ShortChannelID, pkt *htlcPacket) error {
+	sid lnwire.ShortChannelID, pkt *htlcPacket) er.R {
 
 	var (
 		mailbox MailBox

@@ -5,6 +5,7 @@ package etcd
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/stretchr/testify/require"
 )
@@ -16,18 +17,18 @@ func TestReadCursorEmptyInterval(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		b, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b)
 
 		return nil
 	}, func() {})
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.View(func(tx walletdb.ReadTx) error {
+	err = db.View(func(tx walletdb.ReadTx) er.R {
 		b := tx.ReadBucket([]byte("apple"))
 		require.NotNil(t, b)
 
@@ -50,7 +51,7 @@ func TestReadCursorEmptyInterval(t *testing.T) {
 
 		return nil
 	}, func() {})
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 }
 
 func TestReadCursorNonEmptyInterval(t *testing.T) {
@@ -60,7 +61,7 @@ func TestReadCursorNonEmptyInterval(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	testKeyValues := []KV{
 		{"b", "1"},
@@ -69,20 +70,20 @@ func TestReadCursorNonEmptyInterval(t *testing.T) {
 		{"e", "4"},
 	}
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		b, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b)
 
 		for _, kv := range testKeyValues {
-			require.NoError(t, b.Put([]byte(kv.key), []byte(kv.val)))
+			util.RequireNoErr(t, b.Put([]byte(kv.key), []byte(kv.val)))
 		}
 		return nil
 	}, func() {})
 
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.View(func(tx walletdb.ReadTx) error {
+	err = db.View(func(tx walletdb.ReadTx) er.R {
 		b := tx.ReadBucket([]byte("apple"))
 		require.NotNil(t, b)
 
@@ -127,7 +128,7 @@ func TestReadCursorNonEmptyInterval(t *testing.T) {
 		return nil
 	}, func() {})
 
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 }
 
 func TestReadWriteCursor(t *testing.T) {
@@ -137,7 +138,7 @@ func TestReadWriteCursor(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	testKeyValues := []KV{
 		{"b", "1"},
@@ -149,9 +150,9 @@ func TestReadWriteCursor(t *testing.T) {
 	count := len(testKeyValues)
 
 	// Pre-store the first half of the interval.
-	require.NoError(t, db.Update(func(tx walletdb.ReadWriteTx) error {
+	util.RequireNoErr(t, db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		b, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b)
 
 		for i := 0; i < count/2; i++ {
@@ -159,12 +160,12 @@ func TestReadWriteCursor(t *testing.T) {
 				[]byte(testKeyValues[i].key),
 				[]byte(testKeyValues[i].val),
 			)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 		}
 		return nil
 	}, func() {}))
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		b := tx.ReadWriteBucket([]byte("apple"))
 		require.NotNil(t, b)
 
@@ -174,7 +175,7 @@ func TestReadWriteCursor(t *testing.T) {
 				[]byte(testKeyValues[i].key),
 				[]byte(testKeyValues[i].val),
 			)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 		}
 
 		cursor := b.ReadWriteCursor()
@@ -203,8 +204,8 @@ func TestReadWriteCursor(t *testing.T) {
 		// deleted one. Check that First/Next will "jump"
 		// over the deleted item and return the new first.
 		_, _ = cursor.First()
-		require.NoError(t, cursor.Delete())
-		require.NoError(t, b.Put([]byte("a"), []byte("0")))
+		util.RequireNoErr(t, cursor.Delete())
+		util.RequireNoErr(t, b.Put([]byte("a"), []byte("0")))
 		fk, fv = cursor.First()
 
 		require.Equal(t, []byte("a"), fk)
@@ -217,8 +218,8 @@ func TestReadWriteCursor(t *testing.T) {
 		// Similarly test that a new end is returned if
 		// the old end is deleted first.
 		_, _ = cursor.Last()
-		require.NoError(t, cursor.Delete())
-		require.NoError(t, b.Put([]byte("f"), []byte("5")))
+		util.RequireNoErr(t, cursor.Delete())
+		util.RequireNoErr(t, b.Put([]byte("f"), []byte("5")))
 
 		lk, lv = cursor.Last()
 		require.Equal(t, []byte("f"), lk)
@@ -229,14 +230,14 @@ func TestReadWriteCursor(t *testing.T) {
 		require.Equal(t, []byte("3"), v)
 
 		// Overwrite k/v in the middle of the interval.
-		require.NoError(t, b.Put([]byte("c"), []byte("3")))
+		util.RequireNoErr(t, b.Put([]byte("c"), []byte("3")))
 		k, v = cursor.Prev()
 		require.Equal(t, []byte("c"), k)
 		require.Equal(t, []byte("3"), v)
 
 		// Insert new key/values.
-		require.NoError(t, b.Put([]byte("cx"), []byte("x")))
-		require.NoError(t, b.Put([]byte("cy"), []byte("y")))
+		util.RequireNoErr(t, b.Put([]byte("cx"), []byte("x")))
+		util.RequireNoErr(t, b.Put([]byte("cy"), []byte("y")))
 
 		k, v = cursor.Next()
 		require.Equal(t, []byte("cx"), k)
@@ -278,7 +279,7 @@ func TestReadWriteCursor(t *testing.T) {
 		return nil
 	}, func() {})
 
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	expected := map[string]string{
 		bkey("apple"):       bval("apple"),
@@ -301,28 +302,28 @@ func TestReadWriteCursorWithBucketAndValue(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Pre-store the first half of the interval.
-	require.NoError(t, db.Update(func(tx walletdb.ReadWriteTx) error {
+	util.RequireNoErr(t, db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		b, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b)
 
-		require.NoError(t, b.Put([]byte("key"), []byte("val")))
+		util.RequireNoErr(t, b.Put([]byte("key"), []byte("val")))
 
 		b1, err := b.CreateBucket([]byte("banana"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b1)
 
 		b2, err := b.CreateBucket([]byte("pear"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b2)
 
 		return nil
 	}, func() {}))
 
-	err = db.View(func(tx walletdb.ReadTx) error {
+	err = db.View(func(tx walletdb.ReadTx) er.R {
 		b := tx.ReadBucket([]byte("apple"))
 		require.NotNil(t, b)
 
@@ -356,7 +357,7 @@ func TestReadWriteCursorWithBucketAndValue(t *testing.T) {
 		return nil
 	}, func() {})
 
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	expected := map[string]string{
 		bkey("apple"):           bval("apple"),

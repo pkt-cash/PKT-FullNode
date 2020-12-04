@@ -3,6 +3,7 @@ package lnwire
 import (
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -39,7 +40,7 @@ var _ Message = (*GossipTimestampRange)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (g *GossipTimestampRange) Decode(r io.Reader, pver uint32) error {
+func (g *GossipTimestampRange) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		g.ChainHash[:],
 		&g.FirstTimestamp,
@@ -51,7 +52,7 @@ func (g *GossipTimestampRange) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (g *GossipTimestampRange) Encode(w io.Writer, pver uint32) error {
+func (g *GossipTimestampRange) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		g.ChainHash[:],
 		g.FirstTimestamp,

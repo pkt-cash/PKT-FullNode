@@ -2,7 +2,9 @@
 
 package build
 
-import "os"
+import (
+	"os"
+)
 
 // LoggingType is a log type that writes to both stdout and the log rotator, if
 // present.

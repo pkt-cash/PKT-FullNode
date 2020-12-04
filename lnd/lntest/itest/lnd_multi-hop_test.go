@@ -147,14 +147,14 @@ func waitForInvoiceAccepted(t *harnessTest, node *lntest.HarnessNode,
 // checkPaymentStatus asserts that the given node list a payment with the given
 // preimage has the expected status.
 func checkPaymentStatus(ctxt context.Context, node *lntest.HarnessNode,
-	preimage lntypes.Preimage, status lnrpc.Payment_PaymentStatus) error {
+	preimage lntypes.Preimage, status lnrpc.Payment_PaymentStatus) er.R {
 
 	req := &lnrpc.ListPaymentsRequest{
 		IncludeIncomplete: true,
 	}
 	paymentsResp, err := node.ListPayments(ctxt, req)
 	if err != nil {
-		return fmt.Errorf("error when obtaining Alice payments: %v",
+		return er.Errorf("error when obtaining Alice payments: %v",
 			err)
 	}
 
@@ -167,7 +167,7 @@ func checkPaymentStatus(ctxt context.Context, node *lntest.HarnessNode,
 
 		found = true
 		if p.Status != status {
-			return fmt.Errorf("expected payment status "+
+			return er.Errorf("expected payment status "+
 				"%v, got %v", status, p.Status)
 		}
 
@@ -176,14 +176,14 @@ func checkPaymentStatus(ctxt context.Context, node *lntest.HarnessNode,
 		// If this expected status is SUCCEEDED, we expect the final preimage.
 		case lnrpc.Payment_SUCCEEDED:
 			if p.PaymentPreimage != preimage.String() {
-				return fmt.Errorf("preimage doesn't match: %v vs %v",
+				return er.Errorf("preimage doesn't match: %v vs %v",
 					p.PaymentPreimage, preimage.String())
 			}
 
 		// Otherwise we expect an all-zero preimage.
 		default:
 			if p.PaymentPreimage != (lntypes.Preimage{}).String() {
-				return fmt.Errorf("expected zero preimage, got %v",
+				return er.Errorf("expected zero preimage, got %v",
 					p.PaymentPreimage)
 			}
 		}
@@ -191,7 +191,7 @@ func checkPaymentStatus(ctxt context.Context, node *lntest.HarnessNode,
 	}
 
 	if !found {
-		return fmt.Errorf("payment with payment hash %v not found "+
+		return er.Errorf("payment with payment hash %v not found "+
 			"in response", payHash)
 	}
 

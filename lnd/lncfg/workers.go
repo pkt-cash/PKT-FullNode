@@ -31,17 +31,17 @@ type Workers struct {
 
 // Validate checks the Workers configuration to ensure that the input values are
 // sane.
-func (w *Workers) Validate() error {
+func (w *Workers) Validate() er.R {
 	if w.Read <= 0 {
-		return fmt.Errorf("number of read workers (%d) must be "+
+		return er.Errorf("number of read workers (%d) must be "+
 			"positive", w.Read)
 	}
 	if w.Write <= 0 {
-		return fmt.Errorf("number of write workers (%d) must be "+
+		return er.Errorf("number of write workers (%d) must be "+
 			"positive", w.Write)
 	}
 	if w.Sig <= 0 {
-		return fmt.Errorf("number of sig workers (%d) must be "+
+		return er.Errorf("number of sig workers (%d) must be "+
 			"positive", w.Sig)
 	}
 

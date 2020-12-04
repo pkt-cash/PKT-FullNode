@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = descriptor.ForMessage
 
-func request_WatchtowerClient_AddTower_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_AddTower_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq AddTowerRequest
 	var metadata runtime.ServerMetadata
 
@@ -48,7 +48,7 @@ func request_WatchtowerClient_AddTower_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_WatchtowerClient_AddTower_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_AddTower_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq AddTowerRequest
 	var metadata runtime.ServerMetadata
 
@@ -69,7 +69,7 @@ var (
 	filter_WatchtowerClient_RemoveTower_0 = &utilities.DoubleArray{Encoding: map[string]int{"pubkey": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_WatchtowerClient_RemoveTower_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_RemoveTower_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq RemoveTowerRequest
 	var metadata runtime.ServerMetadata
 
@@ -103,7 +103,7 @@ func request_WatchtowerClient_RemoveTower_0(ctx context.Context, marshaler runti
 
 }
 
-func local_request_WatchtowerClient_RemoveTower_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_RemoveTower_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq RemoveTowerRequest
 	var metadata runtime.ServerMetadata
 
@@ -138,7 +138,7 @@ var (
 	filter_WatchtowerClient_ListTowers_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_WatchtowerClient_ListTowers_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_ListTowers_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq ListTowersRequest
 	var metadata runtime.ServerMetadata
 
@@ -154,7 +154,7 @@ func request_WatchtowerClient_ListTowers_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_WatchtowerClient_ListTowers_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_ListTowers_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq ListTowersRequest
 	var metadata runtime.ServerMetadata
 
@@ -171,7 +171,7 @@ var (
 	filter_WatchtowerClient_GetTowerInfo_0 = &utilities.DoubleArray{Encoding: map[string]int{"pubkey": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq GetTowerInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -205,7 +205,7 @@ func request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq GetTowerInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -236,7 +236,7 @@ func local_request_WatchtowerClient_GetTowerInfo_0(ctx context.Context, marshale
 
 }
 
-func request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq StatsRequest
 	var metadata runtime.ServerMetadata
 
@@ -245,7 +245,7 @@ func request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq StatsRequest
 	var metadata runtime.ServerMetadata
 
@@ -254,7 +254,7 @@ func local_request_WatchtowerClient_Stats_0(ctx context.Context, marshaler runti
 
 }
 
-func request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runtime.Marshaler, client WatchtowerClientClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq PolicyRequest
 	var metadata runtime.ServerMetadata
 
@@ -263,7 +263,7 @@ func request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runtime.Marshaler, server WatchtowerClientServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
 	var protoReq PolicyRequest
 	var metadata runtime.ServerMetadata
 
@@ -275,7 +275,7 @@ func local_request_WatchtowerClient_Policy_0(ctx context.Context, marshaler runt
 // RegisterWatchtowerClientHandlerServer registers the http handlers for service WatchtowerClient to "mux".
 // UnaryRPC     :call WatchtowerClientServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterWatchtowerClientHandlerServer(ctx context.Context, mux *runtime.ServeMux, server WatchtowerClientServer) error {
+func RegisterWatchtowerClientHandlerServer(ctx context.Context, mux *runtime.ServeMux, server WatchtowerClientServer) er.R {
 
 	mux.Handle("POST", pattern_WatchtowerClient_AddTower_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -427,7 +427,7 @@ func RegisterWatchtowerClientHandlerFromEndpoint(ctx context.Context, mux *runti
 
 // RegisterWatchtowerClientHandler registers the http handlers for service WatchtowerClient to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterWatchtowerClientHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+func RegisterWatchtowerClientHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
 	return RegisterWatchtowerClientHandlerClient(ctx, mux, NewWatchtowerClientClient(conn))
 }
 
@@ -436,7 +436,7 @@ func RegisterWatchtowerClientHandler(ctx context.Context, mux *runtime.ServeMux,
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "WatchtowerClientClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "WatchtowerClientClient" to call the correct interceptors.
-func RegisterWatchtowerClientHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WatchtowerClientClient) error {
+func RegisterWatchtowerClientHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WatchtowerClientClient) er.R {
 
 	mux.Handle("POST", pattern_WatchtowerClient_AddTower_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())

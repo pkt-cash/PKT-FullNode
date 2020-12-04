@@ -3,8 +3,6 @@ package htlcswitch
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -12,6 +10,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -21,9 +21,9 @@ import (
 
 var zeroCircuit = channeldb.CircuitKey{}
 
-func genPreimage() ([32]byte, error) {
+func genPreimage() ([32]byte, er.R) {
 	var preimage [32]byte
-	if _, err := io.ReadFull(rand.Reader, preimage[:]); err != nil {
+	if _, err := util.ReadFull(rand.Reader, preimage[:]); err != nil {
 		return preimage, err
 	}
 	return preimage, nil
@@ -2122,7 +2122,7 @@ func TestSwitchSendPayment(t *testing.T) {
 	}
 
 	// Handle the request and checks that bob channel link received it.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	go func() {
 		err := s.SendHTLC(
 			aliceChannelLink.ShortChanID(), paymentID, update,
@@ -2142,7 +2142,7 @@ func TestSwitchSendPayment(t *testing.T) {
 
 		result, ok := <-resultChan
 		if !ok {
-			errChan <- fmt.Errorf("shutting down")
+			errChan <- er.Errorf("shutting down")
 		}
 
 		if result.Error != nil {
@@ -3125,15 +3125,15 @@ func (m *mockForwardInterceptor) InterceptForwardHtlc(intercepted InterceptedFor
 	return true
 }
 
-func (m *mockForwardInterceptor) settle(preimage lntypes.Preimage) error {
+func (m *mockForwardInterceptor) settle(preimage lntypes.Preimage) er.R {
 	return m.intercepted.Settle(preimage)
 }
 
-func (m *mockForwardInterceptor) fail() error {
+func (m *mockForwardInterceptor) fail() er.R {
 	return m.intercepted.Fail()
 }
 
-func (m *mockForwardInterceptor) resume() error {
+func (m *mockForwardInterceptor) resume() er.R {
 	return m.intercepted.Resume()
 }
 

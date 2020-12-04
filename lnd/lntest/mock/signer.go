@@ -1,9 +1,8 @@
 package mock
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -30,14 +29,14 @@ type DummySigner struct{}
 
 // SignOutputRaw returns a dummy signature.
 func (d *DummySigner) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (input.Signature, error) {
+	signDesc *input.SignDescriptor) (input.Signature, er.R) {
 
 	return &DummySignature{}, nil
 }
 
 // ComputeInputScript returns nil for both values.
 func (d *DummySigner) ComputeInputScript(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (*input.Script, error) {
+	signDesc *input.SignDescriptor) (*input.Script, er.R) {
 
 	return &input.Script{}, nil
 }
@@ -51,14 +50,14 @@ type SingleSigner struct {
 // SignOutputRaw generates a signature for the passed transaction using the
 // stored private key.
 func (s *SingleSigner) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (input.Signature, error) {
+	signDesc *input.SignDescriptor) (input.Signature, er.R) {
 
 	amt := signDesc.Output.Value
 	witnessScript := signDesc.WitnessScript
 	privKey := s.Privkey
 
 	if !privKey.PubKey().IsEqual(signDesc.KeyDesc.PubKey) {
-		return nil, fmt.Errorf("incorrect key passed")
+		return nil, er.Errorf("incorrect key passed")
 	}
 
 	switch {
@@ -83,7 +82,7 @@ func (s *SingleSigner) SignOutputRaw(tx *wire.MsgTx,
 // ComputeInputScript computes an input script with the stored private key
 // given a transaction and a SignDescriptor.
 func (s *SingleSigner) ComputeInputScript(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (*input.Script, error) {
+	signDesc *input.SignDescriptor) (*input.Script, er.R) {
 
 	privKey := s.Privkey
 
@@ -111,16 +110,16 @@ func (s *SingleSigner) ComputeInputScript(tx *wire.MsgTx,
 // SignMessage takes a public key and a message and only signs the message
 // with the stored private key if the public key matches the private key.
 func (s *SingleSigner) SignMessage(pubKey *btcec.PublicKey,
-	msg []byte) (input.Signature, error) {
+	msg []byte) (input.Signature, er.R) {
 
 	if !pubKey.IsEqual(s.Privkey.PubKey()) {
-		return nil, fmt.Errorf("unknown public key")
+		return nil, er.Errorf("unknown public key")
 	}
 
 	digest := chainhash.DoubleHashB(msg)
 	sign, err := s.Privkey.Sign(digest)
 	if err != nil {
-		return nil, fmt.Errorf("can't sign the message: %v", err)
+		return nil, er.Errorf("can't sign the message: %v", err)
 	}
 
 	return sign, nil

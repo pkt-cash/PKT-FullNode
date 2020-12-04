@@ -66,7 +66,7 @@ type FutureNodeResult chan *response
 
 // Receive waits for the response promised by the future and returns an error if
 // any occurred when performing the specified command.
-func (r FutureNodeResult) Receive() error {
+func (r FutureNodeResult) Receive() er.R {
 	_, err := receiveFuture(r)
 	return err
 }
@@ -90,7 +90,7 @@ func (c *Client) NodeAsync(command btcjson.NodeSubCmd, host string,
 // whether we are targetting a persistent or non-persistent peer. Passing nil
 // will cause the default value to be used, which currently is "temp".
 func (c *Client) Node(command btcjson.NodeSubCmd, host string,
-	connectSubCmd *string) error {
+	connectSubCmd *string) er.R {
 	return c.NodeAsync(command, host, connectSubCmd).Receive()
 }
 

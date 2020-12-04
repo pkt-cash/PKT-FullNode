@@ -3,14 +3,14 @@ package route
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -21,23 +21,26 @@ import (
 const VertexSize = 33
 
 var (
+	Err = er.NewErrorType("lnd.route")
 	// ErrNoRouteHopsProvided is returned when a caller attempts to
 	// construct a new sphinx packet, but provides an empty set of hops for
 	// each route.
-	ErrNoRouteHopsProvided = fmt.Errorf("empty route hops provided")
+	ErrNoRouteHopsProvided = Err.CodeWithDetail("ErrNoRouteHopsProvided",
+		"empty route hops provided")
 
 	// ErrMaxRouteHopsExceeded is returned when a caller attempts to
 	// construct a new sphinx packet, but provides too many hops.
-	ErrMaxRouteHopsExceeded = fmt.Errorf("route has too many hops")
+	ErrMaxRouteHopsExceeded = Err.CodeWithDetail("ErrMaxRouteHopsExceeded",
+		"route has too many hops")
 
 	// ErrIntermediateMPPHop is returned when a hop tries to deliver an MPP
 	// record to an intermediate hop, only final hops can receive MPP
 	// records.
-	ErrIntermediateMPPHop = errors.New("cannot send MPP to intermediate")
+	ErrIntermediateMPPHop = Err.CodeWithDetail("ErrIntermediateMPPHop", "cannot send MPP to intermediate")
 
 	// ErrAMPMissingMPP is returned when the caller tries to attach an AMP
 	// record but no MPP record is presented for the final hop.
-	ErrAMPMissingMPP = errors.New("cannot send AMP without MPP record")
+	ErrAMPMissingMPP = Err.CodeWithDetail("ErrAMPMissingMPP", "cannot send AMP without MPP record")
 )
 
 // Vertex is a simple alias for the serialization of a compressed Bitcoin
@@ -53,10 +56,10 @@ func NewVertex(pub *btcec.PublicKey) Vertex {
 
 // NewVertexFromBytes returns a new Vertex based on a serialized pubkey in a
 // byte slice.
-func NewVertexFromBytes(b []byte) (Vertex, error) {
+func NewVertexFromBytes(b []byte) (Vertex, er.R) {
 	vertexLen := len(b)
 	if vertexLen != VertexSize {
-		return Vertex{}, fmt.Errorf("invalid vertex length of %v, "+
+		return Vertex{}, er.Errorf("invalid vertex length of %v, "+
 			"want %v", vertexLen, VertexSize)
 	}
 
@@ -66,14 +69,14 @@ func NewVertexFromBytes(b []byte) (Vertex, error) {
 }
 
 // NewVertexFromStr returns a new Vertex given its hex-encoded string format.
-func NewVertexFromStr(v string) (Vertex, error) {
+func NewVertexFromStr(v string) (Vertex, er.R) {
 	// Return error if hex string is of incorrect length.
 	if len(v) != VertexSize*2 {
-		return Vertex{}, fmt.Errorf("invalid vertex string length of "+
+		return Vertex{}, er.Errorf("invalid vertex string length of "+
 			"%v, want %v", len(v), VertexSize*2)
 	}
 
-	vertex, err := hex.DecodeString(v)
+	vertex, err := util.DecodeHex(v)
 	if err != nil {
 		return Vertex{}, err
 	}
@@ -153,11 +156,11 @@ func (h *Hop) Copy() *Hop {
 // references the _outgoing_ channel ID that follows this hop. This field
 // follows the same semantics as the NextAddress field in the onion: it should
 // be set to zero to indicate the terminal hop.
-func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) error {
+func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) er.R {
 	// If this is a legacy payload, then we'll exit here as this method
 	// shouldn't be called.
 	if h.LegacyPayload == true {
-		return fmt.Errorf("cannot pack hop payloads for legacy " +
+		return er.Errorf("cannot pack hop payloads for legacy " +
 			"payloads")
 	}
 
@@ -189,7 +192,7 @@ func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) error {
 		if nextChanID == 0 {
 			records = append(records, h.MPP.Record())
 		} else {
-			return ErrIntermediateMPPHop
+			return ErrIntermediateMPPHop.Default()
 		}
 	}
 
@@ -201,7 +204,7 @@ func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) error {
 		if h.MPP != nil {
 			records = append(records, h.AMP.Record())
 		} else {
-			return ErrAMPMissingMPP
+			return ErrAMPMissingMPP.Default()
 		}
 	}
 
@@ -362,10 +365,10 @@ func (r *Route) FinalHop() *Hop {
 // information to perform the payment. It infers fee amounts and populates the
 // node, chan and prev/next hop maps.
 func NewRouteFromHops(amtToSend lnwire.MilliSatoshi, timeLock uint32,
-	sourceVertex Vertex, hops []*Hop) (*Route, error) {
+	sourceVertex Vertex, hops []*Hop) (*Route, er.R) {
 
 	if len(hops) == 0 {
-		return nil, ErrNoRouteHopsProvided
+		return nil, ErrNoRouteHopsProvided.Default()
 	}
 
 	// First, we'll create a route struct and populate it with the fields
@@ -387,17 +390,17 @@ func NewRouteFromHops(amtToSend lnwire.MilliSatoshi, timeLock uint32,
 // contains the per-hop paylods used to encoding the HTLC routing data for each
 // hop in the route. This method also accepts an optional EOB payload for the
 // final hop.
-func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, error) {
+func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, er.R) {
 	var path sphinx.PaymentPath
 
 	// We can only construct a route if there are hops provided.
 	if len(r.Hops) == 0 {
-		return nil, ErrNoRouteHopsProvided
+		return nil, ErrNoRouteHopsProvided.Default()
 	}
 
 	// Check maximum route length.
 	if len(r.Hops) > sphinx.NumMaxHops {
-		return nil, ErrMaxRouteHopsExceeded
+		return nil, ErrMaxRouteHopsExceeded.Default()
 	}
 
 	// For each hop encoded within the route, we'll convert the hop struct

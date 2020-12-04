@@ -224,7 +224,6 @@ type R interface {
 	Stack() []string
 	HasStack() bool
 	String() string
-	Error() string
 	Wrapped0() error
 	Native() error
 	AddMessage(m string)

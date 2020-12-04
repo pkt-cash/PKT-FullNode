@@ -40,7 +40,7 @@ var (
 
 // randPubKeyHashScript generates a P2PKH script that pays to the public key of
 // a randomly-generated private key.
-func randPubKeyHashScript() ([]byte, *btcec.PrivateKey, error) {
+func randPubKeyHashScript() ([]byte, *btcec.PrivateKey, er.R) {
 	privKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, nil, err
@@ -62,10 +62,10 @@ func randPubKeyHashScript() ([]byte, *btcec.PrivateKey, error) {
 
 // GetTestTxidAndScript generate a new test transaction and returns its txid and
 // the script of the output being generated.
-func GetTestTxidAndScript(h *rpctest.Harness) (*chainhash.Hash, []byte, error) {
+func GetTestTxidAndScript(h *rpctest.Harness) (*chainhash.Hash, []byte, er.R) {
 	pkScript, _, err := randPubKeyHashScript()
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to generate pkScript: %v", err)
+		return nil, nil, er.Errorf("unable to generate pkScript: %v", err)
 	}
 	output := &wire.TxOut{Value: 2e8, PkScript: pkScript}
 	txid, err := h.SendOutputs([]*wire.TxOut{output}, 10)
@@ -77,7 +77,7 @@ func GetTestTxidAndScript(h *rpctest.Harness) (*chainhash.Hash, []byte, error) {
 }
 
 // WaitForMempoolTx waits for the txid to be seen in the miner's mempool.
-func WaitForMempoolTx(miner *rpctest.Harness, txid *chainhash.Hash) error {
+func WaitForMempoolTx(miner *rpctest.Harness, txid *chainhash.Hash) er.R {
 	timeout := time.After(10 * time.Second)
 	trickle := time.After(2 * TrickleInterval)
 	for {
@@ -98,7 +98,7 @@ func WaitForMempoolTx(miner *rpctest.Harness, txid *chainhash.Hash) error {
 		select {
 		case <-time.After(100 * time.Millisecond):
 		case <-timeout:
-			return errors.New("timed out waiting for tx")
+			return er.New("timed out waiting for tx")
 		}
 	}
 
@@ -108,7 +108,7 @@ func WaitForMempoolTx(miner *rpctest.Harness, txid *chainhash.Hash) error {
 	select {
 	case <-trickle:
 	case <-timeout:
-		return errors.New("timeout waiting for trickle interval. " +
+		return er.New("timeout waiting for trickle interval. " +
 			"Trickle interval to large?")
 	}
 

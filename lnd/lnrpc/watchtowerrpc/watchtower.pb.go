@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -37,10 +37,10 @@ func (*GetInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_9f019c0e859ad3d6, []int{0}
 }
 
-func (m *GetInfoRequest) XXX_Unmarshal(b []byte) error {
+func (m *GetInfoRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_GetInfoRequest.Unmarshal(m, b)
 }
-func (m *GetInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GetInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_GetInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *GetInfoRequest) XXX_Merge(src proto.Message) {
@@ -74,10 +74,10 @@ func (*GetInfoResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_9f019c0e859ad3d6, []int{1}
 }
 
-func (m *GetInfoResponse) XXX_Unmarshal(b []byte) error {
+func (m *GetInfoResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_GetInfoResponse.Unmarshal(m, b)
 }
-func (m *GetInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GetInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_GetInfoResponse.Marshal(b, m, deterministic)
 }
 func (m *GetInfoResponse) XXX_Merge(src proto.Message) {
@@ -154,7 +154,7 @@ type WatchtowerClient interface {
 	//GetInfo returns general information concerning the companion watchtower
 	//including its public key and URIs where the server is currently
 	//listening for clients.
-	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
+	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, er.R)
 }
 
 type watchtowerClient struct {
@@ -165,7 +165,7 @@ func NewWatchtowerClient(cc *grpc.ClientConn) WatchtowerClient {
 	return &watchtowerClient{cc}
 }
 
-func (c *watchtowerClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
+func (c *watchtowerClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, er.R) {
 	out := new(GetInfoResponse)
 	err := c.cc.Invoke(ctx, "/watchtowerrpc.Watchtower/GetInfo", in, out, opts...)
 	if err != nil {
@@ -180,14 +180,14 @@ type WatchtowerServer interface {
 	//GetInfo returns general information concerning the companion watchtower
 	//including its public key and URIs where the server is currently
 	//listening for clients.
-	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
+	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, er.R)
 }
 
 // UnimplementedWatchtowerServer can be embedded to have forward compatible implementations.
 type UnimplementedWatchtowerServer struct {
 }
 
-func (*UnimplementedWatchtowerServer) GetInfo(ctx context.Context, req *GetInfoRequest) (*GetInfoResponse, error) {
+func (*UnimplementedWatchtowerServer) GetInfo(ctx context.Context, req *GetInfoRequest) (*GetInfoResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
 }
 
@@ -195,7 +195,7 @@ func RegisterWatchtowerServer(s *grpc.Server, srv WatchtowerServer) {
 	s.RegisterService(&_Watchtower_serviceDesc, srv)
 }
 
-func _Watchtower_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Watchtower_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(GetInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func _Watchtower_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/watchtowerrpc.Watchtower/GetInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerServer).GetInfo(ctx, req.(*GetInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)

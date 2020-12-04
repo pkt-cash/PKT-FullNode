@@ -2,10 +2,10 @@ package chanbackup
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 )
 
@@ -22,12 +22,12 @@ type mockKeyRing struct {
 	fail bool
 }
 
-func (m *mockKeyRing) DeriveNextKey(keyFam keychain.KeyFamily) (keychain.KeyDescriptor, error) {
+func (m *mockKeyRing) DeriveNextKey(keyFam keychain.KeyFamily) (keychain.KeyDescriptor, er.R) {
 	return keychain.KeyDescriptor{}, nil
 }
-func (m *mockKeyRing) DeriveKey(keyLoc keychain.KeyLocator) (keychain.KeyDescriptor, error) {
+func (m *mockKeyRing) DeriveKey(keyLoc keychain.KeyLocator) (keychain.KeyDescriptor, er.R) {
 	if m.fail {
-		return keychain.KeyDescriptor{}, fmt.Errorf("fail")
+		return keychain.KeyDescriptor{}, er.Errorf("fail")
 	}
 
 	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), testWalletPrivKey)

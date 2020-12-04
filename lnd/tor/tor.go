@@ -56,7 +56,7 @@ func (c *proxyConn) RemoteAddr() net.Addr {
 // around net.Conn in order to expose the actual remote address we're dialing,
 // rather than the proxy's address.
 func Dial(address, socksAddr string, streamIsolation bool,
-	timeout time.Duration) (net.Conn, error) {
+	timeout time.Duration) (net.Conn, er.R) {
 
 	conn, err := dial(address, socksAddr, streamIsolation, timeout)
 	if err != nil {
@@ -83,7 +83,7 @@ func Dial(address, socksAddr string, streamIsolation bool,
 // this new connection will use a fresh circuit, rather than possibly re-using
 // an existing circuit.
 func dial(address, socksAddr string, streamIsolation bool,
-	timeout time.Duration) (net.Conn, error) {
+	timeout time.Duration) (net.Conn, er.R) {
 
 	// If we were requested to force stream isolation for this connection,
 	// we'll populate the authentication credentials with random data as
@@ -113,7 +113,7 @@ func dial(address, socksAddr string, streamIsolation bool,
 
 // LookupHost performs DNS resolution on a given host via Tor's native resolver.
 // Only IPv4 addresses are returned.
-func LookupHost(host, socksAddr string) ([]string, error) {
+func LookupHost(host, socksAddr string) ([]string, er.R) {
 	ip, err := connmgr.TorLookupIP(host, socksAddr)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func LookupHost(host, socksAddr string) ([]string, error) {
 // must have TCP resolution enabled for the given port.
 func LookupSRV(service, proto, name, socksAddr,
 	dnsServer string, streamIsolation bool,
-	timeout time.Duration) (string, []*net.SRV, error) {
+	timeout time.Duration) (string, []*net.SRV, er.R) {
 
 	// Connect to the DNS server we'll be using to query SRV records.
 	conn, err := dial(dnsServer, socksAddr, streamIsolation, timeout)
@@ -156,7 +156,7 @@ func LookupSRV(service, proto, name, socksAddr,
 
 	// We'll fail if we were unable to query the DNS server for our record.
 	if resp.Rcode != dns.RcodeSuccess {
-		return "", nil, fmt.Errorf("unable to query for SRV records: "+
+		return "", nil, er.Errorf("unable to query for SRV records: "+
 			"%s", dnsCodes[resp.Rcode])
 	}
 
@@ -177,7 +177,7 @@ func LookupSRV(service, proto, name, socksAddr,
 
 // ResolveTCPAddr uses Tor's proxy to resolve TCP addresses instead of the
 // standard system resolver provided in the `net` package.
-func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, error) {
+func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, er.R) {
 	// Split host:port since the lookup function does not take a port.
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
@@ -201,7 +201,7 @@ func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, error) {
 }
 
 // ParseAddr parses an address from its string format to a net.Addr.
-func ParseAddr(address, socksAddr string) (net.Addr, error) {
+func ParseAddr(address, socksAddr string) (net.Addr, er.R) {
 	host, portStr, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err

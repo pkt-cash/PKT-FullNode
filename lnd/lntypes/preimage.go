@@ -20,10 +20,10 @@ func (p Preimage) String() string {
 
 // MakePreimage returns a new Preimage from a bytes slice. An error is returned
 // if the number of bytes passed in is not PreimageSize.
-func MakePreimage(newPreimage []byte) (Preimage, error) {
+func MakePreimage(newPreimage []byte) (Preimage, er.R) {
 	nhlen := len(newPreimage)
 	if nhlen != PreimageSize {
-		return Preimage{}, fmt.Errorf("invalid preimage length of %v, "+
+		return Preimage{}, er.Errorf("invalid preimage length of %v, "+
 			"want %v", nhlen, PreimageSize)
 	}
 
@@ -34,14 +34,14 @@ func MakePreimage(newPreimage []byte) (Preimage, error) {
 }
 
 // MakePreimageFromStr creates a Preimage from a hex preimage string.
-func MakePreimageFromStr(newPreimage string) (Preimage, error) {
+func MakePreimageFromStr(newPreimage string) (Preimage, er.R) {
 	// Return error if preimage string is of incorrect length.
 	if len(newPreimage) != PreimageSize*2 {
-		return Preimage{}, fmt.Errorf("invalid preimage string length "+
+		return Preimage{}, er.Errorf("invalid preimage string length "+
 			"of %v, want %v", len(newPreimage), PreimageSize*2)
 	}
 
-	preimage, err := hex.DecodeString(newPreimage)
+	preimage, err := util.DecodeHex(newPreimage)
 	if err != nil {
 		return Preimage{}, err
 	}

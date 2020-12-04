@@ -13,7 +13,7 @@ import (
 // the config that is meant for us in the config dispatcher, then we'll exit
 // with an error.
 func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (
-	lnrpc.SubServer, lnrpc.MacaroonPerms, error) {
+	lnrpc.SubServer, lnrpc.MacaroonPerms, er.R) {
 
 	// We'll attempt to look up the config that we expect, according to our
 	// subServerName name. If we can't find this, then we'll exit with an
@@ -21,7 +21,7 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (
 	// config.
 	chainNotifierServerConf, ok := configRegistry.FetchConfig(subServerName)
 	if !ok {
-		return nil, nil, fmt.Errorf("unable to find config for "+
+		return nil, nil, er.Errorf("unable to find config for "+
 			"subserver type %s", subServerName)
 	}
 
@@ -29,7 +29,7 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (
 	// ensure that it's the type we need.
 	config, ok := chainNotifierServerConf.(*Config)
 	if !ok {
-		return nil, nil, fmt.Errorf("wrong type of config for "+
+		return nil, nil, er.Errorf("wrong type of config for "+
 			"subserver %s, expected %T got %T", subServerName,
 			&Config{}, chainNotifierServerConf)
 	}
@@ -42,10 +42,10 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (
 	// ensure that we know where to look for them, or create them if not
 	// found.
 	case config.MacService != nil && config.NetworkDir == "":
-		return nil, nil, fmt.Errorf("NetworkDir must be set to create " +
+		return nil, nil, er.Errorf("NetworkDir must be set to create " +
 			"chainrpc")
 	case config.ChainNotifier == nil:
-		return nil, nil, fmt.Errorf("ChainNotifier must be set to " +
+		return nil, nil, er.Errorf("ChainNotifier must be set to " +
 			"create chainrpc")
 	}
 
@@ -56,7 +56,7 @@ func init() {
 	subServer := &lnrpc.SubServerDriver{
 		SubServerName: subServerName,
 		New: func(c lnrpc.SubServerConfigDispatcher) (
-			lnrpc.SubServer, lnrpc.MacaroonPerms, error) {
+			lnrpc.SubServer, lnrpc.MacaroonPerms, er.R) {
 
 			return createNewSubServer(c)
 		},

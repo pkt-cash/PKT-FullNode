@@ -21,7 +21,7 @@ func TestMemoryReplayLogStorageAndRetrieval(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected ErrLogEntryNotFound")
 	}
-	if err != ErrLogEntryNotFound {
+	if !ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 
@@ -36,7 +36,7 @@ func TestMemoryReplayLogStorageAndRetrieval(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected ErrReplayedPacket")
 	}
-	if err != ErrReplayedPacket {
+	if !ErrReplayedPacket.Is(err) {
 		t.Fatalf("Put failed - received unexpected error upon Put: %v", err)
 	}
 
@@ -60,7 +60,7 @@ func TestMemoryReplayLogStorageAndRetrieval(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected ErrLogEntryNotFound")
 	}
-	if err != ErrLogEntryNotFound {
+	if !ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 

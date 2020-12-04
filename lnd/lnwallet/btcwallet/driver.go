@@ -15,15 +15,15 @@ const (
 // initialization parameters. This function is the factory function required to
 // properly create an instance of the lnwallet.WalletDriver struct for
 // BtcWallet.
-func createNewWallet(args ...interface{}) (lnwallet.WalletController, error) {
+func createNewWallet(args ...interface{}) (lnwallet.WalletController, er.R) {
 	if len(args) != 1 {
-		return nil, fmt.Errorf("incorrect number of arguments to .New(...), "+
+		return nil, er.Errorf("incorrect number of arguments to .New(...), "+
 			"expected 1, instead passed %v", len(args))
 	}
 
 	config, ok := args[0].(*Config)
 	if !ok {
-		return nil, fmt.Errorf("first argument to btcdnotifier.New is " +
+		return nil, er.Errorf("first argument to btcdnotifier.New is " +
 			"incorrect, expected a *rpcclient.ConnConfig")
 	}
 

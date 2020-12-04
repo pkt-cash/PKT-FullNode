@@ -1,8 +1,6 @@
 package neutrinonotify
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -112,8 +110,8 @@ func New(node *neutrino.ChainService, spendHintCache chainntnfs.SpendHintCache,
 
 // Start contacts the running neutrino light client and kicks off an initial
 // empty rescan.
-func (n *NeutrinoNotifier) Start() error {
-	var startErr error
+func (n *NeutrinoNotifier) Start() er.R {
+	var startErr er.R
 	n.start.Do(func() {
 		startErr = n.startNotifier()
 	})
@@ -121,7 +119,7 @@ func (n *NeutrinoNotifier) Start() error {
 }
 
 // Stop shuts down the NeutrinoNotifier.
-func (n *NeutrinoNotifier) Stop() error {
+func (n *NeutrinoNotifier) Stop() er.R {
 	// Already shutting down?
 	if atomic.AddInt32(&n.stopped, 1) != 1 {
 		return nil
@@ -151,7 +149,7 @@ func (n *NeutrinoNotifier) Started() bool {
 	return atomic.LoadInt32(&n.active) != 0
 }
 
-func (n *NeutrinoNotifier) startNotifier() error {
+func (n *NeutrinoNotifier) startNotifier() er.R {
 	// Start our concurrent queues before starting the rescan, to ensure
 	// onFilteredBlockConnected and onRelavantTx callbacks won't be
 	// blocked.
@@ -233,7 +231,7 @@ type filteredBlock struct {
 // update and new block notifications.
 type rescanFilterUpdate struct {
 	updateOptions []neutrino.UpdateOption
-	errChan       chan error
+	errChan       chan er.R
 }
 
 // onFilteredBlockConnected is a callback which is executed each a new block is
@@ -516,7 +514,7 @@ out:
 // script) has already been included in a block in the active chain and, if so,
 // returns details about said block.
 func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequest,
-	startHeight, endHeight uint32) (*chainntnfs.TxConfirmation, error) {
+	startHeight, endHeight uint32) (*chainntnfs.TxConfirmation, er.R) {
 
 	// Starting from the height hint, we'll walk forwards in the chain to
 	// see if this transaction/output script has already been confirmed.
@@ -525,7 +523,7 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 		// processing the next height.
 		select {
 		case <-n.quit:
-			return nil, chainntnfs.ErrChainNotifierShuttingDown
+			return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 		default:
 		}
 
@@ -533,7 +531,7 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 		// can compute the current block hash.
 		blockHash, err := n.p2pNode.GetBlockHash(int64(scanHeight))
 		if err != nil {
-			return nil, fmt.Errorf("unable to get header for height=%v: %v",
+			return nil, er.Errorf("unable to get header for height=%v: %v",
 				scanHeight, err)
 		}
 
@@ -552,7 +550,7 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 			//neutrino.MaxBatchSize(int64(scanHeight-startHeight+1)),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to retrieve regular filter for "+
+			return nil, er.Errorf("unable to retrieve regular filter for "+
 				"height=%v: %v", scanHeight, err)
 		}
 
@@ -561,7 +559,7 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 		key := builder.DeriveKey(blockHash)
 		match, err := regFilter.Match(key, confRequest.PkScript.Script())
 		if err != nil {
-			return nil, fmt.Errorf("unable to query filter: %v", err)
+			return nil, er.Errorf("unable to query filter: %v", err)
 		}
 
 		// If there's no match, then we can continue forward to the
@@ -575,7 +573,7 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 		// to send the proper response.
 		block, err := n.p2pNode.GetBlock(*blockHash)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get block from network: %v", err)
+			return nil, er.Errorf("unable to get block from network: %v", err)
 		}
 
 		// For every transaction in the block, check which one matches
@@ -603,14 +601,14 @@ func (n *NeutrinoNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequ
 // now or after numConfirmations confs.
 //
 // NOTE: This method must be called with the bestBlockMtx lock held.
-func (n *NeutrinoNotifier) handleBlockConnected(newBlock *filteredBlock) error {
+func (n *NeutrinoNotifier) handleBlockConnected(newBlock *filteredBlock) er.R {
 	// We'll extend the txNotifier's height with the information of this new
 	// block, which will handle all of the notification logic for us.
 	err := n.txNotifier.ConnectTip(
 		&newBlock.hash, newBlock.height, newBlock.txns,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to connect tip: %v", err)
+		return er.Errorf("unable to connect tip: %v", err)
 	}
 
 	chainntnfs.Log.Infof("New block: height=%v, sha=%v", newBlock.height,
@@ -629,10 +627,10 @@ func (n *NeutrinoNotifier) handleBlockConnected(newBlock *filteredBlock) error {
 }
 
 // getFilteredBlock is a utility to retrieve the full filtered block from a block epoch.
-func (n *NeutrinoNotifier) getFilteredBlock(epoch chainntnfs.BlockEpoch) (*filteredBlock, error) {
+func (n *NeutrinoNotifier) getFilteredBlock(epoch chainntnfs.BlockEpoch) (*filteredBlock, er.R) {
 	rawBlock, err := n.p2pNode.GetBlock(*epoch.Hash)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get block: %v", err)
+		return nil, er.Errorf("unable to get block: %v", err)
 	}
 
 	txns := rawBlock.Transactions()
@@ -680,7 +678,7 @@ func (n *NeutrinoNotifier) notifyBlockEpochClient(epochClient *blockEpochRegistr
 // Once a spend of has been detected, the details of the spending event will be
 // sent across the 'Spend' channel.
 func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
-	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, error) {
+	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, er.R) {
 
 	// Register the conf notification with the TxNotifier. A non-nil value
 	// for `dispatch` will be returned if we are required to perform a
@@ -720,23 +718,23 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 	}
 	updateOptions = append(updateOptions, neutrino.Rewind(rewindHeight))
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	select {
 	case n.notificationRegistry <- &rescanFilterUpdate{
 		updateOptions: updateOptions,
 		errChan:       errChan,
 	}:
 	case <-n.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 
 	select {
 	case err = <-errChan:
 	case <-n.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("unable to update filter: %v", err)
+		return nil, er.Errorf("unable to update filter: %v", err)
 	}
 
 	// If the txNotifier didn't return any details to perform a historical
@@ -782,7 +780,7 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 			}),
 			neutrino.QuitChan(n.quit),
 		)
-		if err != nil && !strings.Contains(err.Error(), "not found") {
+		if err != nil && !strings.Contains(err.String(), "not found") {
 			chainntnfs.Log.Errorf("Failed getting UTXO: %v", err)
 			return
 		}
@@ -828,7 +826,7 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 // sent across the 'Confirmed' channel.
 func (n *NeutrinoNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	pkScript []byte,
-	numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, error) {
+	numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, er.R) {
 
 	// Register the conf notification with the TxNotifier. A non-nil value
 	// for `dispatch` will be returned if we are required to perform a
@@ -853,12 +851,12 @@ func (n *NeutrinoNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	params := n.p2pNode.ChainParams()
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, &params)
 	if err != nil {
-		return nil, fmt.Errorf("unable to extract script: %v", err)
+		return nil, er.Errorf("unable to extract script: %v", err)
 	}
 
 	// We'll send the filter update request to the notifier's main event
 	// handler and wait for its response.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	select {
 	case n.notificationRegistry <- &rescanFilterUpdate{
 		updateOptions: []neutrino.UpdateOption{
@@ -869,16 +867,16 @@ func (n *NeutrinoNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 		errChan: errChan,
 	}:
 	case <-n.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 
 	select {
 	case err = <-errChan:
 	case <-n.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("unable to update filter: %v", err)
+		return nil, er.Errorf("unable to update filter: %v", err)
 	}
 
 	// If a historical rescan was not requested by the txNotifier, then we
@@ -892,7 +890,7 @@ func (n *NeutrinoNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	select {
 	case n.notificationRegistry <- ntfn.HistoricalDispatch:
 	case <-n.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 
 	return ntfn.Event, nil
@@ -911,7 +909,7 @@ type blockEpochRegistration struct {
 
 	bestBlock *chainntnfs.BlockEpoch
 
-	errorChan chan error
+	errorChan chan er.R
 
 	wg sync.WaitGroup
 }
@@ -929,7 +927,7 @@ type epochCancel struct {
 // they do not provide one, then a notification will be dispatched immediately
 // for the current tip of the chain upon a successful registration.
 func (n *NeutrinoNotifier) RegisterBlockEpochNtfn(
-	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error) {
+	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R) {
 
 	reg := &blockEpochRegistration{
 		epochQueue: queue.NewConcurrentQueue(20),
@@ -937,7 +935,7 @@ func (n *NeutrinoNotifier) RegisterBlockEpochNtfn(
 		cancelChan: make(chan struct{}),
 		epochID:    atomic.AddUint64(&n.epochClientCounter, 1),
 		bestBlock:  bestBlock,
-		errorChan:  make(chan error, 1),
+		errorChan:  make(chan er.R, 1),
 	}
 	reg.epochQueue.Start()
 
@@ -977,7 +975,7 @@ func (n *NeutrinoNotifier) RegisterBlockEpochNtfn(
 		// we'll stop the queue now ourselves.
 		reg.epochQueue.Stop()
 
-		return nil, errors.New("chainntnfs: system interrupt while " +
+		return nil, er.New("chainntnfs: system interrupt while " +
 			"attempting to register for block epoch notification.")
 	case n.notificationRegistry <- reg:
 		return &chainntnfs.BlockEpochEvent{

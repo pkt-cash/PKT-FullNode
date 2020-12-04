@@ -21,13 +21,13 @@ func NewMockSweeperStore() *MockSweeperStore {
 
 // IsOurTx determines whether a tx is published by us, based on its
 // hash.
-func (s *MockSweeperStore) IsOurTx(hash chainhash.Hash) (bool, error) {
+func (s *MockSweeperStore) IsOurTx(hash chainhash.Hash) (bool, er.R) {
 	_, ok := s.ourTxes[hash]
 	return ok, nil
 }
 
 // NotifyPublishTx signals that we are about to publish a tx.
-func (s *MockSweeperStore) NotifyPublishTx(tx *wire.MsgTx) error {
+func (s *MockSweeperStore) NotifyPublishTx(tx *wire.MsgTx) er.R {
 	txHash := tx.TxHash()
 	s.ourTxes[txHash] = struct{}{}
 	s.lastTx = tx
@@ -37,12 +37,12 @@ func (s *MockSweeperStore) NotifyPublishTx(tx *wire.MsgTx) error {
 
 // GetLastPublishedTx returns the last tx that we called NotifyPublishTx
 // for.
-func (s *MockSweeperStore) GetLastPublishedTx() (*wire.MsgTx, error) {
+func (s *MockSweeperStore) GetLastPublishedTx() (*wire.MsgTx, er.R) {
 	return s.lastTx, nil
 }
 
 // ListSweeps lists all the sweeps we have successfully published.
-func (s *MockSweeperStore) ListSweeps() ([]chainhash.Hash, error) {
+func (s *MockSweeperStore) ListSweeps() ([]chainhash.Hash, er.R) {
 	var txns []chainhash.Hash
 	for tx := range s.ourTxes {
 		txns = append(txns, tx)

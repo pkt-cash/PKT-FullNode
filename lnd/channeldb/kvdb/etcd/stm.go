@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	v3 "github.com/coreos/etcd/clientv3"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 type CommitStats struct {
@@ -30,7 +31,7 @@ type KV struct {
 type STM interface {
 	// Get returns the value for a key and inserts the key in the txn's read
 	// set. Returns nil if there's no matching key, or the key is empty.
-	Get(key string) ([]byte, error)
+	Get(key string) ([]byte, er.R)
 
 	// Put adds a value for a key to the txn's write set.
 	Put(key, val string)
@@ -41,35 +42,35 @@ type STM interface {
 	// First returns the first k/v that begins with prefix or nil if there's
 	// no such k/v pair. If the key is found it is inserted to the txn's
 	// read set. Returns nil if there's no match.
-	First(prefix string) (*KV, error)
+	First(prefix string) (*KV, er.R)
 
 	// Last returns the last k/v that begins with prefix or nil if there's
 	// no such k/v pair. If the key is found it is inserted to the txn's
 	// read set. Returns nil if there's no match.
-	Last(prefix string) (*KV, error)
+	Last(prefix string) (*KV, er.R)
 
 	// Prev returns the previous k/v before key that begins with prefix or
 	// nil if there's no such k/v. If the key is found it is inserted to the
 	// read set. Returns nil if there's no match.
-	Prev(prefix, key string) (*KV, error)
+	Prev(prefix, key string) (*KV, er.R)
 
 	// Next returns the next k/v after key that begins with prefix or nil
 	// if there's no such k/v. If the key is found it is inserted to the
 	// txn's read set. Returns nil if there's no match.
-	Next(prefix, key string) (*KV, error)
+	Next(prefix, key string) (*KV, er.R)
 
 	// Seek will return k/v at key beginning with prefix. If the key doesn't
 	// exists Seek will return the next k/v after key beginning with prefix.
 	// If a matching k/v is found it is inserted to the txn's read set. Returns
 	// nil if there's no match.
-	Seek(prefix, key string) (*KV, error)
+	Seek(prefix, key string) (*KV, er.R)
 
 	// OnCommit calls the passed callback func upon commit.
 	OnCommit(func())
 
 	// Commit attempts to apply the txn's changes to the server.
 	// Commit may return CommitError if transaction is outdated and needs retry.
-	Commit() error
+	Commit() er.R
 
 	// Rollback emties the read and write sets such that a subsequent commit
 	// won't alter the database.
@@ -94,7 +95,7 @@ type DatabaseError struct {
 }
 
 // Unwrap returns the wrapped error in a DatabaseError.
-func (e *DatabaseError) Unwrap() error {
+func (e *DatabaseError) Unwrap() er.R {
 	return e.err
 }
 
@@ -188,7 +189,7 @@ func WithCommitStatsCallback(cb func(bool, CommitStats)) STMOptionFunc {
 // RunSTM runs the apply function by creating an STM using serializable snapshot
 // isolation, passing it to the apply and handling commit errors and retries.
 func RunSTM(cli *v3.Client, apply func(STM) error, txQueue *commitQueue,
-	so ...STMOptionFunc) error {
+	so ...STMOptionFunc) er.R {
 
 	return runSTM(makeSTM(cli, false, txQueue, so...), apply)
 }
@@ -229,7 +230,7 @@ func makeSTM(cli *v3.Client, manual bool, txQueue *commitQueue,
 // runSTM implements the run loop of the STM, running the apply func, catching
 // errors and handling commit. The loop will quit on every error except
 // CommitError which is used to indicate a necessary retry.
-func runSTM(s *stm, apply func(STM) error) error {
+func runSTM(s *stm, apply func(STM) error) er.R {
 	var (
 		retries    int
 		stats      CommitStats
@@ -246,7 +247,7 @@ func runSTM(s *stm, apply func(STM) error) error {
 			// Check if the STM is aborted and break the retry loop
 			// if it is.
 			case <-s.options.ctx.Done():
-				executeErr = fmt.Errorf("aborted")
+				executeErr = er.Errorf("aborted")
 				return
 
 			default:
@@ -362,7 +363,7 @@ func (ws writeSet) puts() []v3.Op {
 // fetch is a helper to fetch key/value given options. If a value is returned
 // then fetch will try to fix the STM's snapshot revision (if not already set).
 // We'll also cache the returned key/value in the read set.
-func (s *stm) fetch(key string, opts ...v3.OpOption) ([]KV, error) {
+func (s *stm) fetch(key string, opts ...v3.OpOption) ([]KV, er.R) {
 	resp, err := s.client.Get(
 		s.options.ctx, key, append(opts, s.getOpts...)...,
 	)
@@ -417,7 +418,7 @@ func (s *stm) fetch(key string, opts ...v3.OpOption) ([]KV, error) {
 // Get returns the value for key. If there's no such
 // key/value in the database or the passed key is empty
 // Get will return nil.
-func (s *stm) Get(key string) ([]byte, error) {
+func (s *stm) Get(key string) ([]byte, er.R) {
 	if key == "" {
 		return nil, nil
 	}
@@ -469,13 +470,13 @@ func (s *stm) Get(key string) ([]byte, error) {
 
 // First returns the first key/value matching prefix. If there's no key starting
 // with prefix, Last will return nil.
-func (s *stm) First(prefix string) (*KV, error) {
+func (s *stm) First(prefix string) (*KV, er.R) {
 	return s.next(prefix, prefix, true)
 }
 
 // Last returns the last key/value with prefix. If there's no key starting with
 // prefix, Last will return nil.
-func (s *stm) Last(prefix string) (*KV, error) {
+func (s *stm) Last(prefix string) (*KV, er.R) {
 	// As we don't know the full range, fetch the last
 	// key/value with this prefix first.
 	resp, err := s.fetch(prefix, v3.WithLastKey()...)
@@ -519,7 +520,7 @@ func (s *stm) Last(prefix string) (*KV, error) {
 
 // Prev returns the prior key/value before key (with prefix). If there's no such
 // key Next will return nil.
-func (s *stm) Prev(prefix, startKey string) (*KV, error) {
+func (s *stm) Prev(prefix, startKey string) (*KV, er.R) {
 	var result KV
 
 	fetchKey := startKey
@@ -599,21 +600,21 @@ func (s *stm) Prev(prefix, startKey string) (*KV, error) {
 
 // Next returns the next key/value after key (with prefix). If there's no such
 // key Next will return nil.
-func (s *stm) Next(prefix string, key string) (*KV, error) {
+func (s *stm) Next(prefix string, key string) (*KV, er.R) {
 	return s.next(prefix, key, false)
 }
 
 // Seek "seeks" to the key (with prefix). If the key doesn't exists it'll get
 // the next key with the same prefix. If no key fills this criteria, Seek will
 // return nil.
-func (s *stm) Seek(prefix, key string) (*KV, error) {
+func (s *stm) Seek(prefix, key string) (*KV, er.R) {
 	return s.next(prefix, key, true)
 }
 
 // next will try to retrieve the next match that has prefix and starts with the
 // passed startKey. If includeStartKey is set to true, it'll return the value
 // of startKey (essentially implementing seek).
-func (s *stm) next(prefix, startKey string, includeStartKey bool) (*KV, error) {
+func (s *stm) next(prefix, startKey string, includeStartKey bool) (*KV, er.R) {
 	var result KV
 
 	fetchKey := startKey
@@ -735,7 +736,7 @@ func (s *stm) OnCommit(cb func()) {
 // commit builds the final transaction and tries to execute it. If commit fails
 // because the keys have changed return a CommitError, otherwise return a
 // DatabaseError.
-func (s *stm) commit() (CommitStats, error) {
+func (s *stm) commit() (CommitStats, er.R) {
 	rset := s.rset.cmps()
 	wset := s.wset.cmps(s.revision + 1)
 
@@ -785,7 +786,7 @@ func (s *stm) commit() (CommitStats, error) {
 }
 
 // Commit simply calls commit and the commit stats callback if set.
-func (s *stm) Commit() error {
+func (s *stm) Commit() er.R {
 	stats, err := s.commit()
 
 	if s.options.commitStatsCallback != nil {

@@ -56,11 +56,11 @@ type topologyClientUpdate struct {
 // topology occurs. Changes that will be sent at notifications include: new
 // nodes appearing, node updating their attributes, new channels, channels
 // closing, and updates in the routing policies of a channel's directed edges.
-func (r *ChannelRouter) SubscribeTopology() (*TopologyClient, error) {
+func (r *ChannelRouter) SubscribeTopology() (*TopologyClient, er.R) {
 	// If the router is not yet started, return an error to avoid a
 	// deadlock waiting for it to handle the subscription request.
 	if atomic.LoadUint32(&r.started) == 0 {
-		return nil, fmt.Errorf("router not started")
+		return nil, er.Errorf("router not started")
 	}
 
 	// We'll first atomically obtain the next ID for this client from the
@@ -79,7 +79,7 @@ func (r *ChannelRouter) SubscribeTopology() (*TopologyClient, error) {
 		ntfnChan: ntfnChan,
 	}:
 	case <-r.quit:
-		return nil, errors.New("ChannelRouter shutting down")
+		return nil, er.New("ChannelRouter shutting down")
 	}
 
 	return &TopologyClient{
@@ -307,7 +307,7 @@ type ChannelEdgeUpdate struct {
 // information required to create the topology change update from the graph
 // database.
 func addToTopologyChange(graph *channeldb.ChannelGraph, update *TopologyChange,
-	msg interface{}) error {
+	msg interface{}) er.R {
 
 	switch m := msg.(type) {
 
@@ -386,7 +386,7 @@ func addToTopologyChange(graph *channeldb.ChannelGraph, update *TopologyChange,
 		return nil
 
 	default:
-		return fmt.Errorf("unable to add to topology change, "+
+		return er.Errorf("unable to add to topology change, "+
 			"unknown message type %T", msg)
 	}
 }

@@ -3,7 +3,7 @@ package migration_01_to_11
 import (
 	"testing"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -34,7 +34,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration func(d *DB),
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(r)
+			err = er.Errorf("%v", r)
 		}
 
 		if err == nil && shouldFail {
@@ -49,7 +49,7 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration func(d *DB),
 	}()
 
 	// Apply migration.
-	err = kvdb.Update(cdb, func(tx kvdb.RwTx) error {
+	err = kvdb.Update(cdb, func(tx kvdb.RwTx) er.R {
 		return migrationFunc(tx)
 	}, func() {})
 	if err != nil {

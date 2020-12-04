@@ -52,7 +52,7 @@ func ChanUpdSetTimestamp(update *lnwire.ChannelUpdate) {
 //
 // NOTE: This method modifies the given update.
 func SignChannelUpdate(signer lnwallet.MessageSigner, pubKey *btcec.PublicKey,
-	update *lnwire.ChannelUpdate, mods ...ChannelUpdateModifier) error {
+	update *lnwire.ChannelUpdate, mods ...ChannelUpdateModifier) er.R {
 
 	// Apply the requested changes to the channel update.
 	for _, modifier := range mods {
@@ -81,7 +81,7 @@ func SignChannelUpdate(signer lnwallet.MessageSigner, pubKey *btcec.PublicKey,
 func ExtractChannelUpdate(ownerPubKey []byte,
 	info *channeldb.ChannelEdgeInfo,
 	policies ...*channeldb.ChannelEdgePolicy) (
-	*lnwire.ChannelUpdate, error) {
+	*lnwire.ChannelUpdate, er.R) {
 
 	// Helper function to extract the owner of the given policy.
 	owner := func(edge *channeldb.ChannelEdgePolicy) []byte {
@@ -107,7 +107,7 @@ func ExtractChannelUpdate(ownerPubKey []byte,
 		}
 	}
 
-	return nil, fmt.Errorf("unable to extract ChannelUpdate for channel %v",
+	return nil, er.Errorf("unable to extract ChannelUpdate for channel %v",
 		info.ChannelPoint)
 }
 
@@ -134,7 +134,7 @@ func UnsignedChannelUpdateFromEdge(info *channeldb.ChannelEdgeInfo,
 // ChannelUpdateFromEdge reconstructs a signed ChannelUpdate from the given edge
 // info and policy.
 func ChannelUpdateFromEdge(info *channeldb.ChannelEdgeInfo,
-	policy *channeldb.ChannelEdgePolicy) (*lnwire.ChannelUpdate, error) {
+	policy *channeldb.ChannelEdgePolicy) (*lnwire.ChannelUpdate, er.R) {
 
 	update := UnsignedChannelUpdateFromEdge(info, policy)
 

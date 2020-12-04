@@ -25,7 +25,7 @@ type CreateSessionTLV struct {
 }
 
 // EBlobType is an encoder for blob.Type.
-func EBlobType(w io.Writer, val interface{}, buf *[8]byte) error {
+func EBlobType(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if t, ok := val.(*blob.Type); ok {
 		return tlv.EUint16T(w, uint16(*t), buf)
 	}
@@ -33,7 +33,7 @@ func EBlobType(w io.Writer, val interface{}, buf *[8]byte) error {
 }
 
 // EBlobType is an decoder for blob.Type.
-func DBlobType(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DBlobType(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if typ, ok := val.(*blob.Type); ok {
 		var t uint16
 		err := tlv.DUint16(r, &t, buf, l)
@@ -47,7 +47,7 @@ func DBlobType(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
 }
 
 // ESatPerKW is an encoder for lnwallet.SatPerKWeight.
-func ESatPerKW(w io.Writer, val interface{}, buf *[8]byte) error {
+func ESatPerKW(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if v, ok := val.(*chainfee.SatPerKWeight); ok {
 		return tlv.EUint64(w, uint64(*v), buf)
 	}
@@ -55,7 +55,7 @@ func ESatPerKW(w io.Writer, val interface{}, buf *[8]byte) error {
 }
 
 // DSatPerKW is an decoder for lnwallet.SatPerKWeight.
-func DSatPerKW(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DSatPerKW(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if v, ok := val.(*chainfee.SatPerKWeight); ok {
 		var sat uint64
 		err := tlv.DUint64(r, &sat, buf, l)
@@ -83,12 +83,12 @@ func NewCreateSessionTLV() *CreateSessionTLV {
 }
 
 // Encode writes the CreateSessionTLV to the passed io.Writer.
-func (c *CreateSessionTLV) Encode(w io.Writer) error {
+func (c *CreateSessionTLV) Encode(w io.Writer) er.R {
 	return c.tlvStream.Encode(w)
 }
 
 // Decode reads the CreateSessionTLV from the passed io.Reader.
-func (c *CreateSessionTLV) Decode(r io.Reader) error {
+func (c *CreateSessionTLV) Decode(r io.Reader) er.R {
 	return c.tlvStream.Decode(r)
 }
 

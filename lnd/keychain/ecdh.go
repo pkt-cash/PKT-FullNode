@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // NewPubKeyECDH wraps the given key of the key ring so it adheres to the
@@ -41,7 +42,7 @@ func (p *PubKeyECDH) PubKey() *btcec.PublicKey {
 //  s := sha256(sx.SerializeCompressed())
 //
 // NOTE: This is part of the SingleKeyECDH interface.
-func (p *PubKeyECDH) ECDH(pubKey *btcec.PublicKey) ([32]byte, error) {
+func (p *PubKeyECDH) ECDH(pubKey *btcec.PublicKey) ([32]byte, er.R) {
 	return p.ecdh.ECDH(p.keyDesc, pubKey)
 }
 
@@ -71,7 +72,7 @@ func (p *PrivKeyECDH) PubKey() *btcec.PublicKey {
 //  s := sha256(sx.SerializeCompressed())
 //
 // NOTE: This is part of the SingleKeyECDH interface.
-func (p *PrivKeyECDH) ECDH(pub *btcec.PublicKey) ([32]byte, error) {
+func (p *PrivKeyECDH) ECDH(pub *btcec.PublicKey) ([32]byte, er.R) {
 	s := &btcec.PublicKey{}
 	s.X, s.Y = btcec.S256().ScalarMult(pub.X, pub.Y, p.PrivKey.D.Bytes())
 

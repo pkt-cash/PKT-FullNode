@@ -5,12 +5,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -61,7 +62,7 @@ type Config struct {
 
 	// NewAddress is used to generate reward addresses, where a cut of
 	// successfully sent funds can be received.
-	NewAddress func() (btcutil.Address, error)
+	NewAddress func() (btcutil.Address, er.R)
 
 	// NodeKeyECDH is the ECDH capable wrapper of the key to be used in
 	// accepting new brontide connections.
@@ -72,7 +73,7 @@ type Config struct {
 	//
 	// TODO(conner): replace with lnwallet.WalletController interface to
 	// have stronger guarantees wrt. returned error types.
-	PublishTx func(*wire.MsgTx, string) error
+	PublishTx func(*wire.MsgTx, string) er.R
 
 	// ListenAddrs specifies the listening addresses of the tower.
 	ListenAddrs []net.Addr

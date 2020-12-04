@@ -5,6 +5,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 )
 
@@ -19,7 +20,7 @@ type TowerCandidateIterator interface {
 	// iterator. An optional address can be provided to indicate a stale
 	// tower address to remove it. If it isn't provided, then the tower is
 	// completely removed from the iterator.
-	RemoveCandidate(wtdb.TowerID, net.Addr) error
+	RemoveCandidate(wtdb.TowerID, net.Addr) er.R
 
 	// IsActive determines whether a given tower is exists within the
 	// iterator.
@@ -27,12 +28,12 @@ type TowerCandidateIterator interface {
 
 	// Reset clears any internal iterator state, making previously taken
 	// candidates available as long as they remain in the set.
-	Reset() error
+	Reset() er.R
 
 	// Next returns the next candidate tower. The iterator is not required
 	// to return results in any particular order.  If no more candidates are
 	// available, ErrTowerCandidatesExhausted is returned.
-	Next() (*wtdb.Tower, error)
+	Next() (*wtdb.Tower, er.R)
 }
 
 // towerListIterator is a linked-list backed TowerCandidateIterator.
@@ -66,7 +67,7 @@ func newTowerListIterator(candidates ...*wtdb.Tower) *towerListIterator {
 
 // Reset clears the iterators state, and makes the address at the front of the
 // list the next item to be returned..
-func (t *towerListIterator) Reset() error {
+func (t *towerListIterator) Reset() er.R {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -79,7 +80,7 @@ func (t *towerListIterator) Reset() error {
 // Next returns the next candidate tower. This iterator will always return
 // candidates in the order given when the iterator was instantiated.  If no more
 // candidates are available, ErrTowerCandidatesExhausted is returned.
-func (t *towerListIterator) Next() (*wtdb.Tower, error) {
+func (t *towerListIterator) Next() (*wtdb.Tower, er.R) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -102,7 +103,7 @@ func (t *towerListIterator) Next() (*wtdb.Tower, error) {
 		return tower, nil
 	}
 
-	return nil, ErrTowerCandidatesExhausted
+	return nil, ErrTowerCandidatesExhausted.Default()
 }
 
 // AddCandidate adds a new candidate tower to the iterator. If the candidate
@@ -132,7 +133,7 @@ func (t *towerListIterator) AddCandidate(candidate *wtdb.Tower) {
 // it. If it isn't provided, then the tower is completely removed from the
 // iterator.
 func (t *towerListIterator) RemoveCandidate(candidate wtdb.TowerID,
-	addr net.Addr) error {
+	addr net.Addr) er.R {
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -144,7 +145,7 @@ func (t *towerListIterator) RemoveCandidate(candidate wtdb.TowerID,
 	if addr != nil {
 		tower.RemoveAddress(addr)
 		if len(tower.Addresses) == 0 {
-			return wtdb.ErrLastTowerAddr
+			return wtdb.ErrLastTowerAddr.Default()
 		}
 	} else {
 		delete(t.candidates, candidate)

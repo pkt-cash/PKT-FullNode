@@ -3,6 +3,7 @@ package lnwire
 import (
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -35,7 +36,7 @@ var _ Message = (*FundingCreated)(nil)
 // protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (f *FundingCreated) Encode(w io.Writer, pver uint32) error {
+func (f *FundingCreated) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w, f.PendingChannelID[:], f.FundingPoint, f.CommitSig)
 }
 
@@ -44,7 +45,7 @@ func (f *FundingCreated) Encode(w io.Writer, pver uint32) error {
 // defined by the passed protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (f *FundingCreated) Decode(r io.Reader, pver uint32) error {
+func (f *FundingCreated) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r, f.PendingChannelID[:], &f.FundingPoint, &f.CommitSig)
 }
 

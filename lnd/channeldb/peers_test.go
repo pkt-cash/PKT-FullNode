@@ -11,7 +11,7 @@ import (
 // TestFlapCount tests lookup and writing of flap count to disk.
 func TestFlapCount(t *testing.T) {
 	db, cleanup, err := MakeTestDB()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	defer cleanup()
 
 	// Try to read flap count for a peer that we have no records for.
@@ -36,15 +36,15 @@ func TestFlapCount(t *testing.T) {
 	}
 
 	err = db.WriteFlapCounts(peers)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Lookup flap count for our first pubkey.
 	count, err := db.ReadFlapCount(testPub)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, peer1FlapCount, count)
 
 	// Lookup our flap count for the second peer.
 	count, err = db.ReadFlapCount(testPub2)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, peer2FlapCount, count)
 }

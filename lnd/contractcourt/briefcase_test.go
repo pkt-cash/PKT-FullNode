@@ -104,7 +104,7 @@ var (
 	}
 )
 
-func makeTestDB() (kvdb.Backend, func(), error) {
+func makeTestDB() (kvdb.Backend, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
 	tempDirName, err := ioutil.TempDir("", "arblog")
@@ -126,7 +126,7 @@ func makeTestDB() (kvdb.Backend, func(), error) {
 }
 
 func newTestBoltArbLog(chainhash chainhash.Hash,
-	op wire.OutPoint) (ArbitratorLog, func(), error) {
+	op wire.OutPoint) (ArbitratorLog, func(), er.R) {
 
 	testDB, cleanUp, err := makeTestDB()
 	if err != nil {
@@ -135,7 +135,7 @@ func newTestBoltArbLog(chainhash chainhash.Hash,
 
 	testArbCfg := ChannelArbitratorConfig{
 		PutResolverReport: func(_ kvdb.RwTx,
-			_ *channeldb.ResolverReport) error {
+			_ *channeldb.ResolverReport) er.R {
 			return nil
 		},
 	}

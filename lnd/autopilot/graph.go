@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -83,9 +84,9 @@ func (d dbNode) Addrs() []net.Addr {
 // describes the active channel.
 //
 // NOTE: Part of the autopilot.Node interface.
-func (d dbNode) ForEachChannel(cb func(ChannelEdge) error) error {
+func (d dbNode) ForEachChannel(cb func(ChannelEdge) er.R) er.R {
 	return d.node.ForEachChannel(d.tx, func(tx kvdb.RTx,
-		ei *channeldb.ChannelEdgeInfo, ep, _ *channeldb.ChannelEdgePolicy) error {
+		ei *channeldb.ChannelEdgeInfo, ep, _ *channeldb.ChannelEdgePolicy) er.R {
 
 		// Skip channels for which no outgoing edge policy is available.
 		//
@@ -116,8 +117,8 @@ func (d dbNode) ForEachChannel(cb func(ChannelEdge) error) error {
 // error, then execution should be terminated.
 //
 // NOTE: Part of the autopilot.ChannelGraph interface.
-func (d *databaseChannelGraph) ForEachNode(cb func(Node) error) error {
-	return d.db.ForEachNode(func(tx kvdb.RTx, n *channeldb.LightningNode) error {
+func (d *databaseChannelGraph) ForEachNode(cb func(Node) er.R) er.R {
+	return d.db.ForEachNode(func(tx kvdb.RTx, n *channeldb.LightningNode) er.R {
 		// We'll skip over any node that doesn't have any advertised
 		// addresses. As we won't be able to reach them to actually
 		// open any channels.
@@ -137,9 +138,9 @@ func (d *databaseChannelGraph) ForEachNode(cb func(Node) error) error {
 // meant to aide in the generation of random graphs for use within test cases
 // the exercise the autopilot package.
 func (d *databaseChannelGraph) addRandChannel(node1, node2 *btcec.PublicKey,
-	capacity btcutil.Amount) (*ChannelEdge, *ChannelEdge, error) {
+	capacity btcutil.Amount) (*ChannelEdge, *ChannelEdge, er.R) {
 
-	fetchNode := func(pub *btcec.PublicKey) (*channeldb.LightningNode, error) {
+	fetchNode := func(pub *btcec.PublicKey) (*channeldb.LightningNode, er.R) {
 		if pub != nil {
 			vertex, err := route.NewVertexFromBytes(
 				pub.SerializeCompressed(),
@@ -150,9 +151,9 @@ func (d *databaseChannelGraph) addRandChannel(node1, node2 *btcec.PublicKey,
 
 			dbNode, err := d.db.FetchLightningNode(nil, vertex)
 			switch {
-			case err == channeldb.ErrGraphNodeNotFound:
+			case channeldb.ErrGraphNodeNotFound.Is(err):
 				fallthrough
-			case err == channeldb.ErrGraphNotFound:
+			case channeldb.ErrGraphNotFound.Is(err):
 				graphNode := &channeldb.LightningNode{
 					HaveNodeAnnouncement: true,
 					Addresses: []net.Addr{
@@ -277,7 +278,7 @@ func (d *databaseChannelGraph) addRandChannel(node1, node2 *btcec.PublicKey,
 		nil
 }
 
-func (d *databaseChannelGraph) addRandNode() (*btcec.PublicKey, error) {
+func (d *databaseChannelGraph) addRandNode() (*btcec.PublicKey, er.R) {
 	nodeKey, err := randKey()
 	if err != nil {
 		return nil, err
@@ -326,7 +327,7 @@ func newMemChannelGraph() *memChannelGraph {
 // error, then execution should be terminated.
 //
 // NOTE: Part of the autopilot.ChannelGraph interface.
-func (m memChannelGraph) ForEachNode(cb func(Node) error) error {
+func (m memChannelGraph) ForEachNode(cb func(Node) er.R) er.R {
 	for _, node := range m.graph {
 		if err := cb(node); err != nil {
 			return err
@@ -343,7 +344,7 @@ func randChanID() lnwire.ShortChannelID {
 }
 
 // randKey returns a random public key.
-func randKey() (*btcec.PublicKey, error) {
+func randKey() (*btcec.PublicKey, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err
@@ -356,7 +357,7 @@ func randKey() (*btcec.PublicKey, error) {
 // meant to aide in the generation of random graphs for use within test cases
 // the exercise the autopilot package.
 func (m *memChannelGraph) addRandChannel(node1, node2 *btcec.PublicKey,
-	capacity btcutil.Amount) (*ChannelEdge, *ChannelEdge, error) {
+	capacity btcutil.Amount) (*ChannelEdge, *ChannelEdge, er.R) {
 
 	var (
 		vertex1, vertex2 *memNode
@@ -437,7 +438,7 @@ func (m *memChannelGraph) addRandChannel(node1, node2 *btcec.PublicKey,
 	return &edge1, &edge2, nil
 }
 
-func (m *memChannelGraph) addRandNode() (*btcec.PublicKey, error) {
+func (m *memChannelGraph) addRandNode() (*btcec.PublicKey, er.R) {
 	newPub, err := randKey()
 	if err != nil {
 		return nil, err
@@ -494,7 +495,7 @@ func (m memNode) Addrs() []net.Addr {
 // describes the active channel.
 //
 // NOTE: Part of the autopilot.Node interface.
-func (m memNode) ForEachChannel(cb func(ChannelEdge) error) error {
+func (m memNode) ForEachChannel(cb func(ChannelEdge) er.R) er.R {
 	for _, channel := range m.chans {
 		if err := cb(channel); err != nil {
 			return err

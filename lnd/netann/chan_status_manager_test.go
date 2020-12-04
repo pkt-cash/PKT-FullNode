@@ -4,19 +4,19 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
-	"io"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/netann"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // randOutpoint creates a random wire.Outpoint.
@@ -24,7 +24,7 @@ func randOutpoint(t *testing.T) wire.OutPoint {
 	t.Helper()
 
 	var buf [36]byte
-	_, err := io.ReadFull(rand.Reader, buf[:])
+	_, err := util.ReadFull(rand.Reader, buf[:])
 	if err != nil {
 		t.Fatalf("unable to generate random outpoint: %v", err)
 	}
@@ -148,20 +148,20 @@ func newMockGraph(t *testing.T, numChannels int,
 	return g
 }
 
-func (g *mockGraph) FetchAllOpenChannels() ([]*channeldb.OpenChannel, error) {
+func (g *mockGraph) FetchAllOpenChannels() ([]*channeldb.OpenChannel, er.R) {
 	return g.chans(), nil
 }
 
 func (g *mockGraph) FetchChannelEdgesByOutpoint(
 	op *wire.OutPoint) (*channeldb.ChannelEdgeInfo,
-	*channeldb.ChannelEdgePolicy, *channeldb.ChannelEdgePolicy, error) {
+	*channeldb.ChannelEdgePolicy, *channeldb.ChannelEdgePolicy, er.R) {
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	info, ok := g.chanInfos[*op]
 	if !ok {
-		return nil, nil, nil, channeldb.ErrEdgeNotFound
+		return nil, nil, nil, channeldb.ErrEdgeNotFound.Default()
 	}
 
 	pol1 := g.chanPols1[*op]
@@ -170,13 +170,13 @@ func (g *mockGraph) FetchChannelEdgesByOutpoint(
 	return info, pol1, pol2, nil
 }
 
-func (g *mockGraph) ApplyChannelUpdate(update *lnwire.ChannelUpdate) error {
+func (g *mockGraph) ApplyChannelUpdate(update *lnwire.ChannelUpdate) er.R {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	outpoint, ok := g.sidToCid[update.ShortChannelID]
 	if !ok {
-		return fmt.Errorf("unknown short channel id: %v",
+		return er.Errorf("unknown short channel id: %v",
 			update.ShortChannelID)
 	}
 
@@ -196,7 +196,7 @@ func (g *mockGraph) ApplyChannelUpdate(update *lnwire.ChannelUpdate) error {
 		update1 = false
 
 	default:
-		return fmt.Errorf("unable to find policy to update")
+		return er.Errorf("unable to find policy to update")
 	}
 
 	timestamp := time.Unix(int64(update.Timestamp), 0)

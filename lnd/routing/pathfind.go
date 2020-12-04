@@ -2,11 +2,11 @@ package routing
 
 import (
 	"container/heap"
-	"errors"
 	"fmt"
 	"math"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/feature"
@@ -42,7 +42,7 @@ const (
 type pathFinder = func(g *graphParams, r *RestrictParams,
 	cfg *PathFindingConfig, source, target route.Vertex,
 	amt lnwire.MilliSatoshi, finalHtlcExpiry int32) (
-	[]*channeldb.ChannelEdgePolicy, error)
+	[]*channeldb.ChannelEdgePolicy, er.R)
 
 var (
 	// DefaultAttemptCost is the default fixed virtual cost in path finding
@@ -103,7 +103,7 @@ type finalHopParams struct {
 // dependencies.
 func newRoute(sourceVertex route.Vertex,
 	pathEdges []*channeldb.ChannelEdgePolicy, currentHeight uint32,
-	finalHop finalHopParams) (*route.Route, error) {
+	finalHop finalHopParams) (*route.Route, er.R) {
 
 	var (
 		hops []*route.Hop
@@ -173,7 +173,7 @@ func newRoute(sourceVertex route.Vertex,
 			// Attach any custom records to the final hop if the
 			// receiver supports TLV.
 			if !tlvPayload && finalHop.records != nil {
-				return nil, errors.New("cannot attach " +
+				return nil, er.New("cannot attach " +
 					"custom records")
 			}
 			customRecords = finalHop.records
@@ -182,7 +182,7 @@ func newRoute(sourceVertex route.Vertex,
 			// doesn't support both TLV and payment addrs, fail.
 			payAddr := supports(lnwire.PaymentAddrOptional)
 			if !payAddr && finalHop.paymentAddr != nil {
-				return nil, errors.New("cannot attach " +
+				return nil, er.New("cannot attach " +
 					"payment addr")
 			}
 
@@ -347,11 +347,11 @@ type PathFindingConfig struct {
 // available balance.
 func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 	bandwidthHints map[uint64]lnwire.MilliSatoshi,
-	g routingGraph) (lnwire.MilliSatoshi, lnwire.MilliSatoshi, error) {
+	g routingGraph) (lnwire.MilliSatoshi, lnwire.MilliSatoshi, er.R) {
 
 	var max, total lnwire.MilliSatoshi
 	cb := func(edgeInfo *channeldb.ChannelEdgeInfo, outEdge,
-		_ *channeldb.ChannelEdgePolicy) error {
+		_ *channeldb.ChannelEdgePolicy) er.R {
 
 		if outEdge == nil {
 			return nil
@@ -407,7 +407,7 @@ func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 // available bandwidth.
 func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	source, target route.Vertex, amt lnwire.MilliSatoshi,
-	finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, error) {
+	finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, er.R) {
 
 	// Pathfinding can be a significant portion of the total payment
 	// latency, especially on low-powered devices. Log several metrics to

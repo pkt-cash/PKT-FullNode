@@ -102,7 +102,7 @@ type ClientSessionBody struct {
 }
 
 // Encode writes a ClientSessionBody to the passed io.Writer.
-func (s *ClientSessionBody) Encode(w io.Writer) error {
+func (s *ClientSessionBody) Encode(w io.Writer) er.R {
 	return WriteElements(w,
 		s.SeqNum,
 		s.TowerLastApplied,
@@ -115,7 +115,7 @@ func (s *ClientSessionBody) Encode(w io.Writer) error {
 }
 
 // Decode reads a ClientSessionBody from the passed io.Reader.
-func (s *ClientSessionBody) Decode(r io.Reader) error {
+func (s *ClientSessionBody) Decode(r io.Reader) er.R {
 	var (
 		towerID uint64
 		status  uint8
@@ -150,7 +150,7 @@ type BackupID struct {
 }
 
 // Encode writes the BackupID from the passed io.Writer.
-func (b *BackupID) Encode(w io.Writer) error {
+func (b *BackupID) Encode(w io.Writer) er.R {
 	return WriteElements(w,
 		b.ChanID,
 		b.CommitHeight,
@@ -158,7 +158,7 @@ func (b *BackupID) Encode(w io.Writer) error {
 }
 
 // Decode reads a BackupID from the passed io.Reader.
-func (b *BackupID) Decode(r io.Reader) error {
+func (b *BackupID) Decode(r io.Reader) er.R {
 	return ReadElements(r,
 		&b.ChanID,
 		&b.CommitHeight,
@@ -198,7 +198,7 @@ type CommittedUpdateBody struct {
 }
 
 // Encode writes the CommittedUpdateBody to the passed io.Writer.
-func (u *CommittedUpdateBody) Encode(w io.Writer) error {
+func (u *CommittedUpdateBody) Encode(w io.Writer) er.R {
 	err := u.BackupID.Encode(w)
 	if err != nil {
 		return err
@@ -211,7 +211,7 @@ func (u *CommittedUpdateBody) Encode(w io.Writer) error {
 }
 
 // Decode reads a CommittedUpdateBody from the passed io.Reader.
-func (u *CommittedUpdateBody) Decode(r io.Reader) error {
+func (u *CommittedUpdateBody) Decode(r io.Reader) er.R {
 	err := u.BackupID.Decode(r)
 	if err != nil {
 		return err

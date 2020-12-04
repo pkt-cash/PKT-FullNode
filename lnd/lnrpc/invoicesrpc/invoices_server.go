@@ -84,7 +84,7 @@ var _ InvoicesServer = (*Server)(nil)
 // this method. If the macaroons we need aren't found in the filepath, then
 // we'll create them on start up. If we're unable to locate, or create the
 // macaroons we need, then we'll return with an error.
-func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, er.R) {
 	// If the path of the invoices macaroon wasn't specified, then we'll
 	// assume that it's found at the default network directory.
 	macFilePath := filepath.Join(
@@ -132,14 +132,14 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
 // Start launches any helper goroutines required for the Server to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	close(s.quit)
 
 	return nil
@@ -158,7 +158,7 @@ func (s *Server) Name() string {
 // called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterInvoicesServer(grpcServer, s)
@@ -175,7 +175,7 @@ func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (s *Server) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -194,7 +194,7 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 // SubscribeSingleInvoice returns a uni-directional stream (server -> client)
 // for notifying the client of state changes for a specified invoice.
 func (s *Server) SubscribeSingleInvoice(req *SubscribeSingleInvoiceRequest,
-	updateStream Invoices_SubscribeSingleInvoiceServer) error {
+	updateStream Invoices_SubscribeSingleInvoiceServer) er.R {
 
 	hash, err := lntypes.MakeHash(req.RHash)
 	if err != nil {
@@ -230,7 +230,7 @@ func (s *Server) SubscribeSingleInvoice(req *SubscribeSingleInvoiceRequest,
 // SettleInvoice settles an accepted invoice. If the invoice is already settled,
 // this call will succeed.
 func (s *Server) SettleInvoice(ctx context.Context,
-	in *SettleInvoiceMsg) (*SettleInvoiceResp, error) {
+	in *SettleInvoiceMsg) (*SettleInvoiceResp, er.R) {
 
 	preimage, err := lntypes.MakePreimage(in.Preimage)
 	if err != nil {
@@ -249,7 +249,7 @@ func (s *Server) SettleInvoice(ctx context.Context,
 // canceled, this call will succeed. If the invoice is already settled, it will
 // fail.
 func (s *Server) CancelInvoice(ctx context.Context,
-	in *CancelInvoiceMsg) (*CancelInvoiceResp, error) {
+	in *CancelInvoiceMsg) (*CancelInvoiceResp, er.R) {
 
 	paymentHash, err := lntypes.MakeHash(in.PaymentHash)
 	if err != nil {
@@ -270,7 +270,7 @@ func (s *Server) CancelInvoice(ctx context.Context,
 // Any duplicated invoices are rejected, therefore all invoices *must* have a
 // unique payment hash.
 func (s *Server) AddHoldInvoice(ctx context.Context,
-	invoice *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, error) {
+	invoice *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, er.R) {
 
 	addInvoiceCfg := &AddInvoiceConfig{
 		AddInvoice:         s.cfg.InvoiceRegistry.AddInvoice,

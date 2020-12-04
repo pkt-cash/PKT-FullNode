@@ -50,7 +50,7 @@ var addrTests = []struct {
 	// Invalid addresses.
 	{
 		expAddr: unknownAddrType{},
-		serErr:  ErrUnknownAddressType.Error(),
+		serErr:  "ErrUnknownAddressType",
 	},
 	{
 		expAddr: &net.TCPAddr{
@@ -127,7 +127,7 @@ func TestAddrSerialization(t *testing.T) {
 			t.Fatalf("unexpected serialization err for addr %v: %v",
 				test.expAddr, err)
 
-		case err != nil && !strings.Contains(err.Error(), test.serErr):
+		case err != nil && !strings.Contains(err.String(), test.serErr):
 			t.Fatalf("unexpected serialization err for addr %v, "+
 				"want: %v, got %v", test.expAddr, test.serErr,
 				err)

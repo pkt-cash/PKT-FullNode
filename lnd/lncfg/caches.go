@@ -28,13 +28,13 @@ type Caches struct {
 
 // Validate checks the Caches configuration for values that are too small to be
 // sane.
-func (c *Caches) Validate() error {
+func (c *Caches) Validate() er.R {
 	if c.RejectCacheSize < MinRejectCacheSize {
-		return fmt.Errorf("reject cache size %d is less than min: %d",
+		return er.Errorf("reject cache size %d is less than min: %d",
 			c.RejectCacheSize, MinRejectCacheSize)
 	}
 	if c.ChannelCacheSize < MinChannelCacheSize {
-		return fmt.Errorf("channel cache size %d is less than min: %d",
+		return er.Errorf("channel cache size %d is less than min: %d",
 			c.ChannelCacheSize, MinChannelCacheSize)
 	}
 

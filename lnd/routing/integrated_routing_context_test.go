@@ -118,7 +118,7 @@ func (c *integratedRoutingContext) testPayment(maxParts uint32) ([]htlcAttempt,
 		c.t.Fatal(err)
 	}
 
-	getBandwidthHints := func() (map[uint64]lnwire.MilliSatoshi, error) {
+	getBandwidthHints := func() (map[uint64]lnwire.MilliSatoshi, er.R) {
 		// Create bandwidth hints based on local channel balances.
 		bandwidthHints := map[uint64]lnwire.MilliSatoshi{}
 		for _, ch := range c.graph.nodes[c.source.pubkey].channels {
@@ -142,7 +142,7 @@ func (c *integratedRoutingContext) testPayment(maxParts uint32) ([]htlcAttempt,
 
 	session, err := newPaymentSession(
 		&payment, getBandwidthHints,
-		func() (routingGraph, func(), error) {
+		func() (routingGraph, func(), er.R) {
 			return c.graph, func() {}, nil
 		},
 		mc, c.pathFindingCfg,

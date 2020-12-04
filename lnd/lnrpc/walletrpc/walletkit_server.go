@@ -5,8 +5,6 @@ package walletrpc
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -146,7 +145,7 @@ var (
 
 // ErrZeroLabel is returned when an attempt is made to label a transaction with
 // an empty label.
-var ErrZeroLabel = errors.New("cannot label transaction with empty label")
+var ErrZeroLabel = Err.CodeWithDetail("ErrZeroLabel", "cannot label transaction with empty label")
 
 // WalletKit is a sub-RPC server that exposes a tool kit which allows clients
 // to execute common wallet operations. This includes requesting new addresses,
@@ -160,7 +159,7 @@ type WalletKit struct {
 var _ WalletKitServer = (*WalletKit)(nil)
 
 // New creates a new instance of the WalletKit sub-RPC server.
-func New(cfg *Config) (*WalletKit, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*WalletKit, lnrpc.MacaroonPerms, er.R) {
 	// If the path of the wallet kit macaroon wasn't specified, then we'll
 	// assume that it's found at the default network directory.
 	if cfg.WalletKitMacPath == "" {
@@ -210,14 +209,14 @@ func New(cfg *Config) (*WalletKit, lnrpc.MacaroonPerms, error) {
 // Start launches any helper goroutines required for the sub-server to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (w *WalletKit) Start() error {
+func (w *WalletKit) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (w *WalletKit) Stop() error {
+func (w *WalletKit) Stop() er.R {
 	return nil
 }
 
@@ -234,7 +233,7 @@ func (w *WalletKit) Name() string {
 // is called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (w *WalletKit) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (w *WalletKit) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterWalletKitServer(grpcServer, w)
@@ -251,7 +250,7 @@ func (w *WalletKit) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (w *WalletKit) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -275,7 +274,7 @@ func (w *WalletKit) RegisterWithRestServer(ctx context.Context,
 // minimum and maximum number of confirmations specified by the user, with 0
 // meaning unconfirmed.
 func (w *WalletKit) ListUnspent(ctx context.Context,
-	req *ListUnspentRequest) (*ListUnspentResponse, error) {
+	req *ListUnspentRequest) (*ListUnspentResponse, er.R) {
 
 	// Validate the confirmation arguments.
 	minConfs, maxConfs, err := lnrpc.ParseConfs(req.MinConfs, req.MaxConfs)
@@ -290,7 +289,7 @@ func (w *WalletKit) ListUnspent(ctx context.Context,
 	// any other concurrent processes attempting to lock any UTXOs which may
 	// be shown available to us.
 	var utxos []*lnwallet.Utxo
-	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() error {
+	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() er.R {
 		utxos, err = w.cfg.Wallet.ListUnspentWitness(minConfs, maxConfs)
 		return err
 	})
@@ -318,23 +317,23 @@ func (w *WalletKit) ListUnspent(ctx context.Context,
 // output has already been locked to a different ID, then
 // wtxmgr.ErrOutputAlreadyLocked is returned.
 func (w *WalletKit) LeaseOutput(ctx context.Context,
-	req *LeaseOutputRequest) (*LeaseOutputResponse, error) {
+	req *LeaseOutputRequest) (*LeaseOutputResponse, er.R) {
 
 	if len(req.Id) != 32 {
-		return nil, errors.New("id must be 32 random bytes")
+		return nil, er.New("id must be 32 random bytes")
 	}
 	var lockID wtxmgr.LockID
 	copy(lockID[:], req.Id)
 
 	// Don't allow ID's of 32 bytes, but all zeros.
 	if lockID == (wtxmgr.LockID{}) {
-		return nil, errors.New("id must be 32 random bytes")
+		return nil, er.New("id must be 32 random bytes")
 	}
 
 	// Don't allow our internal ID to be used externally for locking. Only
 	// unlocking is allowed.
 	if lockID == LndInternalLockID {
-		return nil, errors.New("reserved id cannot be used")
+		return nil, er.New("reserved id cannot be used")
 	}
 
 	op, err := unmarshallOutPoint(req.Outpoint)
@@ -345,7 +344,7 @@ func (w *WalletKit) LeaseOutput(ctx context.Context,
 	// Acquire the global coin selection lock to ensure there aren't any
 	// other concurrent processes attempting to lease the same UTXO.
 	var expiration time.Time
-	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() error {
+	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() er.R {
 		expiration, err = w.cfg.Wallet.LeaseOutput(lockID, *op)
 		return err
 	})
@@ -362,10 +361,10 @@ func (w *WalletKit) LeaseOutput(ctx context.Context,
 // selection if it remains unspent. The ID should match the one used to
 // originally lock the output.
 func (w *WalletKit) ReleaseOutput(ctx context.Context,
-	req *ReleaseOutputRequest) (*ReleaseOutputResponse, error) {
+	req *ReleaseOutputRequest) (*ReleaseOutputResponse, er.R) {
 
 	if len(req.Id) != 32 {
-		return nil, errors.New("id must be 32 random bytes")
+		return nil, er.New("id must be 32 random bytes")
 	}
 	var lockID wtxmgr.LockID
 	copy(lockID[:], req.Id)
@@ -377,7 +376,7 @@ func (w *WalletKit) ReleaseOutput(ctx context.Context,
 
 	// Acquire the global coin selection lock to maintain consistency as
 	// it's acquired when we initially leased the output.
-	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() error {
+	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() er.R {
 		return w.cfg.Wallet.ReleaseOutput(lockID, *op)
 	})
 	if err != nil {
@@ -391,7 +390,7 @@ func (w *WalletKit) ReleaseOutput(ctx context.Context,
 // (account in BIP43) specified. This method should return the next external
 // child within this branch.
 func (w *WalletKit) DeriveNextKey(ctx context.Context,
-	req *KeyReq) (*signrpc.KeyDescriptor, error) {
+	req *KeyReq) (*signrpc.KeyDescriptor, er.R) {
 
 	nextKeyDesc, err := w.cfg.KeyRing.DeriveNextKey(
 		keychain.KeyFamily(req.KeyFamily),
@@ -412,7 +411,7 @@ func (w *WalletKit) DeriveNextKey(ctx context.Context,
 // DeriveKey attempts to derive an arbitrary key specified by the passed
 // KeyLocator.
 func (w *WalletKit) DeriveKey(ctx context.Context,
-	req *signrpc.KeyLocator) (*signrpc.KeyDescriptor, error) {
+	req *signrpc.KeyLocator) (*signrpc.KeyDescriptor, er.R) {
 
 	keyDesc, err := w.cfg.KeyRing.DeriveKey(keychain.KeyLocator{
 		Family: keychain.KeyFamily(req.KeyFamily),
@@ -433,7 +432,7 @@ func (w *WalletKit) DeriveKey(ctx context.Context,
 
 // NextAddr returns the next unused address within the wallet.
 func (w *WalletKit) NextAddr(ctx context.Context,
-	req *AddrRequest) (*AddrResponse, error) {
+	req *AddrRequest) (*AddrResponse, er.R) {
 
 	addr, err := w.cfg.Wallet.NewAddress(lnwallet.WitnessPubKey, false)
 	if err != nil {
@@ -449,13 +448,13 @@ func (w *WalletKit) NextAddr(ctx context.Context,
 // without an error, the wallet will continually attempt to re-broadcast the
 // transaction on start up, until it enters the chain.
 func (w *WalletKit) PublishTransaction(ctx context.Context,
-	req *Transaction) (*PublishResponse, error) {
+	req *Transaction) (*PublishResponse, er.R) {
 
 	switch {
 	// If the client doesn't specify a transaction, then there's nothing to
 	// publish.
 	case len(req.TxHex) == 0:
-		return nil, fmt.Errorf("must provide a transaction to " +
+		return nil, er.Errorf("must provide a transaction to " +
 			"publish")
 	}
 
@@ -482,13 +481,13 @@ func (w *WalletKit) PublishTransaction(ctx context.Context,
 // the caller to create a transaction that sends to several outputs at once.
 // This is ideal when wanting to batch create a set of transactions.
 func (w *WalletKit) SendOutputs(ctx context.Context,
-	req *SendOutputsRequest) (*SendOutputsResponse, error) {
+	req *SendOutputsRequest) (*SendOutputsResponse, er.R) {
 
 	switch {
 	// If the client didn't specify any outputs to create, then  we can't
 	// proceed .
 	case len(req.Outputs) == 0:
-		return nil, fmt.Errorf("must specify at least one output " +
+		return nil, er.Errorf("must specify at least one output " +
 			"to create")
 	}
 
@@ -538,13 +537,13 @@ func (w *WalletKit) SendOutputs(ctx context.Context,
 // determine the fee (in sat/kw) to attach to a transaction in order to achieve
 // the confirmation target.
 func (w *WalletKit) EstimateFee(ctx context.Context,
-	req *EstimateFeeRequest) (*EstimateFeeResponse, error) {
+	req *EstimateFeeRequest) (*EstimateFeeResponse, er.R) {
 
 	switch {
 	// A confirmation target of zero doesn't make any sense. Similarly, we
 	// reject confirmation targets of 1 as they're unreasonable.
 	case req.ConfTarget == 0 || req.ConfTarget == 1:
-		return nil, fmt.Errorf("confirmation target must be greater " +
+		return nil, er.Errorf("confirmation target must be greater " +
 			"than 1")
 	}
 
@@ -566,7 +565,7 @@ func (w *WalletKit) EstimateFee(ctx context.Context,
 // transaction. The fee rate of each sweeping transaction is determined by
 // taking the average fee rate of all the outputs it's trying to sweep.
 func (w *WalletKit) PendingSweeps(ctx context.Context,
-	in *PendingSweepsRequest) (*PendingSweepsResponse, error) {
+	in *PendingSweepsRequest) (*PendingSweepsResponse, er.R) {
 
 	// Retrieve all of the outputs the UtxoSweeper is currently trying to
 	// sweep.
@@ -643,9 +642,9 @@ func (w *WalletKit) PendingSweeps(ctx context.Context,
 
 // unmarshallOutPoint converts an outpoint from its lnrpc type to its canonical
 // type.
-func unmarshallOutPoint(op *lnrpc.OutPoint) (*wire.OutPoint, error) {
+func unmarshallOutPoint(op *lnrpc.OutPoint) (*wire.OutPoint, er.R) {
 	if op == nil {
-		return nil, fmt.Errorf("empty outpoint provided")
+		return nil, er.Errorf("empty outpoint provided")
 	}
 
 	var hash chainhash.Hash
@@ -654,7 +653,7 @@ func unmarshallOutPoint(op *lnrpc.OutPoint) (*wire.OutPoint, error) {
 		fallthrough
 
 	case len(op.TxidBytes) != 0 && len(op.TxidStr) != 0:
-		return nil, fmt.Errorf("either TxidBytes or TxidStr must be " +
+		return nil, er.Errorf("either TxidBytes or TxidStr must be " +
 			"specified, but not both")
 
 	// The hash was provided as raw bytes.
@@ -682,7 +681,7 @@ func unmarshallOutPoint(op *lnrpc.OutPoint) (*wire.OutPoint, error) {
 // explicitly specified, then an error is returned. The status of the input
 // sweep can be checked through the PendingSweeps RPC.
 func (w *WalletKit) BumpFee(ctx context.Context,
-	in *BumpFeeRequest) (*BumpFeeResponse, error) {
+	in *BumpFeeRequest) (*BumpFeeResponse, er.R) {
 
 	// Parse the outpoint from the request.
 	op, err := unmarshallOutPoint(in.Outpoint)
@@ -734,7 +733,7 @@ func (w *WalletKit) BumpFee(ctx context.Context,
 
 	// We're only able to bump the fee of unconfirmed transactions.
 	if utxo.Confirmations > 0 {
-		return nil, errors.New("unable to bump fee of a confirmed " +
+		return nil, er.New("unable to bump fee of a confirmed " +
 			"transaction")
 	}
 
@@ -745,7 +744,7 @@ func (w *WalletKit) BumpFee(ctx context.Context,
 	case lnwallet.NestedWitnessPubKey:
 		witnessType = input.NestedWitnessKeyHash
 	default:
-		return nil, fmt.Errorf("unknown input witness %v", op)
+		return nil, er.Errorf("unknown input witness %v", op)
 	}
 
 	signDesc := &input.SignDescriptor{
@@ -760,7 +759,7 @@ func (w *WalletKit) BumpFee(ctx context.Context,
 	// with an unconfirmed transaction.
 	_, currentHeight, err := w.cfg.Chain.GetBestBlock()
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve current height: %v",
+		return nil, er.Errorf("unable to retrieve current height: %v",
 			err)
 	}
 
@@ -774,7 +773,7 @@ func (w *WalletKit) BumpFee(ctx context.Context,
 
 // ListSweeps returns a list of the sweeps that our node has published.
 func (w *WalletKit) ListSweeps(ctx context.Context,
-	in *ListSweepsRequest) (*ListSweepsResponse, error) {
+	in *ListSweepsRequest) (*ListSweepsResponse, er.R) {
 
 	sweeps, err := w.cfg.Sweeper.ListSweeps()
 	if err != nil {
@@ -838,11 +837,11 @@ func (w *WalletKit) ListSweeps(ctx context.Context,
 
 // LabelTransaction adds a label to a transaction.
 func (w *WalletKit) LabelTransaction(ctx context.Context,
-	req *LabelTransactionRequest) (*LabelTransactionResponse, error) {
+	req *LabelTransactionRequest) (*LabelTransactionResponse, er.R) {
 
 	// Check that the label provided in non-zero.
 	if len(req.Label) == 0 {
-		return nil, ErrZeroLabel
+		return nil, ErrZeroLabel.Default()
 	}
 
 	// Validate the length of the non-zero label. We do not need to use the
@@ -877,7 +876,7 @@ func (w *WalletKit) LabelTransaction(ctx context.Context,
 // publishing the transaction) or to unlock/release the locked UTXOs in case of
 // an error on the caller's side.
 func (w *WalletKit) FundPsbt(_ context.Context,
-	req *FundPsbtRequest) (*FundPsbtResponse, error) {
+	req *FundPsbtRequest) (*FundPsbtResponse, er.R) {
 
 	var (
 		err         error
@@ -897,7 +896,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		r := bytes.NewReader(req.GetPsbt())
 		packet, err = psbt.NewFromRawBytes(r, false)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse PSBT: %v", err)
+			return nil, er.Errorf("could not parse PSBT: %v", err)
 		}
 
 	// The template is specified as a RPC message. We need to create a new
@@ -905,7 +904,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 	case req.GetRaw() != nil:
 		tpl := req.GetRaw()
 		if len(tpl.Outputs) == 0 {
-			return nil, fmt.Errorf("no outputs specified")
+			return nil, er.Errorf("no outputs specified")
 		}
 
 		txOut := make([]*wire.TxOut, 0, len(tpl.Outputs))
@@ -914,13 +913,13 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 				addrStr, w.cfg.ChainParams,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing address "+
+				return nil, er.Errorf("error parsing address "+
 					"%s for network %s: %v", addrStr,
 					w.cfg.ChainParams.Name, err)
 			}
 			pkScript, err := txscript.PayToAddrScript(addr)
 			if err != nil {
-				return nil, fmt.Errorf("error getting pk "+
+				return nil, er.Errorf("error getting pk "+
 					"script for address %s: %v", addrStr,
 					err)
 			}
@@ -935,7 +934,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		for idx, in := range tpl.Inputs {
 			op, err := unmarshallOutPoint(in)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing "+
+				return nil, er.Errorf("error parsing "+
 					"outpoint: %v", err)
 			}
 			txIn[idx] = op
@@ -944,11 +943,11 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		sequences := make([]uint32, len(txIn))
 		packet, err = psbt.New(txIn, txOut, 2, 0, sequences)
 		if err != nil {
-			return nil, fmt.Errorf("could not create PSBT: %v", err)
+			return nil, er.Errorf("could not create PSBT: %v", err)
 		}
 
 	default:
-		return nil, fmt.Errorf("transaction template missing, need " +
+		return nil, er.Errorf("transaction template missing, need " +
 			"to specify either PSBT or raw TX template")
 	}
 
@@ -958,7 +957,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 	case req.GetTargetConf() != 0:
 		targetConf := req.GetTargetConf()
 		if targetConf < 2 {
-			return nil, fmt.Errorf("confirmation target must be " +
+			return nil, er.Errorf("confirmation target must be " +
 				"greater than 1")
 		}
 
@@ -966,7 +965,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 			targetConf,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not estimate fee: %v",
+			return nil, er.Errorf("could not estimate fee: %v",
 				err)
 		}
 
@@ -977,7 +976,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		).FeePerKWeight()
 
 	default:
-		return nil, fmt.Errorf("fee definition missing, need to " +
+		return nil, er.Errorf("fee definition missing, need to " +
 			"specify either target_conf or set_per_vbyte")
 	}
 
@@ -986,7 +985,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 	// of the tasks while holding the lock. The result is a list of locked
 	// UTXOs.
 	changeIndex := int32(-1)
-	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() error {
+	err = w.cfg.CoinSelectionLocker.WithCoinSelectLock(func() er.R {
 		// In case the user did specify inputs, we need to make sure
 		// they are known to us, still unspent and not yet locked.
 		if len(packet.UnsignedTx.TxIn) > 0 {
@@ -1012,7 +1011,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		// generating a new change address.
 		changeIndex, err = w.cfg.Wallet.FundPsbt(packet, feeSatPerKW)
 		if err != nil {
-			return fmt.Errorf("wallet couldn't fund PSBT: %v", err)
+			return er.Errorf("wallet couldn't fund PSBT: %v", err)
 		}
 
 		// Make sure we can properly serialize the packet. If this goes
@@ -1020,7 +1019,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		// probably shouldn't try to lock any of them.
 		err = packet.Serialize(&rawPsbt)
 		if err != nil {
-			return fmt.Errorf("error serializing funded PSBT: %v",
+			return er.Errorf("error serializing funded PSBT: %v",
 				err)
 		}
 
@@ -1034,7 +1033,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 		// extracted into a defer.
 		locks, err = lockInputs(w.cfg.Wallet, packet)
 		if err != nil {
-			return fmt.Errorf("could not lock inputs: %v", err)
+			return er.Errorf("could not lock inputs: %v", err)
 		}
 
 		return nil
@@ -1076,7 +1075,7 @@ func (w *WalletKit) FundPsbt(_ context.Context,
 // caller's responsibility to either publish the transaction on success or
 // unlock/release any locked UTXOs in case of an error in this method.
 func (w *WalletKit) FinalizePsbt(_ context.Context,
-	req *FinalizePsbtRequest) (*FinalizePsbtResponse, error) {
+	req *FinalizePsbtRequest) (*FinalizePsbtResponse, er.R) {
 
 	// Parse the funded PSBT. No additional checks are required at this
 	// level as the wallet will perform all of them.
@@ -1084,7 +1083,7 @@ func (w *WalletKit) FinalizePsbt(_ context.Context,
 		bytes.NewReader(req.FundedPsbt), false,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing PSBT: %v", err)
+		return nil, er.Errorf("error parsing PSBT: %v", err)
 	}
 
 	// Let the wallet do the heavy lifting. This will sign all inputs that
@@ -1092,7 +1091,7 @@ func (w *WalletKit) FinalizePsbt(_ context.Context,
 	// witness data attached, this will fail.
 	err = w.cfg.Wallet.FinalizePsbt(packet)
 	if err != nil {
-		return nil, fmt.Errorf("error finalizing PSBT: %v", err)
+		return nil, er.Errorf("error finalizing PSBT: %v", err)
 	}
 
 	var (
@@ -1103,15 +1102,15 @@ func (w *WalletKit) FinalizePsbt(_ context.Context,
 	// Serialize the finalized PSBT in both the packet and wire format.
 	err = packet.Serialize(&finalPsbtBytes)
 	if err != nil {
-		return nil, fmt.Errorf("error serializing PSBT: %v", err)
+		return nil, er.Errorf("error serializing PSBT: %v", err)
 	}
 	finalTx, err := psbt.Extract(packet)
 	if err != nil {
-		return nil, fmt.Errorf("unable to extract final TX: %v", err)
+		return nil, er.Errorf("unable to extract final TX: %v", err)
 	}
 	err = finalTx.Serialize(&finalTxBytes)
 	if err != nil {
-		return nil, fmt.Errorf("error serializing final TX: %v", err)
+		return nil, er.Errorf("error serializing final TX: %v", err)
 	}
 
 	return &FinalizePsbtResponse{

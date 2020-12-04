@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -41,10 +41,10 @@ func (*AddTowerRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{0}
 }
 
-func (m *AddTowerRequest) XXX_Unmarshal(b []byte) error {
+func (m *AddTowerRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddTowerRequest.Unmarshal(m, b)
 }
-func (m *AddTowerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddTowerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddTowerRequest.Marshal(b, m, deterministic)
 }
 func (m *AddTowerRequest) XXX_Merge(src proto.Message) {
@@ -86,10 +86,10 @@ func (*AddTowerResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{1}
 }
 
-func (m *AddTowerResponse) XXX_Unmarshal(b []byte) error {
+func (m *AddTowerResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddTowerResponse.Unmarshal(m, b)
 }
-func (m *AddTowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddTowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddTowerResponse.Marshal(b, m, deterministic)
 }
 func (m *AddTowerResponse) XXX_Merge(src proto.Message) {
@@ -124,10 +124,10 @@ func (*RemoveTowerRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{2}
 }
 
-func (m *RemoveTowerRequest) XXX_Unmarshal(b []byte) error {
+func (m *RemoveTowerRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_RemoveTowerRequest.Unmarshal(m, b)
 }
-func (m *RemoveTowerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *RemoveTowerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_RemoveTowerRequest.Marshal(b, m, deterministic)
 }
 func (m *RemoveTowerRequest) XXX_Merge(src proto.Message) {
@@ -169,10 +169,10 @@ func (*RemoveTowerResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{3}
 }
 
-func (m *RemoveTowerResponse) XXX_Unmarshal(b []byte) error {
+func (m *RemoveTowerResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_RemoveTowerResponse.Unmarshal(m, b)
 }
-func (m *RemoveTowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *RemoveTowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_RemoveTowerResponse.Marshal(b, m, deterministic)
 }
 func (m *RemoveTowerResponse) XXX_Merge(src proto.Message) {
@@ -204,10 +204,10 @@ func (*GetTowerInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{4}
 }
 
-func (m *GetTowerInfoRequest) XXX_Unmarshal(b []byte) error {
+func (m *GetTowerInfoRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_GetTowerInfoRequest.Unmarshal(m, b)
 }
-func (m *GetTowerInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GetTowerInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_GetTowerInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *GetTowerInfoRequest) XXX_Merge(src proto.Message) {
@@ -263,10 +263,10 @@ func (*TowerSession) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{5}
 }
 
-func (m *TowerSession) XXX_Unmarshal(b []byte) error {
+func (m *TowerSession) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_TowerSession.Unmarshal(m, b)
 }
-func (m *TowerSession) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TowerSession) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_TowerSession.Marshal(b, m, deterministic)
 }
 func (m *TowerSession) XXX_Merge(src proto.Message) {
@@ -332,10 +332,10 @@ func (*Tower) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{6}
 }
 
-func (m *Tower) XXX_Unmarshal(b []byte) error {
+func (m *Tower) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_Tower.Unmarshal(m, b)
 }
-func (m *Tower) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Tower) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_Tower.Marshal(b, m, deterministic)
 }
 func (m *Tower) XXX_Merge(src proto.Message) {
@@ -400,10 +400,10 @@ func (*ListTowersRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{7}
 }
 
-func (m *ListTowersRequest) XXX_Unmarshal(b []byte) error {
+func (m *ListTowersRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListTowersRequest.Unmarshal(m, b)
 }
-func (m *ListTowersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListTowersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListTowersRequest.Marshal(b, m, deterministic)
 }
 func (m *ListTowersRequest) XXX_Merge(src proto.Message) {
@@ -440,10 +440,10 @@ func (*ListTowersResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{8}
 }
 
-func (m *ListTowersResponse) XXX_Unmarshal(b []byte) error {
+func (m *ListTowersResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListTowersResponse.Unmarshal(m, b)
 }
-func (m *ListTowersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListTowersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListTowersResponse.Marshal(b, m, deterministic)
 }
 func (m *ListTowersResponse) XXX_Merge(src proto.Message) {
@@ -478,10 +478,10 @@ func (*StatsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{9}
 }
 
-func (m *StatsRequest) XXX_Unmarshal(b []byte) error {
+func (m *StatsRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_StatsRequest.Unmarshal(m, b)
 }
-func (m *StatsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StatsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_StatsRequest.Marshal(b, m, deterministic)
 }
 func (m *StatsRequest) XXX_Merge(src proto.Message) {
@@ -525,10 +525,10 @@ func (*StatsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{10}
 }
 
-func (m *StatsResponse) XXX_Unmarshal(b []byte) error {
+func (m *StatsResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_StatsResponse.Unmarshal(m, b)
 }
-func (m *StatsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StatsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_StatsResponse.Marshal(b, m, deterministic)
 }
 func (m *StatsResponse) XXX_Merge(src proto.Message) {
@@ -591,10 +591,10 @@ func (*PolicyRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{11}
 }
 
-func (m *PolicyRequest) XXX_Unmarshal(b []byte) error {
+func (m *PolicyRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PolicyRequest.Unmarshal(m, b)
 }
-func (m *PolicyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PolicyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PolicyRequest.Marshal(b, m, deterministic)
 }
 func (m *PolicyRequest) XXX_Merge(src proto.Message) {
@@ -630,10 +630,10 @@ func (*PolicyResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b5f4e7d95a641af2, []int{12}
 }
 
-func (m *PolicyResponse) XXX_Unmarshal(b []byte) error {
+func (m *PolicyResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PolicyResponse.Unmarshal(m, b)
 }
-func (m *PolicyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PolicyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PolicyResponse.Marshal(b, m, deterministic)
 }
 func (m *PolicyResponse) XXX_Merge(src proto.Message) {
@@ -744,21 +744,21 @@ type WatchtowerClientClient interface {
 	//considers it for new sessions. If the watchtower already exists, then
 	//any new addresses included will be considered when dialing it for
 	//session negotiations and backups.
-	AddTower(ctx context.Context, in *AddTowerRequest, opts ...grpc.CallOption) (*AddTowerResponse, error)
+	AddTower(ctx context.Context, in *AddTowerRequest, opts ...grpc.CallOption) (*AddTowerResponse, er.R)
 	//
 	//RemoveTower removes a watchtower from being considered for future session
 	//negotiations and from being used for any subsequent backups until it's added
 	//again. If an address is provided, then this RPC only serves as a way of
 	//removing the address from the watchtower instead.
-	RemoveTower(ctx context.Context, in *RemoveTowerRequest, opts ...grpc.CallOption) (*RemoveTowerResponse, error)
+	RemoveTower(ctx context.Context, in *RemoveTowerRequest, opts ...grpc.CallOption) (*RemoveTowerResponse, er.R)
 	// ListTowers returns the list of watchtowers registered with the client.
-	ListTowers(ctx context.Context, in *ListTowersRequest, opts ...grpc.CallOption) (*ListTowersResponse, error)
+	ListTowers(ctx context.Context, in *ListTowersRequest, opts ...grpc.CallOption) (*ListTowersResponse, er.R)
 	// GetTowerInfo retrieves information for a registered watchtower.
-	GetTowerInfo(ctx context.Context, in *GetTowerInfoRequest, opts ...grpc.CallOption) (*Tower, error)
+	GetTowerInfo(ctx context.Context, in *GetTowerInfoRequest, opts ...grpc.CallOption) (*Tower, er.R)
 	// Stats returns the in-memory statistics of the client since startup.
-	Stats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, error)
+	Stats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, er.R)
 	// Policy returns the active watchtower client policy configuration.
-	Policy(ctx context.Context, in *PolicyRequest, opts ...grpc.CallOption) (*PolicyResponse, error)
+	Policy(ctx context.Context, in *PolicyRequest, opts ...grpc.CallOption) (*PolicyResponse, er.R)
 }
 
 type watchtowerClientClient struct {
@@ -769,7 +769,7 @@ func NewWatchtowerClientClient(cc *grpc.ClientConn) WatchtowerClientClient {
 	return &watchtowerClientClient{cc}
 }
 
-func (c *watchtowerClientClient) AddTower(ctx context.Context, in *AddTowerRequest, opts ...grpc.CallOption) (*AddTowerResponse, error) {
+func (c *watchtowerClientClient) AddTower(ctx context.Context, in *AddTowerRequest, opts ...grpc.CallOption) (*AddTowerResponse, er.R) {
 	out := new(AddTowerResponse)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/AddTower", in, out, opts...)
 	if err != nil {
@@ -778,7 +778,7 @@ func (c *watchtowerClientClient) AddTower(ctx context.Context, in *AddTowerReque
 	return out, nil
 }
 
-func (c *watchtowerClientClient) RemoveTower(ctx context.Context, in *RemoveTowerRequest, opts ...grpc.CallOption) (*RemoveTowerResponse, error) {
+func (c *watchtowerClientClient) RemoveTower(ctx context.Context, in *RemoveTowerRequest, opts ...grpc.CallOption) (*RemoveTowerResponse, er.R) {
 	out := new(RemoveTowerResponse)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/RemoveTower", in, out, opts...)
 	if err != nil {
@@ -787,7 +787,7 @@ func (c *watchtowerClientClient) RemoveTower(ctx context.Context, in *RemoveTowe
 	return out, nil
 }
 
-func (c *watchtowerClientClient) ListTowers(ctx context.Context, in *ListTowersRequest, opts ...grpc.CallOption) (*ListTowersResponse, error) {
+func (c *watchtowerClientClient) ListTowers(ctx context.Context, in *ListTowersRequest, opts ...grpc.CallOption) (*ListTowersResponse, er.R) {
 	out := new(ListTowersResponse)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/ListTowers", in, out, opts...)
 	if err != nil {
@@ -796,7 +796,7 @@ func (c *watchtowerClientClient) ListTowers(ctx context.Context, in *ListTowersR
 	return out, nil
 }
 
-func (c *watchtowerClientClient) GetTowerInfo(ctx context.Context, in *GetTowerInfoRequest, opts ...grpc.CallOption) (*Tower, error) {
+func (c *watchtowerClientClient) GetTowerInfo(ctx context.Context, in *GetTowerInfoRequest, opts ...grpc.CallOption) (*Tower, er.R) {
 	out := new(Tower)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/GetTowerInfo", in, out, opts...)
 	if err != nil {
@@ -805,7 +805,7 @@ func (c *watchtowerClientClient) GetTowerInfo(ctx context.Context, in *GetTowerI
 	return out, nil
 }
 
-func (c *watchtowerClientClient) Stats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, error) {
+func (c *watchtowerClientClient) Stats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, er.R) {
 	out := new(StatsResponse)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/Stats", in, out, opts...)
 	if err != nil {
@@ -814,7 +814,7 @@ func (c *watchtowerClientClient) Stats(ctx context.Context, in *StatsRequest, op
 	return out, nil
 }
 
-func (c *watchtowerClientClient) Policy(ctx context.Context, in *PolicyRequest, opts ...grpc.CallOption) (*PolicyResponse, error) {
+func (c *watchtowerClientClient) Policy(ctx context.Context, in *PolicyRequest, opts ...grpc.CallOption) (*PolicyResponse, er.R) {
 	out := new(PolicyResponse)
 	err := c.cc.Invoke(ctx, "/wtclientrpc.WatchtowerClient/Policy", in, out, opts...)
 	if err != nil {
@@ -830,43 +830,43 @@ type WatchtowerClientServer interface {
 	//considers it for new sessions. If the watchtower already exists, then
 	//any new addresses included will be considered when dialing it for
 	//session negotiations and backups.
-	AddTower(context.Context, *AddTowerRequest) (*AddTowerResponse, error)
+	AddTower(context.Context, *AddTowerRequest) (*AddTowerResponse, er.R)
 	//
 	//RemoveTower removes a watchtower from being considered for future session
 	//negotiations and from being used for any subsequent backups until it's added
 	//again. If an address is provided, then this RPC only serves as a way of
 	//removing the address from the watchtower instead.
-	RemoveTower(context.Context, *RemoveTowerRequest) (*RemoveTowerResponse, error)
+	RemoveTower(context.Context, *RemoveTowerRequest) (*RemoveTowerResponse, er.R)
 	// ListTowers returns the list of watchtowers registered with the client.
-	ListTowers(context.Context, *ListTowersRequest) (*ListTowersResponse, error)
+	ListTowers(context.Context, *ListTowersRequest) (*ListTowersResponse, er.R)
 	// GetTowerInfo retrieves information for a registered watchtower.
-	GetTowerInfo(context.Context, *GetTowerInfoRequest) (*Tower, error)
+	GetTowerInfo(context.Context, *GetTowerInfoRequest) (*Tower, er.R)
 	// Stats returns the in-memory statistics of the client since startup.
-	Stats(context.Context, *StatsRequest) (*StatsResponse, error)
+	Stats(context.Context, *StatsRequest) (*StatsResponse, er.R)
 	// Policy returns the active watchtower client policy configuration.
-	Policy(context.Context, *PolicyRequest) (*PolicyResponse, error)
+	Policy(context.Context, *PolicyRequest) (*PolicyResponse, er.R)
 }
 
 // UnimplementedWatchtowerClientServer can be embedded to have forward compatible implementations.
 type UnimplementedWatchtowerClientServer struct {
 }
 
-func (*UnimplementedWatchtowerClientServer) AddTower(ctx context.Context, req *AddTowerRequest) (*AddTowerResponse, error) {
+func (*UnimplementedWatchtowerClientServer) AddTower(ctx context.Context, req *AddTowerRequest) (*AddTowerResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddTower not implemented")
 }
-func (*UnimplementedWatchtowerClientServer) RemoveTower(ctx context.Context, req *RemoveTowerRequest) (*RemoveTowerResponse, error) {
+func (*UnimplementedWatchtowerClientServer) RemoveTower(ctx context.Context, req *RemoveTowerRequest) (*RemoveTowerResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveTower not implemented")
 }
-func (*UnimplementedWatchtowerClientServer) ListTowers(ctx context.Context, req *ListTowersRequest) (*ListTowersResponse, error) {
+func (*UnimplementedWatchtowerClientServer) ListTowers(ctx context.Context, req *ListTowersRequest) (*ListTowersResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTowers not implemented")
 }
-func (*UnimplementedWatchtowerClientServer) GetTowerInfo(ctx context.Context, req *GetTowerInfoRequest) (*Tower, error) {
+func (*UnimplementedWatchtowerClientServer) GetTowerInfo(ctx context.Context, req *GetTowerInfoRequest) (*Tower, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTowerInfo not implemented")
 }
-func (*UnimplementedWatchtowerClientServer) Stats(ctx context.Context, req *StatsRequest) (*StatsResponse, error) {
+func (*UnimplementedWatchtowerClientServer) Stats(ctx context.Context, req *StatsRequest) (*StatsResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stats not implemented")
 }
-func (*UnimplementedWatchtowerClientServer) Policy(ctx context.Context, req *PolicyRequest) (*PolicyResponse, error) {
+func (*UnimplementedWatchtowerClientServer) Policy(ctx context.Context, req *PolicyRequest) (*PolicyResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method Policy not implemented")
 }
 
@@ -874,7 +874,7 @@ func RegisterWatchtowerClientServer(s *grpc.Server, srv WatchtowerClientServer) 
 	s.RegisterService(&_WatchtowerClient_serviceDesc, srv)
 }
 
-func _WatchtowerClient_AddTower_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_AddTower_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(AddTowerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -886,13 +886,13 @@ func _WatchtowerClient_AddTower_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/AddTower",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).AddTower(ctx, req.(*AddTowerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WatchtowerClient_RemoveTower_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_RemoveTower_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(RemoveTowerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -904,13 +904,13 @@ func _WatchtowerClient_RemoveTower_Handler(srv interface{}, ctx context.Context,
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/RemoveTower",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).RemoveTower(ctx, req.(*RemoveTowerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WatchtowerClient_ListTowers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_ListTowers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(ListTowersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -922,13 +922,13 @@ func _WatchtowerClient_ListTowers_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/ListTowers",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).ListTowers(ctx, req.(*ListTowersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WatchtowerClient_GetTowerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_GetTowerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(GetTowerInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -940,13 +940,13 @@ func _WatchtowerClient_GetTowerInfo_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/GetTowerInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).GetTowerInfo(ctx, req.(*GetTowerInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WatchtowerClient_Stats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_Stats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(StatsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -958,13 +958,13 @@ func _WatchtowerClient_Stats_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/Stats",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).Stats(ctx, req.(*StatsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WatchtowerClient_Policy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WatchtowerClient_Policy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(PolicyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -976,7 +976,7 @@ func _WatchtowerClient_Policy_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/wtclientrpc.WatchtowerClient/Policy",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WatchtowerClientServer).Policy(ctx, req.(*PolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)

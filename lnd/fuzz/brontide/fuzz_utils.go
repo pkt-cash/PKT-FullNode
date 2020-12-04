@@ -28,10 +28,10 @@ var (
 	}
 
 	// Returns the initiator's ephemeral private key.
-	initEphemeral = brontide.EphemeralGenerator(func() (*btcec.PrivateKey, error) {
+	initEphemeral = brontide.EphemeralGenerator(func() (*btcec.PrivateKey, er.R) {
 		e := "121212121212121212121212121212121212121212121212121212" +
 			"1212121212"
-		eBytes, err := hex.DecodeString(e)
+		eBytes, err := util.DecodeHex(e)
 		if err != nil {
 			return nil, err
 		}
@@ -41,10 +41,10 @@ var (
 	})
 
 	// Returns the responder's ephemeral private key.
-	respEphemeral = brontide.EphemeralGenerator(func() (*btcec.PrivateKey, error) {
+	respEphemeral = brontide.EphemeralGenerator(func() (*btcec.PrivateKey, er.R) {
 		e := "222222222222222222222222222222222222222222222222222" +
 			"2222222222222"
-		eBytes, err := hex.DecodeString(e)
+		eBytes, err := util.DecodeHex(e)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func completeHandshake(initiator, responder *brontide.Machine) {
 
 // handshake actually completes the brontide handshake and bubbles up
 // an error to the calling function.
-func handshake(initiator, responder *brontide.Machine) error {
+func handshake(initiator, responder *brontide.Machine) er.R {
 	// Generate ActOne and send to the responder.
 	actOne, err := initiator.GenActOne()
 	if err != nil {
@@ -104,7 +104,7 @@ func nilAndPanic(initiator, responder *brontide.Machine, err error) {
 	if responder != nil {
 		responder.SetCurveToNil()
 	}
-	panic(fmt.Errorf("error: %v, initiator: %v, responder: %v", err,
+	panic(er.Errorf("error: %v, initiator: %v, responder: %v", err,
 		spew.Sdump(initiator), spew.Sdump(responder)))
 }
 

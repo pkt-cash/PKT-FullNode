@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -216,11 +217,11 @@ func (f *mockFailIncorrectDetailsNoAmt) Error() string {
 	return ""
 }
 
-func (f *mockFailIncorrectDetailsNoAmt) Decode(r io.Reader, pver uint32) error {
+func (f *mockFailIncorrectDetailsNoAmt) Decode(r io.Reader, pver uint32) er.R {
 	return nil
 }
 
-func (f *mockFailIncorrectDetailsNoAmt) Encode(w io.Writer, pver uint32) error {
+func (f *mockFailIncorrectDetailsNoAmt) Encode(w io.Writer, pver uint32) er.R {
 	return nil
 }
 
@@ -270,10 +271,10 @@ func (f *mockFailIncorrectDetailsNoHeight) Error() string {
 	return ""
 }
 
-func (f *mockFailIncorrectDetailsNoHeight) Decode(r io.Reader, pver uint32) error {
+func (f *mockFailIncorrectDetailsNoHeight) Decode(r io.Reader, pver uint32) er.R {
 	return nil
 }
 
-func (f *mockFailIncorrectDetailsNoHeight) Encode(w io.Writer, pver uint32) error {
+func (f *mockFailIncorrectDetailsNoHeight) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElement(w, f.amount)
 }

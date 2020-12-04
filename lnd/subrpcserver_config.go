@@ -98,7 +98,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	towerClient wtclient.Client,
 	tcpResolver lncfg.TCPResolver,
 	genInvoiceFeatures func() *lnwire.FeatureVector,
-	rpcLogger pktlog.Logger) error {
+	rpcLogger pktlog.Logger) er.R {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -259,7 +259,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			)
 
 		default:
-			return fmt.Errorf("unknown field: %v, %T", fieldName,
+			return er.Errorf("unknown field: %v, %T", fieldName,
 				cfg)
 		}
 	}

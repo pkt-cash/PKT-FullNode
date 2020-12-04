@@ -66,7 +66,7 @@ func harness(data []byte, emptyMsg wtwire.Message) int {
 	if !reflect.DeepEqual(msg, newMsg) {
 		// Deserialized message and original message are not
 		// deeply equal.
-		panic(fmt.Errorf("deserialized message and original message " +
+		panic(er.Errorf("deserialized message and original message " +
 			"are not deeply equal."))
 	}
 

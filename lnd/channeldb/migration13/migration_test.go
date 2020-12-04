@@ -3,6 +3,7 @@ package migration13
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migtest"
 )
@@ -111,10 +112,10 @@ func TestMigrateMpp(t *testing.T) {
 
 	migtest.ApplyMigration(
 		t,
-		func(tx kvdb.RwTx) error {
+		func(tx kvdb.RwTx) er.R {
 			return migtest.RestoreDB(tx, paymentsRootBucket, pre)
 		},
-		func(tx kvdb.RwTx) error {
+		func(tx kvdb.RwTx) er.R {
 			return migtest.VerifyDB(tx, paymentsRootBucket, post)
 		},
 		MigrateMPP,

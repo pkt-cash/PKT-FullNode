@@ -39,12 +39,12 @@ func newHtlcSuccessResolverTextContext(t *testing.T) *htlcSuccessResolverTestCon
 	chainCfg := ChannelArbitratorConfig{
 		ChainArbitratorConfig: ChainArbitratorConfig{
 			Notifier: notifier,
-			PublishTx: func(_ *wire.MsgTx, _ string) error {
+			PublishTx: func(_ *wire.MsgTx, _ string) er.R {
 				return nil
 			},
 		},
 		PutResolverReport: func(_ kvdb.RwTx,
-			report *channeldb.ResolverReport) error {
+			report *channeldb.ResolverReport) er.R {
 
 			return nil
 		},
@@ -53,7 +53,7 @@ func newHtlcSuccessResolverTextContext(t *testing.T) *htlcSuccessResolverTestCon
 	cfg := ResolverConfig{
 		ChannelArbitratorConfig: chainCfg,
 		Checkpoint: func(_ ContractResolver,
-			_ ...*channeldb.ResolverReport) error {
+			_ ...*channeldb.ResolverReport) er.R {
 
 			checkPointChan <- struct{}{}
 			return nil
@@ -209,7 +209,7 @@ func testHtlcSuccess(t *testing.T, resolution lnwallet.IncomingHtlcResolution,
 	// itself because it is created by the test context.
 	reportChan := make(chan *channeldb.ResolverReport)
 	ctx.resolver.Checkpoint = func(_ ContractResolver,
-		reports ...*channeldb.ResolverReport) error {
+		reports ...*channeldb.ResolverReport) er.R {
 
 		// Send all of our reports into the channel.
 		for _, report := range reports {

@@ -37,7 +37,7 @@ func getFreePort() int {
 // NewEmbeddedEtcdInstance creates an embedded etcd instance for testing,
 // listening on random open ports. Returns the backend config and a cleanup
 // func that will stop the etcd instance.
-func NewEmbeddedEtcdInstance(path string) (*BackendConfig, func(), error) {
+func NewEmbeddedEtcdInstance(path string) (*BackendConfig, func(), er.R) {
 	cfg := embed.NewConfig()
 	cfg.Dir = path
 
@@ -61,7 +61,7 @@ func NewEmbeddedEtcdInstance(path string) (*BackendConfig, func(), error) {
 	case <-time.After(readyTimeout):
 		etcd.Close()
 		return nil, nil,
-			fmt.Errorf("etcd failed to start after: %v", readyTimeout)
+			er.Errorf("etcd failed to start after: %v", readyTimeout)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

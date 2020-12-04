@@ -133,10 +133,10 @@ type ReadWriteBucket interface {
 	Tx() ReadWriteTx
 
 	// NextSequence returns an autoincrementing integer for the bucket.
-	NextSequence() (uint64, error)
+	NextSequence() (uint64, er.R)
 
 	// SetSequence updates the sequence number for the bucket.
-	SetSequence(v uint64) error
+	SetSequence(v uint64) er.R
 
 	// Sequence returns the current integer for the bucket without
 	// incrementing it.
@@ -215,7 +215,7 @@ type BatchDB interface {
 	// Batch is similar to the package-level Update method, but it will
 	// attempt to optismitcally combine the invocation of several
 	// transaction functions into a single db write transaction.
-	Batch(func(tx ReadWriteTx) error) error
+	Batch(func(tx ReadWriteTx) er.R) er.R
 }
 
 // View opens a database read transaction and executes the function f with the
@@ -282,7 +282,7 @@ func Update(db DB, f func(tx ReadWriteTx) er.R) er.R {
 // returned.
 //
 // Batch is only useful when there are multiple goroutines calling it.
-func Batch(db DB, f func(tx ReadWriteTx) error) error {
+func Batch(db DB, f func(tx ReadWriteTx) er.R) er.R {
 	batchDB, ok := db.(BatchDB)
 	if !ok {
 		return er.Errorf("need batch")

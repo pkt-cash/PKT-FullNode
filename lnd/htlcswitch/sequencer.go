@@ -3,7 +3,7 @@ package htlcswitch
 import (
 	"sync"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
@@ -17,7 +17,7 @@ const defaultSequenceBatchSize = 1000
 // unique in order to avoid circuit key collision in the circuit map.
 type Sequencer interface {
 	// NextID returns a unique sequence number for each invocation.
-	NextID() (uint64, error)
+	NextID() (uint64, er.R)
 }
 
 var (
@@ -27,7 +27,7 @@ var (
 
 	// ErrSequencerCorrupted signals that the persistence engine was not
 	// initialized, or has been corrupted since startup.
-	ErrSequencerCorrupted = errors.New(
+	ErrSequencerCorrupted = er.New(
 		"sequencer database has been corrupted")
 )
 
@@ -43,7 +43,7 @@ type persistentSequencer struct {
 }
 
 // NewPersistentSequencer initializes a new sequencer using a channeldb backend.
-func NewPersistentSequencer(db *channeldb.DB) (Sequencer, error) {
+func NewPersistentSequencer(db *channeldb.DB) (Sequencer, er.R) {
 	g := &persistentSequencer{
 		db: db,
 	}
@@ -59,7 +59,7 @@ func NewPersistentSequencer(db *channeldb.DB) (Sequencer, error) {
 
 // NextID returns a unique sequence number for every invocation, persisting the
 // assignment to avoid reuse.
-func (s *persistentSequencer) NextID() (uint64, error) {
+func (s *persistentSequencer) NextID() (uint64, er.R) {
 
 	// nextID will be the unique sequence number returned if no errors are
 	// encountered.
@@ -87,10 +87,10 @@ func (s *persistentSequencer) NextID() (uint64, error) {
 	// allocated will start from the last known tip on disk, which is fine
 	// as we only require uniqueness of the allocated numbers.
 	var nextHorizonID uint64
-	if err := kvdb.Update(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
 		nextIDBkt := tx.ReadWriteBucket(nextPaymentIDKey)
 		if nextIDBkt == nil {
-			return ErrSequencerCorrupted
+			return ErrSequencerCorrupted.Default()
 		}
 
 		nextID = nextIDBkt.Sequence()
@@ -122,8 +122,8 @@ func (s *persistentSequencer) NextID() (uint64, error) {
 }
 
 // initDB populates the bucket used to generate payment sequence numbers.
-func (s *persistentSequencer) initDB() error {
-	return kvdb.Update(s.db, func(tx kvdb.RwTx) error {
+func (s *persistentSequencer) initDB() er.R {
+	return kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
 		_, err := tx.CreateTopLevelBucket(nextPaymentIDKey)
 		return err
 	}, func() {})

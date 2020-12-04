@@ -10,6 +10,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // MaxMessagePayload is the maximum bytes a message can be regardless of other
@@ -122,27 +125,18 @@ func (t MessageType) String() string {
 
 // UnknownMessage is an implementation of the error interface that allows the
 // creation of an error in response to an unknown message.
-type UnknownMessage struct {
-	messageType MessageType
-}
-
-// Error returns a human readable string describing the error.
-//
-// This is part of the error interface.
-func (u *UnknownMessage) Error() string {
-	return fmt.Sprintf("unable to parse message of unknown type: %v",
-		u.messageType)
-}
+var UnknownMessage = Err.CodeWithDetail("UnknownMessage",
+	"unable to parse message of unknown type")
 
 // Serializable is an interface which defines a lightning wire serializable
 // object.
 type Serializable interface {
 	// Decode reads the bytes stream and converts it to the object.
-	Decode(io.Reader, uint32) error
+	Decode(io.Reader, uint32) er.R
 
 	// Encode converts object to the bytes stream and write it into the
 	// writer.
-	Encode(io.Writer, uint32) error
+	Encode(io.Writer, uint32) er.R
 }
 
 // Message is an interface that defines a lightning wire protocol message. The
@@ -156,7 +150,7 @@ type Message interface {
 
 // makeEmptyMessage creates a new empty message of the proper concrete type
 // based on the passed message type.
-func makeEmptyMessage(msgType MessageType) (Message, error) {
+func makeEmptyMessage(msgType MessageType) (Message, er.R) {
 	var msg Message
 
 	switch msgType {
@@ -217,7 +211,7 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 	case MsgGossipTimestampRange:
 		msg = &GossipTimestampRange{}
 	default:
-		return nil, &UnknownMessage{msgType}
+		return nil, UnknownMessage.New(fmt.Sprintf("%v", msgType), nil)
 	}
 
 	return msg, nil
@@ -225,7 +219,7 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 
 // WriteMessage writes a lightning Message to w including the necessary header
 // information and returns the number of bytes written.
-func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
+func WriteMessage(w io.Writer, msg Message, pver uint32) (int, er.R) {
 	totalBytes := 0
 
 	// Encode the message payload itself into a temporary buffer.
@@ -239,7 +233,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
 
 	// Enforce maximum overall message payload.
 	if lenp > MaxMessagePayload {
-		return totalBytes, fmt.Errorf("message payload is too large - "+
+		return totalBytes, er.Errorf("message payload is too large - "+
 			"encoded %d bytes, but maximum message payload is %d bytes",
 			lenp, MaxMessagePayload)
 	}
@@ -247,7 +241,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
 	// Enforce maximum message payload on the message type.
 	mpl := msg.MaxPayloadLength(pver)
 	if uint32(lenp) > mpl {
-		return totalBytes, fmt.Errorf("message payload is too large - "+
+		return totalBytes, er.Errorf("message payload is too large - "+
 			"encoded %d bytes, but maximum message payload of "+
 			"type %v is %d bytes", lenp, msg.MsgType(), mpl)
 	}
@@ -256,7 +250,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
 	// message type itself.
 	var mType [2]byte
 	binary.BigEndian.PutUint16(mType[:], uint16(msg.MsgType()))
-	n, err := w.Write(mType[:])
+	n, err := util.Write(w, mType[:])
 	totalBytes += n
 	if err != nil {
 		return totalBytes, err
@@ -264,7 +258,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
 
 	// With the message type written, we'll now write out the raw payload
 	// itself.
-	n, err = w.Write(payload)
+	n, err = util.Write(w, payload)
 	totalBytes += n
 
 	return totalBytes, err
@@ -272,11 +266,11 @@ func WriteMessage(w io.Writer, msg Message, pver uint32) (int, error) {
 
 // ReadMessage reads, validates, and parses the next Lightning message from r
 // for the provided protocol version.
-func ReadMessage(r io.Reader, pver uint32) (Message, error) {
+func ReadMessage(r io.Reader, pver uint32) (Message, er.R) {
 	// First, we'll read out the first two bytes of the message so we can
 	// create the proper empty message.
 	var mType [2]byte
-	if _, err := io.ReadFull(r, mType[:]); err != nil {
+	if _, err := util.ReadFull(r, mType[:]); err != nil {
 		return nil, err
 	}
 

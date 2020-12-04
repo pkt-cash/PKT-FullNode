@@ -10,7 +10,7 @@ import (
 )
 
 // rpcHtlcEvent returns a rpc htlc event from a htlcswitch event.
-func rpcHtlcEvent(htlcEvent interface{}) (*HtlcEvent, error) {
+func rpcHtlcEvent(htlcEvent interface{}) (*HtlcEvent, er.R) {
 	var (
 		key       htlcswitch.HtlcKey
 		timestamp time.Time
@@ -70,7 +70,7 @@ func rpcHtlcEvent(htlcEvent interface{}) (*HtlcEvent, error) {
 		timestamp = e.Timestamp
 
 	default:
-		return nil, fmt.Errorf("unknown event type: %T", e)
+		return nil, er.Errorf("unknown event type: %T", e)
 	}
 
 	rpcEvent := &HtlcEvent{
@@ -94,7 +94,7 @@ func rpcHtlcEvent(htlcEvent interface{}) (*HtlcEvent, error) {
 		rpcEvent.EventType = HtlcEvent_FORWARD
 
 	default:
-		return nil, fmt.Errorf("unknown event type: %v", eventType)
+		return nil, er.Errorf("unknown event type: %v", eventType)
 	}
 
 	return rpcEvent, nil
@@ -114,7 +114,7 @@ func rpcInfo(info htlcswitch.HtlcInfo) *HtlcInfo {
 // rpcFailReason maps a lnwire failure message and failure detail to a rpc
 // failure code and detail.
 func rpcFailReason(linkErr *htlcswitch.LinkError) (lnrpc.Failure_FailureCode,
-	FailureDetail, error) {
+	FailureDetail, er.R) {
 
 	wireErr, err := marshallError(linkErr)
 	if err != nil {
@@ -137,7 +137,7 @@ func rpcFailReason(linkErr *htlcswitch.LinkError) (lnrpc.Failure_FailureCode,
 		return wireCode, fd, err
 
 	default:
-		return 0, 0, fmt.Errorf("unknown failure "+
+		return 0, 0, er.Errorf("unknown failure "+
 			"detail type: %T", linkErr.FailureDetail)
 
 	}
@@ -149,7 +149,7 @@ func rpcFailReason(linkErr *htlcswitch.LinkError) (lnrpc.Failure_FailureCode,
 // is accompanied with a result), so we error if we fail to match the result
 // type.
 func rpcFailureResolution(invoiceFailure invoices.FailResolutionResult) (
-	FailureDetail, error) {
+	FailureDetail, er.R) {
 
 	switch invoiceFailure {
 	case invoices.ResultReplayToCanceled:
@@ -195,7 +195,7 @@ func rpcFailureResolution(invoiceFailure invoices.FailResolutionResult) (
 		return FailureDetail_MPP_IN_PROGRESS, nil
 
 	default:
-		return 0, fmt.Errorf("unknown fail resolution: %v",
+		return 0, er.Errorf("unknown fail resolution: %v",
 			invoiceFailure.FailureString())
 	}
 }
@@ -205,7 +205,7 @@ func rpcFailureResolution(invoiceFailure invoices.FailResolutionResult) (
 // a wire message which required no further failure detail, we return a no
 // detail failure detail to indicate that there was no additional information.
 func rpcOutgoingFailure(failureDetail htlcswitch.OutgoingFailure) (
-	FailureDetail, error) {
+	FailureDetail, er.R) {
 
 	switch failureDetail {
 	case htlcswitch.OutgoingFailureNone:
@@ -239,7 +239,7 @@ func rpcOutgoingFailure(failureDetail htlcswitch.OutgoingFailure) (
 		return FailureDetail_FORWARDS_DISABLED, nil
 
 	default:
-		return 0, fmt.Errorf("unknown outgoing failure "+
+		return 0, er.Errorf("unknown outgoing failure "+
 			"detail: %v", failureDetail.FailureString())
 	}
 }

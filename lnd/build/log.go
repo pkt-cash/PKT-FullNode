@@ -1,10 +1,10 @@
 package build
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktlog"
 )
 
@@ -121,11 +121,11 @@ type LeveledSubLogger interface {
 // ParseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly on the given logger. An appropriate error is returned
 // if anything is invalid.
-func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
+func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) er.R {
 	// Split at the delimiter.
 	levels := strings.Split(level, ",")
 	if len(levels) == 0 {
-		return fmt.Errorf("invalid log level: %v", level)
+		return er.Errorf("invalid log level: %v", level)
 	}
 
 	// If the first entry has no =, treat is as the log level for all
@@ -135,7 +135,7 @@ func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
 		// Validate debug log level.
 		if !validLogLevel(globalLevel) {
 			str := "the specified debug level [%v] is invalid"
-			return fmt.Errorf(str, globalLevel)
+			return er.Errorf(str, globalLevel)
 		}
 
 		// Change the logging level for all subsystems.
@@ -151,7 +151,7 @@ func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
 		if !strings.Contains(logLevelPair, "=") {
 			str := "the specified debug level contains an " +
 				"invalid subsystem/level pair [%v]"
-			return fmt.Errorf(str, logLevelPair)
+			return er.Errorf(str, logLevelPair)
 		}
 
 		// Extract the specified subsystem and log level.
@@ -160,7 +160,7 @@ func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
 			str := "the specified debug level has an invalid " +
 				"format [%v] -- use format subsystem1=level1," +
 				"subsystem2=level2"
-			return fmt.Errorf(str, logLevelPair)
+			return er.Errorf(str, logLevelPair)
 		}
 		subsysID, logLevel := fields[0], fields[1]
 		subLoggers := logger.SubLoggers()
@@ -169,7 +169,7 @@ func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
 		if _, exists := subLoggers[subsysID]; !exists {
 			str := "the specified subsystem [%v] is invalid -- " +
 				"supported subsystems are %v"
-			return fmt.Errorf(
+			return er.Errorf(
 				str, subsysID, logger.SupportedSubsystems(),
 			)
 		}
@@ -177,7 +177,7 @@ func ParseAndSetDebugLevels(level string, logger LeveledSubLogger) error {
 		// Validate log level.
 		if !validLogLevel(logLevel) {
 			str := "the specified debug level [%v] is invalid"
-			return fmt.Errorf(str, logLevel)
+			return er.Errorf(str, logLevel)
 		}
 
 		logger.SetLogLevel(subsysID, logLevel)

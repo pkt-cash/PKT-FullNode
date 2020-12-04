@@ -2,37 +2,24 @@ package lnwire
 
 import (
 	"bytes"
-	"fmt"
 	"image/color"
 	"io"
 	"io/ioutil"
 	"net"
 	"unicode/utf8"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
+
+var Err = er.NewErrorType("lnd.lnwire")
 
 // ErrUnknownAddrType is an error returned if we encounter an unknown address type
 // when parsing addresses.
-type ErrUnknownAddrType struct {
-	addrType addressType
-}
+var ErrUnknownAddrType = Err.CodeWithDetail("ErrUnknownAddrType",
+	"unknown address type")
 
-// Error returns a human readable string describing the error.
-//
-// NOTE: implements the error interface.
-func (e ErrUnknownAddrType) Error() string {
-	return fmt.Sprintf("unknown address type: %v", e.addrType)
-}
-
-// ErrInvalidNodeAlias is an error returned if a node alias we parse on the
-// wire is invalid, as in it has non UTF-8 characters.
-type ErrInvalidNodeAlias struct{}
-
-// Error returns a human readable string describing the error.
-//
-// NOTE: implements the error interface.
-func (e ErrInvalidNodeAlias) Error() string {
-	return "node alias has non-utf8 characters"
-}
+var ErrInvalidNodeAlias = Err.CodeWithDetail("ErrInvalidNodeAlias",
+	"node alias has non-utf8 characters")
 
 // NodeAlias a hex encoded UTF-8 string that may be displayed as an alternative
 // to the node's ID. Notice that aliases are not unique and may be freely
@@ -41,16 +28,16 @@ type NodeAlias [32]byte
 
 // NewNodeAlias creates a new instance of a NodeAlias. Verification is
 // performed on the passed string to ensure it meets the alias requirements.
-func NewNodeAlias(s string) (NodeAlias, error) {
+func NewNodeAlias(s string) (NodeAlias, er.R) {
 	var n NodeAlias
 
 	if len(s) > 32 {
-		return n, fmt.Errorf("alias too large: max is %v, got %v", 32,
+		return n, er.Errorf("alias too large: max is %v, got %v", 32,
 			len(s))
 	}
 
 	if !utf8.ValidString(s) {
-		return n, &ErrInvalidNodeAlias{}
+		return n, ErrInvalidNodeAlias.Default()
 	}
 
 	copy(n[:], []byte(s))
@@ -109,7 +96,7 @@ var _ Message = (*NodeAnnouncement)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *NodeAnnouncement) Decode(r io.Reader, pver uint32) error {
+func (a *NodeAnnouncement) Decode(r io.Reader, pver uint32) er.R {
 	err := ReadElements(r,
 		&a.Signature,
 		&a.Features,
@@ -127,9 +114,10 @@ func (a *NodeAnnouncement) Decode(r io.Reader, pver uint32) error {
 	// we'll collect the remainder into the ExtraOpaqueData field. If there
 	// aren't any bytes, then we'll snip off the slice to avoid carrying
 	// around excess capacity.
-	a.ExtraOpaqueData, err = ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	var errr error
+	a.ExtraOpaqueData, errr = ioutil.ReadAll(r)
+	if errr != nil {
+		return er.E(errr)
 	}
 	if len(a.ExtraOpaqueData) == 0 {
 		a.ExtraOpaqueData = nil
@@ -141,7 +129,7 @@ func (a *NodeAnnouncement) Decode(r io.Reader, pver uint32) error {
 // Encode serializes the target NodeAnnouncement into the passed io.Writer
 // observing the protocol version specified.
 //
-func (a *NodeAnnouncement) Encode(w io.Writer, pver uint32) error {
+func (a *NodeAnnouncement) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		a.Signature,
 		a.Features,
@@ -171,7 +159,7 @@ func (a *NodeAnnouncement) MaxPayloadLength(pver uint32) uint32 {
 }
 
 // DataToSign returns the part of the message that should be signed.
-func (a *NodeAnnouncement) DataToSign() ([]byte, error) {
+func (a *NodeAnnouncement) DataToSign() ([]byte, er.R) {
 
 	// We should not include the signatures itself.
 	var w bytes.Buffer

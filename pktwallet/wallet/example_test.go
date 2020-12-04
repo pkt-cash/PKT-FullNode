@@ -17,9 +17,9 @@ var defaultDBTimeout = 10 * time.Second
 // testWallet creates a test wallet and unlocks it.
 func testWallet(t *testing.T) (*Wallet, func()) {
 	// Set up a wallet.
-	dir, err := ioutil.TempDir("", "test_wallet")
-	if err != nil {
-		t.Fatalf("Failed to create db dir: %v", err)
+	dir, errr := ioutil.TempDir("", "test_wallet")
+	if errr != nil {
+		t.Fatalf("Failed to create db dir: %v", errr)
 	}
 
 	cleanup := func() {

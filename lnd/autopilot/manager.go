@@ -1,14 +1,14 @@
 package autopilot
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // ManagerCfg houses a set of values and methods that is passed to the Manager
@@ -24,19 +24,19 @@ type ManagerCfg struct {
 
 	// ChannelState is a function closure that returns the current set of
 	// channels managed by this node.
-	ChannelState func() ([]LocalChannel, error)
+	ChannelState func() ([]LocalChannel, er.R)
 
 	// ChannelInfo is a function closure that returns the channel managed
 	// by the node given by the passed channel point.
-	ChannelInfo func(wire.OutPoint) (*LocalChannel, error)
+	ChannelInfo func(wire.OutPoint) (*LocalChannel, er.R)
 
 	// SubscribeTransactions is used to get a subscription for transactions
 	// relevant to this node's wallet.
-	SubscribeTransactions func() (lnwallet.TransactionSubscription, error)
+	SubscribeTransactions func() (lnwallet.TransactionSubscription, er.R)
 
 	// SubscribeTopology is used to get a subscription for topology changes
 	// on the network.
-	SubscribeTopology func() (*routing.TopologyClient, error)
+	SubscribeTopology func() (*routing.TopologyClient, er.R)
 }
 
 // Manager is struct that manages an autopilot agent, making it possible to
@@ -59,7 +59,7 @@ type Manager struct {
 }
 
 // NewManager creates a new instance of the Manager from the passed config.
-func NewManager(cfg *ManagerCfg) (*Manager, error) {
+func NewManager(cfg *ManagerCfg) (*Manager, er.R) {
 	return &Manager{
 		cfg:  cfg,
 		quit: make(chan struct{}),
@@ -67,14 +67,14 @@ func NewManager(cfg *ManagerCfg) (*Manager, error) {
 }
 
 // Start starts the Manager.
-func (m *Manager) Start() error {
+func (m *Manager) Start() er.R {
 	m.started.Do(func() {})
 	return nil
 }
 
 // Stop stops the Manager. If an autopilot agent is active, it will also be
 // stopped.
-func (m *Manager) Stop() error {
+func (m *Manager) Stop() er.R {
 	m.stopped.Do(func() {
 		if err := m.StopAgent(); err != nil {
 			log.Errorf("Unable to stop pilot: %v", err)
@@ -96,7 +96,7 @@ func (m *Manager) IsActive() bool {
 
 // StartAgent creates and starts an autopilot agent from the Manager's
 // config.
-func (m *Manager) StartAgent() error {
+func (m *Manager) StartAgent() er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -243,7 +243,7 @@ func (m *Manager) StartAgent() error {
 }
 
 // StopAgent stops any active autopilot agent.
-func (m *Manager) StopAgent() error {
+func (m *Manager) StopAgent() er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -267,7 +267,7 @@ func (m *Manager) StopAgent() error {
 
 // QueryHeuristics queries the available autopilot heuristics for node scores.
 func (m *Manager) QueryHeuristics(nodes []NodeID, localState bool) (
-	HeuristicScores, error) {
+	HeuristicScores, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
@@ -290,13 +290,13 @@ type HeuristicScores map[string]map[NodeID]float64
 //
 // NOTE: Must be called with the manager's lock.
 func (m *Manager) queryHeuristics(nodes map[NodeID]struct{}, localState bool) (
-	HeuristicScores, error) {
+	HeuristicScores, er.R) {
 
 	// If we want to take the local state into action when querying the
 	// heuristics, we fetch it. If not we'll just pass an emply slice to
 	// the heuristic.
 	var totalChans []LocalChannel
-	var err error
+	var err er.R
 	if localState {
 		// Fetch the current set of channels.
 		totalChans, err = m.cfg.ChannelState()
@@ -341,7 +341,7 @@ func (m *Manager) queryHeuristics(nodes map[NodeID]struct{}, localState bool) (
 			m.cfg.PilotCfg.Graph, totalChans, chanSize, nodes,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get sub score: %v",
+			return nil, er.Errorf("unable to get sub score: %v",
 				err)
 		}
 
@@ -360,7 +360,7 @@ func (m *Manager) queryHeuristics(nodes map[NodeID]struct{}, localState bool) (
 
 // SetNodeScores is used to set the scores of the given heuristic, if it is
 // active, and ScoreSettable.
-func (m *Manager) SetNodeScores(name string, scores map[NodeID]float64) error {
+func (m *Manager) SetNodeScores(name string, scores map[NodeID]float64) er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -368,7 +368,7 @@ func (m *Manager) SetNodeScores(name string, scores map[NodeID]float64) error {
 	// scores.
 	s, ok := m.cfg.PilotCfg.Heuristic.(ScoreSettable)
 	if !ok {
-		return fmt.Errorf("current heuristic doesn't support " +
+		return er.Errorf("current heuristic doesn't support " +
 			"external scoring")
 	}
 
@@ -379,7 +379,7 @@ func (m *Manager) SetNodeScores(name string, scores map[NodeID]float64) error {
 	}
 
 	if !applied {
-		return fmt.Errorf("heuristic with name %v not found", name)
+		return er.Errorf("heuristic with name %v not found", name)
 	}
 
 	// If the autopilot agent is active, notify about the updated

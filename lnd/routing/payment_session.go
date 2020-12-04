@@ -3,11 +3,12 @@ package routing
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // BlockPadding is used to increment the finalCltvDelta value for the last hop
@@ -119,7 +120,7 @@ type PaymentSession interface {
 	// A noRouteError is returned if a non-critical error is encountered
 	// during path finding.
 	RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
-		activeShards, height uint32) (*route.Route, error)
+		activeShards, height uint32) (*route.Route, er.R)
 }
 
 // paymentSession is used during an HTLC routings session to prune the local
@@ -133,7 +134,7 @@ type PaymentSession interface {
 type paymentSession struct {
 	additionalEdges map[route.Vertex][]*channeldb.ChannelEdgePolicy
 
-	getBandwidthHints func() (map[uint64]lnwire.MilliSatoshi, error)
+	getBandwidthHints func() (map[uint64]lnwire.MilliSatoshi, er.R)
 
 	payment *LightningPayment
 
@@ -141,7 +142,7 @@ type paymentSession struct {
 
 	pathFinder pathFinder
 
-	getRoutingGraph func() (routingGraph, func(), error)
+	getRoutingGraph func() (routingGraph, func(), er.R)
 
 	// pathFindingConfig defines global parameters that control the
 	// trade-off in path finding between fees and probabiity.
@@ -164,7 +165,7 @@ func newPaymentSession(p *LightningPayment,
 	getBandwidthHints func() (map[uint64]lnwire.MilliSatoshi, error),
 	getRoutingGraph func() (routingGraph, func(), error),
 	missionControl MissionController, pathFindingConfig PathFindingConfig) (
-	*paymentSession, error) {
+	*paymentSession, er.R) {
 
 	edges, err := RouteHintsToEdges(p.RouteHints, p.Target)
 	if err != nil {
@@ -196,7 +197,7 @@ func newPaymentSession(p *LightningPayment,
 // NOTE: This function is safe for concurrent access.
 // NOTE: Part of the PaymentSession interface.
 func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
-	activeShards, height uint32) (*route.Route, error) {
+	activeShards, height uint32) (*route.Route, er.R) {
 
 	if p.empty {
 		return nil, errEmptyPaySession

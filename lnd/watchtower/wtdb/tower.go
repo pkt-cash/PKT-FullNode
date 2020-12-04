@@ -105,7 +105,7 @@ func (t *Tower) String() string {
 
 // Encode writes the Tower to the passed io.Writer. The TowerID is not
 // serialized, since it acts as the key.
-func (t *Tower) Encode(w io.Writer) error {
+func (t *Tower) Encode(w io.Writer) er.R {
 	return WriteElements(w,
 		t.IdentityKey,
 		t.Addresses,
@@ -114,7 +114,7 @@ func (t *Tower) Encode(w io.Writer) error {
 
 // Decode reads a Tower from the passed io.Reader. The TowerID is meant to be
 // decoded from the key.
-func (t *Tower) Decode(r io.Reader) error {
+func (t *Tower) Decode(r io.Reader) er.R {
 	return ReadElements(r,
 		&t.IdentityKey,
 		&t.Addresses,

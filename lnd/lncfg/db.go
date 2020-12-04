@@ -33,17 +33,17 @@ func DefaultDB() *DB {
 }
 
 // Validate validates the DB config.
-func (db *DB) Validate() error {
+func (db *DB) Validate() er.R {
 	switch db.Backend {
 	case BoltBackend:
 
 	case EtcdBackend:
 		if !db.Etcd.Embedded && db.Etcd.Host == "" {
-			return fmt.Errorf("etcd host must be set")
+			return er.Errorf("etcd host must be set")
 		}
 
 	default:
-		return fmt.Errorf("unknown backend, must be either \"%v\" or \"%v\"",
+		return er.Errorf("unknown backend, must be either \"%v\" or \"%v\"",
 			BoltBackend, EtcdBackend)
 	}
 
@@ -68,7 +68,7 @@ type DatabaseBackends struct {
 // local database will ALWAYS be non-nil, while the remote database will only
 // be populated if etcd is specified.
 func (db *DB) GetBackends(ctx context.Context, dbPath string,
-	networkName string) (*DatabaseBackends, error) {
+	networkName string) (*DatabaseBackends, er.R) {
 
 	var (
 		localDB, remoteDB kvdb.Backend

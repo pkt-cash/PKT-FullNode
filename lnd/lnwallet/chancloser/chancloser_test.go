@@ -64,7 +64,7 @@ func TestMaybeMatchScript(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			err := maybeMatchScript(
-				func() error { return nil }, test.upfrontScript,
+				func() er.R { return nil }, test.upfrontScript,
 				test.shutdownScript,
 			)
 

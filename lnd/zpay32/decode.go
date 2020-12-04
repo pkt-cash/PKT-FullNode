@@ -3,28 +3,27 @@ package zpay32
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 // Decode parses the provided encoded invoice and returns a decoded Invoice if
 // it is valid by BOLT-0011 and matches the provided active network.
-func Decode(invoice string, net *chaincfg.Params) (*Invoice, error) {
+func Decode(invoice string, net *chaincfg.Params) (*Invoice, er.R) {
 	decodedInvoice := Invoice{}
 
 	// Before bech32 decoding the invoice, make sure that it is not too large.
 	// This is done as an anti-DoS measure since bech32 decoding is expensive.
 	if len(invoice) > maxInvoiceLength {
-		return nil, ErrInvoiceTooLarge
+		return nil, ErrInvoiceTooLarge.Default()
 	}
 
 	// Decode the invoice using the modified bech32 decoder.
@@ -36,18 +35,18 @@ func Decode(invoice string, net *chaincfg.Params) (*Invoice, error) {
 	// We expect the human-readable part to at least have ln + one char
 	// encoding the network.
 	if len(hrp) < 3 {
-		return nil, fmt.Errorf("hrp too short")
+		return nil, er.Errorf("hrp too short")
 	}
 
 	// First two characters of HRP should be "ln".
 	if hrp[:2] != "ln" {
-		return nil, fmt.Errorf("prefix should be \"ln\"")
+		return nil, er.Errorf("prefix should be \"ln\"")
 	}
 
 	// The next characters should be a valid prefix for a segwit BIP173
 	// address that match the active network.
 	if !strings.HasPrefix(hrp[2:], net.Bech32HRPSegwit) {
-		return nil, fmt.Errorf(
+		return nil, er.Errorf(
 			"invoice not for current active network '%s'", net.Name)
 	}
 	decodedInvoice.Net = net
@@ -66,7 +65,7 @@ func Decode(invoice string, net *chaincfg.Params) (*Invoice, error) {
 	// Everything except the last 520 bits of the data encodes the invoice's
 	// timestamp and tagged fields.
 	if len(data) < signatureBase32Len {
-		return nil, errors.New("short invoice")
+		return nil, er.New("short invoice")
 	}
 	invoiceData := data[:len(data)-signatureBase32Len]
 
@@ -103,11 +102,11 @@ func Decode(invoice string, net *chaincfg.Params) (*Invoice, error) {
 	if decodedInvoice.Destination != nil {
 		signature, err := sig.ToSignature()
 		if err != nil {
-			return nil, fmt.Errorf("unable to deserialize "+
+			return nil, er.Errorf("unable to deserialize "+
 				"signature: %v", err)
 		}
 		if !signature.Verify(hash, decodedInvoice.Destination) {
-			return nil, fmt.Errorf("invalid invoice signature")
+			return nil, er.Errorf("invalid invoice signature")
 		}
 	} else {
 		headerByte := recoveryID + 27 + 4
@@ -138,10 +137,10 @@ func Decode(invoice string, net *chaincfg.Params) (*Invoice, error) {
 
 // parseData parses the data part of the invoice. It expects base32 data
 // returned from the bech32.Decode method, except signature.
-func parseData(invoice *Invoice, data []byte, net *chaincfg.Params) error {
+func parseData(invoice *Invoice, data []byte, net *chaincfg.Params) er.R {
 	// It must contain the timestamp, encoded using 35 bits (7 groups).
 	if len(data) < timestampBase32Len {
-		return fmt.Errorf("data too short: %d", len(data))
+		return er.Errorf("data too short: %d", len(data))
 	}
 
 	t, err := parseTimestamp(data[:timestampBase32Len])
@@ -156,9 +155,9 @@ func parseData(invoice *Invoice, data []byte, net *chaincfg.Params) error {
 }
 
 // parseTimestamp converts a 35-bit timestamp (encoded in base32) to uint64.
-func parseTimestamp(data []byte) (uint64, error) {
+func parseTimestamp(data []byte) (uint64, er.R) {
 	if len(data) != timestampBase32Len {
-		return 0, fmt.Errorf("timestamp must be 35 bits, was %d",
+		return 0, er.Errorf("timestamp must be 35 bits, was %d",
 			len(data)*5)
 	}
 
@@ -167,7 +166,7 @@ func parseTimestamp(data []byte) (uint64, error) {
 
 // parseTaggedFields takes the base32 encoded tagged fields of the invoice, and
 // fills the Invoice struct accordingly.
-func parseTaggedFields(invoice *Invoice, fields []byte, net *chaincfg.Params) error {
+func parseTaggedFields(invoice *Invoice, fields []byte, net *chaincfg.Params) er.R {
 	index := 0
 	for len(fields)-index > 0 {
 		// If there are less than 3 groups to read, there cannot be more
@@ -176,7 +175,7 @@ func parseTaggedFields(invoice *Invoice, fields []byte, net *chaincfg.Params) er
 		//
 		// This means the last tagged field is broken.
 		if len(fields)-index < 3 {
-			return ErrBrokenTaggedField
+			return ErrBrokenTaggedField.Default()
 		}
 
 		typ := fields[index]
@@ -188,7 +187,7 @@ func parseTaggedFields(invoice *Invoice, fields []byte, net *chaincfg.Params) er
 		// If we don't have enough field data left to read this length,
 		// return error.
 		if len(fields) < index+3+int(dataLength) {
-			return ErrInvalidFieldLength
+			return ErrInvalidFieldLength.Default()
 		}
 		base32Data := fields[index+3 : index+3+int(dataLength)]
 
@@ -293,9 +292,9 @@ func parseTaggedFields(invoice *Invoice, fields []byte, net *chaincfg.Params) er
 }
 
 // parseFieldDataLength converts the two byte slice into a uint16.
-func parseFieldDataLength(data []byte) (uint16, error) {
+func parseFieldDataLength(data []byte) (uint16, er.R) {
 	if len(data) != 2 {
-		return 0, fmt.Errorf("data length must be 2 bytes, was %d",
+		return 0, er.Errorf("data length must be 2 bytes, was %d",
 			len(data))
 	}
 
@@ -304,7 +303,7 @@ func parseFieldDataLength(data []byte) (uint16, error) {
 
 // parse32Bytes converts a 256-bit value (encoded in base32) to *[32]byte. This
 // can be used for payment hashes, description hashes, payment addresses, etc.
-func parse32Bytes(data []byte) (*[32]byte, error) {
+func parse32Bytes(data []byte) (*[32]byte, er.R) {
 	var paymentHash [32]byte
 
 	// As BOLT-11 states, a reader must skip over the 32-byte fields if
@@ -325,7 +324,7 @@ func parse32Bytes(data []byte) (*[32]byte, error) {
 
 // parseDescription converts the data (encoded in base32) into a string to use
 // as the description.
-func parseDescription(data []byte) (*string, error) {
+func parseDescription(data []byte) (*string, er.R) {
 	base256Data, err := bech32.ConvertBits(data, 5, 8, false)
 	if err != nil {
 		return nil, err
@@ -338,7 +337,7 @@ func parseDescription(data []byte) (*string, error) {
 
 // parseDestination converts the data (encoded in base32) into a 33-byte public
 // key of the payee node.
-func parseDestination(data []byte) (*btcec.PublicKey, error) {
+func parseDestination(data []byte) (*btcec.PublicKey, er.R) {
 	// As BOLT-11 states, a reader must skip over the destination field
 	// if it does not have a length of 53, so avoid returning an error.
 	if len(data) != pubKeyBase32Len {
@@ -354,7 +353,7 @@ func parseDestination(data []byte) (*btcec.PublicKey, error) {
 }
 
 // parseExpiry converts the data (encoded in base32) into the expiry time.
-func parseExpiry(data []byte) (*time.Duration, error) {
+func parseExpiry(data []byte) (*time.Duration, er.R) {
 	expiry, err := base32ToUint64(data)
 	if err != nil {
 		return nil, err
@@ -367,7 +366,7 @@ func parseExpiry(data []byte) (*time.Duration, error) {
 
 // parseMinFinalCLTVExpiry converts the data (encoded in base32) into a uint64
 // to use as the minFinalCLTVExpiry.
-func parseMinFinalCLTVExpiry(data []byte) (*uint64, error) {
+func parseMinFinalCLTVExpiry(data []byte) (*uint64, er.R) {
 	expiry, err := base32ToUint64(data)
 	if err != nil {
 		return nil, err
@@ -378,10 +377,10 @@ func parseMinFinalCLTVExpiry(data []byte) (*uint64, error) {
 
 // parseFallbackAddr converts the data (encoded in base32) into a fallback
 // on-chain address.
-func parseFallbackAddr(data []byte, net *chaincfg.Params) (btcutil.Address, error) {
+func parseFallbackAddr(data []byte, net *chaincfg.Params) (btcutil.Address, er.R) {
 	// Checks if the data is empty or contains a version without an address.
 	if len(data) < 2 {
-		return nil, fmt.Errorf("empty fallback address field")
+		return nil, er.Errorf("empty fallback address field")
 	}
 
 	var addr btcutil.Address
@@ -400,7 +399,7 @@ func parseFallbackAddr(data []byte, net *chaincfg.Params) (btcutil.Address, erro
 		case 32:
 			addr, err = btcutil.NewAddressWitnessScriptHash(witness, net)
 		default:
-			return nil, fmt.Errorf("unknown witness program length %d",
+			return nil, er.Errorf("unknown witness program length %d",
 				len(witness))
 		}
 
@@ -436,7 +435,7 @@ func parseFallbackAddr(data []byte, net *chaincfg.Params) (btcutil.Address, erro
 
 // parseRouteHint converts the data (encoded in base32) into an array containing
 // one or more routing hop hints that represent a single route hint.
-func parseRouteHint(data []byte) ([]HopHint, error) {
+func parseRouteHint(data []byte) ([]HopHint, er.R) {
 	base256Data, err := bech32.ConvertBits(data, 5, 8, false)
 	if err != nil {
 		return nil, err
@@ -444,7 +443,7 @@ func parseRouteHint(data []byte) ([]HopHint, error) {
 
 	// Check that base256Data is a multiple of hopHintLen.
 	if len(base256Data)%hopHintLen != 0 {
-		return nil, fmt.Errorf("expected length multiple of %d bytes, "+
+		return nil, er.Errorf("expected length multiple of %d bytes, "+
 			"got %d", hopHintLen, len(base256Data))
 	}
 
@@ -471,7 +470,7 @@ func parseRouteHint(data []byte) ([]HopHint, error) {
 
 // parseFeatures decodes any feature bits directly from the base32
 // representation.
-func parseFeatures(data []byte) (*lnwire.FeatureVector, error) {
+func parseFeatures(data []byte) (*lnwire.FeatureVector, er.R) {
 	rawFeatures := lnwire.NewRawFeatureVector()
 	err := rawFeatures.DecodeBase32(bytes.NewReader(data), len(data))
 	if err != nil {
@@ -482,10 +481,10 @@ func parseFeatures(data []byte) (*lnwire.FeatureVector, error) {
 }
 
 // base32ToUint64 converts a base32 encoded number to uint64.
-func base32ToUint64(data []byte) (uint64, error) {
+func base32ToUint64(data []byte) (uint64, er.R) {
 	// Maximum that fits in uint64 is ceil(64 / 5) = 12 groups.
 	if len(data) > 13 {
-		return 0, fmt.Errorf("cannot parse data of length %d as uint64",
+		return 0, er.Errorf("cannot parse data of length %d as uint64",
 			len(data))
 	}
 

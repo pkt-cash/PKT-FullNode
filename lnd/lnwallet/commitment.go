@@ -1,11 +1,10 @@
 package lnwallet
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
@@ -190,7 +189,7 @@ type ScriptInfo struct {
 // channel type. The second return value is the CSV deleay of the output
 // script, what must be satisfied in order to spend the output.
 func CommitScriptToRemote(chanType channeldb.ChannelType,
-	key *btcec.PublicKey) (*ScriptInfo, uint32, error) {
+	key *btcec.PublicKey) (*ScriptInfo, uint32, er.R) {
 
 	// If this channel type has anchors, we derive the delayed to_remote
 	// script.
@@ -282,10 +281,10 @@ func HtlcSuccessFee(chanType channeldb.ChannelType,
 // anchor.
 func CommitScriptAnchors(localChanCfg,
 	remoteChanCfg *channeldb.ChannelConfig) (*ScriptInfo,
-	*ScriptInfo, error) {
+	*ScriptInfo, er.R) {
 
 	// Helper to create anchor ScriptInfo from key.
-	anchorScript := func(key *btcec.PublicKey) (*ScriptInfo, error) {
+	anchorScript := func(key *btcec.PublicKey) (*ScriptInfo, er.R) {
 		script, err := input.CommitScriptAnchor(key)
 		if err != nil {
 			return nil, err
@@ -396,7 +395,7 @@ func (cb *CommitmentBuilder) createUnsignedCommitmentTx(ourBalance,
 	theirBalance lnwire.MilliSatoshi, isOurs bool,
 	feePerKw chainfee.SatPerKWeight, height uint64,
 	filteredHTLCView *htlcView,
-	keyRing *CommitmentKeyRing) (*unsignedCommitmentTx, error) {
+	keyRing *CommitmentKeyRing) (*unsignedCommitmentTx, er.R) {
 
 	dustLimit := cb.chanState.LocalChanCfg.DustLimit
 	if !isOurs {
@@ -457,7 +456,7 @@ func (cb *CommitmentBuilder) createUnsignedCommitmentTx(ourBalance,
 
 	var (
 		commitTx *wire.MsgTx
-		err      error
+		err      er.R
 	)
 
 	// Depending on whether the transaction is ours or not, we call
@@ -555,7 +554,7 @@ func (cb *CommitmentBuilder) createUnsignedCommitmentTx(ourBalance,
 		totalOut += btcutil.Amount(txOut.Value)
 	}
 	if totalOut > cb.chanState.Capacity {
-		return nil, fmt.Errorf("height=%v, for ChannelPoint(%v) "+
+		return nil, er.Errorf("height=%v, for ChannelPoint(%v) "+
 			"attempts to consume %v while channel capacity is %v",
 			height, cb.chanState.FundingOutpoint,
 			totalOut, cb.chanState.Capacity)
@@ -580,7 +579,7 @@ func CreateCommitTx(chanType channeldb.ChannelType,
 	fundingOutput wire.TxIn, keyRing *CommitmentKeyRing,
 	localChanCfg, remoteChanCfg *channeldb.ChannelConfig,
 	amountToLocal, amountToRemote btcutil.Amount,
-	numHTLCs int64) (*wire.MsgTx, error) {
+	numHTLCs int64) (*wire.MsgTx, er.R) {
 
 	// First, we create the script for the delayed "pay-to-self" output.
 	// This output has 2 main redemption clauses: either we can redeem the
@@ -667,7 +666,7 @@ func CreateCommitTx(chanType channeldb.ChannelType,
 // the cooperative close tx, given the channel type and transaction fee.
 func CoopCloseBalance(chanType channeldb.ChannelType, isInitiator bool,
 	coopCloseFee btcutil.Amount, localCommit channeldb.ChannelCommitment) (
-	btcutil.Amount, btcutil.Amount, error) {
+	btcutil.Amount, btcutil.Amount, er.R) {
 
 	// Get both parties' balances from the latest commitment.
 	ourBalance := localCommit.LocalBalance.ToSatoshis()
@@ -697,7 +696,7 @@ func CoopCloseBalance(chanType channeldb.ChannelType, isInitiator bool,
 	// initiator can pay the proposed fee, but we do a sanity check just to
 	// be sure here.
 	if ourBalance < 0 || theirBalance < 0 {
-		return 0, 0, fmt.Errorf("initiator cannot afford proposed " +
+		return 0, 0, er.Errorf("initiator cannot afford proposed " +
 			"coop close fee")
 	}
 
@@ -709,11 +708,11 @@ func CoopCloseBalance(chanType channeldb.ChannelType, isInitiator bool,
 // HTLC is being applied to their commitment transaction or ours.
 func genHtlcScript(chanType channeldb.ChannelType, isIncoming, ourCommit bool,
 	timeout uint32, rHash [32]byte,
-	keyRing *CommitmentKeyRing) ([]byte, []byte, error) {
+	keyRing *CommitmentKeyRing) ([]byte, []byte, er.R) {
 
 	var (
 		witnessScript []byte
-		err           error
+		err           er.R
 	)
 
 	// Choose scripts based on channel type.
@@ -785,7 +784,7 @@ func genHtlcScript(chanType channeldb.ChannelType, isIncoming, ourCommit bool,
 // the descriptor itself.
 func addHTLC(commitTx *wire.MsgTx, ourCommit bool,
 	isIncoming bool, paymentDesc *PaymentDescriptor,
-	keyRing *CommitmentKeyRing, chanType channeldb.ChannelType) error {
+	keyRing *CommitmentKeyRing, chanType channeldb.ChannelType) er.R {
 
 	timeout := paymentDesc.Timeout
 	rHash := paymentDesc.RHash

@@ -3,10 +3,10 @@
 package etcd
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/stretchr/testify/require"
 )
@@ -18,22 +18,22 @@ func TestBucketCreation(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		// empty bucket name
 		b, err := tx.CreateTopLevelBucket(nil)
-		require.Error(t, walletdb.ErrBucketNameRequired, err)
+		util.RequireErr(t, walletdb.ErrBucketNameRequired, err)
 		require.Nil(t, b)
 
 		// empty bucket name
 		b, err = tx.CreateTopLevelBucket([]byte(""))
-		require.Error(t, walletdb.ErrBucketNameRequired, err)
+		util.RequireErr(t, walletdb.ErrBucketNameRequired, err)
 		require.Nil(t, b)
 
 		// "apple"
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, apple)
 
 		// Check bucket tx.
@@ -41,21 +41,21 @@ func TestBucketCreation(t *testing.T) {
 
 		// "apple" already created
 		b, err = tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, b)
 
 		// "apple/banana"
 		banana, err := apple.CreateBucket([]byte("banana"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, banana)
 
 		banana, err = apple.CreateBucketIfNotExists([]byte("banana"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, banana)
 
 		// Try creating "apple/banana" again
 		b, err = apple.CreateBucket([]byte("banana"))
-		require.Error(t, walletdb.ErrBucketExists, err)
+		util.RequireErr(t, walletdb.ErrBucketExists, err)
 		require.Nil(t, b)
 
 		// "apple/mango"
@@ -99,9 +99,9 @@ func TestBucketDeletion(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		// "apple"
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
@@ -115,19 +115,19 @@ func TestBucketDeletion(t *testing.T) {
 		kvs := []KV{{"key1", "val1"}, {"key2", "val2"}, {"key3", "val3"}}
 
 		for _, kv := range kvs {
-			require.NoError(t, banana.Put([]byte(kv.key), []byte(kv.val)))
+			util.RequireNoErr(t, banana.Put([]byte(kv.key), []byte(kv.val)))
 			require.Equal(t, []byte(kv.val), banana.Get([]byte(kv.key)))
 		}
 
 		// Delete a k/v from "apple/banana"
-		require.NoError(t, banana.Delete([]byte("key2")))
+		util.RequireNoErr(t, banana.Delete([]byte("key2")))
 		// Try getting/putting/deleting invalid k/v's.
 		require.Nil(t, banana.Get(nil))
-		require.Error(t, walletdb.ErrKeyRequired, banana.Put(nil, []byte("val")))
-		require.Error(t, walletdb.ErrKeyRequired, banana.Delete(nil))
+		util.RequireErr(t, walletdb.ErrKeyRequired, banana.Put(nil, []byte("val")))
+		util.RequireErr(t, walletdb.ErrKeyRequired, banana.Delete(nil))
 
 		// Try deleting a k/v that doesn't exist.
-		require.NoError(t, banana.Delete([]byte("nokey")))
+		util.RequireNoErr(t, banana.Delete([]byte("nokey")))
 
 		// "apple/pear"
 		pear, err := apple.CreateBucket([]byte("pear"))
@@ -147,7 +147,7 @@ func TestBucketDeletion(t *testing.T) {
 
 		// Put some values into "apple/pear/cherry"
 		for _, kv := range kvs {
-			require.NoError(t, cherry.Put([]byte(kv.key), []byte(kv.val)))
+			util.RequireNoErr(t, cherry.Put([]byte(kv.key), []byte(kv.val)))
 		}
 
 		// Read back values in "apple/pear/cherry" trough a read bucket.
@@ -160,12 +160,12 @@ func TestBucketDeletion(t *testing.T) {
 		}
 
 		// Try deleting some invalid buckets.
-		require.Error(t,
+		util.RequireErr(t,
 			walletdb.ErrBucketNameRequired, apple.DeleteNestedBucket(nil),
 		)
 
 		// Try deleting a non existing bucket.
-		require.Error(
+		util.RequireErr(
 			t,
 			walletdb.ErrBucketNotFound,
 			apple.DeleteNestedBucket([]byte("missing")),
@@ -209,9 +209,9 @@ func TestBucketForEach(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		// "apple"
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
@@ -234,7 +234,7 @@ func TestBucketForEach(t *testing.T) {
 		}
 
 		got := make(map[string]string)
-		err = apple.ForEach(func(key, val []byte) error {
+		err = apple.ForEach(func(key, val []byte) er.R {
 			got[string(key)] = string(val)
 			return nil
 		})
@@ -246,16 +246,16 @@ func TestBucketForEach(t *testing.T) {
 			"banana": "",
 		}
 
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, expected, got)
 
 		got = make(map[string]string)
-		err = banana.ForEach(func(key, val []byte) error {
+		err = banana.ForEach(func(key, val []byte) er.R {
 			got[string(key)] = string(val)
 			return nil
 		})
 
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		// remove the sub-bucket key
 		delete(expected, "banana")
 		require.Equal(t, expected, got)
@@ -285,9 +285,9 @@ func TestBucketForEachWithError(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		// "apple"
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
@@ -314,9 +314,9 @@ func TestBucketForEachWithError(t *testing.T) {
 		got := make(map[string]string)
 		i := 0
 		// Error while iterating value keys.
-		err = apple.ForEach(func(key, val []byte) error {
+		err = apple.ForEach(func(key, val []byte) er.R {
 			if i == 2 {
-				return fmt.Errorf("error")
+				return er.Errorf("error")
 			}
 
 			got[string(key)] = string(val)
@@ -330,14 +330,14 @@ func TestBucketForEachWithError(t *testing.T) {
 		}
 
 		require.Equal(t, expected, got)
-		require.Error(t, err)
+		util.RequireErr(t, err)
 
 		got = make(map[string]string)
 		i = 0
 		// Erro while iterating buckets.
-		err = apple.ForEach(func(key, val []byte) error {
+		err = apple.ForEach(func(key, val []byte) er.R {
 			if i == 3 {
-				return fmt.Errorf("error")
+				return er.Errorf("error")
 			}
 
 			got[string(key)] = string(val)
@@ -352,7 +352,7 @@ func TestBucketForEachWithError(t *testing.T) {
 		}
 
 		require.Equal(t, expected, got)
-		require.Error(t, err)
+		util.RequireErr(t, err)
 		return nil
 	}, func() {})
 
@@ -375,9 +375,9 @@ func TestBucketSequence(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
 		require.NotNil(t, apple)
@@ -414,17 +414,17 @@ func TestKeyClash(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// First:
 	// put: /apple/key -> val
 	// create bucket: /apple/banana
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
 		require.NotNil(t, apple)
 
-		require.NoError(t, apple.Put([]byte("key"), []byte("val")))
+		util.RequireNoErr(t, apple.Put([]byte("key"), []byte("val")))
 
 		banana, err := apple.CreateBucket([]byte("banana"))
 		require.Nil(t, err)
@@ -438,23 +438,23 @@ func TestKeyClash(t *testing.T) {
 	// Next try to:
 	// put: /apple/banana -> val => will fail (as /apple/banana is a bucket)
 	// create bucket: /apple/key => will fail (as /apple/key is a value)
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
 		require.Nil(t, err)
 		require.NotNil(t, apple)
 
-		require.Error(t,
+		util.RequireErr(t,
 			walletdb.ErrIncompatibleValue,
 			apple.Put([]byte("banana"), []byte("val")),
 		)
 
 		b, err := apple.CreateBucket([]byte("key"))
 		require.Nil(t, b)
-		require.Error(t, walletdb.ErrIncompatibleValue, b)
+		util.RequireErr(t, walletdb.ErrIncompatibleValue, b)
 
 		b, err = apple.CreateBucketIfNotExists([]byte("key"))
 		require.Nil(t, b)
-		require.Error(t, walletdb.ErrIncompatibleValue, b)
+		util.RequireErr(t, walletdb.ErrIncompatibleValue, b)
 
 		return nil
 	}, func() {})
@@ -482,38 +482,38 @@ func TestBucketCreateDelete(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, apple)
 
 		banana, err := apple.CreateBucket([]byte("banana"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, banana)
 
 		return nil
 	}, func() {})
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple := tx.ReadWriteBucket([]byte("apple"))
 		require.NotNil(t, apple)
-		require.NoError(t, apple.DeleteNestedBucket([]byte("banana")))
+		util.RequireNoErr(t, apple.DeleteNestedBucket([]byte("banana")))
 
 		return nil
 	}, func() {})
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple := tx.ReadWriteBucket([]byte("apple"))
 		require.NotNil(t, apple)
-		require.NoError(t, apple.Put([]byte("banana"), []byte("value")))
+		util.RequireNoErr(t, apple.Put([]byte("banana"), []byte("value")))
 
 		return nil
 	}, func() {})
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	expected := map[string]string{
 		vkey("banana", "apple"): "value",

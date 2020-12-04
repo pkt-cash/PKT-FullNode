@@ -35,20 +35,20 @@ func NewWrite(writeBufferPool *WriteBuffer, numWorkers int,
 }
 
 // Start safely spins up the Write pool.
-func (w *Write) Start() error {
+func (w *Write) Start() er.R {
 	return w.workerPool.Start()
 }
 
 // Stop safely shuts down the Write pool.
-func (w *Write) Stop() error {
+func (w *Write) Stop() er.R {
 	return w.workerPool.Stop()
 }
 
 // Submit accepts a function closure that provides access to a fresh
 // bytes.Buffer backed by a buffer.Write object. The function's execution will
 // be allocated to one of the underlying Worker pool's goroutines.
-func (w *Write) Submit(inner func(*bytes.Buffer) error) error {
-	return w.workerPool.Submit(func(s WorkerState) error {
+func (w *Write) Submit(inner func(*bytes.Buffer) error) er.R {
+	return w.workerPool.Submit(func(s WorkerState) er.R {
 		state := s.(*writeWorkerState)
 		return inner(state.buf)
 	})

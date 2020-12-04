@@ -18,6 +18,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/autopilotrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/chainrpc"
@@ -213,7 +214,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			}()
 
 			msgChan := make(chan *chainrpc.BlockEpoch)
-			errChan := make(chan error)
+			errChan := make(chan er.R)
 			timeout := time.After(defaultTimeout)
 
 			// We want to read exactly one message.
@@ -231,7 +232,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 				// wrapper which we'll get rid of here.
 				msgStr := string(msg)
 				if !strings.Contains(msgStr, "\"result\":") {
-					errChan <- fmt.Errorf("invalid msg: %s",
+					errChan <- er.Errorf("invalid msg: %s",
 						msgStr)
 					return
 				}
@@ -295,9 +296,9 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			mac, errr := a.ReadMacaroon(
 				a.AdminMacPath(), defaultTimeout,
 			)
-			require.NoError(t, errr, "read admin mac")
+			util.RequireNoErr(t, errr, "read admin mac")
 			macBytes, errr := mac.MarshalBinary()
-			require.NoError(t, errr, "marshal admin mac")
+			util.RequireNoErr(t, errr, "marshal admin mac")
 
 			customHeader := make(http.Header)
 			customHeader.Set(
@@ -322,7 +323,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			}()
 
 			msgChan := make(chan *chainrpc.BlockEpoch)
-			errChan := make(chan error)
+			errChan := make(chan er.R)
 			timeout := time.After(defaultTimeout)
 
 			// We want to read exactly one message.
@@ -340,7 +341,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 				// wrapper which we'll get rid of here.
 				msgStr := string(msg)
 				if !strings.Contains(msgStr, "\"result\":") {
-					errChan <- fmt.Errorf("invalid msg: %s",
+					errChan <- er.Errorf("invalid msg: %s",
 						msgStr)
 					return
 				}
@@ -406,7 +407,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 // invokeGET calls the given URL with the GET method and appropriate macaroon
 // header fields then tries to unmarshal the response into the given response
 // proto message.
-func invokeGET(node *lntest.HarnessNode, url string, resp proto.Message) error {
+func invokeGET(node *lntest.HarnessNode, url string, resp proto.Message) er.R {
 	_, rawResp, err := makeRequest(node, url, "GET", nil, nil)
 	if err != nil {
 		return err
@@ -419,7 +420,7 @@ func invokeGET(node *lntest.HarnessNode, url string, resp proto.Message) error {
 // appropriate macaroon header fields then tries to unmarshal the response into
 // the given response proto message.
 func invokePOST(node *lntest.HarnessNode, url string, req,
-	resp proto.Message) error {
+	resp proto.Message) er.R {
 
 	// Marshal the request to JSON using the jsonpb marshaler to get correct
 	// field names.
@@ -472,7 +473,7 @@ func makeRequest(node *lntest.HarnessNode, url, method string,
 // openWebSocket opens a new WebSocket connection to the given URL with the
 // appropriate macaroon headers and sends the request message over the socket.
 func openWebSocket(node *lntest.HarnessNode, url, method string,
-	req proto.Message, customHeader http.Header) (*websocket.Conn, error) {
+	req proto.Message, customHeader http.Header) (*websocket.Conn, er.R) {
 
 	// Prepare our macaroon headers and assemble the full URL from the
 	// node's listening address. WebSockets always work over GET so we need
@@ -508,7 +509,7 @@ func openWebSocket(node *lntest.HarnessNode, url, method string,
 
 // addAdminMacaroon reads the admin macaroon from the node and appends it to
 // the HTTP header fields.
-func addAdminMacaroon(node *lntest.HarnessNode, header http.Header) error {
+func addAdminMacaroon(node *lntest.HarnessNode, header http.Header) er.R {
 	mac, err := node.ReadMacaroon(node.AdminMacPath(), defaultTimeout)
 	if err != nil {
 		return err

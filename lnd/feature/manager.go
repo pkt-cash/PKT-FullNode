@@ -35,14 +35,14 @@ type Manager struct {
 
 // NewManager creates a new feature Manager, applying any custom modifications
 // to its feature sets before returning.
-func NewManager(cfg Config) (*Manager, error) {
+func NewManager(cfg Config) (*Manager, er.R) {
 	return newManager(cfg, defaultSetDesc)
 }
 
 // newManager creates a new feature Manager, applying any custom modifications
 // to its feature sets before returning. This method accepts the setDesc as its
 // own parameter so that it can be unit tested.
-func newManager(cfg Config, desc setDesc) (*Manager, error) {
+func newManager(cfg Config, desc setDesc) (*Manager, er.R) {
 	// First build the default feature vector for all known sets.
 	fsets := make(map[Set]*lnwire.RawFeatureVector)
 	for bit, sets := range desc {
@@ -59,7 +59,7 @@ func newManager(cfg Config, desc setDesc) (*Manager, error) {
 			// same pair.
 			err := fv.SafeSet(bit)
 			if err != nil {
-				return nil, fmt.Errorf("unable to set "+
+				return nil, er.Errorf("unable to set "+
 					"%v in %v: %v", bit, set, err)
 			}
 
@@ -96,7 +96,7 @@ func newManager(cfg Config, desc setDesc) (*Manager, error) {
 		fv := lnwire.NewFeatureVector(raw, lnwire.Features)
 		err := ValidateDeps(fv)
 		if err != nil {
-			return nil, fmt.Errorf("invalid feature set %v: %v",
+			return nil, er.Errorf("invalid feature set %v: %v",
 				set, err)
 		}
 	}

@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +42,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			private:         false,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// For this restoration method, we'll grab the
 				// current multi-channel backup from the old
@@ -52,7 +53,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 					ctxb, req,
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to obtain "+
+					return nil, er.Errorf("unable to obtain "+
 						"channel backup: %v", err)
 				}
 
@@ -75,7 +76,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			private:   false,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
@@ -101,7 +102,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			private:   false,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// First, fetch the current backup state as is,
 				// to obtain our latest Multi.
@@ -109,7 +110,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 					ctxb, &lnrpc.ChanBackupExportRequest{},
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to obtain "+
+					return nil, er.Errorf("unable to obtain "+
 						"channel backup: %v", err)
 				}
 				backupSnapshot := &lnrpc.ChanBackupSnapshot{
@@ -119,7 +120,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 				// Create a new nodeRestorer that will restore
 				// the node using the Multi backup we just
 				// obtained above.
-				return func() (*lntest.HarnessNode, error) {
+				return func() (*lntest.HarnessNode, er.R) {
 					return net.RestoreNodeWithSeed(
 						"dave", nil, password,
 						mnemonic, 1000, backupSnapshot,
@@ -136,7 +137,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			private:   false,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// First, fetch the current backup state as is,
 				// to obtain our latest Multi.
@@ -144,7 +145,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 					ctxb, &lnrpc.ChanBackupExportRequest{},
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to obtain "+
+					return nil, er.Errorf("unable to obtain "+
 						"channel backup: %v", err)
 				}
 				backupSnapshot := &lnrpc.ChanBackupSnapshot{
@@ -155,7 +156,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 				// the node with its seed, but no channel
 				// backup, shutdown this initialized node, then
 				// restart it again using Unlock.
-				return func() (*lntest.HarnessNode, error) {
+				return func() (*lntest.HarnessNode, er.R) {
 					newNode, err := net.RestoreNodeWithSeed(
 						"dave", nil, password,
 						mnemonic, 1000, nil,
@@ -184,7 +185,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			private:   false,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
@@ -202,13 +203,13 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 
 				ctxb := context.Background()
 
-				return func() (*lntest.HarnessNode, error) {
+				return func() (*lntest.HarnessNode, er.R) {
 					newNode, err := net.RestoreNodeWithSeed(
 						"dave", nil, password, mnemonic,
 						1000, nil,
 					)
 					if err != nil {
-						return nil, fmt.Errorf("unable to "+
+						return nil, er.Errorf("unable to "+
 							"restore node: %v", err)
 					}
 
@@ -219,7 +220,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 						},
 					)
 					if err != nil {
-						return nil, fmt.Errorf("unable "+
+						return nil, er.Errorf("unable "+
 							"to restore backups: %v",
 							err)
 					}
@@ -231,7 +232,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 						},
 					)
 					if err != nil {
-						return nil, fmt.Errorf("unable "+
+						return nil, er.Errorf("unable "+
 							"to restore backups the"+
 							"second time: %v",
 							err)
@@ -252,7 +253,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			unconfirmed:     true,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
@@ -290,7 +291,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			unconfirmed:     true,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// For this restoration method, we'll grab the
 				// current multi-channel backup from the old
@@ -301,12 +302,12 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 					ctxb, req,
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to obtain "+
+					return nil, er.Errorf("unable to obtain "+
 						"channel backup: %v", err)
 				}
 				chanPoints := chanBackup.MultiChanBackup.ChanPoints
 				if len(chanPoints) == 0 {
-					return nil, fmt.Errorf("unconfirmed " +
+					return nil, er.Errorf("unconfirmed " +
 						"channel not included in backup")
 				}
 
@@ -339,7 +340,7 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 			anchorCommit: true,
 			restoreMethod: func(oldNode *lntest.HarnessNode,
 				backupFilePath string,
-				mnemonic []string) (nodeRestorer, error) {
+				mnemonic []string) (nodeRestorer, er.R) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
@@ -418,7 +419,7 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 	// easily use below.
 	var wg sync.WaitGroup
 	backupUpdates := make(chan *lnrpc.ChanBackupSnapshot)
-	streamErr := make(chan error)
+	streamErr := make(chan er.R)
 	streamQuit := make(chan struct{})
 
 	wg.Add(1)
@@ -487,10 +488,10 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 	// assertBackupFileState is a helper function that we'll use to compare
 	// the on disk back up file to our currentBackup pointer above.
 	assertBackupFileState := func() {
-		err := wait.NoError(func() error {
+		err := wait.NoError(func() er.R {
 			packedBackup, err := ioutil.ReadFile(backupFilePath)
 			if err != nil {
-				return fmt.Errorf("unable to read backup "+
+				return er.Errorf("unable to read backup "+
 					"file: %v", err)
 			}
 
@@ -500,7 +501,7 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 			// number of channels that the multi-backup contains.
 			rawBackup := currentBackup.MultiChanBackup.MultiChanBackup
 			if len(rawBackup) != len(packedBackup) {
-				return fmt.Errorf("backup files don't match: "+
+				return er.Errorf("backup files don't match: "+
 					"expected %x got %x", rawBackup, packedBackup)
 			}
 
@@ -514,7 +515,7 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 				}
 				_, err := carol.VerifyChanBackup(ctxb, snapshot)
 				if err != nil {
-					return fmt.Errorf("unable to verify "+
+					return er.Errorf("unable to verify "+
 						"backup #%d: %v", i, err)
 				}
 			}
@@ -631,25 +632,25 @@ func testExportChannelBackup(net *lntest.NetworkHarness, t *harnessTest) {
 	// Before we proceed, we'll make two utility methods we'll use below
 	// for our primary assertions.
 	assertNumSingleBackups := func(numSingles int) {
-		err := wait.NoError(func() error {
+		err := wait.NoError(func() er.R {
 			ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 			req := &lnrpc.ChanBackupExportRequest{}
 			chanSnapshot, err := carol.ExportAllChannelBackups(
 				ctxt, req,
 			)
 			if err != nil {
-				return fmt.Errorf("unable to export channel "+
+				return er.Errorf("unable to export channel "+
 					"backup: %v", err)
 			}
 
 			if chanSnapshot.SingleChanBackups == nil {
-				return fmt.Errorf("single chan backups not " +
+				return er.Errorf("single chan backups not " +
 					"populated")
 			}
 
 			backups := chanSnapshot.SingleChanBackups.ChanBackups
 			if len(backups) != numSingles {
-				return fmt.Errorf("expected %v singles, "+
+				return er.Errorf("expected %v singles, "+
 					"got %v", len(backups), numSingles)
 			}
 
@@ -733,7 +734,7 @@ func testExportChannelBackup(net *lntest.NetworkHarness, t *harnessTest) {
 // nodeRestorer is a function closure that allows each chanRestoreTestCase to
 // control exactly *how* the prior node is restored. This might be using an
 // backup obtained over RPC, or the file system, etc.
-type nodeRestorer func() (*lntest.HarnessNode, error)
+type nodeRestorer func() (*lntest.HarnessNode, er.R)
 
 // chanRestoreTestCase describes a test case for an end to end SCB restoration
 // work flow. One node will start from scratch using an existing SCB. At the
@@ -772,7 +773,7 @@ type chanRestoreTestCase struct {
 	// has been fully restored itself.
 	restoreMethod func(oldNode *lntest.HarnessNode,
 		backupFilePath string,
-		mnemonic []string) (nodeRestorer, error)
+		mnemonic []string) (nodeRestorer, er.R)
 }
 
 // testChanRestoreScenario executes a chanRestoreTestCase from end to end,
@@ -853,13 +854,13 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 		}
 
 		// Give the pubsub some time to update the channel backup.
-		err = wait.NoError(func() error {
+		err = wait.NoError(func() er.R {
 			fi, err := os.Stat(dave.ChanBackupPath())
 			if err != nil {
 				return err
 			}
 			if fi.Size() <= chanbackup.NilMultiSizePacked {
-				return fmt.Errorf("backup file empty")
+				return er.Errorf("backup file empty")
 			}
 			return nil
 		}, defaultTimeout)
@@ -945,7 +946,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	// To make sure the channel state is advanced correctly if the channel
 	// peer is not online at first, we also shutdown Carol.
 	restartCarol, err := net.SuspendNode(carol)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Next, we'll make a new Dave and start the bulk of our recovery
 	// workflow.
@@ -955,7 +956,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	}
 
 	// First ensure that the on-chain balance is restored.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		balReq := &lnrpc.WalletBalanceRequest{}
 		daveBalResp, err := dave.WalletBalance(ctxt, balReq)
@@ -965,7 +966,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 
 		daveBal := daveBalResp.ConfirmedBalance
 		if daveBal <= 0 {
-			return fmt.Errorf("expected positive balance, had %v",
+			return er.Errorf("expected positive balance, had %v",
 				daveBal)
 		}
 
@@ -985,7 +986,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	pendingChanResp, err := dave.PendingChannels(
 		ctxt, &lnrpc.PendingChannelsRequest{},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We also want to make sure we cannot force close in this state. That
 	// would get the state machine in a weird state.
@@ -1006,9 +1007,9 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 
 	// We don't get an error directly but only when reading the first
 	// message of the stream.
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	_, err = resp.Recv()
-	require.Error(t.t, err)
+	util.RequireErr(t.t, err)
 	require.Contains(t.t, err.Error(), "cannot close channel with state: ")
 	require.Contains(t.t, err.Error(), "ChanStatusRestored")
 
@@ -1020,7 +1021,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	// in the correct state even without the remote peer telling us so,
 	// let's start up Carol again.
 	err = restartCarol()
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that we have our new node up, we expect that it'll re-connect to
 	// Carol automatically based on the restored backup.
@@ -1046,7 +1047,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 // trigger a SCB restore using the RPC interface.
 func chanRestoreViaRPC(net *lntest.NetworkHarness,
 	password []byte, mnemonic []string,
-	multi []byte) (nodeRestorer, error) {
+	multi []byte) (nodeRestorer, er.R) {
 
 	backup := &lnrpc.RestoreChanBackupRequest_MultiChanBackup{
 		MultiChanBackup: multi,
@@ -1054,12 +1055,12 @@ func chanRestoreViaRPC(net *lntest.NetworkHarness,
 
 	ctxb := context.Background()
 
-	return func() (*lntest.HarnessNode, error) {
+	return func() (*lntest.HarnessNode, er.R) {
 		newNode, err := net.RestoreNodeWithSeed(
 			"dave", nil, password, mnemonic, 1000, nil,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to "+
+			return nil, er.Errorf("unable to "+
 				"restore node: %v", err)
 		}
 
@@ -1069,7 +1070,7 @@ func chanRestoreViaRPC(net *lntest.NetworkHarness,
 			},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable "+
+			return nil, er.Errorf("unable "+
 				"to restore backups: %v", err)
 		}
 

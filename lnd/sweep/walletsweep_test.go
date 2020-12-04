@@ -120,7 +120,7 @@ func newMockUtxoSource(utxos []*lnwallet.Utxo) *mockUtxoSource {
 }
 
 func (m *mockUtxoSource) ListUnspentWitness(minConfs int32,
-	maxConfs int32) ([]*lnwallet.Utxo, error) {
+	maxConfs int32) ([]*lnwallet.Utxo, er.R) {
 
 	return m.outputs, nil
 }
@@ -129,13 +129,13 @@ type mockCoinSelectionLocker struct {
 	fail bool
 }
 
-func (m *mockCoinSelectionLocker) WithCoinSelectLock(f func() error) error {
+func (m *mockCoinSelectionLocker) WithCoinSelectLock(f func() error) er.R {
 	if err := f(); err != nil {
 		return err
 	}
 
 	if m.fail {
-		return fmt.Errorf("kek")
+		return er.Errorf("kek")
 	}
 
 	return nil

@@ -75,11 +75,11 @@ func newMockChannelGraphTimeSeries(
 	}
 }
 
-func (m *mockChannelGraphTimeSeries) HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, error) {
+func (m *mockChannelGraphTimeSeries) HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, er.R) {
 	return &m.highestID, nil
 }
 func (m *mockChannelGraphTimeSeries) UpdatesInHorizon(chain chainhash.Hash,
-	startTime time.Time, endTime time.Time) ([]lnwire.Message, error) {
+	startTime time.Time, endTime time.Time) ([]lnwire.Message, er.R) {
 
 	m.horizonReq <- horizonQuery{
 		chain, startTime, endTime,
@@ -88,28 +88,28 @@ func (m *mockChannelGraphTimeSeries) UpdatesInHorizon(chain chainhash.Hash,
 	return <-m.horizonResp, nil
 }
 func (m *mockChannelGraphTimeSeries) FilterKnownChanIDs(chain chainhash.Hash,
-	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error) {
+	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, er.R) {
 
 	m.filterReq <- superSet
 
 	return <-m.filterResp, nil
 }
 func (m *mockChannelGraphTimeSeries) FilterChannelRange(chain chainhash.Hash,
-	startHeight, endHeight uint32) ([]lnwire.ShortChannelID, error) {
+	startHeight, endHeight uint32) ([]lnwire.ShortChannelID, er.R) {
 
 	m.filterRangeReqs <- filterRangeReq{startHeight, endHeight}
 
 	return <-m.filterRangeResp, nil
 }
 func (m *mockChannelGraphTimeSeries) FetchChanAnns(chain chainhash.Hash,
-	shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, error) {
+	shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, er.R) {
 
 	m.annReq <- shortChanIDs
 
 	return <-m.annResp, nil
 }
 func (m *mockChannelGraphTimeSeries) FetchChanUpdates(chain chainhash.Hash,
-	shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, error) {
+	shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, er.R) {
 
 	m.updateReq <- shortChanID
 
@@ -149,11 +149,11 @@ func newTestSyncer(hID lnwire.ShortChannelID,
 		batchSize:      chunkSize,
 		noSyncChannels: !syncChannels,
 		noReplyQueries: !replyQueries,
-		sendToPeer: func(msgs ...lnwire.Message) error {
+		sendToPeer: func(msgs ...lnwire.Message) er.R {
 			msgChan <- msgs
 			return nil
 		},
-		sendToPeerSync: func(msgs ...lnwire.Message) error {
+		sendToPeerSync: func(msgs ...lnwire.Message) er.R {
 			msgChan <- msgs
 			return nil
 		},
@@ -300,14 +300,14 @@ func TestGossipSyncerFilterGossipMsgsAllInMemory(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query received")
+			errCh <- er.New("no query received")
 			return
 		case query := <-chanSeries.updateReq:
 			// It should be asking for the chan updates of short
 			// chan ID 25.
 			expectedID := lnwire.NewShortChanIDFromInt(25)
 			if expectedID != query {
-				errCh <- fmt.Errorf("wrong query id: expected %v, got %v",
+				errCh <- er.Errorf("wrong query id: expected %v, got %v",
 					expectedID, query)
 				return
 			}
@@ -385,7 +385,7 @@ func TestGossipSyncerApplyNoHistoricalGossipFilter(t *testing.T) {
 
 		// Unexpected query received.
 		case <-chanSeries.horizonReq:
-			errChan <- errors.New("chan series should not have been " +
+			errChan <- er.New("chan series should not have been " +
 				"queried")
 		}
 	}()
@@ -435,13 +435,13 @@ func TestGossipSyncerApplyGossipFilter(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query recvd")
+			errCh <- er.New("no query recvd")
 			return
 		case query := <-chanSeries.horizonReq:
 			// The syncer should have translated the time range
 			// into the proper star time.
 			if remoteHorizon.FirstTimestamp != uint32(query.start.Unix()) {
-				errCh <- fmt.Errorf("wrong query stamp: expected %v, got %v",
+				errCh <- er.Errorf("wrong query stamp: expected %v, got %v",
 					remoteHorizon.FirstTimestamp, query.start)
 				return
 			}
@@ -483,13 +483,13 @@ func TestGossipSyncerApplyGossipFilter(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query recvd")
+			errCh <- er.New("no query recvd")
 			return
 		case query := <-chanSeries.horizonReq:
 			// The syncer should have translated the time range
 			// into the proper star time.
 			if remoteHorizon.FirstTimestamp != uint32(query.start.Unix()) {
-				errCh <- fmt.Errorf("wrong query stamp: expected %v, got %v",
+				errCh <- er.Errorf("wrong query stamp: expected %v, got %v",
 					remoteHorizon.FirstTimestamp, query.start)
 				return
 			}
@@ -675,12 +675,12 @@ func TestGossipSyncerReplyShortChanIDs(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query recvd")
+			errCh <- er.New("no query recvd")
 			return
 		case chanIDs := <-chanSeries.annReq:
 			// The set of chan ID's should match exactly.
 			if !reflect.DeepEqual(chanIDs, queryChanIDs) {
-				errCh <- fmt.Errorf("wrong chan IDs: expected %v, got %v",
+				errCh <- er.Errorf("wrong chan IDs: expected %v, got %v",
 					queryChanIDs, chanIDs)
 				return
 			}
@@ -797,14 +797,14 @@ func TestGossipSyncerReplyChanRangeQuery(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query recvd")
+			errCh <- er.New("no query recvd")
 			return
 		case filterReq := <-chanSeries.filterRangeReqs:
 			// We should be querying for block 100 to 150.
 			if filterReq.startHeight != startingBlockHeight &&
 				filterReq.endHeight != endingBlockHeight {
 
-				errCh <- fmt.Errorf("wrong height range: %v",
+				errCh <- er.Errorf("wrong height range: %v",
 					spew.Sdump(filterReq))
 				return
 			}
@@ -1003,7 +1003,7 @@ func TestGossipSyncerReplyChanRangeQueryBlockRange(t *testing.T) {
 	go func() {
 		for _, query := range queryReqs {
 			if err := syncer.replyChanRangeQuery(query); err != nil {
-				errCh <- fmt.Errorf("unable to issue query: %v", err)
+				errCh <- er.Errorf("unable to issue query: %v", err)
 				return
 			}
 		}
@@ -1053,12 +1053,12 @@ func TestGossipSyncerReplyChanRangeQueryNoNewChans(t *testing.T) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query recvd")
+			errCh <- er.New("no query recvd")
 			return
 		case filterReq := <-chanSeries.filterRangeReqs:
 			// We should be querying for block 100 to 150.
 			if filterReq.startHeight != 100 && filterReq.endHeight != 150 {
-				errCh <- fmt.Errorf("wrong height range: %v",
+				errCh <- er.Errorf("wrong height range: %v",
 					spew.Sdump(filterReq))
 				return
 			}
@@ -1278,14 +1278,14 @@ func testGossipSyncerProcessChanRangeReply(t *testing.T, legacy bool) {
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
-			errCh <- errors.New("no query received")
+			errCh <- er.New("no query received")
 			return
 
 		case req := <-chanSeries.filterReq:
 			// We should get a request for the entire range of short
 			// chan ID's.
 			if !reflect.DeepEqual(expectedReq, req) {
-				errCh <- fmt.Errorf("wrong request: expected %v, got %v",
+				errCh <- er.Errorf("wrong request: expected %v, got %v",
 					expectedReq, req)
 				return
 			}

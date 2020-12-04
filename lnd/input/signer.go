@@ -1,6 +1,7 @@
 package input
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -15,7 +16,7 @@ type Signer interface {
 	//
 	// NOTE: The resulting signature should be void of a sighash byte.
 	SignOutputRaw(tx *wire.MsgTx,
-		signDesc *SignDescriptor) (Signature, error)
+		signDesc *SignDescriptor) (Signature, er.R)
 
 	// ComputeInputScript generates a complete InputIndex for the passed
 	// transaction with the signature as defined within the passed
@@ -26,7 +27,7 @@ type Signer interface {
 	// NOTE: This method will ignore any tweak parameters set within the
 	// passed SignDescriptor as it assumes a set of typical script
 	// templates (p2wkh, np2wkh, etc).
-	ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor) (*Script, error)
+	ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor) (*Script, er.R)
 }
 
 // Script represents any script inputs required to redeem a previous

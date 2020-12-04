@@ -23,18 +23,18 @@ func NewOutPointFromProto(op *lnrpc.OutPoint) OutPoint {
 
 // NewProtoOutPoint parses an OutPoint into its corresponding lnrpc.OutPoint
 // type.
-func NewProtoOutPoint(op string) (*lnrpc.OutPoint, error) {
+func NewProtoOutPoint(op string) (*lnrpc.OutPoint, er.R) {
 	parts := strings.Split(op, ":")
 	if len(parts) != 2 {
-		return nil, errors.New("outpoint should be of the form txid:index")
+		return nil, er.New("outpoint should be of the form txid:index")
 	}
 	txid := parts[0]
 	if hex.DecodedLen(len(txid)) != chainhash.HashSize {
-		return nil, fmt.Errorf("invalid hex-encoded txid %v", txid)
+		return nil, er.Errorf("invalid hex-encoded txid %v", txid)
 	}
 	outputIndex, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return nil, fmt.Errorf("invalid output index: %v", err)
+		return nil, er.Errorf("invalid output index: %v", err)
 	}
 	return &lnrpc.OutPoint{
 		TxidStr:     txid,

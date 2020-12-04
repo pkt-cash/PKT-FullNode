@@ -3,6 +3,8 @@ package chanacceptor
 import (
 	"sync"
 	"sync/atomic"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ChainedAcceptor represents a conjunction of ChannelAcceptor results.
@@ -72,14 +74,14 @@ func (c *ChainedAcceptor) Accept(req *ChannelAcceptRequest) *ChannelAcceptRespon
 		// set each value on our final response if it has not been set
 		// yet, and allow duplicate sets if the value is the same. If
 		// we cannot set a field, we return an error response.
-		var err error
+		var err er.R
 		finalResp, err = mergeResponse(finalResp, *acceptorResponse)
 		if err != nil {
 			log.Errorf("response for: %x has inconsistent values: %v",
 				req.OpenChanMsg.PendingChannelID, err)
 
 			return NewChannelAcceptResponse(
-				false, errChannelRejected, nil, 0, 0,
+				false, errChannelRejected.Default(), nil, 0, 0,
 				0, 0, 0, 0,
 			)
 		}

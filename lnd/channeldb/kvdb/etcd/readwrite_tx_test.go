@@ -5,6 +5,8 @@ package etcd
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/stretchr/testify/require"
 )
@@ -16,10 +18,10 @@ func TestTxManualCommit(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	tx, err := db.BeginReadWriteTx()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.NotNil(t, tx)
 
 	committed := false
@@ -29,17 +31,17 @@ func TestTxManualCommit(t *testing.T) {
 	})
 
 	apple, err := tx.CreateTopLevelBucket([]byte("apple"))
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.NotNil(t, apple)
-	require.NoError(t, apple.Put([]byte("testKey"), []byte("testVal")))
+	util.RequireNoErr(t, apple.Put([]byte("testKey"), []byte("testVal")))
 
 	banana, err := tx.CreateTopLevelBucket([]byte("banana"))
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.NotNil(t, banana)
-	require.NoError(t, banana.Put([]byte("testKey"), []byte("testVal")))
-	require.NoError(t, tx.DeleteTopLevelBucket([]byte("banana")))
+	util.RequireNoErr(t, banana.Put([]byte("testKey"), []byte("testVal")))
+	util.RequireNoErr(t, tx.DeleteTopLevelBucket([]byte("banana")))
 
-	require.NoError(t, tx.Commit())
+	util.RequireNoErr(t, tx.Commit())
 	require.True(t, committed)
 
 	expected := map[string]string{
@@ -56,7 +58,7 @@ func TestTxRollback(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	tx, err := db.BeginReadWriteTx()
 	require.Nil(t, err)
@@ -66,10 +68,10 @@ func TestTxRollback(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, apple)
 
-	require.NoError(t, apple.Put([]byte("testKey"), []byte("testVal")))
+	util.RequireNoErr(t, apple.Put([]byte("testKey"), []byte("testVal")))
 
-	require.NoError(t, tx.Rollback())
-	require.Error(t, walletdb.ErrTxClosed, tx.Commit())
+	util.RequireNoErr(t, tx.Rollback())
+	util.RequireErr(t, walletdb.ErrTxClosed, tx.Commit())
 	require.Equal(t, map[string]string{}, f.Dump())
 }
 
@@ -80,7 +82,7 @@ func TestChangeDuringManualTx(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	tx, err := db.BeginReadWriteTx()
 	require.Nil(t, err)
@@ -90,7 +92,7 @@ func TestChangeDuringManualTx(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, apple)
 
-	require.NoError(t, apple.Put([]byte("testKey"), []byte("testVal")))
+	util.RequireNoErr(t, apple.Put([]byte("testKey"), []byte("testVal")))
 
 	// Try overwriting the bucket key.
 	f.Put(bkey("apple"), "banana")
@@ -109,16 +111,16 @@ func TestChangeDuringUpdate(t *testing.T) {
 	defer f.Cleanup()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	count := 0
 
-	err = db.Update(func(tx walletdb.ReadWriteTx) error {
+	err = db.Update(func(tx walletdb.ReadWriteTx) er.R {
 		apple, err := tx.CreateTopLevelBucket([]byte("apple"))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.NotNil(t, apple)
 
-		require.NoError(t, apple.Put([]byte("key"), []byte("value")))
+		util.RequireNoErr(t, apple.Put([]byte("key"), []byte("value")))
 
 		if count == 0 {
 			f.Put(vkey("key", "apple"), "new_value")

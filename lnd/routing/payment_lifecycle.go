@@ -1,11 +1,11 @@
 package routing
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
@@ -38,7 +38,7 @@ type paymentState struct {
 // paymentState uses the passed payment to find the latest information we need
 // to act on every iteration of the payment loop.
 func (p *paymentLifecycle) paymentState(payment *channeldb.MPPayment) (
-	*paymentState, error) {
+	*paymentState, er.R) {
 
 	// Fetch the total amount and fees that has already been sent in
 	// settled and still in-flight shards.
@@ -46,7 +46,7 @@ func (p *paymentLifecycle) paymentState(payment *channeldb.MPPayment) (
 
 	// Sanity check we haven't sent a value larger than the payment amount.
 	if sentAmt > p.totalAmount {
-		return nil, fmt.Errorf("amount sent %v exceeds "+
+		return nil, er.Errorf("amount sent %v exceeds "+
 			"total amount %v", sentAmt, p.totalAmount)
 	}
 
@@ -78,7 +78,7 @@ func (p *paymentLifecycle) paymentState(payment *channeldb.MPPayment) (
 }
 
 // resumePayment resumes the paymentLifecycle from the current state.
-func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
+func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, er.R) {
 	shardHandler := &shardHandler{
 		router:      p.router,
 		paymentHash: p.paymentHash,
@@ -195,7 +195,7 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
 			continue
 
 		case <-p.router.quit:
-			return [32]byte{}, nil, ErrRouterShuttingDown
+			return [32]byte{}, nil, ErrRouterShuttingDown.Default()
 
 		// Fall through if we haven't hit our time limit.
 		default:
@@ -302,22 +302,22 @@ func (p *shardHandler) stop() {
 }
 
 // waitForShard blocks until any of the outstanding shards return.
-func (p *shardHandler) waitForShard() error {
+func (p *shardHandler) waitForShard() er.R {
 	select {
 	case err := <-p.shardErrors:
 		return err
 
 	case <-p.quit:
-		return fmt.Errorf("shard handler quitting")
+		return er.Errorf("shard handler quitting")
 
 	case <-p.router.quit:
-		return ErrRouterShuttingDown
+		return ErrRouterShuttingDown.Default()
 	}
 }
 
 // checkShards is a non-blocking method that check if any shards has finished
 // their execution.
-func (p *shardHandler) checkShards() error {
+func (p *shardHandler) checkShards() er.R {
 	for {
 		select {
 		case err := <-p.shardErrors:
@@ -326,10 +326,10 @@ func (p *shardHandler) checkShards() error {
 			}
 
 		case <-p.quit:
-			return fmt.Errorf("shard handler quitting")
+			return er.Errorf("shard handler quitting")
 
 		case <-p.router.quit:
-			return ErrRouterShuttingDown
+			return ErrRouterShuttingDown.Default()
 
 		default:
 			return nil
@@ -358,7 +358,7 @@ type launchOutcome struct {
 // was not sent onto the network, so no result will be available in the future
 // for it.
 func (p *shardHandler) launchShard(rt *route.Route) (*channeldb.HTLCAttemptInfo,
-	*launchOutcome, error) {
+	*launchOutcome, er.R) {
 
 	// Using the route received from the payment session, create a new
 	// shard to send.
@@ -462,7 +462,7 @@ func (p *shardHandler) collectResultAsync(attempt *channeldb.HTLCAttemptInfo) {
 // from the Switch, then records the attempt outcome with the control tower. A
 // shardResult is returned, indicating the final outcome of this HTLC attempt.
 func (p *shardHandler) collectResult(attempt *channeldb.HTLCAttemptInfo) (
-	*shardResult, error) {
+	*shardResult, er.R) {
 
 	// Regenerate the circuit for this attempt.
 	_, circuit, err := generateSphinxPacket(
@@ -524,14 +524,14 @@ func (p *shardHandler) collectResult(attempt *channeldb.HTLCAttemptInfo) (
 	select {
 	case result, ok = <-resultChan:
 		if !ok {
-			return nil, htlcswitch.ErrSwitchExiting
+			return nil, htlcswitch.ErrSwitchExiting.Default()
 		}
 
 	case <-p.router.quit:
-		return nil, ErrRouterShuttingDown
+		return nil, ErrRouterShuttingDown.Default()
 
 	case <-p.quit:
-		return nil, fmt.Errorf("shard handler exiting")
+		return nil, er.Errorf("shard handler exiting")
 	}
 
 	// In case of a payment failure, fail the attempt with the control
@@ -583,7 +583,7 @@ func (p *shardHandler) collectResult(attempt *channeldb.HTLCAttemptInfo) (
 // createNewPaymentAttempt creates a new payment attempt from the given route.
 func (p *shardHandler) createNewPaymentAttempt(rt *route.Route) (
 	lnwire.ShortChannelID, *lnwire.UpdateAddHTLC,
-	*channeldb.HTLCAttemptInfo, error) {
+	*channeldb.HTLCAttemptInfo, er.R) {
 
 	// Generate a new key to be used for this attempt.
 	sessionKey, err := generateNewSessionKey()
@@ -640,7 +640,7 @@ func (p *shardHandler) createNewPaymentAttempt(rt *route.Route) (
 // sendPaymentAttempt attempts to send the current attempt to the switch.
 func (p *shardHandler) sendPaymentAttempt(
 	attempt *channeldb.HTLCAttemptInfo, firstHop lnwire.ShortChannelID,
-	htlcAdd *lnwire.UpdateAddHTLC) error {
+	htlcAdd *lnwire.UpdateAddHTLC) er.R {
 
 	log.Tracef("Attempting to send payment %v (pid=%v), "+
 		"using route: %v", p.paymentHash, attempt.AttemptID,
@@ -674,7 +674,7 @@ func (p *shardHandler) sendPaymentAttempt(
 // considered a terminal error. Terminal errors will be recorded with the
 // control tower.
 func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
-	sendErr error) error {
+	sendErr error) er.R {
 
 	reason := p.router.processSendError(
 		attempt.AttemptID, &attempt.Route, sendErr,
@@ -696,7 +696,7 @@ func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
 
 // failAttempt calls control tower to fail the current payment attempt.
 func (p *shardHandler) failAttempt(attempt *channeldb.HTLCAttemptInfo,
-	sendError error) (*channeldb.HTLCAttempt, error) {
+	sendError error) (*channeldb.HTLCAttempt, er.R) {
 
 	log.Warnf("Attempt %v for payment %v failed: %v", attempt.AttemptID,
 		p.paymentHash, sendError)

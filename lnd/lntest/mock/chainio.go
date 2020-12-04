@@ -13,13 +13,13 @@ type ChainIO struct {
 }
 
 // GetBestBlock currently returns dummy values.
-func (c *ChainIO) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (c *ChainIO) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	return chaincfg.TestNet3Params.GenesisHash, c.BestHeight, nil
 }
 
 // GetUtxo currently returns dummy values.
 func (c *ChainIO) GetUtxo(op *wire.OutPoint, _ []byte,
-	heightHint uint32, _ <-chan struct{}) (*wire.TxOut, error) {
+	heightHint uint32, _ <-chan struct{}) (*wire.TxOut, er.R) {
 
 	return nil, nil
 }
@@ -30,6 +30,6 @@ func (c *ChainIO) GetBlockHash(blockHeight int64) (*chainhash.Hash, er.R) {
 }
 
 // GetBlock currently returns dummy values.
-func (c *ChainIO) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (c *ChainIO) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	return nil, nil
 }

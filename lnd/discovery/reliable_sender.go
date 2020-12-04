@@ -3,6 +3,7 @@ package discovery
 import (
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -73,7 +74,7 @@ func newReliableSender(cfg *reliableSenderCfg) *reliableSender {
 }
 
 // Start spawns message handlers for any peers with pending messages.
-func (s *reliableSender) Start() error {
+func (s *reliableSender) Start() er.R {
 	var err error
 	s.start.Do(func() {
 		err = s.resendPendingMsgs()
@@ -93,7 +94,7 @@ func (s *reliableSender) Stop() {
 // event that the peer is currently offline, this will only write the message to
 // disk. Once the peer reconnects, this message, along with any others pending,
 // will be sent to the peer.
-func (s *reliableSender) sendMessage(msg lnwire.Message, peerPubKey [33]byte) error {
+func (s *reliableSender) sendMessage(msg lnwire.Message, peerPubKey [33]byte) er.R {
 	// We'll start by persisting the message to disk. This allows us to
 	// resend the message upon restarts and peer reconnections.
 	if err := s.cfg.MessageStore.AddMessage(msg, peerPubKey); err != nil {
@@ -122,7 +123,7 @@ spawnHandler:
 	case <-msgHandler.done:
 		goto spawnHandler
 	case <-s.quit:
-		return ErrGossiperShuttingDown
+		return ErrGossiperShuttingDown.Default()
 	}
 
 	return nil
@@ -313,7 +314,7 @@ out:
 
 // resendPendingMsgs retrieves and sends all of the messages within the message
 // store that should be reliably sent to their respective peers.
-func (s *reliableSender) resendPendingMsgs() error {
+func (s *reliableSender) resendPendingMsgs() er.R {
 	// Fetch all of the peers for which we have pending messages for and
 	// spawn a peerMsgHandler for each. Once the peer is seen as online, all
 	// of the pending messages will be sent.

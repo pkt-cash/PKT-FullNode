@@ -5,7 +5,7 @@ import (
 )
 
 // errInvalidSize is returned when an invalid size for a buffer is provided.
-var errInvalidSize = errors.New("buffer size must be > 0")
+var errInvalidSize = er.New("buffer size must be > 0")
 
 // CircularBuffer is a buffer which retains a set of values in memory, and
 // overwrites the oldest item in the buffer when a new item needs to be
@@ -21,7 +21,7 @@ type CircularBuffer struct {
 
 // NewCircularBuffer returns a new circular buffer with the size provided. It
 // will fail if a zero or negative size parameter is provided.
-func NewCircularBuffer(size int) (*CircularBuffer, error) {
+func NewCircularBuffer(size int) (*CircularBuffer, er.R) {
 	if size <= 0 {
 		return nil, errInvalidSize
 	}

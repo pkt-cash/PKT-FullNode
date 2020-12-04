@@ -2,13 +2,13 @@ package brontide
 
 import (
 	"bytes"
-	"io"
 	"math"
 	"net"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
@@ -40,10 +40,10 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 
 	ipAddr := netAddr.Address.String()
 	var conn net.Conn
-	var err error
+	var err er.R
 	conn, err = dialer("tcp", ipAddr, timeout)
 	if err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	b := &Conn{
@@ -55,7 +55,7 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	actOne, err := b.noise.GenActOne()
 	if err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 	if _, err := conn.Write(actOne[:]); err != nil {
 		b.conn.Close()
@@ -65,10 +65,10 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	// We'll ensure that we get ActTwo from the remote peer in a timely
 	// manner. If they don't respond within 1s, then we'll kill the
 	// connection.
-	err = conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
+	err = er.E(conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout)))
 	if err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	// If the first act was successful (we know that address is actually
@@ -76,13 +76,13 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	// send our static public key to the remote peer with strong forward
 	// secrecy.
 	var actTwo [ActTwoSize]byte
-	if _, err := io.ReadFull(conn, actTwo[:]); err != nil {
+	if _, err := util.ReadFull(conn, actTwo[:]); err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 	if err := b.noise.RecvActTwo(actTwo); err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	// Finally, complete the handshake by sending over our encrypted static
@@ -90,7 +90,7 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 	actThree, err := b.noise.GenActThree()
 	if err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 	if _, err := conn.Write(actThree[:]); err != nil {
 		b.conn.Close()
@@ -99,10 +99,10 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 
 	// We'll reset the deadline as it's no longer critical beyond the
 	// initial handshake.
-	err = conn.SetReadDeadline(time.Time{})
+	err = er.E(conn.SetReadDeadline(time.Time{}))
 	if err != nil {
 		b.conn.Close()
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	return b, nil
@@ -116,7 +116,7 @@ func Dial(local keychain.SingleKeyECDH, netAddr *lnwire.NetAddress,
 // adversarial and induce long delays. If the caller needs to set read deadlines
 // appropriately, it is preferred that they use the split ReadNextHeader and
 // ReadNextBody methods so that the deadlines can be set appropriately on each.
-func (c *Conn) ReadNextMessage() ([]byte, error) {
+func (c *Conn) ReadNextMessage() ([]byte, er.R) {
 	return c.noise.ReadMessage(c.conn)
 }
 
@@ -124,7 +124,7 @@ func (c *Conn) ReadNextMessage() ([]byte, error) {
 // stream. This function will block until the read of the header succeeds and
 // return the packet length (including MAC overhead) that is expected from the
 // subsequent call to ReadNextBody.
-func (c *Conn) ReadNextHeader() (uint32, error) {
+func (c *Conn) ReadNextHeader() (uint32, er.R) {
 	return c.noise.ReadHeader(c.conn)
 }
 
@@ -132,7 +132,7 @@ func (c *Conn) ReadNextHeader() (uint32, error) {
 // brontide stream. This function will block until the read of the body succeeds
 // and return the decrypted payload. The provided buffer MUST be the packet
 // length returned by the preceding call to ReadNextHeader.
-func (c *Conn) ReadNextBody(buf []byte) ([]byte, error) {
+func (c *Conn) ReadNextBody(buf []byte) ([]byte, er.R) {
 	return c.noise.ReadBody(c.conn, buf)
 }
 
@@ -150,7 +150,7 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 	if c.readBuf.Len() == 0 {
 		plaintext, err := c.noise.ReadMessage(c.conn)
 		if err != nil {
-			return 0, err
+			return 0, er.Native(err)
 		}
 
 		if _, err := c.readBuf.Write(plaintext); err != nil {
@@ -166,15 +166,16 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 // SetDeadline and SetWriteDeadline.
 //
 // Part of the net.Conn interface.
-func (c *Conn) Write(b []byte) (n int, err error) {
+func (c *Conn) Write(b []byte) (int, error) {
 	// If the message doesn't require any chunking, then we can go ahead
 	// with a single write.
 	if len(b) <= math.MaxUint16 {
-		err = c.noise.WriteMessage(b)
+		err := c.noise.WriteMessage(b)
 		if err != nil {
-			return 0, err
+			return 0, er.Native(err)
 		}
-		return c.noise.Flush(c.conn)
+		i, e := c.noise.Flush(c.conn)
+		return i, er.Native(e)
 	}
 
 	// If we need to split the message into fragments, then we'll write
@@ -194,13 +195,13 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 		// counter and next chunk size.
 		chunk := b[bytesWritten : bytesWritten+chunkSize]
 		if err := c.noise.WriteMessage(chunk); err != nil {
-			return bytesWritten, err
+			return bytesWritten, er.Native(err)
 		}
 
 		n, err := c.noise.Flush(c.conn)
 		bytesWritten += n
 		if err != nil {
-			return bytesWritten, err
+			return bytesWritten, er.Native(err)
 		}
 	}
 
@@ -214,7 +215,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 //
 // NOTE: This DOES NOT write the message to the wire, it should be followed by a
 // call to Flush to ensure the message is written.
-func (c *Conn) WriteMessage(b []byte) error {
+func (c *Conn) WriteMessage(b []byte) er.R {
 	return c.noise.WriteMessage(b)
 }
 
@@ -226,7 +227,7 @@ func (c *Conn) WriteMessage(b []byte) error {
 // does not account for the overhead of the header or MACs.
 //
 // NOTE: It is safe to call this method again iff a timeout error is returned.
-func (c *Conn) Flush() (int, error) {
+func (c *Conn) Flush() (int, er.R) {
 	return c.noise.Flush(c.conn)
 }
 

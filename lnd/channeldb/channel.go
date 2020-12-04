@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -126,52 +127,60 @@ var (
 var (
 	// ErrNoCommitmentsFound is returned when a channel has not set
 	// commitment states.
-	ErrNoCommitmentsFound = fmt.Errorf("no commitments found")
+	ErrNoCommitmentsFound = Err.CodeWithDetail("ErrNoCommitmentsFound",
+		"no commitments found")
 
 	// ErrNoChanInfoFound is returned when a particular channel does not
 	// have any channels state.
-	ErrNoChanInfoFound = fmt.Errorf("no chan info found")
+	ErrNoChanInfoFound = Err.CodeWithDetail("ErrNoChanInfoFound",
+		"no chan info found")
 
 	// ErrNoRevocationsFound is returned when revocation state for a
 	// particular channel cannot be found.
-	ErrNoRevocationsFound = fmt.Errorf("no revocations found")
+	ErrNoRevocationsFound = Err.CodeWithDetail("ErrNoRevocationsFound",
+		"no revocations found")
 
 	// ErrNoPendingCommit is returned when there is not a pending
 	// commitment for a remote party. A new commitment is written to disk
 	// each time we write a new state in order to be properly fault
 	// tolerant.
-	ErrNoPendingCommit = fmt.Errorf("no pending commits found")
+	ErrNoPendingCommit = Err.CodeWithDetail("ErrNoPendingCommit",
+		"no pending commits found")
 
 	// ErrInvalidCircuitKeyLen signals that a circuit key could not be
 	// decoded because the byte slice is of an invalid length.
-	ErrInvalidCircuitKeyLen = fmt.Errorf(
+	ErrInvalidCircuitKeyLen = Err.CodeWithDetail("ErrInvalidCircuitKeyLen",
 		"length of serialized circuit key must be 16 bytes")
 
 	// ErrNoCommitPoint is returned when no data loss commit point is found
 	// in the database.
-	ErrNoCommitPoint = fmt.Errorf("no commit point found")
+	ErrNoCommitPoint = Err.CodeWithDetail("ErrNoCommitPoint",
+		"no commit point found")
 
 	// ErrNoCloseTx is returned when no closing tx is found for a channel
 	// in the state CommitBroadcasted.
-	ErrNoCloseTx = fmt.Errorf("no closing tx found")
+	ErrNoCloseTx = Err.CodeWithDetail("ErrNoCloseTx",
+		"no closing tx found")
 
 	// ErrNoRestoredChannelMutation is returned when a caller attempts to
 	// mutate a channel that's been recovered.
-	ErrNoRestoredChannelMutation = fmt.Errorf("cannot mutate restored " +
-		"channel state")
+	ErrNoRestoredChannelMutation = Err.CodeWithDetail("ErrNoRestoredChannelMutation",
+		"cannot mutate restored channel state")
 
 	// ErrChanBorked is returned when a caller attempts to mutate a borked
 	// channel.
-	ErrChanBorked = fmt.Errorf("cannot mutate borked channel")
+	ErrChanBorked = Err.CodeWithDetail("ErrChanBorked",
+		"cannot mutate borked channel")
 
 	// errLogEntryNotFound is returned when we cannot find a log entry at
 	// the height requested in the revocation log.
-	errLogEntryNotFound = fmt.Errorf("log entry not found")
+	errLogEntryNotFound = Err.CodeWithDetail("errLogEntryNotFound",
+		"log entry not found")
 
 	// errHeightNotFound is returned when a query for channel balances at
 	// a height that we have not reached yet is made.
-	errHeightNotReached = fmt.Errorf("height requested greater than " +
-		"current commit height")
+	errHeightNotReached = Err.CodeWithDetail("errHeightNotReached",
+		"height requested greater than current commit height")
 )
 
 // ChannelType is an enum-like type that describes one of several possible
@@ -696,7 +705,7 @@ func (c *OpenChannel) ChanStatus() ChannelStatus {
 
 // ApplyChanStatus allows the caller to modify the internal channel state in a
 // thead-safe manner.
-func (c *OpenChannel) ApplyChanStatus(status ChannelStatus) error {
+func (c *OpenChannel) ApplyChanStatus(status ChannelStatus) er.R {
 	c.Lock()
 	defer c.Unlock()
 
@@ -706,7 +715,7 @@ func (c *OpenChannel) ApplyChanStatus(status ChannelStatus) error {
 // ClearChanStatus allows the caller to clear a particular channel status from
 // the primary channel status bit field. After this method returns, a call to
 // HasChanStatus(status) should return false.
-func (c *OpenChannel) ClearChanStatus(status ChannelStatus) error {
+func (c *OpenChannel) ClearChanStatus(status ChannelStatus) er.R {
 	c.Lock()
 	defer c.Unlock()
 
@@ -738,11 +747,11 @@ func (c *OpenChannel) hasChanStatus(status ChannelStatus) bool {
 // TODO: the name of this function should be changed to reflect the fact that
 // it is not only refreshing the short channel id but all the channel state.
 // maybe Refresh/Reload?
-func (c *OpenChannel) RefreshShortChanID() error {
+func (c *OpenChannel) RefreshShortChanID() er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -753,7 +762,7 @@ func (c *OpenChannel) RefreshShortChanID() error {
 		// We'll re-populating the in-memory channel with the info
 		// fetched from disk.
 		if err := fetchChanInfo(chanBucket, c); err != nil {
-			return fmt.Errorf("unable to fetch chan info: %v", err)
+			return er.Errorf("unable to fetch chan info: %v", err)
 		}
 
 		return nil
@@ -769,13 +778,13 @@ func (c *OpenChannel) RefreshShortChanID() error {
 // channel's data resides in given: the public key for the node, the outpoint,
 // and the chainhash that the channel resides on.
 func fetchChanBucket(tx kvdb.RTx, nodeKey *btcec.PublicKey,
-	outPoint *wire.OutPoint, chainHash chainhash.Hash) (kvdb.RBucket, error) {
+	outPoint *wire.OutPoint, chainHash chainhash.Hash) (kvdb.RBucket, er.R) {
 
 	// First fetch the top level bucket which stores all data related to
 	// current, active channels.
 	openChanBucket := tx.ReadBucket(openChannelBucket)
 	if openChanBucket == nil {
-		return nil, ErrNoChanDBExists
+		return nil, ErrNoChanDBExists.Default()
 	}
 
 	// TODO(roasbeef): CreateTopLevelBucket on the interface isn't like
@@ -786,14 +795,14 @@ func fetchChanBucket(tx kvdb.RTx, nodeKey *btcec.PublicKey,
 	nodePub := nodeKey.SerializeCompressed()
 	nodeChanBucket := openChanBucket.NestedReadBucket(nodePub)
 	if nodeChanBucket == nil {
-		return nil, ErrNoActiveChannels
+		return nil, ErrNoActiveChannels.Default()
 	}
 
 	// We'll then recurse down an additional layer in order to fetch the
 	// bucket for this particular chain.
 	chainBucket := nodeChanBucket.NestedReadBucket(chainHash[:])
 	if chainBucket == nil {
-		return nil, ErrNoActiveChannels
+		return nil, ErrNoActiveChannels.Default()
 	}
 
 	// With the bucket for the node and chain fetched, we can now go down
@@ -804,7 +813,7 @@ func fetchChanBucket(tx kvdb.RTx, nodeKey *btcec.PublicKey,
 	}
 	chanBucket := chainBucket.NestedReadBucket(chanPointBuf.Bytes())
 	if chanBucket == nil {
-		return nil, ErrChannelNotFound
+		return nil, ErrChannelNotFound.Default()
 	}
 
 	return chanBucket, nil
@@ -815,7 +824,7 @@ func fetchChanBucket(tx kvdb.RTx, nodeKey *btcec.PublicKey,
 // and the chainhash that the channel resides on. This differs from
 // fetchChanBucket in that it returns a writeable bucket.
 func fetchChanBucketRw(tx kvdb.RwTx, nodeKey *btcec.PublicKey, // nolint:interfacer
-	outPoint *wire.OutPoint, chainHash chainhash.Hash) (kvdb.RwBucket, error) {
+	outPoint *wire.OutPoint, chainHash chainhash.Hash) (kvdb.RwBucket, er.R) {
 
 	readBucket, err := fetchChanBucket(tx, nodeKey, outPoint, chainHash)
 	if err != nil {
@@ -827,7 +836,7 @@ func fetchChanBucketRw(tx kvdb.RwTx, nodeKey *btcec.PublicKey, // nolint:interfa
 
 // fullSync syncs the contents of an OpenChannel while re-using an existing
 // database transaction.
-func (c *OpenChannel) fullSync(tx kvdb.RwTx) error {
+func (c *OpenChannel) fullSync(tx kvdb.RwTx) er.R {
 	// First fetch the top level bucket which stores all data related to
 	// current, active channels.
 	openChanBucket, err := tx.CreateTopLevelBucket(openChannelBucket)
@@ -863,7 +872,7 @@ func (c *OpenChannel) fullSync(tx kvdb.RwTx) error {
 	case kvdb.ErrBucketExists.Is(err):
 		// If this channel already exists, then in order to avoid
 		// overriding it, we'll return an error back up to the caller.
-		return ErrChanAlreadyExists
+		return ErrChanAlreadyExists.Default()
 	case err != nil:
 		return err
 	}
@@ -873,11 +882,11 @@ func (c *OpenChannel) fullSync(tx kvdb.RwTx) error {
 
 // MarkAsOpen marks a channel as fully open given a locator that uniquely
 // describes its location within the chain.
-func (c *OpenChannel) MarkAsOpen(openLoc lnwire.ShortChannelID) error {
+func (c *OpenChannel) MarkAsOpen(openLoc lnwire.ShortChannelID) er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -908,7 +917,7 @@ func (c *OpenChannel) MarkAsOpen(openLoc lnwire.ShortChannelID) error {
 // MarkDataLoss marks sets the channel status to LocalDataLoss and stores the
 // passed commitPoint for use to retrieve funds in case the remote force closes
 // the channel.
-func (c *OpenChannel) MarkDataLoss(commitPoint *btcec.PublicKey) error {
+func (c *OpenChannel) MarkDataLoss(commitPoint *btcec.PublicKey) er.R {
 	c.Lock()
 	defer c.Unlock()
 
@@ -917,33 +926,40 @@ func (c *OpenChannel) MarkDataLoss(commitPoint *btcec.PublicKey) error {
 		return err
 	}
 
-	putCommitPoint := func(chanBucket kvdb.RwBucket) error {
+	putCommitPoint := func(chanBucket kvdb.RwBucket) er.R {
 		return chanBucket.Put(dataLossCommitPointKey, b.Bytes())
 	}
 
 	return c.putChanStatus(ChanStatusLocalDataLoss, putCommitPoint)
 }
 
+func mapErr(err er.R) er.R {
+	switch {
+	case err == nil:
+		return nil
+	case ErrNoChanDBExists.Is(err), ErrNoActiveChannels.Is(err), ErrChannelNotFound.Is(err):
+		return ErrNoCommitPoint.Default()
+	default:
+		return err
+	}
+}
+
 // DataLossCommitPoint retrieves the stored commit point set during
 // MarkDataLoss. If not found ErrNoCommitPoint is returned.
-func (c *OpenChannel) DataLossCommitPoint() (*btcec.PublicKey, error) {
+func (c *OpenChannel) DataLossCommitPoint() (*btcec.PublicKey, er.R) {
 	var commitPoint *btcec.PublicKey
 
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		switch err {
-		case nil:
-		case ErrNoChanDBExists, ErrNoActiveChannels, ErrChannelNotFound:
-			return ErrNoCommitPoint
-		default:
+		if err = mapErr(err); err != nil {
 			return err
 		}
 
 		bs := chanBucket.Get(dataLossCommitPointKey)
 		if bs == nil {
-			return ErrNoCommitPoint
+			return ErrNoCommitPoint.Default()
 		}
 		r := bytes.NewReader(bs)
 		if err := ReadElements(r, &commitPoint); err != nil {
@@ -964,7 +980,7 @@ func (c *OpenChannel) DataLossCommitPoint() (*btcec.PublicKey, error) {
 // MarkBorked marks the event when the channel as reached an irreconcilable
 // state, such as a channel breach or state desynchronization. Borked channels
 // should never be added to the switch.
-func (c *OpenChannel) MarkBorked() error {
+func (c *OpenChannel) MarkBorked() er.R {
 	c.Lock()
 	defer c.Unlock()
 
@@ -986,7 +1002,7 @@ func (c *OpenChannel) MarkBorked() error {
 // If this is a restored channel, having status ChanStatusRestored, then we'll
 // modify our typical chan sync message to ensure they force close even if
 // we're on the very first state.
-func (c *OpenChannel) ChanSyncMsg() (*lnwire.ChannelReestablish, error) {
+func (c *OpenChannel) ChanSyncMsg() (*lnwire.ChannelReestablish, er.R) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -1060,7 +1076,7 @@ func (c *OpenChannel) ChanSyncMsg() (*lnwire.ChannelReestablish, error) {
 // active.
 //
 // NOTE: The primary mutex should already be held before this method is called.
-func (c *OpenChannel) isBorked(chanBucket kvdb.RBucket) (bool, error) {
+func (c *OpenChannel) isBorked(chanBucket kvdb.RBucket) (bool, er.R) {
 	channel, err := fetchOpenChannel(chanBucket, &c.FundingOutpoint)
 	if err != nil {
 		return false, err
@@ -1076,7 +1092,7 @@ func (c *OpenChannel) isBorked(chanBucket kvdb.RBucket) (bool, error) {
 // republish this tx at startup to ensure propagation, and we should still
 // handle the case where a different tx actually hits the chain.
 func (c *OpenChannel) MarkCommitmentBroadcasted(closeTx *wire.MsgTx,
-	locallyInitiated bool) error {
+	locallyInitiated bool) er.R {
 
 	return c.markBroadcasted(
 		ChanStatusCommitBroadcasted, forceCloseTxKey, closeTx,
@@ -1092,7 +1108,7 @@ func (c *OpenChannel) MarkCommitmentBroadcasted(closeTx *wire.MsgTx,
 // ensure propagation, and we should still handle the case where a different tx
 // actually hits the chain.
 func (c *OpenChannel) MarkCoopBroadcasted(closeTx *wire.MsgTx,
-	locallyInitiated bool) error {
+	locallyInitiated bool) er.R {
 
 	return c.markBroadcasted(
 		ChanStatusCoopBroadcasted, coopCloseTxKey, closeTx,
@@ -1105,21 +1121,21 @@ func (c *OpenChannel) MarkCoopBroadcasted(closeTx *wire.MsgTx,
 // which should specify either a coop or force close. It adds a status which
 // indicates the party that initiated the channel close.
 func (c *OpenChannel) markBroadcasted(status ChannelStatus, key []byte,
-	closeTx *wire.MsgTx, locallyInitiated bool) error {
+	closeTx *wire.MsgTx, locallyInitiated bool) er.R {
 
 	c.Lock()
 	defer c.Unlock()
 
 	// If a closing tx is provided, we'll generate a closure to write the
 	// transaction in the appropriate bucket under the given key.
-	var putClosingTx func(kvdb.RwBucket) error
+	var putClosingTx func(kvdb.RwBucket) er.R
 	if closeTx != nil {
 		var b bytes.Buffer
 		if err := WriteElement(&b, closeTx); err != nil {
 			return err
 		}
 
-		putClosingTx = func(chanBucket kvdb.RwBucket) error {
+		putClosingTx = func(chanBucket kvdb.RwBucket) er.R {
 			return chanBucket.Put(key, b.Bytes())
 		}
 	}
@@ -1138,36 +1154,32 @@ func (c *OpenChannel) markBroadcasted(status ChannelStatus, key []byte,
 
 // BroadcastedCommitment retrieves the stored unilateral closing tx set during
 // MarkCommitmentBroadcasted. If not found ErrNoCloseTx is returned.
-func (c *OpenChannel) BroadcastedCommitment() (*wire.MsgTx, error) {
+func (c *OpenChannel) BroadcastedCommitment() (*wire.MsgTx, er.R) {
 	return c.getClosingTx(forceCloseTxKey)
 }
 
 // BroadcastedCooperative retrieves the stored cooperative closing tx set during
 // MarkCoopBroadcasted. If not found ErrNoCloseTx is returned.
-func (c *OpenChannel) BroadcastedCooperative() (*wire.MsgTx, error) {
+func (c *OpenChannel) BroadcastedCooperative() (*wire.MsgTx, er.R) {
 	return c.getClosingTx(coopCloseTxKey)
 }
 
 // getClosingTx is a helper method which returns the stored closing transaction
 // for key. The caller should use either the force or coop closing keys.
-func (c *OpenChannel) getClosingTx(key []byte) (*wire.MsgTx, error) {
+func (c *OpenChannel) getClosingTx(key []byte) (*wire.MsgTx, er.R) {
 	var closeTx *wire.MsgTx
 
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		switch err {
-		case nil:
-		case ErrNoChanDBExists, ErrNoActiveChannels, ErrChannelNotFound:
-			return ErrNoCloseTx
-		default:
+		if err = mapErr(err); err != nil {
 			return err
 		}
 
 		bs := chanBucket.Get(key)
 		if bs == nil {
-			return ErrNoCloseTx
+			return ErrNoCloseTx.Default()
 		}
 		r := bytes.NewReader(bs)
 		return ReadElement(r, &closeTx)
@@ -1185,9 +1197,9 @@ func (c *OpenChannel) getClosingTx(key []byte) (*wire.MsgTx, error) {
 // list of closures that are given the chanBucket in order to atomically add
 // extra information together with the new status.
 func (c *OpenChannel) putChanStatus(status ChannelStatus,
-	fs ...func(kvdb.RwBucket) error) error {
+	fs ...func(kvdb.RwBucket) er.R) er.R {
 
-	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucketRw(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -1230,8 +1242,8 @@ func (c *OpenChannel) putChanStatus(status ChannelStatus,
 	return nil
 }
 
-func (c *OpenChannel) clearChanStatus(status ChannelStatus) error {
-	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+func (c *OpenChannel) clearChanStatus(status ChannelStatus) er.R {
+	if err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucketRw(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -1261,17 +1273,17 @@ func (c *OpenChannel) clearChanStatus(status ChannelStatus) error {
 
 // putChannel serializes, and stores the current state of the channel in its
 // entirety.
-func putOpenChannel(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
+func putOpenChannel(chanBucket kvdb.RwBucket, channel *OpenChannel) er.R {
 	// First, we'll write out all the relatively static fields, that are
 	// decided upon initial channel creation.
 	if err := putChanInfo(chanBucket, channel); err != nil {
-		return fmt.Errorf("unable to store chan info: %v", err)
+		return er.Errorf("unable to store chan info: %v", err)
 	}
 
 	// With the static channel info written out, we'll now write out the
 	// current commitment state for both parties.
 	if err := putChanCommitments(chanBucket, channel); err != nil {
-		return fmt.Errorf("unable to store chan commitments: %v", err)
+		return er.Errorf("unable to store chan commitments: %v", err)
 	}
 
 	// Next, if this is a frozen channel, we'll add in the axillary
@@ -1281,14 +1293,14 @@ func putOpenChannel(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
 			chanBucket, channel.ThawHeight,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to store thaw height: %v", err)
+			return er.Errorf("unable to store thaw height: %v", err)
 		}
 	}
 
 	// Finally, we'll write out the revocation state for both parties
 	// within a distinct key space.
 	if err := putChanRevocationState(chanBucket, channel); err != nil {
-		return fmt.Errorf("unable to store chan revocations: %v", err)
+		return er.Errorf("unable to store chan revocations: %v", err)
 	}
 
 	return nil
@@ -1297,7 +1309,7 @@ func putOpenChannel(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
 // fetchOpenChannel retrieves, and deserializes (including decrypting
 // sensitive) the complete channel currently active with the passed nodeID.
 func fetchOpenChannel(chanBucket kvdb.RBucket,
-	chanPoint *wire.OutPoint) (*OpenChannel, error) {
+	chanPoint *wire.OutPoint) (*OpenChannel, er.R) {
 
 	channel := &OpenChannel{
 		FundingOutpoint: *chanPoint,
@@ -1306,13 +1318,13 @@ func fetchOpenChannel(chanBucket kvdb.RBucket,
 	// First, we'll read all the static information that changes less
 	// frequently from disk.
 	if err := fetchChanInfo(chanBucket, channel); err != nil {
-		return nil, fmt.Errorf("unable to fetch chan info: %v", err)
+		return nil, er.Errorf("unable to fetch chan info: %v", err)
 	}
 
 	// With the static information read, we'll now read the current
 	// commitment state for both sides of the channel.
 	if err := fetchChanCommitments(chanBucket, channel); err != nil {
-		return nil, fmt.Errorf("unable to fetch chan commitments: %v", err)
+		return nil, er.Errorf("unable to fetch chan commitments: %v", err)
 	}
 
 	// Next, if this is a frozen channel, we'll add in the axillary
@@ -1320,7 +1332,7 @@ func fetchOpenChannel(chanBucket kvdb.RBucket,
 	if channel.ChanType.IsFrozen() {
 		thawHeight, err := fetchThawHeight(chanBucket)
 		if err != nil {
-			return nil, fmt.Errorf("unable to store thaw "+
+			return nil, er.Errorf("unable to store thaw "+
 				"height: %v", err)
 		}
 
@@ -1330,7 +1342,7 @@ func fetchOpenChannel(chanBucket kvdb.RBucket,
 	// Finally, we'll retrieve the current revocation state so we can
 	// properly
 	if err := fetchChanRevocationState(chanBucket, channel); err != nil {
-		return nil, fmt.Errorf("unable to fetch chan revocations: %v", err)
+		return nil, er.Errorf("unable to fetch chan revocations: %v", err)
 	}
 
 	channel.Packager = NewChannelPackager(channel.ShortChannelID)
@@ -1349,20 +1361,20 @@ func fetchOpenChannel(chanBucket kvdb.RBucket,
 //
 // TODO(roasbeef): addr param should eventually be an lnwire.NetAddress type
 // that includes service bits.
-func (c *OpenChannel) SyncPending(addr net.Addr, pendingHeight uint32) error {
+func (c *OpenChannel) SyncPending(addr net.Addr, pendingHeight uint32) er.R {
 	c.Lock()
 	defer c.Unlock()
 
 	c.FundingBroadcastHeight = pendingHeight
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		return syncNewChannel(tx, c, []net.Addr{addr})
 	}, func() {})
 }
 
 // syncNewChannel will write the passed channel to disk, and also create a
 // LinkNode (if needed) for the channel peer.
-func syncNewChannel(tx kvdb.RwTx, c *OpenChannel, addrs []net.Addr) error {
+func syncNewChannel(tx kvdb.RwTx, c *OpenChannel, addrs []net.Addr) er.R {
 	// First, sync all the persistent channel state to disk.
 	if err := c.fullSync(tx); err != nil {
 		return err
@@ -1399,7 +1411,7 @@ func syncNewChannel(tx kvdb.RwTx, c *OpenChannel, addrs []net.Addr) error {
 // occur. This method its to be called when we revoke our prior commitment
 // state.
 func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
-	unsignedAckedUpdates []LogUpdate) error {
+	unsignedAckedUpdates []LogUpdate) er.R {
 
 	c.Lock()
 	defer c.Unlock()
@@ -1408,10 +1420,10 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 	// state as all, as it's impossible to do so in a protocol compliant
 	// manner.
 	if c.hasChanStatus(ChanStatusRestored) {
-		return ErrNoRestoredChannelMutation
+		return ErrNoRestoredChannelMutation.Default()
 	}
 
-	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucketRw(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -1426,11 +1438,11 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 			return err
 		}
 		if isBorked {
-			return ErrChanBorked
+			return ErrChanBorked.Default()
 		}
 
 		if err = putChanInfo(chanBucket, c); err != nil {
-			return fmt.Errorf("unable to store chan info: %v", err)
+			return er.Errorf("unable to store chan info: %v", err)
 		}
 
 		// With the proper bucket fetched, we'll now write the latest
@@ -1439,7 +1451,7 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 			chanBucket, newCommitment, true,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to store chan "+
+			return er.Errorf("unable to store chan "+
 				"revocations: %v", err)
 		}
 
@@ -1453,7 +1465,7 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 
 		err = chanBucket.Put(unsignedAckedUpdatesKey, b.Bytes())
 		if err != nil {
-			return fmt.Errorf("unable to store dangline remote "+
+			return er.Errorf("unable to store dangline remote "+
 				"updates: %v", err)
 		}
 
@@ -1482,12 +1494,12 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 		var b2 bytes.Buffer
 		err = serializeLogUpdates(&b2, validUpdates)
 		if err != nil {
-			return fmt.Errorf("unable to serialize log updates: %v", err)
+			return er.Errorf("unable to serialize log updates: %v", err)
 		}
 
 		err = chanBucket.Put(remoteUnsignedLocalUpdatesKey, b2.Bytes())
 		if err != nil {
-			return fmt.Errorf("unable to restore chanbucket: %v", err)
+			return er.Errorf("unable to restore chanbucket: %v", err)
 		}
 
 		return nil
@@ -1507,12 +1519,12 @@ func (c *OpenChannel) UpdateCommitment(newCommitment *ChannelCommitment,
 // NOTE: these are our balances *after* subtracting the commitment fee and
 // anchor outputs.
 func (c *OpenChannel) BalancesAtHeight(height uint64) (lnwire.MilliSatoshi,
-	lnwire.MilliSatoshi, error) {
+	lnwire.MilliSatoshi, er.R) {
 
 	if height > c.LocalCommitment.CommitHeight &&
 		height > c.RemoteCommitment.CommitHeight {
 
-		return 0, 0, errHeightNotReached
+		return 0, 0, errHeightNotReached.Default()
 	}
 
 	// If our current commit is as the desired height, we can return our
@@ -1622,7 +1634,7 @@ type HTLC struct {
 //
 // NOTE: This API is NOT stable, the on-disk format will likely change in the
 // future.
-func SerializeHtlcs(b io.Writer, htlcs ...HTLC) error {
+func SerializeHtlcs(b io.Writer, htlcs ...HTLC) er.R {
 	numHtlcs := uint16(len(htlcs))
 	if err := WriteElement(b, numHtlcs); err != nil {
 		return err
@@ -1647,7 +1659,7 @@ func SerializeHtlcs(b io.Writer, htlcs ...HTLC) error {
 //
 // NOTE: This API is NOT stable, the on-disk format will likely change in the
 // future.
-func DeserializeHtlcs(r io.Reader) ([]HTLC, error) {
+func DeserializeHtlcs(r io.Reader) ([]HTLC, er.R) {
 	var numHtlcs uint16
 	if err := ReadElement(r, &numHtlcs); err != nil {
 		return nil, err
@@ -1703,12 +1715,12 @@ type LogUpdate struct {
 }
 
 // Encode writes a log update to the provided io.Writer.
-func (l *LogUpdate) Encode(w io.Writer) error {
+func (l *LogUpdate) Encode(w io.Writer) er.R {
 	return WriteElements(w, l.LogIndex, l.UpdateMsg)
 }
 
 // Decode reads a log update from the provided io.Reader.
-func (l *LogUpdate) Decode(r io.Reader) error {
+func (l *LogUpdate) Decode(r io.Reader) er.R {
 	return ReadElements(r, &l.LogIndex, &l.UpdateMsg)
 }
 
@@ -1731,9 +1743,9 @@ type CircuitKey struct {
 }
 
 // SetBytes deserializes the given bytes into this CircuitKey.
-func (k *CircuitKey) SetBytes(bs []byte) error {
+func (k *CircuitKey) SetBytes(bs []byte) er.R {
 	if len(bs) != 16 {
-		return ErrInvalidCircuitKeyLen
+		return ErrInvalidCircuitKeyLen.Default()
 	}
 
 	k.ChanID = lnwire.NewShortChanIDFromInt(
@@ -1752,20 +1764,20 @@ func (k CircuitKey) Bytes() []byte {
 }
 
 // Encode writes a CircuitKey to the provided io.Writer.
-func (k *CircuitKey) Encode(w io.Writer) error {
+func (k *CircuitKey) Encode(w io.Writer) er.R {
 	var scratch [16]byte
 	binary.BigEndian.PutUint64(scratch[:8], k.ChanID.ToUint64())
 	binary.BigEndian.PutUint64(scratch[8:], k.HtlcID)
 
-	_, err := w.Write(scratch[:])
+	_, err := util.Write(w, scratch[:])
 	return err
 }
 
 // Decode reads a CircuitKey from the provided io.Reader.
-func (k *CircuitKey) Decode(r io.Reader) error {
+func (k *CircuitKey) Decode(r io.Reader) er.R {
 	var scratch [16]byte
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return err
 	}
 	k.ChanID = lnwire.NewShortChanIDFromInt(
@@ -1836,9 +1848,9 @@ type CommitDiff struct {
 }
 
 // serializeLogUpdates serializes provided list of updates to a stream.
-func serializeLogUpdates(w io.Writer, logUpdates []LogUpdate) error {
+func serializeLogUpdates(w io.Writer, logUpdates []LogUpdate) er.R {
 	numUpdates := uint16(len(logUpdates))
-	if err := binary.Write(w, byteOrder, numUpdates); err != nil {
+	if err := util.WriteBin(w, byteOrder, numUpdates); err != nil {
 		return err
 	}
 
@@ -1853,9 +1865,9 @@ func serializeLogUpdates(w io.Writer, logUpdates []LogUpdate) error {
 }
 
 // deserializeLogUpdates deserializes a list of updates from a stream.
-func deserializeLogUpdates(r io.Reader) ([]LogUpdate, error) {
+func deserializeLogUpdates(r io.Reader) ([]LogUpdate, er.R) {
 	var numUpdates uint16
-	if err := binary.Read(r, byteOrder, &numUpdates); err != nil {
+	if err := util.ReadBin(r, byteOrder, &numUpdates); err != nil {
 		return nil, err
 	}
 
@@ -1871,7 +1883,7 @@ func deserializeLogUpdates(r io.Reader) ([]LogUpdate, error) {
 	return logUpdates, nil
 }
 
-func serializeCommitDiff(w io.Writer, diff *CommitDiff) error {
+func serializeCommitDiff(w io.Writer, diff *CommitDiff) er.R {
 	if err := serializeChanCommit(w, &diff.Commitment); err != nil {
 		return err
 	}
@@ -1885,7 +1897,7 @@ func serializeCommitDiff(w io.Writer, diff *CommitDiff) error {
 	}
 
 	numOpenRefs := uint16(len(diff.OpenedCircuitKeys))
-	if err := binary.Write(w, byteOrder, numOpenRefs); err != nil {
+	if err := util.WriteBin(w, byteOrder, numOpenRefs); err != nil {
 		return err
 	}
 
@@ -1897,7 +1909,7 @@ func serializeCommitDiff(w io.Writer, diff *CommitDiff) error {
 	}
 
 	numClosedRefs := uint16(len(diff.ClosedCircuitKeys))
-	if err := binary.Write(w, byteOrder, numClosedRefs); err != nil {
+	if err := util.WriteBin(w, byteOrder, numClosedRefs); err != nil {
 		return err
 	}
 
@@ -1911,10 +1923,10 @@ func serializeCommitDiff(w io.Writer, diff *CommitDiff) error {
 	return nil
 }
 
-func deserializeCommitDiff(r io.Reader) (*CommitDiff, error) {
+func deserializeCommitDiff(r io.Reader) (*CommitDiff, er.R) {
 	var (
 		d   CommitDiff
-		err error
+		err er.R
 	)
 
 	d.Commitment, err = deserializeChanCommit(r)
@@ -1933,7 +1945,7 @@ func deserializeCommitDiff(r io.Reader) (*CommitDiff, error) {
 	}
 
 	var numOpenRefs uint16
-	if err := binary.Read(r, byteOrder, &numOpenRefs); err != nil {
+	if err := util.ReadBin(r, byteOrder, &numOpenRefs); err != nil {
 		return nil, err
 	}
 
@@ -1948,7 +1960,7 @@ func deserializeCommitDiff(r io.Reader) (*CommitDiff, error) {
 	}
 
 	var numClosedRefs uint16
-	if err := binary.Read(r, byteOrder, &numClosedRefs); err != nil {
+	if err := util.ReadBin(r, byteOrder, &numClosedRefs); err != nil {
 		return nil, err
 	}
 
@@ -1971,7 +1983,7 @@ func deserializeCommitDiff(r io.Reader) (*CommitDiff, error) {
 // transmit it to the remote party. The contents of the argument should be
 // sufficient to retransmit the updates and signature needed to reconstruct the
 // state in full, in the case that we need to retransmit.
-func (c *OpenChannel) AppendRemoteCommitChain(diff *CommitDiff) error {
+func (c *OpenChannel) AppendRemoteCommitChain(diff *CommitDiff) er.R {
 	c.Lock()
 	defer c.Unlock()
 
@@ -1979,10 +1991,10 @@ func (c *OpenChannel) AppendRemoteCommitChain(diff *CommitDiff) error {
 	// state at all, as it's impossible to do so in a protocol compliant
 	// manner.
 	if c.hasChanStatus(ChanStatusRestored) {
-		return ErrNoRestoredChannelMutation
+		return ErrNoRestoredChannelMutation.Default()
 	}
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		// First, we'll grab the writable bucket where this channel's
 		// data resides.
 		chanBucket, err := fetchChanBucketRw(
@@ -1999,7 +2011,7 @@ func (c *OpenChannel) AppendRemoteCommitChain(diff *CommitDiff) error {
 			return err
 		}
 		if isBorked {
-			return ErrChanBorked
+			return ErrChanBorked.Default()
 		}
 
 		// Any outgoing settles and fails necessarily have a
@@ -2040,23 +2052,19 @@ func (c *OpenChannel) AppendRemoteCommitChain(diff *CommitDiff) error {
 // chain will have a length of two: their current unrevoked commitment, and
 // this new pending commitment. Once they revoked their prior state, we'll swap
 // these pointers, causing the tip and the tail to point to the same entry.
-func (c *OpenChannel) RemoteCommitChainTip() (*CommitDiff, error) {
+func (c *OpenChannel) RemoteCommitChainTip() (*CommitDiff, er.R) {
 	var cd *CommitDiff
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		switch err {
-		case nil:
-		case ErrNoChanDBExists, ErrNoActiveChannels, ErrChannelNotFound:
-			return ErrNoPendingCommit
-		default:
+		if err = mapErr(err); err != nil {
 			return err
 		}
 
 		tipBytes := chanBucket.Get(commitDiffKey)
 		if tipBytes == nil {
-			return ErrNoPendingCommit
+			return ErrNoPendingCommit.Default()
 		}
 
 		tipReader := bytes.NewReader(tipBytes)
@@ -2079,17 +2087,13 @@ func (c *OpenChannel) RemoteCommitChainTip() (*CommitDiff, error) {
 
 // UnsignedAckedUpdates retrieves the persisted unsigned acked remote log
 // updates that still need to be signed for.
-func (c *OpenChannel) UnsignedAckedUpdates() ([]LogUpdate, error) {
+func (c *OpenChannel) UnsignedAckedUpdates() ([]LogUpdate, er.R) {
 	var updates []LogUpdate
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		switch err {
-		case nil:
-		case ErrNoChanDBExists, ErrNoActiveChannels, ErrChannelNotFound:
-			return nil
-		default:
+		if err = mapErr(err); err != nil {
 			return err
 		}
 
@@ -2113,18 +2117,16 @@ func (c *OpenChannel) UnsignedAckedUpdates() ([]LogUpdate, error) {
 
 // RemoteUnsignedLocalUpdates retrieves the persisted, unsigned local log
 // updates that the remote still needs to sign for.
-func (c *OpenChannel) RemoteUnsignedLocalUpdates() ([]LogUpdate, error) {
+func (c *OpenChannel) RemoteUnsignedLocalUpdates() ([]LogUpdate, er.R) {
 	var updates []LogUpdate
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		switch err {
-		case nil:
-			break
-		case ErrNoChanDBExists, ErrNoActiveChannels, ErrChannelNotFound:
-			return nil
-		default:
+		if err = mapErr(err); err != nil {
+			if ErrNoCommitPoint.Is(err) {
+				return nil
+			}
 			return err
 		}
 
@@ -2153,13 +2155,13 @@ func (c *OpenChannel) RemoteUnsignedLocalUpdates() ([]LogUpdate, error) {
 //
 // NOTE: If this method isn't called, then the target channel won't be able to
 // propose new states for the commitment state of the remote party.
-func (c *OpenChannel) InsertNextRevocation(revKey *btcec.PublicKey) error {
+func (c *OpenChannel) InsertNextRevocation(revKey *btcec.PublicKey) er.R {
 	c.Lock()
 	defer c.Unlock()
 
 	c.RemoteNextRevocation = revKey
 
-	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucketRw(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2186,7 +2188,7 @@ func (c *OpenChannel) InsertNextRevocation(revKey *btcec.PublicKey) error {
 // set of local updates that the peer still needs to send us a signature for.
 // We store this set of updates in case we go down.
 func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
-	updates []LogUpdate) error {
+	updates []LogUpdate) er.R {
 
 	c.Lock()
 	defer c.Unlock()
@@ -2195,12 +2197,12 @@ func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
 	// state at all, as it's impossible to do so in a protocol compliant
 	// manner.
 	if c.hasChanStatus(ChanStatusRestored) {
-		return ErrNoRestoredChannelMutation
+		return ErrNoRestoredChannelMutation.Default()
 	}
 
 	var newRemoteCommit *ChannelCommitment
 
-	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		chanBucket, err := fetchChanBucketRw(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2215,7 +2217,7 @@ func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
 			return err
 		}
 		if isBorked {
-			return ErrChanBorked
+			return ErrChanBorked.Default()
 		}
 
 		// Persist the latest preimage state to disk as the remote peer
@@ -2303,12 +2305,12 @@ func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
 		var b bytes.Buffer
 		err = serializeLogUpdates(&b, validUpdates)
 		if err != nil {
-			return fmt.Errorf("unable to serialize log updates: %v", err)
+			return er.Errorf("unable to serialize log updates: %v", err)
 		}
 
 		err = chanBucket.Put(unsignedAckedUpdatesKey, b.Bytes())
 		if err != nil {
-			return fmt.Errorf("unable to store under unsignedAckedUpdatesKey: %v", err)
+			return er.Errorf("unable to store under unsignedAckedUpdatesKey: %v", err)
 		}
 
 		// Persist the local updates the peer hasn't yet signed so they
@@ -2321,7 +2323,7 @@ func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
 
 		err = chanBucket.Put(remoteUnsignedLocalUpdatesKey, b2.Bytes())
 		if err != nil {
-			return fmt.Errorf("unable to restore remote unsigned "+
+			return er.Errorf("unable to restore remote unsigned "+
 				"local updates: %v", err)
 		}
 
@@ -2347,12 +2349,12 @@ func (c *OpenChannel) AdvanceCommitChainTail(fwdPkg *FwdPkg,
 // this always returns the next index that has been not been allocated, this
 // will first try to examine any pending commitments, before falling back to the
 // last locked-in remote commitment.
-func (c *OpenChannel) NextLocalHtlcIndex() (uint64, error) {
+func (c *OpenChannel) NextLocalHtlcIndex() (uint64, er.R) {
 	// First, load the most recent commit diff that we initiated for the
 	// remote party. If no pending commit is found, this is not treated as
 	// a critical error, since we can always fall back.
 	pendingRemoteCommit, err := c.RemoteCommitChainTip()
-	if err != nil && err != ErrNoPendingCommit {
+	if err != nil && !ErrNoPendingCommit.Is(err) {
 		return 0, err
 	}
 
@@ -2369,13 +2371,13 @@ func (c *OpenChannel) NextLocalHtlcIndex() (uint64, error) {
 // LoadFwdPkgs scans the forwarding log for any packages that haven't been
 // processed, and returns their deserialized log updates in map indexed by the
 // remote commitment height at which the updates were locked in.
-func (c *OpenChannel) LoadFwdPkgs() ([]*FwdPkg, error) {
+func (c *OpenChannel) LoadFwdPkgs() ([]*FwdPkg, er.R) {
 	c.RLock()
 	defer c.RUnlock()
 
 	var fwdPkgs []*FwdPkg
-	if err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
-		var err error
+	if err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
+		var err er.R
 		fwdPkgs, err = c.Packager.LoadFwdPkgs(tx)
 		return err
 	}, func() {
@@ -2390,11 +2392,11 @@ func (c *OpenChannel) LoadFwdPkgs() ([]*FwdPkg, error) {
 // AckAddHtlcs updates the AckAddFilter containing any of the provided AddRefs
 // indicating that a response to this Add has been committed to the remote party.
 // Doing so will prevent these Add HTLCs from being reforwarded internally.
-func (c *OpenChannel) AckAddHtlcs(addRefs ...AddRef) error {
+func (c *OpenChannel) AckAddHtlcs(addRefs ...AddRef) er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		return c.Packager.AckAddHtlcs(tx, addRefs...)
 	}, func() {})
 }
@@ -2403,22 +2405,22 @@ func (c *OpenChannel) AckAddHtlcs(addRefs ...AddRef) error {
 // SettleFailRefs, indicating that the response has been delivered to the
 // incoming link, corresponding to a particular AddRef. Doing so will prevent
 // the responses from being retransmitted internally.
-func (c *OpenChannel) AckSettleFails(settleFailRefs ...SettleFailRef) error {
+func (c *OpenChannel) AckSettleFails(settleFailRefs ...SettleFailRef) er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		return c.Packager.AckSettleFails(tx, settleFailRefs...)
 	}, func() {})
 }
 
 // SetFwdFilter atomically sets the forwarding filter for the forwarding package
 // identified by `height`.
-func (c *OpenChannel) SetFwdFilter(height uint64, fwdFilter *PkgFilter) error {
+func (c *OpenChannel) SetFwdFilter(height uint64, fwdFilter *PkgFilter) er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		return c.Packager.SetFwdFilter(tx, height, fwdFilter)
 	}, func() {})
 }
@@ -2428,11 +2430,11 @@ func (c *OpenChannel) SetFwdFilter(height uint64, fwdFilter *PkgFilter) error {
 // later packages won't be removed.
 //
 // NOTE: This method should only be called on packages marked FwdStateCompleted.
-func (c *OpenChannel) RemoveFwdPkgs(heights ...uint64) error {
+func (c *OpenChannel) RemoveFwdPkgs(heights ...uint64) er.R {
 	c.Lock()
 	defer c.Unlock()
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		for _, height := range heights {
 			err := c.Packager.RemovePkg(tx, height)
 			if err != nil {
@@ -2449,7 +2451,7 @@ func (c *OpenChannel) RemoveFwdPkgs(heights ...uint64) error {
 // commitment chain. The ChannelDelta returned by this method will always lag
 // one state behind the most current (unrevoked) state of the remote node's
 // commitment chain.
-func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, error) {
+func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, er.R) {
 	c.RLock()
 	defer c.RUnlock()
 
@@ -2460,7 +2462,7 @@ func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, error) {
 	}
 
 	var commit ChannelCommitment
-	if err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	if err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2470,7 +2472,7 @@ func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, error) {
 
 		logBucket := chanBucket.NestedReadBucket(revocationLogBucket)
 		if logBucket == nil {
-			return ErrNoPastDeltas
+			return ErrNoPastDeltas.Default()
 		}
 
 		// Once we have the bucket that stores the revocation log from
@@ -2483,7 +2485,7 @@ func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, error) {
 
 		// Once we have the entry, we'll decode it into the channel
 		// delta pointer we created above.
-		var dbErr error
+		var dbErr er.R
 		commit, dbErr = deserializeChanCommit(logEntryReader)
 		if dbErr != nil {
 			return dbErr
@@ -2502,12 +2504,12 @@ func (c *OpenChannel) RevocationLogTail() (*ChannelCommitment, error) {
 // This value is always monotonically increasing. This method is provided in
 // order to allow multiple instances of a particular open channel to obtain a
 // consistent view of the number of channel updates to date.
-func (c *OpenChannel) CommitmentHeight() (uint64, error) {
+func (c *OpenChannel) CommitmentHeight() (uint64, er.R) {
 	c.RLock()
 	defer c.RUnlock()
 
 	var height uint64
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		// Get the bucket dedicated to storing the metadata for open
 		// channels.
 		chanBucket, err := fetchChanBucket(
@@ -2539,12 +2541,12 @@ func (c *OpenChannel) CommitmentHeight() (uint64, error) {
 // intended to be used for obtaining the relevant data needed to claim all
 // funds rightfully spendable in the case of an on-chain broadcast of the
 // commitment transaction.
-func (c *OpenChannel) FindPreviousState(updateNum uint64) (*ChannelCommitment, error) {
+func (c *OpenChannel) FindPreviousState(updateNum uint64) (*ChannelCommitment, er.R) {
 	c.RLock()
 	defer c.RUnlock()
 
 	var commit ChannelCommitment
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2554,7 +2556,7 @@ func (c *OpenChannel) FindPreviousState(updateNum uint64) (*ChannelCommitment, e
 
 		logBucket := chanBucket.NestedReadBucket(revocationLogBucket)
 		if logBucket == nil {
-			return ErrNoPastDeltas
+			return ErrNoPastDeltas.Default()
 		}
 
 		c, err := fetchChannelLogEntry(logBucket, updateNum)
@@ -2697,26 +2699,26 @@ type ChannelCloseSummary struct {
 // channel statuses which will be written to the historical channel bucket.
 // These statuses are used to record close initiators.
 func (c *OpenChannel) CloseChannel(summary *ChannelCloseSummary,
-	statuses ...ChannelStatus) error {
+	statuses ...ChannelStatus) er.R {
 
 	c.Lock()
 	defer c.Unlock()
 
-	return kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 		openChanBucket := tx.ReadWriteBucket(openChannelBucket)
 		if openChanBucket == nil {
-			return ErrNoChanDBExists
+			return ErrNoChanDBExists.Default()
 		}
 
 		nodePub := c.IdentityPub.SerializeCompressed()
 		nodeChanBucket := openChanBucket.NestedReadWriteBucket(nodePub)
 		if nodeChanBucket == nil {
-			return ErrNoActiveChannels
+			return ErrNoActiveChannels.Default()
 		}
 
 		chainBucket := nodeChanBucket.NestedReadWriteBucket(c.ChainHash[:])
 		if chainBucket == nil {
-			return ErrNoActiveChannels
+			return ErrNoActiveChannels.Default()
 		}
 
 		var chanPointBuf bytes.Buffer
@@ -2729,7 +2731,7 @@ func (c *OpenChannel) CloseChannel(summary *ChannelCloseSummary,
 			chanKey,
 		)
 		if chanBucket == nil {
-			return ErrNoActiveChannels
+			return ErrNoActiveChannels.Default()
 		}
 
 		// Before we delete the channel state, we'll read out the full
@@ -2877,8 +2879,8 @@ func (c *OpenChannel) Snapshot() *ChannelSnapshot {
 // remote party. These commitments are read from disk to ensure that only the
 // latest fully committed state is returned. The first commitment returned is
 // the local commitment, and the second returned is the remote commitment.
-func (c *OpenChannel) LatestCommitments() (*ChannelCommitment, *ChannelCommitment, error) {
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+func (c *OpenChannel) LatestCommitments() (*ChannelCommitment, *ChannelCommitment, er.R) {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2899,8 +2901,8 @@ func (c *OpenChannel) LatestCommitments() (*ChannelCommitment, *ChannelCommitmen
 // revocation storage tree for the remote party. This method can be used when
 // acting on a possible contract breach to ensure, that the caller has the most
 // up to date information required to deliver justice.
-func (c *OpenChannel) RemoteRevocationStore() (shachain.Store, error) {
-	err := kvdb.View(c.Db, func(tx kvdb.RTx) error {
+func (c *OpenChannel) RemoteRevocationStore() (shachain.Store, er.R) {
+	err := kvdb.View(c.Db, func(tx kvdb.RTx) er.R {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
@@ -2919,7 +2921,7 @@ func (c *OpenChannel) RemoteRevocationStore() (shachain.Store, error) {
 
 // AbsoluteThawHeight determines a frozen channel's absolute thaw height. If the
 // channel is not frozen, then 0 is returned.
-func (c *OpenChannel) AbsoluteThawHeight() (uint32, error) {
+func (c *OpenChannel) AbsoluteThawHeight() (uint32, er.R) {
 	// Only frozen channels have a thaw height.
 	if !c.ChanType.IsFrozen() {
 		return 0, nil
@@ -2931,7 +2933,7 @@ func (c *OpenChannel) AbsoluteThawHeight() (uint32, error) {
 		// We'll only known of the channel's short ID once it's
 		// confirmed.
 		if c.IsPending {
-			return 0, errors.New("cannot use relative thaw " +
+			return 0, er.New("cannot use relative thaw " +
 				"height for unconfirmed channel")
 		}
 		return c.ShortChannelID.BlockHeight + c.ThawHeight, nil
@@ -2940,7 +2942,7 @@ func (c *OpenChannel) AbsoluteThawHeight() (uint32, error) {
 }
 
 func putChannelCloseSummary(tx kvdb.RwTx, chanID []byte,
-	summary *ChannelCloseSummary, lastChanState *OpenChannel) error {
+	summary *ChannelCloseSummary, lastChanState *OpenChannel) er.R {
 
 	closedChanBucket, err := tx.CreateTopLevelBucket(closedChannelBucket)
 	if err != nil {
@@ -2959,7 +2961,7 @@ func putChannelCloseSummary(tx kvdb.RwTx, chanID []byte,
 	return closedChanBucket.Put(chanID, b.Bytes())
 }
 
-func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) error {
+func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) er.R {
 	err := WriteElements(w,
 		cs.ChanPoint, cs.ShortChanID, cs.ChainHash, cs.ClosingTXID,
 		cs.CloseHeight, cs.RemotePub, cs.Capacity, cs.SettledBalance,
@@ -3018,7 +3020,7 @@ func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) error {
 	return nil
 }
 
-func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
+func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, er.R) {
 	c := &ChannelCloseSummary{}
 
 	err := ReadElements(r,
@@ -3073,7 +3075,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 	// Check if we have a channel sync message to read.
 	var hasChanSyncMsg bool
 	err = ReadElements(r, &hasChanSyncMsg)
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return c, nil
 	} else if err != nil {
 		return nil, err
@@ -3090,7 +3092,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 
 		chanSync, ok := msg.(*lnwire.ChannelReestablish)
 		if !ok {
-			return nil, errors.New("unable cast db Message to " +
+			return nil, er.New("unable cast db Message to " +
 				"ChannelReestablish")
 		}
 		c.LastChanSyncMsg = chanSync
@@ -3099,7 +3101,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 	return c, nil
 }
 
-func writeChanConfig(b io.Writer, c *ChannelConfig) error {
+func writeChanConfig(b io.Writer, c *ChannelConfig) er.R {
 	return WriteElements(b,
 		c.DustLimit, c.MaxPendingAmount, c.ChanReserve, c.MinHTLC,
 		c.MaxAcceptedHtlcs, c.CsvDelay, c.MultiSigKey,
@@ -3118,7 +3120,7 @@ func fundingTxPresent(channel *OpenChannel) bool {
 		!channel.hasChanStatus(ChanStatusRestored)
 }
 
-func putChanInfo(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
+func putChanInfo(chanBucket kvdb.RwBucket, channel *OpenChannel) er.R {
 	var w bytes.Buffer
 	if err := WriteElements(&w,
 		channel.ChanType, channel.ChainHash, channel.FundingOutpoint,
@@ -3166,7 +3168,7 @@ func putChanInfo(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
 // putOptionalUpfrontShutdownScript adds a shutdown script under the key
 // provided if it has a non-zero length.
 func putOptionalUpfrontShutdownScript(chanBucket kvdb.RwBucket, key []byte,
-	script []byte) error {
+	script []byte) er.R {
 	// If the script is empty, we do not need to add anything.
 	if len(script) == 0 {
 		return nil
@@ -3184,7 +3186,7 @@ func putOptionalUpfrontShutdownScript(chanBucket kvdb.RwBucket, key []byte,
 // key provided if it is present. Upfront shutdown scripts are optional, so the
 // function returns with no error if the key is not present.
 func getOptionalUpfrontShutdownScript(chanBucket kvdb.RBucket, key []byte,
-	script *lnwire.DeliveryAddress) error {
+	script *lnwire.DeliveryAddress) er.R {
 
 	// Return early if the bucket does not exit, a shutdown script was not set.
 	bs := chanBucket.Get(key)
@@ -3202,7 +3204,7 @@ func getOptionalUpfrontShutdownScript(chanBucket kvdb.RBucket, key []byte,
 	return nil
 }
 
-func serializeChanCommit(w io.Writer, c *ChannelCommitment) error {
+func serializeChanCommit(w io.Writer, c *ChannelCommitment) er.R {
 	if err := WriteElements(w,
 		c.CommitHeight, c.LocalLogIndex, c.LocalHtlcIndex,
 		c.RemoteLogIndex, c.RemoteHtlcIndex, c.LocalBalance,
@@ -3216,7 +3218,7 @@ func serializeChanCommit(w io.Writer, c *ChannelCommitment) error {
 }
 
 func putChanCommitment(chanBucket kvdb.RwBucket, c *ChannelCommitment,
-	local bool) error {
+	local bool) er.R {
 
 	var commitKey []byte
 	if local {
@@ -3233,7 +3235,7 @@ func putChanCommitment(chanBucket kvdb.RwBucket, c *ChannelCommitment,
 	return chanBucket.Put(commitKey, b.Bytes())
 }
 
-func putChanCommitments(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
+func putChanCommitments(chanBucket kvdb.RwBucket, channel *OpenChannel) er.R {
 	// If this is a restored channel, then we don't have any commitments to
 	// write.
 	if channel.hasChanStatus(ChanStatusRestored) {
@@ -3252,7 +3254,7 @@ func putChanCommitments(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
 	)
 }
 
-func putChanRevocationState(chanBucket kvdb.RwBucket, channel *OpenChannel) error {
+func putChanRevocationState(chanBucket kvdb.RwBucket, channel *OpenChannel) er.R {
 
 	var b bytes.Buffer
 	err := WriteElements(
@@ -3277,7 +3279,7 @@ func putChanRevocationState(chanBucket kvdb.RwBucket, channel *OpenChannel) erro
 	return chanBucket.Put(revocationStateKey, b.Bytes())
 }
 
-func readChanConfig(b io.Reader, c *ChannelConfig) error {
+func readChanConfig(b io.Reader, c *ChannelConfig) er.R {
 	return ReadElements(b,
 		&c.DustLimit, &c.MaxPendingAmount, &c.ChanReserve,
 		&c.MinHTLC, &c.MaxAcceptedHtlcs, &c.CsvDelay,
@@ -3287,10 +3289,10 @@ func readChanConfig(b io.Reader, c *ChannelConfig) error {
 	)
 }
 
-func fetchChanInfo(chanBucket kvdb.RBucket, channel *OpenChannel) error {
+func fetchChanInfo(chanBucket kvdb.RBucket, channel *OpenChannel) er.R {
 	infoBytes := chanBucket.Get(chanInfoKey)
 	if infoBytes == nil {
-		return ErrNoChanInfoFound
+		return ErrNoChanInfoFound.Default()
 	}
 	r := bytes.NewReader(infoBytes)
 
@@ -3334,7 +3336,7 @@ func fetchChanInfo(chanBucket kvdb.RBucket, channel *OpenChannel) error {
 	)
 }
 
-func deserializeChanCommit(r io.Reader) (ChannelCommitment, error) {
+func deserializeChanCommit(r io.Reader) (ChannelCommitment, er.R) {
 	var c ChannelCommitment
 
 	err := ReadElements(r,
@@ -3354,7 +3356,7 @@ func deserializeChanCommit(r io.Reader) (ChannelCommitment, error) {
 	return c, nil
 }
 
-func fetchChanCommitment(chanBucket kvdb.RBucket, local bool) (ChannelCommitment, error) {
+func fetchChanCommitment(chanBucket kvdb.RBucket, local bool) (ChannelCommitment, er.R) {
 	var commitKey []byte
 	if local {
 		commitKey = append(chanCommitmentKey, byte(0x00))
@@ -3364,15 +3366,15 @@ func fetchChanCommitment(chanBucket kvdb.RBucket, local bool) (ChannelCommitment
 
 	commitBytes := chanBucket.Get(commitKey)
 	if commitBytes == nil {
-		return ChannelCommitment{}, ErrNoCommitmentsFound
+		return ChannelCommitment{}, ErrNoCommitmentsFound.Default()
 	}
 
 	r := bytes.NewReader(commitBytes)
 	return deserializeChanCommit(r)
 }
 
-func fetchChanCommitments(chanBucket kvdb.RBucket, channel *OpenChannel) error {
-	var err error
+func fetchChanCommitments(chanBucket kvdb.RBucket, channel *OpenChannel) er.R {
+	var err er.R
 
 	// If this is a restored channel, then we don't have any commitments to
 	// read.
@@ -3392,10 +3394,10 @@ func fetchChanCommitments(chanBucket kvdb.RBucket, channel *OpenChannel) error {
 	return nil
 }
 
-func fetchChanRevocationState(chanBucket kvdb.RBucket, channel *OpenChannel) error {
+func fetchChanRevocationState(chanBucket kvdb.RBucket, channel *OpenChannel) er.R {
 	revBytes := chanBucket.Get(revocationStateKey)
 	if revBytes == nil {
-		return ErrNoRevocationsFound
+		return ErrNoRevocationsFound.Default()
 	}
 	r := bytes.NewReader(revBytes)
 
@@ -3418,7 +3420,7 @@ func fetchChanRevocationState(chanBucket kvdb.RBucket, channel *OpenChannel) err
 	return ReadElements(r, &channel.RemoteNextRevocation)
 }
 
-func deleteOpenChannel(chanBucket kvdb.RwBucket) error {
+func deleteOpenChannel(chanBucket kvdb.RwBucket) er.R {
 
 	if err := chanBucket.Delete(chanInfoKey); err != nil {
 		return err
@@ -3453,7 +3455,7 @@ func makeLogKey(updateNum uint64) [8]byte {
 }
 
 func appendChannelLogEntry(log kvdb.RwBucket,
-	commit *ChannelCommitment) error {
+	commit *ChannelCommitment) er.R {
 
 	var b bytes.Buffer
 	if err := serializeChanCommit(&b, commit); err != nil {
@@ -3465,19 +3467,19 @@ func appendChannelLogEntry(log kvdb.RwBucket,
 }
 
 func fetchChannelLogEntry(log kvdb.RBucket,
-	updateNum uint64) (ChannelCommitment, error) {
+	updateNum uint64) (ChannelCommitment, er.R) {
 
 	logEntrykey := makeLogKey(updateNum)
 	commitBytes := log.Get(logEntrykey[:])
 	if commitBytes == nil {
-		return ChannelCommitment{}, errLogEntryNotFound
+		return ChannelCommitment{}, errLogEntryNotFound.Default()
 	}
 
 	commitReader := bytes.NewReader(commitBytes)
 	return deserializeChanCommit(commitReader)
 }
 
-func fetchThawHeight(chanBucket kvdb.RBucket) (uint32, error) {
+func fetchThawHeight(chanBucket kvdb.RBucket) (uint32, er.R) {
 	var height uint32
 
 	heightBytes := chanBucket.Get(frozenChanKey)
@@ -3490,7 +3492,7 @@ func fetchThawHeight(chanBucket kvdb.RBucket) (uint32, error) {
 	return height, nil
 }
 
-func storeThawHeight(chanBucket kvdb.RwBucket, height uint32) error {
+func storeThawHeight(chanBucket kvdb.RwBucket, height uint32) er.R {
 	var heightBuf bytes.Buffer
 	if err := WriteElements(&heightBuf, height); err != nil {
 		return err
@@ -3499,6 +3501,6 @@ func storeThawHeight(chanBucket kvdb.RwBucket, height uint32) error {
 	return chanBucket.Put(frozenChanKey, heightBuf.Bytes())
 }
 
-func deleteThawHeight(chanBucket kvdb.RwBucket) error {
+func deleteThawHeight(chanBucket kvdb.RwBucket) er.R {
 	return chanBucket.Delete(frozenChanKey)
 }

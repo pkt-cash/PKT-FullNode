@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 )
 
@@ -17,10 +18,10 @@ type Interface interface {
 	InboundPeerConnected(Peer)
 
 	// Start sets up the watchtower server.
-	Start() error
+	Start() er.R
 
 	// Stop cleans up the watchtower's current connections and resources.
-	Stop() error
+	Stop() er.R
 }
 
 // Peer is the primary interface used to abstract watchtower clients.
@@ -28,17 +29,17 @@ type Peer interface {
 	io.WriteCloser
 
 	// ReadNextMessage pulls the next framed message from the client.
-	ReadNextMessage() ([]byte, error)
+	ReadNextMessage() ([]byte, er.R)
 
 	// SetWriteDeadline specifies the time by which the client must have
 	// read a message sent by the server. In practice, the connection is
 	// buffered, so the client must read enough from the connection to
 	// support the server adding another reply.
-	SetWriteDeadline(time.Time) error
+	SetWriteDeadline(time.Time) er.R
 
 	// SetReadDeadline specifies the time by which the client must send
 	// another message.
-	SetReadDeadline(time.Time) error
+	SetReadDeadline(time.Time) er.R
 
 	// RemotePub returns the client's public key.
 	RemotePub() *btcec.PublicKey
@@ -53,18 +54,18 @@ type DB interface {
 	// InsertSessionInfo saves a newly agreed-upon session from a client.
 	// This method should fail if a session with the same session id already
 	// exists.
-	InsertSessionInfo(*wtdb.SessionInfo) error
+	InsertSessionInfo(*wtdb.SessionInfo) er.R
 
 	// GetSessionInfo retrieves the SessionInfo associated with the session
 	// id, if it exists.
-	GetSessionInfo(*wtdb.SessionID) (*wtdb.SessionInfo, error)
+	GetSessionInfo(*wtdb.SessionID) (*wtdb.SessionInfo, er.R)
 
 	// InsertStateUpdate persists a state update sent by a client, and
 	// validates the update against the current SessionInfo stored under the
 	// update's session id..
-	InsertStateUpdate(*wtdb.SessionStateUpdate) (uint16, error)
+	InsertStateUpdate(*wtdb.SessionStateUpdate) (uint16, er.R)
 
 	// DeleteSession removes all data associated with a particular session
 	// id from the tower's database.
-	DeleteSession(wtdb.SessionID) error
+	DeleteSession(wtdb.SessionID) er.R
 }

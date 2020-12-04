@@ -38,7 +38,7 @@ func NewInitMessage(connFeatures *lnwire.RawFeatureVector,
 // protocol version specified.
 //
 // This is part of the wtwire.Message interface.
-func (msg *Init) Encode(w io.Writer, pver uint32) error {
+func (msg *Init) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		msg.ConnFeatures,
 		msg.ChainHash,
@@ -49,7 +49,7 @@ func (msg *Init) Encode(w io.Writer, pver uint32) error {
 // observing the specified protocol version.
 //
 // This is part of the wtwire.Message interface.
-func (msg *Init) Decode(r io.Reader, pver uint32) error {
+func (msg *Init) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&msg.ConnFeatures,
 		&msg.ChainHash,
@@ -80,7 +80,7 @@ var _ Message = (*Init)(nil)
 // chain hash and that the remote Init does not contain any required feature
 // bits that we don't understand.
 func (msg *Init) CheckRemoteInit(remoteInit *Init,
-	featureNames map[lnwire.FeatureBit]string) error {
+	featureNames map[lnwire.FeatureBit]string) er.R {
 
 	// Check that the remote peer is on the same chain.
 	if msg.ChainHash != remoteInit.ChainHash {

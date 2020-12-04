@@ -2,11 +2,11 @@ package migration_01_to_11
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -44,19 +44,19 @@ func makeFakePayment() *outgoingPayment {
 }
 
 // randomBytes creates random []byte with length in range [minLen, maxLen)
-func randomBytes(minLen, maxLen int) ([]byte, error) {
+func randomBytes(minLen, maxLen int) ([]byte, er.R) {
 	randBuf := make([]byte, minLen+rand.Intn(maxLen-minLen))
 
 	if _, err := rand.Read(randBuf); err != nil {
-		return nil, fmt.Errorf("Internal error. "+
+		return nil, er.Errorf("Internal error. "+
 			"Cannot generate random string: %v", err)
 	}
 
 	return randBuf, nil
 }
 
-func makeRandomFakePayment() (*outgoingPayment, error) {
-	var err error
+func makeRandomFakePayment() (*outgoingPayment, er.R) {
+	var err er.R
 	fakeInvoice := &Invoice{
 		// Use single second precision to avoid false positive test
 		// failures due to the monotonic time component.

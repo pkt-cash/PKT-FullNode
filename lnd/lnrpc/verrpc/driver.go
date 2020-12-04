@@ -10,7 +10,7 @@ func init() {
 	subServer := &lnrpc.SubServerDriver{
 		SubServerName: subServerName,
 		New: func(c lnrpc.SubServerConfigDispatcher) (lnrpc.SubServer,
-			lnrpc.MacaroonPerms, error) {
+			lnrpc.MacaroonPerms, er.R) {
 
 			return &Server{}, macPermissions, nil
 		},

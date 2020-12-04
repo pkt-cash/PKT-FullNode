@@ -3,8 +3,6 @@ package lnwallet
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
-	"io"
 	"io/ioutil"
 	prand "math/rand"
 	"net"
@@ -12,6 +10,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -104,7 +104,7 @@ var (
 // files created. If tweaklessCommits is true, then the commits within the
 // channels will use the new format, otherwise the legacy format.
 func CreateTestChannels(chanType channeldb.ChannelType) (
-	*LightningChannel, *LightningChannel, func(), error) {
+	*LightningChannel, *LightningChannel, func(), er.R) {
 
 	channelCapacity, err := btcutil.NewAmount(10)
 	if err != nil {
@@ -282,7 +282,7 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 	}
 
 	var chanIDBytes [8]byte
-	if _, err := io.ReadFull(rand.Reader, chanIDBytes[:]); err != nil {
+	if _, err := util.ReadFull(rand.Reader, chanIDBytes[:]); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -402,7 +402,7 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 // initRevocationWindows simulates a new channel being opened within the p2p
 // network by populating the initial revocation windows of the passed
 // commitment state machines.
-func initRevocationWindows(chanA, chanB *LightningChannel) error {
+func initRevocationWindows(chanA, chanB *LightningChannel) er.R {
 	aliceNextRevoke, err := chanA.NextRevocationKey()
 	if err != nil {
 		return err
@@ -423,8 +423,8 @@ func initRevocationWindows(chanA, chanB *LightningChannel) error {
 }
 
 // pubkeyFromHex parses a Bitcoin public key from a hex encoded string.
-func pubkeyFromHex(keyHex string) (*btcec.PublicKey, error) {
-	bytes, err := hex.DecodeString(keyHex)
+func pubkeyFromHex(keyHex string) (*btcec.PublicKey, er.R) {
+	bytes, err := util.DecodeHex(keyHex)
 	if err != nil {
 		return nil, err
 	}
@@ -432,8 +432,8 @@ func pubkeyFromHex(keyHex string) (*btcec.PublicKey, error) {
 }
 
 // privkeyFromHex parses a Bitcoin private key from a hex encoded string.
-func privkeyFromHex(keyHex string) (*btcec.PrivateKey, error) {
-	bytes, err := hex.DecodeString(keyHex)
+func privkeyFromHex(keyHex string) (*btcec.PrivateKey, er.R) {
+	bytes, err := util.DecodeHex(keyHex)
 	if err != nil {
 		return nil, err
 	}
@@ -443,8 +443,8 @@ func privkeyFromHex(keyHex string) (*btcec.PrivateKey, error) {
 }
 
 // blockFromHex parses a full Bitcoin block from a hex encoded string.
-func blockFromHex(blockHex string) (*btcutil.Block, error) {
-	bytes, err := hex.DecodeString(blockHex)
+func blockFromHex(blockHex string) (*btcutil.Block, er.R) {
+	bytes, err := util.DecodeHex(blockHex)
 	if err != nil {
 		return nil, err
 	}
@@ -452,8 +452,8 @@ func blockFromHex(blockHex string) (*btcutil.Block, error) {
 }
 
 // txFromHex parses a full Bitcoin transaction from a hex encoded string.
-func txFromHex(txHex string) (*btcutil.Tx, error) {
-	bytes, err := hex.DecodeString(txHex)
+func txFromHex(txHex string) (*btcutil.Tx, er.R) {
+	bytes, err := util.DecodeHex(txHex)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +479,7 @@ func calcStaticFee(chanType channeldb.ChannelType, numHTLCs int) btcutil.Amount 
 // commitment state machines to transition to a new state locking in any
 // pending updates. This method is useful when testing interactions between two
 // live state machines.
-func ForceStateTransition(chanA, chanB *LightningChannel) error {
+func ForceStateTransition(chanA, chanB *LightningChannel) er.R {
 	aliceSig, aliceHtlcSigs, _, err := chanA.SignNextCommitment()
 	if err != nil {
 		return err

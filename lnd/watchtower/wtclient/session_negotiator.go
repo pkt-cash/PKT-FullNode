@@ -1,10 +1,10 @@
 package wtclient
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -27,10 +27,10 @@ type SessionNegotiator interface {
 	NewSessions() <-chan *wtdb.ClientSession
 
 	// Start safely initializes the session negotiator.
-	Start() error
+	Start() er.R
 
 	// Stop safely shuts down the session negotiator.
-	Stop() error
+	Stop() er.R
 }
 
 // NegotiatorConfig provides access to the resources required by a
@@ -59,14 +59,14 @@ type NegotiatorConfig struct {
 	// using a specified private key. The peer is returned in the event of a
 	// successful connection.
 	Dial func(keychain.SingleKeyECDH, *lnwire.NetAddress) (wtserver.Peer,
-		error)
+		er.R)
 
 	// SendMessage writes a wtwire message to remote peer.
-	SendMessage func(wtserver.Peer, wtwire.Message) error
+	SendMessage func(wtserver.Peer, wtwire.Message) er.R
 
 	// ReadMessage reads a message from a remote peer and returns the
 	// decoded wtwire message.
-	ReadMessage func(wtserver.Peer) (wtwire.Message, error)
+	ReadMessage func(wtserver.Peer) (wtwire.Message, er.R)
 
 	// ChainHash the genesis hash identifying the chain for any negotiated
 	// sessions. Any state updates sent to that session should also
@@ -128,7 +128,7 @@ func newSessionNegotiator(cfg *NegotiatorConfig) *sessionNegotiator {
 }
 
 // Start safely starts up the sessionNegotiator.
-func (n *sessionNegotiator) Start() error {
+func (n *sessionNegotiator) Start() er.R {
 	n.started.Do(func() {
 		log.Debugf("Starting session negotiator")
 
@@ -140,7 +140,7 @@ func (n *sessionNegotiator) Start() error {
 }
 
 // Stop safely shutsdown the sessionNegotiator.
-func (n *sessionNegotiator) Stop() error {
+func (n *sessionNegotiator) Stop() er.R {
 	n.stopped.Do(func() {
 		log.Debugf("Stopping session negotiator")
 
@@ -309,11 +309,11 @@ retryWithBackoff:
 // negotiation, or after all addresses have failed with ErrFailedNegotiation. If
 // the tower has no addresses, ErrNoTowerAddrs is returned.
 func (n *sessionNegotiator) createSession(tower *wtdb.Tower,
-	keyIndex uint32) error {
+	keyIndex uint32) er.R {
 
 	// If the tower has no addresses, there's nothing we can do.
 	if len(tower.Addresses) == 0 {
-		return ErrNoTowerAddrs
+		return ErrNoTowerAddrs.Default()
 	}
 
 	sessionKeyDesc, err := n.cfg.SecretKeyRing.DeriveKey(
@@ -332,7 +332,7 @@ func (n *sessionNegotiator) createSession(tower *wtdb.Tower,
 	for _, lnAddr := range tower.LNAddrs() {
 		err := n.tryAddress(sessionKey, keyIndex, tower, lnAddr)
 		switch {
-		case err == ErrPermanentTowerFailure:
+		case ErrPermanentTowerFailure.Is(err):
 			// TODO(conner): report to iterator? can then be reset
 			// with restart
 			fallthrough
@@ -348,7 +348,7 @@ func (n *sessionNegotiator) createSession(tower *wtdb.Tower,
 		}
 	}
 
-	return ErrFailedNegotiation
+	return ErrFailedNegotiation.Default()
 }
 
 // tryAddress executes a single create session dance using the given address.
@@ -356,7 +356,7 @@ func (n *sessionNegotiator) createSession(tower *wtdb.Tower,
 // returns true if all steps succeed and the new session has been persisted, and
 // fails otherwise.
 func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
-	keyIndex uint32, tower *wtdb.Tower, lnAddr *lnwire.NetAddress) error {
+	keyIndex uint32, tower *wtdb.Tower, lnAddr *lnwire.NetAddress) er.R {
 
 	// Connect to the tower address using our generated session key.
 	conn, err := n.cfg.Dial(sessionKey, lnAddr)
@@ -367,19 +367,19 @@ func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
 	// Send local Init message.
 	err = n.cfg.SendMessage(conn, n.localInit)
 	if err != nil {
-		return fmt.Errorf("unable to send Init: %v", err)
+		return er.Errorf("unable to send Init: %v", err)
 	}
 
 	// Receive remote Init message.
 	remoteMsg, err := n.cfg.ReadMessage(conn)
 	if err != nil {
-		return fmt.Errorf("unable to read Init: %v", err)
+		return er.Errorf("unable to read Init: %v", err)
 	}
 
 	// Check that returned message is wtwire.Init.
 	remoteInit, ok := remoteMsg.(*wtwire.Init)
 	if !ok {
-		return fmt.Errorf("expected Init, got %T in reply", remoteMsg)
+		return er.Errorf("expected Init, got %T in reply", remoteMsg)
 	}
 
 	// Verify the watchtower's remote Init message against our own.
@@ -400,19 +400,19 @@ func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
 	// Send CreateSession message.
 	err = n.cfg.SendMessage(conn, createSession)
 	if err != nil {
-		return fmt.Errorf("unable to send CreateSession: %v", err)
+		return er.Errorf("unable to send CreateSession: %v", err)
 	}
 
 	// Receive CreateSessionReply message.
 	remoteMsg, err = n.cfg.ReadMessage(conn)
 	if err != nil {
-		return fmt.Errorf("unable to read CreateSessionReply: %v", err)
+		return er.Errorf("unable to read CreateSessionReply: %v", err)
 	}
 
 	// Check that returned message is wtwire.CreateSessionReply.
 	createSessionReply, ok := remoteMsg.(*wtwire.CreateSessionReply)
 	if !ok {
-		return fmt.Errorf("expected CreateSessionReply, got %T in "+
+		return er.Errorf("expected CreateSessionReply, got %T in "+
 			"reply", remoteMsg)
 	}
 
@@ -441,7 +441,7 @@ func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
 
 		err = n.cfg.DB.CreateClientSession(clientSession)
 		if err != nil {
-			return fmt.Errorf("unable to persist ClientSession: %v",
+			return er.Errorf("unable to persist ClientSession: %v",
 				err)
 		}
 
@@ -455,16 +455,16 @@ func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
 		case n.successfulNegotiations <- clientSession:
 			return nil
 		case <-n.quit:
-			return ErrNegotiatorExiting
+			return ErrNegotiatorExiting.Default()
 		}
 
 	// TODO(conner): handle error codes properly
 	case wtwire.CreateSessionCodeRejectBlobType:
-		return fmt.Errorf("tower rejected blob type: %v",
+		return er.Errorf("tower rejected blob type: %v",
 			policy.BlobType)
 
 	case wtwire.CreateSessionCodeRejectMaxUpdates:
-		return fmt.Errorf("tower rejected max updates: %v",
+		return er.Errorf("tower rejected max updates: %v",
 			policy.MaxUpdates)
 
 	case wtwire.CreateSessionCodeRejectRewardRate:
@@ -472,18 +472,18 @@ func (n *sessionNegotiator) tryAddress(sessionKey keychain.SingleKeyECDH,
 		// we didn't request a reward session, we'll treat this as a
 		// permanent tower failure.
 		if !policy.BlobType.Has(blob.FlagReward) {
-			return ErrPermanentTowerFailure
+			return ErrPermanentTowerFailure.Default()
 		}
 
-		return fmt.Errorf("tower rejected reward rate: %v",
+		return er.Errorf("tower rejected reward rate: %v",
 			policy.RewardRate)
 
 	case wtwire.CreateSessionCodeRejectSweepFeeRate:
-		return fmt.Errorf("tower rejected sweep fee rate: %v",
+		return er.Errorf("tower rejected sweep fee rate: %v",
 			policy.SweepFeeRate)
 
 	default:
-		return fmt.Errorf("received unhandled error code: %v",
+		return er.Errorf("received unhandled error code: %v",
 			createSessionReply.Code)
 	}
 }

@@ -3,20 +3,21 @@ package lnd
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/labels"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 //                          SUMMARY OF OUTPUT STATES
@@ -163,7 +164,8 @@ const (
 var (
 	// ErrContractNotFound is returned when the nursery is unable to
 	// retrieve information about a queried contract.
-	ErrContractNotFound = fmt.Errorf("unable to locate contract")
+	ErrContractNotFound = er.GenericErrorType.CodeWithDetail("ErrContractNotFound",
+		"unable to locate contract")
 )
 
 // NurseryConfig abstracts the required subsystems used by the utxo nursery. An
@@ -180,12 +182,12 @@ type NurseryConfig struct {
 	// FetchClosedChannels provides access to a user's channels, such that
 	// they can be marked fully closed after incubation has concluded.
 	FetchClosedChannels func(pendingOnly bool) (
-		[]*channeldb.ChannelCloseSummary, error)
+		[]*channeldb.ChannelCloseSummary, er.R)
 
 	// FetchClosedChannel provides access to the close summary to extract a
 	// height hint from.
 	FetchClosedChannel func(chanID *wire.OutPoint) (
-		*channeldb.ChannelCloseSummary, error)
+		*channeldb.ChannelCloseSummary, er.R)
 
 	// Notifier provides the utxo nursery the ability to subscribe to
 	// transaction confirmation events, which advance outputs through their
@@ -194,14 +196,14 @@ type NurseryConfig struct {
 
 	// PublishTransaction facilitates the process of broadcasting a signed
 	// transaction to the appropriate network.
-	PublishTransaction func(*wire.MsgTx, string) error
+	PublishTransaction func(*wire.MsgTx, string) er.R
 
 	// Store provides access to and modification of the persistent state
 	// maintained about the utxo nursery's incubating outputs.
 	Store NurseryStore
 
 	// Sweep sweeps an input back to the wallet.
-	SweepInput func(input.Input, sweep.Params) (chan sweep.Result, error)
+	SweepInput func(input.Input, sweep.Params) (chan sweep.Result, er.R)
 }
 
 // utxoNursery is a system dedicated to incubating time-locked outputs created
@@ -236,7 +238,7 @@ func newUtxoNursery(cfg *NurseryConfig) *utxoNursery {
 
 // Start launches all goroutines the utxoNursery needs to properly carry out
 // its duties.
-func (u *utxoNursery) Start() error {
+func (u *utxoNursery) Start() er.R {
 	if !atomic.CompareAndSwapUint32(&u.started, 0, 1) {
 		return nil
 	}
@@ -312,7 +314,7 @@ func (u *utxoNursery) Start() error {
 
 // Stop gracefully shuts down any lingering goroutines launched during normal
 // operation of the utxoNursery.
-func (u *utxoNursery) Stop() error {
+func (u *utxoNursery) Stop() er.R {
 	if !atomic.CompareAndSwapUint32(&u.stopped, 0, 1) {
 		return nil
 	}
@@ -332,7 +334,7 @@ func (u *utxoNursery) Stop() error {
 func (u *utxoNursery) IncubateOutputs(chanPoint wire.OutPoint,
 	outgoingHtlcs []lnwallet.OutgoingHtlcResolution,
 	incomingHtlcs []lnwallet.IncomingHtlcResolution,
-	broadcastHeight uint32) error {
+	broadcastHeight uint32) er.R {
 
 	// Add to wait group because nursery might shut down during execution of
 	// this function. Otherwise it could happen that nursery thinks it is
@@ -345,7 +347,7 @@ func (u *utxoNursery) IncubateOutputs(chanPoint wire.OutPoint,
 	// right before this function's add call was made.
 	select {
 	case <-u.quit:
-		return fmt.Errorf("nursery shutting down")
+		return er.Errorf("nursery shutting down")
 	default:
 	}
 
@@ -469,7 +471,7 @@ func (u *utxoNursery) IncubateOutputs(chanPoint wire.OutPoint,
 // contract that was previously force closed. If a report entry for the target
 // chanPoint is unable to be constructed, then an error will be returned.
 func (u *utxoNursery) NurseryReport(
-	chanPoint *wire.OutPoint) (*contractMaturityReport, error) {
+	chanPoint *wire.OutPoint) (*contractMaturityReport, er.R) {
 
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -479,7 +481,7 @@ func (u *utxoNursery) NurseryReport(
 
 	var report *contractMaturityReport
 
-	if err := u.cfg.Store.ForChanOutputs(chanPoint, func(k, v []byte) error {
+	if err := u.cfg.Store.ForChanOutputs(chanPoint, func(k, v []byte) er.R {
 		switch {
 		case bytes.HasPrefix(k, cribPrefix):
 			// Cribs outputs are the only kind currently stored as
@@ -587,7 +589,7 @@ func (u *utxoNursery) NurseryReport(
 
 // reloadPreschool re-initializes the chain notifier with all of the outputs
 // that had been saved to the "preschool" database bucket prior to shutdown.
-func (u *utxoNursery) reloadPreschool() error {
+func (u *utxoNursery) reloadPreschool() er.R {
 	psclOutputs, err := u.cfg.Store.FetchPreschools()
 	if err != nil {
 		return err
@@ -634,7 +636,7 @@ func (u *utxoNursery) reloadPreschool() error {
 // This allows the nursery to reinitialize all state to continue sweeping
 // outputs, even in the event that we missed blocks while offline. reloadClasses
 // is called during the startup of the UTXO Nursery.
-func (u *utxoNursery) reloadClasses(bestHeight uint32) error {
+func (u *utxoNursery) reloadClasses(bestHeight uint32) er.R {
 	// Loading all active heights up to and including the current block.
 	activeHeights, err := u.cfg.Store.HeightsBelowOrEqual(
 		uint32(bestHeight))
@@ -722,7 +724,7 @@ func (u *utxoNursery) incubator(newBlockChan *chainntnfs.BlockEpochEvent) {
 // CLTV delay expires at the nursery's current height. This method is called
 // each time a new block arrives, or during startup to catch up on heights we
 // may have missed while the nursery was offline.
-func (u *utxoNursery) graduateClass(classHeight uint32) error {
+func (u *utxoNursery) graduateClass(classHeight uint32) er.R {
 	// Record this height as the nursery's current best height.
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -770,7 +772,7 @@ func (u *utxoNursery) graduateClass(classHeight uint32) error {
 // wallet. The outputs swept were previously time locked (either absolute or
 // relative), but are not mature enough to sweep into the wallet.
 func (u *utxoNursery) sweepMatureOutputs(classHeight uint32,
-	kgtnOutputs []kidOutput) error {
+	kgtnOutputs []kidOutput) er.R {
 
 	utxnLog.Infof("Sweeping %v CSV-delayed outputs with sweep tx for "+
 		"height %v", len(kgtnOutputs), classHeight)
@@ -859,7 +861,7 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 // sweepCribOutput broadcasts the crib output's htlc timeout txn, and sets up a
 // notification that will advance it to the kindergarten bucket upon
 // confirmation.
-func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) error {
+func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) er.R {
 	utxnLog.Infof("Publishing CLTV-delayed HTLC output using timeout tx "+
 		"(txid=%v): %v", baby.timeoutTx.TxHash(),
 		newLogClosure(func() string {
@@ -884,7 +886,7 @@ func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) erro
 // notification for an htlc timeout transaction. If successful, a goroutine
 // will be spawned that will transition the provided baby output into the
 // kindergarten state within the nursery store.
-func (u *utxoNursery) registerTimeoutConf(baby *babyOutput, heightHint uint32) error {
+func (u *utxoNursery) registerTimeoutConf(baby *babyOutput, heightHint uint32) er.R {
 
 	birthTxID := baby.timeoutTx.TxHash()
 
@@ -950,7 +952,7 @@ func (u *utxoNursery) waitForTimeoutConf(baby *babyOutput,
 // HTLC on our commitment transaction.. If successful, the provided preschool
 // output will be moved persistently into the kindergarten state within the
 // nursery store.
-func (u *utxoNursery) registerPreschoolConf(kid *kidOutput, heightHint uint32) error {
+func (u *utxoNursery) registerPreschoolConf(kid *kidOutput, heightHint uint32) er.R {
 	txID := kid.OutPoint().Hash
 
 	// TODO(roasbeef): ensure we don't already have one waiting, need to
@@ -1144,7 +1146,7 @@ func (c *contractMaturityReport) AddRecoveredHtlc(kid *kidOutput) {
 // if and only if all of its outputs have been marked graduated. If the channel
 // still has ungraduated outputs, the method will succeed without altering the
 // database state.
-func (u *utxoNursery) closeAndRemoveIfMature(chanPoint *wire.OutPoint) error {
+func (u *utxoNursery) closeAndRemoveIfMature(chanPoint *wire.OutPoint) er.R {
 	isMature, err := u.cfg.Store.IsMatureChannel(chanPoint)
 	if err == ErrContractNotFound {
 		return nil
@@ -1224,10 +1226,10 @@ func makeBabyOutput(chanPoint *wire.OutPoint,
 }
 
 // Encode writes the baby output to the given io.Writer.
-func (bo *babyOutput) Encode(w io.Writer) error {
+func (bo *babyOutput) Encode(w io.Writer) er.R {
 	var scratch [4]byte
 	byteOrder.PutUint32(scratch[:], bo.expiry)
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
@@ -1239,7 +1241,7 @@ func (bo *babyOutput) Encode(w io.Writer) error {
 }
 
 // Decode reconstructs a baby output using the provided io.Reader.
-func (bo *babyOutput) Decode(r io.Reader) error {
+func (bo *babyOutput) Decode(r io.Reader) er.R {
 	var scratch [4]byte
 	if _, err := r.Read(scratch[:]); err != nil {
 		return err
@@ -1335,10 +1337,10 @@ func (k *kidOutput) ConfHeight() uint32 {
 // storage. Note that the signDescriptor struct field is included so that the
 // output's witness can be generated by createSweepTx() when the output becomes
 // spendable.
-func (k *kidOutput) Encode(w io.Writer) error {
+func (k *kidOutput) Encode(w io.Writer) er.R {
 	var scratch [8]byte
 	byteOrder.PutUint64(scratch[:], uint64(k.Amount()))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
@@ -1349,27 +1351,27 @@ func (k *kidOutput) Encode(w io.Writer) error {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, k.isHtlc); err != nil {
+	if err := util.WriteBin(w, byteOrder, k.isHtlc); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint32(scratch[:4], k.BlocksToMaturity())
-	if _, err := w.Write(scratch[:4]); err != nil {
+	if _, err := util.Write(w, scratch[:4]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint32(scratch[:4], k.absoluteMaturity)
-	if _, err := w.Write(scratch[:4]); err != nil {
+	if _, err := util.Write(w, scratch[:4]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint32(scratch[:4], k.ConfHeight())
-	if _, err := w.Write(scratch[:4]); err != nil {
+	if _, err := util.Write(w, scratch[:4]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint16(scratch[:2], uint16(k.witnessType))
-	if _, err := w.Write(scratch[:2]); err != nil {
+	if _, err := util.Write(w, scratch[:2]); err != nil {
 		return err
 	}
 
@@ -1379,7 +1381,7 @@ func (k *kidOutput) Encode(w io.Writer) error {
 // Decode takes a byte array representation of a kidOutput and converts it to an
 // struct. Note that the witnessFunc method isn't added during deserialization
 // and must be added later based on the value of the witnessType field.
-func (k *kidOutput) Decode(r io.Reader) error {
+func (k *kidOutput) Decode(r io.Reader) er.R {
 	var scratch [8]byte
 
 	if _, err := r.Read(scratch[:]); err != nil {
@@ -1396,7 +1398,7 @@ func (k *kidOutput) Decode(r io.Reader) error {
 		return err
 	}
 
-	if err := binary.Read(r, byteOrder, &k.isHtlc); err != nil {
+	if err := util.ReadBin(r, byteOrder, &k.isHtlc); err != nil {
 		return err
 	}
 
@@ -1424,7 +1426,7 @@ func (k *kidOutput) Decode(r io.Reader) error {
 }
 
 // TODO(bvu): copied from channeldb, remove repetition
-func writeOutpoint(w io.Writer, o *wire.OutPoint) error {
+func writeOutpoint(w io.Writer, o *wire.OutPoint) er.R {
 	// TODO(roasbeef): make all scratch buffers on the stack
 	scratch := make([]byte, 4)
 
@@ -1435,12 +1437,12 @@ func writeOutpoint(w io.Writer, o *wire.OutPoint) error {
 	}
 
 	byteOrder.PutUint32(scratch, o.Index)
-	_, err := w.Write(scratch)
+	_, err := util.Write(w, scratch)
 	return err
 }
 
 // TODO(bvu): copied from channeldb, remove repetition
-func readOutpoint(r io.Reader, o *wire.OutPoint) error {
+func readOutpoint(r io.Reader, o *wire.OutPoint) er.R {
 	scratch := make([]byte, 4)
 
 	txid, err := wire.ReadVarBytes(r, 0, 32, "prevout")

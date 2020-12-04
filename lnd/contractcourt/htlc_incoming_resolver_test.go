@@ -74,7 +74,7 @@ func TestHtlcIncomingResolverFwdContestedTimeout(t *testing.T) {
 	// itself because it is created by the test context.
 	reportChan := make(chan *channeldb.ResolverReport)
 	ctx.resolver.Checkpoint = func(_ ContractResolver,
-		reports ...*channeldb.ResolverReport) error {
+		reports ...*channeldb.ResolverReport) er.R {
 
 		// Send all of our reports into the channel.
 		for _, report := range reports {
@@ -191,7 +191,7 @@ func TestHtlcIncomingResolverExitTimeoutHodl(t *testing.T) {
 	// itself because it is created by the test context.
 	reportChan := make(chan *channeldb.ResolverReport)
 	ctx.resolver.Checkpoint = func(_ ContractResolver,
-		reports ...*channeldb.ResolverReport) error {
+		reports ...*channeldb.ResolverReport) er.R {
 
 		// Send all of our reports into the channel.
 		for _, report := range reports {
@@ -228,7 +228,7 @@ func TestHtlcIncomingResolverExitCancelHodl(t *testing.T) {
 	// itself because it is created by the test context.
 	reportChan := make(chan *channeldb.ResolverReport)
 	ctx.resolver.Checkpoint = func(_ ContractResolver,
-		reports ...*channeldb.ResolverReport) error {
+		reports ...*channeldb.ResolverReport) er.R {
 
 		// Send all of our reports into the channel.
 		for _, report := range reports {
@@ -260,7 +260,7 @@ type mockHopIterator struct {
 	hop.Iterator
 }
 
-func (h *mockHopIterator) HopPayload() (*hop.Payload, error) {
+func (h *mockHopIterator) HopPayload() (*hop.Payload, er.R) {
 	var nextAddress [8]byte
 	if !h.isExit {
 		nextAddress = [8]byte{0x01}
@@ -281,7 +281,7 @@ type mockOnionProcessor struct {
 }
 
 func (o *mockOnionProcessor) ReconstructHopIterator(r io.Reader, rHash []byte) (
-	hop.Iterator, error) {
+	hop.Iterator, er.R) {
 
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -326,7 +326,7 @@ func newIncomingResolverTestContext(t *testing.T, isExit bool) *incomingResolver
 			OnionProcessor: onionProcessor,
 		},
 		PutResolverReport: func(_ kvdb.RwTx,
-			_ *channeldb.ResolverReport) error {
+			_ *channeldb.ResolverReport) er.R {
 
 			return nil
 		},
@@ -335,7 +335,7 @@ func newIncomingResolverTestContext(t *testing.T, isExit bool) *incomingResolver
 	cfg := ResolverConfig{
 		ChannelArbitratorConfig: chainCfg,
 		Checkpoint: func(_ ContractResolver,
-			_ ...*channeldb.ResolverReport) error {
+			_ ...*channeldb.ResolverReport) er.R {
 
 			checkPointChan <- struct{}{}
 			return nil

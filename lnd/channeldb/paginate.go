@@ -1,6 +1,9 @@
 package channeldb
 
-import "github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+)
 
 type paginator struct {
 	// cursor is the cursor which we are using to iterate through a bucket.
@@ -113,7 +116,7 @@ func (p paginator) cursorStart() ([]byte, []byte) {
 // to its set of return items (if desired) and return a boolean which indicates
 // whether the item was added. This is required to allow the paginator to
 // determine when the response has the maximum number of required items.
-func (p paginator) query(fetchAndAppend func(k, v []byte) (bool, error)) error {
+func (p paginator) query(fetchAndAppend func(k, v []byte) (bool, er.R)) er.R {
 	indexKey, indexValue := p.cursorStart()
 
 	var totalItems int

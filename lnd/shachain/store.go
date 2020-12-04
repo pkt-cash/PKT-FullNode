@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
 // Store is an interface which serves as an abstraction over data structure
@@ -19,19 +21,19 @@ import (
 type Store interface {
 	// LookUp function is used to restore/lookup/fetch the previous secret
 	// by its index.
-	LookUp(uint64) (*chainhash.Hash, error)
+	LookUp(uint64) (*chainhash.Hash, er.R)
 
 	// AddNextEntry attempts to store the given hash within its internal
 	// storage in an efficient manner.
 	//
 	// NOTE: The hashes derived from the shachain MUST be inserted in the
 	// order they're produced by a shachain.Producer.
-	AddNextEntry(*chainhash.Hash) error
+	AddNextEntry(*chainhash.Hash) er.R
 
 	// Encode writes a binary serialization of the shachain elements
 	// currently saved by implementation of shachain.Store to the passed
 	// io.Writer.
-	Encode(io.Writer) error
+	Encode(io.Writer) er.R
 }
 
 // RevocationStore is a concrete implementation of the Store interface. The
@@ -67,22 +69,22 @@ func NewRevocationStore() *RevocationStore {
 
 // NewRevocationStoreFromBytes recreates the initial store state from the given
 // binary shachain store representation.
-func NewRevocationStoreFromBytes(r io.Reader) (*RevocationStore, error) {
+func NewRevocationStoreFromBytes(r io.Reader) (*RevocationStore, er.R) {
 	store := &RevocationStore{}
 
-	if err := binary.Read(r, binary.BigEndian, &store.lenBuckets); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &store.lenBuckets); err != nil {
 		return nil, err
 	}
 
 	for i := uint8(0); i < store.lenBuckets; i++ {
 		var hashIndex index
-		err := binary.Read(r, binary.BigEndian, &hashIndex)
+		err := util.ReadBin(r, binary.BigEndian, &hashIndex)
 		if err != nil {
 			return nil, err
 		}
 
 		var nextHash chainhash.Hash
-		if _, err := io.ReadFull(r, nextHash[:]); err != nil {
+		if _, err := util.ReadFull(r, nextHash[:]); err != nil {
 			return nil, err
 		}
 
@@ -92,7 +94,7 @@ func NewRevocationStoreFromBytes(r io.Reader) (*RevocationStore, error) {
 		}
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &store.index); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &store.index); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +106,7 @@ func NewRevocationStoreFromBytes(r io.Reader) (*RevocationStore, error) {
 // in store we will not able to derive it and function will fail.
 //
 // NOTE: This function is part of the Store interface.
-func (store *RevocationStore) LookUp(v uint64) (*chainhash.Hash, error) {
+func (store *RevocationStore) LookUp(v uint64) (*chainhash.Hash, er.R) {
 	ind := newIndex(v)
 
 	// Trying to derive the index from one of the existing buckets elements.
@@ -127,7 +129,7 @@ func (store *RevocationStore) LookUp(v uint64) (*chainhash.Hash, error) {
 // they're produced by a shachain.Producer.
 //
 // NOTE: This function is part of the Store interface.
-func (store *RevocationStore) AddNextEntry(hash *chainhash.Hash) error {
+func (store *RevocationStore) AddNextEntry(hash *chainhash.Hash) er.R {
 	newElement := &element{
 		index: store.index,
 		hash:  *hash,
@@ -142,7 +144,7 @@ func (store *RevocationStore) AddNextEntry(hash *chainhash.Hash) error {
 		}
 
 		if !e.isEqual(&store.buckets[i]) {
-			return errors.New("hash isn't derivable from " +
+			return er.New("hash isn't derivable from " +
 				"previous ones")
 		}
 	}
@@ -160,8 +162,8 @@ func (store *RevocationStore) AddNextEntry(hash *chainhash.Hash) error {
 // saved by implementation of shachain.Store to the passed io.Writer.
 //
 // NOTE: This function is part of the Store interface.
-func (store *RevocationStore) Encode(w io.Writer) error {
-	err := binary.Write(w, binary.BigEndian, store.lenBuckets)
+func (store *RevocationStore) Encode(w io.Writer) er.R {
+	err := util.WriteBin(w, binary.BigEndian, store.lenBuckets)
 	if err != nil {
 		return err
 	}
@@ -169,16 +171,16 @@ func (store *RevocationStore) Encode(w io.Writer) error {
 	for i := uint8(0); i < store.lenBuckets; i++ {
 		element := store.buckets[i]
 
-		err := binary.Write(w, binary.BigEndian, element.index)
+		err := util.WriteBin(w, binary.BigEndian, element.index)
 		if err != nil {
 			return err
 		}
 
-		if _, err = w.Write(element.hash[:]); err != nil {
+		if _, err = util.Write(w, element.hash[:]); err != nil {
 			return err
 		}
 
 	}
 
-	return binary.Write(w, binary.BigEndian, store.index)
+	return util.WriteBin(w, binary.BigEndian, store.index)
 }

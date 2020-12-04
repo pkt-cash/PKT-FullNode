@@ -46,7 +46,7 @@ type chanDBRestorer struct {
 // to continue to use the channel, only the minimal amount of information to
 // insert this shell channel back into the database.
 func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
-	*channeldb.ChannelShell, error) {
+	*channeldb.ChannelShell, er.R) {
 
 	// First, we'll also need to obtain the private key for the shachain
 	// root from the encoded public key.
@@ -55,7 +55,7 @@ func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
 	// shachain...
 	privKey, err := c.secretKeys.DerivePrivKey(backup.ShaChainRootDesc)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive shachain root key: %v", err)
+		return nil, er.Errorf("unable to derive shachain root key: %v", err)
 	}
 	revRoot, err := chainhash.NewHash(privKey.Serialize())
 	if err != nil {
@@ -70,31 +70,31 @@ func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
 		backup.LocalChanCfg.MultiSigKey.KeyLocator,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive multi sig key: %v", err)
+		return nil, er.Errorf("unable to derive multi sig key: %v", err)
 	}
 	backup.LocalChanCfg.RevocationBasePoint, err = c.secretKeys.DeriveKey(
 		backup.LocalChanCfg.RevocationBasePoint.KeyLocator,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive revocation key: %v", err)
+		return nil, er.Errorf("unable to derive revocation key: %v", err)
 	}
 	backup.LocalChanCfg.PaymentBasePoint, err = c.secretKeys.DeriveKey(
 		backup.LocalChanCfg.PaymentBasePoint.KeyLocator,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive payment key: %v", err)
+		return nil, er.Errorf("unable to derive payment key: %v", err)
 	}
 	backup.LocalChanCfg.DelayBasePoint, err = c.secretKeys.DeriveKey(
 		backup.LocalChanCfg.DelayBasePoint.KeyLocator,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive delay key: %v", err)
+		return nil, er.Errorf("unable to derive delay key: %v", err)
 	}
 	backup.LocalChanCfg.HtlcBasePoint, err = c.secretKeys.DeriveKey(
 		backup.LocalChanCfg.HtlcBasePoint.KeyLocator,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to derive htlc key: %v", err)
+		return nil, er.Errorf("unable to derive htlc key: %v", err)
 	}
 
 	var chanType channeldb.ChannelType
@@ -111,7 +111,7 @@ func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
 		chanType |= channeldb.SingleFunderTweaklessBit
 
 	default:
-		return nil, fmt.Errorf("unknown Single version: %v", err)
+		return nil, er.Errorf("unknown Single version: %v", err)
 	}
 
 	ltndLog.Infof("SCB Recovery: created channel shell for ChannelPoint(%v), "+
@@ -145,7 +145,7 @@ func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
 // data loss recovery protocol.
 //
 // NOTE: Part of the chanbackup.ChannelRestorer interface.
-func (c *chanDBRestorer) RestoreChansFromSingles(backups ...chanbackup.Single) error {
+func (c *chanDBRestorer) RestoreChansFromSingles(backups ...chanbackup.Single) er.R {
 	channelShells := make([]*channeldb.ChannelShell, 0, len(backups))
 	firstChanHeight := uint32(math.MaxUint32)
 	for _, backup := range backups {
@@ -247,7 +247,7 @@ var _ chanbackup.ChannelRestorer = (*chanDBRestorer)(nil)
 // as a persistent attempt.
 //
 // NOTE: Part of the chanbackup.PeerConnector interface.
-func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) error {
+func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) er.R {
 	// Before we connect to the remote peer, we'll remove any connections
 	// to ensure the new connection is created after this new link/channel
 	// is known.
@@ -291,6 +291,6 @@ func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) error {
 		return nil
 	}
 
-	return fmt.Errorf("unable to connect to peer %x for SCB restore",
+	return er.Errorf("unable to connect to peer %x for SCB restore",
 		nodePub.SerializeCompressed())
 }

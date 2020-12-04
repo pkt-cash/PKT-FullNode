@@ -29,7 +29,7 @@ type HealthCheckConfig struct {
 }
 
 // Validate checks the values configured for our health checks.
-func (h *HealthCheckConfig) Validate() error {
+func (h *HealthCheckConfig) Validate() er.R {
 	if err := h.ChainCheck.validate("chain backend"); err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (h *HealthCheckConfig) Validate() error {
 	if h.DiskCheck.RequiredRemaining < 0 ||
 		h.DiskCheck.RequiredRemaining >= 1 {
 
-		return errors.New("disk required ratio must be in [0:1)")
+		return er.New("disk required ratio must be in [0:1)")
 	}
 
 	return nil
@@ -58,23 +58,23 @@ type CheckConfig struct {
 }
 
 // validate checks the values in a health check config entry if it is enabled.
-func (c *CheckConfig) validate(name string) error {
+func (c *CheckConfig) validate(name string) er.R {
 	if c.Attempts == 0 {
 		return nil
 	}
 
 	if c.Backoff < MinHealthCheckBackoff {
-		return fmt.Errorf("%v backoff: %v below minimum: %v", name,
+		return er.Errorf("%v backoff: %v below minimum: %v", name,
 			c.Backoff, MinHealthCheckBackoff)
 	}
 
 	if c.Timeout < MinHealthCheckTimeout {
-		return fmt.Errorf("%v timeout: %v below minimum: %v", name,
+		return er.Errorf("%v timeout: %v below minimum: %v", name,
 			c.Timeout, MinHealthCheckTimeout)
 	}
 
 	if c.Interval < MinHealthCheckInterval {
-		return fmt.Errorf("%v interval: %v below minimum: %v", name,
+		return er.Errorf("%v interval: %v below minimum: %v", name,
 			c.Interval, MinHealthCheckInterval)
 	}
 

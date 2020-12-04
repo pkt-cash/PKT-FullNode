@@ -87,19 +87,19 @@ func (p *MockPeer) Write(b []byte) (n int, err error) {
 	case p.OutgoingMsgs <- bb:
 		return len(b), nil
 	case <-p.writeDeadline:
-		return 0, fmt.Errorf("write timeout expired")
+		return 0, er.Errorf("write timeout expired")
 	case <-p.RemoteQuit:
-		return 0, fmt.Errorf("remote closed connected")
+		return 0, er.Errorf("remote closed connected")
 	case <-p.Quit:
-		return 0, fmt.Errorf("connection closed")
+		return 0, er.Errorf("connection closed")
 	}
 }
 
 // Close tearsdown the connection, and fails any pending reads or writes.
-func (p *MockPeer) Close() error {
+func (p *MockPeer) Close() er.R {
 	select {
 	case <-p.Quit:
-		return fmt.Errorf("connection already closed")
+		return er.Errorf("connection already closed")
 	default:
 		close(p.Quit)
 		return nil
@@ -109,22 +109,22 @@ func (p *MockPeer) Close() error {
 // ReadNextMessage returns the raw bytes of the next full message read from the
 // remote peer. The read will fail if either party closes the connection or the
 // read deadline expires.
-func (p *MockPeer) ReadNextMessage() ([]byte, error) {
+func (p *MockPeer) ReadNextMessage() ([]byte, er.R) {
 	select {
 	case b := <-p.IncomingMsgs:
 		return b, nil
 	case <-p.readDeadline:
-		return nil, fmt.Errorf("read timeout expired")
+		return nil, er.Errorf("read timeout expired")
 	case <-p.RemoteQuit:
-		return nil, fmt.Errorf("remote closed connected")
+		return nil, er.Errorf("remote closed connected")
 	case <-p.Quit:
-		return nil, fmt.Errorf("connection closed")
+		return nil, er.Errorf("connection closed")
 	}
 }
 
 // SetWriteDeadline initializes a timer that will cause any pending writes to
 // fail at time t. If t is zero, the deadline is infinite.
-func (p *MockPeer) SetWriteDeadline(t time.Time) error {
+func (p *MockPeer) SetWriteDeadline(t time.Time) er.R {
 	if t.IsZero() {
 		p.writeDeadline = nil
 		return nil
@@ -138,7 +138,7 @@ func (p *MockPeer) SetWriteDeadline(t time.Time) error {
 
 // SetReadDeadline initializes a timer that will cause any pending reads to fail
 // at time t. If t is zero, the deadline is infinite.
-func (p *MockPeer) SetReadDeadline(t time.Time) error {
+func (p *MockPeer) SetReadDeadline(t time.Time) er.R {
 	if t.IsZero() {
 		p.readDeadline = nil
 		return nil
@@ -166,12 +166,12 @@ func (p *MockPeer) LocalAddr() net.Addr {
 }
 
 // Read is not implemented.
-func (p *MockPeer) Read(dst []byte) (int, error) {
+func (p *MockPeer) Read(dst []byte) (int, er.R) {
 	panic("not implemented")
 }
 
 // SetDeadline is not implemented.
-func (p *MockPeer) SetDeadline(t time.Time) error {
+func (p *MockPeer) SetDeadline(t time.Time) er.R {
 	panic("not implemented")
 }
 

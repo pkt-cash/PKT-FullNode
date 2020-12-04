@@ -30,9 +30,9 @@ type Chain struct {
 }
 
 // Validate performs validation on our chain config.
-func (c *Chain) Validate(minTimeLockDelta uint32, minDelay uint16) error {
+func (c *Chain) Validate(minTimeLockDelta uint32, minDelay uint16) er.R {
 	if c.TimeLockDelta < minTimeLockDelta {
-		return fmt.Errorf("timelockdelta must be at least %v",
+		return er.Errorf("timelockdelta must be at least %v",
 			minTimeLockDelta)
 	}
 
@@ -40,7 +40,7 @@ func (c *Chain) Validate(minTimeLockDelta uint32, minDelay uint16) error {
 	// minimum value. We do this to prevent setting an unreasonably low
 	// delay, which would mean that the node would accept no channels.
 	if c.MaxLocalDelay < minDelay {
-		return fmt.Errorf("MaxLocalDelay must be at least: %v",
+		return er.Errorf("MaxLocalDelay must be at least: %v",
 			minDelay)
 	}
 

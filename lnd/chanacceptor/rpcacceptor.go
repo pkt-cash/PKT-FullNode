@@ -2,13 +2,13 @@ package chanacceptor
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chancloser"
@@ -16,32 +16,37 @@ import (
 )
 
 var (
-	errShuttingDown = errors.New("server shutting down")
+	errShuttingDown = er.GenericErrorType.CodeWithDetail("errShuttingDown", "server shutting down")
 
 	// errCustomLength is returned when our custom error's length exceeds
 	// our maximum.
-	errCustomLength = fmt.Errorf("custom error message exceeds length "+
-		"limit: %v", maxErrorLength)
+	errCustomLength = er.GenericErrorType.CodeWithDetail("errCustomLength",
+		fmt.Sprintf("custom error message exceeds length "+
+			"limit: %v", maxErrorLength))
 
 	// errInvalidUpfrontShutdown is returned when we cannot parse the
 	// upfront shutdown address returned.
-	errInvalidUpfrontShutdown = fmt.Errorf("could not parse upfront " +
-		"shutdown address")
+	errInvalidUpfrontShutdown = er.GenericErrorType.CodeWithDetail("errInvalidUpfrontShutdown",
+		"could not parse upfront "+
+			"shutdown address")
 
 	// errInsufficientReserve is returned when the reserve proposed by for
 	// a channel is less than the dust limit originally supplied.
-	errInsufficientReserve = fmt.Errorf("reserve lower than proposed dust " +
-		"limit")
+	errInsufficientReserve = er.GenericErrorType.CodeWithDetail("errInsufficientReserve",
+		"reserve lower than proposed dust "+
+			"limit")
 
 	// errAcceptWithError is returned when we get a response which accepts
 	// a channel but ambiguously also sets a custom error message.
-	errAcceptWithError = errors.New("channel acceptor response accepts " +
-		"channel, but also includes custom error")
+	errAcceptWithError = er.GenericErrorType.CodeWithDetail("errAcceptWithError",
+		"channel acceptor response accepts "+
+			"channel, but also includes custom error")
 
 	// errMaxHtlcTooHigh is returned if our htlc count exceeds the number
 	// hard-set by BOLT 2.
-	errMaxHtlcTooHigh = fmt.Errorf("htlc limit exceeds spec limit of: %v",
-		input.MaxHTLCNumber/2)
+	errMaxHtlcTooHigh = er.GenericErrorType.CodeWithDetail("errMaxHtlcTooHigh",
+		fmt.Sprintf("htlc limit exceeds spec limit of: %v",
+			input.MaxHTLCNumber/2))
 
 	// maxErrorLength is the maximum error length we allow the error we
 	// send to our peer to be.
@@ -60,11 +65,11 @@ type chanAcceptInfo struct {
 type RPCAcceptor struct {
 	// receive is a function from which we receive channel acceptance
 	// decisions. Note that this function is expected to block.
-	receive func() (*lnrpc.ChannelAcceptResponse, error)
+	receive func() (*lnrpc.ChannelAcceptResponse, er.R)
 
 	// send is a function which sends requests for channel acceptance
 	// decisions into our rpc stream.
-	send func(request *lnrpc.ChannelAcceptRequest) error
+	send func(request *lnrpc.ChannelAcceptRequest) er.R
 
 	// requests is a channel that we send requests for a acceptor response
 	// into.
@@ -107,7 +112,7 @@ func (r *RPCAcceptor) Accept(req *ChannelAcceptRequest) *ChannelAcceptResponse {
 	// Create a rejection response which we can use for the cases where we
 	// reject the channel.
 	rejectChannel := NewChannelAcceptResponse(
-		false, errChannelRejected, nil, 0, 0, 0, 0, 0, 0,
+		false, errChannelRejected.Default(), nil, 0, 0, 0, 0, 0, 0,
 	)
 
 	// Send the request to the newRequests channel.
@@ -146,8 +151,8 @@ func (r *RPCAcceptor) Accept(req *ChannelAcceptRequest) *ChannelAcceptResponse {
 }
 
 // NewRPCAcceptor creates and returns an instance of the RPCAcceptor.
-func NewRPCAcceptor(receive func() (*lnrpc.ChannelAcceptResponse, error),
-	send func(*lnrpc.ChannelAcceptRequest) error, timeout time.Duration,
+func NewRPCAcceptor(receive func() (*lnrpc.ChannelAcceptResponse, er.R),
+	send func(*lnrpc.ChannelAcceptRequest) er.R, timeout time.Duration,
 	params *chaincfg.Params, quit chan struct{}) *RPCAcceptor {
 
 	return &RPCAcceptor{
@@ -164,7 +169,7 @@ func NewRPCAcceptor(receive func() (*lnrpc.ChannelAcceptResponse, error),
 // Run is the main loop for the RPC Acceptor. This function will block until
 // it receives the signal that lnd is shutting down, or the rpc stream is
 // cancelled by the client.
-func (r *RPCAcceptor) Run() error {
+func (r *RPCAcceptor) Run() er.R {
 	// Wait for our goroutines to exit before we return.
 	defer r.wg.Wait()
 
@@ -174,7 +179,7 @@ func (r *RPCAcceptor) Run() error {
 	// errChan is used by the receive loop to signal any errors that occur
 	// during reading from the stream. This is primarily used to shutdown
 	// the send loop in the case of an RPC client disconnecting.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	// Start a goroutine to receive responses from the channel acceptor.
 	// We expect the receive function to block, so it must be run in a
@@ -192,7 +197,7 @@ func (r *RPCAcceptor) Run() error {
 // receiveResponses receives responses for our channel accept requests and
 // dispatches them into the responses channel provided, sending any errors that
 // occur into the error channel provided.
-func (r *RPCAcceptor) receiveResponses(errChan chan error,
+func (r *RPCAcceptor) receiveResponses(errChan chan er.R,
 	responses chan lnrpc.ChannelAcceptResponse) {
 
 	for {
@@ -235,8 +240,8 @@ func (r *RPCAcceptor) receiveResponses(errChan chan error,
 // sendAcceptRequests handles channel acceptor requests sent to us by our
 // Accept() function, dispatching them to our acceptor stream and coordinating
 // return of responses to their callers.
-func (r *RPCAcceptor) sendAcceptRequests(errChan chan error,
-	responses chan lnrpc.ChannelAcceptResponse) error {
+func (r *RPCAcceptor) sendAcceptRequests(errChan chan er.R,
+	responses chan lnrpc.ChannelAcceptResponse) er.R {
 
 	// Close the done channel to indicate that the acceptor is no longer
 	// listening and any in-progress requests should be terminated.
@@ -323,7 +328,7 @@ func (r *RPCAcceptor) sendAcceptRequests(errChan chan error,
 
 		// Exit if we are shutting down.
 		case <-r.quit:
-			return errShuttingDown
+			return errShuttingDown.Default()
 		}
 	}
 }
@@ -332,8 +337,8 @@ func (r *RPCAcceptor) sendAcceptRequests(errChan chan error,
 // acceptor, returning a boolean indicating whether to accept the channel, an
 // error to send to the peer, and any validation errors that occurred.
 func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
-	req lnrpc.ChannelAcceptResponse) (bool, error, lnwire.DeliveryAddress,
-	error) {
+	req lnrpc.ChannelAcceptResponse) (bool, er.R, lnwire.DeliveryAddress,
+	er.R) {
 
 	channelStr := hex.EncodeToString(req.PendingChanId)
 
@@ -345,7 +350,7 @@ func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
 			"than limit of: %v", req.MaxHtlcCount, channelStr,
 			input.MaxHTLCNumber/2)
 
-		return false, errChannelRejected, nil, errMaxHtlcTooHigh
+		return false, errChannelRejected.Default(), nil, errMaxHtlcTooHigh.Default()
 	}
 
 	// Ensure that the reserve that has been proposed, if it is set, is at
@@ -357,7 +362,7 @@ func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
 			"at least equal to proposed dust limit: %v",
 			req.ReserveSat, channelStr, dustLimit)
 
-		return false, errChannelRejected, nil, errInsufficientReserve
+		return false, errChannelRejected.Default(), nil, errInsufficientReserve.Default()
 	}
 
 	// Attempt to parse the upfront shutdown address provided.
@@ -368,12 +373,12 @@ func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
 		log.Errorf("Could not parse upfront shutdown for "+
 			"%v: %v", channelStr, err)
 
-		return false, errChannelRejected, nil, errInvalidUpfrontShutdown
+		return false, errChannelRejected.Default(), nil, errInvalidUpfrontShutdown.Default()
 	}
 
 	// Check that the custom error provided is valid.
 	if len(req.Error) > maxErrorLength {
-		return false, errChannelRejected, nil, errCustomLength
+		return false, errChannelRejected.Default(), nil, errCustomLength.Default()
 	}
 
 	var haveCustomError = len(req.Error) != 0
@@ -382,7 +387,7 @@ func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
 	// If accept is true, but we also have an error specified, we fail
 	// because this result is ambiguous.
 	case req.Accept && haveCustomError:
-		return false, errChannelRejected, nil, errAcceptWithError
+		return false, errChannelRejected.Default(), nil, errAcceptWithError.Default()
 
 	// If we accept without an error message, we can just return a nil
 	// error.
@@ -391,12 +396,12 @@ func (r *RPCAcceptor) validateAcceptorResponse(dustLimit btcutil.Amount,
 
 	// If we reject the channel, and have a custom error, then we use it.
 	case haveCustomError:
-		return false, fmt.Errorf(req.Error), nil, nil
+		return false, er.Errorf(req.Error), nil, nil
 
 	// Otherwise, we have rejected the channel with no custom error, so we
 	// just use a generic error to fail the channel.
 	default:
-		return false, errChannelRejected, nil, nil
+		return false, errChannelRejected.Default(), nil, nil
 	}
 }
 

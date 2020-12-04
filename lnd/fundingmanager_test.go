@@ -4,8 +4,6 @@ package lnd
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -18,6 +16,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
@@ -115,7 +115,7 @@ type mockNotifier struct {
 }
 
 func (m *mockNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
-	_ []byte, numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, error) {
+	_ []byte, numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, er.R) {
 
 	if numConfs == 6 {
 		return &chainntnfs.ConfirmationEvent{
@@ -128,14 +128,14 @@ func (m *mockNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 }
 
 func (m *mockNotifier) RegisterBlockEpochNtfn(
-	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error) {
+	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R) {
 	return &chainntnfs.BlockEpochEvent{
 		Epochs: m.epochChan,
 		Cancel: func() {},
 	}, nil
 }
 
-func (m *mockNotifier) Start() error {
+func (m *mockNotifier) Start() er.R {
 	return nil
 }
 
@@ -143,12 +143,12 @@ func (m *mockNotifier) Started() bool {
 	return true
 }
 
-func (m *mockNotifier) Stop() error {
+func (m *mockNotifier) Stop() er.R {
 	return nil
 }
 
 func (m *mockNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint, _ []byte,
-	heightHint uint32) (*chainntnfs.SpendEvent, error) {
+	heightHint uint32) (*chainntnfs.SpendEvent, er.R) {
 	return &chainntnfs.SpendEvent{
 		Spend:  make(chan *chainntnfs.SpendDetail),
 		Cancel: func() {},
@@ -193,7 +193,7 @@ type testNode struct {
 	remoteFeatures  []lnwire.FeatureBit
 
 	remotePeer  *testNode
-	sendMessage func(lnwire.Message) error
+	sendMessage func(lnwire.Message) er.R
 }
 
 var _ lnpeer.Peer = (*testNode)(nil)
@@ -210,11 +210,11 @@ func (n *testNode) PubKey() [33]byte {
 	return newSerializedKey(n.addr.IdentityKey)
 }
 
-func (n *testNode) SendMessage(_ bool, msg ...lnwire.Message) error {
+func (n *testNode) SendMessage(_ bool, msg ...lnwire.Message) er.R {
 	return n.sendMessage(msg[0])
 }
 
-func (n *testNode) SendMessageLazy(sync bool, msgs ...lnwire.Message) error {
+func (n *testNode) SendMessageLazy(sync bool, msgs ...lnwire.Message) er.R {
 	return n.SendMessage(sync, msgs...)
 }
 
@@ -235,9 +235,9 @@ func (n *testNode) RemoteFeatures() *lnwire.FeatureVector {
 }
 
 func (n *testNode) AddNewChannel(channel *channeldb.OpenChannel,
-	quit <-chan struct{}) error {
+	quit <-chan struct{}) er.R {
 
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	msg := &newChannelMsg{
 		channel: channel,
 		err:     errChan,
@@ -246,14 +246,14 @@ func (n *testNode) AddNewChannel(channel *channeldb.OpenChannel,
 	select {
 	case n.newChannels <- msg:
 	case <-quit:
-		return ErrFundingManagerShuttingDown
+		return ErrFundingManagerShuttingDown.Default()
 	}
 
 	select {
 	case err := <-errChan:
 		return err
 	case <-quit:
-		return ErrFundingManagerShuttingDown
+		return ErrFundingManagerShuttingDown.Default()
 	}
 }
 
@@ -261,7 +261,7 @@ func createTestWallet(cdb *channeldb.DB, netParams *chaincfg.Params,
 	notifier chainntnfs.ChainNotifier, wc lnwallet.WalletController,
 	signer input.Signer, keyRing keychain.SecretKeyRing,
 	bio lnwallet.BlockChainIO,
-	estimator chainfee.Estimator) (*lnwallet.LightningWallet, error) {
+	estimator chainfee.Estimator) (*lnwallet.LightningWallet, er.R) {
 
 	wallet, err := lnwallet.NewLightningWallet(lnwallet.Config{
 		Database:           cdb,
@@ -287,7 +287,7 @@ func createTestWallet(cdb *channeldb.DB, netParams *chaincfg.Params,
 
 func createTestFundingManager(t *testing.T, privKey *btcec.PrivateKey,
 	addr *lnwire.NetAddress, tempTestDir string,
-	options ...cfgOption) (*testNode, error) {
+	options ...cfgOption) (*testNode, er.R) {
 
 	netParams := fundingNetParams.Params
 	estimator := chainfee.NewStaticEstimator(62500, 0)
@@ -352,28 +352,28 @@ func createTestFundingManager(t *testing.T, privKey *btcec.PrivateKey,
 		Notifier:     chainNotifier,
 		FeeEstimator: estimator,
 		SignMessage: func(pubKey *btcec.PublicKey,
-			msg []byte) (input.Signature, error) {
+			msg []byte) (input.Signature, er.R) {
 
 			return testSig, nil
 		},
 		SendAnnouncement: func(msg lnwire.Message,
-			_ ...discovery.OptionalMsgField) chan error {
+			_ ...discovery.OptionalMsgField) chan er.R {
 
 			errChan := make(chan error, 1)
 			select {
 			case sentAnnouncements <- msg:
 				errChan <- nil
 			case <-shutdownChan:
-				errChan <- fmt.Errorf("shutting down")
+				errChan <- er.Errorf("shutting down")
 			}
 			return errChan
 		},
-		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, error) {
+		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, er.R) {
 			return lnwire.NodeAnnouncement{}, nil
 		},
 		TempChanIDSeed: chanIDSeed,
 		FindChannel: func(chanID lnwire.ChannelID) (
-			*channeldb.OpenChannel, error) {
+			*channeldb.OpenChannel, er.R) {
 			dbChannels, err := cdb.FetchAllChannels()
 			if err != nil {
 				return nil, err
@@ -385,7 +385,7 @@ func createTestFundingManager(t *testing.T, privKey *btcec.PrivateKey,
 				}
 			}
 
-			return nil, fmt.Errorf("unable to find channel")
+			return nil, er.Errorf("unable to find channel")
 		},
 		DefaultRoutingPolicy: htlcswitch.ForwardingPolicy{
 			MinHTLCOut:    5,
@@ -418,17 +418,17 @@ func createTestFundingManager(t *testing.T, privKey *btcec.PrivateKey,
 		RequiredRemoteMaxHTLCs: func(chanAmt btcutil.Amount) uint16 {
 			return uint16(input.MaxHTLCNumber / 2)
 		},
-		WatchNewChannel: func(*channeldb.OpenChannel, *btcec.PublicKey) error {
+		WatchNewChannel: func(*channeldb.OpenChannel, *btcec.PublicKey) er.R {
 			return nil
 		},
-		ReportShortChanID: func(wire.OutPoint) error {
+		ReportShortChanID: func(wire.OutPoint) er.R {
 			return nil
 		},
-		PublishTransaction: func(txn *wire.MsgTx, _ string) error {
+		PublishTransaction: func(txn *wire.MsgTx, _ string) er.R {
 			publTxChan <- txn
 			return nil
 		},
-		UpdateLabel: func(chainhash.Hash, string) error {
+		UpdateLabel: func(chainhash.Hash, string) er.R {
 			return nil
 		},
 		ZombieSweeperInterval:         1 * time.Hour,
@@ -499,22 +499,22 @@ func recreateAliceFundingManager(t *testing.T, alice *testNode) {
 		Notifier:     oldCfg.Notifier,
 		FeeEstimator: oldCfg.FeeEstimator,
 		SignMessage: func(pubKey *btcec.PublicKey,
-			msg []byte) (input.Signature, error) {
+			msg []byte) (input.Signature, er.R) {
 			return testSig, nil
 		},
 		SendAnnouncement: func(msg lnwire.Message,
-			_ ...discovery.OptionalMsgField) chan error {
+			_ ...discovery.OptionalMsgField) chan er.R {
 
 			errChan := make(chan error, 1)
 			select {
 			case aliceAnnounceChan <- msg:
 				errChan <- nil
 			case <-shutdownChan:
-				errChan <- fmt.Errorf("shutting down")
+				errChan <- er.Errorf("shutting down")
 			}
 			return errChan
 		},
-		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, error) {
+		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, er.R) {
 			return lnwire.NodeAnnouncement{}, nil
 		},
 		NotifyWhenOnline: func(peer [33]byte,
@@ -532,11 +532,11 @@ func recreateAliceFundingManager(t *testing.T, alice *testNode) {
 		},
 		DefaultMinHtlcIn:       5,
 		RequiredRemoteMaxValue: oldCfg.RequiredRemoteMaxValue,
-		PublishTransaction: func(txn *wire.MsgTx, _ string) error {
+		PublishTransaction: func(txn *wire.MsgTx, _ string) er.R {
 			publishChan <- txn
 			return nil
 		},
-		UpdateLabel: func(chainhash.Hash, string) error {
+		UpdateLabel: func(chainhash.Hash, string) er.R {
 			return nil
 		},
 		ZombieSweeperInterval: oldCfg.ZombieSweeperInterval,
@@ -594,21 +594,21 @@ func setupFundingManagers(t *testing.T,
 	// alice.sendMessage will be triggered when Bob's funding manager
 	// attempts to send a message to Alice and vice versa.
 	alice.remotePeer = bob
-	alice.sendMessage = func(msg lnwire.Message) error {
+	alice.sendMessage = func(msg lnwire.Message) er.R {
 		select {
 		case alice.remotePeer.msgChan <- msg:
 		case <-alice.shutdownChannel:
-			return errors.New("shutting down")
+			return er.New("shutting down")
 		}
 		return nil
 	}
 
 	bob.remotePeer = alice
-	bob.sendMessage = func(msg lnwire.Message) error {
+	bob.sendMessage = func(msg lnwire.Message) er.R {
 		select {
 		case bob.remotePeer.msgChan <- msg:
 		case <-bob.shutdownChannel:
-			return errors.New("shutting down")
+			return er.New("shutting down")
 		}
 		return nil
 	}
@@ -917,7 +917,7 @@ func assertDatabaseState(t *testing.T, node *testNode,
 		}
 		state, _, err = node.fundingMgr.getChannelOpeningState(
 			fundingOutPoint)
-		if err != nil && err != ErrChannelNotFound {
+		if err != nil && !ErrChannelNotFound.Is(err) {
 			t.Fatalf("unable to get channel state: %v", err)
 		}
 
@@ -1364,7 +1364,7 @@ func testLocalCSVLimit(t *testing.T, aliceMaxCSV, bobRequiredCSV uint16) {
 	// she proceeded with the channel open as usual.
 	select {
 	case err := <-errChan:
-		require.Error(t, err)
+		util.RequireErr(t, err)
 		require.True(t, expectFail)
 
 	case msg := <-alice.msgChan:
@@ -1454,8 +1454,8 @@ func TestFundingManagerRestartBehavior(t *testing.T) {
 	// implementation of sendMessage to restore the original behavior later
 	// on.
 	workingSendMessage := bob.sendMessage
-	bob.sendMessage = func(msg lnwire.Message) error {
-		return fmt.Errorf("intentional error in SendToPeer")
+	bob.sendMessage = func(msg lnwire.Message) er.R {
+		return er.Errorf("intentional error in SendToPeer")
 	}
 	alice.fundingMgr.cfg.NotifyWhenOnline = func(peer [33]byte,
 		con chan<- lnpeer.Peer) {
@@ -1509,10 +1509,10 @@ func TestFundingManagerRestartBehavior(t *testing.T) {
 
 	// Intentionally make the channel announcements fail
 	alice.fundingMgr.cfg.SendAnnouncement = func(msg lnwire.Message,
-		_ ...discovery.OptionalMsgField) chan error {
+		_ ...discovery.OptionalMsgField) chan er.R {
 
 		errChan := make(chan error, 1)
-		errChan <- fmt.Errorf("intentional error in SendAnnouncement")
+		errChan <- er.Errorf("intentional error in SendAnnouncement")
 		return errChan
 	}
 
@@ -1600,8 +1600,8 @@ func TestFundingManagerOfflinePeer(t *testing.T) {
 	// We'll save the current implementation of sendMessage to restore the
 	// original behavior later on.
 	workingSendMessage := bob.sendMessage
-	bob.sendMessage = func(msg lnwire.Message) error {
-		return fmt.Errorf("intentional error in SendToPeer")
+	bob.sendMessage = func(msg lnwire.Message) er.R {
+		return er.Errorf("intentional error in SendToPeer")
 	}
 	peerChan := make(chan [33]byte, 1)
 	conChan := make(chan chan<- lnpeer.Peer, 1)
@@ -2685,17 +2685,17 @@ func TestFundingManagerCustomChannelParameters(t *testing.T) {
 
 	// Helper method for checking the CSV delay stored for a reservation.
 	assertDelay := func(resCtx *reservationWithCtx,
-		ourDelay, theirDelay uint16) error {
+		ourDelay, theirDelay uint16) er.R {
 
 		ourCsvDelay := resCtx.reservation.OurContribution().CsvDelay
 		if ourCsvDelay != ourDelay {
-			return fmt.Errorf("expected our CSV delay to be %v, "+
+			return er.Errorf("expected our CSV delay to be %v, "+
 				"was %v", ourDelay, ourCsvDelay)
 		}
 
 		theirCsvDelay := resCtx.reservation.TheirContribution().CsvDelay
 		if theirCsvDelay != theirDelay {
-			return fmt.Errorf("expected their CSV delay to be %v, "+
+			return er.Errorf("expected their CSV delay to be %v, "+
 				"was %v", theirDelay, theirCsvDelay)
 		}
 		return nil
@@ -2704,17 +2704,17 @@ func TestFundingManagerCustomChannelParameters(t *testing.T) {
 	// Helper method for checking the MinHtlc value stored for a
 	// reservation.
 	assertMinHtlc := func(resCtx *reservationWithCtx,
-		expOurMinHtlc, expTheirMinHtlc lnwire.MilliSatoshi) error {
+		expOurMinHtlc, expTheirMinHtlc lnwire.MilliSatoshi) er.R {
 
 		ourMinHtlc := resCtx.reservation.OurContribution().MinHTLC
 		if ourMinHtlc != expOurMinHtlc {
-			return fmt.Errorf("expected our minHtlc to be %v, "+
+			return er.Errorf("expected our minHtlc to be %v, "+
 				"was %v", expOurMinHtlc, ourMinHtlc)
 		}
 
 		theirMinHtlc := resCtx.reservation.TheirContribution().MinHTLC
 		if theirMinHtlc != expTheirMinHtlc {
-			return fmt.Errorf("expected their minHtlc to be %v, "+
+			return er.Errorf("expected their minHtlc to be %v, "+
 				"was %v", expTheirMinHtlc, theirMinHtlc)
 		}
 		return nil
@@ -2723,19 +2723,19 @@ func TestFundingManagerCustomChannelParameters(t *testing.T) {
 	// Helper method for checking the MaxValueInFlight stored for a
 	// reservation.
 	assertMaxHtlc := func(resCtx *reservationWithCtx,
-		expOurMaxValue, expTheirMaxValue lnwire.MilliSatoshi) error {
+		expOurMaxValue, expTheirMaxValue lnwire.MilliSatoshi) er.R {
 
 		ourMaxValue :=
 			resCtx.reservation.OurContribution().MaxPendingAmount
 		if ourMaxValue != expOurMaxValue {
-			return fmt.Errorf("expected our maxValue to be %v, "+
+			return er.Errorf("expected our maxValue to be %v, "+
 				"was %v", expOurMaxValue, ourMaxValue)
 		}
 
 		theirMaxValue :=
 			resCtx.reservation.TheirContribution().MaxPendingAmount
 		if theirMaxValue != expTheirMaxValue {
-			return fmt.Errorf("expected their MaxPendingAmount to be %v, "+
+			return er.Errorf("expected their MaxPendingAmount to be %v, "+
 				"was %v", expTheirMaxValue, theirMaxValue)
 		}
 		return nil
@@ -3266,13 +3266,13 @@ func TestGetUpfrontShutdownScript(t *testing.T) {
 	upfrontScript := []byte("upfront script")
 	generatedScript := []byte("generated script")
 
-	getScript := func() (lnwire.DeliveryAddress, error) {
+	getScript := func() (lnwire.DeliveryAddress, er.R) {
 		return generatedScript, nil
 	}
 
 	tests := []struct {
 		name           string
-		getScript      func() (lnwire.DeliveryAddress, error)
+		getScript      func() (lnwire.DeliveryAddress, er.R)
 		upfrontScript  lnwire.DeliveryAddress
 		peerEnabled    bool
 		localEnabled   bool

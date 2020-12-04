@@ -12,10 +12,10 @@ const (
 type CustomSet map[uint64][]byte
 
 // Validate checks that all custom records are in the custom type range.
-func (c CustomSet) Validate() error {
+func (c CustomSet) Validate() er.R {
 	for key := range c {
 		if key < CustomTypeStart {
-			return fmt.Errorf("no custom records with types "+
+			return er.Errorf("no custom records with types "+
 				"below %v allowed", CustomTypeStart)
 		}
 	}

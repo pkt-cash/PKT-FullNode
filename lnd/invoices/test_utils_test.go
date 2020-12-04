@@ -57,7 +57,7 @@ var (
 
 	testCurrentHeight = int32(1)
 
-	testPrivKeyBytes, _ = hex.DecodeString(
+	testPrivKeyBytes, _ = util.DecodeHex(
 		"e126f68f7eafcc8b74f54d269fe206be715000f94dac067d1c04a8ca3b2db734")
 
 	testPrivKey, _ = btcec.PrivKeyFromBytes(
@@ -70,10 +70,10 @@ var (
 	testNetParams = &chaincfg.MainNetParams
 
 	testMessageSigner = zpay32.MessageSigner{
-		SignCompact: func(hash []byte) ([]byte, error) {
+		SignCompact: func(hash []byte) ([]byte, er.R) {
 			sig, err := btcec.SignCompact(btcec.S256(), testPrivKey, hash, true)
 			if err != nil {
-				return nil, fmt.Errorf("can't sign the message: %v", err)
+				return nil, er.Errorf("can't sign the message: %v", err)
 			}
 			return sig, nil
 		},
@@ -111,7 +111,7 @@ var (
 	}
 )
 
-func newTestChannelDB(clock clock.Clock) (*channeldb.DB, func(), error) {
+func newTestChannelDB(clock clock.Clock) (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
 	tempDirName, err := ioutil.TempDir("", "channeldb")

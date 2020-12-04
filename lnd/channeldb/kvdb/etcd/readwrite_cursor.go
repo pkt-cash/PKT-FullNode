@@ -120,7 +120,7 @@ func (c *readWriteCursor) Seek(seek []byte) (key, value []byte) {
 // Delete removes the current key/value pair the cursor is at without
 // invalidating the cursor.  Returns ErrIncompatibleValue if attempted
 // when the cursor points to a nested bucket.
-func (c *readWriteCursor) Delete() error {
+func (c *readWriteCursor) Delete() er.R {
 	// Get the next key after the current one. We could do this
 	// after deletion too but it's one step more efficient here.
 	nextKey, err := c.bucket.tx.stm.Next(c.prefix, c.currKey)

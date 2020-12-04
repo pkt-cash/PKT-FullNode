@@ -2,10 +2,10 @@ package wtclient
 
 import (
 	"container/list"
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -42,14 +42,14 @@ type sessionQueueConfig struct {
 	// Dial allows the client to dial the tower using it's public key and
 	// net address.
 	Dial func(keychain.SingleKeyECDH, *lnwire.NetAddress) (wtserver.Peer,
-		error)
+		er.R)
 
 	// SendMessage encodes, encrypts, and writes a message to the given peer.
-	SendMessage func(wtserver.Peer, wtwire.Message) error
+	SendMessage func(wtserver.Peer, wtwire.Message) er.R
 
 	// ReadMessage receives, decypts, and decodes a message from the given
 	// peer.
-	ReadMessage func(wtserver.Peer) (wtwire.Message, error)
+	ReadMessage func(wtserver.Peer) (wtwire.Message, er.R)
 
 	// Signer facilitates signing of inputs, used to construct the witnesses
 	// for justice transaction inputs.
@@ -362,7 +362,7 @@ func (q *sessionQueue) drainBackups() {
 // pending queue, allowing the caller to remove the update from either the
 // commit or pending queue if the update is successfully acked.
 func (q *sessionQueue) nextStateUpdate() (*wtwire.StateUpdate, bool,
-	wtdb.BackupID, error) {
+	wtdb.BackupID, er.R) {
 
 	var (
 		seqNum    uint16
@@ -414,7 +414,7 @@ func (q *sessionQueue) nextStateUpdate() (*wtwire.StateUpdate, bool,
 		hint, encBlob, err := task.craftSessionPayload(q.cfg.Signer)
 		if err != nil {
 			// TODO(conner): mark will not send
-			err := fmt.Errorf("unable to craft session payload: %v",
+			err := er.Errorf("unable to craft session payload: %v",
 				err)
 			return nil, false, wtdb.BackupID{}, err
 		}
@@ -447,7 +447,7 @@ func (q *sessionQueue) nextStateUpdate() (*wtwire.StateUpdate, bool,
 	lastApplied, err := q.cfg.DB.CommitUpdate(q.ID(), &update)
 	if err != nil {
 		// TODO(conner): mark failed/reschedule
-		err := fmt.Errorf("unable to commit state update for "+
+		err := er.Errorf("unable to commit state update for "+
 			"%v seqnum=%d: %v", update.BackupID, seqNum, err)
 		return nil, false, wtdb.BackupID{}, err
 	}
@@ -475,7 +475,7 @@ func (q *sessionQueue) nextStateUpdate() (*wtwire.StateUpdate, bool,
 // send the next state update.
 func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 	stateUpdate *wtwire.StateUpdate, localInit *wtwire.Init,
-	sendInit, isPending bool) error {
+	sendInit, isPending bool) er.R {
 
 	// If this is the first message being sent to the tower, we must send an
 	// Init message to establish that server supports the features we
@@ -495,7 +495,7 @@ func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 
 		remoteInit, ok := remoteMsg.(*wtwire.Init)
 		if !ok {
-			return fmt.Errorf("watchtower %s responded with %T "+
+			return er.Errorf("watchtower %s responded with %T "+
 				"to Init", q.towerAddr, remoteMsg)
 		}
 
@@ -522,7 +522,7 @@ func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 
 	stateUpdateReply, ok := remoteMsg.(*wtwire.StateUpdateReply)
 	if !ok {
-		return fmt.Errorf("watchtower %s responded with %T to "+
+		return er.Errorf("watchtower %s responded with %T to "+
 			"StateUpdate", q.towerAddr, remoteMsg)
 	}
 
@@ -535,7 +535,7 @@ func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 
 	// TODO(conner): handle other error cases properly, ban towers, etc.
 	default:
-		err := fmt.Errorf("received error code %v in "+
+		err := er.Errorf("received error code %v in "+
 			"StateUpdateReply for seqnum=%d",
 			stateUpdateReply.Code, stateUpdate.SeqNum)
 		log.Warnf("SessionQueue(%s) unable to upload state update to "+
@@ -548,21 +548,21 @@ func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 	switch {
 	case err == wtdb.ErrUnallocatedLastApplied:
 		// TODO(conner): borked watchtower
-		err = fmt.Errorf("unable to ack seqnum=%d: %v",
+		err = er.Errorf("unable to ack seqnum=%d: %v",
 			stateUpdate.SeqNum, err)
 		log.Errorf("SessionQueue(%v) failed to ack update: %v", q.ID(), err)
 		return err
 
 	case err == wtdb.ErrLastAppliedReversion:
 		// TODO(conner): borked watchtower
-		err = fmt.Errorf("unable to ack seqnum=%d: %v",
+		err = er.Errorf("unable to ack seqnum=%d: %v",
 			stateUpdate.SeqNum, err)
 		log.Errorf("SessionQueue(%s) failed to ack update: %v",
 			q.ID(), err)
 		return err
 
 	case err != nil:
-		err = fmt.Errorf("unable to ack seqnum=%d: %v",
+		err = er.Errorf("unable to ack seqnum=%d: %v",
 			stateUpdate.SeqNum, err)
 		log.Errorf("SessionQueue(%s) failed to ack update: %v",
 			q.ID(), err)

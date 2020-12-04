@@ -2,6 +2,8 @@ package lnwire
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // UpdateFee is the message the channel initiator sends to the other peer if
@@ -34,7 +36,7 @@ var _ Message = (*UpdateFee)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFee) Decode(r io.Reader, pver uint32) error {
+func (c *UpdateFee) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&c.ChanID,
 		&c.FeePerKw,
@@ -45,7 +47,7 @@ func (c *UpdateFee) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFee) Encode(w io.Writer, pver uint32) error {
+func (c *UpdateFee) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChanID,
 		c.FeePerKw,

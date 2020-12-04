@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	prand "math/rand"
 	"net"
@@ -12,13 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/miekg/dns"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
-	"github.com/miekg/dns"
 )
 
 func init() {
@@ -37,7 +37,7 @@ type NetworkPeerBootstrapper interface {
 	// node nodes allows the caller to ignore a set of nodes perhaps
 	// because they already have connections established.
 	SampleNodeAddrs(numAddrs uint32,
-		ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, error)
+		ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, er.R)
 
 	// Name returns a human readable string which names the concrete
 	// implementation of the NetworkPeerBootstrapper.
@@ -51,7 +51,7 @@ type NetworkPeerBootstrapper interface {
 // the ignore map is populated, then the bootstrappers will be instructed to
 // skip those nodes.
 func MultiSourceBootstrap(ignore map[autopilot.NodeID]struct{}, numAddrs uint32,
-	bootstrappers ...NetworkPeerBootstrapper) ([]*lnwire.NetAddress, error) {
+	bootstrappers ...NetworkPeerBootstrapper) ([]*lnwire.NetAddress, er.R) {
 
 	// We'll randomly shuffle our bootstrappers before querying them in
 	// order to avoid from querying the same bootstrapper method over and
@@ -87,7 +87,7 @@ func MultiSourceBootstrap(ignore map[autopilot.NodeID]struct{}, numAddrs uint32,
 	}
 
 	if len(addrs) == 0 {
-		return nil, errors.New("no addresses found")
+		return nil, er.New("no addresses found")
 	}
 
 	log.Infof("Obtained %v addrs to bootstrap network with", len(addrs))
@@ -133,7 +133,7 @@ var _ NetworkPeerBootstrapper = (*ChannelGraphBootstrapper)(nil)
 // backed by an active autopilot.ChannelGraph instance. This type of network
 // peer bootstrapper will use the authenticated nodes within the known channel
 // graph to bootstrap connections.
-func NewGraphBootstrapper(cg autopilot.ChannelGraph) (NetworkPeerBootstrapper, error) {
+func NewGraphBootstrapper(cg autopilot.ChannelGraph) (NetworkPeerBootstrapper, er.R) {
 
 	c := &ChannelGraphBootstrapper{
 		chanGraph: cg,
@@ -153,7 +153,7 @@ func NewGraphBootstrapper(cg autopilot.ChannelGraph) (NetworkPeerBootstrapper, e
 //
 // NOTE: Part of the NetworkPeerBootstrapper interface.
 func (c *ChannelGraphBootstrapper) SampleNodeAddrs(numAddrs uint32,
-	ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, error) {
+	ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, er.R) {
 
 	// We'll merge the ignore map with our currently selected map in order
 	// to ensure we don't return any duplicate nodes.
@@ -167,16 +167,16 @@ func (c *ChannelGraphBootstrapper) SampleNodeAddrs(numAddrs uint32,
 	// sample constraint as we maintain an xor accumulator to ensure we
 	// randomly sample nodes independent of the iteration of the channel
 	// graph.
-	sampleAddrs := func() ([]*lnwire.NetAddress, error) {
+	sampleAddrs := func() ([]*lnwire.NetAddress, er.R) {
 		var (
 			a []*lnwire.NetAddress
 
 			// We'll create a special error so we can return early
 			// and abort the transaction once we find a match.
-			errFound = fmt.Errorf("found node")
+			errFound = er.Errorf("found node")
 		)
 
-		err := c.chanGraph.ForEachNode(func(node autopilot.Node) error {
+		err := c.chanGraph.ForEachNode(func(node autopilot.Node) er.R {
 			nID := autopilot.NodeID(node.PubKey())
 			if _, ok := c.tried[nID]; ok {
 				return nil
@@ -319,7 +319,7 @@ func NewDNSSeedBootstrapper(
 // causing them to be filtered out. The targetEndPoint is the original end
 // point that was meant to be hit.
 func (d *DNSSeedBootstrapper) fallBackSRVLookup(soaShim string,
-	targetEndPoint string) ([]*net.SRV, error) {
+	targetEndPoint string) ([]*net.SRV, er.R) {
 
 	log.Tracef("Attempting to query fallback DNS seed")
 
@@ -356,7 +356,7 @@ func (d *DNSSeedBootstrapper) fallBackSRVLookup(soaShim string,
 
 	// If the message response code was not the success code, fail.
 	if resp.Rcode != dns.RcodeSuccess {
-		return nil, fmt.Errorf("unsuccessful SRV request, "+
+		return nil, er.Errorf("unsuccessful SRV request, "+
 			"received: %v", resp.Rcode)
 	}
 
@@ -381,7 +381,7 @@ func (d *DNSSeedBootstrapper) fallBackSRVLookup(soaShim string,
 // many valid peer addresses to return. The set of DNS seeds are used
 // successively to retrieve eligible target nodes.
 func (d *DNSSeedBootstrapper) SampleNodeAddrs(numAddrs uint32,
-	ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, error) {
+	ignore map[autopilot.NodeID]struct{}) ([]*lnwire.NetAddress, er.R) {
 
 	var netAddrs []*lnwire.NetAddress
 

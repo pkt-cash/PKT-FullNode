@@ -2,10 +2,11 @@ package hop
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -40,7 +41,7 @@ type ErrorEncrypter interface {
 	// encrypted opaque failure reason. This method will be used at the
 	// source that the error occurs. It differs from IntermediateEncrypt
 	// slightly, in that it computes a proper MAC over the error.
-	EncryptFirstHop(lnwire.FailureMessage) (lnwire.OpaqueReason, error)
+	EncryptFirstHop(lnwire.FailureMessage) (lnwire.OpaqueReason, er.R)
 
 	// EncryptMalformedError is similar to EncryptFirstHop (it adds the
 	// MAC), but it accepts an opaque failure reason rather than a failure
@@ -60,18 +61,18 @@ type ErrorEncrypter interface {
 
 	// Encode serializes the encrypter's ephemeral public key to the given
 	// io.Writer.
-	Encode(io.Writer) error
+	Encode(io.Writer) er.R
 
 	// Decode deserializes the encrypter' ephemeral public key from the
 	// given io.Reader.
-	Decode(io.Reader) error
+	Decode(io.Reader) er.R
 
 	// Reextract rederives the encrypter using the extracter, performing an
 	// ECDH with the sphinx router's key and the ephemeral public key.
 	//
 	// NOTE: This should be called shortly after Decode to properly
 	// reinitialize the error encrypter.
-	Reextract(ErrorEncrypterExtracter) error
+	Reextract(ErrorEncrypterExtracter) er.R
 }
 
 // SphinxErrorEncrypter is a concrete implementation of both the ErrorEncrypter
@@ -105,7 +106,7 @@ func NewSphinxErrorEncrypter() *SphinxErrorEncrypter {
 //
 // NOTE: Part of the ErrorEncrypter interface.
 func (s *SphinxErrorEncrypter) EncryptFirstHop(
-	failure lnwire.FailureMessage) (lnwire.OpaqueReason, error) {
+	failure lnwire.FailureMessage) (lnwire.OpaqueReason, er.R) {
 
 	var b bytes.Buffer
 	if err := lnwire.EncodeFailure(&b, failure, 0); err != nil {
@@ -150,17 +151,17 @@ func (s *SphinxErrorEncrypter) Type() EncrypterType {
 
 // Encode serializes the error encrypter' ephemeral public key to the provided
 // io.Writer.
-func (s *SphinxErrorEncrypter) Encode(w io.Writer) error {
+func (s *SphinxErrorEncrypter) Encode(w io.Writer) er.R {
 	ephemeral := s.EphemeralKey.SerializeCompressed()
-	_, err := w.Write(ephemeral)
+	_, err := util.Write(w, ephemeral)
 	return err
 }
 
 // Decode reconstructs the error encrypter's ephemeral public key from the
 // provided io.Reader.
-func (s *SphinxErrorEncrypter) Decode(r io.Reader) error {
+func (s *SphinxErrorEncrypter) Decode(r io.Reader) er.R {
 	var ephemeral [33]byte
-	if _, err := io.ReadFull(r, ephemeral[:]); err != nil {
+	if _, err := util.ReadFull(r, ephemeral[:]); err != nil {
 		return err
 	}
 
@@ -177,20 +178,20 @@ func (s *SphinxErrorEncrypter) Decode(r io.Reader) error {
 // This intended to be used shortly after Decode, to fully initialize a
 // SphinxErrorEncrypter.
 func (s *SphinxErrorEncrypter) Reextract(
-	extract ErrorEncrypterExtracter) error {
+	extract ErrorEncrypterExtracter) er.R {
 
 	obfuscator, failcode := extract(s.EphemeralKey)
 	if failcode != lnwire.CodeNone {
 		// This should never happen, since we already validated that
 		// this obfuscator can be extracted when it was received in the
 		// link.
-		return fmt.Errorf("unable to reconstruct onion "+
+		return er.Errorf("unable to reconstruct onion "+
 			"obfuscator, got failcode: %d", failcode)
 	}
 
 	sphinxEncrypter, ok := obfuscator.(*SphinxErrorEncrypter)
 	if !ok {
-		return fmt.Errorf("incorrect onion error extracter")
+		return er.Errorf("incorrect onion error extracter")
 	}
 
 	// Copy the freshly extracted encrypter.

@@ -2,13 +2,12 @@ package wtclient
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -68,21 +67,21 @@ type Client interface {
 	// considers it for new sessions. If the watchtower already exists, then
 	// any new addresses included will be considered when dialing it for
 	// session negotiations and backups.
-	AddTower(*lnwire.NetAddress) error
+	AddTower(*lnwire.NetAddress) er.R
 
 	// RemoveTower removes a watchtower from being considered for future
 	// session negotiations and from being used for any subsequent backups
 	// until it's added again. If an address is provided, then this call
 	// only serves as a way of removing the address from the watchtower
 	// instead.
-	RemoveTower(*btcec.PublicKey, net.Addr) error
+	RemoveTower(*btcec.PublicKey, net.Addr) er.R
 
 	// RegisteredTowers retrieves the list of watchtowers registered with
 	// the client.
-	RegisteredTowers() ([]*RegisteredTower, error)
+	RegisteredTowers() ([]*RegisteredTower, er.R)
 
 	// LookupTower retrieves a registered watchtower through its public key.
-	LookupTower(*btcec.PublicKey) (*RegisteredTower, error)
+	LookupTower(*btcec.PublicKey) (*RegisteredTower, er.R)
 
 	// Stats returns the in-memory statistics of the client since startup.
 	Stats() ClientStats
@@ -94,7 +93,7 @@ type Client interface {
 	// parameters within the client. This should be called during link
 	// startup to ensure that the client is able to support the link during
 	// operation.
-	RegisterChannel(lnwire.ChannelID) error
+	RegisterChannel(lnwire.ChannelID) er.R
 
 	// BackupState initiates a request to back up a particular revoked
 	// state. If the method returns nil, the backup is guaranteed to be
@@ -103,16 +102,16 @@ type Client interface {
 	// negotiated policy. If the channel we're trying to back up doesn't
 	// have a tweak for the remote party's output, then isTweakless should
 	// be true.
-	BackupState(*lnwire.ChannelID, *lnwallet.BreachRetribution, bool) error
+	BackupState(*lnwire.ChannelID, *lnwallet.BreachRetribution, bool) er.R
 
 	// Start initializes the watchtower client, allowing it process requests
 	// to backup revoked channel states.
-	Start() error
+	Start() er.R
 
 	// Stop attempts a graceful shutdown of the watchtower client. In doing
 	// so, it will attempt to flush the pipeline and deliver any queued
 	// states to the tower before exiting.
-	Stop() error
+	Stop() er.R
 
 	// ForceQuit will forcibly shutdown the watchtower client. Calling this
 	// may lead to queued states being dropped.
@@ -129,7 +128,7 @@ type Config struct {
 	Signer input.Signer
 
 	// NewAddress generates a new on-chain sweep pkscript.
-	NewAddress func() ([]byte, error)
+	NewAddress func() ([]byte, er.R)
 
 	// SecretKeyRing is used to derive the session keys used to communicate
 	// with the tower. The client only stores the KeyLocators internally so
@@ -258,7 +257,7 @@ var _ Client = (*TowerClient)(nil)
 
 // New initializes a new TowerClient from the provide Config. An error is
 // returned if the client could not initialized.
-func New(config *Config) (*TowerClient, error) {
+func New(config *Config) (*TowerClient, er.R) {
 	// Copy the config to prevent side-effects from modifying both the
 	// internal and external version of the Config.
 	cfg := new(Config)
@@ -341,7 +340,7 @@ func New(config *Config) (*TowerClient, error) {
 // existing ListClientSessions method should be used.
 func getClientSessions(db DB, keyRing ECDHKeyRing, forTower *wtdb.TowerID,
 	passesFilter func(*wtdb.ClientSession) bool) (
-	map[wtdb.SessionID]*wtdb.ClientSession, error) {
+	map[wtdb.SessionID]*wtdb.ClientSession, er.R) {
 
 	sessions, err := db.ListClientSessions(forTower)
 	if err != nil {
@@ -419,7 +418,7 @@ func (c *TowerClient) buildHighestCommitHeights() {
 
 // Start initializes the watchtower client by loading or negotiating an active
 // session and then begins processing backup tasks from the request pipeline.
-func (c *TowerClient) Start() error {
+func (c *TowerClient) Start() er.R {
 	var err error
 	c.started.Do(func() {
 		log.Infof("Starting watchtower client")
@@ -458,7 +457,7 @@ func (c *TowerClient) Start() error {
 }
 
 // Stop idempotently initiates a graceful shutdown of the watchtower client.
-func (c *TowerClient) Stop() error {
+func (c *TowerClient) Stop() er.R {
 	c.stopped.Do(func() {
 		log.Debugf("Stopping watchtower client")
 
@@ -551,7 +550,7 @@ func (c *TowerClient) ForceQuit() {
 // RegisterChannel persistently initializes any channel-dependent parameters
 // within the client. This should be called during link startup to ensure that
 // the client is able to support the link during operation.
-func (c *TowerClient) RegisterChannel(chanID lnwire.ChannelID) error {
+func (c *TowerClient) RegisterChannel(chanID lnwire.ChannelID) er.R {
 	c.backupMu.Lock()
 	defer c.backupMu.Unlock()
 
@@ -592,14 +591,14 @@ func (c *TowerClient) RegisterChannel(chanID lnwire.ChannelID) error {
 //  - breached outputs contain too little value to sweep at the target sweep fee
 //    rate.
 func (c *TowerClient) BackupState(chanID *lnwire.ChannelID,
-	breachInfo *lnwallet.BreachRetribution, isTweakless bool) error {
+	breachInfo *lnwallet.BreachRetribution, isTweakless bool) er.R {
 
 	// Retrieve the cached sweep pkscript used for this channel.
 	c.backupMu.Lock()
 	summary, ok := c.summaries[*chanID]
 	if !ok {
 		c.backupMu.Unlock()
-		return ErrUnregisteredChannel
+		return ErrUnregisteredChannel.Default()
 	}
 
 	// Ignore backups that have already been presented to the client.
@@ -712,7 +711,7 @@ func (c *TowerClient) backupDispatcher() {
 			// possibility of a new session being negotiated with
 			// this request's tower.
 			case msg := <-c.staleTowers:
-				msg.errChan <- errors.New("removing towers " +
+				msg.errChan <- er.New("removing towers " +
 					"is disallowed while a new session " +
 					"negotiation is in progress")
 
@@ -903,7 +902,7 @@ func (c *TowerClient) taskRejected(task *backupTask, curStatus reserveStatus) {
 // connection. The connection will use the configured Net's resolver to resolve
 // the address for either Tor or clear net connections.
 func (c *TowerClient) dial(localKey keychain.SingleKeyECDH,
-	addr *lnwire.NetAddress) (wtserver.Peer, error) {
+	addr *lnwire.NetAddress) (wtserver.Peer, er.R) {
 
 	return c.cfg.AuthDial(localKey, addr, c.cfg.Dial)
 }
@@ -912,12 +911,12 @@ func (c *TowerClient) dial(localKey keychain.SingleKeyECDH,
 // error is returned if a message is not received before the server's read
 // timeout, the read off the wire failed, or the message could not be
 // deserialized.
-func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, error) {
+func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, er.R) {
 	// Set a read timeout to ensure we drop the connection if nothing is
 	// received in a timely manner.
 	err := peer.SetReadDeadline(time.Now().Add(c.cfg.ReadTimeout))
 	if err != nil {
-		err = fmt.Errorf("unable to set read deadline: %v", err)
+		err = er.Errorf("unable to set read deadline: %v", err)
 		log.Errorf("Unable to read msg: %v", err)
 		return nil, err
 	}
@@ -925,7 +924,7 @@ func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, error) {
 	// Pull the next message off the wire,
 	rawMsg, err := peer.ReadNextMessage()
 	if err != nil {
-		err = fmt.Errorf("unable to read message: %v", err)
+		err = er.Errorf("unable to read message: %v", err)
 		log.Errorf("Unable to read msg: %v", err)
 		return nil, err
 	}
@@ -935,7 +934,7 @@ func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, error) {
 	msgReader := bytes.NewReader(rawMsg)
 	msg, err := wtwire.ReadMessage(msgReader, 0)
 	if err != nil {
-		err = fmt.Errorf("unable to parse message: %v", err)
+		err = er.Errorf("unable to parse message: %v", err)
 		log.Errorf("Unable to read msg: %v", err)
 		return nil, err
 	}
@@ -946,13 +945,13 @@ func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, error) {
 }
 
 // sendMessage sends a watchtower wire message to the target peer.
-func (c *TowerClient) sendMessage(peer wtserver.Peer, msg wtwire.Message) error {
+func (c *TowerClient) sendMessage(peer wtserver.Peer, msg wtwire.Message) er.R {
 	// Encode the next wire message into the buffer.
 	// TODO(conner): use buffer pool
 	var b bytes.Buffer
 	_, err := wtwire.WriteMessage(&b, msg, 0)
 	if err != nil {
-		err = fmt.Errorf("Unable to encode msg: %v", err)
+		err = er.Errorf("Unable to encode msg: %v", err)
 		log.Errorf("Unable to send msg: %v", err)
 		return err
 	}
@@ -961,7 +960,7 @@ func (c *TowerClient) sendMessage(peer wtserver.Peer, msg wtwire.Message) error 
 	// connection if nothing is sent in a timely manner.
 	err = peer.SetWriteDeadline(time.Now().Add(c.cfg.WriteTimeout))
 	if err != nil {
-		err = fmt.Errorf("unable to set write deadline: %v", err)
+		err = er.Errorf("unable to set write deadline: %v", err)
 		log.Errorf("Unable to send msg: %v", err)
 		return err
 	}
@@ -1027,7 +1026,7 @@ func (c *TowerClient) initActiveQueue(s *wtdb.ClientSession) *sessionQueue {
 // it for new sessions. If the watchtower already exists, then any new addresses
 // included will be considered when dialing it for session negotiations and
 // backups.
-func (c *TowerClient) AddTower(addr *lnwire.NetAddress) error {
+func (c *TowerClient) AddTower(addr *lnwire.NetAddress) er.R {
 	errChan := make(chan error, 1)
 
 	select {
@@ -1036,25 +1035,25 @@ func (c *TowerClient) AddTower(addr *lnwire.NetAddress) error {
 		errChan: errChan,
 	}:
 	case <-c.pipeline.quit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	case <-c.pipeline.forceQuit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	}
 
 	select {
 	case err := <-errChan:
 		return err
 	case <-c.pipeline.quit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	case <-c.pipeline.forceQuit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	}
 }
 
 // handleNewTower handles a request for a new tower to be added. If the tower
 // already exists, then its corresponding sessions, if any, will be set
 // considered as candidates.
-func (c *TowerClient) handleNewTower(msg *newTowerMsg) error {
+func (c *TowerClient) handleNewTower(msg *newTowerMsg) er.R {
 	// We'll start by updating our persisted state, followed by our
 	// in-memory state, with the new tower. This might not actually be a new
 	// tower, but it might include a new address at which it can be reached.
@@ -1069,7 +1068,7 @@ func (c *TowerClient) handleNewTower(msg *newTowerMsg) error {
 		c.cfg.DB, c.cfg.SecretKeyRing, &tower.ID, activeSessionFilter,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to determine sessions for tower %x: "+
+		return er.Errorf("unable to determine sessions for tower %x: "+
 			"%v", tower.IdentityKey.SerializeCompressed(), err)
 	}
 	for id, session := range sessions {
@@ -1083,7 +1082,7 @@ func (c *TowerClient) handleNewTower(msg *newTowerMsg) error {
 // negotiations and from being used for any subsequent backups until it's added
 // again. If an address is provided, then this call only serves as a way of
 // removing the address from the watchtower instead.
-func (c *TowerClient) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error {
+func (c *TowerClient) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) er.R {
 	errChan := make(chan error, 1)
 
 	select {
@@ -1093,18 +1092,18 @@ func (c *TowerClient) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error 
 		errChan: errChan,
 	}:
 	case <-c.pipeline.quit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	case <-c.pipeline.forceQuit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	}
 
 	select {
 	case err := <-errChan:
 		return err
 	case <-c.pipeline.quit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	case <-c.pipeline.forceQuit:
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 	}
 }
 
@@ -1112,7 +1111,7 @@ func (c *TowerClient) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) error 
 // of the tower's sessions have pending updates, then they will become inactive
 // and removed as candidates. If the active session queue corresponds to any of
 // these sessions, a new one will be negotiated.
-func (c *TowerClient) handleStaleTower(msg *staleTowerMsg) error {
+func (c *TowerClient) handleStaleTower(msg *staleTowerMsg) er.R {
 	// We'll load the tower before potentially removing it in order to
 	// retrieve its ID within the database.
 	tower, err := c.cfg.DB.LoadTower(msg.pubKey)
@@ -1141,7 +1140,7 @@ func (c *TowerClient) handleStaleTower(msg *staleTowerMsg) error {
 	pubKey := msg.pubKey.SerializeCompressed()
 	sessions, err := c.cfg.DB.ListClientSessions(&tower.ID)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve sessions for tower %x: "+
+		return er.Errorf("unable to retrieve sessions for tower %x: "+
 			"%v", pubKey, err)
 	}
 	for sessionID := range sessions {
@@ -1162,7 +1161,7 @@ func (c *TowerClient) handleStaleTower(msg *staleTowerMsg) error {
 
 // RegisteredTowers retrieves the list of watchtowers registered with the
 // client.
-func (c *TowerClient) RegisteredTowers() ([]*RegisteredTower, error) {
+func (c *TowerClient) RegisteredTowers() ([]*RegisteredTower, er.R) {
 	// Retrieve all of our towers along with all of our sessions.
 	towers, err := c.cfg.DB.ListTowers()
 	if err != nil {
@@ -1201,7 +1200,7 @@ func (c *TowerClient) RegisteredTowers() ([]*RegisteredTower, error) {
 }
 
 // LookupTower retrieves a registered watchtower through its public key.
-func (c *TowerClient) LookupTower(pubKey *btcec.PublicKey) (*RegisteredTower, error) {
+func (c *TowerClient) LookupTower(pubKey *btcec.PublicKey) (*RegisteredTower, er.R) {
 	tower, err := c.cfg.DB.LoadTower(pubKey)
 	if err != nil {
 		return nil, err

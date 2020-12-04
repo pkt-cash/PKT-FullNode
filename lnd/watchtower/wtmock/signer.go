@@ -30,7 +30,7 @@ func NewMockSigner() *MockSigner {
 // in the sign descriptor. The returned signature is the raw DER-encoded
 // signature without the signhash flag.
 func (s *MockSigner) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (input.Signature, error) {
+	signDesc *input.SignDescriptor) (input.Signature, er.R) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -55,7 +55,7 @@ func (s *MockSigner) SignOutputRaw(tx *wire.MsgTx,
 
 // ComputeInputScript is not implemented.
 func (s *MockSigner) ComputeInputScript(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (*input.Script, error) {
+	signDesc *input.SignDescriptor) (*input.Script, er.R) {
 	panic("not implemented")
 }
 

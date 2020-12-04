@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -45,7 +46,7 @@ var _ chainntnfs.SpendHintCache = (*mockHintCache)(nil)
 var _ chainntnfs.ConfirmHintCache = (*mockHintCache)(nil)
 
 func (c *mockHintCache) CommitSpendHint(heightHint uint32,
-	spendRequests ...chainntnfs.SpendRequest) error {
+	spendRequests ...chainntnfs.SpendRequest) er.R {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -57,19 +58,19 @@ func (c *mockHintCache) CommitSpendHint(heightHint uint32,
 	return nil
 }
 
-func (c *mockHintCache) QuerySpendHint(spendRequest chainntnfs.SpendRequest) (uint32, error) {
+func (c *mockHintCache) QuerySpendHint(spendRequest chainntnfs.SpendRequest) (uint32, er.R) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	hint, ok := c.spendHints[spendRequest]
 	if !ok {
-		return 0, chainntnfs.ErrSpendHintNotFound
+		return 0, chainntnfs.ErrSpendHintNotFound.Default()
 	}
 
 	return hint, nil
 }
 
-func (c *mockHintCache) PurgeSpendHint(spendRequests ...chainntnfs.SpendRequest) error {
+func (c *mockHintCache) PurgeSpendHint(spendRequests ...chainntnfs.SpendRequest) er.R {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -81,7 +82,7 @@ func (c *mockHintCache) PurgeSpendHint(spendRequests ...chainntnfs.SpendRequest)
 }
 
 func (c *mockHintCache) CommitConfirmHint(heightHint uint32,
-	confRequests ...chainntnfs.ConfRequest) error {
+	confRequests ...chainntnfs.ConfRequest) er.R {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -93,19 +94,19 @@ func (c *mockHintCache) CommitConfirmHint(heightHint uint32,
 	return nil
 }
 
-func (c *mockHintCache) QueryConfirmHint(confRequest chainntnfs.ConfRequest) (uint32, error) {
+func (c *mockHintCache) QueryConfirmHint(confRequest chainntnfs.ConfRequest) (uint32, er.R) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	hint, ok := c.confHints[confRequest]
 	if !ok {
-		return 0, chainntnfs.ErrConfirmHintNotFound
+		return 0, chainntnfs.ErrConfirmHintNotFound.Default()
 	}
 
 	return hint, nil
 }
 
-func (c *mockHintCache) PurgeConfirmHint(confRequests ...chainntnfs.ConfRequest) error {
+func (c *mockHintCache) PurgeConfirmHint(confRequests ...chainntnfs.ConfRequest) er.R {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -134,7 +135,7 @@ func TestTxNotifierRegistrationValidation(t *testing.T) {
 		numConfs   uint32
 		heightHint uint32
 		checkSpend bool
-		err        error
+		err        *er.ErrorCode
 	}{
 		{
 			name:       "empty output script",
@@ -180,7 +181,8 @@ func TestTxNotifierRegistrationValidation(t *testing.T) {
 				&chainntnfs.ZeroHash, testCase.pkScript,
 				testCase.numConfs, testCase.heightHint,
 			)
-			if err != testCase.err {
+			if testCase.err == nil && err == nil {
+			} else if testCase.err == nil || !testCase.err.Is(err) {
 				t.Fatalf("conf registration expected error "+
 					"\"%v\", got \"%v\"", testCase.err, err)
 			}
@@ -193,7 +195,8 @@ func TestTxNotifierRegistrationValidation(t *testing.T) {
 				&chainntnfs.ZeroOutPoint, testCase.pkScript,
 				testCase.heightHint,
 			)
-			if err != testCase.err {
+			if testCase.err == nil && err == nil {
+			} else if testCase.err == nil || !testCase.err.Is(err) {
 				t.Fatalf("spend registration expected error "+
 					"\"%v\", got \"%v\"", testCase.err, err)
 			}
@@ -1885,14 +1888,14 @@ func TestTxNotifierConfirmHintCache(t *testing.T) {
 	// Both transactions should not have a height hint set, as RegisterConf
 	// should not alter the cache state.
 	_, err = hintCache.QueryConfirmHint(ntfn1.HistoricalDispatch.ConfRequest)
-	if err != chainntnfs.ErrConfirmHintNotFound {
+	if !chainntnfs.ErrConfirmHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"want: %v, got %v",
 			chainntnfs.ErrConfirmHintNotFound, err)
 	}
 
 	_, err = hintCache.QueryConfirmHint(ntfn2.HistoricalDispatch.ConfRequest)
-	if err != chainntnfs.ErrConfirmHintNotFound {
+	if !chainntnfs.ErrConfirmHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"want: %v, got %v",
 			chainntnfs.ErrConfirmHintNotFound, err)
@@ -1918,14 +1921,14 @@ func TestTxNotifierConfirmHintCache(t *testing.T) {
 	// confirming while the historical dispatch is processing the
 	// registration.
 	hint, err := hintCache.QueryConfirmHint(ntfn1.HistoricalDispatch.ConfRequest)
-	if err != chainntnfs.ErrConfirmHintNotFound {
+	if !chainntnfs.ErrConfirmHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"want: %v, got %v",
 			chainntnfs.ErrConfirmHintNotFound, err)
 	}
 
 	hint, err = hintCache.QueryConfirmHint(ntfn2.HistoricalDispatch.ConfRequest)
-	if err != chainntnfs.ErrConfirmHintNotFound {
+	if !chainntnfs.ErrConfirmHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"want: %v, got %v",
 			chainntnfs.ErrConfirmHintNotFound, err)
@@ -2079,13 +2082,13 @@ func TestTxNotifierSpendHintCache(t *testing.T) {
 	// we must first determine whether they have already been spent in the
 	// chain.
 	_, err = hintCache.QuerySpendHint(ntfn1.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)
 	}
 	_, err = hintCache.QuerySpendHint(ntfn2.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)
@@ -2107,13 +2110,13 @@ func TestTxNotifierSpendHintCache(t *testing.T) {
 	// outpoints, this implies that there is a still a pending historical
 	// rescan for them, so their spend hints should not be created/updated.
 	_, err = hintCache.QuerySpendHint(ntfn1.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)
 	}
 	_, err = hintCache.QuerySpendHint(ntfn2.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)
@@ -2265,7 +2268,7 @@ func TestTxNotifierSpendDuringHistoricalRescan(t *testing.T) {
 	// It should not have a spend hint set upon registration, as we must
 	// first determine whether it has already been spent in the chain.
 	_, err = hintCache.QuerySpendHint(ntfn1.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)
@@ -2287,7 +2290,7 @@ func TestTxNotifierSpendDuringHistoricalRescan(t *testing.T) {
 	// Since we haven't called UpdateSpendDetails yet, there should be no
 	// spend hint found.
 	_, err = hintCache.QuerySpendHint(ntfn1.HistoricalDispatch.SpendRequest)
-	if err != chainntnfs.ErrSpendHintNotFound {
+	if !chainntnfs.ErrSpendHintNotFound.Is(err) {
 		t.Fatalf("unexpected error when querying for height hint "+
 			"expected: %v, got %v", chainntnfs.ErrSpendHintNotFound,
 			err)

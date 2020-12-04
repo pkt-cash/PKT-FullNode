@@ -12,14 +12,14 @@ import (
 // sub server given the main config dispatcher method. If we're unable to find
 // the config that is meant for us in the config dispatcher, then we'll exit
 // with an error.
-func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (lnrpc.SubServer, lnrpc.MacaroonPerms, error) {
+func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (lnrpc.SubServer, lnrpc.MacaroonPerms, er.R) {
 	// We'll attempt to look up the config that we expect, according to our
 	// subServerName name. If we can't find this, then we'll exit with an
 	// error, as we're unable to properly initialize ourselves without this
 	// config.
 	walletKitServerConf, ok := configRegistry.FetchConfig(subServerName)
 	if !ok {
-		return nil, nil, fmt.Errorf("unable to find config for "+
+		return nil, nil, er.Errorf("unable to find config for "+
 			"subserver type %s", subServerName)
 	}
 
@@ -27,7 +27,7 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (lnrpc.S
 	// ensure that it's the type we need.
 	config, ok := walletKitServerConf.(*Config)
 	if !ok {
-		return nil, nil, fmt.Errorf("wrong type of config for "+
+		return nil, nil, er.Errorf("wrong type of config for "+
 			"subserver %s, expected %T got %T", subServerName,
 			&Config{}, walletKitServerConf)
 	}
@@ -37,27 +37,27 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (lnrpc.S
 	// useable.
 	switch {
 	case config.MacService != nil && config.NetworkDir == "":
-		return nil, nil, fmt.Errorf("NetworkDir must be set to " +
+		return nil, nil, er.Errorf("NetworkDir must be set to " +
 			"create WalletKit RPC server")
 
 	case config.FeeEstimator == nil:
-		return nil, nil, fmt.Errorf("FeeEstimator must be set to " +
+		return nil, nil, er.Errorf("FeeEstimator must be set to " +
 			"create WalletKit RPC server")
 
 	case config.Wallet == nil:
-		return nil, nil, fmt.Errorf("Wallet must be set to create " +
+		return nil, nil, er.Errorf("Wallet must be set to create " +
 			"WalletKit RPC server")
 
 	case config.KeyRing == nil:
-		return nil, nil, fmt.Errorf("KeyRing must be set to create " +
+		return nil, nil, er.Errorf("KeyRing must be set to create " +
 			"WalletKit RPC server")
 
 	case config.Sweeper == nil:
-		return nil, nil, fmt.Errorf("Sweeper must be set to create " +
+		return nil, nil, er.Errorf("Sweeper must be set to create " +
 			"WalletKit RPC server")
 
 	case config.Chain == nil:
-		return nil, nil, fmt.Errorf("Chain must be set to create " +
+		return nil, nil, er.Errorf("Chain must be set to create " +
 			"WalletKit RPC server")
 	}
 
@@ -67,7 +67,7 @@ func createNewSubServer(configRegistry lnrpc.SubServerConfigDispatcher) (lnrpc.S
 func init() {
 	subServer := &lnrpc.SubServerDriver{
 		SubServerName: subServerName,
-		New: func(c lnrpc.SubServerConfigDispatcher) (lnrpc.SubServer, lnrpc.MacaroonPerms, error) {
+		New: func(c lnrpc.SubServerConfigDispatcher) (lnrpc.SubServer, lnrpc.MacaroonPerms, er.R) {
 			return createNewSubServer(c)
 		},
 	}

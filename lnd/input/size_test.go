@@ -333,7 +333,7 @@ type dummySigner struct {
 // SignOutputRaw generates a signature for the passed transaction according to
 // the data within the passed SignDescriptor.
 func (s *dummySigner) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (input.Signature, error) {
+	signDesc *input.SignDescriptor) (input.Signature, er.R) {
 
 	return &maxDERSignature{}, nil
 }

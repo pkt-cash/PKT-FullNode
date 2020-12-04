@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/stretchr/testify/require"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // testGraphDesc is a helper type to describe a test graph.
@@ -43,7 +43,7 @@ func buildTestGraph(t *testing.T,
 
 	for i := 0; i < desc.nodes; i++ {
 		key, err := graph.addRandNode()
-		require.NoError(t, err, "cannot create random node")
+		util.RequireNoErr(t, err, "cannot create random node")
 
 		nodes[i] = key
 	}
@@ -54,7 +54,7 @@ func buildTestGraph(t *testing.T,
 			_, _, err := graph.addRandChannel(
 				nodes[u], nodes[v], chanCapacity,
 			)
-			require.NoError(t, err,
+			util.RequireNoErr(t, err,
 				"unexpected error adding random channel",
 			)
 			if err != nil {

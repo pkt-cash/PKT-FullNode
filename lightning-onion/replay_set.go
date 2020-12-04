@@ -3,6 +3,9 @@ package sphinx
 import (
 	"encoding/binary"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // ReplaySet is a data structure used to efficiently record the occurrence of
@@ -46,9 +49,9 @@ func (rs *ReplaySet) Merge(rs2 *ReplaySet) {
 
 // Encode serializes the replay set into an io.Writer suitable for storage. The
 // replay set can be recovered using Decode.
-func (rs *ReplaySet) Encode(w io.Writer) error {
+func (rs *ReplaySet) Encode(w io.Writer) er.R {
 	for seqNum := range rs.replays {
-		err := binary.Write(w, binary.BigEndian, seqNum)
+		err := util.WriteBin(w, binary.BigEndian, seqNum)
 		if err != nil {
 			return err
 		}
@@ -59,16 +62,16 @@ func (rs *ReplaySet) Encode(w io.Writer) error {
 
 // Decode reconstructs a replay set given a io.Reader. The byte
 // slice is assumed to be even in length, otherwise resulting in failure.
-func (rs *ReplaySet) Decode(r io.Reader) error {
+func (rs *ReplaySet) Decode(r io.Reader) er.R {
 	for {
 		// seqNum provides to buffer to read the next uint16 index.
 		var seqNum uint16
 
-		err := binary.Read(r, binary.BigEndian, &seqNum)
-		switch err {
-		case nil:
+		err := util.ReadBin(r, binary.BigEndian, &seqNum)
+		switch {
+		case err == nil:
 			// Successful read, proceed.
-		case io.EOF:
+		case er.Wrapped(err) == io.EOF:
 			return nil
 		default:
 			// Can return ErrShortBuffer or ErrUnexpectedEOF.

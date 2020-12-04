@@ -28,7 +28,7 @@ type utxoLock struct {
 
 // verifyInputsUnspent checks that all inputs are contained in the list of
 // known, non-locked UTXOs given.
-func verifyInputsUnspent(inputs []*wire.TxIn, utxos []*lnwallet.Utxo) error {
+func verifyInputsUnspent(inputs []*wire.TxIn, utxos []*lnwallet.Utxo) er.R {
 	// TODO(guggero): Pass in UTXOs as a map to make lookup more efficient.
 	for idx, txIn := range inputs {
 		found := false
@@ -40,7 +40,7 @@ func verifyInputsUnspent(inputs []*wire.TxIn, utxos []*lnwallet.Utxo) error {
 		}
 
 		if !found {
-			return fmt.Errorf("input %d not found in list of non-"+
+			return er.Errorf("input %d not found in list of non-"+
 				"locked UTXO", idx)
 		}
 	}
@@ -77,7 +77,7 @@ func lockInputs(w lnwallet.WalletController, packet *psbt.Packet) ([]*utxoLock,
 				}
 			}
 
-			return nil, fmt.Errorf("could not lease a lock on "+
+			return nil, er.Errorf("could not lease a lock on "+
 				"UTXO: %v", err)
 		}
 

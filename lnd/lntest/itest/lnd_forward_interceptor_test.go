@@ -268,7 +268,7 @@ func newInterceptorTestContext(t *harnessTest,
 // 3. settling htlc externally.
 // 4. held htlc that is resumed later.
 func (c *interceptorTestContext) prepareTestCases() (
-	[]*interceptorTestCase, error) {
+	[]*interceptorTestCase, er.R) {
 
 	cases := []*interceptorTestCase{
 		{amountMsat: 1000, shouldHold: false,
@@ -286,13 +286,13 @@ func (c *interceptorTestContext) prepareTestCases() (
 			ValueMsat: t.amountMsat,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to add invoice: %v", err)
+			return nil, er.Errorf("unable to add invoice: %v", err)
 		}
 		invoice, err := c.carol.LookupInvoice(context.Background(), &lnrpc.PaymentHash{
 			RHashStr: hex.EncodeToString(addResponse.RHash),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to add invoice: %v", err)
+			return nil, er.Errorf("unable to add invoice: %v", err)
 		}
 		t.invoice = invoice
 	}
@@ -365,7 +365,7 @@ func (c *interceptorTestContext) waitForChannels() {
 // sendAliceToCarolPayment sends a payment from alice to carol and make an
 // attempt to pay. The lnrpc.HTLCAttempt is returned.
 func (c *interceptorTestContext) sendAliceToCarolPayment(ctx context.Context,
-	amtMsat int64, paymentHash []byte) (*lnrpc.HTLCAttempt, error) {
+	amtMsat int64, paymentHash []byte) (*lnrpc.HTLCAttempt, er.R) {
 
 	// Build a route from alice to carol.
 	route, err := c.buildRoute(ctx, amtMsat, []*lntest.HarnessNode{c.bob, c.carol})
@@ -388,14 +388,14 @@ func (c *interceptorTestContext) sendAliceToCarolPayment(ctx context.Context,
 
 // buildRoute is a helper function to build a route with given hops.
 func (c *interceptorTestContext) buildRoute(ctx context.Context, amtMsat int64, hops []*lntest.HarnessNode) (
-	*lnrpc.Route, error) {
+	*lnrpc.Route, er.R) {
 
 	rpcHops := make([][]byte, 0, len(hops))
 	for _, hop := range hops {
 		k := hop.PubKeyStr
 		pubkey, err := route.NewVertexFromStr(k)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing %v: %v",
+			return nil, er.Errorf("error parsing %v: %v",
 				k, err)
 		}
 		rpcHops = append(rpcHops, pubkey[:])

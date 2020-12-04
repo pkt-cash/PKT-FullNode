@@ -3,6 +3,7 @@
 package etcd
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
@@ -42,10 +43,10 @@ func (tx *readWriteTx) ReadBucket(key []byte) walletdb.ReadBucket {
 
 // Rollback closes the transaction, discarding changes (if any) if the
 // database was modified by a write transaction.
-func (tx *readWriteTx) Rollback() error {
+func (tx *readWriteTx) Rollback() er.R {
 	// If the transaction has been closed roolback will fail.
 	if !tx.active {
-		return walletdb.ErrTxClosed
+		return walletdb.ErrTxClosed.Default()
 	}
 
 	// Rollback the STM and set the tx to inactive.
@@ -63,23 +64,23 @@ func (tx *readWriteTx) ReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
 
 // CreateTopLevelBucket creates the top level bucket for a key if it
 // does not exist.  The newly-created bucket it returned.
-func (tx *readWriteTx) CreateTopLevelBucket(key []byte) (walletdb.ReadWriteBucket, error) {
+func (tx *readWriteTx) CreateTopLevelBucket(key []byte) (walletdb.ReadWriteBucket, er.R) {
 	return rootBucket(tx).CreateBucketIfNotExists(key)
 }
 
 // DeleteTopLevelBucket deletes the top level bucket for a key.  This
 // errors if the bucket can not be found or the key keys a single value
 // instead of a bucket.
-func (tx *readWriteTx) DeleteTopLevelBucket(key []byte) error {
+func (tx *readWriteTx) DeleteTopLevelBucket(key []byte) er.R {
 	return rootBucket(tx).DeleteNestedBucket(key)
 }
 
 // Commit commits the transaction if not already committed. Will return
 // error if the underlying STM fails.
-func (tx *readWriteTx) Commit() error {
+func (tx *readWriteTx) Commit() er.R {
 	// Commit will fail if the transaction is already committed.
 	if !tx.active {
-		return walletdb.ErrTxClosed
+		return walletdb.ErrTxClosed.Default()
 	}
 
 	// Try committing the transaction.

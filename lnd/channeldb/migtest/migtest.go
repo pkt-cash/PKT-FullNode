@@ -1,22 +1,22 @@
 package migtest
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
 // MakeDB creates a new instance of the ChannelDB for testing purposes. A
 // callback which cleans up the created temporary directories is also returned
 // and intended to be executed after the test completes.
-func MakeDB() (kvdb.Backend, func(), error) {
+func MakeDB() (kvdb.Backend, func(), er.R) {
 	// Create temporary database for mission control.
-	file, err := ioutil.TempFile("", "*.db")
-	if err != nil {
-		return nil, nil, err
+	file, errr := ioutil.TempFile("", "*.db")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	dbPath := file.Name()
@@ -36,7 +36,7 @@ func MakeDB() (kvdb.Backend, func(), error) {
 // ApplyMigration is a helper test function that encapsulates the general steps
 // which are needed to properly check the result of applying migration function.
 func ApplyMigration(t *testing.T,
-	beforeMigration, afterMigration, migrationFunc func(tx kvdb.RwTx) error,
+	beforeMigration, afterMigration, migrationFunc func(tx kvdb.RwTx) er.R,
 	shouldFail bool) {
 
 	cdb, cleanUp, err := MakeDB()
@@ -78,13 +78,15 @@ func ApplyMigration(t *testing.T,
 	}
 }
 
-func newError(e interface{}) error {
-	var err error
+func newError(e interface{}) er.R {
+	var err er.R
 	switch e := e.(type) {
-	case error:
+	case er.R:
 		err = e
+	case error:
+		err = er.E(e)
 	default:
-		err = fmt.Errorf("%v", e)
+		err = er.Errorf("%v", e)
 	}
 
 	return err

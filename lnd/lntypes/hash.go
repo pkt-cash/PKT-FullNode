@@ -22,10 +22,10 @@ func (hash Hash) String() string {
 
 // MakeHash returns a new Hash from a byte slice.  An error is returned if
 // the number of bytes passed in is not HashSize.
-func MakeHash(newHash []byte) (Hash, error) {
+func MakeHash(newHash []byte) (Hash, er.R) {
 	nhlen := len(newHash)
 	if nhlen != HashSize {
-		return Hash{}, fmt.Errorf("invalid hash length of %v, want %v",
+		return Hash{}, er.Errorf("invalid hash length of %v, want %v",
 			nhlen, HashSize)
 	}
 
@@ -36,14 +36,14 @@ func MakeHash(newHash []byte) (Hash, error) {
 }
 
 // MakeHashFromStr creates a Hash from a hex hash string.
-func MakeHashFromStr(newHash string) (Hash, error) {
+func MakeHashFromStr(newHash string) (Hash, er.R) {
 	// Return error if hash string is of incorrect length.
 	if len(newHash) != HashSize*2 {
-		return Hash{}, fmt.Errorf("invalid hash string length of %v, "+
+		return Hash{}, er.Errorf("invalid hash string length of %v, "+
 			"want %v", len(newHash), HashSize*2)
 	}
 
-	hash, err := hex.DecodeString(newHash)
+	hash, err := util.DecodeHex(newHash)
 	if err != nil {
 		return Hash{}, err
 	}

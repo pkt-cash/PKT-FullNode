@@ -1,12 +1,12 @@
 package contractcourt
 
 import (
-	"encoding/binary"
-	"fmt"
 	"io"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -79,7 +79,7 @@ func (c *commitSweepResolver) ResolverKey() []byte {
 
 // waitForHeight registers for block notifications and waits for the provided
 // block height to be reached.
-func (c *commitSweepResolver) waitForHeight(waitHeight uint32) error {
+func (c *commitSweepResolver) waitForHeight(waitHeight uint32) er.R {
 	// Register for block epochs. After registration, the current height
 	// will be sent on the channel immediately.
 	blockEpochs, err := c.Notifier.RegisterBlockEpochNtfn(nil)
@@ -107,7 +107,7 @@ func (c *commitSweepResolver) waitForHeight(waitHeight uint32) error {
 
 // getCommitTxConfHeight waits for confirmation of the commitment tx and returns
 // the confirmation height.
-func (c *commitSweepResolver) getCommitTxConfHeight() (uint32, error) {
+func (c *commitSweepResolver) getCommitTxConfHeight() (uint32, er.R) {
 	txID := c.commitResolution.SelfOutPoint.Hash
 	signDesc := c.commitResolution.SelfOutputSignDesc
 	pkScript := signDesc.Output.PkScript
@@ -123,7 +123,7 @@ func (c *commitSweepResolver) getCommitTxConfHeight() (uint32, error) {
 	select {
 	case txConfirmation, ok := <-confChan.Confirmed:
 		if !ok {
-			return 0, fmt.Errorf("cannot get confirmation "+
+			return 0, er.Errorf("cannot get confirmation "+
 				"for commit tx %v", txID)
 		}
 
@@ -141,7 +141,7 @@ func (c *commitSweepResolver) getCommitTxConfHeight() (uint32, error) {
 // returned.
 //
 // NOTE: This function MUST be run as a goroutine.
-func (c *commitSweepResolver) Resolve() (ContractResolver, error) {
+func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 	// If we're already resolved, then we can exit early.
 	if c.resolved {
 		return nil, nil
@@ -312,21 +312,21 @@ func (c *commitSweepResolver) IsResolved() bool {
 // Writer.
 //
 // NOTE: Part of the ContractResolver interface.
-func (c *commitSweepResolver) Encode(w io.Writer) error {
+func (c *commitSweepResolver) Encode(w io.Writer) er.R {
 	if err := encodeCommitResolution(w, &c.commitResolution); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, endian, c.resolved); err != nil {
+	if err := util.WriteBin(w, endian, c.resolved); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, c.broadcastHeight); err != nil {
+	if err := util.WriteBin(w, endian, c.broadcastHeight); err != nil {
 		return err
 	}
-	if _, err := w.Write(c.chanPoint.Hash[:]); err != nil {
+	if _, err := util.Write(w, c.chanPoint.Hash[:]); err != nil {
 		return err
 	}
-	err := binary.Write(w, endian, c.chanPoint.Index)
+	err := util.WriteBin(w, endian, c.chanPoint.Index)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func (c *commitSweepResolver) Encode(w io.Writer) error {
 // ContractResolver from the passed Reader instance, returning an active
 // ContractResolver instance.
 func newCommitSweepResolverFromReader(r io.Reader, resCfg ResolverConfig) (
-	*commitSweepResolver, error) {
+	*commitSweepResolver, er.R) {
 
 	c := &commitSweepResolver{
 		contractResolverKit: *newContractResolverKit(resCfg),
@@ -352,17 +352,17 @@ func newCommitSweepResolverFromReader(r io.Reader, resCfg ResolverConfig) (
 		return nil, err
 	}
 
-	if err := binary.Read(r, endian, &c.resolved); err != nil {
+	if err := util.ReadBin(r, endian, &c.resolved); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, endian, &c.broadcastHeight); err != nil {
+	if err := util.ReadBin(r, endian, &c.broadcastHeight); err != nil {
 		return nil, err
 	}
-	_, err := io.ReadFull(r, c.chanPoint.Hash[:])
+	_, err := util.ReadFull(r, c.chanPoint.Hash[:])
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Read(r, endian, &c.chanPoint.Index)
+	err = util.ReadBin(r, endian, &c.chanPoint.Index)
 	if err != nil {
 		return nil, err
 	}

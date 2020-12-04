@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // mockBackend simulates a chain backend for realistic behaviour in unit tests
@@ -41,7 +42,7 @@ func newMockBackend(t *testing.T, notifier *MockNotifier) *mockBackend {
 	}
 }
 
-func (b *mockBackend) publishTransaction(tx *wire.MsgTx) error {
+func (b *mockBackend) publishTransaction(tx *wire.MsgTx) er.R {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -49,20 +50,20 @@ func (b *mockBackend) publishTransaction(tx *wire.MsgTx) error {
 	if _, ok := b.unconfirmedTxes[txHash]; ok {
 		// Tx already exists
 		testLog.Tracef("mockBackend duplicate tx %v", tx.TxHash())
-		return lnwallet.ErrDoubleSpend
+		return lnwallet.ErrDoubleSpend.Default()
 	}
 
 	for _, in := range tx.TxIn {
 		if _, ok := b.unconfirmedSpendInputs[in.PreviousOutPoint]; ok {
 			// Double spend
 			testLog.Tracef("mockBackend double spend tx %v", tx.TxHash())
-			return lnwallet.ErrDoubleSpend
+			return lnwallet.ErrDoubleSpend.Default()
 		}
 
 		if _, ok := b.confirmedSpendInputs[in.PreviousOutPoint]; ok {
 			// Already included in block
 			testLog.Tracef("mockBackend already in block tx %v", tx.TxHash())
-			return lnwallet.ErrDoubleSpend
+			return lnwallet.ErrDoubleSpend.Default()
 		}
 	}
 
@@ -76,7 +77,7 @@ func (b *mockBackend) publishTransaction(tx *wire.MsgTx) error {
 	return nil
 }
 
-func (b *mockBackend) PublishTransaction(tx *wire.MsgTx, _ string) error {
+func (b *mockBackend) PublishTransaction(tx *wire.MsgTx, _ string) er.R {
 	log.Tracef("Publishing tx %v", tx.TxHash())
 	err := b.publishTransaction(tx)
 	select {
@@ -88,7 +89,7 @@ func (b *mockBackend) PublishTransaction(tx *wire.MsgTx, _ string) error {
 }
 
 func (b *mockBackend) ListUnspentWitness(minconfirms, maxconfirms int32) (
-	[]*lnwallet.Utxo, error) {
+	[]*lnwallet.Utxo, er.R) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -103,7 +104,7 @@ func (b *mockBackend) ListUnspentWitness(minconfirms, maxconfirms int32) (
 	return b.walletUtxos, nil
 }
 
-func (b *mockBackend) WithCoinSelectLock(f func() error) error {
+func (b *mockBackend) WithCoinSelectLock(f func() error) er.R {
 	return f()
 }
 

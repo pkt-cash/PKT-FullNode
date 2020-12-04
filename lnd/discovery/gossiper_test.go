@@ -3,7 +3,6 @@ package discovery
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	prand "math/rand"
@@ -15,12 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
@@ -31,6 +29,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/routing"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -70,7 +69,7 @@ var (
 // makeTestDB creates a new instance of the ChannelDB for testing purposes. A
 // callback which cleans up the created temporary directories is also returned
 // and intended to be executed after the test completes.
-func makeTestDB() (*channeldb.DB, func(), error) {
+func makeTestDB() (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
 	tempDirName, err := ioutil.TempDir("", "channeldb")
@@ -113,7 +112,7 @@ func newMockRouter(height uint32) *mockGraphSource {
 
 var _ routing.ChannelGraphSource = (*mockGraphSource)(nil)
 
-func (r *mockGraphSource) AddNode(node *channeldb.LightningNode) error {
+func (r *mockGraphSource) AddNode(node *channeldb.LightningNode) er.R {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -121,19 +120,19 @@ func (r *mockGraphSource) AddNode(node *channeldb.LightningNode) error {
 	return nil
 }
 
-func (r *mockGraphSource) AddEdge(info *channeldb.ChannelEdgeInfo) error {
+func (r *mockGraphSource) AddEdge(info *channeldb.ChannelEdgeInfo) er.R {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, ok := r.infos[info.ChannelID]; ok {
-		return errors.New("info already exist")
+		return er.New("info already exist")
 	}
 
 	r.infos[info.ChannelID] = *info
 	return nil
 }
 
-func (r *mockGraphSource) UpdateEdge(edge *channeldb.ChannelEdgePolicy) error {
+func (r *mockGraphSource) UpdateEdge(edge *channeldb.ChannelEdgePolicy) er.R {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -150,12 +149,12 @@ func (r *mockGraphSource) UpdateEdge(edge *channeldb.ChannelEdgePolicy) error {
 	return nil
 }
 
-func (r *mockGraphSource) CurrentBlockHeight() (uint32, error) {
+func (r *mockGraphSource) CurrentBlockHeight() (uint32, er.R) {
 	return r.bestHeight, nil
 }
 
 func (r *mockGraphSource) AddProof(chanID lnwire.ShortChannelID,
-	proof *channeldb.ChannelAuthProof) error {
+	proof *channeldb.ChannelAuthProof) er.R {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -163,7 +162,7 @@ func (r *mockGraphSource) AddProof(chanID lnwire.ShortChannelID,
 	chanIDInt := chanID.ToUint64()
 	info, ok := r.infos[chanIDInt]
 	if !ok {
-		return errors.New("channel does not exist")
+		return er.New("channel does not exist")
 	}
 
 	info.AuthProof = proof
@@ -172,12 +171,12 @@ func (r *mockGraphSource) AddProof(chanID lnwire.ShortChannelID,
 	return nil
 }
 
-func (r *mockGraphSource) ForEachNode(func(node *channeldb.LightningNode) error) error {
+func (r *mockGraphSource) ForEachNode(func(node *channeldb.LightningNode) error) er.R {
 	return nil
 }
 
 func (r *mockGraphSource) ForAllOutgoingChannels(cb func(i *channeldb.ChannelEdgeInfo,
-	c *channeldb.ChannelEdgePolicy) error) error {
+	c *channeldb.ChannelEdgePolicy) error) er.R {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -206,14 +205,14 @@ func (r *mockGraphSource) ForAllOutgoingChannels(cb func(i *channeldb.ChannelEdg
 }
 
 func (r *mockGraphSource) ForEachChannel(func(chanInfo *channeldb.ChannelEdgeInfo,
-	e1, e2 *channeldb.ChannelEdgePolicy) error) error {
+	e1, e2 *channeldb.ChannelEdgePolicy) error) er.R {
 	return nil
 }
 
 func (r *mockGraphSource) GetChannelByID(chanID lnwire.ShortChannelID) (
 	*channeldb.ChannelEdgeInfo,
 	*channeldb.ChannelEdgePolicy,
-	*channeldb.ChannelEdgePolicy, error) {
+	*channeldb.ChannelEdgePolicy, er.R) {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -223,13 +222,13 @@ func (r *mockGraphSource) GetChannelByID(chanID lnwire.ShortChannelID) (
 	if !ok {
 		pubKeys, isZombie := r.zombies[chanIDInt]
 		if !isZombie {
-			return nil, nil, nil, channeldb.ErrEdgeNotFound
+			return nil, nil, nil, channeldb.ErrEdgeNotFound.Default()
 		}
 
 		return &channeldb.ChannelEdgeInfo{
 			NodeKey1Bytes: pubKeys[0],
 			NodeKey2Bytes: pubKeys[1],
-		}, nil, nil, channeldb.ErrZombieEdge
+		}, nil, nil, channeldb.ErrZombieEdge.Default()
 	}
 
 	edges := r.edges[chanID.ToUint64()]
@@ -251,7 +250,7 @@ func (r *mockGraphSource) GetChannelByID(chanID lnwire.ShortChannelID) (
 }
 
 func (r *mockGraphSource) FetchLightningNode(
-	nodePub route.Vertex) (*channeldb.LightningNode, error) {
+	nodePub route.Vertex) (*channeldb.LightningNode, er.R) {
 
 	for _, node := range r.nodes {
 		if bytes.Equal(nodePub[:], node.PubKeyBytes[:]) {
@@ -259,7 +258,7 @@ func (r *mockGraphSource) FetchLightningNode(
 		}
 	}
 
-	return nil, channeldb.ErrGraphNodeNotFound
+	return nil, channeldb.ErrGraphNodeNotFound.Default()
 }
 
 // IsStaleNode returns true if the graph source has a node announcement for the
@@ -291,7 +290,7 @@ func (r *mockGraphSource) IsStaleNode(nodePub route.Vertex, timestamp time.Time)
 
 // IsPublicNode determines whether the given vertex is seen as a public node in
 // the graph from the graph's source node's point of view.
-func (r *mockGraphSource) IsPublicNode(node route.Vertex) (bool, error) {
+func (r *mockGraphSource) IsPublicNode(node route.Vertex) (bool, er.R) {
 	for _, info := range r.infos {
 		if !bytes.Equal(node[:], info.NodeKey1Bytes[:]) &&
 			!bytes.Equal(node[:], info.NodeKey2Bytes[:]) {
@@ -360,7 +359,7 @@ func (r *mockGraphSource) IsStaleEdgePolicy(chanID lnwire.ShortChannelID,
 // MarkEdgeLive clears an edge from our zombie index, deeming it as live.
 //
 // NOTE: This method is part of the ChannelGraphSource interface.
-func (r *mockGraphSource) MarkEdgeLive(chanID lnwire.ShortChannelID) error {
+func (r *mockGraphSource) MarkEdgeLive(chanID lnwire.ShortChannelID) er.R {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.zombies, chanID.ToUint64())
@@ -369,7 +368,7 @@ func (r *mockGraphSource) MarkEdgeLive(chanID lnwire.ShortChannelID) error {
 
 // MarkEdgeZombie marks an edge as a zombie within our zombie index.
 func (r *mockGraphSource) MarkEdgeZombie(chanID lnwire.ShortChannelID, pubKey1,
-	pubKey2 [33]byte) error {
+	pubKey2 [33]byte) er.R {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -391,13 +390,13 @@ func newMockNotifier() *mockNotifier {
 }
 
 func (m *mockNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
-	_ []byte, numConfs, _ uint32) (*chainntnfs.ConfirmationEvent, error) {
+	_ []byte, numConfs, _ uint32) (*chainntnfs.ConfirmationEvent, er.R) {
 
 	return nil, nil
 }
 
 func (m *mockNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint, _ []byte,
-	_ uint32) (*chainntnfs.SpendEvent, error) {
+	_ uint32) (*chainntnfs.SpendEvent, er.R) {
 	return nil, nil
 }
 
@@ -414,7 +413,7 @@ func (m *mockNotifier) notifyBlock(hash chainhash.Hash, height uint32) {
 }
 
 func (m *mockNotifier) RegisterBlockEpochNtfn(
-	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error) {
+	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -429,7 +428,7 @@ func (m *mockNotifier) RegisterBlockEpochNtfn(
 	}, nil
 }
 
-func (m *mockNotifier) Start() error {
+func (m *mockNotifier) Start() er.R {
 	return nil
 }
 
@@ -437,7 +436,7 @@ func (m *mockNotifier) Started() bool {
 	return true
 }
 
-func (m *mockNotifier) Stop() error {
+func (m *mockNotifier) Stop() er.R {
 	return nil
 }
 
@@ -455,8 +454,8 @@ type annBatch struct {
 	remoteProofAnn *lnwire.AnnounceSignatures
 }
 
-func createAnnouncements(blockHeight uint32) (*annBatch, error) {
-	var err error
+func createAnnouncements(blockHeight uint32) (*annBatch, er.R) {
+	var err er.R
 	var batch annBatch
 	timestamp := testTimestamp
 
@@ -515,9 +514,9 @@ func createAnnouncements(blockHeight uint32) (*annBatch, error) {
 }
 
 func createNodeAnnouncement(priv *btcec.PrivateKey,
-	timestamp uint32, extraBytes ...[]byte) (*lnwire.NodeAnnouncement, error) {
+	timestamp uint32, extraBytes ...[]byte) (*lnwire.NodeAnnouncement, er.R) {
 
-	var err error
+	var err er.R
 	k := hex.EncodeToString(priv.Serialize())
 	alias, err := lnwire.NewNodeAlias("kek" + k[:10])
 	if err != nil {
@@ -552,9 +551,9 @@ func createNodeAnnouncement(priv *btcec.PrivateKey,
 func createUpdateAnnouncement(blockHeight uint32,
 	flags lnwire.ChanUpdateChanFlags,
 	nodeKey *btcec.PrivateKey, timestamp uint32,
-	extraBytes ...[]byte) (*lnwire.ChannelUpdate, error) {
+	extraBytes ...[]byte) (*lnwire.ChannelUpdate, er.R) {
 
-	var err error
+	var err er.R
 
 	htlcMinMsat := lnwire.MilliSatoshi(prand.Int63())
 	a := &lnwire.ChannelUpdate{
@@ -585,7 +584,7 @@ func createUpdateAnnouncement(blockHeight uint32,
 	return a, nil
 }
 
-func signUpdate(nodeKey *btcec.PrivateKey, a *lnwire.ChannelUpdate) error {
+func signUpdate(nodeKey *btcec.PrivateKey, a *lnwire.ChannelUpdate) er.R {
 	pub := nodeKey.PubKey()
 	signer := mock.SingleSigner{Privkey: nodeKey}
 	sig, err := netann.SignAnnouncement(&signer, pub, a)
@@ -624,7 +623,7 @@ func createAnnouncementWithoutProof(blockHeight uint32,
 }
 
 func createRemoteChannelAnnouncement(blockHeight uint32,
-	extraBytes ...[]byte) (*lnwire.ChannelAnnouncement, error) {
+	extraBytes ...[]byte) (*lnwire.ChannelAnnouncement, er.R) {
 
 	a := createAnnouncementWithoutProof(blockHeight, extraBytes...)
 
@@ -682,7 +681,7 @@ type testCtx struct {
 	broadcastedMessage chan msgWithSenders
 }
 
-func createTestCtx(startHeight uint32) (*testCtx, func(), error) {
+func createTestCtx(startHeight uint32) (*testCtx, func(), er.R) {
 	// Next we'll initialize an instance of the channel router with mock
 	// versions of the chain and channel notifier. As we don't need to test
 	// any p2p functionality, the peer send and switch send,
@@ -705,7 +704,7 @@ func createTestCtx(startHeight uint32) (*testCtx, func(), error) {
 	gossiper := New(Config{
 		Notifier: notifier,
 		Broadcast: func(senders map[route.Vertex]struct{},
-			msgs ...lnwire.Message) error {
+			msgs ...lnwire.Message) er.R {
 
 			for _, msg := range msgs {
 				broadcastedMessage <- msgWithSenders{
@@ -726,7 +725,7 @@ func createTestCtx(startHeight uint32) (*testCtx, func(), error) {
 			c := make(chan struct{})
 			return c
 		},
-		SelfNodeAnnouncement: func(bool) (lnwire.NodeAnnouncement, error) {
+		SelfNodeAnnouncement: func(bool) (lnwire.NodeAnnouncement, er.R) {
 			return lnwire.NodeAnnouncement{
 				Timestamp: testTimestamp,
 			}, nil
@@ -748,7 +747,7 @@ func createTestCtx(startHeight uint32) (*testCtx, func(), error) {
 
 	if err := gossiper.Start(); err != nil {
 		cleanUpDb()
-		return nil, nil, fmt.Errorf("unable to start router: %v", err)
+		return nil, nil, er.Errorf("unable to start router: %v", err)
 	}
 
 	// Mark the graph as synced in order to allow the announcements to be
@@ -1113,7 +1112,7 @@ func TestSignatureAnnouncementLocalFirst(t *testing.T) {
 
 	number := 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1149,7 +1148,7 @@ func TestSignatureAnnouncementLocalFirst(t *testing.T) {
 
 	number = 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1221,7 +1220,7 @@ func TestOrphanSignatureAnnouncement(t *testing.T) {
 
 	number := 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1360,7 +1359,7 @@ func TestOrphanSignatureAnnouncement(t *testing.T) {
 
 	number = 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(p *channeldb.WaitingProof) error {
+		func(p *channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1474,7 +1473,7 @@ func TestSignatureAnnouncementRetryAtStartup(t *testing.T) {
 
 	number := 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1581,7 +1580,7 @@ out:
 
 	number = 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -1768,7 +1767,7 @@ func TestSignatureAnnouncementFullProofWhenRemoteProof(t *testing.T) {
 
 	number := 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -2600,7 +2599,7 @@ func TestReceiveRemoteChannelUpdateFirst(t *testing.T) {
 
 	number := 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -2632,7 +2631,7 @@ func TestReceiveRemoteChannelUpdateFirst(t *testing.T) {
 
 	number = 0
 	if err := ctx.gossiper.cfg.WaitingProofStore.ForAll(
-		func(*channeldb.WaitingProof) error {
+		func(*channeldb.WaitingProof) er.R {
 			number++
 			return nil
 		},
@@ -3445,14 +3444,14 @@ func TestSendChannelUpdateReliably(t *testing.T) {
 
 	// Since the messages above are now deemed as stale, they should be
 	// removed from the message store.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		msgs, err := ctx.gossiper.cfg.MessageStore.Messages()
 		if err != nil {
-			return fmt.Errorf("unable to retrieve pending "+
+			return er.Errorf("unable to retrieve pending "+
 				"messages: %v", err)
 		}
 		if len(msgs) != 0 {
-			return fmt.Errorf("expected no messages left, found %d",
+			return er.Errorf("expected no messages left, found %d",
 				len(msgs))
 		}
 		return nil
@@ -3504,12 +3503,12 @@ func assertBroadcastMsg(t *testing.T, ctx *testCtx,
 	// predicate returns true for any of the messages, so we'll continue to
 	// retry until either we hit our timeout, or it returns with no error
 	// (message found).
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		select {
 		case msg := <-ctx.broadcastedMessage:
 			return predicate(msg.msg)
 		case <-time.After(2 * trickleDelay):
-			return fmt.Errorf("no message broadcast")
+			return er.Errorf("no message broadcast")
 		}
 	}, time.Second*5)
 	if err != nil {
@@ -3559,7 +3558,7 @@ func TestPropagateChanPolicyUpdate(t *testing.T) {
 		targetPub [33]byte, peerChan chan<- lnpeer.Peer) {
 
 		if !bytes.Equal(targetPub[:], remoteKey.SerializeCompressed()) {
-			notifyErr <- fmt.Errorf("reliableSender attempted to send the "+
+			notifyErr <- er.Errorf("reliableSender attempted to send the "+
 				"message to the wrong peer: expected %x got %x",
 				remoteKey.SerializeCompressed(),
 				targetPub)
@@ -3618,7 +3617,7 @@ out:
 	var edgesToUpdate []EdgeWithInfo
 	err = ctx.router.ForAllOutgoingChannels(func(
 		info *channeldb.ChannelEdgeInfo,
-		edge *channeldb.ChannelEdgePolicy) error {
+		edge *channeldb.ChannelEdgePolicy) er.R {
 
 		edge.TimeLockDelta = uint16(newTimeLockDelta)
 		edgesToUpdate = append(edgesToUpdate, EdgeWithInfo{
@@ -3640,19 +3639,19 @@ out:
 	// Two channel updates should now be broadcast, with neither of them
 	// being the channel our first private channel.
 	for i := 0; i < numChannels-1; i++ {
-		assertBroadcastMsg(t, ctx, func(msg lnwire.Message) error {
+		assertBroadcastMsg(t, ctx, func(msg lnwire.Message) er.R {
 			upd, ok := msg.(*lnwire.ChannelUpdate)
 			if !ok {
-				return fmt.Errorf("channel update not "+
+				return er.Errorf("channel update not "+
 					"broadcast, instead %T was", msg)
 			}
 
 			if upd.ShortChannelID == firstChanID {
-				return fmt.Errorf("private channel upd " +
+				return er.Errorf("private channel upd " +
 					"broadcast")
 			}
 			if upd.TimeLockDelta != newTimeLockDelta {
-				return fmt.Errorf("wrong delta: expected %v, "+
+				return er.Errorf("wrong delta: expected %v, "+
 					"got %v", newTimeLockDelta,
 					upd.TimeLockDelta)
 			}

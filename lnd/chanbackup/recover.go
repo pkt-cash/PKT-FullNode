@@ -3,8 +3,9 @@ package chanbackup
 import (
 	"net"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 )
@@ -19,7 +20,7 @@ type ChannelRestorer interface {
 	// backups to channel shells that will be stored persistently. Once
 	// these shells have been stored on disk, we'll be able to connect to
 	// the channel peer an execute the data loss recovery protocol.
-	RestoreChansFromSingles(...Single) error
+	RestoreChansFromSingles(...Single) er.R
 }
 
 // PeerConnector is an interface that allows the Recover method to connect to
@@ -29,7 +30,7 @@ type PeerConnector interface {
 	// available addresses. Once this method returns with a non-nil error,
 	// the connector should attempt to persistently connect to the target
 	// peer in the background as a persistent attempt.
-	ConnectPeer(node *btcec.PublicKey, addrs []net.Addr) error
+	ConnectPeer(node *btcec.PublicKey, addrs []net.Addr) er.R
 }
 
 // Recover attempts to recover the static channel state from a set of static
@@ -41,7 +42,7 @@ type PeerConnector interface {
 // well, in order to expose the addressing information required to locate to
 // and connect to each peer in order to initiate the recovery protocol.
 func Recover(backups []Single, restorer ChannelRestorer,
-	peerConnector PeerConnector) error {
+	peerConnector PeerConnector) er.R {
 
 	for i, backup := range backups {
 		log.Infof("Restoring ChannelPoint(%v) to disk: ",
@@ -53,7 +54,7 @@ func Recover(backups []Single, restorer ChannelRestorer,
 		// just continue. No reason to fail a whole set of multi backups
 		// for example. This allows resume of a restore in case another
 		// error happens.
-		if err == channeldb.ErrChanAlreadyExists {
+		if channeldb.ErrChanAlreadyExists.Is(err) {
 			continue
 		}
 		if err != nil {
@@ -94,7 +95,7 @@ func Recover(backups []Single, restorer ChannelRestorer,
 // re-establish a persistent connection in the background.
 func UnpackAndRecoverSingles(singles PackedSingles,
 	keyChain keychain.KeyRing, restorer ChannelRestorer,
-	peerConnector PeerConnector) error {
+	peerConnector PeerConnector) er.R {
 
 	chanBackups, err := singles.Unpack(keyChain)
 	if err != nil {
@@ -112,7 +113,7 @@ func UnpackAndRecoverSingles(singles PackedSingles,
 // re-establish a persistent connection in the background.
 func UnpackAndRecoverMulti(packedMulti PackedMulti,
 	keyChain keychain.KeyRing, restorer ChannelRestorer,
-	peerConnector PeerConnector) error {
+	peerConnector PeerConnector) er.R {
 
 	chanBackups, err := packedMulti.Unpack(keyChain)
 	if err != nil {

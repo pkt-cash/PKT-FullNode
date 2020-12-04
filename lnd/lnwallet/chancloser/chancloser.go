@@ -2,38 +2,42 @@ package chancloser
 
 import (
 	"bytes"
-	"fmt"
 
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/labels"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
+	Err = er.NewErrorType("lnd.chancloser")
 	// ErrChanAlreadyClosing is returned when a channel shutdown is attempted
 	// more than once.
-	ErrChanAlreadyClosing = fmt.Errorf("channel shutdown already initiated")
+	ErrChanAlreadyClosing = Err.CodeWithDetail("ErrChanAlreadyClosing",
+		"channel shutdown already initiated")
 
 	// ErrChanCloseNotFinished is returned when a caller attempts to access
 	// a field or function that is contingent on the channel closure negotiation
 	// already being completed.
-	ErrChanCloseNotFinished = fmt.Errorf("close negotiation not finished")
+	ErrChanCloseNotFinished = Err.CodeWithDetail("ErrChanCloseNotFinished",
+		"close negotiation not finished")
 
 	// ErrInvalidState is returned when the closing state machine receives a
 	// message while it is in an unknown state.
-	ErrInvalidState = fmt.Errorf("invalid state")
+	ErrInvalidState = Err.CodeWithDetail("ErrInvalidState",
+		"invalid state")
 
 	// ErrUpfrontShutdownScriptMismatch is returned when a peer or end user
 	// provides a cooperative close script which does not match the upfront
 	// shutdown script previously set for that party.
-	ErrUpfrontShutdownScriptMismatch = fmt.Errorf("shutdown script does not " +
+	ErrUpfrontShutdownScriptMismatch = Err.CodeWithDetail("ErrUpfrontShutdownScriptMismatch", "shutdown script does not "+
 		"match upfront shutdown script")
 )
 
@@ -85,14 +89,14 @@ type ChanCloseCfg struct {
 	UnregisterChannel func(lnwire.ChannelID)
 
 	// BroadcastTx broadcasts the passed transaction to the network.
-	BroadcastTx func(*wire.MsgTx, string) error
+	BroadcastTx func(*wire.MsgTx, string) er.R
 
 	// DisableChannel disables a channel, resulting in it not being able to
 	// forward payments.
-	DisableChannel func(wire.OutPoint) error
+	DisableChannel func(wire.OutPoint) er.R
 
 	// Disconnect will disconnect from the remote peer in this close.
-	Disconnect func() error
+	Disconnect func() er.R
 
 	// Quit is a channel that should be sent upon in the occasion the state
 	// machine should cease all progress and shutdown.
@@ -206,7 +210,7 @@ func NewChanCloser(cfg ChanCloseCfg, deliveryScript []byte,
 
 // initChanShutdown begins the shutdown process by un-registering the channel,
 // and creating a valid shutdown message to our target delivery address.
-func (c *ChanCloser) initChanShutdown() (*lnwire.Shutdown, error) {
+func (c *ChanCloser) initChanShutdown() (*lnwire.Shutdown, er.R) {
 	// With both items constructed we'll now send the shutdown message for this
 	// particular channel, advertising a shutdown request to our desired
 	// closing script.
@@ -246,11 +250,11 @@ func (c *ChanCloser) initChanShutdown() (*lnwire.Shutdown, error) {
 // cooperative channel closure. This message returns the shutdown message to
 // send to the remote party. Upon completion, we enter the
 // closeShutdownInitiated phase as we await a response.
-func (c *ChanCloser) ShutdownChan() (*lnwire.Shutdown, error) {
+func (c *ChanCloser) ShutdownChan() (*lnwire.Shutdown, er.R) {
 	// If we attempt to shutdown the channel for the first time, and we're not
 	// in the closeIdle state, then the caller made an error.
 	if c.state != closeIdle {
-		return nil, ErrChanAlreadyClosing
+		return nil, ErrChanAlreadyClosing.Default()
 	}
 
 	chancloserLog.Infof("ChannelPoint(%v): initiating shutdown", c.chanPoint)
@@ -274,11 +278,11 @@ func (c *ChanCloser) ShutdownChan() (*lnwire.Shutdown, error) {
 //
 // NOTE: This transaction is only available if the state machine is in the
 // closeFinished state.
-func (c *ChanCloser) ClosingTx() (*wire.MsgTx, error) {
+func (c *ChanCloser) ClosingTx() (*wire.MsgTx, er.R) {
 	// If the state machine hasn't finished closing the channel, then we'll
 	// return an error as we haven't yet computed the closing tx.
 	if c.state != closeFinished {
-		return nil, ErrChanCloseNotFinished
+		return nil, ErrChanCloseNotFinished.Default()
 	}
 
 	return c.closingTx, nil
@@ -310,7 +314,7 @@ func (c *ChanCloser) NegotiationHeight() uint32 {
 // check whether it matches the script provided by our peer. If they do not
 // match, we use the disconnect function provided to disconnect from the peer.
 func maybeMatchScript(disconnect func() error, upfrontScript,
-	peerScript lnwire.DeliveryAddress) error {
+	peerScript lnwire.DeliveryAddress) er.R {
 
 	// If no upfront shutdown script was set, return early because we do not
 	// need to enforce closure to a specific script.
@@ -330,7 +334,7 @@ func maybeMatchScript(disconnect func() error, upfrontScript,
 			return err
 		}
 
-		return ErrUpfrontShutdownScriptMismatch
+		return ErrUpfrontShutdownScriptMismatch.Default()
 	}
 
 	return nil
@@ -342,7 +346,7 @@ func maybeMatchScript(disconnect func() error, upfrontScript,
 // negotiation process has completed. If the second value is true, then this
 // means the ChanCloser can be garbage collected.
 func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
-	bool, error) {
+	bool, er.R) {
 
 	switch c.state {
 
@@ -354,7 +358,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 		// as otherwise, this is an attempted invalid state transition.
 		shutdownMsg, ok := msg.(*lnwire.Shutdown)
 		if !ok {
-			return nil, false, fmt.Errorf("expected lnwire.Shutdown, instead "+
+			return nil, false, er.Errorf("expected lnwire.Shutdown, instead "+
 				"have %v", spew.Sdump(msg))
 		}
 
@@ -371,7 +375,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 				return nil, false, err
 			}
 			if c.negotiationHeight < absoluteThawHeight {
-				return nil, false, fmt.Errorf("initiator "+
+				return nil, false, er.Errorf("initiator "+
 					"attempting to co-op close frozen "+
 					"ChannelPoint(%v) (current_height=%v, "+
 					"thaw_height=%v)", c.chanPoint,
@@ -434,7 +438,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 		// Otherwise, this is an attempted invalid state transition.
 		shutdownMsg, ok := msg.(*lnwire.Shutdown)
 		if !ok {
-			return nil, false, fmt.Errorf("expected lnwire.Shutdown, instead "+
+			return nil, false, er.Errorf("expected lnwire.Shutdown, instead "+
 				"have %v", spew.Sdump(msg))
 		}
 
@@ -480,7 +484,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 		// message, otherwise an invalid state transition was attempted.
 		closeSignedMsg, ok := msg.(*lnwire.ClosingSigned)
 		if !ok {
-			return nil, false, fmt.Errorf("expected lnwire.ClosingSigned, "+
+			return nil, false, er.Errorf("expected lnwire.ClosingSigned, "+
 				"instead have %v", spew.Sdump(msg))
 		}
 
@@ -578,7 +582,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 	// that we agreed on.
 	case closeFinished:
 		if _, ok := msg.(*lnwire.ClosingSigned); !ok {
-			return nil, false, fmt.Errorf("expected lnwire.ClosingSigned, "+
+			return nil, false, er.Errorf("expected lnwire.ClosingSigned, "+
 				"instead have %v", spew.Sdump(msg))
 		}
 
@@ -588,14 +592,14 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 
 	// Otherwise, we're in an unknown state, and can't proceed.
 	default:
-		return nil, false, ErrInvalidState
+		return nil, false, ErrInvalidState.Default()
 	}
 }
 
 // proposeCloseSigned attempts to propose a new signature for the closing
 // transaction for a channel based on the prior fee negotiations and our current
 // compromise fee.
-func (c *ChanCloser) proposeCloseSigned(fee btcutil.Amount) (*lnwire.ClosingSigned, error) {
+func (c *ChanCloser) proposeCloseSigned(fee btcutil.Amount) (*lnwire.ClosingSigned, er.R) {
 	rawSig, _, _, err := c.cfg.Channel.CreateCloseProposal(
 		fee, c.localDeliveryScript, c.remoteDeliveryScript,
 	)
@@ -724,7 +728,7 @@ func calcCompromiseFee(chanPoint wire.OutPoint, ourIdealFee, lastSentFee,
 // If the address is empty, it returns nil. If it successfully decoded the
 // address, it returns a script that pays out to the address.
 func ParseUpfrontShutdownAddress(address string,
-	params *chaincfg.Params) (lnwire.DeliveryAddress, error) {
+	params *chaincfg.Params) (lnwire.DeliveryAddress, er.R) {
 
 	if len(address) == 0 {
 		return nil, nil
@@ -734,7 +738,7 @@ func ParseUpfrontShutdownAddress(address string,
 		address, params,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid address: %v", err)
+		return nil, er.Errorf("invalid address: %v", err)
 	}
 
 	return txscript.PayToAddrScript(addr)

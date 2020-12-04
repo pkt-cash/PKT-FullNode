@@ -11,26 +11,27 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 )
 
-type genGraphFunc func() (testGraph, func(), error)
+type genGraphFunc func() (testGraph, func(), er.R)
 
 type testGraph interface {
 	ChannelGraph
 
 	addRandChannel(*btcec.PublicKey, *btcec.PublicKey,
-		btcutil.Amount) (*ChannelEdge, *ChannelEdge, error)
+		btcutil.Amount) (*ChannelEdge, *ChannelEdge, er.R)
 
-	addRandNode() (*btcec.PublicKey, error)
+	addRandNode() (*btcec.PublicKey, er.R)
 }
 
-func newDiskChanGraph() (testGraph, func(), error) {
+func newDiskChanGraph() (testGraph, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.
@@ -51,7 +52,7 @@ func newDiskChanGraph() (testGraph, func(), error) {
 
 var _ testGraph = (*databaseChannelGraph)(nil)
 
-func newMemChanGraph() (testGraph, func(), error) {
+func newMemChanGraph() (testGraph, func(), er.R) {
 	return newMemChannelGraph(), nil, nil
 }
 
@@ -158,7 +159,7 @@ func TestPrefAttachmentSelectTwoVertexes(t *testing.T) {
 			// Get the score for all nodes found in the graph at
 			// this point.
 			nodes := make(map[NodeID]struct{})
-			if err := graph.ForEachNode(func(n Node) error {
+			if err := graph.ForEachNode(func(n Node) er.R {
 				nodes[n.PubKey()] = struct{}{}
 				return nil
 			}); err != nil {
@@ -267,11 +268,11 @@ func TestPrefAttachmentSelectGreedyAllocation(t *testing.T) {
 			numNodes := 0
 			twoChans := false
 			nodes := make(map[NodeID]struct{})
-			if err := graph.ForEachNode(func(n Node) error {
+			if err := graph.ForEachNode(func(n Node) er.R {
 				numNodes++
 				nodes[n.PubKey()] = struct{}{}
 				numChans := 0
-				err := n.ForEachChannel(func(c ChannelEdge) error {
+				err := n.ForEachChannel(func(c ChannelEdge) er.R {
 					numChans++
 					return nil
 				})
@@ -381,7 +382,7 @@ func TestPrefAttachmentSelectSkipNodes(t *testing.T) {
 			}
 
 			nodes := make(map[NodeID]struct{})
-			if err := graph.ForEachNode(func(n Node) error {
+			if err := graph.ForEachNode(func(n Node) er.R {
 				nodes[n.PubKey()] = struct{}{}
 				return nil
 			}); err != nil {

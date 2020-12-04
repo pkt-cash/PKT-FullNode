@@ -7,6 +7,8 @@ import (
 	"sort"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // Type is an 64-bit identifier for a TLV Record.
@@ -20,18 +22,18 @@ type TypeMap map[Type][]byte
 // Encoder is a signature for methods that can encode TLV values. An error
 // should be returned if the Encoder cannot support the underlying type of val.
 // The provided scratch buffer must be non-nil.
-type Encoder func(w io.Writer, val interface{}, buf *[8]byte) error
+type Encoder func(w io.Writer, val interface{}, buf *[8]byte) er.R
 
 // Decoder is a signature for methods that can decode TLV values. An error
 // should be returned if the Decoder cannot support the underlying type of val.
 // The provided scratch buffer must be non-nil.
-type Decoder func(r io.Reader, val interface{}, buf *[8]byte, l uint64) error
+type Decoder func(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R
 
 // ENOP is an encoder that doesn't modify the io.Writer and never fails.
-func ENOP(io.Writer, interface{}, *[8]byte) error { return nil }
+func ENOP(io.Writer, interface{}, *[8]byte) er.R { return nil }
 
 // DNOP is an encoder that doesn't modify the io.Reader and never fails.
-func DNOP(io.Reader, interface{}, *[8]byte, uint64) error { return nil }
+func DNOP(io.Reader, interface{}, *[8]byte, uint64) er.R { return nil }
 
 // SizeFunc is a function that can compute the length of a given field. Since
 // the size of the underlying field can change, this allows the size of the
@@ -81,7 +83,7 @@ func (f *Record) Type() Type {
 // Encode writes out the TLV record to the passed writer. This is useful when a
 // caller wants to obtain the raw encoding of a *single* TLV record, outside
 // the context of the Stream struct.
-func (f *Record) Encode(w io.Writer) error {
+func (f *Record) Encode(w io.Writer) er.R {
 	var b [8]byte
 
 	return f.encoder(w, f.value, &b)
@@ -90,7 +92,7 @@ func (f *Record) Encode(w io.Writer) error {
 // Decode read in the TLV record from the passed reader. This is useful when a
 // caller wants decode a *single* TLV record, outside the context of the Stream
 // struct.
-func (f *Record) Decode(r io.Reader, l uint64) error {
+func (f *Record) Decode(r io.Reader, l uint64) er.R {
 	var b [8]byte
 	return f.decoder(r, f.value, &b, l)
 }
@@ -192,7 +194,7 @@ func MakeDynamicRecord(typ Type, val interface{}, sizeFunc SizeFunc,
 
 // RecordsToMap encodes a series of TLV records as raw key-value pairs in the
 // form of a map.
-func RecordsToMap(records []Record) (map[uint64][]byte, error) {
+func RecordsToMap(records []Record) (map[uint64][]byte, er.R) {
 	tlvMap := make(map[uint64][]byte, len(records))
 
 	for _, record := range records {
@@ -211,8 +213,8 @@ func RecordsToMap(records []Record) (map[uint64][]byte, error) {
 // value. We can use this to make a record that can be encoded when we don't
 // actually know it's true underlying value, and only it serialization.
 func StubEncoder(v []byte) Encoder {
-	return func(w io.Writer, val interface{}, buf *[8]byte) error {
-		_, err := w.Write(v)
+	return func(w io.Writer, val interface{}, buf *[8]byte) er.R {
+		_, err := util.Write(w, v)
 		return err
 	}
 }

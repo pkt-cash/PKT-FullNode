@@ -3,13 +3,13 @@ package wtclient
 import (
 	"bytes"
 	"crypto/rand"
-	"io"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -55,7 +55,7 @@ var (
 
 func makeAddrSlice(size int) []byte {
 	addr := make([]byte, size)
-	if _, err := io.ReadFull(rand.Reader, addr); err != nil {
+	if _, err := util.ReadFull(rand.Reader, addr); err != nil {
 		panic("cannot make addr")
 	}
 	return addr

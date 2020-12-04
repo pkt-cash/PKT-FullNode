@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
-	"io"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
@@ -23,7 +24,7 @@ type mockPunisher struct {
 }
 
 func (p *mockPunisher) Punish(
-	info *lookout.JusticeDescriptor, quit <-chan struct{}) error {
+	info *lookout.JusticeDescriptor, quit <-chan struct{}) er.R {
 
 	p.matches <- info
 	return nil
@@ -59,7 +60,7 @@ func makeArray64(i uint64) [64]byte {
 
 func makeAddrSlice(size int) []byte {
 	addr := make([]byte, size)
-	if _, err := io.ReadFull(rand.Reader, addr); err != nil {
+	if _, err := util.ReadFull(rand.Reader, addr); err != nil {
 		panic("cannot make addr")
 	}
 	return addr

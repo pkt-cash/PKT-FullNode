@@ -1,6 +1,7 @@
 package channeldb
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -22,10 +23,10 @@ type Meta struct {
 
 // FetchMeta fetches the meta data from boltdb and returns filled meta
 // structure.
-func (d *DB) FetchMeta(tx kvdb.RTx) (*Meta, error) {
+func (d *DB) FetchMeta(tx kvdb.RTx) (*Meta, er.R) {
 	var meta *Meta
 
-	err := kvdb.View(d, func(tx kvdb.RTx) error {
+	err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 		return fetchMeta(meta, tx)
 	}, func() {
 		meta = &Meta{}
@@ -40,10 +41,10 @@ func (d *DB) FetchMeta(tx kvdb.RTx) (*Meta, error) {
 // fetchMeta is an internal helper function used in order to allow callers to
 // re-use a database transaction. See the publicly exported FetchMeta method
 // for more information.
-func fetchMeta(meta *Meta, tx kvdb.RTx) error {
+func fetchMeta(meta *Meta, tx kvdb.RTx) er.R {
 	metaBucket := tx.ReadBucket(metaBucket)
 	if metaBucket == nil {
-		return ErrMetaNotFound
+		return ErrMetaNotFound.Default()
 	}
 
 	data := metaBucket.Get(dbVersionKey)
@@ -57,8 +58,8 @@ func fetchMeta(meta *Meta, tx kvdb.RTx) error {
 }
 
 // PutMeta writes the passed instance of the database met-data struct to disk.
-func (d *DB) PutMeta(meta *Meta) error {
-	return kvdb.Update(d, func(tx kvdb.RwTx) error {
+func (d *DB) PutMeta(meta *Meta) er.R {
+	return kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 		return putMeta(meta, tx)
 	}, func() {})
 }
@@ -66,7 +67,7 @@ func (d *DB) PutMeta(meta *Meta) error {
 // putMeta is an internal helper function used in order to allow callers to
 // re-use a database transaction. See the publicly exported PutMeta method for
 // more information.
-func putMeta(meta *Meta, tx kvdb.RwTx) error {
+func putMeta(meta *Meta, tx kvdb.RwTx) er.R {
 	metaBucket, err := tx.CreateTopLevelBucket(metaBucket)
 	if err != nil {
 		return err
@@ -75,7 +76,7 @@ func putMeta(meta *Meta, tx kvdb.RwTx) error {
 	return putDbVersion(metaBucket, meta)
 }
 
-func putDbVersion(metaBucket kvdb.RwBucket, meta *Meta) error {
+func putDbVersion(metaBucket kvdb.RwBucket, meta *Meta) er.R {
 	scratch := make([]byte, 4)
 	byteOrder.PutUint32(scratch, meta.DbVersionNumber)
 	return metaBucket.Put(dbVersionKey, scratch)

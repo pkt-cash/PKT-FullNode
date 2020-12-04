@@ -1,15 +1,16 @@
 package lookout
 
 import (
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/labels"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // PunisherConfig houses the resources required by the Punisher.
 type PunisherConfig struct {
 	// PublishTx provides the ability to send a signed transaction to the
 	// network.
-	PublishTx func(*wire.MsgTx, string) error
+	PublishTx func(*wire.MsgTx, string) er.R
 
 	// TODO(conner) add DB tracking and spend ntfn registration to see if
 	// ours confirmed or not
@@ -31,7 +32,7 @@ func NewBreachPunisher(cfg *PunisherConfig) *BreachPunisher {
 
 // Punish constructs a justice transaction given a JusticeDescriptor and
 // publishes is it to the network.
-func (p *BreachPunisher) Punish(desc *JusticeDescriptor, quit <-chan struct{}) error {
+func (p *BreachPunisher) Punish(desc *JusticeDescriptor, quit <-chan struct{}) er.R {
 	justiceTxn, err := desc.CreateJusticeTxn()
 	if err != nil {
 		log.Errorf("Unable to create justice txn for "+

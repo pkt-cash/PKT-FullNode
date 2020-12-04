@@ -2,7 +2,6 @@ package routing
 
 import (
 	"bytes"
-	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
@@ -10,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
@@ -39,7 +39,7 @@ type testCtx struct {
 	chainView *mockChainView
 }
 
-func (c *testCtx) RestartRouter() error {
+func (c *testCtx) RestartRouter() er.R {
 	// First, we'll reset the chainView's state as it doesn't persist the
 	// filter between restarts.
 	c.chainView.Reset()
@@ -56,10 +56,10 @@ func (c *testCtx) RestartRouter() error {
 		GraphPruneInterval: time.Hour * 2,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create router %v", err)
+		return er.Errorf("unable to create router %v", err)
 	}
 	if err := router.Start(); err != nil {
-		return fmt.Errorf("unable to start router: %v", err)
+		return er.Errorf("unable to start router: %v", err)
 	}
 
 	// Finally, we'll swap out the pointer in the testCtx with this fresh
@@ -69,7 +69,7 @@ func (c *testCtx) RestartRouter() error {
 }
 
 func createTestCtxFromGraphInstance(startingHeight uint32, graphInstance *testGraphInstance) (
-	*testCtx, func(), error) {
+	*testCtx, func(), er.R) {
 
 	// We'll initialize an instance of the channel router with mock
 	// versions of the chain and channel notifier. As we don't need to test
@@ -119,7 +119,7 @@ func createTestCtxFromGraphInstance(startingHeight uint32, graphInstance *testGr
 		QueryBandwidth: func(e *channeldb.ChannelEdgeInfo) lnwire.MilliSatoshi {
 			return lnwire.NewMSatFromSatoshis(e.Capacity)
 		},
-		NextPaymentID: func() (uint64, error) {
+		NextPaymentID: func() (uint64, er.R) {
 			next := atomic.AddUint64(&uniquePaymentID, 1)
 			return next, nil
 		},
@@ -127,10 +127,10 @@ func createTestCtxFromGraphInstance(startingHeight uint32, graphInstance *testGr
 		Clock:             clock.NewTestClock(time.Unix(1, 0)),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create router %v", err)
+		return nil, nil, er.Errorf("unable to create router %v", err)
 	}
 	if err := router.Start(); err != nil {
-		return nil, nil, fmt.Errorf("unable to start router: %v", err)
+		return nil, nil, er.Errorf("unable to start router: %v", err)
 	}
 
 	ctx := &testCtx{
@@ -149,7 +149,7 @@ func createTestCtxFromGraphInstance(startingHeight uint32, graphInstance *testGr
 	return ctx, cleanUp, nil
 }
 
-func createTestCtxSingleNode(startingHeight uint32) (*testCtx, func(), error) {
+func createTestCtxSingleNode(startingHeight uint32) (*testCtx, func(), er.R) {
 	var (
 		graph      *channeldb.ChannelGraph
 		sourceNode *channeldb.LightningNode
@@ -159,15 +159,15 @@ func createTestCtxSingleNode(startingHeight uint32) (*testCtx, func(), error) {
 
 	graph, cleanup, err = makeTestGraph()
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create test graph: %v", err)
+		return nil, nil, er.Errorf("unable to create test graph: %v", err)
 	}
 
 	sourceNode, err = createTestNode()
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create source node: %v", err)
+		return nil, nil, er.Errorf("unable to create source node: %v", err)
 	}
 	if err = graph.SetSourceNode(sourceNode); err != nil {
-		return nil, nil, fmt.Errorf("unable to set source node: %v", err)
+		return nil, nil, er.Errorf("unable to set source node: %v", err)
 	}
 
 	graphInstance := &testGraphInstance{
@@ -178,12 +178,12 @@ func createTestCtxSingleNode(startingHeight uint32) (*testCtx, func(), error) {
 	return createTestCtxFromGraphInstance(startingHeight, graphInstance)
 }
 
-func createTestCtxFromFile(startingHeight uint32, testGraph string) (*testCtx, func(), error) {
+func createTestCtxFromFile(startingHeight uint32, testGraph string) (*testCtx, func(), er.R) {
 	// We'll attempt to locate and parse out the file
 	// that encodes the graph that our tests should be run against.
 	graphInstance, err := parseTestGraph(testGraph)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create test graph: %v", err)
+		return nil, nil, er.Errorf("unable to create test graph: %v", err)
 	}
 
 	return createTestCtxFromGraphInstance(startingHeight, graphInstance)
@@ -278,7 +278,7 @@ func TestSendPaymentRouteFailureFallback(t *testing.T) {
 	// first hop. This should force the router to instead take the
 	// the more costly path (through pham nuwen).
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			roasbeefSongoku := lnwire.NewShortChanIDFromInt(12345)
 			if firstHop == roasbeefSongoku {
@@ -414,7 +414,7 @@ func TestChannelUpdateValidation(t *testing.T) {
 	// payment with an error originating from the first hop of the route.
 	// The unsigned channel update is attached to the failure message.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 			return [32]byte{}, htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: errChanUpdate,
@@ -533,7 +533,7 @@ func TestSendPaymentErrorRepeatedFeeInsufficient(t *testing.T) {
 	// outgoing channel to Son goku. This will be a fee related error, so
 	// it should only cause the edge to be pruned after the second attempt.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			roasbeefSongoku := lnwire.NewShortChanIDFromInt(chanID)
 			if firstHop == roasbeefSongoku {
@@ -637,7 +637,7 @@ func TestSendPaymentErrorNonFinalTimeLockErrors(t *testing.T) {
 	// error, we should fail the payment flow all together, as Goku is the
 	// only channel to Sophon.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
 				return [32]byte{}, htlcswitch.NewForwardingError(
@@ -690,7 +690,7 @@ func TestSendPaymentErrorNonFinalTimeLockErrors(t *testing.T) {
 	// instead, this should result in the same behavior of roasbeef routing
 	// around the faulty Son Goku node.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
 				return [32]byte{}, htlcswitch.NewForwardingError(
@@ -749,7 +749,7 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 	// indicating that the channel from roasbeef to son goku is not operable
 	// with an UnknownNextPeer.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
 				// We'll first simulate an error from the first
@@ -815,7 +815,7 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 	// Next, we'll modify the SendToSwitch method to indicate that the
 	// connection between songoku and isn't up.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
 				failure := htlcswitch.NewForwardingError(
@@ -858,7 +858,7 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 	// roasbeef -> luoji channel has insufficient capacity. This should
 	// again cause us to instead go via the satoshi route.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
 				// We'll first simulate an error from the first
@@ -2519,7 +2519,7 @@ func TestUnknownErrorSource(t *testing.T) {
 	// node that returns an unparsable failure if approached via the a->b
 	// channel.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			// If channel a->b is used, return an error without
 			// source and message. The sender won't know the origin
@@ -2544,7 +2544,7 @@ func TestUnknownErrorSource(t *testing.T) {
 
 	// Next we modify payment result to return an unknown failure.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			// If channel a->b is used, simulate that the failure
 			// couldn't be decoded (FailureMessage is nil).
@@ -2680,7 +2680,7 @@ func TestSendToRouteStructuredError(t *testing.T) {
 	// payment with an error originating from the first hop of the route.
 	// The unsigned channel update is attached to the failure message.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 			return [32]byte{}, htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: lnwire.ChannelUpdate{},
@@ -2760,7 +2760,7 @@ func TestSendToRouteMultiShardSend(t *testing.T) {
 	// The first shard we send we'll fail immediately, to check that we are
 	// still allowed to retry with other shards after a failed one.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 			return [32]byte{}, htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: lnwire.ChannelUpdate{},
@@ -2787,7 +2787,7 @@ func TestSendToRouteMultiShardSend(t *testing.T) {
 	results := make(chan lntypes.Preimage, numShards)
 
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
-		func(firstHop lnwire.ShortChannelID) ([32]byte, error) {
+		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			// Signal that the shard has been initiated and is
 			// waiting for a result.
@@ -2796,14 +2796,14 @@ func TestSendToRouteMultiShardSend(t *testing.T) {
 			// Wait for a result before returning it.
 			res, ok := <-results
 			if !ok {
-				return [32]byte{}, fmt.Errorf("failure")
+				return [32]byte{}, er.Errorf("failure")
 			}
 			return res, nil
 		})
 
 	// Launch three shards by calling SendToRoute in three goroutines,
 	// returning their final error on the channel.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	successes := make(chan lntypes.Preimage)
 
 	for i := 0; i < numShards; i++ {

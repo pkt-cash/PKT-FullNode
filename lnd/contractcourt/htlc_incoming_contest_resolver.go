@@ -2,12 +2,11 @@ package contractcourt
 
 import (
 	"bytes"
-	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/invoices"
@@ -61,7 +60,7 @@ func newIncomingContestResolver(
 //      as we have no remaining actions left at our disposal.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, error) {
+func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, er.R) {
 	// If we're already full resolved, then we don't have anything further
 	// to do.
 	if h.resolved {
@@ -142,11 +141,11 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, error) {
 	// the preimage is revealed so the inner resolver can properly complete
 	// its duties. The error return value indicates whether the preimage
 	// was properly applied.
-	applyPreimage := func(preimage lntypes.Preimage) error {
+	applyPreimage := func(preimage lntypes.Preimage) er.R {
 		// Sanity check to see if this preimage matches our htlc. At
 		// this point it should never happen that it does not match.
 		if !preimage.Matches(h.htlc.RHash) {
-			return errors.New("preimage does not match hash")
+			return er.New("preimage does not match hash")
 		}
 
 		// Update htlcResolution with the matching preimage.
@@ -175,7 +174,7 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, error) {
 	// Define a closure to process htlc resolutions either directly or
 	// triggered by future notifications.
 	processHtlcResolution := func(e invoices.HtlcResolution) (
-		ContractResolver, error) {
+		ContractResolver, er.R) {
 
 		// Take action based on the type of resolution we have
 		// received.
@@ -212,7 +211,7 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, error) {
 		// Error if the resolution type is unknown, we are only
 		// expecting settles and fails.
 		default:
-			return nil, fmt.Errorf("unknown resolution"+
+			return nil, er.Errorf("unknown resolution"+
 				" type: %v", e)
 		}
 	}
@@ -266,7 +265,7 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, error) {
 		case nil:
 
 		default:
-			return nil, fmt.Errorf("unknown htlc resolution type: %T",
+			return nil, er.Errorf("unknown htlc resolution type: %T",
 				resolution)
 		}
 	} else {
@@ -392,9 +391,9 @@ func (h *htlcIncomingContestResolver) IsResolved() bool {
 // Writer.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcIncomingContestResolver) Encode(w io.Writer) error {
+func (h *htlcIncomingContestResolver) Encode(w io.Writer) er.R {
 	// We'll first write out the one field unique to this resolver.
-	if err := binary.Write(w, endian, h.htlcExpiry); err != nil {
+	if err := util.WriteBin(w, endian, h.htlcExpiry); err != nil {
 		return err
 	}
 
@@ -406,12 +405,12 @@ func (h *htlcIncomingContestResolver) Encode(w io.Writer) error {
 // from the passed Reader instance, returning an active ContractResolver
 // instance.
 func newIncomingContestResolverFromReader(r io.Reader, resCfg ResolverConfig) (
-	*htlcIncomingContestResolver, error) {
+	*htlcIncomingContestResolver, er.R) {
 
 	h := &htlcIncomingContestResolver{}
 
 	// We'll first read the one field unique to this resolver.
-	if err := binary.Read(r, endian, &h.htlcExpiry); err != nil {
+	if err := util.ReadBin(r, endian, &h.htlcExpiry); err != nil {
 		return nil, err
 	}
 
@@ -434,7 +433,7 @@ func (h *htlcIncomingContestResolver) Supplement(htlc channeldb.HTLC) {
 }
 
 // decodePayload (re)decodes the hop payload of a received htlc.
-func (h *htlcIncomingContestResolver) decodePayload() (*hop.Payload, error) {
+func (h *htlcIncomingContestResolver) decodePayload() (*hop.Payload, er.R) {
 
 	onionReader := bytes.NewReader(h.htlc.OnionBlob)
 	iterator, err := h.OnionProcessor.ReconstructHopIterator(

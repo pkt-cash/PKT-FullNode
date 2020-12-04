@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/clock"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +29,7 @@ func TestPeerLog(t *testing.T) {
 
 	// Test that looking up an unknown channel fails.
 	_, _, err := peerLog.channelUptime(wire.OutPoint{Index: 1})
-	require.Error(t, err)
+	util.RequireErr(t, err)
 
 	lastFlap := clock.Now()
 
@@ -58,13 +59,13 @@ func TestPeerLog(t *testing.T) {
 	chan1 := wire.OutPoint{
 		Index: 1,
 	}
-	require.NoError(t, peerLog.addChannel(chan1))
+	util.RequireNoErr(t, peerLog.addChannel(chan1))
 	require.Equal(t, 1, peerLog.channelCount())
 	assertFlapCount(2, &lastFlap)
 
 	// Assert that we can now successfully get our added channel.
 	_, _, err = peerLog.channelUptime(chan1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Bump our test clock's time so that our current time is different to
 	// channel open time.
@@ -74,7 +75,7 @@ func TestPeerLog(t *testing.T) {
 	// Now that we have added a channel and an hour has passed, we expect
 	// our uptime and lifetime to both equal an hour.
 	lifetime, uptime, err := peerLog.channelUptime(chan1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour, lifetime)
 	require.Equal(t, time.Hour, uptime)
 
@@ -88,7 +89,7 @@ func TestPeerLog(t *testing.T) {
 	chan2 := wire.OutPoint{
 		Index: 2,
 	}
-	require.NoError(t, peerLog.addChannel(chan2))
+	util.RequireNoErr(t, peerLog.addChannel(chan2))
 	require.Equal(t, 2, peerLog.channelCount())
 
 	// Progress our time again, so that our peer has now been offline for
@@ -99,26 +100,26 @@ func TestPeerLog(t *testing.T) {
 	// Our first channel should report as having been monitored for three
 	// hours, but only online for one of those hours.
 	lifetime, uptime, err = peerLog.channelUptime(chan1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour*3, lifetime)
 	require.Equal(t, time.Hour, uptime)
 
 	// Remove our first channel and check that we can still correctly query
 	// uptime for the second channel.
-	require.NoError(t, peerLog.removeChannel(chan1))
+	util.RequireNoErr(t, peerLog.removeChannel(chan1))
 	require.Equal(t, 1, peerLog.channelCount())
 
 	// Our second channel, which was created when our peer was offline,
 	// should report as having been monitored for two hours, but have zero
 	// uptime.
 	lifetime, uptime, err = peerLog.channelUptime(chan2)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour*2, lifetime)
 	require.Equal(t, time.Duration(0), uptime)
 
 	// Finally, remove our second channel and assert that our peer cleans
 	// up its in memory set of events but keeps its flap count record.
-	require.NoError(t, peerLog.removeChannel(chan2))
+	util.RequireNoErr(t, peerLog.removeChannel(chan2))
 	require.Equal(t, 0, peerLog.channelCount())
 	require.Len(t, peerLog.onlineEvents, 0)
 	assertFlapCount(3, &lastFlap)
@@ -140,7 +141,7 @@ func TestRateLimitAdd(t *testing.T) {
 
 	// Create a channel for our peer log, otherwise it will not track online
 	// events.
-	require.NoError(t, peerLog.addChannel(wire.OutPoint{}))
+	util.RequireNoErr(t, peerLog.addChannel(wire.OutPoint{}))
 
 	// First, we add an event to the event log. Since we have no previous
 	// events, we expect this event to staged immediately.

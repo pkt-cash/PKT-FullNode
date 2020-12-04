@@ -4,10 +4,10 @@ package watchtowerrpc
 
 import (
 	"context"
-	"errors"
 	fmt "fmt"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
@@ -32,7 +32,7 @@ var (
 
 	// ErrTowerNotActive signals that RPC calls cannot be processed because
 	// the watchtower is not active.
-	ErrTowerNotActive = errors.New("watchtower not active")
+	ErrTowerNotActive = er.GenericErrorType.CodeWithDetail("ErrTowerNotActive", "watchtower not active")
 )
 
 // Handler is the RPC server we'll use to interact with the backing active
@@ -50,21 +50,21 @@ var _ WatchtowerServer = (*Handler)(nil)
 // If the macaroons we need aren't found in the filepath, then we'll create them
 // on start up. If we're unable to locate, or create the macaroons we need, then
 // we'll return with an error.
-func New(cfg *Config) (*Handler, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*Handler, lnrpc.MacaroonPerms, er.R) {
 	return &Handler{*cfg}, macPermissions, nil
 }
 
 // Start launches any helper goroutines required for the Handler to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (c *Handler) Start() error {
+func (c *Handler) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (c *Handler) Stop() error {
+func (c *Handler) Stop() er.R {
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (c *Handler) Name() string {
 // called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (c *Handler) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (c *Handler) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterWatchtowerServer(grpcServer, c)
@@ -98,7 +98,7 @@ func (c *Handler) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (c *Handler) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -119,7 +119,7 @@ func (c *Handler) RegisterWithRestServer(ctx context.Context,
 // included will be considered when dialing it for session negotiations and
 // backups.
 func (c *Handler) GetInfo(ctx context.Context,
-	req *GetInfoRequest) (*GetInfoResponse, error) {
+	req *GetInfoRequest) (*GetInfoResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -146,9 +146,9 @@ func (c *Handler) GetInfo(ctx context.Context,
 
 // isActive returns nil if the tower backend is initialized, and the Handler can
 // proccess RPC requests.
-func (c *Handler) isActive() error {
+func (c *Handler) isActive() er.R {
 	if c.cfg.Active {
 		return nil
 	}
-	return ErrTowerNotActive
+	return ErrTowerNotActive.Default()
 }

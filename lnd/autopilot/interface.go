@@ -4,9 +4,10 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // DefaultConfTarget is the default confirmation target for autopilot channels.
@@ -33,7 +34,7 @@ type Node interface {
 	// iterate through all edges emanating from/to the target node. For
 	// each active channel, this function should be called with the
 	// populated ChannelEdge that describes the active channel.
-	ForEachChannel(func(ChannelEdge) error) error
+	ForEachChannel(func(ChannelEdge) er.R) er.R
 }
 
 // LocalChannel is a simple struct which contains relevant details of a
@@ -81,7 +82,7 @@ type ChannelGraph interface {
 	// ForEachNode is a higher-order function that should be called once
 	// for each connected node within the channel graph. If the passed
 	// callback returns an error, then execution should be terminated.
-	ForEachNode(func(Node) error) error
+	ForEachNode(func(Node) er.R) er.R
 }
 
 // NodeScore is a tuple mapping a NodeID to a score indicating the preference
@@ -142,7 +143,7 @@ type AttachmentHeuristic interface {
 	// score of 0.
 	NodeScores(g ChannelGraph, chans []LocalChannel,
 		chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-		map[NodeID]*NodeScore, error)
+		map[NodeID]*NodeScore, er.R)
 }
 
 // NodeMetric is a common interface for all graph metrics that are not
@@ -150,10 +151,10 @@ type AttachmentHeuristic interface {
 // heuristics or statistical information exposed to users.
 type NodeMetric interface {
 	// Name returns the unique name of this metric.
-	Name() string
+	Name() er.R
 
 	// Refresh refreshes the metric values based on the current graph.
-	Refresh(graph ChannelGraph) error
+	Refresh(graph ChannelGraph) er.R
 
 	// GetMetric returns the latest value of this metric. Values in the
 	// map are per node and can be in arbitrary domain. If normalize is
@@ -174,7 +175,7 @@ type ScoreSettable interface {
 	// parameter is the name of the targeted heuristic, to allow
 	// recursively target specific sub-heuristics. The returned boolean
 	// indicates whether the targeted heuristic was found.
-	SetNodeScores(string, map[NodeID]float64) (bool, error)
+	SetNodeScores(string, map[NodeID]float64) (bool, er.R)
 }
 
 var (
@@ -209,10 +210,10 @@ type ChannelController interface {
 	// slightly less to account for fees. This function should un-block
 	// immediately after the funding transaction that marks the channel
 	// open has been broadcast.
-	OpenChannel(target *btcec.PublicKey, amt btcutil.Amount) error
+	OpenChannel(target *btcec.PublicKey, amt btcutil.Amount) er.R
 
 	// CloseChannel attempts to close out the target channel.
 	//
 	// TODO(roasbeef): add force option?
-	CloseChannel(chanPoint *wire.OutPoint) error
+	CloseChannel(chanPoint *wire.OutPoint) er.R
 }

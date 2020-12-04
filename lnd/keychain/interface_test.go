@@ -45,7 +45,7 @@ var (
 	}
 )
 
-func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, error) {
+func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, er.R) {
 	// Instruct waddrmgr to use the cranked down scrypt parameters when
 	// creating new wallet encryption keys.
 	fastScrypt := waddrmgr.FastScryptOptions
@@ -59,9 +59,9 @@ func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, error) {
 	waddrmgr.SetSecretKeyGen(keyGen)
 
 	// Create a new test wallet that uses fast scrypt as KDF.
-	tempDir, err := ioutil.TempDir("", "keyring-lnwallet")
-	if err != nil {
-		return nil, nil, err
+	tempDir, errr := ioutil.TempDir("", "keyring-lnwallet")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	loader := wallet.NewLoader(&chaincfg.SimNetParams, tempDir, "wallet.db", true, 0)
 
@@ -123,7 +123,7 @@ func assertEqualKeyLocator(t *testing.T, a, b KeyLocator) {
 // constructor for various implementations of the KeyRing interface. A string
 // naming the returned interface, a function closure that cleans up any
 // resources, and the clean up interface itself are to be returned.
-type keyRingConstructor func() (string, func(), KeyRing, error)
+type keyRingConstructor func() (string, func(), KeyRing, er.R)
 
 // TestKeyRingDerivation tests that each known KeyRing implementation properly
 // adheres to the expected behavior of the set of interfaces.
@@ -131,7 +131,7 @@ func TestKeyRingDerivation(t *testing.T) {
 	t.Parallel()
 
 	keyRingImplementations := []keyRingConstructor{
-		func() (string, func(), KeyRing, error) {
+		func() (string, func(), KeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeBitcoin,
 			)
@@ -143,7 +143,7 @@ func TestKeyRingDerivation(t *testing.T) {
 
 			return "btcwallet", cleanUp, keyRing, nil
 		},
-		func() (string, func(), KeyRing, error) {
+		func() (string, func(), KeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeLitecoin,
 			)
@@ -155,7 +155,7 @@ func TestKeyRingDerivation(t *testing.T) {
 
 			return "ltcwallet", cleanUp, keyRing, nil
 		},
-		func() (string, func(), KeyRing, error) {
+		func() (string, func(), KeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeTestnet,
 			)
@@ -276,7 +276,7 @@ func TestKeyRingDerivation(t *testing.T) {
 // constructor for various implementations of the SecretKeyRing interface. A
 // string naming the returned interface, a function closure that cleans up any
 // resources, and the clean up interface itself are to be returned.
-type secretKeyRingConstructor func() (string, func(), SecretKeyRing, error)
+type secretKeyRingConstructor func() (string, func(), SecretKeyRing, er.R)
 
 // TestSecretKeyRingDerivation tests that each known SecretKeyRing
 // implementation properly adheres to the expected behavior of the set of
@@ -285,7 +285,7 @@ func TestSecretKeyRingDerivation(t *testing.T) {
 	t.Parallel()
 
 	secretKeyRingImplementations := []secretKeyRingConstructor{
-		func() (string, func(), SecretKeyRing, error) {
+		func() (string, func(), SecretKeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeBitcoin,
 			)
@@ -297,7 +297,7 @@ func TestSecretKeyRingDerivation(t *testing.T) {
 
 			return "btcwallet", cleanUp, keyRing, nil
 		},
-		func() (string, func(), SecretKeyRing, error) {
+		func() (string, func(), SecretKeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeLitecoin,
 			)
@@ -309,7 +309,7 @@ func TestSecretKeyRingDerivation(t *testing.T) {
 
 			return "ltcwallet", cleanUp, keyRing, nil
 		},
-		func() (string, func(), SecretKeyRing, error) {
+		func() (string, func(), SecretKeyRing, er.R) {
 			cleanUp, wallet, err := createTestBtcWallet(
 				CoinTypeTestnet,
 			)
@@ -421,7 +421,7 @@ func TestSecretKeyRingDerivation(t *testing.T) {
 				privKey, err = secretKeyRing.DerivePrivKey(
 					keyDesc,
 				)
-				if err != ErrCannotDerivePrivKey {
+				if !ErrCannotDerivePrivKey.Is(err) {
 					t.Fatalf("expected %T, instead got %v",
 						ErrCannotDerivePrivKey, err)
 				}

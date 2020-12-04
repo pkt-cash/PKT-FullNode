@@ -1,6 +1,7 @@
 package migration_01_to_11
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -23,7 +24,7 @@ type Meta struct {
 // putMeta is an internal helper function used in order to allow callers to
 // re-use a database transaction. See the publicly exported PutMeta method for
 // more information.
-func putMeta(meta *Meta, tx kvdb.RwTx) error {
+func putMeta(meta *Meta, tx kvdb.RwTx) er.R {
 	metaBucket, err := tx.CreateTopLevelBucket(metaBucket)
 	if err != nil {
 		return err
@@ -32,7 +33,7 @@ func putMeta(meta *Meta, tx kvdb.RwTx) error {
 	return putDbVersion(metaBucket, meta)
 }
 
-func putDbVersion(metaBucket kvdb.RwBucket, meta *Meta) error {
+func putDbVersion(metaBucket kvdb.RwBucket, meta *Meta) er.R {
 	scratch := make([]byte, 4)
 	byteOrder.PutUint32(scratch, meta.DbVersionNumber)
 	return metaBucket.Put(dbVersionKey, scratch)

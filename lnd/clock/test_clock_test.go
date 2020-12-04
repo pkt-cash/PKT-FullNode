@@ -77,7 +77,7 @@ func TestTickSignal(t *testing.T) {
 
 		// Signal timeout if tick didn't happen.
 		case <-time.After(time.Second):
-			err <- fmt.Errorf("timeout")
+			err <- er.Errorf("timeout")
 		}
 	}()
 

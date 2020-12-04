@@ -20,7 +20,7 @@ func (e mockSparseConfFeeSource) GenQueryURL() string {
 	return e.url
 }
 
-func (e mockSparseConfFeeSource) ParseResponse(r io.Reader) (map[uint32]uint32, error) {
+func (e mockSparseConfFeeSource) ParseResponse(r io.Reader) (map[uint32]uint32, er.R) {
 	return e.fees, nil
 }
 

@@ -1,20 +1,20 @@
 package contractcourt
 
 import (
-	"encoding/binary"
-	"fmt"
 	"io"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // htlcTimeoutResolver is a ContractResolver that's capable of resolving an
@@ -103,7 +103,7 @@ const (
 // by the remote party. It'll extract the preimage, add it to the global cache,
 // and finally send the appropriate clean up message.
 func (h *htlcTimeoutResolver) claimCleanUp(
-	commitSpend *chainntnfs.SpendDetail) (ContractResolver, error) {
+	commitSpend *chainntnfs.SpendDetail) (ContractResolver, er.R) {
 
 	// Depending on if this is our commitment or not, then we'll be looking
 	// for a different witness pattern.
@@ -133,7 +133,7 @@ func (h *htlcTimeoutResolver) claimCleanUp(
 
 	preimage, err := lntypes.MakePreimage(preimageBytes)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create pre-image from "+
+		return nil, er.Errorf("unable to create pre-image from "+
 			"witness: %v", err)
 	}
 
@@ -179,7 +179,7 @@ func (h *htlcTimeoutResolver) claimCleanUp(
 //
 // TODO(joostjager): output already set properly in
 // lnwallet.newOutgoingHtlcResolution? And script too?
-func (h *htlcTimeoutResolver) chainDetailsToWatch() (*wire.OutPoint, []byte, error) {
+func (h *htlcTimeoutResolver) chainDetailsToWatch() (*wire.OutPoint, []byte, er.R) {
 	// If there's no timeout transaction, then the claim output is the
 	// output directly on the commitment transaction, so we'll just use
 	// that.
@@ -248,7 +248,7 @@ func isSuccessSpend(spend *chainntnfs.SpendDetail, localCommit bool) bool {
 // see a direct sweep via the timeout clause.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcTimeoutResolver) Resolve() (ContractResolver, error) {
+func (h *htlcTimeoutResolver) Resolve() (ContractResolver, er.R) {
 	// If we're already resolved, then we can exit early.
 	if h.resolved {
 		return nil, nil
@@ -281,7 +281,7 @@ func (h *htlcTimeoutResolver) Resolve() (ContractResolver, error) {
 	// waitForOutputResolution waits for the HTLC output to be fully
 	// resolved. The output is considered fully resolved once it has been
 	// spent, and the spending transaction has been fully confirmed.
-	waitForOutputResolution := func() error {
+	waitForOutputResolution := func() er.R {
 		// We first need to register to see when the HTLC output itself
 		// has been spent by a confirmed transaction.
 		spendNtfn, err := h.Notifier.RegisterSpendNtfn(
@@ -432,7 +432,7 @@ func (h *htlcTimeoutResolver) IsResolved() bool {
 // Writer.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcTimeoutResolver) Encode(w io.Writer) error {
+func (h *htlcTimeoutResolver) Encode(w io.Writer) er.R {
 	// First, we'll write out the relevant fields of the
 	// OutgoingHtlcResolution to the writer.
 	if err := encodeOutgoingResolution(w, &h.htlcResolution); err != nil {
@@ -441,17 +441,17 @@ func (h *htlcTimeoutResolver) Encode(w io.Writer) error {
 
 	// With that portion written, we can now write out the fields specific
 	// to the resolver itself.
-	if err := binary.Write(w, endian, h.outputIncubating); err != nil {
+	if err := util.WriteBin(w, endian, h.outputIncubating); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, h.resolved); err != nil {
+	if err := util.WriteBin(w, endian, h.resolved); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, h.broadcastHeight); err != nil {
+	if err := util.WriteBin(w, endian, h.broadcastHeight); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, endian, h.htlc.HtlcIndex); err != nil {
+	if err := util.WriteBin(w, endian, h.htlc.HtlcIndex); err != nil {
 		return err
 	}
 
@@ -462,7 +462,7 @@ func (h *htlcTimeoutResolver) Encode(w io.Writer) error {
 // from the passed Reader instance, returning an active ContractResolver
 // instance.
 func newTimeoutResolverFromReader(r io.Reader, resCfg ResolverConfig) (
-	*htlcTimeoutResolver, error) {
+	*htlcTimeoutResolver, er.R) {
 
 	h := &htlcTimeoutResolver{
 		contractResolverKit: *newContractResolverKit(resCfg),
@@ -476,17 +476,17 @@ func newTimeoutResolverFromReader(r io.Reader, resCfg ResolverConfig) (
 
 	// With those fields read, we can now read back the fields that are
 	// specific to the resolver itself.
-	if err := binary.Read(r, endian, &h.outputIncubating); err != nil {
+	if err := util.ReadBin(r, endian, &h.outputIncubating); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, endian, &h.resolved); err != nil {
+	if err := util.ReadBin(r, endian, &h.resolved); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, endian, &h.broadcastHeight); err != nil {
+	if err := util.ReadBin(r, endian, &h.broadcastHeight); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(r, endian, &h.htlc.HtlcIndex); err != nil {
+	if err := util.ReadBin(r, endian, &h.htlc.HtlcIndex); err != nil {
 		return nil, err
 	}
 

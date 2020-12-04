@@ -58,7 +58,7 @@ var _ FilteredChainView = (*CfFilteredChainView)(nil)
 //
 // NOTE: The node should already be running and syncing before being passed into
 // this function.
-func NewCfFilteredChainView(node *neutrino.ChainService) (*CfFilteredChainView, error) {
+func NewCfFilteredChainView(node *neutrino.ChainService) (*CfFilteredChainView, er.R) {
 	return &CfFilteredChainView{
 		blockQueue:    newBlockEventQueue(),
 		quit:          make(chan struct{}),
@@ -72,7 +72,7 @@ func NewCfFilteredChainView(node *neutrino.ChainService) (*CfFilteredChainView, 
 // called before any calls to UpdateFilter can be processed.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (c *CfFilteredChainView) Start() error {
+func (c *CfFilteredChainView) Start() er.R {
 	// Already started?
 	if atomic.AddInt32(&c.started, 1) != 1 {
 		return nil
@@ -127,7 +127,7 @@ func (c *CfFilteredChainView) Start() error {
 // Stop signals all active goroutines for a graceful shutdown.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (c *CfFilteredChainView) Stop() error {
+func (c *CfFilteredChainView) Stop() er.R {
 	// Already shutting down?
 	if atomic.AddInt32(&c.stopped, 1) != 1 {
 		return nil
@@ -213,7 +213,7 @@ func (c *CfFilteredChainView) chainFilterer() {
 // selected lock, then the internal chainFilter will also be updated.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (c *CfFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, error) {
+func (c *CfFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, er.R) {
 	// First, we'll fetch the block header itself so we can obtain the
 	// height which is part of our return value.
 	blockHeight, err := c.p2pNode.GetBlockHeight(blockHash)
@@ -240,7 +240,7 @@ func (c *CfFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredB
 	// outpoint that have been spent.
 	filter, err := c.p2pNode.GetCFilter(*blockHash, wire.GCSFilterRegular)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch filter: %v", err)
+		return nil, er.Errorf("unable to fetch filter: %v", err)
 	}
 
 	// Before we can match the filter, we'll need to map each item in our
@@ -313,7 +313,7 @@ func (c *CfFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredB
 //
 // NOTE: This is part of the FilteredChainView interface.
 func (c *CfFilteredChainView) UpdateFilter(ops []channeldb.EdgePoint,
-	updateHeight uint32) error {
+	updateHeight uint32) er.R {
 
 	log.Tracef("Updating chain filter with new UTXO's: %v", ops)
 
@@ -342,7 +342,7 @@ func (c *CfFilteredChainView) UpdateFilter(ops []channeldb.EdgePoint,
 	}
 	err := c.chainView.Update(rescanUpdate...)
 	if err != nil {
-		return fmt.Errorf("unable to update rescan: %v", err)
+		return er.Errorf("unable to update rescan: %v", err)
 	}
 	return nil
 }

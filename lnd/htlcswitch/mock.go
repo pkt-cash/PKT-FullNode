@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -15,8 +14,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -30,6 +29,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type mockPreimageCache struct {
@@ -53,7 +53,7 @@ func (m *mockPreimageCache) LookupPreimage(
 	return p, ok
 }
 
-func (m *mockPreimageCache) AddPreimages(preimages ...lntypes.Preimage) error {
+func (m *mockPreimageCache) AddPreimages(preimages ...lntypes.Preimage) er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -75,13 +75,13 @@ type mockFeeEstimator struct {
 }
 
 func (m *mockFeeEstimator) EstimateFeePerKW(
-	numBlocks uint32) (chainfee.SatPerKWeight, error) {
+	numBlocks uint32) (chainfee.SatPerKWeight, er.R) {
 
 	select {
 	case feeRate := <-m.byteFeeIn:
 		return feeRate, nil
 	case <-m.quit:
-		return 0, fmt.Errorf("exiting")
+		return 0, er.Errorf("exiting")
 	}
 }
 
@@ -89,10 +89,10 @@ func (m *mockFeeEstimator) RelayFeePerKW() chainfee.SatPerKWeight {
 	return 1e3
 }
 
-func (m *mockFeeEstimator) Start() error {
+func (m *mockFeeEstimator) Start() er.R {
 	return nil
 }
-func (m *mockFeeEstimator) Stop() error {
+func (m *mockFeeEstimator) Stop() er.R {
 	close(m.quit)
 	return nil
 }
@@ -105,7 +105,7 @@ type mockForwardingLog struct {
 	events map[time.Time]channeldb.ForwardingEvent
 }
 
-func (m *mockForwardingLog) AddForwardingEvents(events []channeldb.ForwardingEvent) error {
+func (m *mockForwardingLog) AddForwardingEvents(events []channeldb.ForwardingEvent) er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -137,7 +137,7 @@ type mockServer struct {
 
 var _ lnpeer.Peer = (*mockServer)(nil)
 
-func initDB() (*channeldb.DB, error) {
+func initDB() (*channeldb.DB, er.R) {
 	tempPath, err := ioutil.TempDir("", "switchdb")
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func initDB() (*channeldb.DB, error) {
 	return db, err
 }
 
-func initSwitchWithDB(startingHeight uint32, db *channeldb.DB) (*Switch, error) {
+func initSwitchWithDB(startingHeight uint32, db *channeldb.DB) (*Switch, er.R) {
 	var err error
 
 	if db == nil {
@@ -167,7 +167,7 @@ func initSwitchWithDB(startingHeight uint32, db *channeldb.DB) (*Switch, error) 
 		FwdingLog: &mockForwardingLog{
 			events: make(map[time.Time]channeldb.ForwardingEvent),
 		},
-		FetchLastChannelUpdate: func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, error) {
+		FetchLastChannelUpdate: func(lnwire.ShortChannelID) (*lnwire.ChannelUpdate, er.R) {
 			return nil, nil
 		},
 		Notifier: &mock.ChainNotifier{
@@ -187,7 +187,7 @@ func initSwitchWithDB(startingHeight uint32, db *channeldb.DB) (*Switch, error) 
 }
 
 func newMockServer(t testing.TB, name string, startingHeight uint32,
-	db *channeldb.DB, defaultDelta uint32) (*mockServer, error) {
+	db *channeldb.DB, defaultDelta uint32) (*mockServer, er.R) {
 
 	var id [33]byte
 	h := sha256.Sum256([]byte(name))
@@ -215,9 +215,9 @@ func newMockServer(t testing.TB, name string, startingHeight uint32,
 	}, nil
 }
 
-func (s *mockServer) Start() error {
+func (s *mockServer) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&s.started, 0, 1) {
-		return errors.New("mock server already started")
+		return er.New("mock server already started")
 	}
 
 	if err := s.htlcSwitch.Start(); err != nil {
@@ -278,7 +278,7 @@ func newMockHopIterator(hops ...*hop.Payload) hop.Iterator {
 	return &mockHopIterator{hops: hops}
 }
 
-func (r *mockHopIterator) HopPayload() (*hop.Payload, error) {
+func (r *mockHopIterator) HopPayload() (*hop.Payload, er.R) {
 	h := r.hops[0]
 	r.hops = r.hops[1:]
 	return h, nil
@@ -295,11 +295,11 @@ func (r *mockHopIterator) ExtractErrorEncrypter(
 	return extracter(nil)
 }
 
-func (r *mockHopIterator) EncodeNextHop(w io.Writer) error {
+func (r *mockHopIterator) EncodeNextHop(w io.Writer) er.R {
 	var hopLength [4]byte
 	binary.BigEndian.PutUint32(hopLength[:], uint32(len(r.hops)))
 
-	if _, err := w.Write(hopLength[:]); err != nil {
+	if _, err := util.Write(w, hopLength[:]); err != nil {
 		return err
 	}
 
@@ -313,20 +313,20 @@ func (r *mockHopIterator) EncodeNextHop(w io.Writer) error {
 	return nil
 }
 
-func encodeFwdInfo(w io.Writer, f *hop.ForwardingInfo) error {
-	if _, err := w.Write([]byte{byte(f.Network)}); err != nil {
+func encodeFwdInfo(w io.Writer, f *hop.ForwardingInfo) er.R {
+	if _, err := util.Write(w, []byte{byte(f.Network)}); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, binary.BigEndian, f.NextHop); err != nil {
+	if err := util.WriteBin(w, binary.BigEndian, f.NextHop); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, binary.BigEndian, f.AmountToForward); err != nil {
+	if err := util.WriteBin(w, binary.BigEndian, f.AmountToForward); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, binary.BigEndian, f.OutgoingCTLV); err != nil {
+	if err := util.WriteBin(w, binary.BigEndian, f.OutgoingCTLV); err != nil {
 		return err
 	}
 
@@ -355,22 +355,22 @@ func (o *mockObfuscator) Type() hop.EncrypterType {
 	return hop.EncrypterTypeMock
 }
 
-func (o *mockObfuscator) Encode(w io.Writer) error {
+func (o *mockObfuscator) Encode(w io.Writer) er.R {
 	return nil
 }
 
-func (o *mockObfuscator) Decode(r io.Reader) error {
+func (o *mockObfuscator) Decode(r io.Reader) er.R {
 	return nil
 }
 
 func (o *mockObfuscator) Reextract(
-	extracter hop.ErrorEncrypterExtracter) error {
+	extracter hop.ErrorEncrypterExtracter) er.R {
 
 	return nil
 }
 
 func (o *mockObfuscator) EncryptFirstHop(failure lnwire.FailureMessage) (
-	lnwire.OpaqueReason, error) {
+	lnwire.OpaqueReason, er.R) {
 
 	o.failure = failure
 
@@ -397,7 +397,7 @@ func newMockDeobfuscator() ErrorDecrypter {
 	return &mockDeobfuscator{}
 }
 
-func (o *mockDeobfuscator) DecryptError(reason lnwire.OpaqueReason) (*ForwardingError, error) {
+func (o *mockDeobfuscator) DecryptError(reason lnwire.OpaqueReason) (*ForwardingError, er.R) {
 
 	r := bytes.NewReader(reason)
 	failure, err := lnwire.DecodeFailure(r, 0)
@@ -459,7 +459,7 @@ func (p *mockIteratorDecoder) DecodeHopIterator(r io.Reader, rHash []byte,
 
 func (p *mockIteratorDecoder) DecodeHopIterators(id []byte,
 	reqs []hop.DecodeHopIteratorRequest) (
-	[]hop.DecodeHopIteratorResponse, error) {
+	[]hop.DecodeHopIteratorResponse, er.R) {
 
 	idHash := sha256.Sum256(id)
 
@@ -496,22 +496,22 @@ func (p *mockIteratorDecoder) DecodeHopIterators(id []byte,
 	return resps, nil
 }
 
-func decodeFwdInfo(r io.Reader, f *hop.ForwardingInfo) error {
+func decodeFwdInfo(r io.Reader, f *hop.ForwardingInfo) er.R {
 	var net [1]byte
 	if _, err := r.Read(net[:]); err != nil {
 		return err
 	}
 	f.Network = hop.Network(net[0])
 
-	if err := binary.Read(r, binary.BigEndian, &f.NextHop); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &f.NextHop); err != nil {
 		return err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &f.AmountToForward); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &f.AmountToForward); err != nil {
 		return err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &f.OutgoingCTLV); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &f.OutgoingCTLV); err != nil {
 		return err
 	}
 
@@ -520,7 +520,7 @@ func decodeFwdInfo(r io.Reader, f *hop.ForwardingInfo) error {
 
 // messageInterceptor is function that handles the incoming peer messages and
 // may decide should the peer skip the message or not.
-type messageInterceptor func(m lnwire.Message) (bool, error)
+type messageInterceptor func(m lnwire.Message) (bool, er.R)
 
 // Record is used to set the function which will be triggered when new
 // lnwire message was received.
@@ -528,24 +528,24 @@ func (s *mockServer) intersect(f messageInterceptor) {
 	s.interceptorFuncs = append(s.interceptorFuncs, f)
 }
 
-func (s *mockServer) SendMessage(sync bool, msgs ...lnwire.Message) error {
+func (s *mockServer) SendMessage(sync bool, msgs ...lnwire.Message) er.R {
 
 	for _, msg := range msgs {
 		select {
 		case s.messages <- msg:
 		case <-s.quit:
-			return errors.New("server is stopped")
+			return er.New("server is stopped")
 		}
 	}
 
 	return nil
 }
 
-func (s *mockServer) SendMessageLazy(sync bool, msgs ...lnwire.Message) error {
+func (s *mockServer) SendMessageLazy(sync bool, msgs ...lnwire.Message) er.R {
 	panic("not implemented")
 }
 
-func (s *mockServer) readHandler(message lnwire.Message) error {
+func (s *mockServer) readHandler(message lnwire.Message) er.R {
 	var targetChan lnwire.ChannelID
 
 	switch msg := message.(type) {
@@ -569,7 +569,7 @@ func (s *mockServer) readHandler(message lnwire.Message) error {
 	case *lnwire.UpdateFee:
 		targetChan = msg.ChanID
 	default:
-		return fmt.Errorf("unknown message type: %T", msg)
+		return er.Errorf("unknown message type: %T", msg)
 	}
 
 	// Dispatch the commitment update message to the proper channel link
@@ -601,7 +601,7 @@ func (s *mockServer) Address() net.Addr {
 }
 
 func (s *mockServer) AddNewChannel(channel *channeldb.OpenChannel,
-	cancel <-chan struct{}) error {
+	cancel <-chan struct{}) er.R {
 
 	return nil
 }
@@ -616,7 +616,7 @@ func (s *mockServer) RemoteFeatures() *lnwire.FeatureVector {
 	return nil
 }
 
-func (s *mockServer) Stop() error {
+func (s *mockServer) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&s.shutdown, 0, 1) {
 		return nil
 	}
@@ -656,7 +656,7 @@ type mockChannelLink struct {
 // completeCircuit is a helper method for adding the finalized payment circuit
 // to the switch's circuit map. In testing, this should be executed after
 // receiving an htlc from the downstream packets channel.
-func (f *mockChannelLink) completeCircuit(pkt *htlcPacket) error {
+func (f *mockChannelLink) completeCircuit(pkt *htlcPacket) er.R {
 	switch htlc := pkt.htlc.(type) {
 	case *lnwire.UpdateAddHTLC:
 		pkt.outgoingChanID = f.shortChanID
@@ -682,7 +682,7 @@ func (f *mockChannelLink) completeCircuit(pkt *htlcPacket) error {
 	return nil
 }
 
-func (f *mockChannelLink) deleteCircuit(pkt *htlcPacket) error {
+func (f *mockChannelLink) deleteCircuit(pkt *htlcPacket) er.R {
 	return f.htlcSwitch.deleteCircuits(pkt.inKey())
 }
 
@@ -699,12 +699,12 @@ func newMockChannelLink(htlcSwitch *Switch, chanID lnwire.ChannelID,
 	}
 }
 
-func (f *mockChannelLink) HandleSwitchPacket(pkt *htlcPacket) error {
+func (f *mockChannelLink) HandleSwitchPacket(pkt *htlcPacket) er.R {
 	f.mailBox.AddPacket(pkt)
 	return nil
 }
 
-func (f *mockChannelLink) HandleLocalAddPacket(pkt *htlcPacket) error {
+func (f *mockChannelLink) HandleLocalAddPacket(pkt *htlcPacket) er.R {
 	_ = f.mailBox.AddPacket(pkt)
 	return nil
 }
@@ -736,7 +736,7 @@ func (f *mockChannelLink) AttachMailBox(mailBox MailBox) {
 	f.packets = mailBox.PacketOutBox()
 }
 
-func (f *mockChannelLink) Start() error {
+func (f *mockChannelLink) Start() er.R {
 	f.mailBox.ResetMessages()
 	f.mailBox.ResetPackets()
 	return nil
@@ -750,14 +750,14 @@ func (f *mockChannelLink) ChannelPoint() *wire.OutPoint                 { return
 func (f *mockChannelLink) Stop()                                        {}
 func (f *mockChannelLink) EligibleToForward() bool                      { return f.eligible }
 func (f *mockChannelLink) setLiveShortChanID(sid lnwire.ShortChannelID) { f.shortChanID = sid }
-func (f *mockChannelLink) UpdateShortChanID() (lnwire.ShortChannelID, error) {
+func (f *mockChannelLink) UpdateShortChanID() (lnwire.ShortChannelID, er.R) {
 	f.eligible = true
 	return f.shortChanID, nil
 }
 
 var _ ChannelLink = (*mockChannelLink)(nil)
 
-func newDB() (*channeldb.DB, func(), error) {
+func newDB() (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
 	tempDirName, err := ioutil.TempDir("", "channeldb")
@@ -812,19 +812,19 @@ func newMockRegistry(minDelta uint32) *mockInvoiceRegistry {
 }
 
 func (i *mockInvoiceRegistry) LookupInvoice(rHash lntypes.Hash) (
-	channeldb.Invoice, error) {
+	channeldb.Invoice, er.R) {
 
 	return i.registry.LookupInvoice(rHash)
 }
 
-func (i *mockInvoiceRegistry) SettleHodlInvoice(preimage lntypes.Preimage) error {
+func (i *mockInvoiceRegistry) SettleHodlInvoice(preimage lntypes.Preimage) er.R {
 	return i.registry.SettleHodlInvoice(preimage)
 }
 
 func (i *mockInvoiceRegistry) NotifyExitHopHtlc(rhash lntypes.Hash,
 	amt lnwire.MilliSatoshi, expiry uint32, currentHeight int32,
 	circuitKey channeldb.CircuitKey, hodlChan chan<- interface{},
-	payload invoices.Payload) (invoices.HtlcResolution, error) {
+	payload invoices.Payload) (invoices.HtlcResolution, er.R) {
 
 	event, err := i.registry.NotifyExitHopHtlc(
 		rhash, amt, expiry, currentHeight, circuitKey, hodlChan,
@@ -840,12 +840,12 @@ func (i *mockInvoiceRegistry) NotifyExitHopHtlc(rhash lntypes.Hash,
 	return event, nil
 }
 
-func (i *mockInvoiceRegistry) CancelInvoice(payHash lntypes.Hash) error {
+func (i *mockInvoiceRegistry) CancelInvoice(payHash lntypes.Hash) er.R {
 	return i.registry.CancelInvoice(payHash)
 }
 
 func (i *mockInvoiceRegistry) AddInvoice(invoice channeldb.Invoice,
-	paymentHash lntypes.Hash) error {
+	paymentHash lntypes.Hash) er.R {
 
 	_, err := i.registry.AddInvoice(&invoice, paymentHash)
 	return err
@@ -863,21 +863,21 @@ type mockCircuitMap struct {
 
 var _ CircuitMap = (*mockCircuitMap)(nil)
 
-func (m *mockCircuitMap) OpenCircuits(...Keystone) error {
+func (m *mockCircuitMap) OpenCircuits(...Keystone) er.R {
 	return nil
 }
 
 func (m *mockCircuitMap) TrimOpenCircuits(chanID lnwire.ShortChannelID,
-	start uint64) error {
+	start uint64) er.R {
 	return nil
 }
 
-func (m *mockCircuitMap) DeleteCircuits(inKeys ...CircuitKey) error {
+func (m *mockCircuitMap) DeleteCircuits(inKeys ...CircuitKey) er.R {
 	return nil
 }
 
 func (m *mockCircuitMap) CommitCircuits(
-	circuit ...*PaymentCircuit) (*CircuitFwdActions, error) {
+	circuit ...*PaymentCircuit) (*CircuitFwdActions, er.R) {
 
 	return nil, nil
 }
@@ -919,7 +919,7 @@ type mockOnionErrorDecryptor struct {
 }
 
 func (m *mockOnionErrorDecryptor) DecryptError(encryptedData []byte) (
-	*sphinx.DecryptedError, error) {
+	*sphinx.DecryptedError, er.R) {
 
 	return &sphinx.DecryptedError{
 		SenderIdx: m.sourceIdx,

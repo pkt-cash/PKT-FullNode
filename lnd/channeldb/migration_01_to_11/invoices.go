@@ -2,12 +2,11 @@ package migration_01_to_11
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -229,18 +228,18 @@ type InvoiceHTLC struct {
 	State HtlcState
 }
 
-func validateInvoice(i *Invoice) error {
+func validateInvoice(i *Invoice) er.R {
 	if len(i.Memo) > MaxMemoSize {
-		return fmt.Errorf("max length a memo is %v, and invoice "+
+		return er.Errorf("max length a memo is %v, and invoice "+
 			"of length %v was provided", MaxMemoSize, len(i.Memo))
 	}
 	if len(i.Receipt) > MaxReceiptSize {
-		return fmt.Errorf("max length a receipt is %v, and invoice "+
+		return er.Errorf("max length a receipt is %v, and invoice "+
 			"of length %v was provided", MaxReceiptSize,
 			len(i.Receipt))
 	}
 	if len(i.PaymentRequest) > MaxPaymentRequestSize {
-		return fmt.Errorf("max length of payment request is %v, length "+
+		return er.Errorf("max length of payment request is %v, length "+
 			"provided was %v", MaxPaymentRequestSize,
 			len(i.PaymentRequest))
 	}
@@ -250,13 +249,13 @@ func validateInvoice(i *Invoice) error {
 // FetchAllInvoices returns all invoices currently stored within the database.
 // If the pendingOnly param is true, then only unsettled invoices will be
 // returned, skipping all invoices that are fully settled.
-func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, error) {
+func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, er.R) {
 	var invoices []Invoice
 
-	err := kvdb.View(d, func(tx kvdb.RTx) error {
+	err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 		invoiceB := tx.ReadBucket(invoiceBucket)
 		if invoiceB == nil {
-			return ErrNoInvoicesCreated
+			return ErrNoInvoicesCreated.Default()
 		}
 
 		// Iterate through the entire key space of the top-level
@@ -270,7 +269,7 @@ func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, error) {
 			invoiceReader := bytes.NewReader(v)
 			invoice, err := deserializeInvoice(invoiceReader)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			if pendingOnly &&
@@ -298,7 +297,7 @@ func (d *DB) FetchAllInvoices(pendingOnly bool) ([]Invoice, error) {
 // Note: this function is in use for a migration. Before making changes that
 // would modify the on disk format, make a copy of the original code and store
 // it with the migration.
-func serializeInvoice(w io.Writer, i *Invoice) error {
+func serializeInvoice(w io.Writer, i *Invoice) er.R {
 	if err := wire.WriteVarBytes(w, 0, i.Memo[:]); err != nil {
 		return err
 	}
@@ -309,17 +308,17 @@ func serializeInvoice(w io.Writer, i *Invoice) error {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, i.FinalCltvDelta); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.FinalCltvDelta); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, int64(i.Expiry)); err != nil {
+	if err := util.WriteBin(w, byteOrder, int64(i.Expiry)); err != nil {
 		return err
 	}
 
 	birthBytes, err := i.CreationDate.MarshalBinary()
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if err := wire.WriteVarBytes(w, 0, birthBytes); err != nil {
@@ -328,34 +327,34 @@ func serializeInvoice(w io.Writer, i *Invoice) error {
 
 	settleBytes, err := i.SettleDate.MarshalBinary()
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if err := wire.WriteVarBytes(w, 0, settleBytes); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(i.Terms.PaymentPreimage[:]); err != nil {
+	if _, err := util.Write(w, i.Terms.PaymentPreimage[:]); err != nil {
 		return err
 	}
 
 	var scratch [8]byte
 	byteOrder.PutUint64(scratch[:], uint64(i.Terms.Value))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, i.Terms.State); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.Terms.State); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, i.AddIndex); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.AddIndex); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, i.SettleIndex); err != nil {
+	if err := util.WriteBin(w, byteOrder, i.SettleIndex); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, int64(i.AmtPaid)); err != nil {
+	if err := util.WriteBin(w, byteOrder, int64(i.AmtPaid)); err != nil {
 		return err
 	}
 
@@ -368,7 +367,7 @@ func serializeInvoice(w io.Writer, i *Invoice) error {
 
 // serializeHtlcs serializes a map containing circuit keys and invoice htlcs to
 // a writer.
-func serializeHtlcs(w io.Writer, htlcs map[CircuitKey]*InvoiceHTLC) error {
+func serializeHtlcs(w io.Writer, htlcs map[CircuitKey]*InvoiceHTLC) er.R {
 	for key, htlc := range htlcs {
 		// Encode the htlc in a tlv stream.
 		chanID := key.ChanID.ToUint64()
@@ -400,12 +399,12 @@ func serializeHtlcs(w io.Writer, htlcs map[CircuitKey]*InvoiceHTLC) error {
 
 		// Write the length of the tlv stream followed by the stream
 		// bytes.
-		err = binary.Write(w, byteOrder, uint64(b.Len()))
+		err = util.WriteBin(w, byteOrder, uint64(b.Len()))
 		if err != nil {
 			return err
 		}
 
-		if _, err := w.Write(b.Bytes()); err != nil {
+		if _, err := util.Write(w, b.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -413,8 +412,8 @@ func serializeHtlcs(w io.Writer, htlcs map[CircuitKey]*InvoiceHTLC) error {
 	return nil
 }
 
-func deserializeInvoice(r io.Reader) (Invoice, error) {
-	var err error
+func deserializeInvoice(r io.Reader) (Invoice, er.R) {
+	var err er.R
 	invoice := Invoice{}
 
 	// TODO(roasbeef): use read full everywhere
@@ -432,12 +431,12 @@ func deserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 
-	if err := binary.Read(r, byteOrder, &invoice.FinalCltvDelta); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.FinalCltvDelta); err != nil {
 		return invoice, err
 	}
 
 	var expiry int64
-	if err := binary.Read(r, byteOrder, &expiry); err != nil {
+	if err := util.ReadBin(r, byteOrder, &expiry); err != nil {
 		return invoice, err
 	}
 	invoice.Expiry = time.Duration(expiry)
@@ -447,7 +446,7 @@ func deserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.CreationDate.UnmarshalBinary(birthBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
 	settledBytes, err := wire.ReadVarBytes(r, 0, 300, "settled")
@@ -455,29 +454,29 @@ func deserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.SettleDate.UnmarshalBinary(settledBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
-	if _, err := io.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
+	if _, err := util.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
 		return invoice, err
 	}
 	var scratch [8]byte
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return invoice, err
 	}
 	invoice.Terms.Value = lnwire.MilliSatoshi(byteOrder.Uint64(scratch[:]))
 
-	if err := binary.Read(r, byteOrder, &invoice.Terms.State); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.Terms.State); err != nil {
 		return invoice, err
 	}
 
-	if err := binary.Read(r, byteOrder, &invoice.AddIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AddIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.SettleIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.SettleIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.AmtPaid); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AmtPaid); err != nil {
 		return invoice, err
 	}
 
@@ -491,14 +490,14 @@ func deserializeInvoice(r io.Reader) (Invoice, error) {
 
 // deserializeHtlcs reads a list of invoice htlcs from a reader and returns it
 // as a map.
-func deserializeHtlcs(r io.Reader) (map[CircuitKey]*InvoiceHTLC, error) {
+func deserializeHtlcs(r io.Reader) (map[CircuitKey]*InvoiceHTLC, er.R) {
 	htlcs := make(map[CircuitKey]*InvoiceHTLC, 0)
 
 	for {
 		// Read the length of the tlv stream for this htlc.
 		var streamLen uint64
-		if err := binary.Read(r, byteOrder, &streamLen); err != nil {
-			if err == io.EOF {
+		if err := util.ReadBin(r, byteOrder, &streamLen); err != nil {
+			if er.Wrapped(err) == io.EOF {
 				break
 			}
 
@@ -507,7 +506,7 @@ func deserializeHtlcs(r io.Reader) (map[CircuitKey]*InvoiceHTLC, error) {
 
 		streamBytes := make([]byte, streamLen)
 		if _, err := r.Read(streamBytes); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		streamReader := bytes.NewReader(streamBytes)
 

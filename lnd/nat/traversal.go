@@ -1,8 +1,9 @@
 package nat
 
 import (
-	"errors"
 	"net"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 
 	// ErrMultipleNAT is an error returned when multiple NATs have been
 	// detected.
-	ErrMultipleNAT = errors.New("multiple NATs detected")
+	ErrMultipleNAT = er.GenericErrorType.CodeWithDetail("ErrMultipleNAT", "multiple NATs detected")
 )
 
 func init() {
@@ -33,15 +34,15 @@ func init() {
 // techniques.
 type Traversal interface {
 	// ExternalIP returns the external IP address.
-	ExternalIP() (net.IP, error)
+	ExternalIP() (net.IP, er.R)
 
 	// AddPortMapping adds a port mapping for the given port between the
 	// private and public addresses.
-	AddPortMapping(port uint16) error
+	AddPortMapping(port uint16) er.R
 
 	// DeletePortMapping deletes a port mapping for the given port between
 	// the private and public addresses.
-	DeletePortMapping(port uint16) error
+	DeletePortMapping(port uint16) er.R
 
 	// ForwardedPorts returns the ports currently being forwarded using NAT
 	// traversal.

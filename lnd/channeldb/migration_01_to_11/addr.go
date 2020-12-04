@@ -2,11 +2,11 @@ package migration_01_to_11
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 	"net"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/tor"
 )
 
@@ -30,7 +30,7 @@ const (
 
 // encodeTCPAddr serializes a TCP address into its compact raw bytes
 // representation.
-func encodeTCPAddr(w io.Writer, addr *net.TCPAddr) error {
+func encodeTCPAddr(w io.Writer, addr *net.TCPAddr) er.R {
 	var (
 		addrType byte
 		ip       []byte
@@ -45,20 +45,20 @@ func encodeTCPAddr(w io.Writer, addr *net.TCPAddr) error {
 	}
 
 	if ip == nil {
-		return fmt.Errorf("unable to encode IP %v", addr.IP)
+		return er.Errorf("unable to encode IP %v", addr.IP)
 	}
 
-	if _, err := w.Write([]byte{addrType}); err != nil {
+	if _, err := util.Write(w, []byte{addrType}); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(ip); err != nil {
+	if _, err := util.Write(w, ip); err != nil {
 		return err
 	}
 
 	var port [2]byte
 	byteOrder.PutUint16(port[:], uint16(addr.Port))
-	if _, err := w.Write(port[:]); err != nil {
+	if _, err := util.Write(w, port[:]); err != nil {
 		return err
 	}
 
@@ -67,54 +67,54 @@ func encodeTCPAddr(w io.Writer, addr *net.TCPAddr) error {
 
 // encodeOnionAddr serializes an onion address into its compact raw bytes
 // representation.
-func encodeOnionAddr(w io.Writer, addr *tor.OnionAddr) error {
+func encodeOnionAddr(w io.Writer, addr *tor.OnionAddr) er.R {
 	var suffixIndex int
 	hostLen := len(addr.OnionService)
 	switch hostLen {
 	case tor.V2Len:
-		if _, err := w.Write([]byte{byte(v2OnionAddr)}); err != nil {
+		if _, err := util.Write(w, []byte{byte(v2OnionAddr)}); err != nil {
 			return err
 		}
 		suffixIndex = tor.V2Len - tor.OnionSuffixLen
 	case tor.V3Len:
-		if _, err := w.Write([]byte{byte(v3OnionAddr)}); err != nil {
+		if _, err := util.Write(w, []byte{byte(v3OnionAddr)}); err != nil {
 			return err
 		}
 		suffixIndex = tor.V3Len - tor.OnionSuffixLen
 	default:
-		return errors.New("unknown onion service length")
+		return er.New("unknown onion service length")
 	}
 
 	suffix := addr.OnionService[suffixIndex:]
 	if suffix != tor.OnionSuffix {
-		return fmt.Errorf("invalid suffix \"%v\"", suffix)
+		return er.Errorf("invalid suffix \"%v\"", suffix)
 	}
 
 	host, err := tor.Base32Encoding.DecodeString(
 		addr.OnionService[:suffixIndex],
 	)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Sanity check the decoded length.
 	switch {
 	case hostLen == tor.V2Len && len(host) != tor.V2DecodedLen:
-		return fmt.Errorf("onion service %v decoded to invalid host %x",
+		return er.Errorf("onion service %v decoded to invalid host %x",
 			addr.OnionService, host)
 
 	case hostLen == tor.V3Len && len(host) != tor.V3DecodedLen:
-		return fmt.Errorf("onion service %v decoded to invalid host %x",
+		return er.Errorf("onion service %v decoded to invalid host %x",
 			addr.OnionService, host)
 	}
 
-	if _, err := w.Write(host); err != nil {
+	if _, err := util.Write(w, host); err != nil {
 		return err
 	}
 
 	var port [2]byte
 	byteOrder.PutUint16(port[:], uint16(addr.Port))
-	if _, err := w.Write(port[:]); err != nil {
+	if _, err := util.Write(w, port[:]); err != nil {
 		return err
 	}
 
@@ -124,10 +124,10 @@ func encodeOnionAddr(w io.Writer, addr *tor.OnionAddr) error {
 // deserializeAddr reads the serialized raw representation of an address and
 // deserializes it into the actual address. This allows us to avoid address
 // resolution within the channeldb package.
-func deserializeAddr(r io.Reader) (net.Addr, error) {
+func deserializeAddr(r io.Reader) (net.Addr, er.R) {
 	var addrType [1]byte
 	if _, err := r.Read(addrType[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var address net.Addr
@@ -135,12 +135,12 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 	case tcp4Addr:
 		var ip [4]byte
 		if _, err := r.Read(ip[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		var port [2]byte
 		if _, err := r.Read(port[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		address = &net.TCPAddr{
@@ -150,12 +150,12 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 	case tcp6Addr:
 		var ip [16]byte
 		if _, err := r.Read(ip[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		var port [2]byte
 		if _, err := r.Read(port[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		address = &net.TCPAddr{
@@ -165,12 +165,12 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 	case v2OnionAddr:
 		var h [tor.V2DecodedLen]byte
 		if _, err := r.Read(h[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		var p [2]byte
 		if _, err := r.Read(p[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		onionService := tor.Base32Encoding.EncodeToString(h[:])
@@ -184,12 +184,12 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 	case v3OnionAddr:
 		var h [tor.V3DecodedLen]byte
 		if _, err := r.Read(h[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		var p [2]byte
 		if _, err := r.Read(p[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		onionService := tor.Base32Encoding.EncodeToString(h[:])
@@ -201,7 +201,7 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 			Port:         port,
 		}
 	default:
-		return nil, ErrUnknownAddressType
+		return nil, ErrUnknownAddressType.Default()
 	}
 
 	return address, nil
@@ -209,13 +209,13 @@ func deserializeAddr(r io.Reader) (net.Addr, error) {
 
 // serializeAddr serializes an address into its raw bytes representation so that
 // it can be deserialized without requiring address resolution.
-func serializeAddr(w io.Writer, address net.Addr) error {
+func serializeAddr(w io.Writer, address net.Addr) er.R {
 	switch addr := address.(type) {
 	case *net.TCPAddr:
 		return encodeTCPAddr(w, addr)
 	case *tor.OnionAddr:
 		return encodeOnionAddr(w, addr)
 	default:
-		return ErrUnknownAddressType
+		return ErrUnknownAddressType.Default()
 	}
 }

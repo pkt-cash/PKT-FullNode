@@ -2,7 +2,6 @@ package autopilot
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -39,15 +39,15 @@ type Config struct {
 	// ConnectToPeer attempts to connect to the peer using one of its
 	// advertised addresses. The boolean returned signals whether the peer
 	// was already connected.
-	ConnectToPeer func(*btcec.PublicKey, []net.Addr) (bool, error)
+	ConnectToPeer func(*btcec.PublicKey, []net.Addr) (bool, er.R)
 
 	// DisconnectPeer attempts to disconnect the peer with the given public
 	// key.
-	DisconnectPeer func(*btcec.PublicKey) error
+	DisconnectPeer func(*btcec.PublicKey) er.R
 
 	// WalletBalance is a function closure that should return the current
 	// available balance of the backing wallet.
-	WalletBalance func() (btcutil.Amount, error)
+	WalletBalance func() (btcutil.Amount, er.R)
 
 	// Graph is an abstract channel graph that the Heuristic and the Agent
 	// will use to make decisions w.r.t channel allocation and placement
@@ -174,7 +174,7 @@ type Agent struct {
 // configuration and initial channel state. The initial channel state slice
 // should be populated with the set of Channels that are currently opened by
 // the backing Lightning Node.
-func New(cfg Config, initialState []LocalChannel) (*Agent, error) {
+func New(cfg Config, initialState []LocalChannel) (*Agent, er.R) {
 	a := &Agent{
 		cfg:                cfg,
 		chanState:          make(map[lnwire.ShortChannelID]LocalChannel),
@@ -199,15 +199,15 @@ func New(cfg Config, initialState []LocalChannel) (*Agent, error) {
 
 // Start starts the agent along with any goroutines it needs to perform its
 // normal duties.
-func (a *Agent) Start() error {
-	var err error
+func (a *Agent) Start() er.R {
+	var err er.R
 	a.started.Do(func() {
 		err = a.start()
 	})
 	return err
 }
 
-func (a *Agent) start() error {
+func (a *Agent) start() er.R {
 	rand.Seed(time.Now().Unix())
 	log.Infof("Autopilot Agent starting")
 
@@ -219,15 +219,15 @@ func (a *Agent) start() error {
 
 // Stop signals the Agent to gracefully shutdown. This function will block
 // until all goroutines have exited.
-func (a *Agent) Stop() error {
-	var err error
+func (a *Agent) Stop() er.R {
+	var err er.R
 	a.stopped.Do(func() {
 		err = a.stop()
 	})
 	return err
 }
 
-func (a *Agent) stop() error {
+func (a *Agent) stop() er.R {
 	log.Infof("Autopilot Agent stopping")
 
 	close(a.quit)
@@ -549,7 +549,7 @@ func (a *Agent) controller() {
 // openChans queries the agent's heuristic for a set of channel candidates, and
 // attempts to open channels to them.
 func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
-	totalChans []LocalChannel) error {
+	totalChans []LocalChannel) er.R {
 
 	// As channel size we'll use the maximum channel size available.
 	chanSize := a.cfg.Constraints.MaxChanSize()
@@ -558,7 +558,7 @@ func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
 	}
 
 	if chanSize < a.cfg.Constraints.MinChanSize() {
-		return fmt.Errorf("not enough funds available to open a " +
+		return er.Errorf("not enough funds available to open a " +
 			"single channel")
 	}
 
@@ -598,7 +598,7 @@ func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
 	selfPubBytes := a.cfg.Self.SerializeCompressed()
 	nodes := make(map[NodeID]struct{})
 	addresses := make(map[NodeID][]net.Addr)
-	if err := a.cfg.Graph.ForEachNode(func(node Node) error {
+	if err := a.cfg.Graph.ForEachNode(func(node Node) er.R {
 		nID := NodeID(node.PubKey())
 
 		// If we come across ourselves, them we'll continue in
@@ -629,7 +629,7 @@ func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
 		nodes[nID] = struct{}{}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("unable to get graph nodes: %v", err)
+		return er.Errorf("unable to get graph nodes: %v", err)
 	}
 
 	// Use the heuristic to calculate a score for each node in the
@@ -639,7 +639,7 @@ func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
 		a.cfg.Graph, totalChans, chanSize, nodes,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to calculate node scores : %v", err)
+		return er.Errorf("unable to calculate node scores : %v", err)
 	}
 
 	log.Debugf("Got scores for %d nodes", len(scores))
@@ -648,7 +648,7 @@ func (a *Agent) openChans(availableFunds btcutil.Amount, numChans uint32,
 	// to open channels to.
 	scores, err = chooseN(numChans, scores)
 	if err != nil {
-		return fmt.Errorf("unable to make weighted choice: %v",
+		return er.Errorf("unable to make weighted choice: %v",
 			err)
 	}
 
@@ -738,7 +738,7 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 	}
 
 	connected := make(chan bool)
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 
 	// To ensure a call to ConnectToPeer doesn't block the agent from
 	// shutting down, we'll launch it in a non-waitgrouped goroutine, that
@@ -764,17 +764,16 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 	}()
 
 	var alreadyConnected bool
-	var errr error
 	select {
 	case alreadyConnected = <-connected:
-	case errr = <-errChan:
+	case err = <-errChan:
 	case <-a.quit:
 		return
 	}
 
-	if errr != nil {
+	if err != nil {
 		log.Warnf("Unable to connect to %x: %v",
-			pub.SerializeCompressed(), errr)
+			pub.SerializeCompressed(), err)
 
 		// Since we failed to connect to them, we'll mark them as
 		// failed so that we don't attempt to connect to them again.
@@ -811,10 +810,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 			return
 		}
 
-		errr = a.cfg.DisconnectPeer(pub)
-		if errr != nil {
+		err = a.cfg.DisconnectPeer(pub)
+		if err != nil {
 			log.Warnf("Unable to disconnect peer %x: %v",
-				pub.SerializeCompressed(), errr)
+				pub.SerializeCompressed(), err)
 		}
 
 		// Now that we have disconnected, we can remove this node from
@@ -836,10 +835,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 	a.pendingMtx.Unlock()
 
 	// We can then begin the funding workflow with this peer.
-	errr = a.cfg.ChanController.OpenChannel(pub, directive.ChanAmt)
-	if errr != nil {
+	err = a.cfg.ChanController.OpenChannel(pub, directive.ChanAmt)
+	if err != nil {
 		log.Warnf("Unable to open channel to %x of %v: %v",
-			pub.SerializeCompressed(), directive.ChanAmt, errr)
+			pub.SerializeCompressed(), directive.ChanAmt, err)
 
 		// As the attempt failed, we'll clear the peer from the set of
 		// pending opens and mark them as failed so we don't attempt to
@@ -860,10 +859,10 @@ func (a *Agent) executeDirective(directive AttachmentDirective) {
 			return
 		}
 
-		errr = a.cfg.DisconnectPeer(pub)
-		if errr != nil {
+		err = a.cfg.DisconnectPeer(pub)
+		if err != nil {
 			log.Warnf("Unable to disconnect peer %x: %v",
-				pub.SerializeCompressed(), errr)
+				pub.SerializeCompressed(), err)
 		}
 	}
 

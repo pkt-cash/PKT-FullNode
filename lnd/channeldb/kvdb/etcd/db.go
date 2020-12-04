@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/pkg/transport"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 )
 
 const (
@@ -159,7 +160,7 @@ type BackendConfig struct {
 
 // newEtcdBackend returns a db object initialized with the passed backend
 // config. If etcd connection cannot be estabished, then returns error.
-func newEtcdBackend(config BackendConfig) (*db, error) {
+func newEtcdBackend(config BackendConfig) (*db, er.R) {
 	if config.Ctx == nil {
 		config.Ctx = context.Background()
 	}
@@ -224,8 +225,8 @@ func (db *db) getSTMOptions() []STMOptionFunc {
 // transaction and can be used to reset intermediate state. As callers may
 // expect retries of the f closure (depending on the database backend used), the
 // reset function will be called before each retry respectively.
-func (db *db) View(f func(tx walletdb.ReadTx) error, reset func()) error {
-	apply := func(stm STM) error {
+func (db *db) View(f func(tx walletdb.ReadTx) error, reset func()) er.R {
+	apply := func(stm STM) er.R {
 		reset()
 		return f(newReadWriteTx(stm, db.config.Prefix))
 	}
@@ -240,8 +241,8 @@ func (db *db) View(f func(tx walletdb.ReadTx) error, reset func()) error {
 // returned by f is still returned. If the commit fails, the commit error is
 // returned. As callers may expect retries of the f closure, the reset function
 // will be called before each retry respectively.
-func (db *db) Update(f func(tx walletdb.ReadWriteTx) error, reset func()) error {
-	apply := func(stm STM) error {
+func (db *db) Update(f func(tx walletdb.ReadWriteTx) error, reset func()) er.R {
+	apply := func(stm STM) er.R {
 		reset()
 		return f(newReadWriteTx(stm, db.config.Prefix))
 	}
@@ -259,7 +260,7 @@ func (db *db) PrintStats() string {
 }
 
 // BeginReadWriteTx opens a database read+write transaction.
-func (db *db) BeginReadWriteTx() (walletdb.ReadWriteTx, error) {
+func (db *db) BeginReadWriteTx() (walletdb.ReadWriteTx, er.R) {
 	return newReadWriteTx(
 		NewSTM(db.cli, db.txQueue, db.getSTMOptions()...),
 		db.config.Prefix,
@@ -267,7 +268,7 @@ func (db *db) BeginReadWriteTx() (walletdb.ReadWriteTx, error) {
 }
 
 // BeginReadTx opens a database read transaction.
-func (db *db) BeginReadTx() (walletdb.ReadTx, error) {
+func (db *db) BeginReadTx() (walletdb.ReadTx, er.R) {
 	return newReadWriteTx(
 		NewSTM(db.cli, db.txQueue, db.getSTMOptions()...),
 		db.config.Prefix,
@@ -277,7 +278,7 @@ func (db *db) BeginReadTx() (walletdb.ReadTx, error) {
 // Copy writes a copy of the database to the provided writer.  This call will
 // start a read-only transaction to perform all operations.
 // This function is part of the walletdb.Db interface implementation.
-func (db *db) Copy(w io.Writer) error {
+func (db *db) Copy(w io.Writer) er.R {
 	ctx, cancel := context.WithTimeout(db.config.Ctx, etcdLongTimeout)
 	defer cancel()
 
@@ -293,7 +294,7 @@ func (db *db) Copy(w io.Writer) error {
 
 // Close cleanly shuts down the database and syncs all data.
 // This function is part of the walletdb.Db interface implementation.
-func (db *db) Close() error {
+func (db *db) Close() er.R {
 	return db.cli.Close()
 }
 
@@ -305,6 +306,6 @@ func (db *db) Close() error {
 // returned.
 //
 // Batch is only useful when there are multiple goroutines calling it.
-func (db *db) Batch(apply func(tx walletdb.ReadWriteTx) error) error {
+func (db *db) Batch(apply func(tx walletdb.ReadWriteTx) er.R) er.R {
 	return db.Update(apply, func() {})
 }

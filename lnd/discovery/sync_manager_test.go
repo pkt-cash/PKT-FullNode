@@ -504,16 +504,16 @@ func assertSyncerStatus(t *testing.T, s *GossipSyncer, syncState syncerState,
 
 	// We'll check the status of our syncer within a WaitPredicate as some
 	// sync transitions might cause this to be racy.
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		state := s.syncState()
 		if s.syncState() != syncState {
-			return fmt.Errorf("expected syncState %v for peer "+
+			return er.Errorf("expected syncState %v for peer "+
 				"%x, got %v", syncState, s.cfg.peerPub, state)
 		}
 
 		typ := s.SyncType()
 		if s.SyncType() != syncType {
-			return fmt.Errorf("expected syncType %v for peer "+
+			return er.Errorf("expected syncType %v for peer "+
 				"%x, got %v", syncType, s.cfg.peerPub, typ)
 		}
 
@@ -549,10 +549,10 @@ func assertTransitionToChansSynced(t *testing.T, s *GossipSyncer, peer *mockPeer
 		t.Fatal("expected to receive FilterKnownChanIDs request")
 	}
 
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		state := syncerState(atomic.LoadUint32(&s.state))
 		if state != chansSynced {
-			return fmt.Errorf("expected syncerState %v, got %v",
+			return er.Errorf("expected syncerState %v, got %v",
 				chansSynced, state)
 		}
 

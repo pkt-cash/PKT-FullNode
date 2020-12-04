@@ -2,6 +2,8 @@ package lnwire
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // UpdateFulfillHTLC is sent by Alice to Bob when she wishes to settle a
@@ -42,7 +44,7 @@ var _ Message = (*UpdateFulfillHTLC)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFulfillHTLC) Decode(r io.Reader, pver uint32) error {
+func (c *UpdateFulfillHTLC) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&c.ChanID,
 		&c.ID,
@@ -54,7 +56,7 @@ func (c *UpdateFulfillHTLC) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFulfillHTLC) Encode(w io.Writer, pver uint32) error {
+func (c *UpdateFulfillHTLC) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChanID,
 		c.ID,

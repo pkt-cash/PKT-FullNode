@@ -289,7 +289,7 @@ type responseForwardingWriter struct {
 // Write writes the given bytes to the internal pipe.
 //
 // NOTE: This is part of the http.ResponseWriter interface.
-func (w *responseForwardingWriter) Write(b []byte) (int, error) {
+func (w *responseForwardingWriter) Write(b []byte) (int, er.R) {
 	return w.Writer.Write(b)
 }
 

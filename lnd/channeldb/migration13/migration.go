@@ -2,7 +2,6 @@ package migration13
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -49,7 +48,7 @@ var (
 
 // MigrateMPP migrates the payments to a new structure that accommodates for mpp
 // payments.
-func MigrateMPP(tx kvdb.RwTx) error {
+func MigrateMPP(tx kvdb.RwTx) er.R {
 	log.Infof("Migrating payments to mpp structure")
 
 	// Iterate over all payments and store their indexing keys. This is
@@ -76,14 +75,14 @@ func MigrateMPP(tx kvdb.RwTx) error {
 		// We only expect sub-buckets to be found in
 		// this top-level bucket.
 		if bucket == nil {
-			return fmt.Errorf("non bucket element in " +
+			return er.Errorf("non bucket element in " +
 				"payments bucket")
 		}
 
 		// Fetch old format creation info.
 		creationInfo := bucket.Get(paymentCreationInfoKey)
 		if creationInfo == nil {
-			return fmt.Errorf("creation info not found")
+			return er.Errorf("creation info not found")
 		}
 
 		// Make a copy because bbolt doesn't allow this value to be

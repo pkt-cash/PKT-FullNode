@@ -238,7 +238,7 @@ func TestFundPsbt(t *testing.T) {
 				t.Fatalf("expected nil error but got '%v'", err)
 			}
 			if err != nil &&
-				!strings.Contains(err.Error(), tc.expectedErr) {
+				!strings.Contains(err.String(), tc.expectedErr) {
 
 				t.Fatalf("expected error '%s' but got '%v'",
 					tc.expectedErr, err)

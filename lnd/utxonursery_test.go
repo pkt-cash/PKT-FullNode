@@ -434,7 +434,7 @@ func createNurseryTestContext(t *testing.T,
 	notifier := sweep.NewMockNotifier(t)
 
 	publishChan := make(chan wire.MsgTx, 1)
-	publishFunc := func(tx *wire.MsgTx, source string) error {
+	publishFunc := func(tx *wire.MsgTx, source string) er.R {
 		utxnLog.Tracef("Publishing tx %v by %v", tx.TxHash(), source)
 		publishChan <- *tx
 		return nil
@@ -451,11 +451,11 @@ func createNurseryTestContext(t *testing.T,
 	nurseryCfg := NurseryConfig{
 		Notifier: notifier,
 		FetchClosedChannels: func(pendingOnly bool) (
-			[]*channeldb.ChannelCloseSummary, error) {
+			[]*channeldb.ChannelCloseSummary, er.R) {
 			return []*channeldb.ChannelCloseSummary{}, nil
 		},
 		FetchClosedChannel: func(chanID *wire.OutPoint) (
-			*channeldb.ChannelCloseSummary, error) {
+			*channeldb.ChannelCloseSummary, er.R) {
 			return &channeldb.ChannelCloseSummary{
 				CloseHeight: 0,
 			}, nil
@@ -463,7 +463,7 @@ func createNurseryTestContext(t *testing.T,
 		Store:      storeIntercepter,
 		ChainIO:    chainIO,
 		SweepInput: sweeper.sweepInput,
-		PublishTransaction: func(tx *wire.MsgTx, _ string) error {
+		PublishTransaction: func(tx *wire.MsgTx, _ string) er.R {
 			return publishFunc(tx, "nursery")
 		},
 	}
@@ -883,12 +883,12 @@ func newNurseryStoreInterceptor(ns NurseryStore) *nurseryStoreInterceptor {
 }
 
 func (i *nurseryStoreInterceptor) Incubate(kidOutputs []kidOutput,
-	babyOutputs []babyOutput) error {
+	babyOutputs []babyOutput) er.R {
 
 	return i.ns.Incubate(kidOutputs, babyOutputs)
 }
 
-func (i *nurseryStoreInterceptor) CribToKinder(babyOutput *babyOutput) error {
+func (i *nurseryStoreInterceptor) CribToKinder(babyOutput *babyOutput) er.R {
 	err := i.ns.CribToKinder(babyOutput)
 
 	i.cribToKinderChan <- struct{}{}
@@ -897,7 +897,7 @@ func (i *nurseryStoreInterceptor) CribToKinder(babyOutput *babyOutput) error {
 }
 
 func (i *nurseryStoreInterceptor) PreschoolToKinder(kidOutput *kidOutput,
-	lastGradHeight uint32) error {
+	lastGradHeight uint32) er.R {
 
 	err := i.ns.PreschoolToKinder(kidOutput, lastGradHeight)
 
@@ -906,7 +906,7 @@ func (i *nurseryStoreInterceptor) PreschoolToKinder(kidOutput *kidOutput,
 	return err
 }
 
-func (i *nurseryStoreInterceptor) GraduateKinder(height uint32, kid *kidOutput) error {
+func (i *nurseryStoreInterceptor) GraduateKinder(height uint32, kid *kidOutput) er.R {
 	err := i.ns.GraduateKinder(height, kid)
 
 	i.graduateKinderChan <- struct{}{}
@@ -914,39 +914,39 @@ func (i *nurseryStoreInterceptor) GraduateKinder(height uint32, kid *kidOutput) 
 	return err
 }
 
-func (i *nurseryStoreInterceptor) FetchPreschools() ([]kidOutput, error) {
+func (i *nurseryStoreInterceptor) FetchPreschools() ([]kidOutput, er.R) {
 	return i.ns.FetchPreschools()
 }
 
 func (i *nurseryStoreInterceptor) FetchClass(height uint32) (
-	[]kidOutput, []babyOutput, error) {
+	[]kidOutput, []babyOutput, er.R) {
 
 	return i.ns.FetchClass(height)
 }
 
 func (i *nurseryStoreInterceptor) HeightsBelowOrEqual(height uint32) (
-	[]uint32, error) {
+	[]uint32, er.R) {
 
 	return i.ns.HeightsBelowOrEqual(height)
 }
 
 func (i *nurseryStoreInterceptor) ForChanOutputs(chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error, reset func()) error {
+	callback func([]byte, []byte) error, reset func()) er.R {
 
 	return i.ns.ForChanOutputs(chanPoint, callback, reset)
 }
 
-func (i *nurseryStoreInterceptor) ListChannels() ([]wire.OutPoint, error) {
+func (i *nurseryStoreInterceptor) ListChannels() ([]wire.OutPoint, er.R) {
 	return i.ns.ListChannels()
 }
 
 func (i *nurseryStoreInterceptor) IsMatureChannel(chanPoint *wire.OutPoint) (
-	bool, error) {
+	bool, er.R) {
 
 	return i.ns.IsMatureChannel(chanPoint)
 }
 
-func (i *nurseryStoreInterceptor) RemoveChannel(chanPoint *wire.OutPoint) error {
+func (i *nurseryStoreInterceptor) RemoveChannel(chanPoint *wire.OutPoint) er.R {
 	return i.ns.RemoveChannel(chanPoint)
 }
 
@@ -968,7 +968,7 @@ func newMockSweeper(t *testing.T) *mockSweeper {
 }
 
 func (s *mockSweeper) sweepInput(input input.Input,
-	_ sweep.Params) (chan sweep.Result, error) {
+	_ sweep.Params) (chan sweep.Result, er.R) {
 
 	utxnLog.Debugf("mockSweeper sweepInput called for %v", *input.OutPoint())
 

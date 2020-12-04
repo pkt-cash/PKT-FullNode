@@ -3,6 +3,7 @@ package sweep
 import (
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 )
 
@@ -18,7 +19,7 @@ type mockFeeEstimator struct {
 
 	// A closure that when set is used instead of the
 	// mockFeeEstimator.EstimateFeePerKW method.
-	estimateFeePerKW func(numBlocks uint32) (chainfee.SatPerKWeight, error)
+	estimateFeePerKW func(numBlocks uint32) (chainfee.SatPerKWeight, er.R)
 
 	lock sync.Mutex
 }
@@ -44,7 +45,7 @@ func (e *mockFeeEstimator) updateFees(feePerKW,
 }
 
 func (e *mockFeeEstimator) EstimateFeePerKW(numBlocks uint32) (
-	chainfee.SatPerKWeight, error) {
+	chainfee.SatPerKWeight, er.R) {
 
 	e.lock.Lock()
 	defer e.lock.Unlock()
@@ -67,11 +68,11 @@ func (e *mockFeeEstimator) RelayFeePerKW() chainfee.SatPerKWeight {
 	return e.relayFee
 }
 
-func (e *mockFeeEstimator) Start() error {
+func (e *mockFeeEstimator) Start() er.R {
 	return nil
 }
 
-func (e *mockFeeEstimator) Stop() error {
+func (e *mockFeeEstimator) Stop() er.R {
 	return nil
 }
 

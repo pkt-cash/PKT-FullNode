@@ -8,6 +8,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -56,8 +58,8 @@ var zlibDecodeMtx sync.Mutex
 // ErrUnknownShortChanIDEncoding is a parametrized error that indicates that we
 // came across an unknown short channel ID encoding, and therefore were unable
 // to continue parsing.
-func ErrUnknownShortChanIDEncoding(encoding ShortChanIDEncoding) error {
-	return fmt.Errorf("unknown short chan id encoding: %v", encoding)
+func ErrUnknownShortChanIDEncoding(encoding ShortChanIDEncoding) er.R {
+	return er.Errorf("unknown short chan id encoding: %v", encoding)
 }
 
 // QueryShortChanIDs is a message that allows the sender to query a set of
@@ -107,7 +109,7 @@ var _ Message = (*QueryShortChanIDs)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (q *QueryShortChanIDs) Decode(r io.Reader, pver uint32) error {
+func (q *QueryShortChanIDs) Decode(r io.Reader, pver uint32) er.R {
 	err := ReadElements(r, q.ChainHash[:])
 	if err != nil {
 		return err
@@ -122,7 +124,7 @@ func (q *QueryShortChanIDs) Decode(r io.Reader, pver uint32) error {
 // encoded. The first byte of the body details how the short chan ID's were
 // encoded. We'll use this type to govern exactly how we go about encoding the
 // set of short channel ID's.
-func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, error) {
+func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, er.R) {
 	// First, we'll attempt to read the number of bytes in the body of the
 	// set of encoded short channel ID's.
 	var numBytesResp uint16
@@ -136,7 +138,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 	}
 
 	queryBody := make([]byte, numBytesResp)
-	if _, err := io.ReadFull(r, queryBody); err != nil {
+	if _, err := util.ReadFull(r, queryBody); err != nil {
 		return 0, nil, err
 	}
 
@@ -160,7 +162,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 		// encoded short channel ID (8 bytes), then we'll return a
 		// parsing error.
 		if len(queryBody)%8 != 0 {
-			return 0, nil, fmt.Errorf("whole number of short "+
+			return 0, nil, er.Errorf("whole number of short "+
 				"chan ID's cannot be encoded in len=%v",
 				len(queryBody))
 		}
@@ -180,7 +182,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 		var lastChanID ShortChannelID
 		for i := 0; i < numShortChanIDs; i++ {
 			if err := ReadElements(bodyReader, &shortChanIDs[i]); err != nil {
-				return 0, nil, fmt.Errorf("unable to parse "+
+				return 0, nil, er.Errorf("unable to parse "+
 					"short chan ID: %v", err)
 			}
 
@@ -223,7 +225,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 			N: maxZlibBufSize,
 		})
 		if err != nil {
-			return 0, nil, fmt.Errorf("unable to create zlib reader: %v", err)
+			return 0, nil, er.Errorf("unable to create zlib reader: %v", err)
 		}
 
 		var (
@@ -242,14 +244,14 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 			// read all that's contained in the buffer, or have hit
 			// our limit on the number of bytes we'll read. In
 			// either case, we'll return what we have so far.
-			case err == io.ErrUnexpectedEOF || err == io.EOF:
+			case er.Wrapped(err) == io.ErrUnexpectedEOF || er.Wrapped(err) == io.EOF:
 				return encodingType, shortChanIDs, nil
 
 			// Otherwise, we hit some other sort of error, possibly
 			// an invalid payload, so we'll exit early with the
 			// error.
 			case err != nil:
-				return 0, nil, fmt.Errorf("unable to "+
+				return 0, nil, er.Errorf("unable to "+
 					"deflate next short chan "+
 					"ID: %v", err)
 			}
@@ -283,7 +285,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (q *QueryShortChanIDs) Encode(w io.Writer, pver uint32) error {
+func (q *QueryShortChanIDs) Encode(w io.Writer, pver uint32) er.R {
 	// First, we'll write out the chain hash.
 	err := WriteElements(w, q.ChainHash[:])
 	if err != nil {
@@ -298,7 +300,7 @@ func (q *QueryShortChanIDs) Encode(w io.Writer, pver uint32) error {
 // encodeShortChanIDs encodes the passed short channel ID's into the passed
 // io.Writer, respecting the specified encoding type.
 func encodeShortChanIDs(w io.Writer, encodingType ShortChanIDEncoding,
-	shortChanIDs []ShortChannelID, noSort bool) error {
+	shortChanIDs []ShortChannelID, noSort bool) er.R {
 
 	// For both of the current encoding types, the channel ID's are to be
 	// sorted in place, so we'll do that now. The sorting is applied unless
@@ -333,7 +335,7 @@ func encodeShortChanIDs(w io.Writer, encodingType ShortChanIDEncoding,
 		// channel ID to the buffer.
 		for _, chanID := range shortChanIDs {
 			if err := WriteElements(w, chanID); err != nil {
-				return fmt.Errorf("unable to write short chan "+
+				return er.Errorf("unable to write short chan "+
 					"ID: %v", err)
 			}
 		}
@@ -365,7 +367,7 @@ func encodeShortChanIDs(w io.Writer, encodingType ShortChanIDEncoding,
 			for _, chanID := range shortChanIDs {
 				err := WriteElements(zlibWriter, chanID)
 				if err != nil {
-					return fmt.Errorf("unable to write short chan "+
+					return er.Errorf("unable to write short chan "+
 						"ID: %v", err)
 				}
 			}
@@ -374,7 +376,7 @@ func encodeShortChanIDs(w io.Writer, encodingType ShortChanIDEncoding,
 			// ensure the compressed stream is written to the
 			// underlying buffer.
 			if err := zlibWriter.Close(); err != nil {
-				return fmt.Errorf("unable to finalize "+
+				return er.Errorf("unable to finalize "+
 					"compression: %v", err)
 			}
 
@@ -401,7 +403,7 @@ func encodeShortChanIDs(w io.Writer, encodingType ShortChanIDEncoding,
 			return err
 		}
 
-		_, err := w.Write(compressedPayload)
+		_, err := util.Write(w, compressedPayload)
 		return err
 
 	default:

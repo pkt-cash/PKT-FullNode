@@ -3,13 +3,13 @@ package lncfg
 import (
 	"context"
 	"crypto/tls"
-	"encoding/hex"
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
 )
@@ -20,12 +20,12 @@ var (
 
 // TCPResolver is a function signature that resolves an address on a given
 // network.
-type TCPResolver = func(network, addr string) (*net.TCPAddr, error)
+type TCPResolver = func(network, addr string) (*net.TCPAddr, er.R)
 
 // NormalizeAddresses returns a new slice with all the passed addresses
 // normalized with the given default port and all duplicates removed.
 func NormalizeAddresses(addrs []string, defaultPort string,
-	tcpResolver TCPResolver) ([]net.Addr, error) {
+	tcpResolver TCPResolver) ([]net.Addr, er.R) {
 
 	result := make([]net.Addr, 0, len(addrs))
 	seen := map[string]struct{}{}
@@ -53,7 +53,7 @@ func NormalizeAddresses(addrs []string, defaultPort string,
 // combinations, we'll prevent disabling authentication if the server is
 // listening on a public interface.
 func EnforceSafeAuthentication(addrs []net.Addr, macaroonsActive,
-	tlsActive bool) error {
+	tlsActive bool) er.R {
 
 	// We'll now examine all addresses that this RPC server is listening
 	// on. If it's a localhost address or a private address, we'll skip it,
@@ -64,14 +64,14 @@ func EnforceSafeAuthentication(addrs []net.Addr, macaroonsActive,
 		}
 
 		if !macaroonsActive {
-			return fmt.Errorf("detected RPC server listening on "+
+			return er.Errorf("detected RPC server listening on "+
 				"publicly reachable interface %v with "+
 				"authentication disabled! Refusing to start "+
 				"with --no-macaroons specified", addr)
 		}
 
 		if !tlsActive {
-			return fmt.Errorf("detected RPC server listening on "+
+			return er.Errorf("detected RPC server listening on "+
 				"publicly reachable interface %v with "+
 				"encryption disabled! Refusing to start "+
 				"with --notls specified", addr)
@@ -100,13 +100,13 @@ func parseNetwork(addr net.Addr) string {
 }
 
 // ListenOnAddress creates a listener that listens on the given address.
-func ListenOnAddress(addr net.Addr) (net.Listener, error) {
+func ListenOnAddress(addr net.Addr) (net.Listener, er.R) {
 	return net.Listen(parseNetwork(addr), addr.String())
 }
 
 // TLSListenOnAddress creates a TLS listener that listens on the given address.
 func TLSListenOnAddress(addr net.Addr,
-	config *tls.Config) (net.Listener, error) {
+	config *tls.Config) (net.Listener, er.R) {
 	return tls.Listen(parseNetwork(addr), addr.String(), config)
 }
 
@@ -164,7 +164,7 @@ func IsPrivate(addr net.Addr) bool {
 // connections. We accept a custom function to resolve any TCP addresses so
 // that caller is able control exactly how resolution is performed.
 func ParseAddressString(strAddress string, defaultPort string,
-	tcpResolver TCPResolver) (net.Addr, error) {
+	tcpResolver TCPResolver) (net.Addr, er.R) {
 
 	var parsedNetwork, parsedAddr string
 
@@ -192,7 +192,7 @@ func ParseAddressString(strAddress string, defaultPort string,
 		)
 
 	case "ip", "ip4", "ip6", "udp", "udp4", "udp6", "unixgram":
-		return nil, fmt.Errorf("only TCP or unix socket "+
+		return nil, er.Errorf("only TCP or unix socket "+
 			"addresses are supported: %s", parsedAddr)
 
 	default:
@@ -234,14 +234,14 @@ func ParseAddressString(strAddress string, defaultPort string,
 // the defaultPort will be used. Any tcp addresses that need resolving will be
 // resolved using the custom TCPResolver.
 func ParseLNAddressString(strAddress string, defaultPort string,
-	tcpResolver TCPResolver) (*lnwire.NetAddress, error) {
+	tcpResolver TCPResolver) (*lnwire.NetAddress, er.R) {
 
 	// Split the address string around the @ sign.
 	parts := strings.Split(strAddress, "@")
 
 	// The string is malformed if there are not exactly two parts.
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid lightning address %s: "+
+		return nil, er.Errorf("invalid lightning address %s: "+
 			"must be of the form <pubkey-hex>@<addr>", strAddress)
 	}
 
@@ -250,14 +250,14 @@ func ParseLNAddressString(strAddress string, defaultPort string,
 	parsedPubKey, parsedAddr := parts[0], parts[1]
 
 	// Decode the hex pubkey to get the raw compressed pubkey bytes.
-	pubKeyBytes, err := hex.DecodeString(parsedPubKey)
+	pubKeyBytes, err := util.DecodeHex(parsedPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("invalid lightning address pubkey: %v", err)
+		return nil, er.Errorf("invalid lightning address pubkey: %v", err)
 	}
 
 	// The compressed pubkey should have a length of exactly 33 bytes.
 	if len(pubKeyBytes) != 33 {
-		return nil, fmt.Errorf("invalid lightning address pubkey: "+
+		return nil, er.Errorf("invalid lightning address pubkey: "+
 			"length must be 33 bytes, found %d", len(pubKeyBytes))
 	}
 
@@ -265,13 +265,13 @@ func ParseLNAddressString(strAddress string, defaultPort string,
 	// key on the secp256k1 curve.
 	pubKey, err := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
 	if err != nil {
-		return nil, fmt.Errorf("invalid lightning address pubkey: %v", err)
+		return nil, er.Errorf("invalid lightning address pubkey: %v", err)
 	}
 
 	// Finally, parse the address string using our generic address parser.
 	addr, err := ParseAddressString(parsedAddr, defaultPort, tcpResolver)
 	if err != nil {
-		return nil, fmt.Errorf("invalid lightning address address: %v", err)
+		return nil, er.Errorf("invalid lightning address address: %v", err)
 	}
 
 	return &lnwire.NetAddress{
@@ -317,9 +317,9 @@ func verifyPort(address string, defaultPort string) string {
 // ClientAddressDialer creates a gRPC dialer that can also dial unix socket
 // addresses instead of just TCP addresses.
 func ClientAddressDialer(defaultPort string) func(context.Context,
-	string) (net.Conn, error) {
+	string) (net.Conn, er.R) {
 
-	return func(ctx context.Context, addr string) (net.Conn, error) {
+	return func(ctx context.Context, addr string) (net.Conn, er.R) {
 		parsedAddr, err := ParseAddressString(
 			addr, defaultPort, net.ResolveTCPAddr,
 		)

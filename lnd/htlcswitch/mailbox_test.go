@@ -203,7 +203,7 @@ func newMailboxContext(t *testing.T, startTime time.Time,
 	}
 	ctx.mailbox = newMemoryMailBox(&mailBoxConfig{
 		fetchUpdate: func(sid lnwire.ShortChannelID) (
-			*lnwire.ChannelUpdate, error) {
+			*lnwire.ChannelUpdate, er.R) {
 			return &lnwire.ChannelUpdate{
 				ShortChannelID: sid,
 			}, nil
@@ -218,7 +218,7 @@ func newMailboxContext(t *testing.T, startTime time.Time,
 }
 
 func (c *mailboxContext) forward(_ chan struct{},
-	pkts ...*htlcPacket) error {
+	pkts ...*htlcPacket) er.R {
 
 	for _, pkt := range pkts {
 		c.forwards <- pkt
@@ -546,13 +546,13 @@ func TestMailOrchestrator(t *testing.T) {
 	// First, we'll create a new instance of our orchestrator.
 	mo := newMailOrchestrator(&mailOrchConfig{
 		fetchUpdate: func(sid lnwire.ShortChannelID) (
-			*lnwire.ChannelUpdate, error) {
+			*lnwire.ChannelUpdate, er.R) {
 			return &lnwire.ChannelUpdate{
 				ShortChannelID: sid,
 			}, nil
 		},
 		forwardPackets: func(_ chan struct{},
-			pkts ...*htlcPacket) error {
+			pkts ...*htlcPacket) er.R {
 			return nil
 		},
 		clock:  clock.NewTestClock(time.Now()),

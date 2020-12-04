@@ -1,18 +1,20 @@
 package autopilot
 
 import (
-	"errors"
-	"fmt"
 	"math/rand"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
+
+var Err = er.NewErrorType("lnd.autopilot")
 
 // ErrNoPositive is returned from weightedChoice when there are no positive
 // weights left to choose from.
-var ErrNoPositive = errors.New("no positive weights left")
+var ErrNoPositive = Err.CodeWithDetail("ErrNoPositive", "no positive weights left")
 
 // weightedChoice draws a random index from the slice of weights, with a
 // probability propotional to the weight at the given index.
-func weightedChoice(w []float64) (int, error) {
+func weightedChoice(w []float64) (int, er.R) {
 	// Calculate the sum of weights.
 	var sum float64
 	for _, v := range w {
@@ -20,7 +22,7 @@ func weightedChoice(w []float64) (int, error) {
 	}
 
 	if sum <= 0 {
-		return 0, ErrNoPositive
+		return 0, ErrNoPositive.Default()
 	}
 
 	// Pick a random number in the range [0.0, 1.0) and multiply it with
@@ -43,13 +45,13 @@ func weightedChoice(w []float64) (int, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("unable to make choice")
+	return 0, er.Errorf("unable to make choice")
 }
 
 // chooseN picks at random min[n, len(s)] nodes if from the NodeScore map, with
 // a probability weighted by their score.
 func chooseN(n uint32, s map[NodeID]*NodeScore) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	// Keep track of the number of nodes not yet chosen, in addition to
 	// their scores and NodeIDs.
@@ -68,7 +70,7 @@ func chooseN(n uint32, s map[NodeID]*NodeScore) (
 	chosen := make(map[NodeID]*NodeScore)
 	for len(chosen) < int(n) && rem > 0 {
 		choice, err := weightedChoice(scores)
-		if err == ErrNoPositive {
+		if ErrNoPositive.Is(err) {
 			return chosen, nil
 		} else if err != nil {
 			return nil, err

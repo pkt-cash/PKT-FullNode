@@ -3,8 +3,9 @@ package build_test
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -106,10 +107,10 @@ func TestParseAndSetDebugLevels(t *testing.T) {
 
 			err := build.ParseAndSetDebugLevels(test.debugLevel, m)
 			if test.expErr != "" {
-				require.Contains(t, err.Error(), test.expErr)
+				require.Contains(t, err.String(), test.expErr)
 				return
 			}
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 
 			require.Equal(t, test.expGlobal, m.globalLogLevel)
 			require.Equal(t, test.expSubLevels, m.subLogLevels)

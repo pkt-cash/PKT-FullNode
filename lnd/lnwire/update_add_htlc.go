@@ -2,6 +2,8 @@ package lnwire
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // OnionPacketSize is the size of the serialized Sphinx onion packet included
@@ -67,7 +69,7 @@ var _ Message = (*UpdateAddHTLC)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateAddHTLC) Decode(r io.Reader, pver uint32) error {
+func (c *UpdateAddHTLC) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&c.ChanID,
 		&c.ID,
@@ -82,7 +84,7 @@ func (c *UpdateAddHTLC) Decode(r io.Reader, pver uint32) error {
 // the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateAddHTLC) Encode(w io.Writer, pver uint32) error {
+func (c *UpdateAddHTLC) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChanID,
 		c.ID,

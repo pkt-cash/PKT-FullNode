@@ -2,8 +2,6 @@ package lnd
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -86,14 +84,14 @@ type NurseryStore interface {
 	// outgoing htlc outputs to be swept back into the user's wallet. The
 	// event is persisted to disk, such that the nursery can resume the
 	// incubation process after a potential crash.
-	Incubate([]kidOutput, []babyOutput) error
+	Incubate([]kidOutput, []babyOutput) er.R
 
 	// CribToKinder atomically moves a babyOutput in the crib bucket to the
 	// kindergarten bucket. Baby outputs are outgoing HTLC's which require
 	// us to go to the second-layer to claim. The now mature kidOutput
 	// contained in the babyOutput will be stored as it waits out the
 	// kidOutput's CSV delay.
-	CribToKinder(*babyOutput) error
+	CribToKinder(*babyOutput) er.R
 
 	// PreschoolToKinder atomically moves a kidOutput from the preschool
 	// bucket to the kindergarten bucket. This transition should be executed
@@ -104,45 +102,45 @@ type NurseryStore interface {
 	// An additional parameter specifies the last graduated height. This is
 	// used in case of late registration. It schedules the output for sweep
 	// at the next epoch even though it has already expired earlier.
-	PreschoolToKinder(kid *kidOutput, lastGradHeight uint32) error
+	PreschoolToKinder(kid *kidOutput, lastGradHeight uint32) er.R
 
 	// GraduateKinder atomically moves an output at the provided height into
 	// the graduated status. This involves removing the kindergarten entries
 	// from both the height and channel indexes. The height bucket will be
 	// opportunistically pruned from the height index as outputs are
 	// removed.
-	GraduateKinder(height uint32, output *kidOutput) error
+	GraduateKinder(height uint32, output *kidOutput) er.R
 
 	// FetchPreschools returns a list of all outputs currently stored in
 	// the preschool bucket.
-	FetchPreschools() ([]kidOutput, error)
+	FetchPreschools() ([]kidOutput, er.R)
 
 	// FetchClass returns a list of kindergarten and crib outputs whose
 	// timelocks expire at the given height.
-	FetchClass(height uint32) ([]kidOutput, []babyOutput, error)
+	FetchClass(height uint32) ([]kidOutput, []babyOutput, er.R)
 
 	// HeightsBelowOrEqual returns the lowest non-empty heights in the
 	// height index, that exist at or below the provided upper bound.
-	HeightsBelowOrEqual(height uint32) ([]uint32, error)
+	HeightsBelowOrEqual(height uint32) ([]uint32, er.R)
 
 	// ForChanOutputs iterates over all outputs being incubated for a
 	// particular channel point. This method accepts a callback that allows
 	// the caller to process each key-value pair. The key will be a prefixed
 	// outpoint, and the value will be the serialized bytes for an output,
 	// whose type should be inferred from the key's prefix.
-	ForChanOutputs(*wire.OutPoint, func([]byte, []byte) error, func()) error
+	ForChanOutputs(*wire.OutPoint, func([]byte, []byte) error, func()) er.R
 
 	// ListChannels returns all channels the nursery is currently tracking.
-	ListChannels() ([]wire.OutPoint, error)
+	ListChannels() ([]wire.OutPoint, er.R)
 
 	// IsMatureChannel determines the whether or not all of the outputs in a
 	// particular channel bucket have been marked as graduated.
-	IsMatureChannel(*wire.OutPoint) (bool, error)
+	IsMatureChannel(*wire.OutPoint) (bool, er.R)
 
 	// RemoveChannel channel erases all entries from the channel bucket for
 	// the provided channel point, this method should only be called if
 	// IsMatureChannel indicates the channel is ready for removal.
-	RemoveChannel(*wire.OutPoint) error
+	RemoveChannel(*wire.OutPoint) er.R
 }
 
 var (
@@ -194,7 +192,7 @@ var (
 // are comprised of a nursery-specific prefix and the intended chain hash that
 // this nursery store will be used for. This allows multiple nursery stores to
 // isolate their state when operating on multiple chains or forks.
-func prefixChainKey(sysPrefix []byte, hash *chainhash.Hash) ([]byte, error) {
+func prefixChainKey(sysPrefix []byte, hash *chainhash.Hash) ([]byte, er.R) {
 	// Create a buffer to which we will write the system prefix, e.g.
 	// "utxn", followed by the provided chain hash.
 	var pfxChainBuffer bytes.Buffer
@@ -213,7 +211,7 @@ func prefixChainKey(sysPrefix []byte, hash *chainhash.Hash) ([]byte, error) {
 // outpoint with the provided state prefix. The returned bytes will be of the
 // form <prefix><outpoint>.
 func prefixOutputKey(statePrefix []byte,
-	outpoint *wire.OutPoint) ([]byte, error) {
+	outpoint *wire.OutPoint) ([]byte, er.R) {
 
 	// Create a buffer to which we will first write the state prefix,
 	// followed by the outpoint.
@@ -243,7 +241,7 @@ type nurseryStore struct {
 // an instance of nurseryStore who's database is properly segmented for the
 // given chain.
 func newNurseryStore(chainHash *chainhash.Hash,
-	db *channeldb.DB) (*nurseryStore, error) {
+	db *channeldb.DB) (*nurseryStore, er.R) {
 
 	// Prefix the provided chain hash with "utxn" to create the key for the
 	// nursery store's root bucket, ensuring each one has proper chain
@@ -263,8 +261,8 @@ func newNurseryStore(chainHash *chainhash.Hash,
 // Incubate persists the beginning of the incubation process for the
 // CSV-delayed outputs (commitment and incoming HTLC's), commitment output and
 // a list of outgoing two-stage htlc outputs.
-func (ns *nurseryStore) Incubate(kids []kidOutput, babies []babyOutput) error {
-	return kvdb.Update(ns.db, func(tx kvdb.RwTx) error {
+func (ns *nurseryStore) Incubate(kids []kidOutput, babies []babyOutput) er.R {
+	return kvdb.Update(ns.db, func(tx kvdb.RwTx) er.R {
 		// If we have any kid outputs to incubate, then we'll attempt
 		// to add each of them to the nursery store. Any duplicate
 		// outputs will be ignored.
@@ -290,8 +288,8 @@ func (ns *nurseryStore) Incubate(kids []kidOutput, babies []babyOutput) error {
 // CribToKinder atomically moves a babyOutput in the crib bucket to the
 // kindergarten bucket. The now mature kidOutput contained in the babyOutput
 // will be stored as it waits out the kidOutput's CSV delay.
-func (ns *nurseryStore) CribToKinder(bby *babyOutput) error {
-	return kvdb.Update(ns.db, func(tx kvdb.RwTx) error {
+func (ns *nurseryStore) CribToKinder(bby *babyOutput) er.R {
+	return kvdb.Update(ns.db, func(tx kvdb.RwTx) er.R {
 
 		// First, retrieve or create the channel bucket corresponding to
 		// the baby output's origin channel point.
@@ -373,9 +371,9 @@ func (ns *nurseryStore) CribToKinder(bby *babyOutput) error {
 // the kindergarten bucket. This transition should be executed after receiving
 // confirmation of the preschool output's commitment transaction.
 func (ns *nurseryStore) PreschoolToKinder(kid *kidOutput,
-	lastGradHeight uint32) error {
+	lastGradHeight uint32) er.R {
 
-	return kvdb.Update(ns.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(ns.db, func(tx kvdb.RwTx) er.R {
 		// Create or retrieve the channel bucket corresponding to the
 		// kid output's origin channel point.
 		chanPoint := kid.OriginChanPoint()
@@ -471,8 +469,8 @@ func (ns *nurseryStore) PreschoolToKinder(kid *kidOutput,
 // graduated status. This involves removing the kindergarten entries from both
 // the height and channel indexes. The height bucket will be opportunistically
 // pruned from the height index as outputs are removed.
-func (ns *nurseryStore) GraduateKinder(height uint32, kid *kidOutput) error {
-	return kvdb.Update(ns.db, func(tx kvdb.RwTx) error {
+func (ns *nurseryStore) GraduateKinder(height uint32, kid *kidOutput) er.R {
+	return kvdb.Update(ns.db, func(tx kvdb.RwTx) er.R {
 
 		hghtBucket := ns.getHeightBucket(tx, height)
 		if hghtBucket == nil {
@@ -504,7 +502,7 @@ func (ns *nurseryStore) GraduateKinder(height uint32, kid *kidOutput) error {
 
 		chanBucket := ns.getChannelBucketWrite(tx, chanPoint)
 		if chanBucket == nil {
-			return ErrContractNotFound
+			return ErrContractNotFound.Default()
 		}
 
 		// Remove previous output with kindergarten
@@ -534,16 +532,16 @@ func (ns *nurseryStore) GraduateKinder(height uint32, kid *kidOutput) error {
 // FetchClass returns a list of the kindergarten and crib outputs whose timeouts
 // are expiring
 func (ns *nurseryStore) FetchClass(
-	height uint32) ([]kidOutput, []babyOutput, error) {
+	height uint32) ([]kidOutput, []babyOutput, er.R) {
 
 	// Construct list of all crib and kindergarten outputs that need to be
 	// processed at the provided block height.
 	var kids []kidOutput
 	var babies []babyOutput
-	if err := kvdb.View(ns.db, func(tx kvdb.RTx) error {
+	if err := kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		// Append each crib output to our list of babyOutputs.
 		if err := ns.forEachHeightPrefix(tx, cribPrefix, height,
-			func(buf []byte) error {
+			func(buf []byte) er.R {
 
 				// We will attempt to deserialize all outputs
 				// stored with the crib prefix into babyOutputs,
@@ -566,7 +564,7 @@ func (ns *nurseryStore) FetchClass(
 
 		// Append each kindergarten output to our list of kidOutputs.
 		return ns.forEachHeightPrefix(tx, kndrPrefix, height,
-			func(buf []byte) error {
+			func(buf []byte) er.R {
 				// We will attempt to deserialize all outputs
 				// stored with the kindergarten prefix into
 				// kidOutputs, since this is the expected type
@@ -595,9 +593,9 @@ func (ns *nurseryStore) FetchClass(
 
 // FetchPreschools returns a list of all outputs currently stored in the
 // preschool bucket.
-func (ns *nurseryStore) FetchPreschools() ([]kidOutput, error) {
+func (ns *nurseryStore) FetchPreschools() ([]kidOutput, er.R) {
 	var kids []kidOutput
-	if err := kvdb.View(ns.db, func(tx kvdb.RTx) error {
+	if err := kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 
 		// Retrieve the existing chain bucket for this nursery store.
 		chainBucket := tx.ReadBucket(ns.pfxChainKey)
@@ -670,9 +668,9 @@ func (ns *nurseryStore) FetchPreschools() ([]kidOutput, error) {
 
 // HeightsBelowOrEqual returns a slice of all non-empty heights in the height
 // index at or below the provided upper bound.
-func (ns *nurseryStore) HeightsBelowOrEqual(height uint32) ([]uint32, error) {
+func (ns *nurseryStore) HeightsBelowOrEqual(height uint32) ([]uint32, er.R) {
 	var activeHeights []uint32
-	err := kvdb.View(ns.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		// Ensure that the chain bucket for this nursery store exists.
 		chainBucket := tx.ReadBucket(ns.pfxChainKey)
 		if chainBucket == nil {
@@ -717,17 +715,17 @@ func (ns *nurseryStore) HeightsBelowOrEqual(height uint32) ([]uint32, error) {
 // NOTE: The callback should not modify the provided byte slices and is
 // preferably non-blocking.
 func (ns *nurseryStore) ForChanOutputs(chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error, reset func()) error {
+	callback func([]byte, []byte) error, reset func()) er.R {
 
-	return kvdb.View(ns.db, func(tx kvdb.RTx) error {
+	return kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		return ns.forChanOutputs(tx, chanPoint, callback)
 	}, reset)
 }
 
 // ListChannels returns all channels the nursery is currently tracking.
-func (ns *nurseryStore) ListChannels() ([]wire.OutPoint, error) {
+func (ns *nurseryStore) ListChannels() ([]wire.OutPoint, er.R) {
 	var activeChannels []wire.OutPoint
-	if err := kvdb.View(ns.db, func(tx kvdb.RTx) error {
+	if err := kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		// Retrieve the existing chain bucket for this nursery store.
 		chainBucket := tx.ReadBucket(ns.pfxChainKey)
 		if chainBucket == nil {
@@ -762,21 +760,21 @@ func (ns *nurseryStore) ListChannels() ([]wire.OutPoint, error) {
 
 // IsMatureChannel determines the whether or not all of the outputs in a
 // particular channel bucket have been marked as graduated.
-func (ns *nurseryStore) IsMatureChannel(chanPoint *wire.OutPoint) (bool, error) {
-	err := kvdb.View(ns.db, func(tx kvdb.RTx) error {
+func (ns *nurseryStore) IsMatureChannel(chanPoint *wire.OutPoint) (bool, er.R) {
+	err := kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		// Iterate over the contents of the channel bucket, computing
 		// both total number of outputs, and those that have the grad
 		// prefix.
 		return ns.forChanOutputs(tx, chanPoint,
-			func(pfxKey, _ []byte) error {
+			func(pfxKey, _ []byte) er.R {
 				if !bytes.HasPrefix(pfxKey, gradPrefix) {
-					return ErrImmatureChannel
+					return ErrImmatureChannel.Default()
 				}
 				return nil
 			})
 
 	}, func() {})
-	if err != nil && err != ErrImmatureChannel {
+	if err != nil && !ErrImmatureChannel.Is(err) {
 		return false, err
 	}
 
@@ -785,14 +783,14 @@ func (ns *nurseryStore) IsMatureChannel(chanPoint *wire.OutPoint) (bool, error) 
 
 // ErrImmatureChannel signals a channel cannot be removed because not all of its
 // outputs have graduated.
-var ErrImmatureChannel = errors.New("cannot remove immature channel, " +
+var ErrImmatureChannel = Err.CodeWithDetail("ErrImmatureChannel", "cannot remove immature channel, "+
 	"still has ungraduated outputs")
 
 // RemoveChannel channel erases all entries from the channel bucket for the
 // provided channel point.
 // NOTE: The channel's entries in the height index are assumed to be removed.
-func (ns *nurseryStore) RemoveChannel(chanPoint *wire.OutPoint) error {
-	return kvdb.Update(ns.db, func(tx kvdb.RwTx) error {
+func (ns *nurseryStore) RemoveChannel(chanPoint *wire.OutPoint) er.R {
+	return kvdb.Update(ns.db, func(tx kvdb.RwTx) er.R {
 		// Retrieve the existing chain bucket for this nursery store.
 		chainBucket := tx.ReadWriteBucket(ns.pfxChainKey)
 		if chainBucket == nil {
@@ -813,9 +811,9 @@ func (ns *nurseryStore) RemoveChannel(chanPoint *wire.OutPoint) error {
 		}
 		chanBytes := chanBuffer.Bytes()
 
-		err := ns.forChanOutputs(tx, chanPoint, func(k, v []byte) error {
+		err := ns.forChanOutputs(tx, chanPoint, func(k, v []byte) er.R {
 			if !bytes.HasPrefix(k, gradPrefix) {
-				return ErrImmatureChannel
+				return ErrImmatureChannel.Default()
 			}
 
 			// Construct a kindergarten prefixed key, since this
@@ -854,7 +852,7 @@ func (ns *nurseryStore) RemoveChannel(chanPoint *wire.OutPoint) error {
 // its two-stage process of sweeping funds back to the user's wallet. These
 // outputs are persisted in the nursery store in the crib state, and will be
 // revisited after the first-stage output's CLTV has expired.
-func (ns *nurseryStore) enterCrib(tx kvdb.RwTx, baby *babyOutput) error {
+func (ns *nurseryStore) enterCrib(tx kvdb.RwTx, baby *babyOutput) er.R {
 	// First, retrieve or create the channel bucket corresponding to the
 	// baby output's origin channel point.
 	chanPoint := baby.OriginChanPoint()
@@ -911,7 +909,7 @@ func (ns *nurseryStore) enterCrib(tx kvdb.RwTx, baby *babyOutput) error {
 // through a single stage before sweeping. Outputs are stored in the preschool
 // bucket until the commitment transaction has been confirmed, at which point
 // they will be moved to the kindergarten bucket.
-func (ns *nurseryStore) enterPreschool(tx kvdb.RwTx, kid *kidOutput) error {
+func (ns *nurseryStore) enterPreschool(tx kvdb.RwTx, kid *kidOutput) er.R {
 	// First, retrieve or create the channel bucket corresponding to the
 	// baby output's origin channel point.
 	chanPoint := kid.OriginChanPoint()
@@ -945,7 +943,7 @@ func (ns *nurseryStore) enterPreschool(tx kvdb.RwTx, kid *kidOutput) error {
 // createChannelBucket creates or retrieves a channel bucket for the provided
 // channel point.
 func (ns *nurseryStore) createChannelBucket(tx kvdb.RwTx,
-	chanPoint *wire.OutPoint) (kvdb.RwBucket, error) {
+	chanPoint *wire.OutPoint) (kvdb.RwBucket, er.R) {
 
 	// Ensure that the chain bucket for this nursery store exists.
 	chainBucket, err := tx.CreateTopLevelBucket(ns.pfxChainKey)
@@ -1031,7 +1029,7 @@ func (ns *nurseryStore) getChannelBucketWrite(tx kvdb.RwTx,
 // createHeightBucket creates or retrieves an existing bucket from the height
 // index, corresponding to the provided height.
 func (ns *nurseryStore) createHeightBucket(tx kvdb.RwTx,
-	height uint32) (kvdb.RwBucket, error) {
+	height uint32) (kvdb.RwBucket, er.R) {
 
 	// Ensure that the chain bucket for this nursery store exists.
 	chainBucket, err := tx.CreateTopLevelBucket(ns.pfxChainKey)
@@ -1134,7 +1132,7 @@ func (ns *nurseryStore) getHeightBucketWrite(tx kvdb.RwTx,
 // for the provided block height and channel point. This method will attempt to
 // instantiate all buckets along the path if required.
 func (ns *nurseryStore) createHeightChanBucket(tx kvdb.RwTx,
-	height uint32, chanPoint *wire.OutPoint) (kvdb.RwBucket, error) {
+	height uint32, chanPoint *wire.OutPoint) (kvdb.RwBucket, er.R) {
 
 	// Ensure that the height bucket for this nursery store exists.
 	hghtBucket, err := ns.createHeightBucket(tx, height)
@@ -1187,7 +1185,7 @@ func (ns *nurseryStore) getHeightChanBucketWrite(tx kvdb.RwTx,
 // is invoked with serialized bytes retrieved for each output of interest,
 // allowing the caller to deserialize them into the appropriate type.
 func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
-	height uint32, callback func([]byte) error) error {
+	height uint32, callback func([]byte) error) er.R {
 
 	// Start by retrieving the height bucket corresponding to the provided
 	// block height.
@@ -1216,7 +1214,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 	// we assembled above.
 	chanIndex := chainBucket.NestedReadBucket(channelIndexKey)
 	if chanIndex == nil {
-		return errors.New("unable to retrieve channel index")
+		return er.New("unable to retrieve channel index")
 	}
 
 	// Now, we are ready to enumerate all outputs with the desired prefix at
@@ -1229,7 +1227,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 		// holds a sub-bucket for all outputs maturing at this height.
 		hghtChanBucket := hghtBucket.NestedReadBucket(chanBytes)
 		if hghtChanBucket == nil {
-			return fmt.Errorf("unable to retrieve height-channel "+
+			return er.Errorf("unable to retrieve height-channel "+
 				"bucket at height %d for %x", height, chanBytes)
 		}
 
@@ -1238,7 +1236,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 		// outputs.
 		chanBucket := chanIndex.NestedReadBucket(chanBytes)
 		if chanBucket == nil {
-			return fmt.Errorf("unable to retrieve channel "+
+			return er.Errorf("unable to retrieve channel "+
 				"bucket: '%x'", chanBytes)
 		}
 
@@ -1255,7 +1253,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 			// channel bucket.
 			outputBytes := chanBucket.Get(k)
 			if outputBytes == nil {
-				return errors.New("unable to retrieve output")
+				return er.New("unable to retrieve output")
 			}
 
 			// Present the serialized bytes to our call back
@@ -1275,11 +1273,11 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 // corresponding to the prefixed-output key and the serialized output,
 // respectively.
 func (ns *nurseryStore) forChanOutputs(tx kvdb.RTx, chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error) error {
+	callback func([]byte, []byte) error) er.R {
 
 	chanBucket := ns.getChannelBucket(tx, chanPoint)
 	if chanBucket == nil {
-		return ErrContractNotFound
+		return ErrContractNotFound.Default()
 	}
 
 	return chanBucket.ForEach(func(a, b []byte) er.R {
@@ -1296,7 +1294,7 @@ var errBucketNotEmpty = er.GenericErrorType.CodeWithDetail("errBucketNotEmpty",
 // height-channel bucket, and attempt to prune the upstream directories if they
 // are empty.
 func (ns *nurseryStore) removeOutputFromHeight(tx kvdb.RwTx, height uint32,
-	chanPoint *wire.OutPoint, pfxKey []byte) error {
+	chanPoint *wire.OutPoint, pfxKey []byte) er.R {
 
 	// Retrieve the height-channel bucket and delete the prefixed output.
 	hghtChanBucket := ns.getHeightChanBucketWrite(tx, height, chanPoint)
@@ -1314,7 +1312,7 @@ func (ns *nurseryStore) removeOutputFromHeight(tx kvdb.RwTx, height uint32,
 	// Retrieve the height bucket that contains the height-channel bucket.
 	hghtBucket := ns.getHeightBucketWrite(tx, height)
 	if hghtBucket == nil {
-		return errors.New("height bucket not found")
+		return er.New("height bucket not found")
 	}
 
 	var chanBuffer bytes.Buffer

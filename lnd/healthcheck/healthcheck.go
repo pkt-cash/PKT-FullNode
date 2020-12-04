@@ -6,12 +6,11 @@
 package healthcheck
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/ticker"
 )
 
@@ -51,9 +50,9 @@ func NewMonitor(cfg *Config) *Monitor {
 }
 
 // Start launches the goroutines required to run our monitor.
-func (m *Monitor) Start() error {
+func (m *Monitor) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&m.started, 0, 1) {
-		return errors.New("monitor already started")
+		return er.New("monitor already started")
 	}
 
 	// Run through all of the health checks that we have configured and
@@ -81,9 +80,9 @@ func (m *Monitor) Start() error {
 }
 
 // Stop sends all goroutines the signal to exit and waits for them to exit.
-func (m *Monitor) Stop() error {
+func (m *Monitor) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&m.stopped, 0, 1) {
-		return fmt.Errorf("monitor already stopped")
+		return er.Errorf("monitor already stopped")
 	}
 
 	close(m.quit)
@@ -98,9 +97,9 @@ func (m *Monitor) Stop() error {
 // to be dealing with health checks that may block; if we wait group them, we
 // may wait forever. Ideally future health checks will allow callers to cancel
 // them early, and we can wait group this.
-func CreateCheck(checkFunc func() error) func() chan error {
-	return func() chan error {
-		errChan := make(chan error, 1)
+func CreateCheck(checkFunc func() er.R) func() chan er.R {
+	return func() chan er.R {
+		errChan := make(chan er.R, 1)
 		go func() {
 			errChan <- checkFunc()
 		}()
@@ -116,7 +115,7 @@ type Observation struct {
 
 	// Check runs the health check itself, returning an error channel that
 	// is expected to receive nil or an error.
-	Check func() chan error
+	Check func() chan er.R
 
 	// Interval is a ticker which triggers running our check function. This
 	// ticker must be started and stopped by the observation.
@@ -136,7 +135,7 @@ type Observation struct {
 }
 
 // NewObservation creates an observation.
-func NewObservation(name string, check func() error, interval,
+func NewObservation(name string, check func() er.R, interval,
 	timeout, backoff time.Duration, attempts int) *Observation {
 
 	return &Observation{
@@ -188,12 +187,12 @@ func (o *Observation) retryCheck(quit chan struct{}, shutdown shutdownFunc) {
 
 		// Wait for our check to return, timeout to elapse, or quit
 		// signal to be received.
-		var err error
+		var err er.R
 		select {
 		case err = <-o.Check():
 
 		case <-time.After(o.Timeout):
-			err = fmt.Errorf("health check: %v timed out after: "+
+			err = er.Errorf("health check: %v timed out after: "+
 				"%v", o, o.Timeout)
 
 		case <-quit:

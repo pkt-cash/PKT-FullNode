@@ -1,17 +1,18 @@
 package chanfitness
 
 import (
-	"errors"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,19 +25,19 @@ var testNow = time.Unix(1592465134, 0)
 func TestStartStoreError(t *testing.T) {
 	// Ok and erroring subscribe functions are defined here to de-clutter
 	// tests.
-	okSubscribeFunc := func() (subscribe.Subscription, error) {
+	okSubscribeFunc := func() (subscribe.Subscription, er.R) {
 		return newMockSubscription(t), nil
 	}
 
-	errSubscribeFunc := func() (subscribe.Subscription, error) {
-		return nil, errors.New("intentional test err")
+	errSubscribeFunc := func() (subscribe.Subscription, er.R) {
+		return nil, er.New("intentional test err")
 	}
 
 	tests := []struct {
 		name          string
-		ChannelEvents func() (subscribe.Subscription, error)
-		PeerEvents    func() (subscribe.Subscription, error)
-		GetChannels   func() ([]*channeldb.OpenChannel, error)
+		ChannelEvents func() (subscribe.Subscription, er.R)
+		PeerEvents    func() (subscribe.Subscription, er.R)
+		GetChannels   func() ([]*channeldb.OpenChannel, er.R)
 	}{
 		{
 			name:          "Channel events fail",
@@ -51,8 +52,8 @@ func TestStartStoreError(t *testing.T) {
 			name:          "Get open channels fails",
 			ChannelEvents: okSubscribeFunc,
 			PeerEvents:    okSubscribeFunc,
-			GetChannels: func() ([]*channeldb.OpenChannel, error) {
-				return nil, errors.New("intentional test err")
+			GetChannels: func() ([]*channeldb.OpenChannel, er.R) {
+				return nil, er.New("intentional test err")
 			},
 		},
 	}
@@ -99,7 +100,7 @@ func TestMonitorChannelEvents(t *testing.T) {
 	)
 
 	peer1, err := route.NewVertexFromBytes(pubKey.SerializeCompressed())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	t.Run("peer comes online after channel open", func(t *testing.T) {
 		gen := func(ctx *chanEventStoreTestCtx) {
@@ -262,7 +263,7 @@ func TestGetChanInfo(t *testing.T) {
 
 	// At this stage our channel has been open and online for an hour.
 	info, err := ctx.store.GetChanInfo(channel, peer)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour, info.Lifetime)
 	require.Equal(t, time.Hour, info.Uptime)
 
@@ -273,7 +274,7 @@ func TestGetChanInfo(t *testing.T) {
 	// should be the same, even though we've just processed an offline
 	// event.
 	info, err = ctx.store.GetChanInfo(channel, peer)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour, info.Lifetime)
 	require.Equal(t, time.Hour, info.Uptime)
 
@@ -284,7 +285,7 @@ func TestGetChanInfo(t *testing.T) {
 	ctx.clock.SetTime(now)
 
 	info, err = ctx.store.GetChanInfo(channel, peer)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, time.Hour*2, info.Lifetime)
 	require.Equal(t, time.Hour, info.Uptime)
 
@@ -320,7 +321,7 @@ func TestFlapCount(t *testing.T) {
 	// First, query for a peer that we have no record of in memory or on
 	// disk and confirm that we indicate that the peer was not found.
 	_, ts, err := ctx.store.FlapCount(peer1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Nil(t, ts)
 
 	// Send an online event for our peer.
@@ -328,14 +329,14 @@ func TestFlapCount(t *testing.T) {
 
 	// Assert that we now find a record of the peer with flap count = 1.
 	count, ts, err := ctx.store.FlapCount(peer1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, lastFlap, *ts)
 	require.Equal(t, 1, count)
 
 	// Make a request for our peer that not tracked in memory, but does
 	// have its flap count stored on disk.
 	count, ts, err = ctx.store.FlapCount(peer)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, lastFlap, *ts)
 	require.Equal(t, peerFlapCount, count)
 

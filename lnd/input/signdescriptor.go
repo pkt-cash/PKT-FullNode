@@ -2,10 +2,11 @@ package input
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
@@ -15,7 +16,7 @@ import (
 var (
 	// ErrTweakOverdose signals a SignDescriptor is invalid because both of its
 	// SingleTweak and DoubleTweak are non-nil.
-	ErrTweakOverdose = errors.New("sign descriptor should only have one tweak")
+	ErrTweakOverdose = Err.CodeWithDetail("ErrTweakOverdose", "sign descriptor should only have one tweak")
 )
 
 // SignDescriptor houses the necessary information required to successfully
@@ -86,17 +87,17 @@ type SignDescriptor struct {
 // NOTE: We assume the SigHashes and InputIndex fields haven't been assigned
 // yet, since that is usually done just before broadcast by the witness
 // generator.
-func WriteSignDescriptor(w io.Writer, sd *SignDescriptor) error {
-	err := binary.Write(w, binary.BigEndian, sd.KeyDesc.Family)
+func WriteSignDescriptor(w io.Writer, sd *SignDescriptor) er.R {
+	err := util.WriteBin(w, binary.BigEndian, sd.KeyDesc.Family)
 	if err != nil {
 		return err
 	}
-	err = binary.Write(w, binary.BigEndian, sd.KeyDesc.Index)
+	err = util.WriteBin(w, binary.BigEndian, sd.KeyDesc.Index)
 	if err != nil {
 		return err
 	}
 
-	err = binary.Write(w, binary.BigEndian, sd.KeyDesc.PubKey != nil)
+	err = util.WriteBin(w, binary.BigEndian, sd.KeyDesc.PubKey != nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func WriteSignDescriptor(w io.Writer, sd *SignDescriptor) error {
 
 	var scratch [4]byte
 	binary.BigEndian.PutUint32(scratch[:], uint32(sd.HashType))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
@@ -139,18 +140,18 @@ func WriteSignDescriptor(w io.Writer, sd *SignDescriptor) error {
 
 // ReadSignDescriptor deserializes a SignDescriptor struct from the passed
 // io.Reader stream.
-func ReadSignDescriptor(r io.Reader, sd *SignDescriptor) error {
-	err := binary.Read(r, binary.BigEndian, &sd.KeyDesc.Family)
+func ReadSignDescriptor(r io.Reader, sd *SignDescriptor) er.R {
+	err := util.ReadBin(r, binary.BigEndian, &sd.KeyDesc.Family)
 	if err != nil {
 		return err
 	}
-	err = binary.Read(r, binary.BigEndian, &sd.KeyDesc.Index)
+	err = util.ReadBin(r, binary.BigEndian, &sd.KeyDesc.Index)
 	if err != nil {
 		return err
 	}
 
 	var hasKey bool
-	err = binary.Read(r, binary.BigEndian, &hasKey)
+	err = util.ReadBin(r, binary.BigEndian, &hasKey)
 	if err != nil {
 		return err
 	}
@@ -202,7 +203,7 @@ func ReadSignDescriptor(r io.Reader, sd *SignDescriptor) error {
 
 	// Only one tweak should ever be set, fail if both are present.
 	if sd.SingleTweak != nil && sd.DoubleTweak != nil {
-		return ErrTweakOverdose
+		return ErrTweakOverdose.Default()
 	}
 
 	witnessScript, err := wire.ReadVarBytes(r, 0, 500, "witnessScript")
@@ -218,7 +219,7 @@ func ReadSignDescriptor(r io.Reader, sd *SignDescriptor) error {
 	sd.Output = txOut
 
 	var hashType [4]byte
-	if _, err := io.ReadFull(r, hashType[:]); err != nil {
+	if _, err := util.ReadFull(r, hashType[:]); err != nil {
 		return err
 	}
 	sd.HashType = params.SigHashType(binary.BigEndian.Uint32(hashType[:]))

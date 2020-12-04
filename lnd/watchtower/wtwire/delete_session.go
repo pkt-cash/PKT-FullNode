@@ -16,7 +16,7 @@ var _ Message = (*DeleteSession)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the wtwire.Message interface.
-func (m *DeleteSession) Decode(r io.Reader, pver uint32) error {
+func (m *DeleteSession) Decode(r io.Reader, pver uint32) er.R {
 	return nil
 }
 
@@ -24,7 +24,7 @@ func (m *DeleteSession) Decode(r io.Reader, pver uint32) error {
 // observing the specified protocol version.
 //
 // This is part of the wtwire.Message interface.
-func (m *DeleteSession) Encode(w io.Writer, pver uint32) error {
+func (m *DeleteSession) Encode(w io.Writer, pver uint32) er.R {
 	return nil
 }
 

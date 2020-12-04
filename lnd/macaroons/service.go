@@ -2,11 +2,11 @@ package macaroons
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
 	"os"
 	"path"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -22,11 +22,13 @@ var (
 	DBFilename = "macaroons.db"
 
 	// ErrMissingRootKeyID specifies the root key ID is missing.
-	ErrMissingRootKeyID = fmt.Errorf("missing root key ID")
+	ErrMissingRootKeyID = Err.CodeWithDetail("ErrMissingRootKeyID",
+		"missing root key ID")
 
 	// ErrDeletionForbidden is used when attempting to delete the
 	// DefaultRootKeyID or the encryptedKeyID.
-	ErrDeletionForbidden = fmt.Errorf("the specified ID cannot be deleted")
+	ErrDeletionForbidden = Err.CodeWithDetail("ErrDeletionForbidden",
+		"the specified ID cannot be deleted")
 
 	// PermissionEntityCustomURI is a special entity name for a permission
 	// that does not describe an entity:action pair but instead specifies a
@@ -46,7 +48,7 @@ type MacaroonValidator interface {
 	// caveat conditions are met. A non-nil error is returned if any of the
 	// checks fail.
 	ValidateMacaroon(ctx context.Context,
-		requiredPermissions []bakery.Op, fullMethod string) error
+		requiredPermissions []bakery.Op, fullMethod string) er.R
 }
 
 // Service encapsulates bakery.Bakery and adds a Close() method that zeroes the
@@ -76,7 +78,7 @@ type Service struct {
 // such as those for `allow`, `time-before`, `declared`, and `error` caveats
 // are registered automatically and don't need to be added.
 func NewService(dir, location string, statelessInit bool,
-	checks ...Checker) (*Service, error) {
+	checks ...Checker) (*Service, er.R) {
 
 	// Ensure that the path to the directory exists.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -151,15 +153,15 @@ func isRegistered(c *checkers.Checker, name string) bool {
 // make sure any macaroon passed for a request to that URI is valid and
 // satisfies all conditions.
 func (svc *Service) RegisterExternalValidator(fullMethod string,
-	validator MacaroonValidator) error {
+	validator MacaroonValidator) er.R {
 
 	if validator == nil {
-		return fmt.Errorf("validator cannot be nil")
+		return er.Errorf("validator cannot be nil")
 	}
 
 	_, ok := svc.externalValidators[fullMethod]
 	if ok {
-		return fmt.Errorf("external validator for method %s already "+
+		return er.Errorf("external validator for method %s already "+
 			"registered", fullMethod)
 	}
 
@@ -174,11 +176,11 @@ func (svc *Service) UnaryServerInterceptor(
 
 	return func(ctx context.Context, req interface{},
 		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler) (interface{}, error) {
+		handler grpc.UnaryHandler) (interface{}, er.R) {
 
 		uriPermissions, ok := permissionMap[info.FullMethod]
 		if !ok {
-			return nil, fmt.Errorf("%s: unknown permissions "+
+			return nil, er.Errorf("%s: unknown permissions "+
 				"required for method", info.FullMethod)
 		}
 
@@ -207,11 +209,11 @@ func (svc *Service) StreamServerInterceptor(
 	permissionMap map[string][]bakery.Op) grpc.StreamServerInterceptor {
 
 	return func(srv interface{}, ss grpc.ServerStream,
-		info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		info *grpc.StreamServerInfo, handler grpc.StreamHandler) er.R {
 
 		uriPermissions, ok := permissionMap[info.FullMethod]
 		if !ok {
-			return fmt.Errorf("%s: unknown permissions required "+
+			return er.Errorf("%s: unknown permissions required "+
 				"for method", info.FullMethod)
 		}
 
@@ -239,22 +241,22 @@ func (svc *Service) StreamServerInterceptor(
 // expect a macaroon to be encoded as request metadata using the key
 // "macaroon".
 func (svc *Service) ValidateMacaroon(ctx context.Context,
-	requiredPermissions []bakery.Op, fullMethod string) error {
+	requiredPermissions []bakery.Op, fullMethod string) er.R {
 
 	// Get macaroon bytes from context and unmarshal into macaroon.
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return fmt.Errorf("unable to get metadata from context")
+		return er.Errorf("unable to get metadata from context")
 	}
 	if len(md["macaroon"]) != 1 {
-		return fmt.Errorf("expected 1 macaroon, got %d",
+		return er.Errorf("expected 1 macaroon, got %d",
 			len(md["macaroon"]))
 	}
 
 	// With the macaroon obtained, we'll now decode the hex-string
 	// encoding, then unmarshal it from binary into its concrete struct
 	// representation.
-	macBytes, err := hex.DecodeString(md["macaroon"][0])
+	macBytes, err := util.DecodeHex(md["macaroon"][0])
 	if err != nil {
 		return err
 	}
@@ -287,13 +289,13 @@ func (svc *Service) ValidateMacaroon(ctx context.Context,
 
 // Close closes the database that underlies the RootKeyStore and zeroes the
 // encryption keys.
-func (svc *Service) Close() error {
+func (svc *Service) Close() er.R {
 	return svc.rks.Close()
 }
 
 // CreateUnlock calls the underlying root key store's CreateUnlock and returns
 // the result.
-func (svc *Service) CreateUnlock(password *[]byte) error {
+func (svc *Service) CreateUnlock(password *[]byte) er.R {
 	return svc.rks.CreateUnlock(password)
 }
 
@@ -305,13 +307,13 @@ func (svc *Service) CreateUnlock(password *[]byte) error {
 // RootKey(), that reads the context for rootKeyID.
 func (svc *Service) NewMacaroon(
 	ctx context.Context, rootKeyID []byte,
-	ops ...bakery.Op) (*bakery.Macaroon, error) {
+	ops ...bakery.Op) (*bakery.Macaroon, er.R) {
 
 	// Check rootKeyID is not called with nil or empty bytes. We want the
 	// caller to be aware the value of root key ID used, so we won't replace
 	// it with the DefaultRootKeyID if not specified.
 	if len(rootKeyID) == 0 {
-		return nil, ErrMissingRootKeyID
+		return nil, ErrMissingRootKeyID.Default()
 	}
 
 	// // Pass the root key ID to context.
@@ -322,25 +324,25 @@ func (svc *Service) NewMacaroon(
 
 // ListMacaroonIDs returns all the root key ID values except the value of
 // encryptedKeyID.
-func (svc *Service) ListMacaroonIDs(ctxt context.Context) ([][]byte, error) {
+func (svc *Service) ListMacaroonIDs(ctxt context.Context) ([][]byte, er.R) {
 	return svc.rks.ListMacaroonIDs(ctxt)
 }
 
 // DeleteMacaroonID removes one specific root key ID. If the root key ID is
 // found and deleted, it will be returned.
 func (svc *Service) DeleteMacaroonID(ctxt context.Context,
-	rootKeyID []byte) ([]byte, error) {
+	rootKeyID []byte) ([]byte, er.R) {
 	return svc.rks.DeleteMacaroonID(ctxt, rootKeyID)
 }
 
 // GenerateNewRootKey calls the underlying root key store's GenerateNewRootKey
 // and returns the result.
-func (svc *Service) GenerateNewRootKey() error {
+func (svc *Service) GenerateNewRootKey() er.R {
 	return svc.rks.GenerateNewRootKey()
 }
 
 // ChangePassword calls the underlying root key store's ChangePassword and
 // returns the result.
-func (svc *Service) ChangePassword(oldPw, newPw []byte) error {
+func (svc *Service) ChangePassword(oldPw, newPw []byte) er.R {
 	return svc.rks.ChangePassword(oldPw, newPw)
 }

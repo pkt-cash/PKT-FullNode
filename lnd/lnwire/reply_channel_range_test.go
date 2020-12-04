@@ -2,11 +2,11 @@ package lnwire
 
 import (
 	"bytes"
-	"encoding/hex"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // TestReplyChannelRangeUnsorted tests that decoding a ReplyChannelRange request
@@ -80,7 +80,7 @@ func TestReplyChannelRangeEmpty(t *testing.T) {
 			// new ReplyChannelRange message. It should be
 			// identical to the one created above.
 			var req2 ReplyChannelRange
-			b, _ := hex.DecodeString(test.encodedHex)
+			b, _ := util.DecodeHex(test.encodedHex)
 			err := req2.Decode(bytes.NewReader(b), 0)
 			if err != nil {
 				t.Fatalf("unable to decode req: %v", err)

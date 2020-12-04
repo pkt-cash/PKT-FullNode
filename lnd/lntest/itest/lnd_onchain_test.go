@@ -142,16 +142,16 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 	mineBlocks(t, net, 1, 2)
 
 	// The input used to CPFP should no longer be pending.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		req := &walletrpc.PendingSweepsRequest{}
 		ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 		resp, err := net.Bob.WalletKitClient.PendingSweeps(ctxt, req)
 		if err != nil {
-			return fmt.Errorf("unable to retrieve bob's pending "+
+			return er.Errorf("unable to retrieve bob's pending "+
 				"sweeps: %v", err)
 		}
 		if len(resp.PendingSweeps) != 0 {
-			return fmt.Errorf("expected 0 pending sweeps, found %d",
+			return er.Errorf("expected 0 pending sweeps, found %d",
 				len(resp.PendingSweeps))
 		}
 		return nil

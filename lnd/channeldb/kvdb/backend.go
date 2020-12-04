@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb" // Import to register backend.
 )
 
@@ -68,14 +69,14 @@ type BoltBackendConfig struct {
 
 // GetBoltBackend opens (or creates if doesn't exits) a bbolt backed database
 // and returns a kvdb.Backend wrapping it.
-func GetBoltBackend(cfg *BoltBackendConfig) (Backend, error) {
+func GetBoltBackend(cfg *BoltBackendConfig) (Backend, er.R) {
 	dbFilePath := filepath.Join(cfg.DBPath, cfg.DBFileName)
 
 	// Is this a new database?
 	if !fileExists(dbFilePath) {
 		if !fileExists(cfg.DBPath) {
 			if err := os.MkdirAll(cfg.DBPath, 0700); err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 		}
 
@@ -96,12 +97,12 @@ func GetBoltBackend(cfg *BoltBackendConfig) (Backend, error) {
 // compactAndSwap will attempt to write a new temporary DB file to disk with
 // the compacted database content, then atomically swap (via rename) the old
 // file for the new file by updating the name of the new file to the old.
-func compactAndSwap(cfg *BoltBackendConfig) error {
+func compactAndSwap(cfg *BoltBackendConfig) er.R {
 	sourceName := cfg.DBFileName
 
 	// If the main DB file isn't set, then we can't proceed.
 	if sourceName == "" {
-		return fmt.Errorf("cannot compact DB with empty name")
+		return er.Errorf("cannot compact DB with empty name")
 	}
 	sourceFilePath := filepath.Join(cfg.DBPath, sourceName)
 	tempDestFilePath := filepath.Join(cfg.DBPath, DefaultTempDBFileName)
@@ -110,7 +111,7 @@ func compactAndSwap(cfg *BoltBackendConfig) error {
 	// occurred and possibly skip compacting it again now.
 	lastCompactionDate, err := lastCompactionDate(sourceFilePath)
 	if err != nil {
-		return fmt.Errorf("cannot determine last compaction date of "+
+		return er.Errorf("cannot determine last compaction date of "+
 			"source DB file: %v", err)
 	}
 	compactAge := time.Since(lastCompactionDate)
@@ -132,19 +133,19 @@ func compactAndSwap(cfg *BoltBackendConfig) error {
 
 		err = os.Remove(tempDestFilePath)
 		if err != nil {
-			return fmt.Errorf("unable to remove old temp DB file: "+
+			return er.Errorf("unable to remove old temp DB file: "+
 				"%v", err)
 		}
 	}
 
 	// Now that we know the staging area is clear, we'll create the new
 	// temporary DB file and close it before we write the new DB to it.
-	tempFile, err := os.Create(tempDestFilePath)
-	if err != nil {
-		return fmt.Errorf("unable to create temp DB file: %v", err)
+	tempFile, errr := os.Create(tempDestFilePath)
+	if errr != nil {
+		return er.Errorf("unable to create temp DB file: %v", errr)
 	}
 	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("unable to close file: %v", err)
+		return er.Errorf("unable to close file: %v", err)
 	}
 
 	// With the file created, we'll start the compaction and remove the
@@ -161,7 +162,7 @@ func compactAndSwap(cfg *BoltBackendConfig) error {
 	}
 	initialSize, newSize, err := c.execute()
 	if err != nil {
-		return fmt.Errorf("error during compact: %v", err)
+		return er.Errorf("error during compact: %v", err)
 	}
 
 	log.Infof("DB compaction of %v successful, %d -> %d bytes (gain=%.2fx)",
@@ -186,14 +187,14 @@ func compactAndSwap(cfg *BoltBackendConfig) error {
 	// Finally, we'll attempt to atomically rename the temporary file to
 	// the main back up file. If this succeeds, then we'll only have a
 	// single file on disk once this method exits.
-	return os.Rename(tempDestFilePath, sourceFilePath)
+	return er.E(os.Rename(tempDestFilePath, sourceFilePath))
 }
 
 // lastCompactionDate returns the date the given database file was last
 // compacted or a zero time.Time if no compaction was recorded before. The
 // compaction date is read from a file in the same directory and with the same
 // name as the DB file, but with the suffix ".last-compacted".
-func lastCompactionDate(dbFile string) (time.Time, error) {
+func lastCompactionDate(dbFile string) (time.Time, er.R) {
 	zeroTime := time.Unix(0, 0)
 
 	tsFile := fmt.Sprintf("%s%s", dbFile, LastCompactionFileNameSuffix)
@@ -203,7 +204,7 @@ func lastCompactionDate(dbFile string) (time.Time, error) {
 
 	tsBytes, err := ioutil.ReadFile(tsFile)
 	if err != nil {
-		return zeroTime, err
+		return zeroTime, er.E(err)
 	}
 
 	tsNano := byteOrder.Uint64(tsBytes)
@@ -213,12 +214,12 @@ func lastCompactionDate(dbFile string) (time.Time, error) {
 // updateLastCompactionDate stores the current time as a timestamp in a file
 // in the same directory and with the same name as the DB file, but with the
 // suffix ".last-compacted".
-func updateLastCompactionDate(dbFile string) error {
+func updateLastCompactionDate(dbFile string) er.R {
 	var tsBytes [8]byte
 	byteOrder.PutUint64(tsBytes[:], uint64(time.Now().UnixNano()))
 
 	tsFile := fmt.Sprintf("%s%s", dbFile, LastCompactionFileNameSuffix)
-	return ioutil.WriteFile(tsFile, tsBytes[:], 0600)
+	return er.E(ioutil.WriteFile(tsFile, tsBytes[:], 0600))
 }
 
 // GetTestBackend opens (or creates if doesn't exist) a bbolt or etcd
@@ -227,7 +228,7 @@ func updateLastCompactionDate(dbFile string) error {
 // on the TestBackend constant which is conditionally compiled with build tag.
 // The passed path is used to hold all db files, while the name is only used
 // for bbolt.
-func GetTestBackend(path, name string) (Backend, func(), error) {
+func GetTestBackend(path, name string) (Backend, func(), er.R) {
 	empty := func() {}
 
 	if TestBackend == BoltBackendName {
@@ -244,5 +245,5 @@ func GetTestBackend(path, name string) (Backend, func(), error) {
 		return GetEtcdTestBackend(path, name)
 	}
 
-	return nil, nil, fmt.Errorf("unknown backend")
+	return nil, nil, er.Errorf("unknown backend")
 }

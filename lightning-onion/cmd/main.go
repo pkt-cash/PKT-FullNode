@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 )
@@ -26,13 +27,13 @@ type OnionSpec struct {
 	Hops       []OnionHopSpec `json:"hops"`
 }
 
-func parseOnionSpec(spec OnionSpec) (*sphinx.PaymentPath, *btcec.PrivateKey, error) {
+func parseOnionSpec(spec OnionSpec) (*sphinx.PaymentPath, *btcec.PrivateKey, er.R) {
 	var path sphinx.PaymentPath
 	var binSessionKey []byte
-	var err error
+	var err er.R
 
 	if spec.SessionKey != "" {
-		binSessionKey, err = hex.DecodeString(spec.SessionKey)
+		binSessionKey, err = util.DecodeHex(spec.SessionKey)
 		if err != nil {
 			log.Fatalf("Unable to decode the sessionKey %v: %v\n", spec.SessionKey, err)
 		}
@@ -47,7 +48,7 @@ func parseOnionSpec(spec OnionSpec) (*sphinx.PaymentPath, *btcec.PrivateKey, err
 	sessionKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), binSessionKey)
 
 	for i, hop := range spec.Hops {
-		binKey, err := hex.DecodeString(hop.PublicKey)
+		binKey, err := util.DecodeHex(hop.PublicKey)
 		if err != nil || len(binKey) != 33 {
 			log.Fatalf("%s is not a valid hex pubkey %s", hop.PublicKey, err)
 		}
@@ -59,7 +60,7 @@ func parseOnionSpec(spec OnionSpec) (*sphinx.PaymentPath, *btcec.PrivateKey, err
 
 		path[i].NodePub = *pubkey
 
-		payload, err := hex.DecodeString(hop.Payload)
+		payload, err := util.DecodeHex(hop.Payload)
 		if err != nil {
 			log.Fatalf("%s is not a valid hex payload %s",
 				hop.Payload, err)
@@ -91,13 +92,13 @@ func main() {
 	} else if args[1] == "generate" {
 		var spec OnionSpec
 
-		jsonSpec, err := ioutil.ReadFile(args[2])
-		if err != nil {
-			log.Fatalf("Unable to read JSON onion spec from file %v: %v", args[2], err)
+		jsonSpec, errr := ioutil.ReadFile(args[2])
+		if errr != nil {
+			log.Fatalf("Unable to read JSON onion spec from file %v: %v", args[2], errr)
 		}
 
-		if err := json.Unmarshal(jsonSpec, &spec); err != nil {
-			log.Fatalf("Unable to parse JSON onion spec: %v", err)
+		if errr := json.Unmarshal(jsonSpec, &spec); errr != nil {
+			log.Fatalf("Unable to parse JSON onion spec: %v", errr)
 		}
 
 		path, sessionKey, err := parseOnionSpec(spec)
@@ -121,13 +122,13 @@ func main() {
 
 		fmt.Printf("%x\n", w.Bytes())
 	} else if args[1] == "decode" {
-		binKey, err := hex.DecodeString(args[2])
+		binKey, err := util.DecodeHex(args[2])
 		if len(binKey) != 32 || err != nil {
 			log.Fatalf("Argument not a valid hex private key")
 		}
 
 		hexBytes, _ := ioutil.ReadAll(os.Stdin)
-		binMsg, err := hex.DecodeString(strings.TrimSpace(string(hexBytes)))
+		binMsg, err := util.DecodeHex(strings.TrimSpace(string(hexBytes)))
 		if err != nil {
 			log.Fatalf("Error decoding message: %s", err)
 		}

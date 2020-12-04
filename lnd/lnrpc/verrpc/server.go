@@ -25,14 +25,14 @@ type Server struct{}
 // Start launches any helper goroutines required for the rpcServer to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	return nil
 }
 
@@ -49,7 +49,7 @@ func (s *Server) Name() string {
 // is called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	RegisterVersionerServer(grpcServer, s)
 
 	log.Debugf("Versioner RPC server successfully registered with root " +
@@ -64,7 +64,7 @@ func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (s *Server) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -82,7 +82,7 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 
 // GetVersion returns information about the compiled binary.
 func (s *Server) GetVersion(_ context.Context,
-	_ *VersionRequest) (*Version, error) {
+	_ *VersionRequest) (*Version, er.R) {
 
 	return &Version{
 		Commit:        build.Commit,

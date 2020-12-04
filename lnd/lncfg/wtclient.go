@@ -20,7 +20,7 @@ type WtClient struct {
 // Validate ensures the user has provided a valid configuration.
 //
 // NOTE: Part of the Validator interface.
-func (c *WtClient) Validate() error {
+func (c *WtClient) Validate() er.R {
 	// TODO(wilmer): remove in v0.9.0 release.
 	if len(c.PrivateTowerURIs) > 0 {
 		fmt.Println("The `wtclient.private-tower-uris` option has " +

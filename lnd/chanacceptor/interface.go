@@ -1,10 +1,9 @@
 package chanacceptor
 
 import (
-	"errors"
-
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -12,7 +11,7 @@ var (
 	// errChannelRejected is returned when the rpc channel acceptor rejects
 	// a channel due to acceptor timeout, shutdown, or because no custom
 	// error value is available when the channel was rejected.
-	errChannelRejected = errors.New("channel rejected")
+	errChannelRejected = er.GenericErrorType.CodeWithDetail("errChannelRejected", "channel rejected")
 )
 
 // ChannelAcceptRequest is a struct containing the requesting node's public key
@@ -69,7 +68,7 @@ type ChannelAcceptResponse struct {
 // a rejection) so that the error will be whitelisted and delivered to the
 // initiating peer. Accepted channels simply return a response containing a nil
 // error.
-func NewChannelAcceptResponse(accept bool, acceptErr error,
+func NewChannelAcceptResponse(accept bool, acceptErr er.R,
 	upfrontShutdown lnwire.DeliveryAddress, csvDelay, htlcLimit,
 	minDepth uint16, reserve btcutil.Amount, inFlight,
 	minHtlcIn lnwire.MilliSatoshi) *ChannelAcceptResponse {
@@ -92,11 +91,11 @@ func NewChannelAcceptResponse(accept bool, acceptErr error,
 
 	// Use a generic error when no custom error is provided.
 	if acceptErr == nil {
-		acceptErr = errChannelRejected
+		acceptErr = errChannelRejected.Default()
 	}
 
 	resp.ChanAcceptError = ChanAcceptError{
-		error: acceptErr,
+		R: acceptErr,
 	}
 
 	return resp
@@ -105,7 +104,7 @@ func NewChannelAcceptResponse(accept bool, acceptErr error,
 // RejectChannel returns a boolean that indicates whether we should reject the
 // channel.
 func (c *ChannelAcceptResponse) RejectChannel() bool {
-	return c.error != nil
+	return c.R != nil
 }
 
 // ChannelAcceptor is an interface that represents  a predicate on the data

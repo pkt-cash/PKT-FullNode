@@ -1,10 +1,9 @@
 package routing
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -13,7 +12,7 @@ import (
 )
 
 type mockPaymentAttemptDispatcher struct {
-	onPayment func(firstHop lnwire.ShortChannelID) ([32]byte, error)
+	onPayment func(firstHop lnwire.ShortChannelID) ([32]byte, er.R)
 	results   map[uint64]*htlcswitch.PaymentResult
 
 	sync.Mutex
@@ -23,7 +22,7 @@ var _ PaymentAttemptDispatcher = (*mockPaymentAttemptDispatcher)(nil)
 
 func (m *mockPaymentAttemptDispatcher) SendHTLC(firstHop lnwire.ShortChannelID,
 	pid uint64,
-	_ *lnwire.UpdateAddHTLC) error {
+	_ *lnwire.UpdateAddHTLC) er.R {
 
 	if m.onPayment == nil {
 		return nil
@@ -56,7 +55,7 @@ func (m *mockPaymentAttemptDispatcher) SendHTLC(firstHop lnwire.ShortChannelID,
 
 func (m *mockPaymentAttemptDispatcher) GetPaymentResult(paymentID uint64,
 	_ lntypes.Hash, _ htlcswitch.ErrorDecrypter) (
-	<-chan *htlcswitch.PaymentResult, error) {
+	<-chan *htlcswitch.PaymentResult, er.R) {
 
 	c := make(chan *htlcswitch.PaymentResult, 1)
 
@@ -65,14 +64,14 @@ func (m *mockPaymentAttemptDispatcher) GetPaymentResult(paymentID uint64,
 	m.Unlock()
 
 	if !ok {
-		return nil, htlcswitch.ErrPaymentIDNotFound
+		return nil, htlcswitch.ErrPaymentIDNotFound.Default()
 	}
 	c <- res
 
 	return c, nil
 
 }
-func (m *mockPaymentAttemptDispatcher) CleanStore(map[uint64]struct{}) error {
+func (m *mockPaymentAttemptDispatcher) CleanStore(map[uint64]struct{}) er.R {
 	return nil
 }
 
@@ -89,7 +88,7 @@ type mockPaymentSessionSource struct {
 var _ PaymentSessionSource = (*mockPaymentSessionSource)(nil)
 
 func (m *mockPaymentSessionSource) NewPaymentSession(
-	_ *LightningPayment) (PaymentSession, error) {
+	_ *LightningPayment) (PaymentSession, er.R) {
 
 	return &mockPaymentSession{m.routes}, nil
 }
@@ -110,7 +109,7 @@ var _ MissionController = (*mockMissionControl)(nil)
 
 func (m *mockMissionControl) ReportPaymentFail(paymentID uint64, rt *route.Route,
 	failureSourceIdx *int, failure lnwire.FailureMessage) (
-	*channeldb.FailureReason, error) {
+	*channeldb.FailureReason, er.R) {
 
 	// Report a permanent failure if this is an error caused
 	// by incorrect details.
@@ -123,7 +122,7 @@ func (m *mockMissionControl) ReportPaymentFail(paymentID uint64, rt *route.Route
 }
 
 func (m *mockMissionControl) ReportPaymentSuccess(paymentID uint64,
-	rt *route.Route) error {
+	rt *route.Route) er.R {
 
 	return nil
 }
@@ -141,7 +140,7 @@ type mockPaymentSession struct {
 var _ PaymentSession = (*mockPaymentSession)(nil)
 
 func (m *mockPaymentSession) RequestRoute(_, _ lnwire.MilliSatoshi,
-	_, height uint32) (*route.Route, error) {
+	_, height uint32) (*route.Route, er.R) {
 
 	if len(m.routes) == 0 {
 		return nil, errNoPathFound
@@ -164,19 +163,19 @@ var _ PaymentAttemptDispatcher = (*mockPayer)(nil)
 
 func (m *mockPayer) SendHTLC(_ lnwire.ShortChannelID,
 	paymentID uint64,
-	_ *lnwire.UpdateAddHTLC) error {
+	_ *lnwire.UpdateAddHTLC) er.R {
 
 	select {
 	case res := <-m.sendResult:
 		return res
 	case <-m.quit:
-		return fmt.Errorf("test quitting")
+		return er.Errorf("test quitting")
 	}
 
 }
 
 func (m *mockPayer) GetPaymentResult(paymentID uint64, _ lntypes.Hash,
-	_ htlcswitch.ErrorDecrypter) (<-chan *htlcswitch.PaymentResult, error) {
+	_ htlcswitch.ErrorDecrypter) (<-chan *htlcswitch.PaymentResult, er.R) {
 
 	select {
 	case res := <-m.paymentResult:
@@ -186,11 +185,11 @@ func (m *mockPayer) GetPaymentResult(paymentID uint64, _ lntypes.Hash,
 	case err := <-m.paymentResultErr:
 		return nil, err
 	case <-m.quit:
-		return nil, fmt.Errorf("test quitting")
+		return nil, er.Errorf("test quitting")
 	}
 }
 
-func (m *mockPayer) CleanStore(pids map[uint64]struct{}) error {
+func (m *mockPayer) CleanStore(pids map[uint64]struct{}) er.R {
 	return nil
 }
 
@@ -245,7 +244,7 @@ func makeMockControlTower() *mockControlTower {
 }
 
 func (m *mockControlTower) InitPayment(phash lntypes.Hash,
-	c *channeldb.PaymentCreationInfo) error {
+	c *channeldb.PaymentCreationInfo) er.R {
 
 	m.Lock()
 	defer m.Unlock()
@@ -256,7 +255,7 @@ func (m *mockControlTower) InitPayment(phash lntypes.Hash,
 
 	// Don't allow re-init a successful payment.
 	if _, ok := m.successful[phash]; ok {
-		return channeldb.ErrAlreadyPaid
+		return channeldb.ErrAlreadyPaid.Default()
 	}
 
 	_, failed := m.failed[phash]
@@ -264,7 +263,7 @@ func (m *mockControlTower) InitPayment(phash lntypes.Hash,
 
 	// If the payment is known, only allow re-init if failed.
 	if ok && !failed {
-		return channeldb.ErrPaymentInFlight
+		return channeldb.ErrPaymentInFlight.Default()
 	}
 
 	delete(m.failed, phash)
@@ -276,7 +275,7 @@ func (m *mockControlTower) InitPayment(phash lntypes.Hash,
 }
 
 func (m *mockControlTower) RegisterAttempt(phash lntypes.Hash,
-	a *channeldb.HTLCAttemptInfo) error {
+	a *channeldb.HTLCAttemptInfo) er.R {
 
 	m.Lock()
 	defer m.Unlock()
@@ -287,16 +286,16 @@ func (m *mockControlTower) RegisterAttempt(phash lntypes.Hash,
 
 	// Cannot register attempts for successful or failed payments.
 	if _, ok := m.successful[phash]; ok {
-		return channeldb.ErrPaymentAlreadySucceeded
+		return channeldb.ErrPaymentAlreadySucceeded.Default()
 	}
 
 	if _, ok := m.failed[phash]; ok {
-		return channeldb.ErrPaymentAlreadyFailed
+		return channeldb.ErrPaymentAlreadyFailed.Default()
 	}
 
 	p, ok := m.payments[phash]
 	if !ok {
-		return channeldb.ErrPaymentNotInitiated
+		return channeldb.ErrPaymentNotInitiated.Default()
 	}
 
 	p.attempts = append(p.attempts, channeldb.HTLCAttempt{
@@ -309,7 +308,7 @@ func (m *mockControlTower) RegisterAttempt(phash lntypes.Hash,
 
 func (m *mockControlTower) SettleAttempt(phash lntypes.Hash,
 	pid uint64, settleInfo *channeldb.HTLCSettleInfo) (
-	*channeldb.HTLCAttempt, error) {
+	*channeldb.HTLCAttempt, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
@@ -321,7 +320,7 @@ func (m *mockControlTower) SettleAttempt(phash lntypes.Hash,
 	// Only allow setting attempts if the payment is known.
 	p, ok := m.payments[phash]
 	if !ok {
-		return nil, channeldb.ErrPaymentNotInitiated
+		return nil, channeldb.ErrPaymentNotInitiated.Default()
 	}
 
 	// Find the attempt with this pid, and set the settle info.
@@ -331,10 +330,10 @@ func (m *mockControlTower) SettleAttempt(phash lntypes.Hash,
 		}
 
 		if a.Settle != nil {
-			return nil, channeldb.ErrAttemptAlreadySettled
+			return nil, channeldb.ErrAttemptAlreadySettled.Default()
 		}
 		if a.Failure != nil {
-			return nil, channeldb.ErrAttemptAlreadyFailed
+			return nil, channeldb.ErrAttemptAlreadyFailed.Default()
 		}
 
 		p.attempts[i].Settle = settleInfo
@@ -346,11 +345,11 @@ func (m *mockControlTower) SettleAttempt(phash lntypes.Hash,
 		}, nil
 	}
 
-	return nil, fmt.Errorf("pid not found")
+	return nil, er.Errorf("pid not found")
 }
 
 func (m *mockControlTower) FailAttempt(phash lntypes.Hash, pid uint64,
-	failInfo *channeldb.HTLCFailInfo) (*channeldb.HTLCAttempt, error) {
+	failInfo *channeldb.HTLCFailInfo) (*channeldb.HTLCAttempt, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
@@ -362,7 +361,7 @@ func (m *mockControlTower) FailAttempt(phash lntypes.Hash, pid uint64,
 	// Only allow failing attempts if the payment is known.
 	p, ok := m.payments[phash]
 	if !ok {
-		return nil, channeldb.ErrPaymentNotInitiated
+		return nil, channeldb.ErrPaymentNotInitiated.Default()
 	}
 
 	// Find the attempt with this pid, and set the failure info.
@@ -372,10 +371,10 @@ func (m *mockControlTower) FailAttempt(phash lntypes.Hash, pid uint64,
 		}
 
 		if a.Settle != nil {
-			return nil, channeldb.ErrAttemptAlreadySettled
+			return nil, channeldb.ErrAttemptAlreadySettled.Default()
 		}
 		if a.Failure != nil {
-			return nil, channeldb.ErrAttemptAlreadyFailed
+			return nil, channeldb.ErrAttemptAlreadyFailed.Default()
 		}
 
 		p.attempts[i].Failure = failInfo
@@ -384,11 +383,11 @@ func (m *mockControlTower) FailAttempt(phash lntypes.Hash, pid uint64,
 		}, nil
 	}
 
-	return nil, fmt.Errorf("pid not found")
+	return nil, er.Errorf("pid not found")
 }
 
 func (m *mockControlTower) Fail(phash lntypes.Hash,
-	reason channeldb.FailureReason) error {
+	reason channeldb.FailureReason) er.R {
 
 	m.Lock()
 	defer m.Unlock()
@@ -399,7 +398,7 @@ func (m *mockControlTower) Fail(phash lntypes.Hash,
 
 	// Payment must be known.
 	if _, ok := m.payments[phash]; !ok {
-		return channeldb.ErrPaymentNotInitiated
+		return channeldb.ErrPaymentNotInitiated.Default()
 	}
 
 	m.failed[phash] = reason
@@ -408,14 +407,14 @@ func (m *mockControlTower) Fail(phash lntypes.Hash,
 }
 
 func (m *mockControlTower) FetchPayment(phash lntypes.Hash) (
-	*channeldb.MPPayment, error) {
+	*channeldb.MPPayment, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
 
 	p, ok := m.payments[phash]
 	if !ok {
-		return nil, channeldb.ErrPaymentNotInitiated
+		return nil, channeldb.ErrPaymentNotInitiated.Default()
 	}
 
 	mp := &channeldb.MPPayment{
@@ -434,7 +433,7 @@ func (m *mockControlTower) FetchPayment(phash lntypes.Hash) (
 }
 
 func (m *mockControlTower) FetchInFlightPayments() (
-	[]*channeldb.InFlightPayment, error) {
+	[]*channeldb.InFlightPayment, er.R) {
 
 	m.Lock()
 	defer m.Unlock()
@@ -464,7 +463,7 @@ func (m *mockControlTower) FetchInFlightPayments() (
 }
 
 func (m *mockControlTower) SubscribePayment(paymentHash lntypes.Hash) (
-	*ControlTowerSubscriber, error) {
+	*ControlTowerSubscriber, er.R) {
 
-	return nil, errors.New("not implemented")
+	return nil, er.New("not implemented")
 }

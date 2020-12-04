@@ -11,6 +11,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 )
 
@@ -38,14 +40,14 @@ var (
 	testLegacyRouteNumHops = 20
 )
 
-func newTestRoute(numHops int) ([]*Router, *PaymentPath, *[]HopData, *OnionPacket, error) {
+func newTestRoute(numHops int) ([]*Router, *PaymentPath, *[]HopData, *OnionPacket, er.R) {
 	nodes := make([]*Router, numHops)
 
 	// Create numHops random sphinx nodes.
 	for i := 0; i < len(nodes); i++ {
 		privKey, err := btcec.NewPrivateKey(btcec.S256())
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("Unable to "+
+			return nil, nil, nil, nil, er.Errorf("Unable to "+
 				"generate random key for sphinx node: %v", err)
 		}
 
@@ -68,7 +70,7 @@ func newTestRoute(numHops int) ([]*Router, *PaymentPath, *[]HopData, *OnionPacke
 
 		hopPayload, err := NewHopPayload(&hopData, nil)
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("unable to "+
+			return nil, nil, nil, nil, er.Errorf("unable to "+
 				"create new hop payload: %v", err)
 		}
 
@@ -88,7 +90,7 @@ func newTestRoute(numHops int) ([]*Router, *PaymentPath, *[]HopData, *OnionPacke
 		&route, sessionKey, nil, DeterministicPacketFiller,
 	)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("unable to create "+
+		return nil, nil, nil, nil, er.Errorf("unable to create "+
 			"forwarding message: %#v", err)
 	}
 
@@ -96,7 +98,7 @@ func newTestRoute(numHops int) ([]*Router, *PaymentPath, *[]HopData, *OnionPacke
 	for i := 0; i < len(nodes); i++ {
 		hopData, err := route[i].HopPayload.HopData()
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("unable to "+
+			return nil, nil, nil, nil, er.Errorf("unable to "+
 				"gen hop data: %v", err)
 		}
 
@@ -112,7 +114,7 @@ func TestBolt4Packet(t *testing.T) {
 		hopsData []HopData
 	)
 	for i, pubKeyHex := range bolt4PubKeys {
-		pubKeyBytes, err := hex.DecodeString(pubKeyHex)
+		pubKeyBytes, err := util.DecodeHex(pubKeyHex)
 		if err != nil {
 			t.Fatalf("unable to decode BOLT 4 hex pubkey #%d: %v", i, err)
 		}
@@ -142,7 +144,7 @@ func TestBolt4Packet(t *testing.T) {
 		}
 	}
 
-	finalPacket, err := hex.DecodeString(bolt4FinalPacketHex)
+	finalPacket, err := util.DecodeHex(bolt4FinalPacketHex)
 	if err != nil {
 		t.Fatalf("unable to decode BOLT 4 final onion packet from hex: "+
 			"%v", err)
@@ -279,7 +281,7 @@ func TestSphinxNodeRelpay(t *testing.T) {
 
 	// Now, force the node to process the packet a second time, this should
 	// fail with a detected replay error.
-	if _, err := nodes[0].ProcessOnionPacket(fwdMsg, nil, 1); err != ErrReplayedPacket {
+	if _, err := nodes[0].ProcessOnionPacket(fwdMsg, nil, 1); !ErrReplayedPacket.Is(err) {
 		t.Fatalf("sphinx packet replay should be rejected, instead error is %v", err)
 	}
 }
@@ -475,12 +477,12 @@ func TestSphinxEncodeDecode(t *testing.T) {
 }
 
 func newEOBRoute(numHops uint32,
-	eobMapping map[int]HopPayload) (*OnionPacket, []*Router, error) {
+	eobMapping map[int]HopPayload) (*OnionPacket, []*Router, er.R) {
 
 	nodes := make([]*Router, numHops)
 
 	if uint32(len(eobMapping)) != numHops {
-		return nil, nil, fmt.Errorf("must provide payload " +
+		return nil, nil, er.Errorf("must provide payload " +
 			"mapping for all hops")
 	}
 
@@ -489,7 +491,7 @@ func newEOBRoute(numHops uint32,
 	for i := 0; i < len(nodes); i++ {
 		privKey, err := btcec.NewPrivateKey(btcec.S256())
 		if err != nil {
-			return nil, nil, fmt.Errorf("Unable to generate "+
+			return nil, nil, er.Errorf("Unable to generate "+
 				"random key for sphinx node: %v", err)
 		}
 
@@ -546,7 +548,7 @@ func TestSphinxHopVariableSizedPayloads(t *testing.T) {
 	var testCases = []struct {
 		numNodes      uint32
 		eobMapping    map[int]HopPayload
-		expectedError error
+		expectedError *er.ErrorCode
 	}{
 		// A single hop route with a payload going to the last hop in
 		// the route. The payload is enough to fit into what would be
@@ -663,7 +665,8 @@ func TestSphinxHopVariableSizedPayloads(t *testing.T) {
 		nextPkt, routers, err := newEOBRoute(
 			testCase.numNodes, testCase.eobMapping,
 		)
-		if testCase.expectedError != err {
+		if err == nil && testCase.expectedError == nil {
+		} else if testCase.expectedError == nil || !testCase.expectedError.Is(err) {
 			t.Fatalf("#%v: unable to create eob "+
 				"route: %v", testCase, err)
 		}
@@ -808,9 +811,9 @@ func TestVariablePayloadOnion(t *testing.T) {
 	t.Parallel()
 
 	// First, we'll read out the raw JSOn file at the target location.
-	jsonBytes, err := ioutil.ReadFile(testFileName)
-	if err != nil {
-		t.Fatalf("unable to read json file: %v", err)
+	jsonBytes, errr := ioutil.ReadFile(testFileName)
+	if errr != nil {
+		t.Fatalf("unable to read json file: %v", errr)
 	}
 
 	// Once we have the raw file, we'll unpack it into our jsonTestCase
@@ -824,7 +827,7 @@ func TestVariablePayloadOnion(t *testing.T) {
 	// in this test case.
 	var route PaymentPath
 	for i, hop := range testCase.Generate.Hops {
-		pubKeyBytes, err := hex.DecodeString(hop.Pubkey)
+		pubKeyBytes, err := util.DecodeHex(hop.Pubkey)
 		if err != nil {
 			t.Fatalf("unable to decode pubkey: %v", err)
 		}
@@ -833,7 +836,7 @@ func TestVariablePayloadOnion(t *testing.T) {
 			t.Fatalf("unable to parse BOLT 4 pubkey #%d: %v", i, err)
 		}
 
-		payload, err := hex.DecodeString(hop.Payload)
+		payload, err := util.DecodeHex(hop.Payload)
 		if err != nil {
 			t.Fatalf("unable to decode payload: %v", err)
 		}
@@ -859,17 +862,17 @@ func TestVariablePayloadOnion(t *testing.T) {
 		}
 	}
 
-	finalPacket, err := hex.DecodeString(testCase.Onion)
+	finalPacket, err := util.DecodeHex(testCase.Onion)
 	if err != nil {
 		t.Fatalf("unable to decode packet: %v", err)
 	}
 
-	sessionKeyBytes, err := hex.DecodeString(testCase.Generate.SessionKey)
+	sessionKeyBytes, err := util.DecodeHex(testCase.Generate.SessionKey)
 	if err != nil {
 		t.Fatalf("unable to generate session key: %v", err)
 	}
 
-	associatedData, err := hex.DecodeString(testCase.Generate.AssociatedData)
+	associatedData, err := util.DecodeHex(testCase.Generate.AssociatedData)
 	if err != nil {
 		t.Fatalf("unable to decode AD: %v", err)
 	}

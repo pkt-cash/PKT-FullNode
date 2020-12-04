@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -57,10 +57,10 @@ func (*ConfRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{0}
 }
 
-func (m *ConfRequest) XXX_Unmarshal(b []byte) error {
+func (m *ConfRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ConfRequest.Unmarshal(m, b)
 }
-func (m *ConfRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ConfRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ConfRequest.Marshal(b, m, deterministic)
 }
 func (m *ConfRequest) XXX_Merge(src proto.Message) {
@@ -125,10 +125,10 @@ func (*ConfDetails) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{1}
 }
 
-func (m *ConfDetails) XXX_Unmarshal(b []byte) error {
+func (m *ConfDetails) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ConfDetails.Unmarshal(m, b)
 }
-func (m *ConfDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ConfDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ConfDetails.Marshal(b, m, deterministic)
 }
 func (m *ConfDetails) XXX_Merge(src proto.Message) {
@@ -184,10 +184,10 @@ func (*Reorg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{2}
 }
 
-func (m *Reorg) XXX_Unmarshal(b []byte) error {
+func (m *Reorg) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_Reorg.Unmarshal(m, b)
 }
-func (m *Reorg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Reorg) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_Reorg.Marshal(b, m, deterministic)
 }
 func (m *Reorg) XXX_Merge(src proto.Message) {
@@ -219,10 +219,10 @@ func (*ConfEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{3}
 }
 
-func (m *ConfEvent) XXX_Unmarshal(b []byte) error {
+func (m *ConfEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ConfEvent.Unmarshal(m, b)
 }
-func (m *ConfEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ConfEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ConfEvent.Marshal(b, m, deterministic)
 }
 func (m *ConfEvent) XXX_Merge(src proto.Message) {
@@ -299,10 +299,10 @@ func (*Outpoint) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{4}
 }
 
-func (m *Outpoint) XXX_Unmarshal(b []byte) error {
+func (m *Outpoint) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_Outpoint.Unmarshal(m, b)
 }
-func (m *Outpoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Outpoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_Outpoint.Marshal(b, m, deterministic)
 }
 func (m *Outpoint) XXX_Merge(src proto.Message) {
@@ -359,10 +359,10 @@ func (*SpendRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{5}
 }
 
-func (m *SpendRequest) XXX_Unmarshal(b []byte) error {
+func (m *SpendRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SpendRequest.Unmarshal(m, b)
 }
-func (m *SpendRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SpendRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SpendRequest.Marshal(b, m, deterministic)
 }
 func (m *SpendRequest) XXX_Merge(src proto.Message) {
@@ -421,10 +421,10 @@ func (*SpendDetails) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{6}
 }
 
-func (m *SpendDetails) XXX_Unmarshal(b []byte) error {
+func (m *SpendDetails) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SpendDetails.Unmarshal(m, b)
 }
-func (m *SpendDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SpendDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SpendDetails.Marshal(b, m, deterministic)
 }
 func (m *SpendDetails) XXX_Merge(src proto.Message) {
@@ -491,10 +491,10 @@ func (*SpendEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{7}
 }
 
-func (m *SpendEvent) XXX_Unmarshal(b []byte) error {
+func (m *SpendEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SpendEvent.Unmarshal(m, b)
 }
-func (m *SpendEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SpendEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SpendEvent.Marshal(b, m, deterministic)
 }
 func (m *SpendEvent) XXX_Merge(src proto.Message) {
@@ -571,10 +571,10 @@ func (*BlockEpoch) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b10e6f8a1c9d2638, []int{8}
 }
 
-func (m *BlockEpoch) XXX_Unmarshal(b []byte) error {
+func (m *BlockEpoch) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_BlockEpoch.Unmarshal(m, b)
 }
-func (m *BlockEpoch) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BlockEpoch) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_BlockEpoch.Marshal(b, m, deterministic)
 }
 func (m *BlockEpoch) XXX_Merge(src proto.Message) {
@@ -677,7 +677,7 @@ type ChainNotifierClient interface {
 	//A client can specify whether the confirmation request should be for a
 	//particular transaction by its hash or for an output script by specifying a
 	//zero hash.
-	RegisterConfirmationsNtfn(ctx context.Context, in *ConfRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterConfirmationsNtfnClient, error)
+	RegisterConfirmationsNtfn(ctx context.Context, in *ConfRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterConfirmationsNtfnClient, er.R)
 	//
 	//RegisterSpendNtfn is a synchronous response-streaming RPC that registers an
 	//intent for a client to be notification once a spend request has been spent
@@ -685,7 +685,7 @@ type ChainNotifierClient interface {
 	//
 	//A client can specify whether the spend request should be for a particular
 	//outpoint  or for an output script by specifying a zero outpoint.
-	RegisterSpendNtfn(ctx context.Context, in *SpendRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterSpendNtfnClient, error)
+	RegisterSpendNtfn(ctx context.Context, in *SpendRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterSpendNtfnClient, er.R)
 	//
 	//RegisterBlockEpochNtfn is a synchronous response-streaming RPC that
 	//registers an intent for a client to be notified of blocks in the chain. The
@@ -696,7 +696,7 @@ type ChainNotifierClient interface {
 	//A client can also request a historical backlog of blocks from a particular
 	//point. This allows clients to be idempotent by ensuring that they do not
 	//missing processing a single block within the chain.
-	RegisterBlockEpochNtfn(ctx context.Context, in *BlockEpoch, opts ...grpc.CallOption) (ChainNotifier_RegisterBlockEpochNtfnClient, error)
+	RegisterBlockEpochNtfn(ctx context.Context, in *BlockEpoch, opts ...grpc.CallOption) (ChainNotifier_RegisterBlockEpochNtfnClient, er.R)
 }
 
 type chainNotifierClient struct {
@@ -707,7 +707,7 @@ func NewChainNotifierClient(cc *grpc.ClientConn) ChainNotifierClient {
 	return &chainNotifierClient{cc}
 }
 
-func (c *chainNotifierClient) RegisterConfirmationsNtfn(ctx context.Context, in *ConfRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterConfirmationsNtfnClient, error) {
+func (c *chainNotifierClient) RegisterConfirmationsNtfn(ctx context.Context, in *ConfRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterConfirmationsNtfnClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_ChainNotifier_serviceDesc.Streams[0], "/chainrpc.ChainNotifier/RegisterConfirmationsNtfn", opts...)
 	if err != nil {
 		return nil, err
@@ -723,7 +723,7 @@ func (c *chainNotifierClient) RegisterConfirmationsNtfn(ctx context.Context, in 
 }
 
 type ChainNotifier_RegisterConfirmationsNtfnClient interface {
-	Recv() (*ConfEvent, error)
+	Recv() (*ConfEvent, er.R)
 	grpc.ClientStream
 }
 
@@ -731,7 +731,7 @@ type chainNotifierRegisterConfirmationsNtfnClient struct {
 	grpc.ClientStream
 }
 
-func (x *chainNotifierRegisterConfirmationsNtfnClient) Recv() (*ConfEvent, error) {
+func (x *chainNotifierRegisterConfirmationsNtfnClient) Recv() (*ConfEvent, er.R) {
 	m := new(ConfEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -739,7 +739,7 @@ func (x *chainNotifierRegisterConfirmationsNtfnClient) Recv() (*ConfEvent, error
 	return m, nil
 }
 
-func (c *chainNotifierClient) RegisterSpendNtfn(ctx context.Context, in *SpendRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterSpendNtfnClient, error) {
+func (c *chainNotifierClient) RegisterSpendNtfn(ctx context.Context, in *SpendRequest, opts ...grpc.CallOption) (ChainNotifier_RegisterSpendNtfnClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_ChainNotifier_serviceDesc.Streams[1], "/chainrpc.ChainNotifier/RegisterSpendNtfn", opts...)
 	if err != nil {
 		return nil, err
@@ -755,7 +755,7 @@ func (c *chainNotifierClient) RegisterSpendNtfn(ctx context.Context, in *SpendRe
 }
 
 type ChainNotifier_RegisterSpendNtfnClient interface {
-	Recv() (*SpendEvent, error)
+	Recv() (*SpendEvent, er.R)
 	grpc.ClientStream
 }
 
@@ -763,7 +763,7 @@ type chainNotifierRegisterSpendNtfnClient struct {
 	grpc.ClientStream
 }
 
-func (x *chainNotifierRegisterSpendNtfnClient) Recv() (*SpendEvent, error) {
+func (x *chainNotifierRegisterSpendNtfnClient) Recv() (*SpendEvent, er.R) {
 	m := new(SpendEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -771,7 +771,7 @@ func (x *chainNotifierRegisterSpendNtfnClient) Recv() (*SpendEvent, error) {
 	return m, nil
 }
 
-func (c *chainNotifierClient) RegisterBlockEpochNtfn(ctx context.Context, in *BlockEpoch, opts ...grpc.CallOption) (ChainNotifier_RegisterBlockEpochNtfnClient, error) {
+func (c *chainNotifierClient) RegisterBlockEpochNtfn(ctx context.Context, in *BlockEpoch, opts ...grpc.CallOption) (ChainNotifier_RegisterBlockEpochNtfnClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_ChainNotifier_serviceDesc.Streams[2], "/chainrpc.ChainNotifier/RegisterBlockEpochNtfn", opts...)
 	if err != nil {
 		return nil, err
@@ -787,7 +787,7 @@ func (c *chainNotifierClient) RegisterBlockEpochNtfn(ctx context.Context, in *Bl
 }
 
 type ChainNotifier_RegisterBlockEpochNtfnClient interface {
-	Recv() (*BlockEpoch, error)
+	Recv() (*BlockEpoch, er.R)
 	grpc.ClientStream
 }
 
@@ -795,7 +795,7 @@ type chainNotifierRegisterBlockEpochNtfnClient struct {
 	grpc.ClientStream
 }
 
-func (x *chainNotifierRegisterBlockEpochNtfnClient) Recv() (*BlockEpoch, error) {
+func (x *chainNotifierRegisterBlockEpochNtfnClient) Recv() (*BlockEpoch, er.R) {
 	m := new(BlockEpoch)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -813,7 +813,7 @@ type ChainNotifierServer interface {
 	//A client can specify whether the confirmation request should be for a
 	//particular transaction by its hash or for an output script by specifying a
 	//zero hash.
-	RegisterConfirmationsNtfn(*ConfRequest, ChainNotifier_RegisterConfirmationsNtfnServer) error
+	RegisterConfirmationsNtfn(*ConfRequest, ChainNotifier_RegisterConfirmationsNtfnServer) er.R
 	//
 	//RegisterSpendNtfn is a synchronous response-streaming RPC that registers an
 	//intent for a client to be notification once a spend request has been spent
@@ -821,7 +821,7 @@ type ChainNotifierServer interface {
 	//
 	//A client can specify whether the spend request should be for a particular
 	//outpoint  or for an output script by specifying a zero outpoint.
-	RegisterSpendNtfn(*SpendRequest, ChainNotifier_RegisterSpendNtfnServer) error
+	RegisterSpendNtfn(*SpendRequest, ChainNotifier_RegisterSpendNtfnServer) er.R
 	//
 	//RegisterBlockEpochNtfn is a synchronous response-streaming RPC that
 	//registers an intent for a client to be notified of blocks in the chain. The
@@ -832,20 +832,20 @@ type ChainNotifierServer interface {
 	//A client can also request a historical backlog of blocks from a particular
 	//point. This allows clients to be idempotent by ensuring that they do not
 	//missing processing a single block within the chain.
-	RegisterBlockEpochNtfn(*BlockEpoch, ChainNotifier_RegisterBlockEpochNtfnServer) error
+	RegisterBlockEpochNtfn(*BlockEpoch, ChainNotifier_RegisterBlockEpochNtfnServer) er.R
 }
 
 // UnimplementedChainNotifierServer can be embedded to have forward compatible implementations.
 type UnimplementedChainNotifierServer struct {
 }
 
-func (*UnimplementedChainNotifierServer) RegisterConfirmationsNtfn(req *ConfRequest, srv ChainNotifier_RegisterConfirmationsNtfnServer) error {
+func (*UnimplementedChainNotifierServer) RegisterConfirmationsNtfn(req *ConfRequest, srv ChainNotifier_RegisterConfirmationsNtfnServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method RegisterConfirmationsNtfn not implemented")
 }
-func (*UnimplementedChainNotifierServer) RegisterSpendNtfn(req *SpendRequest, srv ChainNotifier_RegisterSpendNtfnServer) error {
+func (*UnimplementedChainNotifierServer) RegisterSpendNtfn(req *SpendRequest, srv ChainNotifier_RegisterSpendNtfnServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method RegisterSpendNtfn not implemented")
 }
-func (*UnimplementedChainNotifierServer) RegisterBlockEpochNtfn(req *BlockEpoch, srv ChainNotifier_RegisterBlockEpochNtfnServer) error {
+func (*UnimplementedChainNotifierServer) RegisterBlockEpochNtfn(req *BlockEpoch, srv ChainNotifier_RegisterBlockEpochNtfnServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method RegisterBlockEpochNtfn not implemented")
 }
 
@@ -853,7 +853,7 @@ func RegisterChainNotifierServer(s *grpc.Server, srv ChainNotifierServer) {
 	s.RegisterService(&_ChainNotifier_serviceDesc, srv)
 }
 
-func _ChainNotifier_RegisterConfirmationsNtfn_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _ChainNotifier_RegisterConfirmationsNtfn_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(ConfRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -862,7 +862,7 @@ func _ChainNotifier_RegisterConfirmationsNtfn_Handler(srv interface{}, stream gr
 }
 
 type ChainNotifier_RegisterConfirmationsNtfnServer interface {
-	Send(*ConfEvent) error
+	Send(*ConfEvent) er.R
 	grpc.ServerStream
 }
 
@@ -870,11 +870,11 @@ type chainNotifierRegisterConfirmationsNtfnServer struct {
 	grpc.ServerStream
 }
 
-func (x *chainNotifierRegisterConfirmationsNtfnServer) Send(m *ConfEvent) error {
+func (x *chainNotifierRegisterConfirmationsNtfnServer) Send(m *ConfEvent) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ChainNotifier_RegisterSpendNtfn_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _ChainNotifier_RegisterSpendNtfn_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(SpendRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -883,7 +883,7 @@ func _ChainNotifier_RegisterSpendNtfn_Handler(srv interface{}, stream grpc.Serve
 }
 
 type ChainNotifier_RegisterSpendNtfnServer interface {
-	Send(*SpendEvent) error
+	Send(*SpendEvent) er.R
 	grpc.ServerStream
 }
 
@@ -891,11 +891,11 @@ type chainNotifierRegisterSpendNtfnServer struct {
 	grpc.ServerStream
 }
 
-func (x *chainNotifierRegisterSpendNtfnServer) Send(m *SpendEvent) error {
+func (x *chainNotifierRegisterSpendNtfnServer) Send(m *SpendEvent) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ChainNotifier_RegisterBlockEpochNtfn_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _ChainNotifier_RegisterBlockEpochNtfn_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(BlockEpoch)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -904,7 +904,7 @@ func _ChainNotifier_RegisterBlockEpochNtfn_Handler(srv interface{}, stream grpc.
 }
 
 type ChainNotifier_RegisterBlockEpochNtfnServer interface {
-	Send(*BlockEpoch) error
+	Send(*BlockEpoch) er.R
 	grpc.ServerStream
 }
 
@@ -912,7 +912,7 @@ type chainNotifierRegisterBlockEpochNtfnServer struct {
 	grpc.ServerStream
 }
 
-func (x *chainNotifierRegisterBlockEpochNtfnServer) Send(m *BlockEpoch) error {
+func (x *chainNotifierRegisterBlockEpochNtfnServer) Send(m *BlockEpoch) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 

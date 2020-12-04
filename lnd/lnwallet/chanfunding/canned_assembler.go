@@ -41,9 +41,9 @@ type ShimIntent struct {
 // funding output.
 //
 // NOTE: This method satisfies the chanfunding.Intent interface.
-func (s *ShimIntent) FundingOutput() ([]byte, *wire.TxOut, error) {
+func (s *ShimIntent) FundingOutput() ([]byte, *wire.TxOut, er.R) {
 	if s.localKey == nil || s.remoteKey == nil {
-		return nil, nil, fmt.Errorf("unable to create witness " +
+		return nil, nil, er.Errorf("unable to create witness " +
 			"script, no funding keys")
 	}
 
@@ -83,9 +83,9 @@ func (s *ShimIntent) RemoteFundingAmt() btcutil.Amount {
 // described above.
 //
 // NOTE: This method satisfies the chanfunding.Intent interface.
-func (s *ShimIntent) ChanPoint() (*wire.OutPoint, error) {
+func (s *ShimIntent) ChanPoint() (*wire.OutPoint, er.R) {
 	if s.chanPoint == nil {
-		return nil, fmt.Errorf("chan point unknown, funding output " +
+		return nil, er.Errorf("chan point unknown, funding output " +
 			"not constructed")
 	}
 
@@ -109,9 +109,9 @@ type FundingKeys struct {
 
 // MultiSigKeys returns the committed multi-sig keys, but only if they've been
 // specified/provided.
-func (s *ShimIntent) MultiSigKeys() (*FundingKeys, error) {
+func (s *ShimIntent) MultiSigKeys() (*FundingKeys, er.R) {
 	if s.localKey == nil || s.remoteKey == nil {
-		return nil, fmt.Errorf("unknown funding keys")
+		return nil, er.Errorf("unknown funding keys")
 	}
 
 	return &FundingKeys{
@@ -170,11 +170,11 @@ func NewCannedAssembler(thawHeight uint32, chanPoint wire.OutPoint,
 // funding output as they've already been created outside lnd.
 //
 // NOTE: This method satisfies the chanfunding.Assembler interface.
-func (c *CannedAssembler) ProvisionChannel(req *Request) (Intent, error) {
+func (c *CannedAssembler) ProvisionChannel(req *Request) (Intent, er.R) {
 	// We'll exit out if this field is set as the funding transaction has
 	// already been assembled, so we don't influence coin selection..
 	if req.SubtractFees {
-		return nil, fmt.Errorf("SubtractFees ignored, funding " +
+		return nil, er.Errorf("SubtractFees ignored, funding " +
 			"transaction is frozen")
 	}
 
@@ -194,7 +194,7 @@ func (c *CannedAssembler) ProvisionChannel(req *Request) (Intent, error) {
 	// A simple sanity check to ensure the provisioned request matches the
 	// re-made shim intent.
 	if req.LocalAmt+req.RemoteAmt != c.fundingAmt {
-		return nil, fmt.Errorf("intent doesn't match canned "+
+		return nil, er.Errorf("intent doesn't match canned "+
 			"assembler: local_amt=%v, remote_amt=%v, funding_amt=%v",
 			req.LocalAmt, req.RemoteAmt, c.fundingAmt)
 	}

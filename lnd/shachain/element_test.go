@@ -12,16 +12,16 @@ import (
 // Example:
 //  Input: 0,1,1,0,0
 //  Output: 0b000000000000000000000000000000000000000[01100] == 12
-func bitsToIndex(bs ...uint64) (index, error) {
+func bitsToIndex(bs ...uint64) (index, er.R) {
 	if len(bs) > 64 {
-		return 0, errors.New("number of elements should be lower then" +
+		return 0, er.New("number of elements should be lower then" +
 			" 64")
 	}
 
 	var res uint64
 	for i, e := range bs {
 		if e != 1 && e != 0 {
-			return 0, errors.New("wrong element, should be '0' or" +
+			return 0, er.New("wrong element, should be '0' or" +
 				" '1'")
 		}
 

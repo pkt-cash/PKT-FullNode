@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 )
 
@@ -214,7 +215,7 @@ func TestAddSha256Witnesses(t *testing.T) {
 // interface for each witness class. We keep this method around to assert the
 // correctness of specialized witness adding methods.
 func (w *WitnessCache) legacyAddWitnesses(wType WitnessType,
-	witnesses ...[]byte) error {
+	witnesses ...[]byte) er.R {
 
 	// Optimistically compute the witness keys before attempting to start
 	// the db transaction.
@@ -230,7 +231,7 @@ func (w *WitnessCache) legacyAddWitnesses(wType WitnessType,
 				witness: witness,
 			})
 		default:
-			return ErrUnknownWitnessType
+			return ErrUnknownWitnessType.Default()
 		}
 	}
 

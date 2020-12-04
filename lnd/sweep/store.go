@@ -3,8 +3,6 @@ package sweep
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -41,24 +39,24 @@ var (
 
 	byteOrder = binary.BigEndian
 
-	errNoTxHashesBucket = errors.New("tx hashes bucket does not exist")
+	errNoTxHashesBucket = er.New("tx hashes bucket does not exist")
 )
 
 // SweeperStore stores published txes.
 type SweeperStore interface {
 	// IsOurTx determines whether a tx is published by us, based on its
 	// hash.
-	IsOurTx(hash chainhash.Hash) (bool, error)
+	IsOurTx(hash chainhash.Hash) (bool, er.R)
 
 	// NotifyPublishTx signals that we are about to publish a tx.
-	NotifyPublishTx(*wire.MsgTx) error
+	NotifyPublishTx(*wire.MsgTx) er.R
 
 	// GetLastPublishedTx returns the last tx that we called NotifyPublishTx
 	// for.
-	GetLastPublishedTx() (*wire.MsgTx, error)
+	GetLastPublishedTx() (*wire.MsgTx, er.R)
 
 	// ListSweeps lists all the sweeps we have successfully published.
-	ListSweeps() ([]chainhash.Hash, error)
+	ListSweeps() ([]chainhash.Hash, er.R)
 }
 
 type sweeperStore struct {
@@ -67,9 +65,9 @@ type sweeperStore struct {
 
 // NewSweeperStore returns a new store instance.
 func NewSweeperStore(db kvdb.Backend, chainHash *chainhash.Hash) (
-	SweeperStore, error) {
+	SweeperStore, er.R) {
 
-	err := kvdb.Update(db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 		_, err := tx.CreateTopLevelBucket(
 			lastTxBucketKey,
 		)
@@ -106,7 +104,7 @@ func NewSweeperStore(db kvdb.Backend, chainHash *chainhash.Hash) (
 // migrateTxHashes migrates nursery finalized txes to the tx hashes bucket. This
 // is not implemented as a database migration, to keep the downgrade path open.
 func migrateTxHashes(tx kvdb.RwTx, txHashesBucket kvdb.RwBucket,
-	chainHash *chainhash.Hash) error {
+	chainHash *chainhash.Hash) er.R {
 
 	log.Infof("Migrating UTXO nursery finalized TXIDs")
 
@@ -170,11 +168,11 @@ func migrateTxHashes(tx kvdb.RwTx, txHashesBucket kvdb.RwBucket,
 }
 
 // NotifyPublishTx signals that we are about to publish a tx.
-func (s *sweeperStore) NotifyPublishTx(sweepTx *wire.MsgTx) error {
-	return kvdb.Update(s.db, func(tx kvdb.RwTx) error {
+func (s *sweeperStore) NotifyPublishTx(sweepTx *wire.MsgTx) er.R {
+	return kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
 		lastTxBucket := tx.ReadWriteBucket(lastTxBucketKey)
 		if lastTxBucket == nil {
-			return errors.New("last tx bucket does not exist")
+			return er.New("last tx bucket does not exist")
 		}
 
 		txHashesBucket := tx.ReadWriteBucket(txHashesBucketKey)
@@ -199,13 +197,13 @@ func (s *sweeperStore) NotifyPublishTx(sweepTx *wire.MsgTx) error {
 
 // GetLastPublishedTx returns the last tx that we called NotifyPublishTx
 // for.
-func (s *sweeperStore) GetLastPublishedTx() (*wire.MsgTx, error) {
+func (s *sweeperStore) GetLastPublishedTx() (*wire.MsgTx, er.R) {
 	var sweepTx *wire.MsgTx
 
-	err := kvdb.View(s.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		lastTxBucket := tx.ReadBucket(lastTxBucketKey)
 		if lastTxBucket == nil {
-			return errors.New("last tx bucket does not exist")
+			return er.New("last tx bucket does not exist")
 		}
 
 		sweepTxRaw := lastTxBucket.Get(lastTxKey)
@@ -216,7 +214,7 @@ func (s *sweeperStore) GetLastPublishedTx() (*wire.MsgTx, error) {
 		sweepTx = &wire.MsgTx{}
 		txReader := bytes.NewReader(sweepTxRaw)
 		if err := sweepTx.Deserialize(txReader); err != nil {
-			return fmt.Errorf("tx deserialize: %v", err)
+			return er.Errorf("tx deserialize: %v", err)
 		}
 
 		return nil
@@ -232,10 +230,10 @@ func (s *sweeperStore) GetLastPublishedTx() (*wire.MsgTx, error) {
 
 // IsOurTx determines whether a tx is published by us, based on its
 // hash.
-func (s *sweeperStore) IsOurTx(hash chainhash.Hash) (bool, error) {
+func (s *sweeperStore) IsOurTx(hash chainhash.Hash) (bool, er.R) {
 	var ours bool
 
-	err := kvdb.View(s.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		txHashesBucket := tx.ReadBucket(txHashesBucketKey)
 		if txHashesBucket == nil {
 			return errNoTxHashesBucket
@@ -255,10 +253,10 @@ func (s *sweeperStore) IsOurTx(hash chainhash.Hash) (bool, error) {
 }
 
 // ListSweeps lists all the sweep transactions we have in the sweeper store.
-func (s *sweeperStore) ListSweeps() ([]chainhash.Hash, error) {
+func (s *sweeperStore) ListSweeps() ([]chainhash.Hash, er.R) {
 	var sweepTxns []chainhash.Hash
 
-	if err := kvdb.View(s.db, func(tx kvdb.RTx) error {
+	if err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		txHashesBucket := tx.ReadBucket(txHashesBucketKey)
 		if txHashesBucket == nil {
 			return errNoTxHashesBucket

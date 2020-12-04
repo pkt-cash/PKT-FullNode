@@ -307,7 +307,7 @@ func testCancelInvoice(t *testing.T, gc bool) {
 		_, err = ctx.cdb.LookupInvoice(
 			channeldb.InvoiceRefByHash(testInvoicePaymentHash),
 		)
-		require.Error(t, err)
+		util.RequireErr(t, err)
 	}
 
 	// We expect no cancel notification to be sent to all invoice
@@ -319,9 +319,9 @@ func testCancelInvoice(t *testing.T, gc bool) {
 	err = ctx.registry.CancelInvoice(testInvoicePaymentHash)
 
 	if gc {
-		require.Error(t, err, channeldb.ErrInvoiceNotFound)
+		util.RequireErr(t, err, channeldb.ErrInvoiceNotFound)
 	} else {
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 	}
 
 	// Notify arrival of a new htlc paying to this invoice. This should
@@ -1125,7 +1125,7 @@ func TestOldInvoiceRemovalOnStart(t *testing.T) {
 	cdb, cleanup, err := newTestChannelDB(testClock)
 	defer cleanup()
 
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	cfg := RegistryConfig{
 		FinalCltvRejectDelta:        testFinalCltvRejectDelta,
@@ -1154,7 +1154,7 @@ func TestOldInvoiceRemovalOnStart(t *testing.T) {
 		}
 
 		_, err := cdb.AddInvoice(invoice, paymentHash)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		i++
 	}
 
@@ -1168,7 +1168,7 @@ func TestOldInvoiceRemovalOnStart(t *testing.T) {
 	}
 
 	response, err := cdb.QueryInvoices(query)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Save all settled invoices for our expectation set.
 	for _, invoice := range response.Invoices {
@@ -1180,11 +1180,11 @@ func TestOldInvoiceRemovalOnStart(t *testing.T) {
 	// Start the registry which should collect and delete all canceled
 	// invoices upon start.
 	err = registry.Start()
-	require.NoError(t, err, "cannot start the registry")
+	util.RequireNoErr(t, err, "cannot start the registry")
 
 	// Perform a scan query to collect all invoices.
 	response, err = cdb.QueryInvoices(query)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Check that we really only kept the settled invoices after the
 	// registry start.

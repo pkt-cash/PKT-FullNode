@@ -8,6 +8,8 @@ package build
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -58,7 +60,7 @@ func init() {
 	// semanticAlphabet.
 	for _, r := range AppPreRelease {
 		if !strings.ContainsRune(semanticAlphabet, r) {
-			panic(fmt.Errorf("rune: %v is not in the semantic "+
+			panic(er.Errorf("rune: %v is not in the semantic "+
 				"alphabet", r))
 		}
 	}

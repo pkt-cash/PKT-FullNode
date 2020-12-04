@@ -13,7 +13,7 @@ var emptyFeatures = lnwire.NewFeatureVector(nil, nil)
 // MigrateInvoiceTLV migrates all existing invoice bodies over to be serialized
 // in a single TLV stream. In the process, we drop the Receipt field and add
 // PaymentAddr and Features to the invoice Terms.
-func MigrateInvoiceTLV(tx kvdb.RwTx) error {
+func MigrateInvoiceTLV(tx kvdb.RwTx) er.R {
 	log.Infof("Migrating invoice bodies to TLV, " +
 		"adding payment addresses and feature vectors.")
 
@@ -37,7 +37,7 @@ func MigrateInvoiceTLV(tx kvdb.RwTx) error {
 		invoiceReader := bytes.NewReader(v)
 		invoice, err := LegacyDeserializeInvoice(invoiceReader)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Insert an empty feature vector on all old payments.

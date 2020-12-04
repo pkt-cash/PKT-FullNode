@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -25,32 +26,32 @@ type MessageConn interface {
 	LocalAddr() net.Addr
 
 	// Read reads bytes from the connection.
-	Read([]byte) (int, error)
+	Read([]byte) (int, er.R)
 
 	// Write writes bytes to the connection.
-	Write([]byte) (int, error)
+	Write([]byte) (int, er.R)
 
 	// SetDeadline sets the deadline for the connection.
-	SetDeadline(time.Time) error
+	SetDeadline(time.Time) er.R
 
 	// SetReadDeadline sets the read deadline.
-	SetReadDeadline(time.Time) error
+	SetReadDeadline(time.Time) er.R
 
 	// SetWriteDeadline sets the write deadline.
-	SetWriteDeadline(time.Time) error
+	SetWriteDeadline(time.Time) er.R
 
 	// Close closes the connection.
-	Close() error
+	Close() er.R
 
 	// Flush attempts a flush.
-	Flush() (int, error)
+	Flush() (int, er.R)
 
 	// WriteMessage writes the message.
-	WriteMessage([]byte) error
+	WriteMessage([]byte) er.R
 
 	// ReadNextHeader reads the next header.
-	ReadNextHeader() (uint32, error)
+	ReadNextHeader() (uint32, er.R)
 
 	// ReadNextBody reads the next body.
-	ReadNextBody([]byte) ([]byte, error)
+	ReadNextBody([]byte) ([]byte, er.R)
 }

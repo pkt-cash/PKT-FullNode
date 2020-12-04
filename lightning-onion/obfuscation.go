@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // OnionErrorEncrypter is a struct that's used to implement onion error
@@ -16,7 +17,7 @@ type OnionErrorEncrypter struct {
 // the passed router, with encryption to be doing using the passed
 // ephemeralKey.
 func NewOnionErrorEncrypter(router *Router,
-	ephemeralKey *btcec.PublicKey) (*OnionErrorEncrypter, error) {
+	ephemeralKey *btcec.PublicKey) (*OnionErrorEncrypter, er.R) {
 
 	sharedSecret, err := router.generateSharedSecret(ephemeralKey)
 	if err != nil {
@@ -29,15 +30,15 @@ func NewOnionErrorEncrypter(router *Router,
 }
 
 // Encode writes the encrypter's shared secret to the provided io.Writer.
-func (o *OnionErrorEncrypter) Encode(w io.Writer) error {
+func (o *OnionErrorEncrypter) Encode(w io.Writer) er.R {
 	_, err := w.Write(o.sharedSecret[:])
-	return err
+	return er.E(err)
 }
 
 // Decode restores the encrypter's share secret from the provided io.Reader.
-func (o *OnionErrorEncrypter) Decode(r io.Reader) error {
+func (o *OnionErrorEncrypter) Decode(r io.Reader) er.R {
 	_, err := io.ReadFull(r, o.sharedSecret[:])
-	return err
+	return er.E(err)
 }
 
 // Circuit is used encapsulate the data which is needed for data deobfuscation.
@@ -51,28 +52,28 @@ type Circuit struct {
 }
 
 // Decode initializes the circuit from the byte stream.
-func (c *Circuit) Decode(r io.Reader) error {
+func (c *Circuit) Decode(r io.Reader) er.R {
 	var keyLength [1]byte
 	if _, err := r.Read(keyLength[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	sessionKeyData := make([]byte, uint8(keyLength[0]))
 	if _, err := r.Read(sessionKeyData[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	c.SessionKey, _ = btcec.PrivKeyFromBytes(btcec.S256(), sessionKeyData)
 	var pathLength [1]byte
 	if _, err := r.Read(pathLength[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	c.PaymentPath = make([]*btcec.PublicKey, uint8(pathLength[0]))
 
 	for i := 0; i < len(c.PaymentPath); i++ {
 		var pubKeyData [btcec.PubKeyBytesLenCompressed]byte
 		if _, err := r.Read(pubKeyData[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		pubKey, err := btcec.ParsePubKey(pubKeyData[:], btcec.S256())
@@ -86,7 +87,11 @@ func (c *Circuit) Decode(r io.Reader) error {
 }
 
 // Encode writes converted circuit in the byte stream.
-func (c *Circuit) Encode(w io.Writer) error {
+func (c *Circuit) Encode(w io.Writer) er.R {
+	return er.E(c.encode(w))
+}
+
+func (c *Circuit) encode(w io.Writer) error {
 	var keyLength [1]byte
 	keyLength[0] = uint8(len(c.SessionKey.Serialize()))
 	if _, err := w.Write(keyLength[:]); err != nil {

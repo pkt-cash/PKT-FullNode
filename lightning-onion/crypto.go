@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
-	"errors"
-	"fmt"
 
 	"github.com/aead/chacha20"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -35,7 +34,7 @@ type SingleKeyECDH interface {
 	// the abstracted private key and a remote public key. The output
 	// returned will be the sha256 of the resulting shared point serialized
 	// in compressed format.
-	ECDH(pubKey *btcec.PublicKey) ([32]byte, error)
+	ECDH(pubKey *btcec.PublicKey) ([32]byte, er.R)
 }
 
 // PrivKeyECDH is an implementation of the SingleKeyECDH in which we do have the
@@ -64,7 +63,7 @@ func (p *PrivKeyECDH) PubKey() *btcec.PublicKey {
 //  s := sha256(sx.SerializeCompressed())
 //
 // NOTE: This is part of the SingleKeyECDH interface.
-func (p *PrivKeyECDH) ECDH(pub *btcec.PublicKey) ([32]byte, error) {
+func (p *PrivKeyECDH) ECDH(pub *btcec.PublicKey) ([32]byte, er.R) {
 	s := &btcec.PublicKey{}
 	s.X, s.Y = btcec.S256().ScalarMult(pub.X, pub.Y, p.PrivKey.D.Bytes())
 
@@ -185,16 +184,16 @@ func blindBaseElement(blindingFactor []byte) *btcec.PublicKey {
 type sharedSecretGenerator interface {
 	// generateSharedSecret given a public key, generates a shared secret
 	// using private data of the underlying sharedSecretGenerator.
-	generateSharedSecret(dhKey *btcec.PublicKey) (Hash256, error)
+	generateSharedSecret(dhKey *btcec.PublicKey) (Hash256, er.R)
 }
 
 // generateSharedSecret generates the shared secret by given ephemeral key.
-func (r *Router) generateSharedSecret(dhKey *btcec.PublicKey) (Hash256, error) {
+func (r *Router) generateSharedSecret(dhKey *btcec.PublicKey) (Hash256, er.R) {
 	var sharedSecret Hash256
 
 	// Ensure that the public key is on our curve.
 	if !btcec.S256().IsOnCurve(dhKey.X, dhKey.Y) {
-		return sharedSecret, ErrInvalidOnionKey
+		return sharedSecret, ErrInvalidOnionKey.Default()
 	}
 
 	// Compute our shared secret.
@@ -226,11 +225,11 @@ const onionErrorLength = 2 + 2 + 256 + sha256.Size
 // returned that contains the decrypted error message and information on the
 // sender.
 func (o *OnionErrorDecrypter) DecryptError(encryptedData []byte) (
-	*DecryptedError, error) {
+	*DecryptedError, er.R) {
 
 	// Ensure the error message length is as expected.
 	if len(encryptedData) != onionErrorLength {
-		return nil, fmt.Errorf("invalid error length: "+
+		return nil, er.Errorf("invalid error length: "+
 			"expected %v got %v", onionErrorLength,
 			len(encryptedData))
 	}
@@ -240,7 +239,7 @@ func (o *OnionErrorDecrypter) DecryptError(encryptedData []byte) (
 		o.circuit.SessionKey,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error generating shared secret: %v",
+		return nil, er.Errorf("error generating shared secret: %v",
 			err)
 	}
 
@@ -294,7 +293,7 @@ func (o *OnionErrorDecrypter) DecryptError(encryptedData []byte) (
 	// If the sender index is still zero, then we haven't found the sender,
 	// meaning we've failed to decrypt.
 	if sender == 0 {
-		return nil, errors.New("unable to retrieve onion failure")
+		return nil, er.New("unable to retrieve onion failure")
 	}
 
 	return &DecryptedError{

@@ -1,16 +1,16 @@
 package healthcheck
 
 import (
-	"errors"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/ticker"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	errNonNil = errors.New("non-nil test error")
+	errNonNil = er.New("non-nil test error")
 	timeout   = time.Second
 	testTime  = time.Unix(1, 2)
 )
@@ -29,7 +29,7 @@ func newMockCheck(t *testing.T) *mockedCheck {
 }
 
 // call returns our mock's error channel, which we can send responses on.
-func (m *mockedCheck) call() chan error {
+func (m *mockedCheck) call() chan er.R {
 	return m.errChan
 }
 
@@ -68,7 +68,7 @@ func TestMonitor(t *testing.T) {
 	}
 	monitor := NewMonitor(cfg)
 
-	require.NoError(t, monitor.Start(), "could not start monitor")
+	util.RequireNoErr(t, monitor.Start(), "could not start monitor")
 
 	// Tick is a helper we will use to tick our interval.
 	tick := func() {
@@ -105,7 +105,7 @@ func TestMonitor(t *testing.T) {
 		t.Fatal("expected shutdown")
 	}
 
-	require.NoError(t, monitor.Stop(), "could not stop monitor")
+	util.RequireNoErr(t, monitor.Stop(), "could not stop monitor")
 }
 
 // TestRetryCheck tests our retry logic. It does not include a test for exiting

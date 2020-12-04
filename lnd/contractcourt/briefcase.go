@@ -2,11 +2,10 @@ package contractcourt
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -58,51 +57,51 @@ type ArbitratorLog interface {
 	// CurrentState returns the current state of the ChannelArbitrator. It
 	// takes an optional database transaction, which will be used if it is
 	// non-nil, otherwise the lookup will be done in its own transaction.
-	CurrentState(tx kvdb.RTx) (ArbitratorState, error)
+	CurrentState(tx kvdb.RTx) (ArbitratorState, er.R)
 
 	// CommitState persists, the current state of the chain attendant.
-	CommitState(ArbitratorState) error
+	CommitState(ArbitratorState) er.R
 
 	// InsertUnresolvedContracts inserts a set of unresolved contracts into
 	// the log. The log will then persistently store each contract until
 	// they've been swapped out, or resolved. It takes a set of report which
 	// should be written to disk if as well if it is non-nil.
 	InsertUnresolvedContracts(reports []*channeldb.ResolverReport,
-		resolvers ...ContractResolver) error
+		resolvers ...ContractResolver) er.R
 
 	// FetchUnresolvedContracts returns all unresolved contracts that have
 	// been previously written to the log.
-	FetchUnresolvedContracts() ([]ContractResolver, error)
+	FetchUnresolvedContracts() ([]ContractResolver, er.R)
 
 	// SwapContract performs an atomic swap of the old contract for the new
 	// contract. This method is used when after a contract has been fully
 	// resolved, it produces another contract that needs to be resolved.
-	SwapContract(old ContractResolver, new ContractResolver) error
+	SwapContract(old ContractResolver, new ContractResolver) er.R
 
 	// ResolveContract marks a contract as fully resolved. Once a contract
 	// has been fully resolved, it is deleted from persistent storage.
-	ResolveContract(ContractResolver) error
+	ResolveContract(ContractResolver) er.R
 
 	// LogContractResolutions stores a complete contract resolution for the
 	// contract under watch. This method will be called once the
 	// ChannelArbitrator either force closes a channel, or detects that the
 	// remote party has broadcast their commitment on chain.
-	LogContractResolutions(*ContractResolutions) error
+	LogContractResolutions(*ContractResolutions) er.R
 
 	// FetchContractResolutions fetches the set of previously stored
 	// contract resolutions from persistent storage.
-	FetchContractResolutions() (*ContractResolutions, error)
+	FetchContractResolutions() (*ContractResolutions, er.R)
 
 	// InsertConfirmedCommitSet stores the known set of active HTLCs at the
 	// time channel closure. We'll use this to reconstruct our set of chain
 	// actions anew based on the confirmed and pending commitment state.
-	InsertConfirmedCommitSet(c *CommitSet) error
+	InsertConfirmedCommitSet(c *CommitSet) er.R
 
 	// FetchConfirmedCommitSet fetches the known confirmed active HTLC set
 	// from the database. It takes an optional database transaction, which
 	// will be used if it is non-nil, otherwise the lookup will be done in
 	// its own transaction.
-	FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, error)
+	FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, er.R)
 
 	// FetchChainActions attempts to fetch the set of previously stored
 	// chain actions. We'll use this upon restart to properly advance our
@@ -111,12 +110,12 @@ type ArbitratorLog interface {
 	// NOTE: This method only exists in order to be able to serve nodes had
 	// channels in the process of closing before the CommitSet struct was
 	// introduced.
-	FetchChainActions() (ChainActionMap, error)
+	FetchChainActions() (ChainActionMap, er.R)
 
 	// WipeHistory is to be called ONLY once *all* contracts have been
 	// fully resolved, and the channel closure if finalized. This method
 	// will delete all on-disk state within the persistent log.
-	WipeHistory() error
+	WipeHistory() er.R
 }
 
 // ArbitratorState is an enum that details the current state of the
@@ -245,7 +244,7 @@ type logScope [32 + 36]byte
 
 // newLogScope creates a new logScope key from the passed chainhash and
 // chanPoint.
-func newLogScope(chain chainhash.Hash, op wire.OutPoint) (*logScope, error) {
+func newLogScope(chain chainhash.Hash, op wire.OutPoint) (*logScope, er.R) {
 	var l logScope
 	b := bytes.NewBuffer(l[0:0])
 
@@ -256,7 +255,7 @@ func newLogScope(chain chainhash.Hash, op wire.OutPoint) (*logScope, error) {
 		return nil, err
 	}
 
-	if err := binary.Write(b, endian, op.Index); err != nil {
+	if err := util.WriteBin(b, endian, op.Index); err != nil {
 		return nil, err
 	}
 
@@ -293,24 +292,24 @@ var (
 var (
 	// errScopeBucketNoExist is returned when we can't find the proper
 	// bucket for an arbitrator's scope.
-	errScopeBucketNoExist = fmt.Errorf("scope bucket not found")
+	errScopeBucketNoExist = er.Errorf("scope bucket not found")
 
 	// errNoContracts is returned when no contracts are found within the
 	// log.
-	errNoContracts = fmt.Errorf("no stored contracts")
+	errNoContracts = er.Errorf("no stored contracts")
 
 	// errNoResolutions is returned when the log doesn't contain any active
 	// chain resolutions.
-	errNoResolutions = fmt.Errorf("no contract resolutions exist")
+	errNoResolutions = er.Errorf("no contract resolutions exist")
 
 	// errNoActions is retuned when the log doesn't contain any stored
 	// chain actions.
-	errNoActions = fmt.Errorf("no chain actions exist")
+	errNoActions = er.Errorf("no chain actions exist")
 
 	// errNoCommitSet is return when the log doesn't contained a CommitSet.
 	// This can happen if the channel hasn't closed yet, or a client is
 	// running an older version that didn't yet write this state.
-	errNoCommitSet = fmt.Errorf("no commit set exists")
+	errNoCommitSet = er.Errorf("no commit set exists")
 )
 
 // boltArbitratorLog is an implementation of the ArbitratorLog interface backed
@@ -326,7 +325,7 @@ type boltArbitratorLog struct {
 // newBoltArbitratorLog returns a new instance of the boltArbitratorLog given
 // an arbitrator config, and the items needed to create its log scope.
 func newBoltArbitratorLog(db kvdb.Backend, cfg ChannelArbitratorConfig,
-	chainHash chainhash.Hash, chanPoint wire.OutPoint) (*boltArbitratorLog, error) {
+	chainHash chainhash.Hash, chanPoint wire.OutPoint) (*boltArbitratorLog, er.R) {
 
 	scope, err := newLogScope(chainHash, chanPoint)
 	if err != nil {
@@ -344,7 +343,7 @@ func newBoltArbitratorLog(db kvdb.Backend, cfg ChannelArbitratorConfig,
 // interface.
 var _ ArbitratorLog = (*boltArbitratorLog)(nil)
 
-func fetchContractReadBucket(tx kvdb.RTx, scopeKey []byte) (kvdb.RBucket, error) {
+func fetchContractReadBucket(tx kvdb.RTx, scopeKey []byte) (kvdb.RBucket, er.R) {
 	scopeBucket := tx.ReadBucket(scopeKey)
 	if scopeBucket == nil {
 		return nil, errScopeBucketNoExist
@@ -358,7 +357,7 @@ func fetchContractReadBucket(tx kvdb.RTx, scopeKey []byte) (kvdb.RBucket, error)
 	return contractBucket, nil
 }
 
-func fetchContractWriteBucket(tx kvdb.RwTx, scopeKey []byte) (kvdb.RwBucket, error) {
+func fetchContractWriteBucket(tx kvdb.RwTx, scopeKey []byte) (kvdb.RwBucket, er.R) {
 	scopeBucket, err := tx.CreateTopLevelBucket(scopeKey)
 	if err != nil {
 		return nil, err
@@ -377,7 +376,7 @@ func fetchContractWriteBucket(tx kvdb.RwTx, scopeKey []byte) (kvdb.RwBucket, err
 // writeResolver is a helper method that writes a contract resolver and stores
 // it it within the passed contractBucket using its unique resolutionsKey key.
 func (b *boltArbitratorLog) writeResolver(contractBucket kvdb.RwBucket,
-	res ContractResolver) error {
+	res ContractResolver) er.R {
 
 	// Only persist resolvers that are stateful. Stateless resolvers don't
 	// expose a resolver key.
@@ -422,7 +421,7 @@ func (b *boltArbitratorLog) writeResolver(contractBucket kvdb.RwBucket,
 // the lookup will be done in its own transaction.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, error) {
+func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 	var (
 		s   ArbitratorState
 		err error
@@ -431,7 +430,7 @@ func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, error) {
 	if tx != nil {
 		s, err = b.currentState(tx)
 	} else {
-		err = kvdb.View(b.db, func(tx kvdb.RTx) error {
+		err = kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 			s, err = b.currentState(tx)
 			return err
 		}, func() {
@@ -446,7 +445,7 @@ func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, error) {
 	return s, nil
 }
 
-func (b *boltArbitratorLog) currentState(tx kvdb.RTx) (ArbitratorState, error) {
+func (b *boltArbitratorLog) currentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 	scopeBucket := tx.ReadBucket(b.scopeKey[:])
 	if scopeBucket == nil {
 		return 0, errScopeBucketNoExist
@@ -463,8 +462,8 @@ func (b *boltArbitratorLog) currentState(tx kvdb.RTx) (ArbitratorState, error) {
 // CommitState persists, the current state of the chain attendant.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) CommitState(s ArbitratorState) error {
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) CommitState(s ArbitratorState) er.R {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		scopeBucket, err := tx.CreateTopLevelBucket(b.scopeKey[:])
 		if err != nil {
 			return err
@@ -478,13 +477,13 @@ func (b *boltArbitratorLog) CommitState(s ArbitratorState) error {
 // previously written to the log.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, error) {
+func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, er.R) {
 	resolverCfg := ResolverConfig{
 		ChannelArbitratorConfig: b.cfg,
 		Checkpoint:              b.checkpointContract,
 	}
 	var contracts []ContractResolver
-	err := kvdb.View(b.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		contractBucket, err := fetchContractReadBucket(tx, b.scopeKey[:])
 		if err != nil {
 			return err
@@ -559,9 +558,9 @@ func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, erro
 //
 // NOTE: Part of the ContractResolver interface.
 func (b *boltArbitratorLog) InsertUnresolvedContracts(reports []*channeldb.ResolverReport,
-	resolvers ...ContractResolver) error {
+	resolvers ...ContractResolver) er.R {
 
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		contractBucket, err := fetchContractWriteBucket(tx, b.scopeKey[:])
 		if err != nil {
 			return err
@@ -591,8 +590,8 @@ func (b *boltArbitratorLog) InsertUnresolvedContracts(reports []*channeldb.Resol
 // it produces another contract that needs to be resolved.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) SwapContract(oldContract, newContract ContractResolver) error {
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) SwapContract(oldContract, newContract ContractResolver) er.R {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		contractBucket, err := fetchContractWriteBucket(tx, b.scopeKey[:])
 		if err != nil {
 			return err
@@ -611,8 +610,8 @@ func (b *boltArbitratorLog) SwapContract(oldContract, newContract ContractResolv
 // fully resolved, it is deleted from persistent storage.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) ResolveContract(res ContractResolver) error {
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) ResolveContract(res ContractResolver) er.R {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		contractBucket, err := fetchContractWriteBucket(tx, b.scopeKey[:])
 		if err != nil {
 			return err
@@ -629,8 +628,8 @@ func (b *boltArbitratorLog) ResolveContract(res ContractResolver) error {
 // that the remote party has gone on-chain.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error {
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) er.R {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		scopeBucket, err := tx.CreateTopLevelBucket(b.scopeKey[:])
 		if err != nil {
 			return err
@@ -644,11 +643,11 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error
 
 		// First, we'll write out the commit output's resolution.
 		if c.CommitResolution == nil {
-			if err := binary.Write(&b, endian, false); err != nil {
+			if err := util.WriteBin(&b, endian, false); err != nil {
 				return err
 			}
 		} else {
-			if err := binary.Write(&b, endian, true); err != nil {
+			if err := util.WriteBin(&b, endian, true); err != nil {
 				return err
 			}
 			errr := encodeCommitResolution(&b, c.CommitResolution)
@@ -661,7 +660,7 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error
 		// can now write out the resolutions for the incoming and
 		// outgoing HTLC's.
 		numIncoming := uint32(len(c.HtlcResolutions.IncomingHTLCs))
-		if err := binary.Write(&b, endian, numIncoming); err != nil {
+		if err := util.WriteBin(&b, endian, numIncoming); err != nil {
 			return err
 		}
 		for _, htlc := range c.HtlcResolutions.IncomingHTLCs {
@@ -671,7 +670,7 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error
 			}
 		}
 		numOutgoing := uint32(len(c.HtlcResolutions.OutgoingHTLCs))
-		if err := binary.Write(&b, endian, numOutgoing); err != nil {
+		if err := util.WriteBin(&b, endian, numOutgoing); err != nil {
 			return err
 		}
 		for _, htlc := range c.HtlcResolutions.OutgoingHTLCs {
@@ -708,9 +707,9 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) error
 // resolutions from persistent storage.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, error) {
+func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er.R) {
 	var c *ContractResolutions
-	err := kvdb.View(b.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		scopeBucket := tx.ReadBucket(b.scopeKey[:])
 		if scopeBucket == nil {
 			return errScopeBucketNoExist
@@ -723,7 +722,7 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 
 		resReader := bytes.NewReader(resolutionBytes)
 
-		_, err := io.ReadFull(resReader, c.CommitHash[:])
+		_, err := util.ReadFull(resReader, c.CommitHash[:])
 		if err != nil {
 			return err
 		}
@@ -731,7 +730,7 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 		// First, we'll attempt to read out the commit resolution (if
 		// it exists).
 		var haveCommitRes bool
-		err = binary.Read(resReader, endian, &haveCommitRes)
+		err = util.ReadBin(resReader, endian, &haveCommitRes)
 		if err != nil {
 			return err
 		}
@@ -752,7 +751,7 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 
 		// Next, we'll read out the incoming and outgoing HTLC
 		// resolutions.
-		err = binary.Read(resReader, endian, &numIncoming)
+		err = util.ReadBin(resReader, endian, &numIncoming)
 		if err != nil {
 			return err
 		}
@@ -766,7 +765,7 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 			}
 		}
 
-		err = binary.Read(resReader, endian, &numOutgoing)
+		err = util.ReadBin(resReader, endian, &numOutgoing)
 		if err != nil {
 			return err
 		}
@@ -808,10 +807,10 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 // forward.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, error) {
+func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, er.R) {
 	var actionsMap ChainActionMap
 
-	err := kvdb.View(b.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		scopeBucket := tx.ReadBucket(b.scopeKey[:])
 		if scopeBucket == nil {
 			return errScopeBucketNoExist
@@ -854,8 +853,8 @@ func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, error) {
 // based on the confirmed and pending commitment state.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) InsertConfirmedCommitSet(c *CommitSet) error {
-	return kvdb.Batch(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) InsertConfirmedCommitSet(c *CommitSet) er.R {
+	return kvdb.Batch(b.db, func(tx kvdb.RwTx) er.R {
 		scopeBucket, err := tx.CreateTopLevelBucket(b.scopeKey[:])
 		if err != nil {
 			return err
@@ -875,13 +874,13 @@ func (b *boltArbitratorLog) InsertConfirmedCommitSet(c *CommitSet) error {
 // is non-nil, otherwise the lookup will be done in its own transaction.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, error) {
+func (b *boltArbitratorLog) FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, er.R) {
 	if tx != nil {
 		return b.fetchConfirmedCommitSet(tx)
 	}
 
 	var c *CommitSet
-	err := kvdb.View(b.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		var err error
 		c, err = b.fetchConfirmedCommitSet(tx)
 		return err
@@ -916,8 +915,8 @@ func (b *boltArbitratorLog) fetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet,
 // on-disk state within the persistent log.
 //
 // NOTE: Part of the ContractResolver interface.
-func (b *boltArbitratorLog) WipeHistory() error {
-	return kvdb.Update(b.db, func(tx kvdb.RwTx) error {
+func (b *boltArbitratorLog) WipeHistory() er.R {
+	return kvdb.Update(b.db, func(tx kvdb.RwTx) er.R {
 		scopeBucket, err := tx.CreateTopLevelBucket(b.scopeKey[:])
 		if err != nil {
 			return err
@@ -959,9 +958,9 @@ func (b *boltArbitratorLog) WipeHistory() error {
 // milestones during contract resolution. If the report provided is non-nil,
 // it should also be recorded.
 func (b *boltArbitratorLog) checkpointContract(c ContractResolver,
-	reports ...*channeldb.ResolverReport) error {
+	reports ...*channeldb.ResolverReport) er.R {
 
-	return kvdb.Update(b.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(b.db, func(tx kvdb.RwTx) er.R {
 		contractBucket, err := fetchContractWriteBucket(tx, b.scopeKey[:])
 		if err != nil {
 			return err
@@ -981,17 +980,17 @@ func (b *boltArbitratorLog) checkpointContract(c ContractResolver,
 	}, func() {})
 }
 
-func encodeIncomingResolution(w io.Writer, i *lnwallet.IncomingHtlcResolution) error {
-	if _, err := w.Write(i.Preimage[:]); err != nil {
+func encodeIncomingResolution(w io.Writer, i *lnwallet.IncomingHtlcResolution) er.R {
+	if _, err := util.Write(w, i.Preimage[:]); err != nil {
 		return err
 	}
 
 	if i.SignedSuccessTx == nil {
-		if err := binary.Write(w, endian, false); err != nil {
+		if err := util.WriteBin(w, endian, false); err != nil {
 			return err
 		}
 	} else {
-		if err := binary.Write(w, endian, true); err != nil {
+		if err := util.WriteBin(w, endian, true); err != nil {
 			return err
 		}
 
@@ -1000,13 +999,13 @@ func encodeIncomingResolution(w io.Writer, i *lnwallet.IncomingHtlcResolution) e
 		}
 	}
 
-	if err := binary.Write(w, endian, i.CsvDelay); err != nil {
+	if err := util.WriteBin(w, endian, i.CsvDelay); err != nil {
 		return err
 	}
-	if _, err := w.Write(i.ClaimOutpoint.Hash[:]); err != nil {
+	if _, err := util.Write(w, i.ClaimOutpoint.Hash[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, i.ClaimOutpoint.Index); err != nil {
+	if err := util.WriteBin(w, endian, i.ClaimOutpoint.Index); err != nil {
 		return err
 	}
 	err := input.WriteSignDescriptor(w, &i.SweepSignDesc)
@@ -1017,13 +1016,13 @@ func encodeIncomingResolution(w io.Writer, i *lnwallet.IncomingHtlcResolution) e
 	return nil
 }
 
-func decodeIncomingResolution(r io.Reader, h *lnwallet.IncomingHtlcResolution) error {
-	if _, err := io.ReadFull(r, h.Preimage[:]); err != nil {
+func decodeIncomingResolution(r io.Reader, h *lnwallet.IncomingHtlcResolution) er.R {
+	if _, err := util.ReadFull(r, h.Preimage[:]); err != nil {
 		return err
 	}
 
 	var txPresent bool
-	if err := binary.Read(r, endian, &txPresent); err != nil {
+	if err := util.ReadBin(r, endian, &txPresent); err != nil {
 		return err
 	}
 	if txPresent {
@@ -1033,15 +1032,15 @@ func decodeIncomingResolution(r io.Reader, h *lnwallet.IncomingHtlcResolution) e
 		}
 	}
 
-	err := binary.Read(r, endian, &h.CsvDelay)
+	err := util.ReadBin(r, endian, &h.CsvDelay)
 	if err != nil {
 		return err
 	}
-	_, err = io.ReadFull(r, h.ClaimOutpoint.Hash[:])
+	_, err = util.ReadFull(r, h.ClaimOutpoint.Hash[:])
 	if err != nil {
 		return err
 	}
-	err = binary.Read(r, endian, &h.ClaimOutpoint.Index)
+	err = util.ReadBin(r, endian, &h.ClaimOutpoint.Index)
 	if err != nil {
 		return err
 	}
@@ -1049,17 +1048,17 @@ func decodeIncomingResolution(r io.Reader, h *lnwallet.IncomingHtlcResolution) e
 	return input.ReadSignDescriptor(r, &h.SweepSignDesc)
 }
 
-func encodeOutgoingResolution(w io.Writer, o *lnwallet.OutgoingHtlcResolution) error {
-	if err := binary.Write(w, endian, o.Expiry); err != nil {
+func encodeOutgoingResolution(w io.Writer, o *lnwallet.OutgoingHtlcResolution) er.R {
+	if err := util.WriteBin(w, endian, o.Expiry); err != nil {
 		return err
 	}
 
 	if o.SignedTimeoutTx == nil {
-		if err := binary.Write(w, endian, false); err != nil {
+		if err := util.WriteBin(w, endian, false); err != nil {
 			return err
 		}
 	} else {
-		if err := binary.Write(w, endian, true); err != nil {
+		if err := util.WriteBin(w, endian, true); err != nil {
 			return err
 		}
 
@@ -1068,27 +1067,27 @@ func encodeOutgoingResolution(w io.Writer, o *lnwallet.OutgoingHtlcResolution) e
 		}
 	}
 
-	if err := binary.Write(w, endian, o.CsvDelay); err != nil {
+	if err := util.WriteBin(w, endian, o.CsvDelay); err != nil {
 		return err
 	}
-	if _, err := w.Write(o.ClaimOutpoint.Hash[:]); err != nil {
+	if _, err := util.Write(w, o.ClaimOutpoint.Hash[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, o.ClaimOutpoint.Index); err != nil {
+	if err := util.WriteBin(w, endian, o.ClaimOutpoint.Index); err != nil {
 		return err
 	}
 
 	return input.WriteSignDescriptor(w, &o.SweepSignDesc)
 }
 
-func decodeOutgoingResolution(r io.Reader, o *lnwallet.OutgoingHtlcResolution) error {
-	err := binary.Read(r, endian, &o.Expiry)
+func decodeOutgoingResolution(r io.Reader, o *lnwallet.OutgoingHtlcResolution) er.R {
+	err := util.ReadBin(r, endian, &o.Expiry)
 	if err != nil {
 		return err
 	}
 
 	var txPresent bool
-	if err := binary.Read(r, endian, &txPresent); err != nil {
+	if err := util.ReadBin(r, endian, &txPresent); err != nil {
 		return err
 	}
 	if txPresent {
@@ -1098,15 +1097,15 @@ func decodeOutgoingResolution(r io.Reader, o *lnwallet.OutgoingHtlcResolution) e
 		}
 	}
 
-	err = binary.Read(r, endian, &o.CsvDelay)
+	err = util.ReadBin(r, endian, &o.CsvDelay)
 	if err != nil {
 		return err
 	}
-	_, err = io.ReadFull(r, o.ClaimOutpoint.Hash[:])
+	_, err = util.ReadFull(r, o.ClaimOutpoint.Hash[:])
 	if err != nil {
 		return err
 	}
-	err = binary.Read(r, endian, &o.ClaimOutpoint.Index)
+	err = util.ReadBin(r, endian, &o.ClaimOutpoint.Index)
 	if err != nil {
 		return err
 	}
@@ -1115,12 +1114,12 @@ func decodeOutgoingResolution(r io.Reader, o *lnwallet.OutgoingHtlcResolution) e
 }
 
 func encodeCommitResolution(w io.Writer,
-	c *lnwallet.CommitOutputResolution) error {
+	c *lnwallet.CommitOutputResolution) er.R {
 
-	if _, err := w.Write(c.SelfOutPoint.Hash[:]); err != nil {
+	if _, err := util.Write(w, c.SelfOutPoint.Hash[:]); err != nil {
 		return err
 	}
-	err := binary.Write(w, endian, c.SelfOutPoint.Index)
+	err := util.WriteBin(w, endian, c.SelfOutPoint.Index)
 	if err != nil {
 		return err
 	}
@@ -1130,17 +1129,17 @@ func encodeCommitResolution(w io.Writer,
 		return err
 	}
 
-	return binary.Write(w, endian, c.MaturityDelay)
+	return util.WriteBin(w, endian, c.MaturityDelay)
 }
 
 func decodeCommitResolution(r io.Reader,
-	c *lnwallet.CommitOutputResolution) error {
+	c *lnwallet.CommitOutputResolution) er.R {
 
-	_, err := io.ReadFull(r, c.SelfOutPoint.Hash[:])
+	_, err := util.ReadFull(r, c.SelfOutPoint.Hash[:])
 	if err != nil {
 		return err
 	}
-	err = binary.Read(r, endian, &c.SelfOutPoint.Index)
+	err = util.ReadBin(r, endian, &c.SelfOutPoint.Index)
 	if err != nil {
 		return err
 	}
@@ -1150,16 +1149,16 @@ func decodeCommitResolution(r io.Reader,
 		return err
 	}
 
-	return binary.Read(r, endian, &c.MaturityDelay)
+	return util.ReadBin(r, endian, &c.MaturityDelay)
 }
 
 func encodeAnchorResolution(w io.Writer,
-	a *lnwallet.AnchorResolution) error {
+	a *lnwallet.AnchorResolution) er.R {
 
-	if _, err := w.Write(a.CommitAnchor.Hash[:]); err != nil {
+	if _, err := util.Write(w, a.CommitAnchor.Hash[:]); err != nil {
 		return err
 	}
-	err := binary.Write(w, endian, a.CommitAnchor.Index)
+	err := util.WriteBin(w, endian, a.CommitAnchor.Index)
 	if err != nil {
 		return err
 	}
@@ -1168,13 +1167,13 @@ func encodeAnchorResolution(w io.Writer,
 }
 
 func decodeAnchorResolution(r io.Reader,
-	a *lnwallet.AnchorResolution) error {
+	a *lnwallet.AnchorResolution) er.R {
 
-	_, err := io.ReadFull(r, a.CommitAnchor.Hash[:])
+	_, err := util.ReadFull(r, a.CommitAnchor.Hash[:])
 	if err != nil {
 		return err
 	}
-	err = binary.Read(r, endian, &a.CommitAnchor.Index)
+	err = util.ReadBin(r, endian, &a.CommitAnchor.Index)
 	if err != nil {
 		return err
 	}
@@ -1182,21 +1181,21 @@ func decodeAnchorResolution(r io.Reader,
 	return input.ReadSignDescriptor(r, &a.AnchorSignDescriptor)
 }
 
-func encodeHtlcSetKey(w io.Writer, h *HtlcSetKey) error {
-	err := binary.Write(w, endian, h.IsRemote)
+func encodeHtlcSetKey(w io.Writer, h *HtlcSetKey) er.R {
+	err := util.WriteBin(w, endian, h.IsRemote)
 	if err != nil {
 		return err
 	}
-	return binary.Write(w, endian, h.IsPending)
+	return util.WriteBin(w, endian, h.IsPending)
 }
 
-func encodeCommitSet(w io.Writer, c *CommitSet) error {
+func encodeCommitSet(w io.Writer, c *CommitSet) er.R {
 	if err := encodeHtlcSetKey(w, c.ConfCommitKey); err != nil {
 		return err
 	}
 
 	numSets := uint8(len(c.HtlcSets))
-	if err := binary.Write(w, endian, numSets); err != nil {
+	if err := util.WriteBin(w, endian, numSets); err != nil {
 		return err
 	}
 
@@ -1214,16 +1213,16 @@ func encodeCommitSet(w io.Writer, c *CommitSet) error {
 	return nil
 }
 
-func decodeHtlcSetKey(r io.Reader, h *HtlcSetKey) error {
-	err := binary.Read(r, endian, &h.IsRemote)
+func decodeHtlcSetKey(r io.Reader, h *HtlcSetKey) er.R {
+	err := util.ReadBin(r, endian, &h.IsRemote)
 	if err != nil {
 		return err
 	}
 
-	return binary.Read(r, endian, &h.IsPending)
+	return util.ReadBin(r, endian, &h.IsPending)
 }
 
-func decodeCommitSet(r io.Reader) (*CommitSet, error) {
+func decodeCommitSet(r io.Reader) (*CommitSet, er.R) {
 	c := &CommitSet{
 		ConfCommitKey: &HtlcSetKey{},
 		HtlcSets:      make(map[HtlcSetKey][]channeldb.HTLC),
@@ -1234,7 +1233,7 @@ func decodeCommitSet(r io.Reader) (*CommitSet, error) {
 	}
 
 	var numSets uint8
-	if err := binary.Read(r, endian, &numSets); err != nil {
+	if err := util.ReadBin(r, endian, &numSets); err != nil {
 		return nil, err
 	}
 

@@ -1,27 +1,28 @@
 package channeldb
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // writeOutpoint writes an outpoint to the passed writer using the minimal
 // amount of bytes possible.
-func writeOutpoint(w io.Writer, o *wire.OutPoint) error {
-	if _, err := w.Write(o.Hash[:]); err != nil {
+func writeOutpoint(w io.Writer, o *wire.OutPoint) er.R {
+	if _, err := util.Write(w, o.Hash[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, o.Index); err != nil {
+	if err := util.WriteBin(w, byteOrder, o.Index); err != nil {
 		return err
 	}
 
@@ -30,11 +31,11 @@ func writeOutpoint(w io.Writer, o *wire.OutPoint) error {
 
 // readOutpoint reads an outpoint from the passed reader that was previously
 // written using the writeOutpoint struct.
-func readOutpoint(r io.Reader, o *wire.OutPoint) error {
-	if _, err := io.ReadFull(r, o.Hash[:]); err != nil {
+func readOutpoint(r io.Reader, o *wire.OutPoint) er.R {
+	if _, err := util.ReadFull(r, o.Hash[:]); err != nil {
 		return err
 	}
-	if err := binary.Read(r, byteOrder, &o.Index); err != nil {
+	if err := util.ReadBin(r, byteOrder, &o.Index); err != nil {
 		return err
 	}
 
@@ -64,32 +65,32 @@ func (e UnknownElementType) Error() string {
 // any element which is to be serialized for storage on disk. The passed
 // io.Writer should be backed by an appropriately sized byte slice, or be able
 // to dynamically expand to accommodate additional data.
-func WriteElement(w io.Writer, element interface{}) error {
+func WriteElement(w io.Writer, element interface{}) er.R {
 	switch e := element.(type) {
 	case keychain.KeyDescriptor:
-		if err := binary.Write(w, byteOrder, e.Family); err != nil {
+		if err := util.WriteBin(w, byteOrder, e.Family); err != nil {
 			return err
 		}
-		if err := binary.Write(w, byteOrder, e.Index); err != nil {
+		if err := util.WriteBin(w, byteOrder, e.Index); err != nil {
 			return err
 		}
 
 		if e.PubKey != nil {
-			if err := binary.Write(w, byteOrder, true); err != nil {
-				return fmt.Errorf("error writing serialized element: %s", err)
+			if err := util.WriteBin(w, byteOrder, true); err != nil {
+				return er.Errorf("error writing serialized element: %s", err)
 			}
 
 			return WriteElement(w, e.PubKey)
 		}
 
-		return binary.Write(w, byteOrder, false)
+		return util.WriteBin(w, byteOrder, false)
 	case ChannelType:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case chainhash.Hash:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
@@ -97,64 +98,64 @@ func WriteElement(w io.Writer, element interface{}) error {
 		return writeOutpoint(w, &e)
 
 	case lnwire.ShortChannelID:
-		if err := binary.Write(w, byteOrder, e.ToUint64()); err != nil {
+		if err := util.WriteBin(w, byteOrder, e.ToUint64()); err != nil {
 			return err
 		}
 
 	case lnwire.ChannelID:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
 	case int64, uint64:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case uint32:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case int32:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case uint16:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case uint8:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case bool:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case btcutil.Amount:
-		if err := binary.Write(w, byteOrder, uint64(e)); err != nil {
+		if err := util.WriteBin(w, byteOrder, uint64(e)); err != nil {
 			return err
 		}
 
 	case lnwire.MilliSatoshi:
-		if err := binary.Write(w, byteOrder, uint64(e)); err != nil {
+		if err := util.WriteBin(w, byteOrder, uint64(e)); err != nil {
 			return err
 		}
 
 	case *btcec.PrivateKey:
 		b := e.Serialize()
-		if _, err := w.Write(b); err != nil {
+		if _, err := util.Write(w, b); err != nil {
 			return err
 		}
 
 	case *btcec.PublicKey:
 		b := e.SerializeCompressed()
-		if _, err := w.Write(b); err != nil {
+		if _, err := util.Write(w, b); err != nil {
 			return err
 		}
 
@@ -168,7 +169,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		return e.Serialize(w)
 
 	case [32]byte:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
@@ -183,22 +184,22 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 
 	case ChannelStatus:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case ClosureType:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case paymentIndexType:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
 	case lnwire.FundingFlag:
-		if err := binary.Write(w, byteOrder, e); err != nil {
+		if err := util.WriteBin(w, byteOrder, e); err != nil {
 			return err
 		}
 
@@ -219,7 +220,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 
 	default:
-		return UnknownElementType{"WriteElement", e}
+		return er.E(UnknownElementType{"WriteElement", e})
 	}
 
 	return nil
@@ -227,7 +228,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 
 // WriteElements is writes each element in the elements slice to the passed
 // io.Writer using WriteElement.
-func WriteElements(w io.Writer, elements ...interface{}) error {
+func WriteElements(w io.Writer, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := WriteElement(w, element)
 		if err != nil {
@@ -239,18 +240,18 @@ func WriteElements(w io.Writer, elements ...interface{}) error {
 
 // ReadElement is a one-stop utility function to deserialize any datastructure
 // encoded using the serialization format of the database.
-func ReadElement(r io.Reader, element interface{}) error {
+func ReadElement(r io.Reader, element interface{}) er.R {
 	switch e := element.(type) {
 	case *keychain.KeyDescriptor:
-		if err := binary.Read(r, byteOrder, &e.Family); err != nil {
+		if err := util.ReadBin(r, byteOrder, &e.Family); err != nil {
 			return err
 		}
-		if err := binary.Read(r, byteOrder, &e.Index); err != nil {
+		if err := util.ReadBin(r, byteOrder, &e.Index); err != nil {
 			return err
 		}
 
 		var hasPubKey bool
-		if err := binary.Read(r, byteOrder, &hasPubKey); err != nil {
+		if err := util.ReadBin(r, byteOrder, &hasPubKey); err != nil {
 			return err
 		}
 
@@ -259,12 +260,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 
 	case *ChannelType:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *chainhash.Hash:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
@@ -273,49 +274,49 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case *lnwire.ShortChannelID:
 		var a uint64
-		if err := binary.Read(r, byteOrder, &a); err != nil {
+		if err := util.ReadBin(r, byteOrder, &a); err != nil {
 			return err
 		}
 		*e = lnwire.NewShortChanIDFromInt(a)
 
 	case *lnwire.ChannelID:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
 	case *int64, *uint64:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *uint32:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *int32:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *uint16:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *uint8:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *bool:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *btcutil.Amount:
 		var a uint64
-		if err := binary.Read(r, byteOrder, &a); err != nil {
+		if err := util.ReadBin(r, byteOrder, &a); err != nil {
 			return err
 		}
 
@@ -323,7 +324,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case *lnwire.MilliSatoshi:
 		var a uint64
-		if err := binary.Read(r, byteOrder, &a); err != nil {
+		if err := util.ReadBin(r, byteOrder, &a); err != nil {
 			return err
 		}
 
@@ -331,7 +332,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case **btcec.PrivateKey:
 		var b [btcec.PrivKeyBytesLen]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 
@@ -340,7 +341,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case **btcec.PublicKey:
 		var b [btcec.PubKeyBytesLenCompressed]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 
@@ -352,7 +353,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case *shachain.Producer:
 		var root [32]byte
-		if _, err := io.ReadFull(r, root[:]); err != nil {
+		if _, err := util.ReadFull(r, root[:]); err != nil {
 			return err
 		}
 
@@ -381,7 +382,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = tx
 
 	case *[32]byte:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
@@ -402,22 +403,22 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = msg
 
 	case *ChannelStatus:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *ClosureType:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *paymentIndexType:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
 	case *lnwire.FundingFlag:
-		if err := binary.Read(r, byteOrder, e); err != nil {
+		if err := util.ReadBin(r, byteOrder, e); err != nil {
 			return err
 		}
 
@@ -444,7 +445,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 
 	default:
-		return UnknownElementType{"ReadElement", e}
+		return er.E(UnknownElementType{"ReadElement", e})
 	}
 
 	return nil
@@ -453,7 +454,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 // ReadElements deserializes a variable number of elements into the passed
 // io.Reader, with each element being deserialized according to the ReadElement
 // function.
-func ReadElements(r io.Reader, elements ...interface{}) error {
+func ReadElements(r io.Reader, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := ReadElement(r, element)
 		if err != nil {

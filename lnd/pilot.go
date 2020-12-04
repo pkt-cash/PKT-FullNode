@@ -41,7 +41,7 @@ func validateAtplCfg(cfg *lncfg.AutoPilot) ([]*autopilot.WeightedHeuristic,
 		a, ok := autopilot.AvailableHeuristics[name]
 		if !ok {
 			// No heuristic matching this config option was found.
-			return nil, fmt.Errorf("heuristic %v not available. %v",
+			return nil, er.Errorf("heuristic %v not available. %v",
 				name, availStr)
 		}
 
@@ -60,11 +60,11 @@ func validateAtplCfg(cfg *lncfg.AutoPilot) ([]*autopilot.WeightedHeuristic,
 
 	// Check found heuristics. We must have at least one to operate.
 	if len(heuristics) == 0 {
-		return nil, fmt.Errorf("no active heuristics: %v", availStr)
+		return nil, er.Errorf("no active heuristics: %v", availStr)
 	}
 
 	if sum != 1.0 {
-		return nil, fmt.Errorf("heuristic weights must sum to 1.0")
+		return nil, er.Errorf("heuristic weights must sum to 1.0")
 	}
 	return heuristics, nil
 }
@@ -84,7 +84,7 @@ type chanController struct {
 // specified amount. This function should un-block immediately after the
 // funding transaction that marks the channel open has been broadcast.
 func (c *chanController) OpenChannel(target *btcec.PublicKey,
-	amt btcutil.Amount) error {
+	amt btcutil.Amount) er.R {
 
 	// With the connection established, we'll now establish our connection
 	// to the target peer, waiting for the first update before we exit.
@@ -122,7 +122,7 @@ func (c *chanController) OpenChannel(target *btcec.PublicKey,
 	}
 }
 
-func (c *chanController) CloseChannel(chanPoint *wire.OutPoint) error {
+func (c *chanController) CloseChannel(chanPoint *wire.OutPoint) er.R {
 	return nil
 }
 
@@ -136,7 +136,7 @@ var _ autopilot.ChannelController = (*chanController)(nil)
 // StartAgent method is called.
 func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 	chainCfg *lncfg.Chain, netParams chainreg.BitcoinNetParams) (
-	*autopilot.ManagerCfg, error) {
+	*autopilot.ManagerCfg, er.R) {
 
 	atplLog.Infof("Instantiating autopilot with active=%v, "+
 		"max_channels=%d, allocation=%f, min_chan_size=%d, "+
@@ -178,12 +178,12 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 			chanMinHtlcIn: chainCfg.MinHTLCIn,
 			netParams:     netParams,
 		},
-		WalletBalance: func() (btcutil.Amount, error) {
+		WalletBalance: func() (btcutil.Amount, er.R) {
 			return svr.cc.Wallet.ConfirmedBalance(cfg.MinConfs)
 		},
 		Graph:       autopilot.ChannelGraphFromDatabase(svr.localChanDB.ChannelGraph()),
 		Constraints: atplConstraints,
-		ConnectToPeer: func(target *btcec.PublicKey, addrs []net.Addr) (bool, error) {
+		ConnectToPeer: func(target *btcec.PublicKey, addrs []net.Addr) (bool, er.R) {
 			// First, we'll check if we're already connected to the
 			// target peer. If we are, we can exit early. Otherwise,
 			// we'll need to establish a connection.
@@ -194,7 +194,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 			// We can't establish a channel if no addresses were
 			// provided for the peer.
 			if len(addrs) == 0 {
-				return false, errors.New("no addresses specified")
+				return false, er.New("no addresses specified")
 			}
 
 			atplLog.Tracef("Attempting to connect to %x",
@@ -215,7 +215,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 				case *net.TCPAddr, *tor.OnionAddr:
 					lnAddr.Address = addr
 				default:
-					return false, fmt.Errorf("unknown "+
+					return false, er.Errorf("unknown "+
 						"address type %T", addr)
 				}
 
@@ -236,7 +236,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 			// If we weren't able to establish a connection at all,
 			// then we'll error out.
 			if !connected {
-				return false, errors.New("exhausted all " +
+				return false, er.New("exhausted all " +
 					"advertised addresses")
 			}
 
@@ -250,7 +250,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 	return &autopilot.ManagerCfg{
 		Self:     self,
 		PilotCfg: &pilotCfg,
-		ChannelState: func() ([]autopilot.LocalChannel, error) {
+		ChannelState: func() ([]autopilot.LocalChannel, er.R) {
 			// We'll fetch the current state of open
 			// channels from the database to use as initial
 			// state for the auto-pilot agent.
@@ -276,7 +276,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 			return chanState, nil
 		},
 		ChannelInfo: func(chanPoint wire.OutPoint) (
-			*autopilot.LocalChannel, error) {
+			*autopilot.LocalChannel, er.R) {
 
 			channel, err := svr.remoteChanDB.FetchChannel(chanPoint)
 			if err != nil {

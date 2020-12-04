@@ -47,7 +47,7 @@ var (
 	bitcoinKey2 = priv2.PubKey()
 )
 
-func createTestNode() (*channeldb.LightningNode, error) {
+func createTestNode() (*channeldb.LightningNode, er.R) {
 	updateTime := prand.Int63()
 
 	priv, err := btcec.NewPrivateKey(btcec.S256())
@@ -88,7 +88,7 @@ func randEdgePolicy(chanID *lnwire.ShortChannelID,
 
 func createChannelEdge(ctx *testCtx, bitcoinKey1, bitcoinKey2 []byte,
 	chanValue btcutil.Amount, fundingHeight uint32) (*wire.MsgTx, *wire.OutPoint,
-	*lnwire.ShortChannelID, error) {
+	*lnwire.ShortChannelID, er.R) {
 
 	fundingTx := wire.NewMsgTx(2)
 	_, tx, err := input.GenFundingPkScript(
@@ -150,7 +150,7 @@ func (m *mockChain) setBestBlock(height int32) {
 	m.bestHeight = height
 }
 
-func (m *mockChain) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (m *mockChain) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -159,7 +159,7 @@ func (m *mockChain) GetBestBlock() (*chainhash.Hash, int32, error) {
 	return &blockHash, m.bestHeight, nil
 }
 
-func (m *mockChain) GetTransaction(txid *chainhash.Hash) (*wire.MsgTx, error) {
+func (m *mockChain) GetTransaction(txid *chainhash.Hash) (*wire.MsgTx, er.R) {
 	return nil, nil
 }
 
@@ -182,13 +182,13 @@ func (m *mockChain) addUtxo(op wire.OutPoint, out *wire.TxOut) {
 	m.Unlock()
 }
 func (m *mockChain) GetUtxo(op *wire.OutPoint, _ []byte, _ uint32,
-	_ <-chan struct{}) (*wire.TxOut, error) {
+	_ <-chan struct{}) (*wire.TxOut, er.R) {
 	m.RLock()
 	defer m.RUnlock()
 
 	utxo, ok := m.utxos[*op]
 	if !ok {
-		return nil, fmt.Errorf("utxo not found")
+		return nil, er.Errorf("utxo not found")
 	}
 
 	return &utxo, nil
@@ -202,13 +202,13 @@ func (m *mockChain) addBlock(block *wire.MsgBlock, height uint32, nonce uint32) 
 	m.blockIndex[height] = hash
 	m.Unlock()
 }
-func (m *mockChain) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (m *mockChain) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	m.RLock()
 	defer m.RUnlock()
 
 	block, ok := m.blocks[*blockHash]
 	if !ok {
-		return nil, fmt.Errorf("block not found")
+		return nil, er.Errorf("block not found")
 	}
 
 	return block, nil
@@ -248,7 +248,7 @@ func (m *mockChainView) Reset() {
 	m.staleBlocks = make(chan *chainview.FilteredBlock, 10)
 }
 
-func (m *mockChainView) UpdateFilter(ops []channeldb.EdgePoint, updateHeight uint32) error {
+func (m *mockChainView) UpdateFilter(ops []channeldb.EdgePoint, updateHeight uint32) er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -301,7 +301,7 @@ func (m *mockChainView) DisconnectedBlocks() <-chan *chainview.FilteredBlock {
 	return m.staleBlocks
 }
 
-func (m *mockChainView) FilterBlock(blockHash *chainhash.Hash) (*chainview.FilteredBlock, error) {
+func (m *mockChainView) FilterBlock(blockHash *chainhash.Hash) (*chainview.FilteredBlock, er.R) {
 
 	block, err := m.chain.GetBlock(blockHash)
 	if err != nil {
@@ -329,11 +329,11 @@ func (m *mockChainView) FilterBlock(blockHash *chainhash.Hash) (*chainview.Filte
 	return filteredBlock, nil
 }
 
-func (m *mockChainView) Start() error {
+func (m *mockChainView) Start() er.R {
 	return nil
 }
 
-func (m *mockChainView) Stop() error {
+func (m *mockChainView) Stop() er.R {
 	close(m.quit)
 	return nil
 }

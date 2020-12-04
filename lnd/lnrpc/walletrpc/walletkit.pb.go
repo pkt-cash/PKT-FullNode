@@ -17,7 +17,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -151,10 +151,10 @@ func (*ListUnspentRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{0}
 }
 
-func (m *ListUnspentRequest) XXX_Unmarshal(b []byte) error {
+func (m *ListUnspentRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListUnspentRequest.Unmarshal(m, b)
 }
-func (m *ListUnspentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListUnspentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListUnspentRequest.Marshal(b, m, deterministic)
 }
 func (m *ListUnspentRequest) XXX_Merge(src proto.Message) {
@@ -198,10 +198,10 @@ func (*ListUnspentResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{1}
 }
 
-func (m *ListUnspentResponse) XXX_Unmarshal(b []byte) error {
+func (m *ListUnspentResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListUnspentResponse.Unmarshal(m, b)
 }
-func (m *ListUnspentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListUnspentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListUnspentResponse.Marshal(b, m, deterministic)
 }
 func (m *ListUnspentResponse) XXX_Merge(src proto.Message) {
@@ -242,10 +242,10 @@ func (*LeaseOutputRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{2}
 }
 
-func (m *LeaseOutputRequest) XXX_Unmarshal(b []byte) error {
+func (m *LeaseOutputRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_LeaseOutputRequest.Unmarshal(m, b)
 }
-func (m *LeaseOutputRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LeaseOutputRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_LeaseOutputRequest.Marshal(b, m, deterministic)
 }
 func (m *LeaseOutputRequest) XXX_Merge(src proto.Message) {
@@ -290,10 +290,10 @@ func (*LeaseOutputResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{3}
 }
 
-func (m *LeaseOutputResponse) XXX_Unmarshal(b []byte) error {
+func (m *LeaseOutputResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_LeaseOutputResponse.Unmarshal(m, b)
 }
-func (m *LeaseOutputResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LeaseOutputResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_LeaseOutputResponse.Marshal(b, m, deterministic)
 }
 func (m *LeaseOutputResponse) XXX_Merge(src proto.Message) {
@@ -332,10 +332,10 @@ func (*ReleaseOutputRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{4}
 }
 
-func (m *ReleaseOutputRequest) XXX_Unmarshal(b []byte) error {
+func (m *ReleaseOutputRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ReleaseOutputRequest.Unmarshal(m, b)
 }
-func (m *ReleaseOutputRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ReleaseOutputRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ReleaseOutputRequest.Marshal(b, m, deterministic)
 }
 func (m *ReleaseOutputRequest) XXX_Merge(src proto.Message) {
@@ -377,10 +377,10 @@ func (*ReleaseOutputResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{5}
 }
 
-func (m *ReleaseOutputResponse) XXX_Unmarshal(b []byte) error {
+func (m *ReleaseOutputResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ReleaseOutputResponse.Unmarshal(m, b)
 }
-func (m *ReleaseOutputResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ReleaseOutputResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ReleaseOutputResponse.Marshal(b, m, deterministic)
 }
 func (m *ReleaseOutputResponse) XXX_Merge(src proto.Message) {
@@ -417,10 +417,10 @@ func (*KeyReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{6}
 }
 
-func (m *KeyReq) XXX_Unmarshal(b []byte) error {
+func (m *KeyReq) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_KeyReq.Unmarshal(m, b)
 }
-func (m *KeyReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *KeyReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_KeyReq.Marshal(b, m, deterministic)
 }
 func (m *KeyReq) XXX_Merge(src proto.Message) {
@@ -462,10 +462,10 @@ func (*AddrRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{7}
 }
 
-func (m *AddrRequest) XXX_Unmarshal(b []byte) error {
+func (m *AddrRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddrRequest.Unmarshal(m, b)
 }
-func (m *AddrRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddrRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddrRequest.Marshal(b, m, deterministic)
 }
 func (m *AddrRequest) XXX_Merge(src proto.Message) {
@@ -496,10 +496,10 @@ func (*AddrResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{8}
 }
 
-func (m *AddrResponse) XXX_Unmarshal(b []byte) error {
+func (m *AddrResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddrResponse.Unmarshal(m, b)
 }
-func (m *AddrResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddrResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddrResponse.Marshal(b, m, deterministic)
 }
 func (m *AddrResponse) XXX_Merge(src proto.Message) {
@@ -540,10 +540,10 @@ func (*Transaction) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{9}
 }
 
-func (m *Transaction) XXX_Unmarshal(b []byte) error {
+func (m *Transaction) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
 }
-func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
 }
 func (m *Transaction) XXX_Merge(src proto.Message) {
@@ -592,10 +592,10 @@ func (*PublishResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{10}
 }
 
-func (m *PublishResponse) XXX_Unmarshal(b []byte) error {
+func (m *PublishResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PublishResponse.Unmarshal(m, b)
 }
-func (m *PublishResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PublishResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PublishResponse.Marshal(b, m, deterministic)
 }
 func (m *PublishResponse) XXX_Merge(src proto.Message) {
@@ -644,10 +644,10 @@ func (*SendOutputsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{11}
 }
 
-func (m *SendOutputsRequest) XXX_Unmarshal(b []byte) error {
+func (m *SendOutputsRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SendOutputsRequest.Unmarshal(m, b)
 }
-func (m *SendOutputsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SendOutputsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SendOutputsRequest.Marshal(b, m, deterministic)
 }
 func (m *SendOutputsRequest) XXX_Merge(src proto.Message) {
@@ -713,10 +713,10 @@ func (*SendOutputsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{12}
 }
 
-func (m *SendOutputsResponse) XXX_Unmarshal(b []byte) error {
+func (m *SendOutputsResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SendOutputsResponse.Unmarshal(m, b)
 }
-func (m *SendOutputsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SendOutputsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SendOutputsResponse.Marshal(b, m, deterministic)
 }
 func (m *SendOutputsResponse) XXX_Merge(src proto.Message) {
@@ -754,10 +754,10 @@ func (*EstimateFeeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{13}
 }
 
-func (m *EstimateFeeRequest) XXX_Unmarshal(b []byte) error {
+func (m *EstimateFeeRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_EstimateFeeRequest.Unmarshal(m, b)
 }
-func (m *EstimateFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *EstimateFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_EstimateFeeRequest.Marshal(b, m, deterministic)
 }
 func (m *EstimateFeeRequest) XXX_Merge(src proto.Message) {
@@ -796,10 +796,10 @@ func (*EstimateFeeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{14}
 }
 
-func (m *EstimateFeeResponse) XXX_Unmarshal(b []byte) error {
+func (m *EstimateFeeResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_EstimateFeeResponse.Unmarshal(m, b)
 }
-func (m *EstimateFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *EstimateFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_EstimateFeeResponse.Marshal(b, m, deterministic)
 }
 func (m *EstimateFeeResponse) XXX_Merge(src proto.Message) {
@@ -859,10 +859,10 @@ func (*PendingSweep) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{15}
 }
 
-func (m *PendingSweep) XXX_Unmarshal(b []byte) error {
+func (m *PendingSweep) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PendingSweep.Unmarshal(m, b)
 }
-func (m *PendingSweep) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PendingSweep) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PendingSweep.Marshal(b, m, deterministic)
 }
 func (m *PendingSweep) XXX_Merge(src proto.Message) {
@@ -953,10 +953,10 @@ func (*PendingSweepsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{16}
 }
 
-func (m *PendingSweepsRequest) XXX_Unmarshal(b []byte) error {
+func (m *PendingSweepsRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PendingSweepsRequest.Unmarshal(m, b)
 }
-func (m *PendingSweepsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PendingSweepsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PendingSweepsRequest.Marshal(b, m, deterministic)
 }
 func (m *PendingSweepsRequest) XXX_Merge(src proto.Message) {
@@ -987,10 +987,10 @@ func (*PendingSweepsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{17}
 }
 
-func (m *PendingSweepsResponse) XXX_Unmarshal(b []byte) error {
+func (m *PendingSweepsResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PendingSweepsResponse.Unmarshal(m, b)
 }
-func (m *PendingSweepsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PendingSweepsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PendingSweepsResponse.Marshal(b, m, deterministic)
 }
 func (m *PendingSweepsResponse) XXX_Merge(src proto.Message) {
@@ -1037,10 +1037,10 @@ func (*BumpFeeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{18}
 }
 
-func (m *BumpFeeRequest) XXX_Unmarshal(b []byte) error {
+func (m *BumpFeeRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_BumpFeeRequest.Unmarshal(m, b)
 }
-func (m *BumpFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BumpFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_BumpFeeRequest.Marshal(b, m, deterministic)
 }
 func (m *BumpFeeRequest) XXX_Merge(src proto.Message) {
@@ -1096,10 +1096,10 @@ func (*BumpFeeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{19}
 }
 
-func (m *BumpFeeResponse) XXX_Unmarshal(b []byte) error {
+func (m *BumpFeeResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_BumpFeeResponse.Unmarshal(m, b)
 }
-func (m *BumpFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BumpFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_BumpFeeResponse.Marshal(b, m, deterministic)
 }
 func (m *BumpFeeResponse) XXX_Merge(src proto.Message) {
@@ -1132,10 +1132,10 @@ func (*ListSweepsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{20}
 }
 
-func (m *ListSweepsRequest) XXX_Unmarshal(b []byte) error {
+func (m *ListSweepsRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListSweepsRequest.Unmarshal(m, b)
 }
-func (m *ListSweepsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListSweepsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListSweepsRequest.Marshal(b, m, deterministic)
 }
 func (m *ListSweepsRequest) XXX_Merge(src proto.Message) {
@@ -1174,10 +1174,10 @@ func (*ListSweepsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{21}
 }
 
-func (m *ListSweepsResponse) XXX_Unmarshal(b []byte) error {
+func (m *ListSweepsResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListSweepsResponse.Unmarshal(m, b)
 }
-func (m *ListSweepsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListSweepsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListSweepsResponse.Marshal(b, m, deterministic)
 }
 func (m *ListSweepsResponse) XXX_Merge(src proto.Message) {
@@ -1255,10 +1255,10 @@ func (*ListSweepsResponse_TransactionIDs) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{21, 0}
 }
 
-func (m *ListSweepsResponse_TransactionIDs) XXX_Unmarshal(b []byte) error {
+func (m *ListSweepsResponse_TransactionIDs) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ListSweepsResponse_TransactionIDs.Unmarshal(m, b)
 }
-func (m *ListSweepsResponse_TransactionIDs) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListSweepsResponse_TransactionIDs) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ListSweepsResponse_TransactionIDs.Marshal(b, m, deterministic)
 }
 func (m *ListSweepsResponse_TransactionIDs) XXX_Merge(src proto.Message) {
@@ -1299,10 +1299,10 @@ func (*LabelTransactionRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{22}
 }
 
-func (m *LabelTransactionRequest) XXX_Unmarshal(b []byte) error {
+func (m *LabelTransactionRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_LabelTransactionRequest.Unmarshal(m, b)
 }
-func (m *LabelTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LabelTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_LabelTransactionRequest.Marshal(b, m, deterministic)
 }
 func (m *LabelTransactionRequest) XXX_Merge(src proto.Message) {
@@ -1351,10 +1351,10 @@ func (*LabelTransactionResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{23}
 }
 
-func (m *LabelTransactionResponse) XXX_Unmarshal(b []byte) error {
+func (m *LabelTransactionResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_LabelTransactionResponse.Unmarshal(m, b)
 }
-func (m *LabelTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LabelTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_LabelTransactionResponse.Marshal(b, m, deterministic)
 }
 func (m *LabelTransactionResponse) XXX_Merge(src proto.Message) {
@@ -1390,10 +1390,10 @@ func (*FundPsbtRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{24}
 }
 
-func (m *FundPsbtRequest) XXX_Unmarshal(b []byte) error {
+func (m *FundPsbtRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_FundPsbtRequest.Unmarshal(m, b)
 }
-func (m *FundPsbtRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *FundPsbtRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_FundPsbtRequest.Marshal(b, m, deterministic)
 }
 func (m *FundPsbtRequest) XXX_Merge(src proto.Message) {
@@ -1515,10 +1515,10 @@ func (*FundPsbtResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{25}
 }
 
-func (m *FundPsbtResponse) XXX_Unmarshal(b []byte) error {
+func (m *FundPsbtResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_FundPsbtResponse.Unmarshal(m, b)
 }
-func (m *FundPsbtResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *FundPsbtResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_FundPsbtResponse.Marshal(b, m, deterministic)
 }
 func (m *FundPsbtResponse) XXX_Merge(src proto.Message) {
@@ -1579,10 +1579,10 @@ func (*TxTemplate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{26}
 }
 
-func (m *TxTemplate) XXX_Unmarshal(b []byte) error {
+func (m *TxTemplate) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_TxTemplate.Unmarshal(m, b)
 }
-func (m *TxTemplate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TxTemplate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_TxTemplate.Marshal(b, m, deterministic)
 }
 func (m *TxTemplate) XXX_Merge(src proto.Message) {
@@ -1632,10 +1632,10 @@ func (*UtxoLease) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{27}
 }
 
-func (m *UtxoLease) XXX_Unmarshal(b []byte) error {
+func (m *UtxoLease) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_UtxoLease.Unmarshal(m, b)
 }
-func (m *UtxoLease) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *UtxoLease) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_UtxoLease.Marshal(b, m, deterministic)
 }
 func (m *UtxoLease) XXX_Merge(src proto.Message) {
@@ -1689,10 +1689,10 @@ func (*FinalizePsbtRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{28}
 }
 
-func (m *FinalizePsbtRequest) XXX_Unmarshal(b []byte) error {
+func (m *FinalizePsbtRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_FinalizePsbtRequest.Unmarshal(m, b)
 }
-func (m *FinalizePsbtRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *FinalizePsbtRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_FinalizePsbtRequest.Marshal(b, m, deterministic)
 }
 func (m *FinalizePsbtRequest) XXX_Merge(src proto.Message) {
@@ -1731,10 +1731,10 @@ func (*FinalizePsbtResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_6cc6942ac78249e5, []int{29}
 }
 
-func (m *FinalizePsbtResponse) XXX_Unmarshal(b []byte) error {
+func (m *FinalizePsbtResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_FinalizePsbtResponse.Unmarshal(m, b)
 }
-func (m *FinalizePsbtResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *FinalizePsbtResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_FinalizePsbtResponse.Marshal(b, m, deterministic)
 }
 func (m *FinalizePsbtResponse) XXX_Merge(src proto.Message) {
@@ -1933,47 +1933,47 @@ type WalletKitClient interface {
 	//
 	//ListUnspent returns a list of all utxos spendable by the wallet with a
 	//number of confirmations between the specified minimum and maximum.
-	ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, error)
+	ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, er.R)
 	//
 	//LeaseOutput locks an output to the given ID, preventing it from being
 	//available for any future coin selection attempts. The absolute time of the
 	//lock's expiration is returned. The expiration of the lock can be extended by
 	//successive invocations of this RPC. Outputs can be unlocked before their
 	//expiration through `ReleaseOutput`.
-	LeaseOutput(ctx context.Context, in *LeaseOutputRequest, opts ...grpc.CallOption) (*LeaseOutputResponse, error)
+	LeaseOutput(ctx context.Context, in *LeaseOutputRequest, opts ...grpc.CallOption) (*LeaseOutputResponse, er.R)
 	//
 	//ReleaseOutput unlocks an output, allowing it to be available for coin
 	//selection if it remains unspent. The ID should match the one used to
 	//originally lock the output.
-	ReleaseOutput(ctx context.Context, in *ReleaseOutputRequest, opts ...grpc.CallOption) (*ReleaseOutputResponse, error)
+	ReleaseOutput(ctx context.Context, in *ReleaseOutputRequest, opts ...grpc.CallOption) (*ReleaseOutputResponse, er.R)
 	//
 	//DeriveNextKey attempts to derive the *next* key within the key family
 	//(account in BIP43) specified. This method should return the next external
 	//child within this branch.
-	DeriveNextKey(ctx context.Context, in *KeyReq, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, error)
+	DeriveNextKey(ctx context.Context, in *KeyReq, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, er.R)
 	//
 	//DeriveKey attempts to derive an arbitrary key specified by the passed
 	//KeyLocator.
-	DeriveKey(ctx context.Context, in *signrpc.KeyLocator, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, error)
+	DeriveKey(ctx context.Context, in *signrpc.KeyLocator, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, er.R)
 	//
 	//NextAddr returns the next unused address within the wallet.
-	NextAddr(ctx context.Context, in *AddrRequest, opts ...grpc.CallOption) (*AddrResponse, error)
+	NextAddr(ctx context.Context, in *AddrRequest, opts ...grpc.CallOption) (*AddrResponse, er.R)
 	//
 	//PublishTransaction attempts to publish the passed transaction to the
 	//network. Once this returns without an error, the wallet will continually
 	//attempt to re-broadcast the transaction on start up, until it enters the
 	//chain.
-	PublishTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*PublishResponse, error)
+	PublishTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*PublishResponse, er.R)
 	//
 	//SendOutputs is similar to the existing sendmany call in Bitcoind, and
 	//allows the caller to create a transaction that sends to several outputs at
 	//once. This is ideal when wanting to batch create a set of transactions.
-	SendOutputs(ctx context.Context, in *SendOutputsRequest, opts ...grpc.CallOption) (*SendOutputsResponse, error)
+	SendOutputs(ctx context.Context, in *SendOutputsRequest, opts ...grpc.CallOption) (*SendOutputsResponse, er.R)
 	//
 	//EstimateFee attempts to query the internal fee estimator of the wallet to
 	//determine the fee (in sat/kw) to attach to a transaction in order to
 	//achieve the confirmation target.
-	EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, error)
+	EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, er.R)
 	//
 	//PendingSweeps returns lists of on-chain outputs that lnd is currently
 	//attempting to sweep within its central batching engine. Outputs with similar
@@ -1983,7 +1983,7 @@ type WalletKitClient interface {
 	//NOTE: Some of the fields within PendingSweepsRequest are not guaranteed to
 	//remain supported. This is an advanced API that depends on the internals of
 	//the UtxoSweeper, so things may change.
-	PendingSweeps(ctx context.Context, in *PendingSweepsRequest, opts ...grpc.CallOption) (*PendingSweepsResponse, error)
+	PendingSweeps(ctx context.Context, in *PendingSweepsRequest, opts ...grpc.CallOption) (*PendingSweepsResponse, er.R)
 	//
 	//BumpFee bumps the fee of an arbitrary input within a transaction. This RPC
 	//takes a different approach than bitcoind's bumpfee command. lnd has a
@@ -2010,18 +2010,18 @@ type WalletKitClient interface {
 	//Note that this RPC currently doesn't perform any validation checks on the
 	//fee preference being provided. For now, the responsibility of ensuring that
 	//the new fee preference is sufficient is delegated to the user.
-	BumpFee(ctx context.Context, in *BumpFeeRequest, opts ...grpc.CallOption) (*BumpFeeResponse, error)
+	BumpFee(ctx context.Context, in *BumpFeeRequest, opts ...grpc.CallOption) (*BumpFeeResponse, er.R)
 	//
 	//ListSweeps returns a list of the sweep transactions our node has produced.
 	//Note that these sweeps may not be confirmed yet, as we record sweeps on
 	//broadcast, not confirmation.
-	ListSweeps(ctx context.Context, in *ListSweepsRequest, opts ...grpc.CallOption) (*ListSweepsResponse, error)
+	ListSweeps(ctx context.Context, in *ListSweepsRequest, opts ...grpc.CallOption) (*ListSweepsResponse, er.R)
 	//
 	//LabelTransaction adds a label to a transaction. If the transaction already
 	//has a label the call will fail unless the overwrite bool is set. This will
 	//overwrite the exiting transaction label. Labels must not be empty, and
 	//cannot exceed 500 characters.
-	LabelTransaction(ctx context.Context, in *LabelTransactionRequest, opts ...grpc.CallOption) (*LabelTransactionResponse, error)
+	LabelTransaction(ctx context.Context, in *LabelTransactionRequest, opts ...grpc.CallOption) (*LabelTransactionResponse, er.R)
 	//
 	//FundPsbt creates a fully populated PSBT that contains enough inputs to fund
 	//the outputs specified in the template. There are two ways of specifying a
@@ -2041,7 +2041,7 @@ type WalletKitClient interface {
 	//responsibility to either spend the locked UTXOs (by finalizing and then
 	//publishing the transaction) or to unlock/release the locked UTXOs in case of
 	//an error on the caller's side.
-	FundPsbt(ctx context.Context, in *FundPsbtRequest, opts ...grpc.CallOption) (*FundPsbtResponse, error)
+	FundPsbt(ctx context.Context, in *FundPsbtRequest, opts ...grpc.CallOption) (*FundPsbtResponse, er.R)
 	//
 	//FinalizePsbt expects a partial transaction with all inputs and outputs fully
 	//declared and tries to sign all inputs that belong to the wallet. Lnd must be
@@ -2054,7 +2054,7 @@ type WalletKitClient interface {
 	//NOTE: This method does NOT publish the transaction once finalized. It is the
 	//caller's responsibility to either publish the transaction on success or
 	//unlock/release any locked UTXOs in case of an error in this method.
-	FinalizePsbt(ctx context.Context, in *FinalizePsbtRequest, opts ...grpc.CallOption) (*FinalizePsbtResponse, error)
+	FinalizePsbt(ctx context.Context, in *FinalizePsbtRequest, opts ...grpc.CallOption) (*FinalizePsbtResponse, er.R)
 }
 
 type walletKitClient struct {
@@ -2065,7 +2065,7 @@ func NewWalletKitClient(cc *grpc.ClientConn) WalletKitClient {
 	return &walletKitClient{cc}
 }
 
-func (c *walletKitClient) ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, error) {
+func (c *walletKitClient) ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, er.R) {
 	out := new(ListUnspentResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/ListUnspent", in, out, opts...)
 	if err != nil {
@@ -2074,7 +2074,7 @@ func (c *walletKitClient) ListUnspent(ctx context.Context, in *ListUnspentReques
 	return out, nil
 }
 
-func (c *walletKitClient) LeaseOutput(ctx context.Context, in *LeaseOutputRequest, opts ...grpc.CallOption) (*LeaseOutputResponse, error) {
+func (c *walletKitClient) LeaseOutput(ctx context.Context, in *LeaseOutputRequest, opts ...grpc.CallOption) (*LeaseOutputResponse, er.R) {
 	out := new(LeaseOutputResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/LeaseOutput", in, out, opts...)
 	if err != nil {
@@ -2083,7 +2083,7 @@ func (c *walletKitClient) LeaseOutput(ctx context.Context, in *LeaseOutputReques
 	return out, nil
 }
 
-func (c *walletKitClient) ReleaseOutput(ctx context.Context, in *ReleaseOutputRequest, opts ...grpc.CallOption) (*ReleaseOutputResponse, error) {
+func (c *walletKitClient) ReleaseOutput(ctx context.Context, in *ReleaseOutputRequest, opts ...grpc.CallOption) (*ReleaseOutputResponse, er.R) {
 	out := new(ReleaseOutputResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/ReleaseOutput", in, out, opts...)
 	if err != nil {
@@ -2092,7 +2092,7 @@ func (c *walletKitClient) ReleaseOutput(ctx context.Context, in *ReleaseOutputRe
 	return out, nil
 }
 
-func (c *walletKitClient) DeriveNextKey(ctx context.Context, in *KeyReq, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, error) {
+func (c *walletKitClient) DeriveNextKey(ctx context.Context, in *KeyReq, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, er.R) {
 	out := new(signrpc.KeyDescriptor)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/DeriveNextKey", in, out, opts...)
 	if err != nil {
@@ -2101,7 +2101,7 @@ func (c *walletKitClient) DeriveNextKey(ctx context.Context, in *KeyReq, opts ..
 	return out, nil
 }
 
-func (c *walletKitClient) DeriveKey(ctx context.Context, in *signrpc.KeyLocator, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, error) {
+func (c *walletKitClient) DeriveKey(ctx context.Context, in *signrpc.KeyLocator, opts ...grpc.CallOption) (*signrpc.KeyDescriptor, er.R) {
 	out := new(signrpc.KeyDescriptor)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/DeriveKey", in, out, opts...)
 	if err != nil {
@@ -2110,7 +2110,7 @@ func (c *walletKitClient) DeriveKey(ctx context.Context, in *signrpc.KeyLocator,
 	return out, nil
 }
 
-func (c *walletKitClient) NextAddr(ctx context.Context, in *AddrRequest, opts ...grpc.CallOption) (*AddrResponse, error) {
+func (c *walletKitClient) NextAddr(ctx context.Context, in *AddrRequest, opts ...grpc.CallOption) (*AddrResponse, er.R) {
 	out := new(AddrResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/NextAddr", in, out, opts...)
 	if err != nil {
@@ -2119,7 +2119,7 @@ func (c *walletKitClient) NextAddr(ctx context.Context, in *AddrRequest, opts ..
 	return out, nil
 }
 
-func (c *walletKitClient) PublishTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*PublishResponse, error) {
+func (c *walletKitClient) PublishTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*PublishResponse, er.R) {
 	out := new(PublishResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/PublishTransaction", in, out, opts...)
 	if err != nil {
@@ -2128,7 +2128,7 @@ func (c *walletKitClient) PublishTransaction(ctx context.Context, in *Transactio
 	return out, nil
 }
 
-func (c *walletKitClient) SendOutputs(ctx context.Context, in *SendOutputsRequest, opts ...grpc.CallOption) (*SendOutputsResponse, error) {
+func (c *walletKitClient) SendOutputs(ctx context.Context, in *SendOutputsRequest, opts ...grpc.CallOption) (*SendOutputsResponse, er.R) {
 	out := new(SendOutputsResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/SendOutputs", in, out, opts...)
 	if err != nil {
@@ -2137,7 +2137,7 @@ func (c *walletKitClient) SendOutputs(ctx context.Context, in *SendOutputsReques
 	return out, nil
 }
 
-func (c *walletKitClient) EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, error) {
+func (c *walletKitClient) EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, er.R) {
 	out := new(EstimateFeeResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/EstimateFee", in, out, opts...)
 	if err != nil {
@@ -2146,7 +2146,7 @@ func (c *walletKitClient) EstimateFee(ctx context.Context, in *EstimateFeeReques
 	return out, nil
 }
 
-func (c *walletKitClient) PendingSweeps(ctx context.Context, in *PendingSweepsRequest, opts ...grpc.CallOption) (*PendingSweepsResponse, error) {
+func (c *walletKitClient) PendingSweeps(ctx context.Context, in *PendingSweepsRequest, opts ...grpc.CallOption) (*PendingSweepsResponse, er.R) {
 	out := new(PendingSweepsResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/PendingSweeps", in, out, opts...)
 	if err != nil {
@@ -2155,7 +2155,7 @@ func (c *walletKitClient) PendingSweeps(ctx context.Context, in *PendingSweepsRe
 	return out, nil
 }
 
-func (c *walletKitClient) BumpFee(ctx context.Context, in *BumpFeeRequest, opts ...grpc.CallOption) (*BumpFeeResponse, error) {
+func (c *walletKitClient) BumpFee(ctx context.Context, in *BumpFeeRequest, opts ...grpc.CallOption) (*BumpFeeResponse, er.R) {
 	out := new(BumpFeeResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/BumpFee", in, out, opts...)
 	if err != nil {
@@ -2164,7 +2164,7 @@ func (c *walletKitClient) BumpFee(ctx context.Context, in *BumpFeeRequest, opts 
 	return out, nil
 }
 
-func (c *walletKitClient) ListSweeps(ctx context.Context, in *ListSweepsRequest, opts ...grpc.CallOption) (*ListSweepsResponse, error) {
+func (c *walletKitClient) ListSweeps(ctx context.Context, in *ListSweepsRequest, opts ...grpc.CallOption) (*ListSweepsResponse, er.R) {
 	out := new(ListSweepsResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/ListSweeps", in, out, opts...)
 	if err != nil {
@@ -2173,7 +2173,7 @@ func (c *walletKitClient) ListSweeps(ctx context.Context, in *ListSweepsRequest,
 	return out, nil
 }
 
-func (c *walletKitClient) LabelTransaction(ctx context.Context, in *LabelTransactionRequest, opts ...grpc.CallOption) (*LabelTransactionResponse, error) {
+func (c *walletKitClient) LabelTransaction(ctx context.Context, in *LabelTransactionRequest, opts ...grpc.CallOption) (*LabelTransactionResponse, er.R) {
 	out := new(LabelTransactionResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/LabelTransaction", in, out, opts...)
 	if err != nil {
@@ -2182,7 +2182,7 @@ func (c *walletKitClient) LabelTransaction(ctx context.Context, in *LabelTransac
 	return out, nil
 }
 
-func (c *walletKitClient) FundPsbt(ctx context.Context, in *FundPsbtRequest, opts ...grpc.CallOption) (*FundPsbtResponse, error) {
+func (c *walletKitClient) FundPsbt(ctx context.Context, in *FundPsbtRequest, opts ...grpc.CallOption) (*FundPsbtResponse, er.R) {
 	out := new(FundPsbtResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/FundPsbt", in, out, opts...)
 	if err != nil {
@@ -2191,7 +2191,7 @@ func (c *walletKitClient) FundPsbt(ctx context.Context, in *FundPsbtRequest, opt
 	return out, nil
 }
 
-func (c *walletKitClient) FinalizePsbt(ctx context.Context, in *FinalizePsbtRequest, opts ...grpc.CallOption) (*FinalizePsbtResponse, error) {
+func (c *walletKitClient) FinalizePsbt(ctx context.Context, in *FinalizePsbtRequest, opts ...grpc.CallOption) (*FinalizePsbtResponse, er.R) {
 	out := new(FinalizePsbtResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/FinalizePsbt", in, out, opts...)
 	if err != nil {
@@ -2205,47 +2205,47 @@ type WalletKitServer interface {
 	//
 	//ListUnspent returns a list of all utxos spendable by the wallet with a
 	//number of confirmations between the specified minimum and maximum.
-	ListUnspent(context.Context, *ListUnspentRequest) (*ListUnspentResponse, error)
+	ListUnspent(context.Context, *ListUnspentRequest) (*ListUnspentResponse, er.R)
 	//
 	//LeaseOutput locks an output to the given ID, preventing it from being
 	//available for any future coin selection attempts. The absolute time of the
 	//lock's expiration is returned. The expiration of the lock can be extended by
 	//successive invocations of this RPC. Outputs can be unlocked before their
 	//expiration through `ReleaseOutput`.
-	LeaseOutput(context.Context, *LeaseOutputRequest) (*LeaseOutputResponse, error)
+	LeaseOutput(context.Context, *LeaseOutputRequest) (*LeaseOutputResponse, er.R)
 	//
 	//ReleaseOutput unlocks an output, allowing it to be available for coin
 	//selection if it remains unspent. The ID should match the one used to
 	//originally lock the output.
-	ReleaseOutput(context.Context, *ReleaseOutputRequest) (*ReleaseOutputResponse, error)
+	ReleaseOutput(context.Context, *ReleaseOutputRequest) (*ReleaseOutputResponse, er.R)
 	//
 	//DeriveNextKey attempts to derive the *next* key within the key family
 	//(account in BIP43) specified. This method should return the next external
 	//child within this branch.
-	DeriveNextKey(context.Context, *KeyReq) (*signrpc.KeyDescriptor, error)
+	DeriveNextKey(context.Context, *KeyReq) (*signrpc.KeyDescriptor, er.R)
 	//
 	//DeriveKey attempts to derive an arbitrary key specified by the passed
 	//KeyLocator.
-	DeriveKey(context.Context, *signrpc.KeyLocator) (*signrpc.KeyDescriptor, error)
+	DeriveKey(context.Context, *signrpc.KeyLocator) (*signrpc.KeyDescriptor, er.R)
 	//
 	//NextAddr returns the next unused address within the wallet.
-	NextAddr(context.Context, *AddrRequest) (*AddrResponse, error)
+	NextAddr(context.Context, *AddrRequest) (*AddrResponse, er.R)
 	//
 	//PublishTransaction attempts to publish the passed transaction to the
 	//network. Once this returns without an error, the wallet will continually
 	//attempt to re-broadcast the transaction on start up, until it enters the
 	//chain.
-	PublishTransaction(context.Context, *Transaction) (*PublishResponse, error)
+	PublishTransaction(context.Context, *Transaction) (*PublishResponse, er.R)
 	//
 	//SendOutputs is similar to the existing sendmany call in Bitcoind, and
 	//allows the caller to create a transaction that sends to several outputs at
 	//once. This is ideal when wanting to batch create a set of transactions.
-	SendOutputs(context.Context, *SendOutputsRequest) (*SendOutputsResponse, error)
+	SendOutputs(context.Context, *SendOutputsRequest) (*SendOutputsResponse, er.R)
 	//
 	//EstimateFee attempts to query the internal fee estimator of the wallet to
 	//determine the fee (in sat/kw) to attach to a transaction in order to
 	//achieve the confirmation target.
-	EstimateFee(context.Context, *EstimateFeeRequest) (*EstimateFeeResponse, error)
+	EstimateFee(context.Context, *EstimateFeeRequest) (*EstimateFeeResponse, er.R)
 	//
 	//PendingSweeps returns lists of on-chain outputs that lnd is currently
 	//attempting to sweep within its central batching engine. Outputs with similar
@@ -2255,7 +2255,7 @@ type WalletKitServer interface {
 	//NOTE: Some of the fields within PendingSweepsRequest are not guaranteed to
 	//remain supported. This is an advanced API that depends on the internals of
 	//the UtxoSweeper, so things may change.
-	PendingSweeps(context.Context, *PendingSweepsRequest) (*PendingSweepsResponse, error)
+	PendingSweeps(context.Context, *PendingSweepsRequest) (*PendingSweepsResponse, er.R)
 	//
 	//BumpFee bumps the fee of an arbitrary input within a transaction. This RPC
 	//takes a different approach than bitcoind's bumpfee command. lnd has a
@@ -2282,18 +2282,18 @@ type WalletKitServer interface {
 	//Note that this RPC currently doesn't perform any validation checks on the
 	//fee preference being provided. For now, the responsibility of ensuring that
 	//the new fee preference is sufficient is delegated to the user.
-	BumpFee(context.Context, *BumpFeeRequest) (*BumpFeeResponse, error)
+	BumpFee(context.Context, *BumpFeeRequest) (*BumpFeeResponse, er.R)
 	//
 	//ListSweeps returns a list of the sweep transactions our node has produced.
 	//Note that these sweeps may not be confirmed yet, as we record sweeps on
 	//broadcast, not confirmation.
-	ListSweeps(context.Context, *ListSweepsRequest) (*ListSweepsResponse, error)
+	ListSweeps(context.Context, *ListSweepsRequest) (*ListSweepsResponse, er.R)
 	//
 	//LabelTransaction adds a label to a transaction. If the transaction already
 	//has a label the call will fail unless the overwrite bool is set. This will
 	//overwrite the exiting transaction label. Labels must not be empty, and
 	//cannot exceed 500 characters.
-	LabelTransaction(context.Context, *LabelTransactionRequest) (*LabelTransactionResponse, error)
+	LabelTransaction(context.Context, *LabelTransactionRequest) (*LabelTransactionResponse, er.R)
 	//
 	//FundPsbt creates a fully populated PSBT that contains enough inputs to fund
 	//the outputs specified in the template. There are two ways of specifying a
@@ -2313,7 +2313,7 @@ type WalletKitServer interface {
 	//responsibility to either spend the locked UTXOs (by finalizing and then
 	//publishing the transaction) or to unlock/release the locked UTXOs in case of
 	//an error on the caller's side.
-	FundPsbt(context.Context, *FundPsbtRequest) (*FundPsbtResponse, error)
+	FundPsbt(context.Context, *FundPsbtRequest) (*FundPsbtResponse, er.R)
 	//
 	//FinalizePsbt expects a partial transaction with all inputs and outputs fully
 	//declared and tries to sign all inputs that belong to the wallet. Lnd must be
@@ -2326,56 +2326,56 @@ type WalletKitServer interface {
 	//NOTE: This method does NOT publish the transaction once finalized. It is the
 	//caller's responsibility to either publish the transaction on success or
 	//unlock/release any locked UTXOs in case of an error in this method.
-	FinalizePsbt(context.Context, *FinalizePsbtRequest) (*FinalizePsbtResponse, error)
+	FinalizePsbt(context.Context, *FinalizePsbtRequest) (*FinalizePsbtResponse, er.R)
 }
 
 // UnimplementedWalletKitServer can be embedded to have forward compatible implementations.
 type UnimplementedWalletKitServer struct {
 }
 
-func (*UnimplementedWalletKitServer) ListUnspent(ctx context.Context, req *ListUnspentRequest) (*ListUnspentResponse, error) {
+func (*UnimplementedWalletKitServer) ListUnspent(ctx context.Context, req *ListUnspentRequest) (*ListUnspentResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListUnspent not implemented")
 }
-func (*UnimplementedWalletKitServer) LeaseOutput(ctx context.Context, req *LeaseOutputRequest) (*LeaseOutputResponse, error) {
+func (*UnimplementedWalletKitServer) LeaseOutput(ctx context.Context, req *LeaseOutputRequest) (*LeaseOutputResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method LeaseOutput not implemented")
 }
-func (*UnimplementedWalletKitServer) ReleaseOutput(ctx context.Context, req *ReleaseOutputRequest) (*ReleaseOutputResponse, error) {
+func (*UnimplementedWalletKitServer) ReleaseOutput(ctx context.Context, req *ReleaseOutputRequest) (*ReleaseOutputResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReleaseOutput not implemented")
 }
-func (*UnimplementedWalletKitServer) DeriveNextKey(ctx context.Context, req *KeyReq) (*signrpc.KeyDescriptor, error) {
+func (*UnimplementedWalletKitServer) DeriveNextKey(ctx context.Context, req *KeyReq) (*signrpc.KeyDescriptor, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeriveNextKey not implemented")
 }
-func (*UnimplementedWalletKitServer) DeriveKey(ctx context.Context, req *signrpc.KeyLocator) (*signrpc.KeyDescriptor, error) {
+func (*UnimplementedWalletKitServer) DeriveKey(ctx context.Context, req *signrpc.KeyLocator) (*signrpc.KeyDescriptor, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeriveKey not implemented")
 }
-func (*UnimplementedWalletKitServer) NextAddr(ctx context.Context, req *AddrRequest) (*AddrResponse, error) {
+func (*UnimplementedWalletKitServer) NextAddr(ctx context.Context, req *AddrRequest) (*AddrResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method NextAddr not implemented")
 }
-func (*UnimplementedWalletKitServer) PublishTransaction(ctx context.Context, req *Transaction) (*PublishResponse, error) {
+func (*UnimplementedWalletKitServer) PublishTransaction(ctx context.Context, req *Transaction) (*PublishResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method PublishTransaction not implemented")
 }
-func (*UnimplementedWalletKitServer) SendOutputs(ctx context.Context, req *SendOutputsRequest) (*SendOutputsResponse, error) {
+func (*UnimplementedWalletKitServer) SendOutputs(ctx context.Context, req *SendOutputsRequest) (*SendOutputsResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendOutputs not implemented")
 }
-func (*UnimplementedWalletKitServer) EstimateFee(ctx context.Context, req *EstimateFeeRequest) (*EstimateFeeResponse, error) {
+func (*UnimplementedWalletKitServer) EstimateFee(ctx context.Context, req *EstimateFeeRequest) (*EstimateFeeResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method EstimateFee not implemented")
 }
-func (*UnimplementedWalletKitServer) PendingSweeps(ctx context.Context, req *PendingSweepsRequest) (*PendingSweepsResponse, error) {
+func (*UnimplementedWalletKitServer) PendingSweeps(ctx context.Context, req *PendingSweepsRequest) (*PendingSweepsResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method PendingSweeps not implemented")
 }
-func (*UnimplementedWalletKitServer) BumpFee(ctx context.Context, req *BumpFeeRequest) (*BumpFeeResponse, error) {
+func (*UnimplementedWalletKitServer) BumpFee(ctx context.Context, req *BumpFeeRequest) (*BumpFeeResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method BumpFee not implemented")
 }
-func (*UnimplementedWalletKitServer) ListSweeps(ctx context.Context, req *ListSweepsRequest) (*ListSweepsResponse, error) {
+func (*UnimplementedWalletKitServer) ListSweeps(ctx context.Context, req *ListSweepsRequest) (*ListSweepsResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSweeps not implemented")
 }
-func (*UnimplementedWalletKitServer) LabelTransaction(ctx context.Context, req *LabelTransactionRequest) (*LabelTransactionResponse, error) {
+func (*UnimplementedWalletKitServer) LabelTransaction(ctx context.Context, req *LabelTransactionRequest) (*LabelTransactionResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method LabelTransaction not implemented")
 }
-func (*UnimplementedWalletKitServer) FundPsbt(ctx context.Context, req *FundPsbtRequest) (*FundPsbtResponse, error) {
+func (*UnimplementedWalletKitServer) FundPsbt(ctx context.Context, req *FundPsbtRequest) (*FundPsbtResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method FundPsbt not implemented")
 }
-func (*UnimplementedWalletKitServer) FinalizePsbt(ctx context.Context, req *FinalizePsbtRequest) (*FinalizePsbtResponse, error) {
+func (*UnimplementedWalletKitServer) FinalizePsbt(ctx context.Context, req *FinalizePsbtRequest) (*FinalizePsbtResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinalizePsbt not implemented")
 }
 
@@ -2383,7 +2383,7 @@ func RegisterWalletKitServer(s *grpc.Server, srv WalletKitServer) {
 	s.RegisterService(&_WalletKit_serviceDesc, srv)
 }
 
-func _WalletKit_ListUnspent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_ListUnspent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(ListUnspentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2395,13 +2395,13 @@ func _WalletKit_ListUnspent_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/ListUnspent",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).ListUnspent(ctx, req.(*ListUnspentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_LeaseOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_LeaseOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(LeaseOutputRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2413,13 +2413,13 @@ func _WalletKit_LeaseOutput_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/LeaseOutput",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).LeaseOutput(ctx, req.(*LeaseOutputRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_ReleaseOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_ReleaseOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(ReleaseOutputRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2431,13 +2431,13 @@ func _WalletKit_ReleaseOutput_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/ReleaseOutput",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).ReleaseOutput(ctx, req.(*ReleaseOutputRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_DeriveNextKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_DeriveNextKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(KeyReq)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2449,13 +2449,13 @@ func _WalletKit_DeriveNextKey_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/DeriveNextKey",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).DeriveNextKey(ctx, req.(*KeyReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_DeriveKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_DeriveKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(signrpc.KeyLocator)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2467,13 +2467,13 @@ func _WalletKit_DeriveKey_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/DeriveKey",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).DeriveKey(ctx, req.(*signrpc.KeyLocator))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_NextAddr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_NextAddr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(AddrRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2485,13 +2485,13 @@ func _WalletKit_NextAddr_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/NextAddr",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).NextAddr(ctx, req.(*AddrRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_PublishTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_PublishTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(Transaction)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2503,13 +2503,13 @@ func _WalletKit_PublishTransaction_Handler(srv interface{}, ctx context.Context,
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/PublishTransaction",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).PublishTransaction(ctx, req.(*Transaction))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_SendOutputs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_SendOutputs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SendOutputsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2521,13 +2521,13 @@ func _WalletKit_SendOutputs_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/SendOutputs",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).SendOutputs(ctx, req.(*SendOutputsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_EstimateFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_EstimateFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(EstimateFeeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2539,13 +2539,13 @@ func _WalletKit_EstimateFee_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/EstimateFee",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).EstimateFee(ctx, req.(*EstimateFeeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_PendingSweeps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_PendingSweeps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(PendingSweepsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2557,13 +2557,13 @@ func _WalletKit_PendingSweeps_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/PendingSweeps",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).PendingSweeps(ctx, req.(*PendingSweepsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_BumpFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_BumpFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(BumpFeeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2575,13 +2575,13 @@ func _WalletKit_BumpFee_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/BumpFee",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).BumpFee(ctx, req.(*BumpFeeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_ListSweeps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_ListSweeps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(ListSweepsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2593,13 +2593,13 @@ func _WalletKit_ListSweeps_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/ListSweeps",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).ListSweeps(ctx, req.(*ListSweepsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_LabelTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_LabelTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(LabelTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2611,13 +2611,13 @@ func _WalletKit_LabelTransaction_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/LabelTransaction",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).LabelTransaction(ctx, req.(*LabelTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_FundPsbt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_FundPsbt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(FundPsbtRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2629,13 +2629,13 @@ func _WalletKit_FundPsbt_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/FundPsbt",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).FundPsbt(ctx, req.(*FundPsbtRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletKit_FinalizePsbt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _WalletKit_FinalizePsbt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(FinalizePsbtRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2647,7 +2647,7 @@ func _WalletKit_FinalizePsbt_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/walletrpc.WalletKit/FinalizePsbt",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(WalletKitServer).FinalizePsbt(ctx, req.(*FinalizePsbtRequest))
 	}
 	return interceptor(ctx, in, info, handler)

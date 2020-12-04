@@ -2,13 +2,12 @@ package routing
 
 import (
 	"crypto/rand"
-	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
@@ -21,7 +20,7 @@ const stepTimeout = 5 * time.Second
 
 // createTestRoute builds a route a->b->c paying the given amt to c.
 func createTestRoute(amt lnwire.MilliSatoshi,
-	aliasMap map[string]route.Vertex) (*route.Route, error) {
+	aliasMap map[string]route.Vertex) (*route.Route, er.R) {
 
 	hopFee := lnwire.NewMSatFromSatoshis(3)
 	hop1 := aliasMap["b"]
@@ -577,8 +576,8 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 		// We set uo the use the following channels and a mock Payer to
 		// synchonize with the interaction to the Switch.
-		sendResult := make(chan error)
-		paymentResultErr := make(chan error)
+		sendResult := make(chan er.R)
+		paymentResultErr := make(chan er.R)
 		paymentResult := make(chan *htlcswitch.PaymentResult)
 
 		payer := &mockPayer{
@@ -600,7 +599,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 			QueryBandwidth: func(e *channeldb.ChannelEdgeInfo) lnwire.MilliSatoshi {
 				return lnwire.NewMSatFromSatoshis(e.Capacity)
 			},
-			NextPaymentID: func() (uint64, error) {
+			NextPaymentID: func() (uint64, er.R) {
 				next := atomic.AddUint64(&uniquePaymentID, 1)
 				return next, nil
 			},
@@ -612,14 +611,14 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 		// On startup, the router should fetch all pending payments
 		// from the ControlTower, so assert that here.
-		errCh := make(chan error)
+		errCh := make(chan er.R)
 		go func() {
 			close(errCh)
 			select {
 			case <-control.fetchInFlight:
 				return
 			case <-time.After(1 * time.Second):
-				errCh <- errors.New("router did not fetch in flight " +
+				errCh <- er.New("router did not fetch in flight " +
 					"payments")
 			}
 		}()
@@ -671,7 +670,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 		// Send the payment. Since this is new payment hash, the
 		// information should be registered with the ControlTower.
-		paymentResult := make(chan error)
+		paymentResult := make(chan er.R)
 		go func() {
 			_, _, err := router.SendPayment(&payment)
 			paymentResult <- err
@@ -812,7 +811,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 			// payment, making sure the router responds with an
 			// error indicating that it is already in flight.
 			case resendPayment:
-				resendResult = make(chan error)
+				resendResult = make(chan er.R)
 				go func() {
 					_, _, err := router.SendPayment(&payment)
 					resendResult <- err
@@ -821,7 +820,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 			// In this step we manually stop the router.
 			case stopRouter:
 				select {
-				case getPaymentResultErr <- fmt.Errorf(
+				case getPaymentResultErr <- er.Errorf(
 					"shutting down"):
 				case <-time.After(stepTimeout):
 					t.Fatalf("unable to send payment " +

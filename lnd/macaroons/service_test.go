@@ -180,17 +180,17 @@ func TestListMacaroonIDs(t *testing.T) {
 	service, err := macaroons.NewService(
 		tempDir, "lnd", false, macaroons.IPLockChecker,
 	)
-	require.NoError(t, err, "Error creating new service")
+	util.RequireNoErr(t, err, "Error creating new service")
 	defer service.Close()
 
 	err = service.CreateUnlock(&defaultPw)
-	require.NoError(t, err, "Error unlocking root key storage")
+	util.RequireNoErr(t, err, "Error unlocking root key storage")
 
 	// Third, make 3 new macaroons with different root key IDs.
 	expectedIDs := [][]byte{{1}, {2}, {3}}
 	for _, v := range expectedIDs {
 		_, err := service.NewMacaroon(context.TODO(), v, testOperation)
-		require.NoError(t, err, "Error creating macaroon from service")
+		util.RequireNoErr(t, err, "Error creating macaroon from service")
 	}
 
 	// Finally, check that calling List return the expected values.
@@ -212,11 +212,11 @@ func TestDeleteMacaroonID(t *testing.T) {
 	service, err := macaroons.NewService(
 		tempDir, "lnd", false, macaroons.IPLockChecker,
 	)
-	require.NoError(t, err, "Error creating new service")
+	util.RequireNoErr(t, err, "Error creating new service")
 	defer service.Close()
 
 	err = service.CreateUnlock(&defaultPw)
-	require.NoError(t, err, "Error unlocking root key storage")
+	util.RequireNoErr(t, err, "Error unlocking root key storage")
 
 	// Third, checks that removing encryptedKeyID returns an error.
 	encryptedKeyID := []byte("enckey")
@@ -234,7 +234,7 @@ func TestDeleteMacaroonID(t *testing.T) {
 	// Sixth, checks that removing a non-existed key id returns nil.
 	nonExistedID := []byte("test-non-existed")
 	deletedID, err := service.DeleteMacaroonID(ctxb, nonExistedID)
-	require.NoError(t, err, "deleting macaroon ID got an error")
+	util.RequireNoErr(t, err, "deleting macaroon ID got an error")
 	require.Nil(t, deletedID, "deleting non-existed ID should return nil")
 
 	// Seventh, make 3 new macaroons with different root key IDs, and delete
@@ -242,10 +242,10 @@ func TestDeleteMacaroonID(t *testing.T) {
 	expectedIDs := [][]byte{{1}, {2}, {3}}
 	for _, v := range expectedIDs {
 		_, err := service.NewMacaroon(ctxb, v, testOperation)
-		require.NoError(t, err, "Error creating macaroon from service")
+		util.RequireNoErr(t, err, "Error creating macaroon from service")
 	}
 	deletedID, err = service.DeleteMacaroonID(ctxb, expectedIDs[0])
-	require.NoError(t, err, "deleting macaroon ID got an error")
+	util.RequireNoErr(t, err, "deleting macaroon ID got an error")
 
 	// Finally, check that the ID is deleted.
 	require.Equal(t, expectedIDs[0], deletedID, "expected ID to be removed")

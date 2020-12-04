@@ -2,13 +2,12 @@ package wtclientrpc
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net"
 	"strconv"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -59,7 +58,7 @@ var (
 
 	// ErrWtclientNotActive signals that RPC calls cannot be processed
 	// because the watchtower client is not active.
-	ErrWtclientNotActive = errors.New("watchtower client not active")
+	ErrWtclientNotActive = er.GenericErrorType.CodeWithDetail("ErrWtclientNotActive", "watchtower client not active")
 )
 
 // WatchtowerClient is the RPC server we'll use to interact with the backing
@@ -79,7 +78,7 @@ var _ WatchtowerClientServer = (*WatchtowerClient)(nil)
 // within this method. If the macaroons we need aren't found in the filepath,
 // then we'll create them on start up. If we're unable to locate, or create the
 // macaroons we need, then we'll return with an error.
-func New(cfg *Config) (*WatchtowerClient, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*WatchtowerClient, lnrpc.MacaroonPerms, er.R) {
 	return &WatchtowerClient{*cfg}, macPermissions, nil
 }
 
@@ -87,14 +86,14 @@ func New(cfg *Config) (*WatchtowerClient, lnrpc.MacaroonPerms, error) {
 // function.
 //
 // NOTE: This is part of the lnrpc.SubWatchtowerClient interface.
-func (c *WatchtowerClient) Start() error {
+func (c *WatchtowerClient) Start() er.R {
 	return nil
 }
 
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (c *WatchtowerClient) Stop() error {
+func (c *WatchtowerClient) Stop() er.R {
 	return nil
 }
 
@@ -111,7 +110,7 @@ func (c *WatchtowerClient) Name() string {
 // called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (c *WatchtowerClient) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (c *WatchtowerClient) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterWatchtowerClientServer(grpcServer, c)
@@ -128,7 +127,7 @@ func (c *WatchtowerClient) RegisterWithRootServer(grpcServer *grpc.Server) error
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (c *WatchtowerClient) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -142,11 +141,11 @@ func (c *WatchtowerClient) RegisterWithRestServer(ctx context.Context,
 
 // isActive returns nil if the watchtower client is initialized so that we can
 // process RPC requests.
-func (c *WatchtowerClient) isActive() error {
+func (c *WatchtowerClient) isActive() er.R {
 	if c.cfg.Active {
 		return nil
 	}
-	return ErrWtclientNotActive
+	return ErrWtclientNotActive.Default()
 }
 
 // AddTower adds a new watchtower reachable at the given address and considers
@@ -154,7 +153,7 @@ func (c *WatchtowerClient) isActive() error {
 // included will be considered when dialing it for session negotiations and
 // backups.
 func (c *WatchtowerClient) AddTower(ctx context.Context,
-	req *AddTowerRequest) (*AddTowerResponse, error) {
+	req *AddTowerRequest) (*AddTowerResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -169,7 +168,7 @@ func (c *WatchtowerClient) AddTower(ctx context.Context,
 		c.cfg.Resolver,
 	)
 	if errr != nil {
-		return nil, fmt.Errorf("invalid address %v: %v", req.Address, errr)
+		return nil, er.Errorf("invalid address %v: %v", req.Address, errr)
 	}
 
 	towerAddr := &lnwire.NetAddress{
@@ -188,7 +187,7 @@ func (c *WatchtowerClient) AddTower(ctx context.Context,
 // again. If an address is provided, then this RPC only serves as a way of
 // removing the address from the watchtower instead.
 func (c *WatchtowerClient) RemoveTower(ctx context.Context,
-	req *RemoveTowerRequest) (*RemoveTowerResponse, error) {
+	req *RemoveTowerRequest) (*RemoveTowerResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -207,7 +206,7 @@ func (c *WatchtowerClient) RemoveTower(ctx context.Context,
 			c.cfg.Resolver,
 		)
 		if errr != nil {
-			return nil, fmt.Errorf("unable to parse tower "+
+			return nil, er.Errorf("unable to parse tower "+
 				"address %v: %v", req.Address, errr)
 		}
 	}
@@ -221,7 +220,7 @@ func (c *WatchtowerClient) RemoveTower(ctx context.Context,
 
 // ListTowers returns the list of watchtowers registered with the client.
 func (c *WatchtowerClient) ListTowers(ctx context.Context,
-	req *ListTowersRequest) (*ListTowersResponse, error) {
+	req *ListTowersRequest) (*ListTowersResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -243,7 +242,7 @@ func (c *WatchtowerClient) ListTowers(ctx context.Context,
 
 // GetTowerInfo retrieves information for a registered watchtower.
 func (c *WatchtowerClient) GetTowerInfo(ctx context.Context,
-	req *GetTowerInfoRequest) (*Tower, error) {
+	req *GetTowerInfoRequest) (*Tower, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -264,7 +263,7 @@ func (c *WatchtowerClient) GetTowerInfo(ctx context.Context,
 
 // Stats returns the in-memory statistics of the client since startup.
 func (c *WatchtowerClient) Stats(ctx context.Context,
-	req *StatsRequest) (*StatsResponse, error) {
+	req *StatsRequest) (*StatsResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err
@@ -282,7 +281,7 @@ func (c *WatchtowerClient) Stats(ctx context.Context,
 
 // Policy returns the active watchtower client policy configuration.
 func (c *WatchtowerClient) Policy(ctx context.Context,
-	req *PolicyRequest) (*PolicyResponse, error) {
+	req *PolicyRequest) (*PolicyResponse, er.R) {
 
 	if err := c.isActive(); err != nil {
 		return nil, err

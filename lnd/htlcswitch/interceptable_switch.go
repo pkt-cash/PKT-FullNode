@@ -1,10 +1,9 @@
 package htlcswitch
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -14,7 +13,7 @@ import (
 var (
 	// ErrFwdNotExists is an error returned when the caller tries to resolve
 	// a forward that doesn't exist anymore.
-	ErrFwdNotExists = errors.New("forward does not exist")
+	ErrFwdNotExists = Err.CodeWithDetail("ErrFwdNotExists", "forward does not exist")
 )
 
 // InterceptableSwitch is an implementation of ForwardingSwitch interface.
@@ -55,7 +54,7 @@ func (s *InterceptableSwitch) SetInterceptor(
 // ChannelLink. The link's quit signal should be provided to allow
 // cancellation of forwarding during link shutdown.
 func (s *InterceptableSwitch) ForwardPackets(linkQuit chan struct{},
-	packets ...*htlcPacket) error {
+	packets ...*htlcPacket) er.R {
 
 	var interceptor ForwardInterceptor
 	s.Lock()
@@ -133,15 +132,15 @@ func (f *interceptedForward) Packet() InterceptedPacket {
 }
 
 // Resume resumes the default behavior as if the packet was not intercepted.
-func (f *interceptedForward) Resume() error {
+func (f *interceptedForward) Resume() er.R {
 	return f.htlcSwitch.ForwardPackets(f.linkQuit, f.packet)
 }
 
 // Fail forward a failed packet to the switch.
-func (f *interceptedForward) Fail() error {
+func (f *interceptedForward) Fail() er.R {
 	reason, err := f.packet.obfuscator.EncryptFirstHop(lnwire.NewTemporaryChannelFailure(nil))
 	if err != nil {
-		return fmt.Errorf("failed to encrypt failure reason %v", err)
+		return er.Errorf("failed to encrypt failure reason %v", err)
 	}
 	return f.resolve(&lnwire.UpdateFailHTLC{
 		Reason: reason,
@@ -149,9 +148,9 @@ func (f *interceptedForward) Fail() error {
 }
 
 // Settle forwards a settled packet to the switch.
-func (f *interceptedForward) Settle(preimage lntypes.Preimage) error {
+func (f *interceptedForward) Settle(preimage lntypes.Preimage) er.R {
 	if !preimage.Matches(f.htlc.PaymentHash) {
-		return errors.New("preimage does not match hash")
+		return er.New("preimage does not match hash")
 	}
 	return f.resolve(&lnwire.UpdateFulfillHTLC{
 		PaymentPreimage: preimage,
@@ -160,7 +159,7 @@ func (f *interceptedForward) Settle(preimage lntypes.Preimage) error {
 
 // resolve is used for both Settle and Fail and forwards the message to the
 // switch.
-func (f *interceptedForward) resolve(message lnwire.Message) error {
+func (f *interceptedForward) resolve(message lnwire.Message) er.R {
 	pkt := &htlcPacket{
 		incomingChanID: f.packet.incomingChanID,
 		incomingHTLCID: f.packet.incomingHTLCID,

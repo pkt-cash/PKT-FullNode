@@ -36,7 +36,7 @@ var towerInfoCommand = cli.Command{
 	Action: actionDecorator(towerInfo),
 }
 
-func towerInfo(ctx *cli.Context) error {
+func towerInfo(ctx *cli.Context) er.R {
 	if ctx.NArg() != 0 || ctx.NumFlags() > 0 {
 		return cli.ShowCommandHelp(ctx, "info")
 	}

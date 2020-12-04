@@ -1,9 +1,10 @@
 package chainview
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // FilteredChainView represents a subscription to a certain subset of the
@@ -43,22 +44,22 @@ type FilteredChainView interface {
 	// relevant notifications are dispatched, meaning blocks with a height
 	// lower than the best known height might be sent over the
 	// FilteredBlocks() channel.
-	UpdateFilter(ops []channeldb.EdgePoint, updateHeight uint32) error
+	UpdateFilter(ops []channeldb.EdgePoint, updateHeight uint32) er.R
 
 	// FilterBlock takes a block hash, and returns a FilteredBlocks which
 	// is the result of applying the current registered UTXO sub-set on the
 	// block corresponding to that block hash.
 	//
 	// TODO(roasbeef): make a version that does by height also?
-	FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, error)
+	FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, er.R)
 
 	// Start starts all goroutine necessary for the operation of the
 	// FilteredChainView implementation.
-	Start() error
+	Start() er.R
 
 	// Stop stops all goroutines which we launched by the prior call to the
 	// Start method.
-	Stop() error
+	Stop() er.R
 }
 
 // FilteredBlock is a block which includes the transactions that modify the

@@ -3,7 +3,6 @@ package channeldb
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 	"image/color"
 	"math"
 	"math/big"
@@ -43,7 +42,7 @@ var (
 	testPub = route.Vertex{2, 202, 4}
 )
 
-func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, error) {
+func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, er.R) {
 	updateTime := prand.Int63()
 
 	pub := priv.PubKey().SerializeCompressed()
@@ -62,7 +61,7 @@ func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, error)
 	return n, nil
 }
 
-func createTestVertex(db *DB) (*LightningNode, error) {
+func createTestVertex(db *DB) (*LightningNode, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err
@@ -883,7 +882,7 @@ func TestGraphTraversal(t *testing.T) {
 
 	// Iterate over each node as returned by the graph, if all nodes are
 	// reached, then the map created above should be empty.
-	err = graph.ForEachNode(func(_ kvdb.RTx, node *LightningNode) error {
+	err = graph.ForEachNode(func(_ kvdb.RTx, node *LightningNode) er.R {
 		delete(nodeIndex, node.Alias)
 		return nil
 	})
@@ -964,7 +963,7 @@ func TestGraphTraversal(t *testing.T) {
 	// again if the map is empty that indicates that all edges have
 	// properly been reached.
 	err = graph.ForEachChannel(func(ei *ChannelEdgeInfo, _ *ChannelEdgePolicy,
-		_ *ChannelEdgePolicy) error {
+		_ *ChannelEdgePolicy) er.R {
 
 		delete(chanIndex, ei.ChannelID)
 		return nil
@@ -980,24 +979,24 @@ func TestGraphTraversal(t *testing.T) {
 	// outgoing channels for a particular node.
 	numNodeChans := 0
 	err = firstNode.ForEachChannel(nil, func(_ kvdb.RTx, _ *ChannelEdgeInfo,
-		outEdge, inEdge *ChannelEdgePolicy) error {
+		outEdge, inEdge *ChannelEdgePolicy) er.R {
 
 		// All channels between first and second node should have fully
 		// (both sides) specified policies.
 		if inEdge == nil || outEdge == nil {
-			return fmt.Errorf("channel policy not present")
+			return er.Errorf("channel policy not present")
 		}
 
 		// Each should indicate that it's outgoing (pointed
 		// towards the second node).
 		if !bytes.Equal(outEdge.Node.PubKeyBytes[:], secondNode.PubKeyBytes[:]) {
-			return fmt.Errorf("wrong outgoing edge")
+			return er.Errorf("wrong outgoing edge")
 		}
 
 		// The incoming edge should also indicate that it's pointing to
 		// the origin node.
 		if !bytes.Equal(inEdge.Node.PubKeyBytes[:], firstNode.PubKeyBytes[:]) {
-			return fmt.Errorf("wrong outgoing edge")
+			return er.Errorf("wrong outgoing edge")
 		}
 
 		numNodeChans++
@@ -1035,7 +1034,7 @@ func assertPruneTip(t *testing.T, graph *ChannelGraph, blockHash *chainhash.Hash
 func assertNumChans(t *testing.T, graph *ChannelGraph, n int) {
 	numChans := 0
 	if err := graph.ForEachChannel(func(*ChannelEdgeInfo, *ChannelEdgePolicy,
-		*ChannelEdgePolicy) error {
+		*ChannelEdgePolicy) er.R {
 
 		numChans++
 		return nil
@@ -1052,7 +1051,7 @@ func assertNumChans(t *testing.T, graph *ChannelGraph, n int) {
 
 func assertNumNodes(t *testing.T, graph *ChannelGraph, n int) {
 	numNodes := 0
-	err := graph.ForEachNode(func(_ kvdb.RTx, _ *LightningNode) error {
+	err := graph.ForEachNode(func(_ kvdb.RTx, _ *LightningNode) er.R {
 		numNodes++
 		return nil
 	})
@@ -2101,7 +2100,7 @@ func TestIncompleteChannelPolicies(t *testing.T) {
 	checkPolicies := func(node *LightningNode, expectedIn, expectedOut bool) {
 		calls := 0
 		err := node.ForEachChannel(nil, func(_ kvdb.RTx, _ *ChannelEdgeInfo,
-			outEdge, inEdge *ChannelEdgePolicy) error {
+			outEdge, inEdge *ChannelEdgePolicy) er.R {
 
 			if !expectedOut && outEdge != nil {
 				t.Fatalf("Expected no outgoing policy")
@@ -2236,16 +2235,16 @@ func TestChannelEdgePruningUpdateIndexDeletion(t *testing.T) {
 			timestampSet[t] = struct{}{}
 		}
 
-		err := kvdb.View(db, func(tx kvdb.RTx) error {
+		err := kvdb.View(db, func(tx kvdb.RTx) er.R {
 			edges := tx.ReadBucket(edgeBucket)
 			if edges == nil {
-				return ErrGraphNoEdgesFound
+				return ErrGraphNoEdgesFound.Default()
 			}
 			edgeUpdateIndex := edges.NestedReadBucket(
 				edgeUpdateIndexBucket,
 			)
 			if edgeUpdateIndex == nil {
-				return ErrGraphNoEdgesFound
+				return ErrGraphNoEdgesFound.Default()
 			}
 
 			var numEntries int
@@ -2259,7 +2258,7 @@ func TestChannelEdgePruningUpdateIndexDeletion(t *testing.T) {
 
 			expectedEntries := len(timestampSet)
 			if numEntries != expectedEntries {
-				return fmt.Errorf("expected %v entries in the "+
+				return er.Errorf("expected %v entries in the "+
 					"update index, got %v", expectedEntries,
 					numEntries)
 			}
@@ -2845,10 +2844,10 @@ func TestEdgePolicyMissingMaxHtcl(t *testing.T) {
 
 	// Attempting to deserialize these bytes should return an error.
 	r := bytes.NewReader(stripped)
-	err = kvdb.View(db, func(tx kvdb.RTx) error {
+	err = kvdb.View(db, func(tx kvdb.RTx) er.R {
 		nodes := tx.ReadBucket(nodeBucket)
 		if nodes == nil {
-			return ErrGraphNotFound
+			return ErrGraphNotFound.Default()
 		}
 
 		_, err = deserializeChanEdgePolicy(r, nodes)
@@ -2865,15 +2864,15 @@ func TestEdgePolicyMissingMaxHtcl(t *testing.T) {
 	}
 
 	// Put the stripped bytes in the DB.
-	err = kvdb.Update(db, func(tx kvdb.RwTx) error {
+	err = kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 		edges := tx.ReadWriteBucket(edgeBucket)
 		if edges == nil {
-			return ErrEdgeNotFound
+			return ErrEdgeNotFound.Default()
 		}
 
 		edgeIndex := edges.NestedReadWriteBucket(edgeIndexBucket)
 		if edgeIndex == nil {
-			return ErrEdgeNotFound
+			return ErrEdgeNotFound.Default()
 		}
 
 		var edgeKey [33 + 8]byte
@@ -3033,37 +3032,37 @@ func TestGraphZombieIndex(t *testing.T) {
 // compareNodes is used to compare two LightningNodes while excluding the
 // Features struct, which cannot be compared as the semantics for reserializing
 // the featuresMap have not been defined.
-func compareNodes(a, b *LightningNode) error {
+func compareNodes(a, b *LightningNode) er.R {
 	if a.LastUpdate != b.LastUpdate {
-		return fmt.Errorf("node LastUpdate doesn't match: expected %v, \n"+
+		return er.Errorf("node LastUpdate doesn't match: expected %v, \n"+
 			"got %v", a.LastUpdate, b.LastUpdate)
 	}
 	if !reflect.DeepEqual(a.Addresses, b.Addresses) {
-		return fmt.Errorf("Addresses doesn't match: expected %#v, \n "+
+		return er.Errorf("Addresses doesn't match: expected %#v, \n "+
 			"got %#v", a.Addresses, b.Addresses)
 	}
 	if !reflect.DeepEqual(a.PubKeyBytes, b.PubKeyBytes) {
-		return fmt.Errorf("PubKey doesn't match: expected %#v, \n "+
+		return er.Errorf("PubKey doesn't match: expected %#v, \n "+
 			"got %#v", a.PubKeyBytes, b.PubKeyBytes)
 	}
 	if !reflect.DeepEqual(a.Color, b.Color) {
-		return fmt.Errorf("Color doesn't match: expected %#v, \n "+
+		return er.Errorf("Color doesn't match: expected %#v, \n "+
 			"got %#v", a.Color, b.Color)
 	}
 	if !reflect.DeepEqual(a.Alias, b.Alias) {
-		return fmt.Errorf("Alias doesn't match: expected %#v, \n "+
+		return er.Errorf("Alias doesn't match: expected %#v, \n "+
 			"got %#v", a.Alias, b.Alias)
 	}
 	if !reflect.DeepEqual(a.db, b.db) {
-		return fmt.Errorf("db doesn't match: expected %#v, \n "+
+		return er.Errorf("db doesn't match: expected %#v, \n "+
 			"got %#v", a.db, b.db)
 	}
 	if !reflect.DeepEqual(a.HaveNodeAnnouncement, b.HaveNodeAnnouncement) {
-		return fmt.Errorf("HaveNodeAnnouncement doesn't match: expected %#v, \n "+
+		return er.Errorf("HaveNodeAnnouncement doesn't match: expected %#v, \n "+
 			"got %#v", a.HaveNodeAnnouncement, b.HaveNodeAnnouncement)
 	}
 	if !bytes.Equal(a.ExtraOpaqueData, b.ExtraOpaqueData) {
-		return fmt.Errorf("extra data doesn't match: %v vs %v",
+		return er.Errorf("extra data doesn't match: %v vs %v",
 			a.ExtraOpaqueData, b.ExtraOpaqueData)
 	}
 
@@ -3072,53 +3071,53 @@ func compareNodes(a, b *LightningNode) error {
 
 // compareEdgePolicies is used to compare two ChannelEdgePolices using
 // compareNodes, so as to exclude comparisons of the Nodes' Features struct.
-func compareEdgePolicies(a, b *ChannelEdgePolicy) error {
+func compareEdgePolicies(a, b *ChannelEdgePolicy) er.R {
 	if a.ChannelID != b.ChannelID {
-		return fmt.Errorf("ChannelID doesn't match: expected %v, "+
+		return er.Errorf("ChannelID doesn't match: expected %v, "+
 			"got %v", a.ChannelID, b.ChannelID)
 	}
 	if !reflect.DeepEqual(a.LastUpdate, b.LastUpdate) {
-		return fmt.Errorf("edge LastUpdate doesn't match: expected %#v, \n "+
+		return er.Errorf("edge LastUpdate doesn't match: expected %#v, \n "+
 			"got %#v", a.LastUpdate, b.LastUpdate)
 	}
 	if a.MessageFlags != b.MessageFlags {
-		return fmt.Errorf("MessageFlags doesn't match: expected %v, "+
+		return er.Errorf("MessageFlags doesn't match: expected %v, "+
 			"got %v", a.MessageFlags, b.MessageFlags)
 	}
 	if a.ChannelFlags != b.ChannelFlags {
-		return fmt.Errorf("ChannelFlags doesn't match: expected %v, "+
+		return er.Errorf("ChannelFlags doesn't match: expected %v, "+
 			"got %v", a.ChannelFlags, b.ChannelFlags)
 	}
 	if a.TimeLockDelta != b.TimeLockDelta {
-		return fmt.Errorf("TimeLockDelta doesn't match: expected %v, "+
+		return er.Errorf("TimeLockDelta doesn't match: expected %v, "+
 			"got %v", a.TimeLockDelta, b.TimeLockDelta)
 	}
 	if a.MinHTLC != b.MinHTLC {
-		return fmt.Errorf("MinHTLC doesn't match: expected %v, "+
+		return er.Errorf("MinHTLC doesn't match: expected %v, "+
 			"got %v", a.MinHTLC, b.MinHTLC)
 	}
 	if a.MaxHTLC != b.MaxHTLC {
-		return fmt.Errorf("MaxHTLC doesn't match: expected %v, "+
+		return er.Errorf("MaxHTLC doesn't match: expected %v, "+
 			"got %v", a.MaxHTLC, b.MaxHTLC)
 	}
 	if a.FeeBaseMSat != b.FeeBaseMSat {
-		return fmt.Errorf("FeeBaseMSat doesn't match: expected %v, "+
+		return er.Errorf("FeeBaseMSat doesn't match: expected %v, "+
 			"got %v", a.FeeBaseMSat, b.FeeBaseMSat)
 	}
 	if a.FeeProportionalMillionths != b.FeeProportionalMillionths {
-		return fmt.Errorf("FeeProportionalMillionths doesn't match: "+
+		return er.Errorf("FeeProportionalMillionths doesn't match: "+
 			"expected %v, got %v", a.FeeProportionalMillionths,
 			b.FeeProportionalMillionths)
 	}
 	if !bytes.Equal(a.ExtraOpaqueData, b.ExtraOpaqueData) {
-		return fmt.Errorf("extra data doesn't match: %v vs %v",
+		return er.Errorf("extra data doesn't match: %v vs %v",
 			a.ExtraOpaqueData, b.ExtraOpaqueData)
 	}
 	if err := compareNodes(a.Node, b.Node); err != nil {
 		return err
 	}
 	if !reflect.DeepEqual(a.db, b.db) {
-		return fmt.Errorf("db doesn't match: expected %#v, \n "+
+		return er.Errorf("db doesn't match: expected %#v, \n "+
 			"got %#v", a.db, b.db)
 	}
 	return nil

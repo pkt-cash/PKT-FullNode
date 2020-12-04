@@ -1,10 +1,8 @@
 package htlcswitch
 
-import "github.com/go-errors/errors"
-
 var (
 	// ErrLinkShuttingDown signals that the link is shutting down.
-	ErrLinkShuttingDown = errors.New("link shutting down")
+	ErrLinkShuttingDown = Err.CodeWithDetail("ErrLinkShuttingDown", "link shutting down")
 )
 
 // errorCode encodes the possible types of errors that will make us fail the

@@ -17,13 +17,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
-	"github.com/pkt-cash/pktd/rpcclient"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/invoicesrpc"
@@ -34,6 +34,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnrpc/wtclientrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/rpcclient"
+	"github.com/pkt-cash/pktd/wire"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"gopkg.in/macaroon.v2"
@@ -143,10 +145,10 @@ type BackendConfig interface {
 	GenArgs() []string
 
 	// ConnectMiner is called to establish a connection to the test miner.
-	ConnectMiner() error
+	ConnectMiner() er.R
 
 	// DisconnectMiner is called to disconnect the miner.
-	DisconnectMiner() error
+	DisconnectMiner() er.R
 
 	// Name returns the name of the backend type.
 	Name() string
@@ -344,7 +346,7 @@ var _ lnrpc.WalletUnlockerClient = (*HarnessNode)(nil)
 var _ invoicesrpc.InvoicesClient = (*HarnessNode)(nil)
 
 // newNode creates a new test lightning node instance from the passed config.
-func newNode(cfg NodeConfig) (*HarnessNode, error) {
+func newNode(cfg NodeConfig) (*HarnessNode, er.R) {
 	if cfg.BaseDir == "" {
 		var err error
 		cfg.BaseDir, err = ioutil.TempDir("", "lndtest-node")
@@ -393,7 +395,7 @@ func newNode(cfg NodeConfig) (*HarnessNode, error) {
 // copied to a file specified as logFilename.
 func NewMiner(logDir, logFilename string, netParams *chaincfg.Params,
 	handler *rpcclient.NotificationHandlers) (*rpctest.Harness,
-	func() error, error) {
+	func() error, er.R) {
 
 	args := []string{
 		"--rejectnonstd",
@@ -407,14 +409,14 @@ func NewMiner(logDir, logFilename string, netParams *chaincfg.Params,
 
 	miner, err := rpctest.New(netParams, handler, args)
 	if err != nil {
-		return nil, nil, fmt.Errorf(
+		return nil, nil, er.Errorf(
 			"unable to create mining node: %v", err,
 		)
 	}
 
-	cleanUp := func() error {
+	cleanUp := func() er.R {
 		if err := miner.TearDown(); err != nil {
-			return fmt.Errorf(
+			return er.Errorf(
 				"failed to tear down miner, got error: %s", err,
 			)
 		}
@@ -425,11 +427,11 @@ func NewMiner(logDir, logFilename string, netParams *chaincfg.Params,
 		copyPath := fmt.Sprintf("%s/../%s", logDir, logFilename)
 		err := CopyFile(filepath.Clean(copyPath), logFile)
 		if err != nil {
-			return fmt.Errorf("unable to copy file: %v", err)
+			return er.Errorf("unable to copy file: %v", err)
 		}
 
 		if err = os.RemoveAll(logDir); err != nil {
-			return fmt.Errorf(
+			return er.Errorf(
 				"cannot remove dir %s: %v", logDir, err,
 			)
 		}
@@ -492,7 +494,7 @@ func (hn *HarnessNode) InvoiceMacPath() string {
 //
 // This may not clean up properly if an error is returned, so the caller should
 // call shutdown() regardless of the return value.
-func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) error {
+func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
 	hn.quit = make(chan struct{})
 
 	args := hn.Cfg.genArgs()
@@ -624,12 +626,12 @@ func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) error {
 // initClientWhenReady waits until the main gRPC server is detected as active,
 // then complete the normal HarnessNode gRPC connection creation. This can be
 // used it a node has just been unlocked, or has its wallet state initialized.
-func (hn *HarnessNode) initClientWhenReady() error {
+func (hn *HarnessNode) initClientWhenReady() er.R {
 	var (
 		conn    *grpc.ClientConn
 		connErr error
 	)
-	if err := wait.NoError(func() error {
+	if err := wait.NoError(func() er.R {
 		conn, connErr = hn.ConnectRPC(true)
 		return connErr
 	}, 5*time.Second); err != nil {
@@ -645,7 +647,7 @@ func (hn *HarnessNode) initClientWhenReady() error {
 // Once established, the new connection is used to initialize the
 // LightningClient and subscribes the HarnessNode to topology changes.
 func (hn *HarnessNode) Init(ctx context.Context,
-	initReq *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, error) {
+	initReq *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, er.R) {
 
 	ctxt, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
@@ -729,7 +731,7 @@ func (hn *HarnessNode) InitChangePassword(ctx context.Context,
 // seed+password. Once this method returns, the HarnessNode will be ready to
 // accept normal gRPC requests and harness command.
 func (hn *HarnessNode) Unlock(ctx context.Context,
-	unlockReq *lnrpc.UnlockWalletRequest) error {
+	unlockReq *lnrpc.UnlockWalletRequest) er.R {
 
 	ctxt, _ := context.WithTimeout(ctx, DefaultTimeout)
 
@@ -748,7 +750,7 @@ func (hn *HarnessNode) Unlock(ctx context.Context,
 // connection and subscribes the harness node to graph topology updates.
 // This method also spawns a lightning network watcher for this node,
 // which watches for topology changes.
-func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) error {
+func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) er.R {
 	// Construct the LightningClient that will allow us to use the
 	// HarnessNode directly for normal rpc operations.
 	hn.conn = conn
@@ -772,7 +774,7 @@ func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) error {
 	// until then, we'll create a dummy subscription to ensure we can do so
 	// successfully before proceeding. We use a dummy subscription in order
 	// to not consume an update from the real one.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		req := &lnrpc.GraphTopologySubscription{}
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		topologyClient, err := hn.SubscribeChannelGraph(ctx, req)
@@ -806,14 +808,14 @@ func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) error {
 	// Launch the watcher that will hook into graph related topology change
 	// from the PoV of this node.
 	hn.wg.Add(1)
-	subscribed := make(chan error)
+	subscribed := make(chan er.R)
 	go hn.lightningNetworkWatcher(subscribed)
 
 	return <-subscribed
 }
 
 // FetchNodeInfo queries an unlocked node to retrieve its public key.
-func (hn *HarnessNode) FetchNodeInfo() error {
+func (hn *HarnessNode) FetchNodeInfo() er.R {
 	// Obtain the lnid of this node for quick identification purposes.
 	ctxb := context.Background()
 	info, err := hn.GetInfo(ctxb, &lnrpc.GetInfoRequest{})
@@ -823,7 +825,7 @@ func (hn *HarnessNode) FetchNodeInfo() error {
 
 	hn.PubKeyStr = info.IdentityPubkey
 
-	pubkey, err := hex.DecodeString(info.IdentityPubkey)
+	pubkey, err := util.DecodeHex(info.IdentityPubkey)
 	if err != nil {
 		return err
 	}
@@ -834,7 +836,7 @@ func (hn *HarnessNode) FetchNodeInfo() error {
 
 // AddToLog adds a line of choice to the node's logfile. This is useful
 // to interleave test output with output from the node.
-func (hn *HarnessNode) AddToLog(line string) error {
+func (hn *HarnessNode) AddToLog(line string) er.R {
 	// If this node was not set up with a log file, just return early.
 	if hn.logFile == nil {
 		return nil
@@ -846,7 +848,7 @@ func (hn *HarnessNode) AddToLog(line string) error {
 }
 
 // writePidFile writes the process ID of the running lnd process to a .pid file.
-func (hn *HarnessNode) writePidFile() error {
+func (hn *HarnessNode) writePidFile() er.R {
 	filePath := filepath.Join(hn.Cfg.BaseDir, fmt.Sprintf("%v.pid", hn.NodeID))
 
 	pid, err := os.Create(filePath)
@@ -868,20 +870,20 @@ func (hn *HarnessNode) writePidFile() error {
 // the file is readable within the timeout, its content is de-serialized as a
 // macaroon and returned.
 func (hn *HarnessNode) ReadMacaroon(macPath string, timeout time.Duration) (
-	*macaroon.Macaroon, error) {
+	*macaroon.Macaroon, er.R) {
 
 	// Wait until macaroon file is created and has valid content before
 	// using it.
 	var mac *macaroon.Macaroon
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		macBytes, err := ioutil.ReadFile(macPath)
 		if err != nil {
-			return fmt.Errorf("error reading macaroon file: %v", err)
+			return er.Errorf("error reading macaroon file: %v", err)
 		}
 
 		newMac := &macaroon.Macaroon{}
 		if err = newMac.UnmarshalBinary(macBytes); err != nil {
-			return fmt.Errorf("error unmarshalling macaroon "+
+			return er.Errorf("error unmarshalling macaroon "+
 				"file: %v", err)
 		}
 		mac = newMac
@@ -895,12 +897,12 @@ func (hn *HarnessNode) ReadMacaroon(macPath string, timeout time.Duration) (
 // ConnectRPCWithMacaroon uses the TLS certificate and given macaroon to
 // create a gRPC client connection.
 func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
-	*grpc.ClientConn, error) {
+	*grpc.ClientConn, er.R) {
 
 	// Wait until TLS certificate is created and has valid content before
 	// using it, up to 30 sec.
 	var tlsCreds credentials.TransportCredentials
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		var err error
 		tlsCreds, err = credentials.NewClientTLSFromFile(
 			hn.Cfg.TLSCertPath, "",
@@ -908,7 +910,7 @@ func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
 		return err
 	}, DefaultTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("error reading TLS cert: %v", err)
+		return nil, er.Errorf("error reading TLS cert: %v", err)
 	}
 
 	opts := []grpc.DialOption{
@@ -930,7 +932,7 @@ func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
 
 // ConnectRPC uses the TLS certificate and admin macaroon files written by the
 // lnd node to create a gRPC client connection.
-func (hn *HarnessNode) ConnectRPC(useMacs bool) (*grpc.ClientConn, error) {
+func (hn *HarnessNode) ConnectRPC(useMacs bool) (*grpc.ClientConn, er.R) {
 	// If we don't want to use macaroons, just pass nil, the next method
 	// will handle it correctly.
 	if !useMacs {
@@ -953,12 +955,12 @@ func (hn *HarnessNode) SetExtraArgs(extraArgs []string) {
 }
 
 // cleanup cleans up all the temporary files created by the node's process.
-func (hn *HarnessNode) cleanup() error {
+func (hn *HarnessNode) cleanup() er.R {
 	return os.RemoveAll(hn.Cfg.BaseDir)
 }
 
 // Stop attempts to stop the active lnd process.
-func (hn *HarnessNode) stop() error {
+func (hn *HarnessNode) stop() er.R {
 	// Do nothing if the process is not running.
 	if hn.processExit == nil {
 		return nil
@@ -978,7 +980,7 @@ func (hn *HarnessNode) stop() error {
 	select {
 	case <-hn.processExit:
 	case <-time.After(60 * time.Second):
-		return fmt.Errorf("process did not exit")
+		return er.Errorf("process did not exit")
 	}
 
 	close(hn.quit)
@@ -995,7 +997,7 @@ func (hn *HarnessNode) stop() error {
 	if hn.conn != nil {
 		err := hn.conn.Close()
 		if err != nil {
-			return fmt.Errorf("error attempting to stop grpc client: %v", err)
+			return er.Errorf("error attempting to stop grpc client: %v", err)
 		}
 	}
 
@@ -1004,7 +1006,7 @@ func (hn *HarnessNode) stop() error {
 
 // shutdown stops the active lnd process and cleans up any temporary directories
 // created along the way.
-func (hn *HarnessNode) shutdown() error {
+func (hn *HarnessNode) shutdown() er.R {
 	if err := hn.stop(); err != nil {
 		return err
 	}
@@ -1027,7 +1029,7 @@ type chanWatchRequest struct {
 
 // getChanPointFundingTxid returns the given channel point's funding txid in
 // raw bytes.
-func getChanPointFundingTxid(chanPoint *lnrpc.ChannelPoint) ([]byte, error) {
+func getChanPointFundingTxid(chanPoint *lnrpc.ChannelPoint) ([]byte, er.R) {
 	var txid []byte
 
 	// A channel point's funding txid can be get/set as a byte slice or a
@@ -1069,7 +1071,7 @@ func (hn *HarnessNode) lightningNetworkWatcher(subscribed chan error) {
 			msg := fmt.Sprintf("%s(%d): unable to create topology "+
 				"client: %v (%s)", hn.Name(), hn.NodeID, err,
 				time.Now().String())
-			subscribed <- fmt.Errorf(msg)
+			subscribed <- er.Errorf(msg)
 			return
 		}
 		close(subscribed)
@@ -1195,7 +1197,7 @@ func (hn *HarnessNode) lightningNetworkWatcher(subscribed chan error) {
 // considered "fully advertised" once both of its directional edges has been
 // advertised within the test Lightning Network.
 func (hn *HarnessNode) WaitForNetworkChannelOpen(ctx context.Context,
-	op *lnrpc.ChannelPoint) error {
+	op *lnrpc.ChannelPoint) er.R {
 
 	eventChan := make(chan struct{})
 
@@ -1221,7 +1223,7 @@ func (hn *HarnessNode) WaitForNetworkChannelOpen(ctx context.Context,
 	case <-eventChan:
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("channel not opened before timeout")
+		return er.Errorf("channel not opened before timeout")
 	}
 }
 
@@ -1230,7 +1232,7 @@ func (hn *HarnessNode) WaitForNetworkChannelOpen(ctx context.Context,
 // closed once a transaction spending the funding outpoint is seen within a
 // confirmed block.
 func (hn *HarnessNode) WaitForNetworkChannelClose(ctx context.Context,
-	op *lnrpc.ChannelPoint) error {
+	op *lnrpc.ChannelPoint) er.R {
 
 	eventChan := make(chan struct{})
 
@@ -1256,7 +1258,7 @@ func (hn *HarnessNode) WaitForNetworkChannelClose(ctx context.Context,
 	case <-eventChan:
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("channel not closed before timeout")
+		return er.Errorf("channel not closed before timeout")
 	}
 }
 
@@ -1265,7 +1267,7 @@ func (hn *HarnessNode) WaitForNetworkChannelClose(ctx context.Context,
 // timeout, then the goroutine will continually poll until the timeout has
 // elapsed. In the case that the chain isn't synced before the timeout is up,
 // then this function will return an error.
-func (hn *HarnessNode) WaitForBlockchainSync(ctx context.Context) error {
+func (hn *HarnessNode) WaitForBlockchainSync(ctx context.Context) er.R {
 	errChan := make(chan error, 1)
 	retryDelay := time.Millisecond * 100
 
@@ -1303,13 +1305,13 @@ func (hn *HarnessNode) WaitForBlockchainSync(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		return fmt.Errorf("timeout while waiting for blockchain sync")
+		return er.Errorf("timeout while waiting for blockchain sync")
 	}
 }
 
 // WaitForBalance waits until the node sees the expected confirmed/unconfirmed
 // balance within their wallet.
-func (hn *HarnessNode) WaitForBalance(expectedBalance btcutil.Amount, confirmed bool) error {
+func (hn *HarnessNode) WaitForBalance(expectedBalance btcutil.Amount, confirmed bool) er.R {
 	ctx := context.Background()
 	req := &lnrpc.WalletBalanceRequest{}
 
@@ -1331,7 +1333,7 @@ func (hn *HarnessNode) WaitForBalance(expectedBalance btcutil.Amount, confirmed 
 
 	err := wait.Predicate(doesBalanceMatch, 30*time.Second)
 	if err != nil {
-		return fmt.Errorf("balances not synced after deadline: "+
+		return er.Errorf("balances not synced after deadline: "+
 			"expected %v, only have %v", expectedBalance, lastBalance)
 	}
 

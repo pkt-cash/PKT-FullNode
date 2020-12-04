@@ -2,10 +2,10 @@ package hop
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -22,11 +22,11 @@ type Iterator interface {
 	// by each hop to authenticate the information given to it by the prior
 	// hop. The payload will also contain any additional TLV fields provided
 	// by the sender.
-	HopPayload() (*Payload, error)
+	HopPayload() (*Payload, er.R)
 
 	// EncodeNextHop encodes the onion packet destined for the next hop
 	// into the passed io.Writer.
-	EncodeNextHop(w io.Writer) error
+	EncodeNextHop(w io.Writer) er.R
 
 	// ExtractErrorEncrypter returns the ErrorEncrypter needed for this hop,
 	// along with a failure code to signal if the decoding was successful.
@@ -66,7 +66,7 @@ var _ Iterator = (*sphinxHopIterator)(nil)
 // Encode encodes iterator and writes it to the writer.
 //
 // NOTE: Part of the HopIterator interface.
-func (r *sphinxHopIterator) EncodeNextHop(w io.Writer) error {
+func (r *sphinxHopIterator) EncodeNextHop(w io.Writer) er.R {
 	return r.processedPacket.NextPacket.Encode(w)
 }
 
@@ -77,7 +77,7 @@ func (r *sphinxHopIterator) EncodeNextHop(w io.Writer) error {
 // also contain any additional TLV fields provided by the sender.
 //
 // NOTE: Part of the HopIterator interface.
-func (r *sphinxHopIterator) HopPayload() (*Payload, error) {
+func (r *sphinxHopIterator) HopPayload() (*Payload, er.R) {
 	switch r.processedPacket.Payload.Type {
 
 	// If this is the legacy payload, then we'll extract the information
@@ -94,7 +94,7 @@ func (r *sphinxHopIterator) HopPayload() (*Payload, error) {
 		))
 
 	default:
-		return nil, fmt.Errorf("unknown sphinx payload type: %v",
+		return nil, er.Errorf("unknown sphinx payload type: %v",
 			r.processedPacket.Payload.Type)
 	}
 }
@@ -130,12 +130,12 @@ func NewOnionProcessor(router *sphinx.Router) *OnionProcessor {
 }
 
 // Start spins up the onion processor's sphinx router.
-func (p *OnionProcessor) Start() error {
+func (p *OnionProcessor) Start() er.R {
 	return p.router.Start()
 }
 
 // Stop shutsdown the onion processor's sphinx router.
-func (p *OnionProcessor) Stop() error {
+func (p *OnionProcessor) Stop() er.R {
 	p.router.Stop()
 	return nil
 }
@@ -188,7 +188,7 @@ func (p *OnionProcessor) DecodeHopIterator(r io.Reader, rHash []byte,
 // instance using the rHash as the associated data when checking the relevant
 // MACs during the decoding process.
 func (p *OnionProcessor) ReconstructHopIterator(r io.Reader, rHash []byte) (
-	Iterator, error) {
+	Iterator, er.R) {
 
 	onionPkt := &sphinx.OnionPacket{}
 	if err := onionPkt.Decode(r); err != nil {
@@ -241,7 +241,7 @@ func (r *DecodeHopIteratorResponse) Result() (Iterator, lnwire.FailCode) {
 // the presented readers and rhashes *NEVER* deviate across invocations for the
 // same id.
 func (p *OnionProcessor) DecodeHopIterators(id []byte,
-	reqs []DecodeHopIteratorRequest) ([]DecodeHopIteratorResponse, error) {
+	reqs []DecodeHopIteratorRequest) ([]DecodeHopIteratorResponse, er.R) {
 
 	var (
 		batchSize = len(reqs)

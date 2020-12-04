@@ -3,7 +3,6 @@ package wtdb_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
@@ -502,7 +502,7 @@ func testChanSummaries(h *clientDBHarness) {
 
 	// Generate a random sweep pkscript and register it for this channel.
 	expPkScript := make([]byte, 22)
-	if _, err := io.ReadFull(crand.Reader, expPkScript); err != nil {
+	if _, err := util.ReadFull(crand.Reader, expPkScript); err != nil {
 		h.t.Fatalf("unable to generate pkscript: %v", err)
 	}
 	h.registerChan(chanID, expPkScript, nil)
@@ -868,17 +868,17 @@ func TestClientDB(t *testing.T) {
 // randCommittedUpdate generates a random committed update.
 func randCommittedUpdate(t *testing.T, seqNum uint16) *wtdb.CommittedUpdate {
 	var chanID lnwire.ChannelID
-	if _, err := io.ReadFull(crand.Reader, chanID[:]); err != nil {
+	if _, err := util.ReadFull(crand.Reader, chanID[:]); err != nil {
 		t.Fatalf("unable to generate chan id: %v", err)
 	}
 
 	var hint blob.BreachHint
-	if _, err := io.ReadFull(crand.Reader, hint[:]); err != nil {
+	if _, err := util.ReadFull(crand.Reader, hint[:]); err != nil {
 		t.Fatalf("unable to generate breach hint: %v", err)
 	}
 
 	encBlob := make([]byte, blob.Size(blob.FlagCommitOutputs.Type()))
-	if _, err := io.ReadFull(crand.Reader, encBlob); err != nil {
+	if _, err := util.ReadFull(crand.Reader, encBlob); err != nil {
 		t.Fatalf("unable to generate encrypted blob: %v", err)
 	}
 

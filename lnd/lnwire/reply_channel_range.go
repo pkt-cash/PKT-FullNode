@@ -1,6 +1,10 @@
 package lnwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // ReplyChannelRange is the response to the QueryChannelRange message. It
 // includes the original query, and the next streaming chunk of encoded short
@@ -42,7 +46,7 @@ var _ Message = (*ReplyChannelRange)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *ReplyChannelRange) Decode(r io.Reader, pver uint32) error {
+func (c *ReplyChannelRange) Decode(r io.Reader, pver uint32) er.R {
 	err := c.QueryChannelRange.Decode(r, pver)
 	if err != nil {
 		return err
@@ -61,7 +65,7 @@ func (c *ReplyChannelRange) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *ReplyChannelRange) Encode(w io.Writer, pver uint32) error {
+func (c *ReplyChannelRange) Encode(w io.Writer, pver uint32) er.R {
 	if err := c.QueryChannelRange.Encode(w, pver); err != nil {
 		return err
 	}

@@ -55,7 +55,7 @@ func TestHtlcOutgoingResolverRemoteClaim(t *testing.T) {
 	// level because our test context has already created the resolver.
 	reportChan := make(chan *channeldb.ResolverReport)
 	ctx.resolver.Checkpoint = func(_ ContractResolver,
-		reports ...*channeldb.ResolverReport) error {
+		reports ...*channeldb.ResolverReport) er.R {
 
 		// Send all of our reports into the channel.
 		for _, report := range reports {
@@ -140,9 +140,9 @@ func newOutgoingResolverTestContext(t *testing.T) *outgoingResolverTestContext {
 		ChainArbitratorConfig: ChainArbitratorConfig{
 			Notifier:   notifier,
 			PreimageDB: preimageDB,
-			DeliverResolutionMsg: func(msgs ...ResolutionMsg) error {
+			DeliverResolutionMsg: func(msgs ...ResolutionMsg) er.R {
 				if len(msgs) != 1 {
-					return fmt.Errorf("expected 1 "+
+					return er.Errorf("expected 1 "+
 						"resolution msg, instead got %v",
 						len(msgs))
 				}
@@ -153,7 +153,7 @@ func newOutgoingResolverTestContext(t *testing.T) *outgoingResolverTestContext {
 			OnionProcessor: onionProcessor,
 		},
 		PutResolverReport: func(_ kvdb.RwTx,
-			_ *channeldb.ResolverReport) error {
+			_ *channeldb.ResolverReport) er.R {
 
 			return nil
 		},
@@ -169,7 +169,7 @@ func newOutgoingResolverTestContext(t *testing.T) *outgoingResolverTestContext {
 	cfg := ResolverConfig{
 		ChannelArbitratorConfig: chainCfg,
 		Checkpoint: func(_ ContractResolver,
-			_ ...*channeldb.ResolverReport) error {
+			_ ...*channeldb.ResolverReport) er.R {
 
 			checkPointChan <- struct{}{}
 			return nil

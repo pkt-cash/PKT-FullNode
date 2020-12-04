@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // RevokeAndAck is sent by either side once a CommitSig message has been
@@ -45,7 +46,7 @@ var _ Message = (*RevokeAndAck)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *RevokeAndAck) Decode(r io.Reader, pver uint32) error {
+func (c *RevokeAndAck) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&c.ChanID,
 		c.Revocation[:],
@@ -57,7 +58,7 @@ func (c *RevokeAndAck) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *RevokeAndAck) Encode(w io.Writer, pver uint32) error {
+func (c *RevokeAndAck) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChanID,
 		c.Revocation[:],

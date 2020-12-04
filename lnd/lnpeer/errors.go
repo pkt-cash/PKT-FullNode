@@ -1,8 +1,9 @@
 package lnpeer
 
-import "fmt"
+import "github.com/pkt-cash/pktd/btcutil/er"
 
 var (
 	// ErrPeerExiting signals that the peer received a disconnect request.
-	ErrPeerExiting = fmt.Errorf("peer exiting")
+	ErrPeerExiting = er.GenericErrorType.CodeWithDetail("ErrPeerExiting",
+		"peer exiting")
 )

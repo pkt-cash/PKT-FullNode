@@ -1,9 +1,9 @@
 package migration_test
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migtest"
@@ -18,12 +18,12 @@ func TestCreateTLB(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		beforeMigration func(kvdb.RwTx) error
+		beforeMigration func(kvdb.RwTx) er.R
 		shouldFail      bool
 	}{
 		{
 			name: "already exists",
-			beforeMigration: func(tx kvdb.RwTx) error {
+			beforeMigration: func(tx kvdb.RwTx) er.R {
 				_, err := tx.CreateTopLevelBucket(newBucket)
 				return err
 			},
@@ -31,7 +31,7 @@ func TestCreateTLB(t *testing.T) {
 		},
 		{
 			name:            "does not exist",
-			beforeMigration: func(_ kvdb.RwTx) error { return nil },
+			beforeMigration: func(_ kvdb.RwTx) er.R { return nil },
 			shouldFail:      false,
 		},
 	}
@@ -42,11 +42,11 @@ func TestCreateTLB(t *testing.T) {
 			migtest.ApplyMigration(
 				t,
 				test.beforeMigration,
-				func(tx kvdb.RwTx) error {
+				func(tx kvdb.RwTx) er.R {
 					if tx.ReadBucket(newBucket) != nil {
 						return nil
 					}
-					return fmt.Errorf("bucket \"%s\" not "+
+					return er.Errorf("bucket \"%s\" not "+
 						"created", newBucket)
 				},
 				migration.CreateTLB(newBucket),

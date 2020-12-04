@@ -5,7 +5,7 @@ import (
 
 	"reflect"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -51,9 +51,9 @@ func TestWaitingProofStore(t *testing.T) {
 		t.Fatalf("unable remove proof from storage: %v", err)
 	}
 
-	if err := store.ForAll(func(proof *WaitingProof) error {
-		return errors.New("storage should be empty")
-	}, func() {}); err != nil && err != ErrWaitingProofNotFound {
+	if err := store.ForAll(func(proof *WaitingProof) er.R {
+		return er.New("storage should be empty")
+	}, func() {}); err != nil && !ErrWaitingProofNotFound.Is(err) {
 		t.Fatal(err)
 	}
 }

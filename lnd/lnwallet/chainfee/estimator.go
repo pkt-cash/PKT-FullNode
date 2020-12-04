@@ -2,7 +2,6 @@ package chainfee
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	prand "math/rand"
 	"net"
@@ -12,6 +11,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/rpcclient"
 )
 
@@ -43,15 +43,15 @@ type Estimator interface {
 	// EstimateFeePerKW takes in a target for the number of blocks until an
 	// initial confirmation and returns the estimated fee expressed in
 	// sat/kw.
-	EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, error)
+	EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, er.R)
 
 	// Start signals the Estimator to start any processes or goroutines
 	// it needs to perform its duty.
-	Start() error
+	Start() er.R
 
 	// Stop stops any spawned goroutines and cleans up the resources used
 	// by the fee estimator.
-	Stop() error
+	Stop() er.R
 
 	// RelayFeePerKW returns the minimum fee rate required for transactions
 	// to be relayed. This is also the basis for calculation of the dust
@@ -85,7 +85,7 @@ func NewStaticEstimator(feePerKW, relayFee SatPerKWeight) *StaticEstimator {
 // EstimateFeePerKW will return a static value for fee calculations.
 //
 // NOTE: This method is part of the Estimator interface.
-func (e StaticEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, error) {
+func (e StaticEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, er.R) {
 	return e.feePerKW, nil
 }
 
@@ -101,7 +101,7 @@ func (e StaticEstimator) RelayFeePerKW() SatPerKWeight {
 // it needs to perform its duty.
 //
 // NOTE: This method is part of the Estimator interface.
-func (e StaticEstimator) Start() error {
+func (e StaticEstimator) Start() er.R {
 	return nil
 }
 
@@ -109,7 +109,7 @@ func (e StaticEstimator) Start() error {
 // by the fee estimator.
 //
 // NOTE: This method is part of the Estimator interface.
-func (e StaticEstimator) Stop() error {
+func (e StaticEstimator) Stop() er.R {
 	return nil
 }
 
@@ -141,7 +141,7 @@ type BtcdEstimator struct {
 // the occasion that the estimator has insufficient data, or returns zero for a
 // fee estimate.
 func NewBtcdEstimator(rpcConfig rpcclient.ConnConfig,
-	fallBackFeeRate SatPerKWeight) (*BtcdEstimator, error) {
+	fallBackFeeRate SatPerKWeight) (*BtcdEstimator, er.R) {
 
 	rpcConfig.DisableConnectOnNew = true
 	rpcConfig.DisableAutoReconnect = false
@@ -160,7 +160,7 @@ func NewBtcdEstimator(rpcConfig rpcclient.ConnConfig,
 // it needs to perform its duty.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BtcdEstimator) Start() error {
+func (b *BtcdEstimator) Start() er.R {
 	if err := b.btcdConn.Connect(20); err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (b *BtcdEstimator) Start() error {
 // by the fee estimator.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BtcdEstimator) Stop() error {
+func (b *BtcdEstimator) Stop() er.R {
 	b.btcdConn.Shutdown()
 
 	return nil
@@ -209,7 +209,7 @@ func (b *BtcdEstimator) Stop() error {
 // confirmation and returns the estimated fee expressed in sat/kw.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BtcdEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, error) {
+func (b *BtcdEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, er.R) {
 	feeEstimate, err := b.fetchEstimate(numBlocks)
 	switch {
 	// If the estimator doesn't have enough data, or returns an error, then
@@ -236,7 +236,7 @@ func (b *BtcdEstimator) RelayFeePerKW() SatPerKWeight {
 
 // fetchEstimate returns a fee estimate for a transaction to be confirmed in
 // confTarget blocks. The estimate is returned in sat/kw.
-func (b *BtcdEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, error) {
+func (b *BtcdEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, er.R) {
 	// First, we'll fetch the estimate for our confirmation target.
 	btcPerKB, err := b.btcdConn.EstimateFee(int64(confTarget))
 	if err != nil {
@@ -301,7 +301,7 @@ type BitcoindEstimator struct {
 // in the occasion that the estimator has insufficient data, or returns zero
 // for a fee estimate.
 func NewBitcoindEstimator(rpcConfig rpcclient.ConnConfig, feeMode string,
-	fallBackFeeRate SatPerKWeight) (*BitcoindEstimator, error) {
+	fallBackFeeRate SatPerKWeight) (*BitcoindEstimator, er.R) {
 
 	rpcConfig.DisableConnectOnNew = true
 	rpcConfig.DisableAutoReconnect = false
@@ -323,7 +323,7 @@ func NewBitcoindEstimator(rpcConfig rpcclient.ConnConfig, feeMode string,
 // it needs to perform its duty.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BitcoindEstimator) Start() error {
+func (b *BitcoindEstimator) Start() er.R {
 	// Once the connection to the backend node has been established, we'll
 	// query it for its minimum relay fee. Since the `getinfo` RPC has been
 	// deprecated for `bitcoind`, we'll need to send a `getnetworkinfo`
@@ -368,7 +368,7 @@ func (b *BitcoindEstimator) Start() error {
 // by the fee estimator.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BitcoindEstimator) Stop() error {
+func (b *BitcoindEstimator) Stop() er.R {
 	return nil
 }
 
@@ -376,7 +376,7 @@ func (b *BitcoindEstimator) Stop() error {
 // confirmation and returns the estimated fee expressed in sat/kw.
 //
 // NOTE: This method is part of the Estimator interface.
-func (b *BitcoindEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, error) {
+func (b *BitcoindEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, er.R) {
 	feeEstimate, err := b.fetchEstimate(numBlocks)
 	switch {
 	// If the estimator doesn't have enough data, or returns an error, then
@@ -403,7 +403,7 @@ func (b *BitcoindEstimator) RelayFeePerKW() SatPerKWeight {
 
 // fetchEstimate returns a fee estimate for a transaction to be confirmed in
 // confTarget blocks. The estimate is returned in sat/kw.
-func (b *BitcoindEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, error) {
+func (b *BitcoindEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, er.R) {
 	// First, we'll send an "estimatesmartfee" command as a raw request,
 	// since it isn't supported by btcd but is available in bitcoind.
 	target, err := json.Marshal(uint64(confTarget))
@@ -476,7 +476,7 @@ type WebAPIFeeSource interface {
 	// ParseResponse attempts to parse the body of the response generated
 	// by the above query URL. Typically this will be JSON, but the
 	// specifics are left to the WebAPIFeeSource implementation.
-	ParseResponse(r io.Reader) (map[uint32]uint32, error)
+	ParseResponse(r io.Reader) (map[uint32]uint32, er.R)
 }
 
 // SparseConfFeeSource is an implementation of the WebAPIFeeSource that utilizes
@@ -502,7 +502,7 @@ func (s SparseConfFeeSource) GenQueryURL() string {
 // the WebAPIFeeSource implementation.
 //
 // NOTE: Part of the WebAPIFeeSource interface.
-func (s SparseConfFeeSource) ParseResponse(r io.Reader) (map[uint32]uint32, error) {
+func (s SparseConfFeeSource) ParseResponse(r io.Reader) (map[uint32]uint32, er.R) {
 	type jsonResp struct {
 		FeeByBlockTarget map[uint32]uint32 `json:"fee_by_block_target"`
 	}
@@ -564,11 +564,11 @@ func NewWebAPIEstimator(api WebAPIFeeSource, noCache bool) *WebAPIEstimator {
 // confirmation and returns the estimated fee expressed in sat/kw.
 //
 // NOTE: This method is part of the Estimator interface.
-func (w *WebAPIEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, error) {
+func (w *WebAPIEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, er.R) {
 	if numBlocks > maxBlockTarget {
 		numBlocks = maxBlockTarget
 	} else if numBlocks < minBlockTarget {
-		return 0, fmt.Errorf("conf target of %v is too low, minimum "+
+		return 0, er.Errorf("conf target of %v is too low, minimum "+
 			"accepted is %v", numBlocks, minBlockTarget)
 	}
 
@@ -599,7 +599,7 @@ func (w *WebAPIEstimator) EstimateFeePerKW(numBlocks uint32) (SatPerKWeight, err
 // to perform its duty.
 //
 // NOTE: This method is part of the Estimator interface.
-func (w *WebAPIEstimator) Start() error {
+func (w *WebAPIEstimator) Start() er.R {
 	// No update loop is needed when we don't cache.
 	if w.noCache {
 		return nil
@@ -623,7 +623,7 @@ func (w *WebAPIEstimator) Start() error {
 // fee estimator.
 //
 // NOTE: This method is part of the Estimator interface.
-func (w *WebAPIEstimator) Stop() error {
+func (w *WebAPIEstimator) Stop() er.R {
 	// Update loop is not running when we don't cache.
 	if w.noCache {
 		return nil
@@ -660,7 +660,7 @@ func (w *WebAPIEstimator) randomFeeUpdateTimeout() time.Duration {
 // getCachedFee takes in a target for the number of blocks until an initial
 // confirmation and returns an estimated fee (if one was returned by the API). If
 // the fee was not previously cached, we cache it here.
-func (w *WebAPIEstimator) getCachedFee(numBlocks uint32) (uint32, error) {
+func (w *WebAPIEstimator) getCachedFee(numBlocks uint32) (uint32, er.R) {
 	w.feesMtx.Lock()
 	defer w.feesMtx.Unlock()
 
@@ -680,7 +680,7 @@ func (w *WebAPIEstimator) getCachedFee(numBlocks uint32) (uint32, error) {
 		}
 		return fee, nil
 	}
-	return 0, fmt.Errorf("web API does not include a fee estimation for "+
+	return 0, er.Errorf("web API does not include a fee estimation for "+
 		"block target of %v", numBlocks)
 }
 

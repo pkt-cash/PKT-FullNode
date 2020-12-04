@@ -6,6 +6,8 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // ErrTypeForEncoding signals that an incorrect type was passed to an Encoder.
@@ -65,10 +67,10 @@ var (
 
 // EUint8 is an Encoder for uint8 values. An error is returned if val is not a
 // *uint8.
-func EUint8(w io.Writer, val interface{}, buf *[8]byte) error {
+func EUint8(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if i, ok := val.(*uint8); ok {
 		buf[0] = *i
-		_, err := w.Write(buf[:1])
+		_, err := util.Write(w, buf[:1])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint8")
@@ -77,18 +79,18 @@ func EUint8(w io.Writer, val interface{}, buf *[8]byte) error {
 // EUint8T encodes a uint8 val to the provided io.Writer. This method is exposed
 // so that encodings for custom uint8-like types can be created without
 // incurring an extra heap allocation.
-func EUint8T(w io.Writer, val uint8, buf *[8]byte) error {
+func EUint8T(w io.Writer, val uint8, buf *[8]byte) er.R {
 	buf[0] = val
-	_, err := w.Write(buf[:1])
+	_, err := util.Write(w, buf[:1])
 	return err
 }
 
 // EUint16 is an Encoder for uint16 values. An error is returned if val is not a
 // *uint16.
-func EUint16(w io.Writer, val interface{}, buf *[8]byte) error {
+func EUint16(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if i, ok := val.(*uint16); ok {
 		byteOrder.PutUint16(buf[:2], *i)
-		_, err := w.Write(buf[:2])
+		_, err := util.Write(w, buf[:2])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint16")
@@ -97,18 +99,18 @@ func EUint16(w io.Writer, val interface{}, buf *[8]byte) error {
 // EUint16T encodes a uint16 val to the provided io.Writer. This method is
 // exposed so that encodings for custom uint16-like types can be created without
 // incurring an extra heap allocation.
-func EUint16T(w io.Writer, val uint16, buf *[8]byte) error {
+func EUint16T(w io.Writer, val uint16, buf *[8]byte) er.R {
 	byteOrder.PutUint16(buf[:2], val)
-	_, err := w.Write(buf[:2])
+	_, err := util.Write(w, buf[:2])
 	return err
 }
 
 // EUint32 is an Encoder for uint32 values. An error is returned if val is not a
 // *uint32.
-func EUint32(w io.Writer, val interface{}, buf *[8]byte) error {
+func EUint32(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if i, ok := val.(*uint32); ok {
 		byteOrder.PutUint32(buf[:4], *i)
-		_, err := w.Write(buf[:4])
+		_, err := util.Write(w, buf[:4])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint32")
@@ -117,18 +119,18 @@ func EUint32(w io.Writer, val interface{}, buf *[8]byte) error {
 // EUint32T encodes a uint32 val to the provided io.Writer. This method is
 // exposed so that encodings for custom uint32-like types can be created without
 // incurring an extra heap allocation.
-func EUint32T(w io.Writer, val uint32, buf *[8]byte) error {
+func EUint32T(w io.Writer, val uint32, buf *[8]byte) er.R {
 	byteOrder.PutUint32(buf[:4], val)
-	_, err := w.Write(buf[:4])
+	_, err := util.Write(w, buf[:4])
 	return err
 }
 
 // EUint64 is an Encoder for uint64 values. An error is returned if val is not a
 // *uint64.
-func EUint64(w io.Writer, val interface{}, buf *[8]byte) error {
+func EUint64(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if i, ok := val.(*uint64); ok {
 		byteOrder.PutUint64(buf[:], *i)
-		_, err := w.Write(buf[:])
+		_, err := util.Write(w, buf[:])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint64")
@@ -137,17 +139,17 @@ func EUint64(w io.Writer, val interface{}, buf *[8]byte) error {
 // EUint64T encodes a uint64 val to the provided io.Writer. This method is
 // exposed so that encodings for custom uint64-like types can be created without
 // incurring an extra heap allocation.
-func EUint64T(w io.Writer, val uint64, buf *[8]byte) error {
+func EUint64T(w io.Writer, val uint64, buf *[8]byte) er.R {
 	byteOrder.PutUint64(buf[:], val)
-	_, err := w.Write(buf[:])
+	_, err := util.Write(w, buf[:])
 	return err
 }
 
 // DUint8 is a Decoder for uint8 values. An error is returned if val is not a
 // *uint8.
-func DUint8(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DUint8(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if i, ok := val.(*uint8); ok && l == 1 {
-		if _, err := io.ReadFull(r, buf[:1]); err != nil {
+		if _, err := util.ReadFull(r, buf[:1]); err != nil {
 			return err
 		}
 		*i = buf[0]
@@ -158,9 +160,9 @@ func DUint8(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
 
 // DUint16 is a Decoder for uint16 values. An error is returned if val is not a
 // *uint16.
-func DUint16(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DUint16(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if i, ok := val.(*uint16); ok && l == 2 {
-		if _, err := io.ReadFull(r, buf[:2]); err != nil {
+		if _, err := util.ReadFull(r, buf[:2]); err != nil {
 			return err
 		}
 		*i = byteOrder.Uint16(buf[:2])
@@ -171,9 +173,9 @@ func DUint16(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
 
 // DUint32 is a Decoder for uint32 values. An error is returned if val is not a
 // *uint32.
-func DUint32(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DUint32(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if i, ok := val.(*uint32); ok && l == 4 {
-		if _, err := io.ReadFull(r, buf[:4]); err != nil {
+		if _, err := util.ReadFull(r, buf[:4]); err != nil {
 			return err
 		}
 		*i = byteOrder.Uint32(buf[:4])
@@ -184,9 +186,9 @@ func DUint32(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
 
 // DUint64 is a Decoder for uint64 values. An error is returned if val is not a
 // *uint64.
-func DUint64(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DUint64(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if i, ok := val.(*uint64); ok && l == 8 {
-		if _, err := io.ReadFull(r, buf[:]); err != nil {
+		if _, err := util.ReadFull(r, buf[:]); err != nil {
 			return err
 		}
 		*i = byteOrder.Uint64(buf[:])
@@ -197,9 +199,9 @@ func DUint64(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
 
 // EBytes32 is an Encoder for 32-byte arrays. An error is returned if val is not
 // a *[32]byte.
-func EBytes32(w io.Writer, val interface{}, _ *[8]byte) error {
+func EBytes32(w io.Writer, val interface{}, _ *[8]byte) er.R {
 	if b, ok := val.(*[32]byte); ok {
-		_, err := w.Write(b[:])
+		_, err := util.Write(w, b[:])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "[32]byte")
@@ -207,9 +209,9 @@ func EBytes32(w io.Writer, val interface{}, _ *[8]byte) error {
 
 // DBytes32 is a Decoder for 32-byte arrays. An error is returned if val is not
 // a *[32]byte.
-func DBytes32(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
+func DBytes32(r io.Reader, val interface{}, _ *[8]byte, l uint64) er.R {
 	if b, ok := val.(*[32]byte); ok && l == 32 {
-		_, err := io.ReadFull(r, b[:])
+		_, err := util.ReadFull(r, b[:])
 		return err
 	}
 	return NewTypeForDecodingErr(val, "[32]byte", l, 32)
@@ -217,9 +219,9 @@ func DBytes32(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
 
 // EBytes33 is an Encoder for 33-byte arrays. An error is returned if val is not
 // a *[33]byte.
-func EBytes33(w io.Writer, val interface{}, _ *[8]byte) error {
+func EBytes33(w io.Writer, val interface{}, _ *[8]byte) er.R {
 	if b, ok := val.(*[33]byte); ok {
-		_, err := w.Write(b[:])
+		_, err := util.Write(w, b[:])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "[33]byte")
@@ -227,9 +229,9 @@ func EBytes33(w io.Writer, val interface{}, _ *[8]byte) error {
 
 // DBytes33 is a Decoder for 33-byte arrays. An error is returned if val is not
 // a *[33]byte.
-func DBytes33(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
+func DBytes33(r io.Reader, val interface{}, _ *[8]byte, l uint64) er.R {
 	if b, ok := val.(*[33]byte); ok {
-		_, err := io.ReadFull(r, b[:])
+		_, err := util.ReadFull(r, b[:])
 		return err
 	}
 	return NewTypeForDecodingErr(val, "[33]byte", l, 33)
@@ -237,9 +239,9 @@ func DBytes33(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
 
 // EBytes64 is an Encoder for 64-byte arrays. An error is returned if val is not
 // a *[64]byte.
-func EBytes64(w io.Writer, val interface{}, _ *[8]byte) error {
+func EBytes64(w io.Writer, val interface{}, _ *[8]byte) er.R {
 	if b, ok := val.(*[64]byte); ok {
-		_, err := w.Write(b[:])
+		_, err := util.Write(w, b[:])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "[64]byte")
@@ -247,9 +249,9 @@ func EBytes64(w io.Writer, val interface{}, _ *[8]byte) error {
 
 // DBytes64 is an Decoder for 64-byte arrays. An error is returned if val is not
 // a *[64]byte.
-func DBytes64(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
+func DBytes64(r io.Reader, val interface{}, _ *[8]byte, l uint64) er.R {
 	if b, ok := val.(*[64]byte); ok && l == 64 {
-		_, err := io.ReadFull(r, b[:])
+		_, err := util.ReadFull(r, b[:])
 		return err
 	}
 	return NewTypeForDecodingErr(val, "[64]byte", l, 64)
@@ -257,9 +259,9 @@ func DBytes64(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
 
 // EPubKey is an Encoder for *btcec.PublicKey values. An error is returned if
 // val is not a **btcec.PublicKey.
-func EPubKey(w io.Writer, val interface{}, _ *[8]byte) error {
+func EPubKey(w io.Writer, val interface{}, _ *[8]byte) er.R {
 	if pk, ok := val.(**btcec.PublicKey); ok {
-		_, err := w.Write((*pk).SerializeCompressed())
+		_, err := util.Write(w, (*pk).SerializeCompressed())
 		return err
 	}
 	return NewTypeForEncodingErr(val, "*btcec.PublicKey")
@@ -267,10 +269,10 @@ func EPubKey(w io.Writer, val interface{}, _ *[8]byte) error {
 
 // DPubKey is a Decoder for *btcec.PublicKey values. An error is returned if val
 // is not a **btcec.PublicKey.
-func DPubKey(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
+func DPubKey(r io.Reader, val interface{}, _ *[8]byte, l uint64) er.R {
 	if pk, ok := val.(**btcec.PublicKey); ok && l == 33 {
 		var b [33]byte
-		_, err := io.ReadFull(r, b[:])
+		_, err := util.ReadFull(r, b[:])
 		if err != nil {
 			return err
 		}
@@ -289,9 +291,9 @@ func DPubKey(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
 
 // EVarBytes is an Encoder for variable byte slices. An error is returned if val
 // is not *[]byte.
-func EVarBytes(w io.Writer, val interface{}, _ *[8]byte) error {
+func EVarBytes(w io.Writer, val interface{}, _ *[8]byte) er.R {
 	if b, ok := val.(*[]byte); ok {
-		_, err := w.Write(*b)
+		_, err := util.Write(w, *b)
 		return err
 	}
 	return NewTypeForEncodingErr(val, "[]byte")
@@ -299,10 +301,10 @@ func EVarBytes(w io.Writer, val interface{}, _ *[8]byte) error {
 
 // DVarBytes is a Decoder for variable byte slices. An error is returned if val
 // is not *[]byte.
-func DVarBytes(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
+func DVarBytes(r io.Reader, val interface{}, _ *[8]byte, l uint64) er.R {
 	if b, ok := val.(*[]byte); ok {
 		*b = make([]byte, l)
-		_, err := io.ReadFull(r, *b)
+		_, err := util.ReadFull(r, *b)
 		return err
 	}
 	return NewTypeForDecodingErr(val, "[]byte", l, l)

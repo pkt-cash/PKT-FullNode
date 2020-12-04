@@ -24,7 +24,7 @@ func TestStore(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testStore(t, func() (SweeperStore, error) {
+		testStore(t, func() (SweeperStore, er.R) {
 			var chain chainhash.Hash
 			return NewSweeperStore(cdb, &chain)
 		})
@@ -32,7 +32,7 @@ func TestStore(t *testing.T) {
 	t.Run("mock", func(t *testing.T) {
 		store := NewMockSweeperStore()
 
-		testStore(t, func() (SweeperStore, error) {
+		testStore(t, func() (SweeperStore, er.R) {
 			// Return same store, because the mock has no real
 			// persistence.
 			return store, nil

@@ -1,14 +1,14 @@
 package wtpolicy
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -36,29 +36,30 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd.wtpolicy")
 	// ErrFeeExceedsInputs signals that the total input value of breaching
 	// commitment txn is insufficient to cover the fees required to sweep
 	// it.
-	ErrFeeExceedsInputs = errors.New("sweep fee exceeds input value")
+	ErrFeeExceedsInputs = Err.CodeWithDetail("ErrFeeExceedsInputs", "sweep fee exceeds input value")
 
 	// ErrRewardExceedsInputs signals that the reward given to the tower (in
 	// addition to the transaction fees) is more than the input amount.
-	ErrRewardExceedsInputs = errors.New("reward amount exceeds input value")
+	ErrRewardExceedsInputs = Err.CodeWithDetail("ErrRewardExceedsInputs", "reward amount exceeds input value")
 
 	// ErrCreatesDust signals that the session's policy would create a dust
 	// output for the victim.
-	ErrCreatesDust = errors.New("justice transaction creates dust at fee rate")
+	ErrCreatesDust = Err.CodeWithDetail("ErrCreatesDust", "justice transaction creates dust at fee rate")
 
 	// ErrAltruistReward signals that the policy is invalid because it
 	// contains a non-zero RewardBase or RewardRate on an altruist policy.
-	ErrAltruistReward = errors.New("altruist policy has reward params")
+	ErrAltruistReward = Err.CodeWithDetail("ErrAltruistReward", "altruist policy has reward params")
 
 	// ErrNoMaxUpdates signals that the policy specified zero MaxUpdates.
-	ErrNoMaxUpdates = errors.New("max updates must be positive")
+	ErrNoMaxUpdates = Err.CodeWithDetail("ErrNoMaxUpdates", "max updates must be positive")
 
 	// ErrSweepFeeRateTooLow signals that the policy's fee rate is too low
 	// to get into the mempool during low congestion.
-	ErrSweepFeeRateTooLow = errors.New("sweep fee rate too low")
+	ErrSweepFeeRateTooLow = Err.CodeWithDetail("ErrSweepFeeRateTooLow", "sweep fee rate too low")
 )
 
 // DefaultPolicy returns a Policy containing the default parameters that can be
@@ -122,24 +123,24 @@ func (p Policy) String() string {
 
 // Validate ensures that the policy satisfies some minimal correctness
 // constraints.
-func (p Policy) Validate() error {
+func (p Policy) Validate() er.R {
 	// RewardBase and RewardRate should not be set if the policy doesn't
 	// have a reward.
 	if !p.BlobType.Has(blob.FlagReward) &&
 		(p.RewardBase != 0 || p.RewardRate != 0) {
 
-		return ErrAltruistReward
+		return ErrAltruistReward.Default()
 	}
 
 	// MaxUpdates must be positive.
 	if p.MaxUpdates == 0 {
-		return ErrNoMaxUpdates
+		return ErrNoMaxUpdates.Default()
 	}
 
 	// SweepFeeRate must be sane enough to get in the mempool during low
 	// congestion.
 	if p.SweepFeeRate < MinSweepFeeRate {
-		return ErrSweepFeeRateTooLow
+		return ErrSweepFeeRateTooLow.Default()
 	}
 
 	return nil
@@ -150,11 +151,11 @@ func (p Policy) Validate() error {
 // of the justice transaction and subtracting an amount that satisfies the
 // policy's fee rate.
 func (p *Policy) ComputeAltruistOutput(totalAmt btcutil.Amount,
-	txWeight int64) (btcutil.Amount, error) {
+	txWeight int64) (btcutil.Amount, er.R) {
 
 	txFee := p.SweepFeeRate.FeeForWeight(txWeight)
 	if txFee > totalAmt {
-		return 0, ErrFeeExceedsInputs
+		return 0, ErrFeeExceedsInputs.Default()
 	}
 
 	sweepAmt := totalAmt - txFee
@@ -164,7 +165,7 @@ func (p *Policy) ComputeAltruistOutput(totalAmt btcutil.Amount,
 
 	// Check that the created outputs won't be dusty.
 	if sweepAmt <= dustLimit {
-		return 0, ErrCreatesDust
+		return 0, ErrCreatesDust.Default()
 	}
 
 	return sweepAmt, nil
@@ -175,18 +176,18 @@ func (p *Policy) ComputeAltruistOutput(totalAmt btcutil.Amount,
 // and reward rate. The reward to he tower is subtracted first, before
 // splitting the remaining balance amongst the victim and fees.
 func (p *Policy) ComputeRewardOutputs(totalAmt btcutil.Amount,
-	txWeight int64) (btcutil.Amount, btcutil.Amount, error) {
+	txWeight int64) (btcutil.Amount, btcutil.Amount, er.R) {
 
 	txFee := p.SweepFeeRate.FeeForWeight(txWeight)
 	if txFee > totalAmt {
-		return 0, 0, ErrFeeExceedsInputs
+		return 0, 0, ErrFeeExceedsInputs.Default()
 	}
 
 	// Apply the reward rate to the remaining total, specified in millionths
 	// of the available balance.
 	rewardAmt := ComputeRewardAmount(totalAmt, p.RewardBase, p.RewardRate)
 	if rewardAmt+txFee > totalAmt {
-		return 0, 0, ErrRewardExceedsInputs
+		return 0, 0, ErrRewardExceedsInputs.Default()
 	}
 
 	// The sweep amount for the victim constitutes the remainder of the
@@ -198,7 +199,7 @@ func (p *Policy) ComputeRewardOutputs(totalAmt btcutil.Amount,
 
 	// Check that the created outputs won't be dusty.
 	if sweepAmt <= dustLimit {
-		return 0, 0, ErrCreatesDust
+		return 0, 0, ErrCreatesDust.Default()
 	}
 
 	return sweepAmt, rewardAmt, nil
@@ -238,7 +239,7 @@ func ComputeRewardAmount(total btcutil.Amount, base, rate uint32) btcutil.Amount
 // is the pkScript of the tower where its reward will be deposited, and will be
 // ignored if the blob type does not specify a reward.
 func (p *Policy) ComputeJusticeTxOuts(totalAmt btcutil.Amount, txWeight int64,
-	sweepPkScript, rewardPkScript []byte) ([]*wire.TxOut, error) {
+	sweepPkScript, rewardPkScript []byte) ([]*wire.TxOut, er.R) {
 
 	var outputs []*wire.TxOut
 

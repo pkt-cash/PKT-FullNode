@@ -12,7 +12,7 @@ import (
 // SignAnnouncement signs any type of gossip message that is announced on the
 // network.
 func SignAnnouncement(signer lnwallet.MessageSigner, pubKey *btcec.PublicKey,
-	msg lnwire.Message) (input.Signature, error) {
+	msg lnwire.Message) (input.Signature, er.R) {
 
 	var (
 		data []byte
@@ -27,10 +27,10 @@ func SignAnnouncement(signer lnwallet.MessageSigner, pubKey *btcec.PublicKey,
 	case *lnwire.NodeAnnouncement:
 		data, err = m.DataToSign()
 	default:
-		return nil, fmt.Errorf("can't sign %T message", m)
+		return nil, er.Errorf("can't sign %T message", m)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("unable to get data to sign: %v", err)
+		return nil, er.Errorf("unable to get data to sign: %v", err)
 	}
 
 	return signer.SignMessage(pubKey, data)

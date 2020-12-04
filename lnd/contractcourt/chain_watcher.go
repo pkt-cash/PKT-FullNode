@@ -2,7 +2,6 @@ package contractcourt
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -155,7 +155,7 @@ type chainWatcherConfig struct {
 	// detects that a contract breach transaction has been confirmed. Only
 	// when this method returns with a non-nil error it will be safe to mark
 	// the channel as pending close in the database.
-	contractBreach func(*lnwallet.BreachRetribution) error
+	contractBreach func(*lnwallet.BreachRetribution) er.R
 
 	// isOurAddr is a function that returns true if the passed address is
 	// known to us.
@@ -200,7 +200,7 @@ type chainWatcher struct {
 // newChainWatcher returns a new instance of a chainWatcher for a channel given
 // the chan point to watch, and also a notifier instance that will allow us to
 // detect on chain events.
-func newChainWatcher(cfg chainWatcherConfig) (*chainWatcher, error) {
+func newChainWatcher(cfg chainWatcherConfig) (*chainWatcher, er.R) {
 	// In order to be able to detect the nature of a potential channel
 	// closure we'll need to reconstruct the state hint bytes used to
 	// obfuscate the commitment state number encoded in the lock time and
@@ -229,7 +229,7 @@ func newChainWatcher(cfg chainWatcherConfig) (*chainWatcher, error) {
 
 // Start starts all goroutines that the chainWatcher needs to perform its
 // duties.
-func (c *chainWatcher) Start() error {
+func (c *chainWatcher) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 		return nil
 	}
@@ -279,7 +279,7 @@ func (c *chainWatcher) Start() error {
 }
 
 // Stop signals the close observer to gracefully exit.
-func (c *chainWatcher) Stop() error {
+func (c *chainWatcher) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return nil
 	}
@@ -332,7 +332,7 @@ func (c *chainWatcher) SubscribeChannelEvents() *ChainEventSubscription {
 func isOurCommitment(localChanCfg, remoteChanCfg channeldb.ChannelConfig,
 	commitSpend *chainntnfs.SpendDetail, broadcastStateNum uint64,
 	revocationProducer shachain.Producer,
-	chanType channeldb.ChannelType) (bool, error) {
+	chanType channeldb.ChannelType) (bool, er.R) {
 
 	// First, we'll re-derive our commitment point for this state since
 	// this is what we use to randomize each of the keys for this state.
@@ -420,12 +420,12 @@ type chainSet struct {
 
 // newChainSet creates a new chainSet given the current up to date channel
 // state.
-func newChainSet(chanState *channeldb.OpenChannel) (*chainSet, error) {
+func newChainSet(chanState *channeldb.OpenChannel) (*chainSet, er.R) {
 	// First, we'll grab the current unrevoked commitments for ourselves
 	// and the remote party.
 	localCommit, remoteCommit, err := chanState.LatestCommitments()
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch channel state for "+
+		return nil, er.Errorf("unable to fetch channel state for "+
 			"chan_point=%v", chanState.FundingOutpoint)
 	}
 
@@ -441,7 +441,7 @@ func newChainSet(chanState *channeldb.OpenChannel) (*chainSet, error) {
 	remoteStateNum := remoteCommit.CommitHeight
 	remoteChainTip, err := chanState.RemoteCommitChainTip()
 	if err != nil && err != channeldb.ErrNoPendingCommit {
-		return nil, fmt.Errorf("unable to obtain chain tip for "+
+		return nil, er.Errorf("unable to obtain chain tip for "+
 			"ChannelPoint(%v): %v",
 			chanState.FundingOutpoint, err)
 	}
@@ -475,7 +475,7 @@ func newChainSet(chanState *channeldb.OpenChannel) (*chainSet, error) {
 	// TODO(roasbeef): mutation is bad mkay
 	_, err = chanState.RemoteRevocationStore()
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch revocation state for "+
+		return nil, er.Errorf("unable to fetch revocation state for "+
 			"chan_point=%v", chanState.FundingOutpoint)
 	}
 
@@ -755,7 +755,7 @@ func (c *chainWatcher) toSelfAmount(tx *wire.MsgTx) btcutil.Amount {
 // transaction, then clean up the database state. We'll also dispatch a
 // notification to all subscribers that the channel has been closed in this
 // manner.
-func (c *chainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDetail) error {
+func (c *chainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDetail) er.R {
 	broadcastTx := commitSpend.SpendingTx
 
 	log.Infof("Cooperative closure for ChannelPoint(%v): %v",
@@ -807,7 +807,7 @@ func (c *chainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDet
 		case sub.CooperativeClosure <- closeInfo:
 		case <-c.quit:
 			c.Unlock()
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 	}
 	c.Unlock()
@@ -818,7 +818,7 @@ func (c *chainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDet
 // dispatchLocalForceClose processes a unilateral close by us being confirmed.
 func (c *chainWatcher) dispatchLocalForceClose(
 	commitSpend *chainntnfs.SpendDetail,
-	localCommit channeldb.ChannelCommitment, commitSet CommitSet) error {
+	localCommit channeldb.ChannelCommitment, commitSet CommitSet) er.R {
 
 	log.Infof("Local unilateral close of ChannelPoint(%v) "+
 		"detected", c.cfg.chanState.FundingOutpoint)
@@ -884,7 +884,7 @@ func (c *chainWatcher) dispatchLocalForceClose(
 		case sub.LocalUnilateralClosure <- closeInfo:
 		case <-c.quit:
 			c.Unlock()
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 	}
 	c.Unlock()
@@ -908,7 +908,7 @@ func (c *chainWatcher) dispatchLocalForceClose(
 func (c *chainWatcher) dispatchRemoteForceClose(
 	commitSpend *chainntnfs.SpendDetail,
 	remoteCommit channeldb.ChannelCommitment,
-	commitSet CommitSet, commitPoint *btcec.PublicKey) error {
+	commitSet CommitSet, commitPoint *btcec.PublicKey) er.R {
 
 	log.Infof("Unilateral close of ChannelPoint(%v) "+
 		"detected", c.cfg.chanState.FundingOutpoint)
@@ -935,7 +935,7 @@ func (c *chainWatcher) dispatchRemoteForceClose(
 		}:
 		case <-c.quit:
 			c.Unlock()
-			return fmt.Errorf("exiting")
+			return er.Errorf("exiting")
 		}
 	}
 	c.Unlock()
@@ -950,14 +950,14 @@ func (c *chainWatcher) dispatchRemoteForceClose(
 // registered subscribers of this event.
 func (c *chainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail,
 	remoteCommit *channeldb.ChannelCommitment,
-	broadcastStateNum uint64) error {
+	broadcastStateNum uint64) er.R {
 
 	log.Warnf("Remote peer has breached the channel contract for "+
 		"ChannelPoint(%v). Revoked state #%v was broadcast!!!",
 		c.cfg.chanState.FundingOutpoint, broadcastStateNum)
 
 	if err := c.cfg.chanState.MarkBorked(); err != nil {
-		return fmt.Errorf("unable to mark channel as borked: %v", err)
+		return er.Errorf("unable to mark channel as borked: %v", err)
 	}
 
 	spendHeight := uint32(spendEvent.SpendingHeight)
@@ -970,7 +970,7 @@ func (c *chainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail
 		c.cfg.chanState, broadcastStateNum, spendHeight,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to create breach retribution: %v", err)
+		return er.Errorf("unable to create breach retribution: %v", err)
 	}
 
 	// Nil the curve before printing.
@@ -1017,7 +1017,7 @@ func (c *chainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail
 		case sub.ContractBreach <- retribution:
 		case <-c.quit:
 			c.Unlock()
-			return fmt.Errorf("quitting")
+			return er.Errorf("quitting")
 		}
 	}
 	c.Unlock()

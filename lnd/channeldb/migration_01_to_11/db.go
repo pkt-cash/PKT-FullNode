@@ -3,7 +3,6 @@ package migration_01_to_11
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,7 +19,7 @@ const (
 // migration is a function which takes a prior outdated version of the database
 // instances and mutates the key/bucket structure to arrive at a more
 // up-to-date version of the database.
-type migration func(tx kvdb.RwTx) error
+type migration func(tx kvdb.RwTx) er.R
 
 var (
 	// Big endian is the preferred byte order, due to cursor scans over
@@ -40,7 +39,7 @@ type DB struct {
 
 // Open opens an existing channeldb. Any necessary schemas migrations due to
 // updates will take place as necessary.
-func Open(dbPath string, modifiers ...OptionModifier) (*DB, error) {
+func Open(dbPath string, modifiers ...OptionModifier) (*DB, er.R) {
 	path := filepath.Join(dbPath, dbName)
 
 	if !fileExists(path) {
@@ -77,10 +76,10 @@ func Open(dbPath string, modifiers ...OptionModifier) (*DB, error) {
 // the case that the target path has not yet been created or doesn't yet exist,
 // then the path is created. Additionally, all required top-level buckets used
 // within the database are created.
-func createChannelDB(dbPath string) error {
+func createChannelDB(dbPath string) er.R {
 	if !fileExists(dbPath) {
 		if err := os.MkdirAll(dbPath, 0700); err != nil {
-			return err
+			return er.E(err)
 		}
 	}
 
@@ -90,7 +89,7 @@ func createChannelDB(dbPath string) error {
 		return err
 	}
 
-	errr := kvdb.Update(bdb, func(tx kvdb.RwTx) error {
+	errr := kvdb.Update(bdb, func(tx kvdb.RwTx) er.R {
 		if _, err := tx.CreateTopLevelBucket(openChannelBucket); err != nil {
 			return err
 		}
@@ -155,7 +154,7 @@ func createChannelDB(dbPath string) error {
 		return putMeta(meta, tx)
 	}, func() {})
 	if errr != nil {
-		return fmt.Errorf("unable to create new channeldb")
+		return er.Errorf("unable to create new channeldb")
 	}
 
 	return bdb.Close()
@@ -178,20 +177,20 @@ func fileExists(path string) bool {
 // it becomes fully closed after a single confirmation.  When a channel was
 // forcibly closed, it will become fully closed after _all_ the pending funds
 // (if any) have been swept.
-func (d *DB) FetchClosedChannels(pendingOnly bool) ([]*ChannelCloseSummary, error) {
+func (d *DB) FetchClosedChannels(pendingOnly bool) ([]*ChannelCloseSummary, er.R) {
 	var chanSummaries []*ChannelCloseSummary
 
-	if err := kvdb.View(d, func(tx kvdb.RTx) error {
+	if err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 		closeBucket := tx.ReadBucket(closedChannelBucket)
 		if closeBucket == nil {
-			return ErrNoClosedChannels
+			return ErrNoClosedChannels.Default()
 		}
 
 		return closeBucket.ForEach(func(chanID []byte, summaryBytes []byte) er.R {
 			summaryReader := bytes.NewReader(summaryBytes)
 			chanSummary, err := deserializeCloseChannelSummary(summaryReader)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			// If the query specified to only include pending

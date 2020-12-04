@@ -1,11 +1,11 @@
 package discovery
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -28,7 +28,7 @@ var (
 	// ErrSyncManagerExiting is an error returned when we attempt to
 	// start/stop a gossip syncer for a connected/disconnected peer, but the
 	// SyncManager has already been stopped.
-	ErrSyncManagerExiting = errors.New("sync manager exiting")
+	ErrSyncManagerExiting = Err.CodeWithDetail("ErrSyncManagerExiting", "sync manager exiting")
 )
 
 // newSyncer in an internal message we'll use within the SyncManager to signal
@@ -413,10 +413,10 @@ func (m *SyncManager) createGossipSyncer(peer lnpeer.Peer) *GossipSyncer {
 		encodingType:  encoding,
 		chunkSize:     encodingTypeToChunkSize[encoding],
 		batchSize:     requestBatchSize,
-		sendToPeer: func(msgs ...lnwire.Message) error {
+		sendToPeer: func(msgs ...lnwire.Message) er.R {
 			return peer.SendMessageLazy(false, msgs...)
 		},
-		sendToPeerSync: func(msgs ...lnwire.Message) error {
+		sendToPeerSync: func(msgs ...lnwire.Message) er.R {
 			return peer.SendMessageLazy(true, msgs...)
 		},
 		ignoreHistoricalFilters: m.cfg.IgnoreHistoricalFilters,
@@ -511,7 +511,7 @@ func (m *SyncManager) rotateActiveSyncerCandidate() {
 // transitionActiveSyncer transitions an active syncer to a passive one.
 //
 // NOTE: This must be called with the syncersMu lock held.
-func (m *SyncManager) transitionActiveSyncer(s *GossipSyncer) error {
+func (m *SyncManager) transitionActiveSyncer(s *GossipSyncer) er.R {
 	log.Debugf("Transitioning active GossipSyncer(%x) to passive",
 		s.cfg.peerPub)
 
@@ -528,7 +528,7 @@ func (m *SyncManager) transitionActiveSyncer(s *GossipSyncer) error {
 // transitionPassiveSyncer transitions a passive syncer to an active one.
 //
 // NOTE: This must be called with the syncersMu lock held.
-func (m *SyncManager) transitionPassiveSyncer(s *GossipSyncer) error {
+func (m *SyncManager) transitionPassiveSyncer(s *GossipSyncer) er.R {
 	log.Debugf("Transitioning passive GossipSyncer(%x) to active",
 		s.cfg.peerPub)
 
@@ -550,7 +550,7 @@ func (m *SyncManager) forceHistoricalSync() *GossipSyncer {
 
 	// We'll sample from both sets of active and inactive syncers in the
 	// event that we don't have any inactive syncers.
-	return chooseRandomSyncer(m.gossipSyncers(), func(s *GossipSyncer) error {
+	return chooseRandomSyncer(m.gossipSyncers(), func(s *GossipSyncer) er.R {
 		return s.historicalSync()
 	})
 }
@@ -594,7 +594,7 @@ func chooseRandomSyncer(syncers map[route.Vertex]*GossipSyncer,
 // public channel graph as possible.
 //
 // TODO(wilmer): Only mark as ActiveSync if this isn't a channel peer.
-func (m *SyncManager) InitSyncState(peer lnpeer.Peer) error {
+func (m *SyncManager) InitSyncState(peer lnpeer.Peer) er.R {
 	done := make(chan struct{})
 
 	select {
@@ -603,14 +603,14 @@ func (m *SyncManager) InitSyncState(peer lnpeer.Peer) error {
 		doneChan: done,
 	}:
 	case <-m.quit:
-		return ErrSyncManagerExiting
+		return ErrSyncManagerExiting.Default()
 	}
 
 	select {
 	case <-done:
 		return nil
 	case <-m.quit:
-		return ErrSyncManagerExiting
+		return ErrSyncManagerExiting.Default()
 	}
 }
 

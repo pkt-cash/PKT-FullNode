@@ -41,14 +41,14 @@ type missionControlStore struct {
 	numRecords int
 }
 
-func newMissionControlStore(db kvdb.Backend, maxRecords int) (*missionControlStore, error) {
+func newMissionControlStore(db kvdb.Backend, maxRecords int) (*missionControlStore, er.R) {
 	var store *missionControlStore
 
 	// Create buckets if not yet existing.
-	err := kvdb.Update(db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 		resultsBucket, err := tx.CreateTopLevelBucket(resultsKey)
 		if err != nil {
-			return fmt.Errorf("cannot create results bucket: %v",
+			return er.Errorf("cannot create results bucket: %v",
 				err)
 		}
 
@@ -76,8 +76,8 @@ func newMissionControlStore(db kvdb.Backend, maxRecords int) (*missionControlSto
 }
 
 // clear removes all results from the db.
-func (b *missionControlStore) clear() error {
-	return kvdb.Update(b.db, func(tx kvdb.RwTx) error {
+func (b *missionControlStore) clear() er.R {
+	return kvdb.Update(b.db, func(tx kvdb.RwTx) er.R {
 		if err := tx.DeleteTopLevelBucket(resultsKey); err != nil {
 			return err
 		}
@@ -88,10 +88,10 @@ func (b *missionControlStore) clear() error {
 }
 
 // fetchAll returns all results currently stored in the database.
-func (b *missionControlStore) fetchAll() ([]*paymentResult, error) {
+func (b *missionControlStore) fetchAll() ([]*paymentResult, er.R) {
 	var results []*paymentResult
 
-	err := kvdb.View(b.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		resultBucket := tx.ReadBucket(resultsKey)
 		results = make([]*paymentResult, 0)
 
@@ -118,7 +118,7 @@ func (b *missionControlStore) fetchAll() ([]*paymentResult, error) {
 
 // serializeResult serializes a payment result and returns a key and value byte
 // slice to insert into the bucket.
-func serializeResult(rp *paymentResult) ([]byte, []byte, error) {
+func serializeResult(rp *paymentResult) ([]byte, []byte, er.R) {
 	// Write timestamps, success status, failure source index and route.
 	var b bytes.Buffer
 
@@ -164,7 +164,7 @@ func serializeResult(rp *paymentResult) ([]byte, []byte, error) {
 }
 
 // deserializeResult deserializes a payment result.
-func deserializeResult(k, v []byte) (*paymentResult, error) {
+func deserializeResult(k, v []byte) (*paymentResult, er.R) {
 	// Parse payment id.
 	result := paymentResult{
 		id: byteOrder.Uint64(k[8:]),
@@ -222,8 +222,8 @@ func deserializeResult(k, v []byte) (*paymentResult, error) {
 }
 
 // AddResult adds a new result to the db.
-func (b *missionControlStore) AddResult(rp *paymentResult) error {
-	return kvdb.Update(b.db, func(tx kvdb.RwTx) error {
+func (b *missionControlStore) AddResult(rp *paymentResult) er.R {
+	return kvdb.Update(b.db, func(tx kvdb.RwTx) er.R {
 		bucket := tx.ReadWriteBucket(resultsKey)
 
 		// Prune oldest entries.

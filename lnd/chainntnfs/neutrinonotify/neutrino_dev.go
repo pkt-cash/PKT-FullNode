@@ -20,7 +20,7 @@ import (
 // outdated best block and miss sending ntfns. Used for testing.
 func (n *NeutrinoNotifier) UnsafeStart(bestHeight int32,
 	bestHash *chainhash.Hash, syncHeight int32,
-	generateBlocks func() error) error {
+	generateBlocks func() error) er.R {
 
 	// We'll obtain the latest block height of the p2p node. We'll
 	// start the auto-rescan from this point. Once a caller actually wishes
@@ -86,7 +86,7 @@ func (n *NeutrinoNotifier) UnsafeStart(bestHeight int32,
 					break loop
 				}
 			case <-timeout:
-				return fmt.Errorf("unable to catch up to height %d",
+				return er.Errorf("unable to catch up to height %d",
 					syncHeight)
 			}
 		}

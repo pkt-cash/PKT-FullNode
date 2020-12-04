@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +53,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
 	carolInvoice, err := carol.AddHoldInvoice(ctxt, invoiceReq)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that we've created the invoice, we'll send a single payment from
 	// Alice to Carol. We won't wait for the response however, as Carol
@@ -67,15 +68,15 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// At this point, all 3 nodes should now have an active channel with
 	// the created HTLC pending on all of them.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash[:])
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Wait for carol to mark invoice as accepted. There is a small gap to
 	// bridge between adding the htlc to the channel and executing the exit
@@ -83,7 +84,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	waitForInvoiceAccepted(t, carol, payHash)
 
 	restartBob, err := net.SuspendNode(bob)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Settle invoice. This will just mark the invoice as settled, as there
 	// is no link anymore to remove the htlc from the commitment tx. For
@@ -95,7 +96,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	_, err = carol.SettleInvoice(ctx, &invoicesrpc.SettleInvoiceMsg{
 		Preimage: preimage[:],
 	})
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Increase the fee estimate so that the following force close tx will
 	// be cpfp'ed.
@@ -108,7 +109,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 		invoiceReq.CltvExpiry - lncfg.DefaultIncomingBroadcastDelta,
 	))
 	_, err = net.Miner.Node.Generate(numBlocks)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// At this point, Carol should broadcast her active commitment
 	// transaction in order to go to the chain and sweep her HTLC. If there
@@ -120,10 +121,10 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	_, err = getNTxsFromMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	bobFundingTxid, err := lnd.GetChanPointFundingTxid(bobChanPoint)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	carolFundingPoint := wire.OutPoint{
 		Hash:  *bobFundingTxid,
@@ -142,7 +143,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 
 	// Restart bob again.
 	err = restartBob()
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// After the force close transaction is mined, Carol should broadcast
 	// her second level HTLC transaction. Bob will broadcast a sweep tx to
@@ -157,7 +158,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	txes, err := getNTxsFromMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// All transactions should be spending from the commitment transaction.
 	assertAllTxesSpendFrom(t, txes, closingTxid)
@@ -165,7 +166,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// We'll now mine an additional block which should confirm both the
 	// second layer transactions.
 	_, err = net.Miner.Node.Generate(1)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	time.Sleep(time.Second * 4)
 
@@ -177,7 +178,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	pendingChanResp, err := carol.PendingChannels(ctxt, pendingChansRequest)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	require.NotZero(t.t, len(pendingChanResp.PendingForceClosingChannels))
 	forceCloseChan := pendingChanResp.PendingForceClosingChannels[0]
@@ -191,34 +192,34 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// extracted the preimage from the chain, and sent it back to Alice,
 	// clearing the HTLC off-chain.
 	nodes = []*lntest.HarnessNode{alice}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertNumActiveHtlcs(nodes, 0)
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// If we mine 4 additional blocks, then both outputs should now be
 	// mature.
 	_, err = net.Miner.Node.Generate(defaultCSV)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We should have a new transaction in the mempool.
 	_, err = waitForTxInMempool(net.Miner.Node, minerMempoolTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Finally, if we mine an additional block to confirm these two sweep
 	// transactions, Carol should not show a pending channel in her report
 	// afterwards.
 	_, err = net.Miner.Node.Generate(1)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(ctxt, carol, 0, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// The invoice should show as settled for Carol, indicating that it was
 	// swept on-chain.
 	invoicesReq := &lnrpc.ListInvoiceRequest{}
 	invoicesResp, err := carol.ListInvoices(ctxb, invoicesReq)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	require.Len(t.t, invoicesResp.Invoices, 1)
 	invoice := invoicesResp.Invoices[0]
 	require.Equal(t.t, lnrpc.Invoice_SETTLED, invoice.State)
@@ -230,7 +231,7 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	err = checkPaymentStatus(
 		ctxt, alice, preimage, lnrpc.Payment_SUCCEEDED,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We'll close out the channel between Alice and Bob, then shutdown
 	// carol to conclude the test.

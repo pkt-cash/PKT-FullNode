@@ -325,7 +325,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		{
 			// revoke w/ sig
 			// TODO(roasbeef): test invalid revoke
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -348,7 +348,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		},
 		{
 			// HTLC with invalid preimage size
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -374,7 +374,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		{
 			// HTLC with valid preimage size + sig
 			// TODO(roasbeef): invalid preimage
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -398,7 +398,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		{
 			// HTLC with valid preimage size + sig, and with
 			// enforced locktime in HTLC script.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Make a commit tx that needs confirmation for
 				// HTLC output to be spent.
 				genCommitTx(true)
@@ -426,7 +426,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 		{
 			// HTLC with valid preimage size + sig, but trying to
 			// spend CSV output without sequence set.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Generate commitment tx with 1 CSV locked
 				// HTLC.
 				genCommitTx(true)
@@ -457,7 +457,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 			// valid spend to the transition the state of the HTLC
 			// output with the second level HTLC timeout
 			// transaction.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -484,7 +484,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 			// valid spend to the transition the state of the HTLC
 			// output with the second level HTLC timeout
 			// transaction.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Make a commit tx that needs confirmation for
 				// HTLC output to be spent.
 				genCommitTx(true)
@@ -515,7 +515,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 			// valid spend to the transition the state of the HTLC
 			// output with the second level HTLC timeout
 			// transaction.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Generate commitment tx with 1 CSV locked
 				// HTLC.
 				genCommitTx(true)
@@ -551,7 +551,7 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 	for i, testCase := range testCases {
 		sweepTx.TxIn[0].Witness = testCase.witness()
 
-		newEngine := func() (*txscript.Engine, error) {
+		newEngine := func() (*txscript.Engine, er.R) {
 			return txscript.NewEngine(htlcPkScript,
 				sweepTx, 0, txscript.StandardVerifyFlags, nil,
 				nil, int64(paymentAmt))
@@ -725,7 +725,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 	}{
 		{
 			// HTLC redemption w/ invalid preimage size
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -752,7 +752,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		},
 		{
 			// HTLC redemption w/ valid preimage size
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -778,7 +778,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		},
 		{
 			// revoke w/ sig
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -802,7 +802,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		{
 			// HTLC redemption w/ valid preimage size, and with
 			// enforced locktime in HTLC scripts.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Make a commit tx that needs confirmation for
 				// HTLC output to be spent.
 				genCommitTx(true)
@@ -833,7 +833,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		{
 			// HTLC redemption w/ valid preimage size, but trying
 			// to spend CSV output without sequence set.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Generate commitment tx with 1 CSV locked
 				// HTLC.
 				genCommitTx(true)
@@ -865,7 +865,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 
 		{
 			// refund w/ invalid lock time
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -888,7 +888,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		},
 		{
 			// refund w/ valid lock time
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				genCommitTx(false)
 				genSweepTx(false)
 
@@ -912,7 +912,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		{
 			// refund w/ valid lock time, and enforced locktime in
 			// HTLC scripts.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Make a commit tx that needs confirmation for
 				// HTLC output to be spent.
 				genCommitTx(true)
@@ -940,7 +940,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 		{
 			// refund w/ valid lock time, but no sequence set in
 			// sweep tx trying to spend CSV locked HTLC output.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				// Generate commitment tx with 1 CSV locked
 				// HTLC.
 				genCommitTx(true)
@@ -971,7 +971,7 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 	for i, testCase := range testCases {
 		sweepTx.TxIn[0].Witness = testCase.witness()
 
-		newEngine := func() (*txscript.Engine, error) {
+		newEngine := func() (*txscript.Engine, er.R) {
 			return txscript.NewEngine(htlcPkScript,
 				sweepTx, 0, txscript.StandardVerifyFlags, nil,
 				nil, int64(paymentAmt))
@@ -1071,7 +1071,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 			// Sender of the HTLC attempts to activate the
 			// revocation clause, but uses the wrong key (fails to
 			// use the double tweak in this case).
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				signDesc := &SignDescriptor{
 					KeyDesc: keychain.KeyDescriptor{
 						PubKey: aliceKeyPub,
@@ -1090,7 +1090,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 		},
 		{
 			// Sender of HTLC activates the revocation clause.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				signDesc := &SignDescriptor{
 					KeyDesc: keychain.KeyDescriptor{
 						PubKey: aliceKeyPub,
@@ -1112,7 +1112,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 			// Receiver of the HTLC attempts to sweep, but tries to
 			// do so pre-maturely with a smaller CSV delay (2
 			// blocks instead of 5 blocks).
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				signDesc := &SignDescriptor{
 					KeyDesc: keychain.KeyDescriptor{
 						PubKey: bobKeyPub,
@@ -1134,7 +1134,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 			// Receiver of the HTLC sweeps with the proper CSV
 			// delay, but uses the wrong key (leaves off the single
 			// tweak).
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				signDesc := &SignDescriptor{
 					KeyDesc: keychain.KeyDescriptor{
 						PubKey: bobKeyPub,
@@ -1154,7 +1154,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 		{
 			// Receiver of the HTLC sweeps with the proper CSV
 			// delay, and the correct key.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				signDesc := &SignDescriptor{
 					KeyDesc: keychain.KeyDescriptor{
 						PubKey: bobKeyPub,
@@ -1177,7 +1177,7 @@ func TestSecondLevelHtlcSpends(t *testing.T) {
 	for i, testCase := range testCases {
 		sweepTx.TxIn[0].Witness = testCase.witness()
 
-		newEngine := func() (*txscript.Engine, error) {
+		newEngine := func() (*txscript.Engine, er.R) {
 			return txscript.NewEngine(htlcPkScript,
 				sweepTx, 0, txscript.StandardVerifyFlags, nil,
 				nil, int64(htlcAmt))
@@ -1237,7 +1237,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 	}{
 		{
 			// Alice can spend after the a CSV delay has passed.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				sweepTx.TxIn[0].Sequence = LockTimeToSequence(false, 1)
 				sweepTxSigHashes := txscript.NewTxSigHashes(sweepTx)
 
@@ -1259,7 +1259,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 		},
 		{
 			// Alice cannot spend output without sequence set.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				sweepTx.TxIn[0].Sequence = constants.MaxTxInSequenceNum
 				sweepTxSigHashes := txscript.NewTxSigHashes(sweepTx)
 
@@ -1284,7 +1284,7 @@ func TestCommitSpendToRemoteConfirmed(t *testing.T) {
 	for i, testCase := range testCases {
 		sweepTx.TxIn[0].Witness = testCase.witness()
 
-		newEngine := func() (*txscript.Engine, error) {
+		newEngine := func() (*txscript.Engine, er.R) {
 			return txscript.NewEngine(commitPkScript,
 				sweepTx, 0, txscript.StandardVerifyFlags, nil,
 				nil, int64(outputVal))
@@ -1350,7 +1350,7 @@ func TestSpendAnchor(t *testing.T) {
 	}{
 		{
 			// Alice can spend immediately.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				sweepTx.TxIn[0].Sequence = constants.MaxTxInSequenceNum
 				sweepTxSigHashes := txscript.NewTxSigHashes(sweepTx)
 
@@ -1372,7 +1372,7 @@ func TestSpendAnchor(t *testing.T) {
 		},
 		{
 			// Anyone can spend after 16 blocks.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				sweepTx.TxIn[0].Sequence = LockTimeToSequence(false, 16)
 				return CommitSpendAnchorAnyone(anchorScript)
 			}),
@@ -1380,7 +1380,7 @@ func TestSpendAnchor(t *testing.T) {
 		},
 		{
 			// Anyone cannot spend before 16 blocks.
-			makeWitnessTestCase(t, func() (wire.TxWitness, error) {
+			makeWitnessTestCase(t, func() (wire.TxWitness, er.R) {
 				sweepTx.TxIn[0].Sequence = LockTimeToSequence(false, 15)
 				return CommitSpendAnchorAnyone(anchorScript)
 			}),
@@ -1391,7 +1391,7 @@ func TestSpendAnchor(t *testing.T) {
 	for i, testCase := range testCases {
 		sweepTx.TxIn[0].Witness = testCase.witness()
 
-		newEngine := func() (*txscript.Engine, error) {
+		newEngine := func() (*txscript.Engine, er.R) {
 			return txscript.NewEngine(anchorPkScript,
 				sweepTx, 0, txscript.StandardVerifyFlags, nil,
 				nil, int64(anchorSize))

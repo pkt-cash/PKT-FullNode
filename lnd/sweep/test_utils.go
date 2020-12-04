@@ -64,14 +64,14 @@ func (m *MockNotifier) NotifyEpoch(height int32) {
 }
 
 // ConfirmTx simulates a tx confirming.
-func (m *MockNotifier) ConfirmTx(txid *chainhash.Hash, height uint32) error {
+func (m *MockNotifier) ConfirmTx(txid *chainhash.Hash, height uint32) er.R {
 	confirm := &chainntnfs.TxConfirmation{
 		BlockHeight: height,
 	}
 	select {
 	case m.getConfChannel(txid) <- confirm:
 	case <-time.After(defaultTestTimeout):
-		return fmt.Errorf("confirmation not consumed")
+		return er.Errorf("confirmation not consumed")
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (m *MockNotifier) getConfChannel(
 
 // RegisterBlockEpochNtfn registers a block notification.
 func (m *MockNotifier) RegisterBlockEpochNtfn(
-	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error) {
+	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R) {
 
 	log.Tracef("Mock block ntfn registered")
 
@@ -170,7 +170,7 @@ func (m *MockNotifier) RegisterBlockEpochNtfn(
 }
 
 // Start the notifier.
-func (m *MockNotifier) Start() error {
+func (m *MockNotifier) Start() er.R {
 	return nil
 }
 
@@ -180,13 +180,13 @@ func (m *MockNotifier) Started() bool {
 }
 
 // Stop the notifier.
-func (m *MockNotifier) Stop() error {
+func (m *MockNotifier) Stop() er.R {
 	return nil
 }
 
 // RegisterSpendNtfn registers for spend notifications.
 func (m *MockNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
-	_ []byte, heightHint uint32) (*chainntnfs.SpendEvent, error) {
+	_ []byte, heightHint uint32) (*chainntnfs.SpendEvent, er.R) {
 
 	// Add channel to global spend ntfn map.
 	m.mutex.Lock()

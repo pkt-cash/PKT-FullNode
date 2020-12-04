@@ -1,9 +1,8 @@
 package lnwire
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 )
 
@@ -15,11 +14,11 @@ type Sig [64]byte
 
 // NewSigFromRawSignature returns a Sig from a Bitcoin raw signature encoded in
 // the canonical DER encoding.
-func NewSigFromRawSignature(sig []byte) (Sig, error) {
+func NewSigFromRawSignature(sig []byte) (Sig, er.R) {
 	var b Sig
 
 	if len(sig) == 0 {
-		return b, fmt.Errorf("cannot decode empty signature")
+		return b, er.Errorf("cannot decode empty signature")
 	}
 
 	// Extract lengths of R and S. The DER representation is laid out as
@@ -39,7 +38,7 @@ func NewSigFromRawSignature(sig []byte) (Sig, error) {
 	// check S first.
 	if sLen > 32 {
 		if (sLen > 33) || (sig[6+rLen] != 0x00) {
-			return b, fmt.Errorf("S is over 32 bytes long " +
+			return b, er.Errorf("S is over 32 bytes long " +
 				"without padding")
 		}
 		sLen--
@@ -51,7 +50,7 @@ func NewSigFromRawSignature(sig []byte) (Sig, error) {
 	// Do the same for R as we did for S
 	if rLen > 32 {
 		if (rLen > 33) || (sig[4] != 0x00) {
-			return b, fmt.Errorf("R is over 32 bytes long " +
+			return b, er.Errorf("R is over 32 bytes long " +
 				"without padding")
 		}
 		rLen--
@@ -65,9 +64,9 @@ func NewSigFromRawSignature(sig []byte) (Sig, error) {
 
 // NewSigFromSignature creates a new signature as used on the wire, from an
 // existing btcec.Signature.
-func NewSigFromSignature(e input.Signature) (Sig, error) {
+func NewSigFromSignature(e input.Signature) (Sig, er.R) {
 	if e == nil {
-		return Sig{}, fmt.Errorf("cannot decode empty signature")
+		return Sig{}, er.Errorf("cannot decode empty signature")
 	}
 
 	// Serialize the signature with all the checks that entails.
@@ -76,7 +75,7 @@ func NewSigFromSignature(e input.Signature) (Sig, error) {
 
 // ToSignature converts the fixed-sized signature to a btcec.Signature objects
 // which can be used for signature validation checks.
-func (b *Sig) ToSignature() (*btcec.Signature, error) {
+func (b *Sig) ToSignature() (*btcec.Signature, er.R) {
 	// Parse the signature with strict checks.
 	sigBytes := b.ToSignatureBytes()
 	sig, err := btcec.ParseDERSignature(sigBytes, btcec.S256())

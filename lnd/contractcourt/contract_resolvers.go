@@ -2,14 +2,14 @@ package contractcourt
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -42,7 +42,7 @@ type ContractResolver interface {
 	// resolution, then another resolve is returned.
 	//
 	// NOTE: This function MUST be run as a goroutine.
-	Resolve() (ContractResolver, error)
+	Resolve() (ContractResolver, er.R)
 
 	// IsResolved returns true if the stored state in the resolve is fully
 	// resolved. In this case the target output can be forgotten.
@@ -50,7 +50,7 @@ type ContractResolver interface {
 
 	// Encode writes an encoded version of the ContractResolver into the
 	// passed Writer.
-	Encode(w io.Writer) error
+	Encode(w io.Writer) er.R
 
 	// Stop signals the resolver to cancel any current resolution
 	// processes, and suspend.
@@ -89,7 +89,7 @@ type ResolverConfig struct {
 	// return a non-nil error upon success. It takes a resolver report,
 	// which contains information about the outcome and should be written
 	// to disk if non-nil.
-	Checkpoint func(ContractResolver, ...*channeldb.ResolverReport) error
+	Checkpoint func(ContractResolver, ...*channeldb.ResolverReport) er.R
 }
 
 // contractResolverKit is meant to be used as a mix-in struct to be embedded within a
@@ -120,5 +120,5 @@ func (r *contractResolverKit) initLogger(resolver ContractResolver) {
 var (
 	// errResolverShuttingDown is returned when the resolver stops
 	// progressing because it received the quit signal.
-	errResolverShuttingDown = errors.New("resolver shutting down")
+	errResolverShuttingDown = er.New("resolver shutting down")
 )

@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -37,10 +37,10 @@ func (*VersionRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_494312204cefa0e6, []int{0}
 }
 
-func (m *VersionRequest) XXX_Unmarshal(b []byte) error {
+func (m *VersionRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_VersionRequest.Unmarshal(m, b)
 }
-func (m *VersionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *VersionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_VersionRequest.Marshal(b, m, deterministic)
 }
 func (m *VersionRequest) XXX_Merge(src proto.Message) {
@@ -86,10 +86,10 @@ func (*Version) Descriptor() ([]byte, []int) {
 	return fileDescriptor_494312204cefa0e6, []int{1}
 }
 
-func (m *Version) XXX_Unmarshal(b []byte) error {
+func (m *Version) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_Version.Unmarshal(m, b)
 }
-func (m *Version) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Version) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_Version.Marshal(b, m, deterministic)
 }
 func (m *Version) XXX_Merge(src proto.Message) {
@@ -212,7 +212,7 @@ type VersionerClient interface {
 	// lncli: `version`
 	//GetVersion returns the current version and build information of the running
 	//daemon.
-	GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*Version, error)
+	GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*Version, er.R)
 }
 
 type versionerClient struct {
@@ -223,7 +223,7 @@ func NewVersionerClient(cc *grpc.ClientConn) VersionerClient {
 	return &versionerClient{cc}
 }
 
-func (c *versionerClient) GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*Version, error) {
+func (c *versionerClient) GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*Version, er.R) {
 	out := new(Version)
 	err := c.cc.Invoke(ctx, "/verrpc.Versioner/GetVersion", in, out, opts...)
 	if err != nil {
@@ -237,14 +237,14 @@ type VersionerServer interface {
 	// lncli: `version`
 	//GetVersion returns the current version and build information of the running
 	//daemon.
-	GetVersion(context.Context, *VersionRequest) (*Version, error)
+	GetVersion(context.Context, *VersionRequest) (*Version, er.R)
 }
 
 // UnimplementedVersionerServer can be embedded to have forward compatible implementations.
 type UnimplementedVersionerServer struct {
 }
 
-func (*UnimplementedVersionerServer) GetVersion(ctx context.Context, req *VersionRequest) (*Version, error) {
+func (*UnimplementedVersionerServer) GetVersion(ctx context.Context, req *VersionRequest) (*Version, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
 }
 
@@ -252,7 +252,7 @@ func RegisterVersionerServer(s *grpc.Server, srv VersionerServer) {
 	s.RegisterService(&_Versioner_serviceDesc, srv)
 }
 
-func _Versioner_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Versioner_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(VersionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func _Versioner_GetVersion_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/verrpc.Versioner/GetVersion",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(VersionerServer).GetVersion(ctx, req.(*VersionRequest))
 	}
 	return interceptor(ctx, in, info, handler)

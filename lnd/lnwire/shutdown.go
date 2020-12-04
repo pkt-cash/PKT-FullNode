@@ -2,6 +2,8 @@ package lnwire
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Shutdown is sent by either side in order to initiate the cooperative closure
@@ -47,7 +49,7 @@ var _ Message = (*Shutdown)(nil)
 // observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (s *Shutdown) Decode(r io.Reader, pver uint32) error {
+func (s *Shutdown) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r, &s.ChannelID, &s.Address)
 }
 
@@ -55,7 +57,7 @@ func (s *Shutdown) Decode(r io.Reader, pver uint32) error {
 // the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (s *Shutdown) Encode(w io.Writer, pver uint32) error {
+func (s *Shutdown) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w, s.ChannelID, s.Address)
 }
 

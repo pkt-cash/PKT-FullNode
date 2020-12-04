@@ -2,18 +2,21 @@ package tlv
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/wire"
 )
 
+var Err = er.NewErrorType("lnd.tlv")
+
 // ErrVarIntNotCanonical signals that the decoded varint was not minimally encoded.
-var ErrVarIntNotCanonical = errors.New("decoded varint is not canonical")
+var ErrVarIntNotCanonical = Err.CodeWithDetail("ErrVarIntNotCanonical", "decoded varint is not canonical")
 
 // ReadVarInt reads a variable length integer from r and returns it as a uint64.
-func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
-	_, err := io.ReadFull(r, buf[:1])
+func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, er.R) {
+	_, err := util.ReadFull(r, buf[:1])
 	if err != nil {
 		return 0, err
 	}
@@ -25,7 +28,7 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
 		rv = uint64(discriminant)
 
 	case discriminant == 0xfd:
-		_, err := io.ReadFull(r, buf[:2])
+		_, err := util.ReadFull(r, buf[:2])
 		switch {
 		case err == io.EOF:
 			return 0, io.ErrUnexpectedEOF
@@ -37,11 +40,11 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
 		// The encoding is not canonical if the value could have been
 		// encoded using fewer bytes.
 		if rv < 0xfd {
-			return 0, ErrVarIntNotCanonical
+			return 0, ErrVarIntNotCanonical.Default()
 		}
 
 	case discriminant == 0xfe:
-		_, err := io.ReadFull(r, buf[:4])
+		_, err := util.ReadFull(r, buf[:4])
 		switch {
 		case err == io.EOF:
 			return 0, io.ErrUnexpectedEOF
@@ -53,11 +56,11 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
 		// The encoding is not canonical if the value could have been
 		// encoded using fewer bytes.
 		if rv <= 0xffff {
-			return 0, ErrVarIntNotCanonical
+			return 0, ErrVarIntNotCanonical.Default()
 		}
 
 	default:
-		_, err := io.ReadFull(r, buf[:])
+		_, err := util.ReadFull(r, buf[:])
 		switch {
 		case err == io.EOF:
 			return 0, io.ErrUnexpectedEOF
@@ -69,7 +72,7 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
 		// The encoding is not canonical if the value could have been
 		// encoded using fewer bytes.
 		if rv <= 0xffffffff {
-			return 0, ErrVarIntNotCanonical
+			return 0, ErrVarIntNotCanonical.Default()
 		}
 	}
 
@@ -78,7 +81,7 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, error) {
 
 // WriteVarInt serializes val to w using a variable number of bytes depending
 // on its value.
-func WriteVarInt(w io.Writer, val uint64, buf *[8]byte) error {
+func WriteVarInt(w io.Writer, val uint64, buf *[8]byte) er.R {
 	var length int
 	switch {
 	case val < 0xfd:
@@ -97,7 +100,7 @@ func WriteVarInt(w io.Writer, val uint64, buf *[8]byte) error {
 
 	default:
 		buf[0] = uint8(0xff)
-		_, err := w.Write(buf[:1])
+		_, err := util.Write(w, buf[:1])
 		if err != nil {
 			return err
 		}
@@ -106,7 +109,7 @@ func WriteVarInt(w io.Writer, val uint64, buf *[8]byte) error {
 		length = 8
 	}
 
-	_, err := w.Write(buf[:length])
+	_, err := util.Write(w, buf[:length])
 	return err
 }
 

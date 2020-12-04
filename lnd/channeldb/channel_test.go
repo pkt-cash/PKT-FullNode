@@ -8,18 +8,19 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -683,7 +684,7 @@ func TestChannelStateTransition(t *testing.T) {
 	// Attempting to query for a commitment diff should return
 	// ErrNoPendingCommit as we haven't yet created a new state for them.
 	_, err = channel.RemoteCommitChainTip()
-	if err != ErrNoPendingCommit {
+	if !ErrNoPendingCommit.Is(err) {
 		t.Fatalf("expected ErrNoPendingCommit, instead got %v", err)
 	}
 
@@ -768,7 +769,7 @@ func TestChannelStateTransition(t *testing.T) {
 
 	// At this point, the remote commit chain should be nil, and the posted
 	// remote commitment should match the one we added as a diff above.
-	if _, err := channel.RemoteCommitChainTip(); err != ErrNoPendingCommit {
+	if _, err := channel.RemoteCommitChainTip(); !ErrNoPendingCommit.Is(err) {
 		t.Fatalf("expected ErrNoPendingCommit, instead got %v", err)
 	}
 
@@ -1094,7 +1095,7 @@ func TestFetchWaitingCloseChannels(t *testing.T) {
 			t.Fatalf("unable to mark nil coop broadcast: %v", err)
 		}
 		_, err := channel.BroadcastedCooperative()
-		if err != ErrNoCloseTx {
+		if !ErrNoCloseTx.Is(err) {
 			t.Fatalf("expected no closing tx error, got: %v", err)
 		}
 
@@ -1258,14 +1259,14 @@ func TestCloseInitiator(t *testing.T) {
 		name string
 		// updateChannel is called to update the channel as broadcast,
 		// cooperatively or not, based on the test's requirements.
-		updateChannel    func(c *OpenChannel) error
+		updateChannel    func(c *OpenChannel) er.R
 		expectedStatuses []ChannelStatus
 	}{
 		{
 			name: "local coop close",
 			// Mark the channel as cooperatively closed, initiated
 			// by the local party.
-			updateChannel: func(c *OpenChannel) error {
+			updateChannel: func(c *OpenChannel) er.R {
 				return c.MarkCoopBroadcasted(
 					&wire.MsgTx{}, true,
 				)
@@ -1279,7 +1280,7 @@ func TestCloseInitiator(t *testing.T) {
 			name: "remote coop close",
 			// Mark the channel as cooperatively closed, initiated
 			// by the remote party.
-			updateChannel: func(c *OpenChannel) error {
+			updateChannel: func(c *OpenChannel) er.R {
 				return c.MarkCoopBroadcasted(
 					&wire.MsgTx{}, false,
 				)
@@ -1293,7 +1294,7 @@ func TestCloseInitiator(t *testing.T) {
 			name: "local force close",
 			// Mark the channel's commitment as broadcast with
 			// local initiator.
-			updateChannel: func(c *OpenChannel) error {
+			updateChannel: func(c *OpenChannel) er.R {
 				return c.MarkCommitmentBroadcasted(
 					&wire.MsgTx{}, true,
 				)
@@ -1419,9 +1420,9 @@ func TestBalanceAtHeight(t *testing.T) {
 	// the revocation log bucket to test lookup of balances at heights that
 	// are not our current height.
 	putRevokedState := func(c *OpenChannel, height uint64, local,
-		remote lnwire.MilliSatoshi) error {
+		remote lnwire.MilliSatoshi) er.R {
 
-		err := kvdb.Update(c.Db, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(c.Db, func(tx kvdb.RwTx) er.R {
 			chanBucket, err := fetchChanBucketRw(
 				tx, c.IdentityPub, &c.FundingOutpoint,
 				c.ChainHash,
@@ -1457,7 +1458,7 @@ func TestBalanceAtHeight(t *testing.T) {
 		targetHeight          uint64
 		expectedLocalBalance  lnwire.MilliSatoshi
 		expectedRemoteBalance lnwire.MilliSatoshi
-		expectedError         error
+		expectedError         *er.ErrorCode
 	}{
 		{
 			name:                  "target is current local height",
@@ -1537,7 +1538,8 @@ func TestBalanceAtHeight(t *testing.T) {
 			local, remote, err := channel.BalancesAtHeight(
 				test.targetHeight,
 			)
-			if err != test.expectedError {
+			if test.expectedError == nil && err == nil {
+			} else if test.expectedError == nil || !test.expectedError.Is(err) {
 				t.Fatalf("expected: %v, got: %v",
 					test.expectedError, err)
 			}

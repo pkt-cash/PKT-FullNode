@@ -40,7 +40,7 @@ type Coin struct {
 // funds, a non-nil error is returned. Additionally, the total amount of the
 // selected coins are returned in order for the caller to properly handle
 // change+fees.
-func selectInputs(amt btcutil.Amount, coins []Coin) (btcutil.Amount, []Coin, error) {
+func selectInputs(amt btcutil.Amount, coins []Coin) (btcutil.Amount, []Coin, er.R) {
 	satSelected := btcutil.Amount(0)
 	for i, coin := range coins {
 		satSelected += btcutil.Amount(coin.Value)
@@ -57,7 +57,7 @@ func selectInputs(amt btcutil.Amount, coins []Coin) (btcutil.Amount, []Coin, err
 // specified fee rate should be expressed in sat/kw for coin selection to
 // function properly.
 func CoinSelect(feeRate chainfee.SatPerKWeight, amt btcutil.Amount,
-	coins []Coin) ([]Coin, btcutil.Amount, error) {
+	coins []Coin) ([]Coin, btcutil.Amount, er.R) {
 
 	amtNeeded := amt
 	for {
@@ -80,7 +80,7 @@ func CoinSelect(feeRate chainfee.SatPerKWeight, amt btcutil.Amount,
 				weightEstimate.AddNestedP2WKHInput()
 
 			default:
-				return nil, 0, fmt.Errorf("unsupported address type: %x",
+				return nil, 0, er.Errorf("unsupported address type: %x",
 					utxo.PkScript)
 			}
 		}
@@ -125,7 +125,7 @@ func CoinSelect(feeRate chainfee.SatPerKWeight, amt btcutil.Amount,
 // coins, the final output and change values are returned.
 func CoinSelectSubtractFees(feeRate chainfee.SatPerKWeight, amt,
 	dustLimit btcutil.Amount, coins []Coin) ([]Coin, btcutil.Amount,
-	btcutil.Amount, error) {
+	btcutil.Amount, er.R) {
 
 	// First perform an initial round of coin selection to estimate
 	// the required fee.
@@ -145,7 +145,7 @@ func CoinSelectSubtractFees(feeRate chainfee.SatPerKWeight, amt,
 			weightEstimate.AddNestedP2WKHInput()
 
 		default:
-			return nil, 0, 0, fmt.Errorf("unsupported address "+
+			return nil, 0, 0, er.Errorf("unsupported address "+
 				"type: %x", utxo.PkScript)
 		}
 	}
@@ -170,7 +170,7 @@ func CoinSelectSubtractFees(feeRate chainfee.SatPerKWeight, amt,
 	// If the the output is too small after subtracting the fee, the coin
 	// selection cannot be performed with an amount this small.
 	if outputAmt <= dustLimit {
-		return nil, 0, 0, fmt.Errorf("output amount(%v) after "+
+		return nil, 0, 0, er.Errorf("output amount(%v) after "+
 			"subtracting fees(%v) below dust limit(%v)", outputAmt,
 			requiredFee, dustLimit)
 	}
@@ -208,7 +208,7 @@ func CoinSelectSubtractFees(feeRate chainfee.SatPerKWeight, amt,
 	// TODO(halseth): smarter fee limit. Make configurable or dynamic wrt
 	// total funding size?
 	if fee > totalOut/5 {
-		return nil, 0, 0, fmt.Errorf("fee %v on total output "+
+		return nil, 0, 0, er.Errorf("fee %v on total output "+
 			"value %v", fee, totalOut)
 	}
 

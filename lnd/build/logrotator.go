@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/jrick/logrotate/rotator"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // RotatingLogWriter is a wrapper around the LogWriter that supports log file
@@ -60,18 +61,18 @@ func (r *RotatingLogWriter) RegisterSubLogger(subsystem string,
 // create roll files in the same directory. It should be called as early on
 // startup and possible and must be closed on shutdown by calling `Close`.
 func (r *RotatingLogWriter) InitLogRotator(logFile string, maxLogFileSize int,
-	maxLogFiles int) error {
+	maxLogFiles int) er.R {
 
 	logDir, _ := filepath.Split(logFile)
 	err := os.MkdirAll(logDir, 0700)
 	if err != nil {
-		return fmt.Errorf("failed to create log directory: %v", err)
+		return er.Errorf("failed to create log directory: %v", err)
 	}
 	r.logRotator, err = rotator.New(
 		logFile, int64(maxLogFileSize*1024), false, maxLogFiles,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create file rotator: %v", err)
+		return er.Errorf("failed to create file rotator: %v", err)
 	}
 
 	// Run rotator as a goroutine now but make sure we catch any errors
@@ -92,9 +93,9 @@ func (r *RotatingLogWriter) InitLogRotator(logFile string, maxLogFileSize int,
 }
 
 // Close closes the underlying log rotator if it has already been created.
-func (r *RotatingLogWriter) Close() error {
+func (r *RotatingLogWriter) Close() er.R {
 	if r.logRotator != nil {
-		return r.logRotator.Close()
+		return er.E(r.logRotator.Close())
 	}
 	return nil
 }

@@ -29,9 +29,9 @@ const External = "external"
 // This allows us to label all transactions published by the api, even if
 // no label is provided. If a label is provided, it is validated against
 // the known restrictions.
-func ValidateAPI(label string) (string, error) {
+func ValidateAPI(label string) (string, er.R) {
 	if len(label) > wtxmgr.TxLabelLimit {
-		return "", fmt.Errorf("label length: %v exceeds "+
+		return "", er.Errorf("label length: %v exceeds "+
 			"limit of %v", len(label), wtxmgr.TxLabelLimit)
 	}
 

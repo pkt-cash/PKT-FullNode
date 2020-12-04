@@ -10,7 +10,7 @@ import (
 // NewBackend starts a bitcoind node with the txindex enabled and returns a
 // BitcoindBackendConfig for that node.
 func NewBackend(miner string, netParams *chaincfg.Params) (
-	*BitcoindBackendConfig, func() error, error) {
+	*BitcoindBackendConfig, func() error, er.R) {
 
 	extraArgs := []string{
 		"-debug",

@@ -178,7 +178,7 @@ type paymentResult struct {
 
 // NewMissionControl returns a new instance of missionControl.
 func NewMissionControl(db kvdb.Backend, cfg *MissionControlConfig) (
-	*MissionControl, error) {
+	*MissionControl, er.R) {
 
 	log.Debugf("Instantiating mission control with config: "+
 		"PenaltyHalfLife=%v, AprioriHopProbability=%v, "+
@@ -213,7 +213,7 @@ func NewMissionControl(db kvdb.Backend, cfg *MissionControlConfig) (
 }
 
 // init initializes mission control with historical data.
-func (m *MissionControl) init() error {
+func (m *MissionControl) init() er.R {
 	log.Debugf("Mission control state reconstruction started")
 
 	start := time.Now()
@@ -235,7 +235,7 @@ func (m *MissionControl) init() error {
 
 // ResetHistory resets the history of MissionControl returning it to a state as
 // if no payment attempts have been made.
-func (m *MissionControl) ResetHistory() error {
+func (m *MissionControl) ResetHistory() er.R {
 	m.Lock()
 	defer m.Unlock()
 
@@ -307,7 +307,7 @@ func (m *MissionControl) GetPairHistorySnapshot(
 // payment attempts need to be made.
 func (m *MissionControl) ReportPaymentFail(paymentID uint64, rt *route.Route,
 	failureSourceIdx *int, failure lnwire.FailureMessage) (
-	*channeldb.FailureReason, error) {
+	*channeldb.FailureReason, er.R) {
 
 	timestamp := m.now()
 
@@ -327,7 +327,7 @@ func (m *MissionControl) ReportPaymentFail(paymentID uint64, rt *route.Route,
 // ReportPaymentSuccess reports a successful payment to mission control as input
 // for future probability estimates.
 func (m *MissionControl) ReportPaymentSuccess(paymentID uint64,
-	rt *route.Route) error {
+	rt *route.Route) er.R {
 
 	timestamp := m.now()
 
@@ -346,7 +346,7 @@ func (m *MissionControl) ReportPaymentSuccess(paymentID uint64,
 // processPaymentResult stores a payment result in the mission control store and
 // updates mission control's in-memory state.
 func (m *MissionControl) processPaymentResult(result *paymentResult) (
-	*channeldb.FailureReason, error) {
+	*channeldb.FailureReason, er.R) {
 
 	// Store complete result in database.
 	if err := m.store.AddResult(result); err != nil {

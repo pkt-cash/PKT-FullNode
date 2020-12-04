@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	p2wkhScript, _ = hex.DecodeString(
+	p2wkhScript, _ = util.DecodeHex(
 		"001411034bdcb6ccb7744fdfdeea958a6fb0b415a032",
 	)
 )

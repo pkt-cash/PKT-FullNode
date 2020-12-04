@@ -41,7 +41,7 @@ func NodeAnnSetTimestamp(nodeAnn *lnwire.NodeAnnouncement) {
 // not monotonically increase from the prior.
 func SignNodeAnnouncement(signer lnwallet.MessageSigner,
 	pubKey *btcec.PublicKey, nodeAnn *lnwire.NodeAnnouncement,
-	mods ...NodeAnnModifier) error {
+	mods ...NodeAnnModifier) er.R {
 
 	// Apply the requested changes to the node announcement.
 	for _, modifier := range mods {

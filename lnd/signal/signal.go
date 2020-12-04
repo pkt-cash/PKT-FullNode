@@ -6,11 +6,12 @@
 package signal
 
 import (
-	"errors"
 	"os"
 	"os/signal"
 	"sync/atomic"
 	"syscall"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -34,9 +35,9 @@ var (
 
 // Intercept starts the interception of interrupt signals. Note that this
 // function can only be called once.
-func Intercept() error {
+func Intercept() er.R {
 	if !atomic.CompareAndSwapInt32(&started, 0, 1) {
-		return errors.New("intercept already started")
+		return er.New("intercept already started")
 	}
 
 	signalsToCatch := []os.Signal{

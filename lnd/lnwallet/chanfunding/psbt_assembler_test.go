@@ -3,7 +3,6 @@ package chanfunding
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -12,6 +11,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -149,7 +149,7 @@ func TestPsbtIntent(t *testing.T) {
 			errChan <- err
 
 		case <-time.After(defaultTimeout):
-			errChan <- fmt.Errorf("timed out")
+			errChan <- er.Errorf("timed out")
 		}
 	}()
 	err = psbtIntent.Finalize(pendingPsbt)
@@ -272,13 +272,13 @@ func TestPsbtVerify(t *testing.T) {
 	testCases := []struct {
 		name        string
 		expectedErr string
-		doVerify    func(int64, *psbt.Packet, *PsbtIntent) error
+		doVerify    func(int64, *psbt.Packet, *PsbtIntent) er.R
 	}{
 		{
 			name:        "nil packet",
 			expectedErr: "PSBT is nil",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				return i.Verify(nil)
 			},
@@ -288,7 +288,7 @@ func TestPsbtVerify(t *testing.T) {
 			expectedErr: "invalid state. got user_canceled " +
 				"expected output_known",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				i.State = PsbtInitiatorCanceled
 				return i.Verify(p)
@@ -298,7 +298,7 @@ func TestPsbtVerify(t *testing.T) {
 			name:        "output not found, value wrong",
 			expectedErr: "funding output not found in PSBT",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxOut[0].Value = 123
 				return i.Verify(p)
@@ -308,7 +308,7 @@ func TestPsbtVerify(t *testing.T) {
 			name:        "output not found, pk script wrong",
 			expectedErr: "funding output not found in PSBT",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxOut[0].PkScript = []byte{1, 2, 3}
 				return i.Verify(p)
@@ -318,7 +318,7 @@ func TestPsbtVerify(t *testing.T) {
 			name:        "no inputs",
 			expectedErr: "PSBT has no inputs",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				return i.Verify(p)
 			},
@@ -328,7 +328,7 @@ func TestPsbtVerify(t *testing.T) {
 			expectedErr: "input amount sum must be larger than " +
 				"output amount sum",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxIn = []*wire.TxIn{{}}
 				p.Inputs = []psbt.PInput{{
@@ -343,7 +343,7 @@ func TestPsbtVerify(t *testing.T) {
 			name:        "input correct",
 			expectedErr: "",
 			doVerify: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				txOut := &wire.TxOut{
 					Value: int64(chanCapacity/2) + 1,
@@ -419,13 +419,13 @@ func TestPsbtFinalize(t *testing.T) {
 	testCases := []struct {
 		name        string
 		expectedErr string
-		doFinalize  func(int64, *psbt.Packet, *PsbtIntent) error
+		doFinalize  func(int64, *psbt.Packet, *PsbtIntent) er.R
 	}{
 		{
 			name:        "nil packet",
 			expectedErr: "PSBT is nil",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				return i.Finalize(nil)
 			},
@@ -435,7 +435,7 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "invalid state. got user_canceled " +
 				"expected verified",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				i.State = PsbtInitiatorCanceled
 				return i.Finalize(p)
@@ -445,7 +445,7 @@ func TestPsbtFinalize(t *testing.T) {
 			name:        "not verified first",
 			expectedErr: "PSBT was not verified first",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				i.State = PsbtVerified
 				i.PendingPsbt = nil
@@ -457,7 +457,7 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "outputs differ from verified PSBT: " +
 				"output 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxOut[0].Value = 123
 				return i.Finalize(p)
@@ -468,7 +468,7 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "outputs differ from verified PSBT: " +
 				"output 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxOut[0].PkScript = []byte{3, 2, 1}
 				return i.Finalize(p)
@@ -479,7 +479,7 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "inputs differ from verified PSBT: " +
 				"previous outpoint of input 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				p.UnsignedTx.TxIn[0].PreviousOutPoint.Index = 0
 				return i.Finalize(p)
@@ -490,7 +490,7 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "inputs differ from verified PSBT: " +
 				"previous outpoint of input 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				prevout := &p.UnsignedTx.TxIn[0].PreviousOutPoint
 				prevout.Hash = chainhash.Hash{77, 88, 99, 11}
@@ -501,7 +501,7 @@ func TestPsbtFinalize(t *testing.T) {
 			name:        "raw tx - nil transaction",
 			expectedErr: "raw transaction is nil",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				return i.FinalizeRawTX(nil)
 			},
@@ -511,10 +511,10 @@ func TestPsbtFinalize(t *testing.T) {
 			expectedErr: "inputs not signed: input 0 has no " +
 				"signature data attached",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				rawTx, err := psbt.Extract(p)
-				require.NoError(t, err)
+				util.RequireNoErr(t, err)
 				rawTx.TxIn[0].Witness = nil
 
 				return i.FinalizeRawTX(rawTx)
@@ -524,10 +524,10 @@ func TestPsbtFinalize(t *testing.T) {
 			name:        "happy path",
 			expectedErr: "",
 			doFinalize: func(amt int64, p *psbt.Packet,
-				i *PsbtIntent) error {
+				i *PsbtIntent) er.R {
 
 				err := i.Finalize(p)
-				require.NoError(t, err)
+				util.RequireNoErr(t, err)
 
 				require.Equal(t, PsbtFinalized, i.State)
 				require.NotNil(t, i.FinalTX)

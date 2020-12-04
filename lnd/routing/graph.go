@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -13,13 +14,13 @@ type routingGraph interface {
 	// forEachNodeChannel calls the callback for every channel of the given node.
 	forEachNodeChannel(nodePub route.Vertex,
 		cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-			*channeldb.ChannelEdgePolicy) error) error
+			*channeldb.ChannelEdgePolicy) error) er.R
 
 	// sourceNode returns the source node of the graph.
 	sourceNode() route.Vertex
 
 	// fetchNodeFeatures returns the features of the given node.
-	fetchNodeFeatures(nodePub route.Vertex) (*lnwire.FeatureVector, error)
+	fetchNodeFeatures(nodePub route.Vertex) (*lnwire.FeatureVector, er.R)
 }
 
 // dbRoutingTx is a routingGraph implementation that retrieves from the
@@ -32,7 +33,7 @@ type dbRoutingTx struct {
 
 // newDbRoutingTx instantiates a new db-connected routing graph. It implictly
 // instantiates a new read transaction.
-func newDbRoutingTx(graph *channeldb.ChannelGraph) (*dbRoutingTx, error) {
+func newDbRoutingTx(graph *channeldb.ChannelGraph) (*dbRoutingTx, er.R) {
 	sourceNode, err := graph.SourceNode()
 	if err != nil {
 		return nil, err
@@ -51,7 +52,7 @@ func newDbRoutingTx(graph *channeldb.ChannelGraph) (*dbRoutingTx, error) {
 }
 
 // close closes the underlying db transaction.
-func (g *dbRoutingTx) close() error {
+func (g *dbRoutingTx) close() er.R {
 	return g.tx.Rollback()
 }
 
@@ -60,10 +61,10 @@ func (g *dbRoutingTx) close() error {
 // NOTE: Part of the routingGraph interface.
 func (g *dbRoutingTx) forEachNodeChannel(nodePub route.Vertex,
 	cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-		*channeldb.ChannelEdgePolicy) error) error {
+		*channeldb.ChannelEdgePolicy) error) er.R {
 
 	txCb := func(_ kvdb.RTx, info *channeldb.ChannelEdgeInfo,
-		p1, p2 *channeldb.ChannelEdgePolicy) error {
+		p1, p2 *channeldb.ChannelEdgePolicy) er.R {
 
 		return cb(info, p1, p2)
 	}
@@ -83,7 +84,7 @@ func (g *dbRoutingTx) sourceNode() route.Vertex {
 //
 // NOTE: Part of the routingGraph interface.
 func (g *dbRoutingTx) fetchNodeFeatures(nodePub route.Vertex) (
-	*lnwire.FeatureVector, error) {
+	*lnwire.FeatureVector, er.R) {
 
 	targetNode, err := g.graph.FetchLightningNode(g.tx, nodePub)
 	switch err {

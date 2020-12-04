@@ -3,6 +3,7 @@ package watchtower
 import (
 	"net"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 )
@@ -18,4 +19,4 @@ type DB interface {
 // AddressNormalizer is a function signature that allows the tower to resolve
 // TCP addresses on clear or onion networks.
 type AddressNormalizer func(addrs []string, defaultPort string,
-	resolver func(string, string) (*net.TCPAddr, error)) ([]net.Addr, error)
+	resolver func(string, string) (*net.TCPAddr, error)) ([]net.Addr, er.R)

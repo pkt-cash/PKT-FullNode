@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"errors"
-	"fmt"
 	"math"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -27,7 +26,7 @@ import (
 type AddInvoiceConfig struct {
 	// AddInvoice is called to add the invoice to the registry.
 	AddInvoice func(invoice *channeldb.Invoice, paymentHash lntypes.Hash) (
-		uint64, error)
+		uint64, er.R)
 
 	// IsChannelActive is used to generate valid hop hints.
 	IsChannelActive func(chanID lnwire.ChannelID) bool
@@ -108,7 +107,7 @@ type AddInvoiceData struct {
 // duplicated invoices are rejected, therefore all invoices *must* have a
 // unique payment preimage.
 func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
-	invoice *AddInvoiceData) (*lntypes.Hash, *channeldb.Invoice, error) {
+	invoice *AddInvoiceData) (*lntypes.Hash, *channeldb.Invoice, er.R) {
 
 	var (
 		paymentPreimage *lntypes.Preimage
@@ -120,7 +119,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// Only either preimage or hash can be set.
 	case invoice.Preimage != nil && invoice.Hash != nil:
 		return nil, nil,
-			errors.New("preimage and hash both set")
+			er.New("preimage and hash both set")
 
 	// If no hash or preimage is given, generate a random preimage.
 	case invoice.Preimage == nil && invoice.Hash == nil:
@@ -145,11 +144,11 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// The size of the memo, receipt and description hash attached must not
 	// exceed the maximum values for either of the fields.
 	if len(invoice.Memo) > channeldb.MaxMemoSize {
-		return nil, nil, fmt.Errorf("memo too large: %v bytes "+
+		return nil, nil, er.Errorf("memo too large: %v bytes "+
 			"(maxsize=%v)", len(invoice.Memo), channeldb.MaxMemoSize)
 	}
 	if len(invoice.DescriptionHash) > 0 && len(invoice.DescriptionHash) != 32 {
-		return nil, nil, fmt.Errorf("description hash is %v bytes, must be 32",
+		return nil, nil, er.Errorf("description hash is %v bytes, must be 32",
 			len(invoice.DescriptionHash))
 	}
 
@@ -160,13 +159,13 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	switch {
 	// The value of the invoice must not be negative.
 	case int64(invoice.Value) < 0:
-		return nil, nil, fmt.Errorf("payments of negative value "+
+		return nil, nil, er.Errorf("payments of negative value "+
 			"are not allowed, value is %v", int64(invoice.Value))
 
 	// Also ensure that the invoice is actually realistic, while preventing
 	// any issues due to underflow.
 	case invoice.Value.ToSatoshis() > maxInvoiceAmt:
-		return nil, nil, fmt.Errorf("invoice amount %v is "+
+		return nil, nil, er.Errorf("invoice amount %v is "+
 			"too large, max is %v", invoice.Value.ToSatoshis(),
 			maxInvoiceAmt)
 	}
@@ -192,7 +191,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 		addr, err := btcutil.DecodeAddress(invoice.FallbackAddr,
 			cfg.ChainParams)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid fallback address: %v",
+			return nil, nil, er.Errorf("invalid fallback address: %v",
 				err)
 		}
 		options = append(options, zpay32.FallbackAddr(addr))
@@ -210,7 +209,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 		expSeconds := invoice.Expiry
 
 		if float64(expSeconds) > maxExpiry.Seconds() {
-			return nil, nil, fmt.Errorf("expiry of %v seconds "+
+			return nil, nil, er.Errorf("expiry of %v seconds "+
 				"greater than max expiry of %v seconds",
 				float64(expSeconds), maxExpiry.Seconds())
 		}
@@ -235,13 +234,13 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// an option on the command line when creating an invoice.
 	switch {
 	case invoice.CltvExpiry > math.MaxUint16:
-		return nil, nil, fmt.Errorf("CLTV delta of %v is too large, max "+
+		return nil, nil, er.Errorf("CLTV delta of %v is too large, max "+
 			"accepted is: %v", invoice.CltvExpiry, math.MaxUint16)
 	case invoice.CltvExpiry != 0:
 		// Disallow user-chosen final CLTV deltas below the required
 		// minimum.
 		if invoice.CltvExpiry < routing.MinCLTVDelta {
-			return nil, nil, fmt.Errorf("CLTV delta of %v must be "+
+			return nil, nil, er.Errorf("CLTV delta of %v must be "+
 				"greater than minimum of %v",
 				routing.MinCLTVDelta, invoice.CltvExpiry)
 		}
@@ -257,7 +256,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// We make sure that the given invoice routing hints number is within the
 	// valid range
 	if len(invoice.RouteHints) > 20 {
-		return nil, nil, fmt.Errorf("number of routing hints must not exceed " +
+		return nil, nil, er.Errorf("number of routing hints must not exceed " +
 			"maximum of 20")
 	}
 
@@ -266,7 +265,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	forcedHints := make(map[uint64]struct{})
 	for _, h := range invoice.RouteHints {
 		if len(h) == 0 {
-			return nil, nil, fmt.Errorf("number of hop hint within a route must " +
+			return nil, nil, er.Errorf("number of hop hint within a route must " +
 				"be positive")
 		}
 		options = append(options, zpay32.RouteHint(h))
@@ -281,7 +280,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	if invoice.Private {
 		openChannels, err := cfg.ChanDB.FetchAllChannels()
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not fetch all channels")
+			return nil, nil, er.Errorf("could not fetch all channels")
 		}
 
 		if len(openChannels) > 0 {
@@ -330,7 +329,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 
 	payReqString, err := payReq.Encode(
 		zpay32.MessageSigner{
-			SignCompact: func(msg []byte) ([]byte, error) {
+			SignCompact: func(msg []byte) ([]byte, er.R) {
 				hash := chainhash.HashB(msg)
 				return cfg.NodeSigner.SignDigestCompact(hash)
 			},

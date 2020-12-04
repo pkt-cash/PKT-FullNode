@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
 )
@@ -93,7 +94,7 @@ func TestValidationBarrierQuit(t *testing.T) {
 	// waiting for the announcements to finish. In the background, we will
 	// iteratively queue the channel updates, which will send back the error
 	// returned from waiting.
-	jobErrs := make(chan error)
+	jobErrs := make(chan er.R)
 	for i := 0; i < numTasks; i++ {
 		go func(ii int) {
 			jobErrs <- barrier.WaitForDependants(chanUpds[ii])

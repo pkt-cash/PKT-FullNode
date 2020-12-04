@@ -3,6 +3,8 @@ package shachain
 import (
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -14,11 +16,11 @@ import (
 type Producer interface {
 	// AtIndex produces a secret by evaluating using the initial seed and a
 	// particular index.
-	AtIndex(uint64) (*chainhash.Hash, error)
+	AtIndex(uint64) (*chainhash.Hash, er.R)
 
 	// Encode writes a binary serialization of the Producer implementation
 	// to the passed io.Writer.
-	Encode(io.Writer) error
+	Encode(io.Writer) er.R
 }
 
 // RevocationProducer is an implementation of Producer interface using the
@@ -51,7 +53,7 @@ func NewRevocationProducer(root chainhash.Hash) *RevocationProducer {
 // NewRevocationProducerFromBytes deserializes an instance of a
 // RevocationProducer encoded in the passed byte slice, returning a fully
 // initialized instance of a RevocationProducer.
-func NewRevocationProducerFromBytes(data []byte) (*RevocationProducer, error) {
+func NewRevocationProducerFromBytes(data []byte) (*RevocationProducer, er.R) {
 	root, err := chainhash.NewHash(data)
 	if err != nil {
 		return nil, err
@@ -69,7 +71,7 @@ func NewRevocationProducerFromBytes(data []byte) (*RevocationProducer, error) {
 // particular index.
 //
 // NOTE: Part of the Producer interface.
-func (p *RevocationProducer) AtIndex(v uint64) (*chainhash.Hash, error) {
+func (p *RevocationProducer) AtIndex(v uint64) (*chainhash.Hash, er.R) {
 	ind := newIndex(v)
 
 	element, err := p.root.derive(ind)
@@ -84,7 +86,7 @@ func (p *RevocationProducer) AtIndex(v uint64) (*chainhash.Hash, error) {
 // passed io.Writer.
 //
 // NOTE: Part of the Producer interface.
-func (p *RevocationProducer) Encode(w io.Writer) error {
-	_, err := w.Write(p.root.hash[:])
-	return err
+func (p *RevocationProducer) Encode(w io.Writer) er.R {
+	_, err := util.Write(w, p.root.hash[:])
+	return er.E(err)
 }

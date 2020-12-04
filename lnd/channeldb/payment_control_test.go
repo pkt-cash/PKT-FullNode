@@ -5,13 +5,13 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -20,20 +20,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func genPreimage() ([32]byte, error) {
+func genPreimage() ([32]byte, er.R) {
 	var preimage [32]byte
-	if _, err := io.ReadFull(rand.Reader, preimage[:]); err != nil {
+	if _, err := util.ReadFull(rand.Reader, preimage[:]); err != nil {
 		return preimage, err
 	}
 	return preimage, nil
 }
 
 func genInfo() (*PaymentCreationInfo, *HTLCAttemptInfo,
-	lntypes.Preimage, error) {
+	lntypes.Preimage, er.R) {
 
 	preimage, err := genPreimage()
 	if err != nil {
-		return nil, nil, preimage, fmt.Errorf("unable to "+
+		return nil, nil, preimage, er.Errorf("unable to "+
 			"generate preimage: %v", err)
 	}
 
@@ -496,7 +496,7 @@ func TestPaymentControlDeleteNonInFligt(t *testing.T) {
 	// Finally, check that we only have a single index left in the payment
 	// index bucket.
 	var indexCount int
-	err = kvdb.View(db, func(tx walletdb.ReadTx) error {
+	err = kvdb.View(db, func(tx walletdb.ReadTx) er.R {
 		index := tx.ReadBucket(paymentsIndexBucket)
 
 		return index.ForEach(func(k, v []byte) er.R {
@@ -504,7 +504,7 @@ func TestPaymentControlDeleteNonInFligt(t *testing.T) {
 			return nil
 		})
 	}, func() { indexCount = 0 })
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	require.Equal(t, 1, indexCount)
 }
@@ -971,11 +971,11 @@ func assertPaymentInfo(t *testing.T, p *PaymentControl, hash lntypes.Hash,
 // fetchPaymentIndexEntry gets the payment hash for the sequence number provided
 // from our payment indexes bucket.
 func fetchPaymentIndexEntry(_ *testing.T, p *PaymentControl,
-	sequenceNumber uint64) (*lntypes.Hash, error) {
+	sequenceNumber uint64) (*lntypes.Hash, er.R) {
 
 	var hash lntypes.Hash
 
-	if err := kvdb.View(p.db, func(tx walletdb.ReadTx) error {
+	if err := kvdb.View(p.db, func(tx walletdb.ReadTx) er.R {
 		indexBucket := tx.ReadBucket(paymentsIndexBucket)
 		key := make([]byte, 8)
 		byteOrder.PutUint64(key, sequenceNumber)
@@ -1007,10 +1007,10 @@ func assertPaymentIndex(t *testing.T, p *PaymentControl,
 	// Lookup the payment so that we have its sequence number and check
 	// that is has correctly been indexed in the payment indexes bucket.
 	pmt, err := p.FetchPayment(expectedHash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	hash, err := fetchPaymentIndexEntry(t, p, pmt.SequenceNum)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	assert.Equal(t, expectedHash, *hash)
 }
 

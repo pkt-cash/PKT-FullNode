@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -16,7 +17,7 @@ func BenchmarkPathPacketConstruction(b *testing.B) {
 	b.StopTimer()
 
 	var (
-		err          error
+		err          er.R
 		sphinxPacket *OnionPacket
 		route        PaymentPath
 	)

@@ -74,7 +74,7 @@ var pendingSweepsCommand = cli.Command{
 	Action: actionDecorator(pendingSweeps),
 }
 
-func pendingSweeps(ctx *cli.Context) error {
+func pendingSweeps(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getWalletClient(ctx)
 	defer cleanUp()
@@ -164,7 +164,7 @@ var bumpFeeCommand = cli.Command{
 	Action: actionDecorator(bumpFee),
 }
 
-func bumpFee(ctx *cli.Context) error {
+func bumpFee(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 {
@@ -221,7 +221,7 @@ var bumpCloseFeeCommand = cli.Command{
 	Action: actionDecorator(bumpCloseFee),
 }
 
-func bumpCloseFee(ctx *cli.Context) error {
+func bumpCloseFee(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 {
@@ -319,7 +319,7 @@ func getWaitingCloseCommitments(client lnrpc.LightningClient,
 		}
 	}
 
-	return nil, errors.New("channel not found")
+	return nil, er.New("channel not found")
 }
 
 var listSweepsCommand = cli.Command{
@@ -342,7 +342,7 @@ var listSweepsCommand = cli.Command{
 	Action: actionDecorator(listSweeps),
 }
 
-func listSweeps(ctx *cli.Context) error {
+func listSweeps(ctx *cli.Context) er.R {
 	client, cleanUp := getWalletClient(ctx)
 	defer cleanUp()
 
@@ -379,7 +379,7 @@ var labelTxCommand = cli.Command{
 	Action: actionDecorator(labelTransaction),
 }
 
-func labelTransaction(ctx *cli.Context) error {
+func labelTransaction(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 2 {
@@ -493,7 +493,7 @@ var fundPsbtCommand = cli.Command{
 	Action: actionDecorator(fundPsbt),
 }
 
-func fundPsbt(ctx *cli.Context) error {
+func fundPsbt(ctx *cli.Context) er.R {
 	// Display the command's help message if there aren't any flags
 	// specified.
 	if ctx.NumFlags() == 0 {
@@ -508,7 +508,7 @@ func fundPsbt(ctx *cli.Context) error {
 	case ctx.IsSet("template_psbt") &&
 		(ctx.IsSet("inputs") || ctx.IsSet("outputs")):
 
-		return fmt.Errorf("cannot set template_psbt and inputs/" +
+		return er.Errorf("cannot set template_psbt and inputs/" +
 			"outputs flags at the same time")
 
 	// Use a pre-existing PSBT as the transaction template.
@@ -535,11 +535,11 @@ func fundPsbt(ctx *cli.Context) error {
 		// entry must be present.
 		jsonMap := []byte(ctx.String("outputs"))
 		if err := json.Unmarshal(jsonMap, &amountToAddr); err != nil {
-			return fmt.Errorf("error parsing outputs JSON: %v",
+			return er.Errorf("error parsing outputs JSON: %v",
 				err)
 		}
 		if len(amountToAddr) == 0 {
-			return fmt.Errorf("at least one output must be " +
+			return er.Errorf("at least one output must be " +
 				"specified")
 		}
 		tpl.Outputs = amountToAddr
@@ -550,14 +550,14 @@ func fundPsbt(ctx *cli.Context) error {
 
 			jsonList := []byte(ctx.String("inputs"))
 			if err := json.Unmarshal(jsonList, &inputs); err != nil {
-				return fmt.Errorf("error parsing inputs JSON: "+
+				return er.Errorf("error parsing inputs JSON: "+
 					"%v", err)
 			}
 
 			for idx, input := range inputs {
 				op, err := NewProtoOutPoint(input)
 				if err != nil {
-					return fmt.Errorf("error parsing "+
+					return er.Errorf("error parsing "+
 						"UTXO outpoint %d: %v", idx,
 						err)
 				}
@@ -570,14 +570,14 @@ func fundPsbt(ctx *cli.Context) error {
 		}
 
 	default:
-		return fmt.Errorf("must specify either template_psbt or " +
+		return er.Errorf("must specify either template_psbt or " +
 			"outputs flag")
 	}
 
 	// Parse fee flags.
 	switch {
 	case ctx.IsSet("conf_target") && ctx.IsSet("sat_per_vbyte"):
-		return fmt.Errorf("cannot set conf_target and sat_per_vbyte " +
+		return er.Errorf("cannot set conf_target and sat_per_vbyte " +
 			"at the same time")
 
 	case ctx.Uint64("conf_target") > 0:
@@ -651,7 +651,7 @@ var finalizePsbtCommand = cli.Command{
 	Action: actionDecorator(finalizePsbt),
 }
 
-func finalizePsbt(ctx *cli.Context) error {
+func finalizePsbt(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 && ctx.NumFlags() != 1 {
@@ -668,7 +668,7 @@ func finalizePsbt(ctx *cli.Context) error {
 	case args.Present():
 		psbtBase64 = args.First()
 	default:
-		return fmt.Errorf("funded_psbt argument missing")
+		return er.Errorf("funded_psbt argument missing")
 	}
 
 	psbtBytes, err := base64.StdEncoding.DecodeString(psbtBase64)
@@ -716,7 +716,7 @@ var releaseOutputCommand = cli.Command{
 	Action: actionDecorator(releaseOutput),
 }
 
-func releaseOutput(ctx *cli.Context) error {
+func releaseOutput(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 && ctx.NumFlags() != 1 {
@@ -733,12 +733,12 @@ func releaseOutput(ctx *cli.Context) error {
 	case args.Present():
 		outpointStr = args.First()
 	default:
-		return fmt.Errorf("outpoint argument missing")
+		return er.Errorf("outpoint argument missing")
 	}
 
 	outpoint, err := NewProtoOutPoint(outpointStr)
 	if err != nil {
-		return fmt.Errorf("error parsing outpoint: %v", err)
+		return er.Errorf("error parsing outpoint: %v", err)
 	}
 	req := &walletrpc.ReleaseOutputRequest{
 		Outpoint: outpoint,

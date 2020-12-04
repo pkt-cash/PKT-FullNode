@@ -3,7 +3,6 @@ package lntest
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
@@ -83,7 +83,7 @@ type NetworkHarness struct {
 // current repo. This will save developers from having to manually `go install`
 // within the repo each time before changes
 func NewNetworkHarness(r *rpctest.Harness, b BackendConfig, lndBinary string,
-	useEtcd bool) (*NetworkHarness, error) {
+	useEtcd bool) (*NetworkHarness, er.R) {
 
 	feeService := startFeeService()
 
@@ -105,13 +105,13 @@ func NewNetworkHarness(r *rpctest.Harness, b BackendConfig, lndBinary string,
 // LookUpNodeByPub queries the set of active nodes to locate a node according
 // to its public key. The second value will be true if the node was found, and
 // false otherwise.
-func (n *NetworkHarness) LookUpNodeByPub(pubStr string) (*HarnessNode, error) {
+func (n *NetworkHarness) LookUpNodeByPub(pubStr string) (*HarnessNode, er.R) {
 	n.mtx.Lock()
 	defer n.mtx.Unlock()
 
 	node, ok := n.nodesByPub[pubStr]
 	if !ok {
-		return nil, fmt.Errorf("unable to find node")
+		return nil, er.Errorf("unable to find node")
 	}
 
 	return node, nil
@@ -120,7 +120,7 @@ func (n *NetworkHarness) LookUpNodeByPub(pubStr string) (*HarnessNode, error) {
 // ProcessErrors returns a channel used for reporting any fatal process errors.
 // If any of the active nodes within the harness' test network incur a fatal
 // error, that error is sent over this channel.
-func (n *NetworkHarness) ProcessErrors() <-chan error {
+func (n *NetworkHarness) ProcessErrors() <-chan er.R {
 	return n.lndErrorChan
 }
 
@@ -140,7 +140,7 @@ func (f *fakeLogger) Println(args ...interface{})               {}
 // rpc clients capable of communicating with the initial seeder nodes are
 // created. Nodes are initialized with the given extra command line flags, which
 // should be formatted properly - "--arg=value".
-func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) error {
+func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) er.R {
 	// Swap out grpc's default logger with out fake logger which drops the
 	// statements on the floor.
 	grpclog.SetLogger(&fakeLogger{})
@@ -244,7 +244,7 @@ out:
 				break out
 			}
 		case <-balanceTimeout:
-			return fmt.Errorf("balances not synced after deadline")
+			return er.Errorf("balances not synced after deadline")
 		}
 	}
 
@@ -252,7 +252,7 @@ out:
 }
 
 // TearDown tears down all active nodes within the test lightning network.
-func (n *NetworkHarness) TearDown() error {
+func (n *NetworkHarness) TearDown() er.R {
 	for _, node := range n.activeNodes {
 		if err := n.ShutdownNode(node); err != nil {
 			return err
@@ -273,7 +273,7 @@ func (n *NetworkHarness) Stop() {
 // NewNode fully initializes a returns a new HarnessNode bound to the
 // current instance of the network harness. The created node is running, but
 // not yet connected to other nodes within the network.
-func (n *NetworkHarness) NewNode(name string, extraArgs []string) (*HarnessNode, error) {
+func (n *NetworkHarness) NewNode(name string, extraArgs []string) (*HarnessNode, er.R) {
 	return n.newNode(name, extraArgs, false, nil)
 }
 
@@ -339,7 +339,7 @@ func (n *NetworkHarness) NewNodeWithSeed(name string, extraArgs []string,
 // be used for regular rpc operations.
 func (n *NetworkHarness) RestoreNodeWithSeed(name string, extraArgs []string,
 	password []byte, mnemonic []string, recoveryWindow int32,
-	chanBackups *lnrpc.ChanBackupSnapshot) (*HarnessNode, error) {
+	chanBackups *lnrpc.ChanBackupSnapshot) (*HarnessNode, er.R) {
 
 	node, err := n.newNode(name, extraArgs, true, password)
 	if err != nil {
@@ -371,7 +371,7 @@ func (n *NetworkHarness) RestoreNodeWithSeed(name string, extraArgs []string,
 // can be used immediately. Otherwise, the node will require an additional
 // initialization phase where the wallet is either created or restored.
 func (n *NetworkHarness) newNode(name string, extraArgs []string, hasSeed bool,
-	password []byte) (*HarnessNode, error) {
+	password []byte) (*HarnessNode, er.R) {
 
 	node, err := newNode(NodeConfig{
 		Name:              name,
@@ -422,7 +422,7 @@ func (n *NetworkHarness) RegisterNode(node *HarnessNode) {
 }
 
 func (n *NetworkHarness) connect(ctx context.Context,
-	req *lnrpc.ConnectPeerRequest, a *HarnessNode) error {
+	req *lnrpc.ConnectPeerRequest, a *HarnessNode) er.R {
 
 	syncTimeout := time.After(15 * time.Second)
 tryconnect:
@@ -435,7 +435,7 @@ tryconnect:
 			case <-time.After(100 * time.Millisecond):
 				goto tryconnect
 			case <-syncTimeout:
-				return fmt.Errorf("chain backend did not " +
+				return er.Errorf("chain backend did not " +
 					"finish syncing")
 			}
 		}
@@ -450,13 +450,13 @@ tryconnect:
 // behave the same as ConnectNodes. If a pending connection request has already
 // been made, the method will block until the two nodes appear in each other's
 // peers list, or until the 15s timeout expires.
-func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode) error {
+func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode) er.R {
 	// errConnectionRequested is used to signal that a connection was
 	// requested successfully, which is distinct from already being
 	// connected to the peer.
-	errConnectionRequested := errors.New("connection request in progress")
+	errConnectionRequested := er.New("connection request in progress")
 
-	tryConnect := func(a, b *HarnessNode) error {
+	tryConnect := func(a, b *HarnessNode) er.R {
 		ctxt, _ := context.WithTimeout(ctx, 15*time.Second)
 		bInfo, err := b.GetInfo(ctxt, &lnrpc.GetInfoRequest{})
 		if err != nil {
@@ -498,7 +498,7 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 
 		}, DefaultTimeout)
 		if err != nil {
-			return fmt.Errorf("connection not succeeded within 15 "+
+			return er.Errorf("connection not succeeded within 15 "+
 				"seconds: %v", predErr)
 		}
 
@@ -549,7 +549,7 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 		return findSelfInPeerList(a, b) && findSelfInPeerList(b, a)
 	}, time.Second*15)
 	if err != nil {
-		return fmt.Errorf("peers not connected within 15 seconds")
+		return er.Errorf("peers not connected within 15 seconds")
 	}
 
 	return nil
@@ -561,7 +561,7 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 //
 // NOTE: This function may block for up to 15-seconds as it will not return
 // until the new connection is detected as being known to both nodes.
-func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) error {
+func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er.R {
 	bobInfo, err := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
 	if err != nil {
 		return err
@@ -596,7 +596,7 @@ func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er
 		return false
 	}, time.Second*15)
 	if err != nil {
-		return fmt.Errorf("peers not connected within 15 seconds")
+		return er.Errorf("peers not connected within 15 seconds")
 	}
 
 	return nil
@@ -604,7 +604,7 @@ func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er
 
 // DisconnectNodes disconnects node a from node b by sending RPC message
 // from a node to b node
-func (n *NetworkHarness) DisconnectNodes(ctx context.Context, a, b *HarnessNode) error {
+func (n *NetworkHarness) DisconnectNodes(ctx context.Context, a, b *HarnessNode) er.R {
 	bobInfo, err := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
 	if err != nil {
 		return err
@@ -634,7 +634,7 @@ func (n *NetworkHarness) DisconnectNodes(ctx context.Context, a, b *HarnessNode)
 // pass a set of SCBs to pass in via the Unlock method allowing them to restore
 // channels during restart.
 func (n *NetworkHarness) RestartNode(node *HarnessNode, callback func() error,
-	chanBackups ...*lnrpc.ChanBackupSnapshot) error {
+	chanBackups ...*lnrpc.ChanBackupSnapshot) er.R {
 
 	err := n.RestartNodeNoUnlock(node, callback)
 	if err != nil {
@@ -666,7 +666,7 @@ func (n *NetworkHarness) RestartNode(node *HarnessNode, callback func() error,
 // the callback parameter is non-nil, then the function will be executed after
 // the node shuts down, but *before* the process has been started up again.
 func (n *NetworkHarness) RestartNodeNoUnlock(node *HarnessNode,
-	callback func() error) error {
+	callback func() error) er.R {
 
 	if err := node.stop(); err != nil {
 		return err
@@ -683,12 +683,12 @@ func (n *NetworkHarness) RestartNodeNoUnlock(node *HarnessNode,
 
 // SuspendNode stops the given node and returns a callback that can be used to
 // start it again.
-func (n *NetworkHarness) SuspendNode(node *HarnessNode) (func() error, error) {
+func (n *NetworkHarness) SuspendNode(node *HarnessNode) (func() error, er.R) {
 	if err := node.stop(); err != nil {
 		return nil, err
 	}
 
-	restart := func() error {
+	restart := func() er.R {
 		return node.start(n.lndBinary, n.lndErrorChan)
 	}
 
@@ -697,7 +697,7 @@ func (n *NetworkHarness) SuspendNode(node *HarnessNode) (func() error, error) {
 
 // ShutdownNode stops an active lnd process and returns when the process has
 // exited and any temporary directories have been cleaned up.
-func (n *NetworkHarness) ShutdownNode(node *HarnessNode) error {
+func (n *NetworkHarness) ShutdownNode(node *HarnessNode) er.R {
 	if err := node.shutdown(); err != nil {
 		return err
 	}
@@ -709,7 +709,7 @@ func (n *NetworkHarness) ShutdownNode(node *HarnessNode) error {
 // StopNode stops the target node, but doesn't yet clean up its directories.
 // This can be used to temporarily bring a node down during a test, to be later
 // started up again.
-func (n *NetworkHarness) StopNode(node *HarnessNode) error {
+func (n *NetworkHarness) StopNode(node *HarnessNode) er.R {
 	return node.stop()
 }
 
@@ -729,7 +729,7 @@ func (n *NetworkHarness) SaveProfilesPages() {
 }
 
 // saveProfilesPage saves the profiles page for the given node to file.
-func saveProfilesPage(node *HarnessNode) error {
+func saveProfilesPage(node *HarnessNode) er.R {
 	resp, err := http.Get(
 		fmt.Sprintf(
 			"http://localhost:%d/debug/pprof/goroutine?debug=1",
@@ -737,7 +737,7 @@ func saveProfilesPage(node *HarnessNode) error {
 		),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get profile page "+
+		return er.Errorf("failed to get profile page "+
 			"(node_id=%d, name=%s): %v",
 			node.NodeID, node.Cfg.Name, err)
 	}
@@ -745,7 +745,7 @@ func saveProfilesPage(node *HarnessNode) error {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read profile page "+
+		return er.Errorf("failed to read profile page "+
 			"(node_id=%d, name=%s): %v",
 			node.NodeID, node.Cfg.Name, err)
 	}
@@ -757,7 +757,7 @@ func saveProfilesPage(node *HarnessNode) error {
 
 	logFile, err := os.Create(fileName)
 	if err != nil {
-		return fmt.Errorf("failed to create file for profile page "+
+		return er.Errorf("failed to create file for profile page "+
 			"(node_id=%d, name=%s): %v",
 			node.NodeID, node.Cfg.Name, err)
 	}
@@ -765,7 +765,7 @@ func saveProfilesPage(node *HarnessNode) error {
 
 	_, err = logFile.Write(body)
 	if err != nil {
-		return fmt.Errorf("failed to save profile page "+
+		return er.Errorf("failed to save profile page "+
 			"(node_id=%d, name=%s): %v",
 			node.NodeID, node.Cfg.Name, err)
 	}
@@ -776,12 +776,12 @@ func saveProfilesPage(node *HarnessNode) error {
 // the transaction isn't seen within the network before the passed timeout,
 // then an error is returned.
 func (n *NetworkHarness) WaitForTxInMempool(ctx context.Context,
-	txid chainhash.Hash) error {
+	txid chainhash.Hash) er.R {
 
 	// Return immediately if harness has been torn down.
 	select {
 	case <-n.quit:
-		return fmt.Errorf("NetworkHarness has been torn down")
+		return er.Errorf("NetworkHarness has been torn down")
 	default:
 	}
 
@@ -792,7 +792,7 @@ func (n *NetworkHarness) WaitForTxInMempool(ctx context.Context,
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("wanted %v, found %v txs "+
+			return er.Errorf("wanted %v, found %v txs "+
 				"in mempool: %v", txid, len(mempool), mempool)
 
 		case <-ticker.C:
@@ -848,17 +848,17 @@ type OpenChannelParams struct {
 // should fund the channel with confirmed outputs or not.
 func (n *NetworkHarness) OpenChannel(ctx context.Context,
 	srcNode, destNode *HarnessNode, p OpenChannelParams) (
-	lnrpc.Lightning_OpenChannelClient, error) {
+	lnrpc.Lightning_OpenChannelClient, er.R) {
 
 	// Wait until srcNode and destNode have the latest chain synced.
 	// Otherwise, we may run into a check within the funding manager that
 	// prevents any funding workflows from being kicked off if the chain
 	// isn't yet synced.
 	if err := srcNode.WaitForBlockchainSync(ctx); err != nil {
-		return nil, fmt.Errorf("unable to sync srcNode chain: %v", err)
+		return nil, er.Errorf("unable to sync srcNode chain: %v", err)
 	}
 	if err := destNode.WaitForBlockchainSync(ctx); err != nil {
-		return nil, fmt.Errorf("unable to sync destNode chain: %v", err)
+		return nil, er.Errorf("unable to sync destNode chain: %v", err)
 	}
 
 	minConfs := int32(1)
@@ -880,12 +880,12 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 
 	respStream, err := srcNode.OpenChannel(ctx, openReq)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open channel between "+
+		return nil, er.Errorf("unable to open channel between "+
 			"alice and bob: %v", err)
 	}
 
 	chanOpen := make(chan struct{})
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	go func() {
 		// Consume the "channel pending" update. This waits until the node
 		// notifies us that the final message in the channel funding workflow
@@ -896,7 +896,7 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 			return
 		}
 		if _, ok := resp.Update.(*lnrpc.OpenStatusUpdate_ChanPending); !ok {
-			errChan <- fmt.Errorf("expected channel pending update, "+
+			errChan <- er.Errorf("expected channel pending update, "+
 				"instead got %v", resp)
 			return
 		}
@@ -906,7 +906,7 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout reached before chan pending "+
+		return nil, er.Errorf("timeout reached before chan pending "+
 			"update sent: %v", err)
 	case err := <-errChan:
 		return nil, err
@@ -921,14 +921,14 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 // received, an error is returned.
 func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 	srcNode, destNode *HarnessNode, amt btcutil.Amount,
-	pushAmt btcutil.Amount) (*lnrpc.PendingUpdate, error) {
+	pushAmt btcutil.Amount) (*lnrpc.PendingUpdate, er.R) {
 
 	// Wait until srcNode and destNode have blockchain synced
 	if err := srcNode.WaitForBlockchainSync(ctx); err != nil {
-		return nil, fmt.Errorf("unable to sync srcNode chain: %v", err)
+		return nil, er.Errorf("unable to sync srcNode chain: %v", err)
 	}
 	if err := destNode.WaitForBlockchainSync(ctx); err != nil {
-		return nil, fmt.Errorf("unable to sync destNode chain: %v", err)
+		return nil, er.Errorf("unable to sync destNode chain: %v", err)
 	}
 
 	openReq := &lnrpc.OpenChannelRequest{
@@ -940,12 +940,12 @@ func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 
 	respStream, err := srcNode.OpenChannel(ctx, openReq)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open channel between "+
+		return nil, er.Errorf("unable to open channel between "+
 			"alice and bob: %v", err)
 	}
 
 	chanPending := make(chan *lnrpc.PendingUpdate)
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	go func() {
 		// Consume the "channel pending" update. This waits until the node
 		// notifies us that the final message in the channel funding workflow
@@ -957,7 +957,7 @@ func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 		}
 		pendingResp, ok := resp.Update.(*lnrpc.OpenStatusUpdate_ChanPending)
 		if !ok {
-			errChan <- fmt.Errorf("expected channel pending update, "+
+			errChan <- er.Errorf("expected channel pending update, "+
 				"instead got %v", resp)
 			return
 		}
@@ -967,7 +967,7 @@ func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout reached before chan pending " +
+		return nil, er.Errorf("timeout reached before chan pending " +
 			"update sent")
 	case err := <-errChan:
 		return nil, err
@@ -981,19 +981,19 @@ func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 // has a timeout, then if the timeout is reached before the channel has been
 // opened, then an error is returned.
 func (n *NetworkHarness) WaitForChannelOpen(ctx context.Context,
-	openChanStream lnrpc.Lightning_OpenChannelClient) (*lnrpc.ChannelPoint, error) {
+	openChanStream lnrpc.Lightning_OpenChannelClient) (*lnrpc.ChannelPoint, er.R) {
 
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	respChan := make(chan *lnrpc.ChannelPoint)
 	go func() {
 		resp, err := openChanStream.Recv()
 		if err != nil {
-			errChan <- fmt.Errorf("unable to read rpc resp: %v", err)
+			errChan <- er.Errorf("unable to read rpc resp: %v", err)
 			return
 		}
 		fundingResp, ok := resp.Update.(*lnrpc.OpenStatusUpdate_ChanOpen)
 		if !ok {
-			errChan <- fmt.Errorf("expected channel open update, "+
+			errChan <- er.Errorf("expected channel open update, "+
 				"instead got %v", resp)
 			return
 		}
@@ -1003,7 +1003,7 @@ func (n *NetworkHarness) WaitForChannelOpen(ctx context.Context,
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout reached while waiting for " +
+		return nil, er.Errorf("timeout reached while waiting for " +
 			"channel open")
 	case err := <-errChan:
 		return nil, err
@@ -1018,7 +1018,7 @@ func (n *NetworkHarness) WaitForChannelOpen(ctx context.Context,
 // channel close is pending.
 func (n *NetworkHarness) CloseChannel(ctx context.Context,
 	lnNode *HarnessNode, cp *lnrpc.ChannelPoint,
-	force bool) (lnrpc.Lightning_CloseChannelClient, *chainhash.Hash, error) {
+	force bool) (lnrpc.Lightning_CloseChannelClient, *chainhash.Hash, er.R) {
 
 	// Create a channel outpoint that we can use to compare to channels
 	// from the ListChannelsResponse.
@@ -1045,7 +1045,7 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		// channel, and the other to check if a channel is active or
 		// not.
 		filterChannel := func(node *HarnessNode,
-			op wire.OutPoint) (*lnrpc.Channel, error) {
+			op wire.OutPoint) (*lnrpc.Channel, er.R) {
 			listResp, err := node.ListChannels(ctx, listReq)
 			if err != nil {
 				return nil, err
@@ -1057,7 +1057,7 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 				}
 			}
 
-			return nil, fmt.Errorf("unable to find channel")
+			return nil, er.Errorf("unable to find channel")
 		}
 		activeChanPredicate := func(node *HarnessNode) func() bool {
 			return func() bool {
@@ -1085,12 +1085,12 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		// for both nodes.
 		err = wait.Predicate(activeChanPredicate(lnNode), timeout)
 		if err != nil {
-			return nil, nil, fmt.Errorf("channel of closing " +
+			return nil, nil, er.Errorf("channel of closing " +
 				"node not active in time")
 		}
 		err = wait.Predicate(activeChanPredicate(receivingNode), timeout)
 		if err != nil {
-			return nil, nil, fmt.Errorf("channel of receiving " +
+			return nil, nil, er.Errorf("channel of receiving " +
 				"node not active in time")
 		}
 	}
@@ -1101,10 +1101,10 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 	}
 	closeRespStream, err := lnNode.CloseChannel(ctx, closeReq)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to close channel: %v", err)
+		return nil, nil, er.Errorf("unable to close channel: %v", err)
 	}
 
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	fin := make(chan *chainhash.Hash)
 	go func() {
 		// Consume the "channel close" update in order to wait for the closing
@@ -1112,25 +1112,25 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		// within the network.
 		closeResp, err := closeRespStream.Recv()
 		if err != nil {
-			errChan <- fmt.Errorf("unable to recv() from close "+
+			errChan <- er.Errorf("unable to recv() from close "+
 				"stream: %v", err)
 			return
 		}
 		pendingClose, ok := closeResp.Update.(*lnrpc.CloseStatusUpdate_ClosePending)
 		if !ok {
-			errChan <- fmt.Errorf("expected channel close update, "+
+			errChan <- er.Errorf("expected channel close update, "+
 				"instead got %v", pendingClose)
 			return
 		}
 
 		closeTxid, err := chainhash.NewHash(pendingClose.ClosePending.Txid)
 		if err != nil {
-			errChan <- fmt.Errorf("unable to decode closeTxid: "+
+			errChan <- er.Errorf("unable to decode closeTxid: "+
 				"%v", err)
 			return
 		}
 		if err := n.WaitForTxInMempool(ctx, *closeTxid); err != nil {
-			errChan <- fmt.Errorf("error while waiting for "+
+			errChan <- er.Errorf("error while waiting for "+
 				"broadcast tx: %v", err)
 			return
 		}
@@ -1152,9 +1152,9 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 // passed context has a timeout, then if the timeout is reached before the
 // notification is received then an error is returned.
 func (n *NetworkHarness) WaitForChannelClose(ctx context.Context,
-	closeChanStream lnrpc.Lightning_CloseChannelClient) (*chainhash.Hash, error) {
+	closeChanStream lnrpc.Lightning_CloseChannelClient) (*chainhash.Hash, er.R) {
 
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	updateChan := make(chan *lnrpc.CloseStatusUpdate_ChanClose)
 	go func() {
 		closeResp, err := closeChanStream.Recv()
@@ -1165,7 +1165,7 @@ func (n *NetworkHarness) WaitForChannelClose(ctx context.Context,
 
 		closeFin, ok := closeResp.Update.(*lnrpc.CloseStatusUpdate_ChanClose)
 		if !ok {
-			errChan <- fmt.Errorf("expected channel close update, "+
+			errChan <- er.Errorf("expected channel close update, "+
 				"instead got %v", closeFin)
 			return
 		}
@@ -1177,7 +1177,7 @@ func (n *NetworkHarness) WaitForChannelClose(ctx context.Context,
 	// occurs, or the channel close update is received.
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout reached before update sent")
+		return nil, er.Errorf("timeout reached before update sent")
 	case err := <-errChan:
 		return nil, err
 	case update := <-updateChan:
@@ -1193,14 +1193,14 @@ func (n *NetworkHarness) WaitForChannelClose(ctx context.Context,
 // nolint: interfacer
 func (n *NetworkHarness) AssertChannelExists(ctx context.Context,
 	node *HarnessNode, chanPoint *wire.OutPoint,
-	checks ...func(*lnrpc.Channel)) error {
+	checks ...func(*lnrpc.Channel)) er.R {
 
 	req := &lnrpc.ListChannelsRequest{}
 
-	return wait.NoError(func() error {
+	return wait.NoError(func() er.R {
 		resp, err := node.ListChannels(ctx, req)
 		if err != nil {
-			return fmt.Errorf("unable fetch node's channels: %v", err)
+			return er.Errorf("unable fetch node's channels: %v", err)
 		}
 
 		for _, channel := range resp.Channels {
@@ -1208,7 +1208,7 @@ func (n *NetworkHarness) AssertChannelExists(ctx context.Context,
 				// First check whether our channel is active,
 				// failing early if it is not.
 				if !channel.Active {
-					return fmt.Errorf("channel %s inactive",
+					return er.Errorf("channel %s inactive",
 						chanPoint)
 				}
 
@@ -1222,7 +1222,7 @@ func (n *NetworkHarness) AssertChannelExists(ctx context.Context,
 			}
 		}
 
-		return fmt.Errorf("channel %s not found", chanPoint)
+		return er.Errorf("channel %s not found", chanPoint)
 	}, 15*time.Second)
 }
 
@@ -1231,7 +1231,7 @@ func (n *NetworkHarness) AssertChannelExists(ctx context.Context,
 // of a particular node in the case of a test failure.
 // Logs from lightning node being generated with delay - you should
 // add time.Sleep() in order to get all logs.
-func (n *NetworkHarness) DumpLogs(node *HarnessNode) (string, error) {
+func (n *NetworkHarness) DumpLogs(node *HarnessNode) (string, er.R) {
 	logFile := fmt.Sprintf("%v/simnet/lnd.log", node.Cfg.LogDir)
 
 	buf, err := ioutil.ReadFile(logFile)
@@ -1246,7 +1246,7 @@ func (n *NetworkHarness) DumpLogs(node *HarnessNode) (string, error) {
 // targeted lightning node using a P2WKH address. 6 blocks are mined after in
 // order to confirm the transaction.
 func (n *NetworkHarness) SendCoins(ctx context.Context, amt btcutil.Amount,
-	target *HarnessNode) error {
+	target *HarnessNode) er.R {
 
 	return n.sendCoins(
 		ctx, amt, target, lnrpc.AddressType_WITNESS_PUBKEY_HASH,
@@ -1258,7 +1258,7 @@ func (n *NetworkHarness) SendCoins(ctx context.Context, amt btcutil.Amount,
 // lightning node using a P2WPKH address. No blocks are mined after, so the
 // transaction remains unconfirmed.
 func (n *NetworkHarness) SendCoinsUnconfirmed(ctx context.Context,
-	amt btcutil.Amount, target *HarnessNode) error {
+	amt btcutil.Amount, target *HarnessNode) er.R {
 
 	return n.sendCoins(
 		ctx, amt, target, lnrpc.AddressType_WITNESS_PUBKEY_HASH,
@@ -1269,7 +1269,7 @@ func (n *NetworkHarness) SendCoinsUnconfirmed(ctx context.Context,
 // SendCoinsNP2WKH attempts to send amt satoshis from the internal mining node
 // to the targeted lightning node using a NP2WKH address.
 func (n *NetworkHarness) SendCoinsNP2WKH(ctx context.Context,
-	amt btcutil.Amount, target *HarnessNode) error {
+	amt btcutil.Amount, target *HarnessNode) er.R {
 
 	return n.sendCoins(
 		ctx, amt, target, lnrpc.AddressType_NESTED_PUBKEY_HASH,
@@ -1282,7 +1282,7 @@ func (n *NetworkHarness) SendCoinsNP2WKH(ctx context.Context,
 // transaction that pays to the target should confirm.
 func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 	target *HarnessNode, addrType lnrpc.AddressType,
-	confirmed bool) error {
+	confirmed bool) er.R {
 
 	balReq := &lnrpc.WalletBalanceRequest{}
 	initialBalance, err := target.WalletBalance(ctx, balReq)
@@ -1326,7 +1326,7 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 
 	// Now, wait for ListUnspent to show the unconfirmed transaction
 	// containing the correct pkscript.
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		// Since neutrino doesn't support unconfirmed outputs, skip
 		// this check.
 		if target.Cfg.BackendCfg.Name() == "neutrino" {
@@ -1342,7 +1342,7 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 		// When using this method, there should only ever be on
 		// unconfirmed transaction.
 		if len(resp.Utxos) != 1 {
-			return fmt.Errorf("number of unconfirmed utxos "+
+			return er.Errorf("number of unconfirmed utxos "+
 				"should be 1, found %d", len(resp.Utxos))
 		}
 
@@ -1350,14 +1350,14 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 		// pkscript as the output generated above.
 		pkScriptStr := resp.Utxos[0].PkScript
 		if strings.Compare(pkScriptStr, expPkScriptStr) != 0 {
-			return fmt.Errorf("pkscript mismatch, want: %s, "+
+			return er.Errorf("pkscript mismatch, want: %s, "+
 				"found: %s", expPkScriptStr, pkScriptStr)
 		}
 
 		return nil
 	}, 15*time.Second)
 	if err != nil {
-		return fmt.Errorf("unconfirmed utxo was not found in "+
+		return er.Errorf("unconfirmed utxo was not found in "+
 			"ListUnspent: %v", err)
 	}
 
@@ -1385,7 +1385,7 @@ func (n *NetworkHarness) SetFeeEstimate(fee chainfee.SatPerKWeight) {
 }
 
 // CopyFile copies the file src to dest.
-func CopyFile(dest, src string) error {
+func CopyFile(dest, src string) er.R {
 	s, err := os.Open(src)
 	if err != nil {
 		return err
@@ -1416,7 +1416,7 @@ func FileExists(path string) bool {
 
 // CopyAll copies all files and directories from srcDir to dstDir recursively.
 // Note that this function does not support links.
-func CopyAll(dstDir, srcDir string) error {
+func CopyAll(dstDir, srcDir string) er.R {
 	entries, err := ioutil.ReadDir(srcDir)
 	if err != nil {
 		return err

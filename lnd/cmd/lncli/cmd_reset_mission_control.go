@@ -15,7 +15,7 @@ var resetMissionControlCommand = cli.Command{
 	Action:   actionDecorator(resetMissionControl),
 }
 
-func resetMissionControl(ctx *cli.Context) error {
+func resetMissionControl(ctx *cli.Context) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 

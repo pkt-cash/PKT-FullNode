@@ -48,7 +48,7 @@ type channelTestCtx struct {
 // newChannelTestCtx creates a new channelCtx for use in the validation tests
 // below. This creates a fake funding transaction, as well as an invalid and
 // valid commitment transaction.
-func newChannelTestCtx(chanSize int64) (*channelTestCtx, error) {
+func newChannelTestCtx(chanSize int64) (*channelTestCtx, er.R) {
 	multiSigScript, err := input.GenMultiSigScript(
 		alicePub.SerializeCompressed(), bobPub.SerializeCompressed(),
 	)

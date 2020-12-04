@@ -26,20 +26,20 @@ func NewMockBackend() *MockBackend {
 }
 
 func (m *MockBackend) RegisterBlockEpochNtfn(*chainntnfs.BlockEpoch) (
-	*chainntnfs.BlockEpochEvent, error) {
+	*chainntnfs.BlockEpochEvent, er.R) {
 
 	return &chainntnfs.BlockEpochEvent{
 		Epochs: m.blocks,
 	}, nil
 }
 
-func (m *MockBackend) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (m *MockBackend) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	block, ok := m.epochs[*hash]
 	if !ok {
-		return nil, fmt.Errorf("unknown block for hash %x", hash)
+		return nil, er.Errorf("unknown block for hash %x", hash)
 	}
 
 	return block, nil

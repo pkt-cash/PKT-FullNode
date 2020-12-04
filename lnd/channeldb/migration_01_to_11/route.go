@@ -3,13 +3,14 @@ package migration_01_to_11
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -21,7 +22,7 @@ const VertexSize = 33
 
 // ErrNoRouteHopsProvided is returned when a caller attempts to construct a new
 // sphinx packet, but provides an empty set of hops for each route.
-var ErrNoRouteHopsProvided = fmt.Errorf("empty route hops provided")
+var ErrNoRouteHopsProvided = Err.CodeWithDetail("ErrNoRouteHopsProvided", "empty route hops provided")
 
 // Vertex is a simple alias for the serialization of a compressed Bitcoin
 // public key.
@@ -36,10 +37,10 @@ func NewVertex(pub *btcec.PublicKey) Vertex {
 
 // NewVertexFromBytes returns a new Vertex based on a serialized pubkey in a
 // byte slice.
-func NewVertexFromBytes(b []byte) (Vertex, error) {
+func NewVertexFromBytes(b []byte) (Vertex, er.R) {
 	vertexLen := len(b)
 	if vertexLen != VertexSize {
-		return Vertex{}, fmt.Errorf("invalid vertex length of %v, "+
+		return Vertex{}, er.Errorf("invalid vertex length of %v, "+
 			"want %v", vertexLen, VertexSize)
 	}
 
@@ -49,14 +50,14 @@ func NewVertexFromBytes(b []byte) (Vertex, error) {
 }
 
 // NewVertexFromStr returns a new Vertex given its hex-encoded string format.
-func NewVertexFromStr(v string) (Vertex, error) {
+func NewVertexFromStr(v string) (Vertex, er.R) {
 	// Return error if hex string is of incorrect length.
 	if len(v) != VertexSize*2 {
-		return Vertex{}, fmt.Errorf("invalid vertex string length of "+
+		return Vertex{}, er.Errorf("invalid vertex string length of "+
 			"%v, want %v", len(v), VertexSize*2)
 	}
 
-	vertex, err := hex.DecodeString(v)
+	vertex, err := util.DecodeHex(v)
 	if err != nil {
 		return Vertex{}, err
 	}
@@ -111,11 +112,11 @@ type Hop struct {
 // references the _outgoing_ channel ID that follows this hop. This field
 // follows the same semantics as the NextAddress field in the onion: it should
 // be set to zero to indicate the terminal hop.
-func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) error {
+func (h *Hop) PackHopPayload(w io.Writer, nextChanID uint64) er.R {
 	// If this is a legacy payload, then we'll exit here as this method
 	// shouldn't be called.
 	if h.LegacyPayload == true {
-		return fmt.Errorf("cannot pack hop payloads for legacy " +
+		return er.Errorf("cannot pack hop payloads for legacy " +
 			"payloads")
 	}
 
@@ -214,10 +215,10 @@ func (r *Route) TotalFees() lnwire.MilliSatoshi {
 // information to perform the payment. It infers fee amounts and populates the
 // node, chan and prev/next hop maps.
 func NewRouteFromHops(amtToSend lnwire.MilliSatoshi, timeLock uint32,
-	sourceVertex Vertex, hops []*Hop) (*Route, error) {
+	sourceVertex Vertex, hops []*Hop) (*Route, er.R) {
 
 	if len(hops) == 0 {
-		return nil, ErrNoRouteHopsProvided
+		return nil, ErrNoRouteHopsProvided.Default()
 	}
 
 	// First, we'll create a route struct and populate it with the fields
@@ -239,7 +240,7 @@ func NewRouteFromHops(amtToSend lnwire.MilliSatoshi, timeLock uint32,
 // contains the per-hop paylods used to encoding the HTLC routing data for each
 // hop in the route. This method also accepts an optional EOB payload for the
 // final hop.
-func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, error) {
+func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, er.R) {
 	var path sphinx.PaymentPath
 
 	// For each hop encoded within the route, we'll convert the hop struct
@@ -279,10 +280,9 @@ func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, error) {
 				hopData.NextAddress[:], nextHop,
 			)
 
-			var errr error
-			payload, errr = sphinx.NewHopPayload(&hopData, nil)
-			if errr != nil {
-				return nil, errr
+			payload, err = sphinx.NewHopPayload(&hopData, nil)
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			// For non-legacy payloads, we'll need to pack the

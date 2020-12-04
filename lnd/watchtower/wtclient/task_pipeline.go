@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // taskPipeline implements a reliable, in-order queue that ensures its queue
@@ -94,19 +96,19 @@ func (q *taskPipeline) NewBackupTasks() <-chan *backupTask {
 // of NewBackupTasks. If the taskPipeline is shutting down, ErrClientExiting is
 // returned. Otherwise, if QueueBackupTask returns nil it is guaranteed to be
 // delivered via NewBackupTasks unless ForceQuit is called before completion.
-func (q *taskPipeline) QueueBackupTask(task *backupTask) error {
+func (q *taskPipeline) QueueBackupTask(task *backupTask) er.R {
 	q.queueCond.L.Lock()
 	select {
 
 	// Reject new tasks after quit has been signaled.
 	case <-q.quit:
 		q.queueCond.L.Unlock()
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 
 	// Reject new tasks after force quit has been signaled.
 	case <-q.forceQuit:
 		q.queueCond.L.Unlock()
-		return ErrClientExiting
+		return ErrClientExiting.Default()
 
 	default:
 	}

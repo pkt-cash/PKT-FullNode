@@ -4,6 +4,8 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // ChannelReestablish is a message sent between peers that have an existing
@@ -70,7 +72,7 @@ var _ Message = (*ChannelReestablish)(nil)
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (a *ChannelReestablish) Encode(w io.Writer, pver uint32) error {
+func (a *ChannelReestablish) Encode(w io.Writer, pver uint32) er.R {
 	err := WriteElements(w,
 		a.ChanID,
 		a.NextLocalCommitHeight,
@@ -95,7 +97,7 @@ func (a *ChannelReestablish) Encode(w io.Writer, pver uint32) error {
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *ChannelReestablish) Decode(r io.Reader, pver uint32) error {
+func (a *ChannelReestablish) Decode(r io.Reader, pver uint32) er.R {
 	err := ReadElements(r,
 		&a.ChanID,
 		&a.NextLocalCommitHeight,
@@ -116,8 +118,8 @@ func (a *ChannelReestablish) Decode(r io.Reader, pver uint32) error {
 	// the EOF, then this means the field wasn't included so we can exit
 	// early.
 	var buf [32]byte
-	_, err = io.ReadFull(r, buf[:32])
-	if err == io.EOF {
+	_, err = util.ReadFull(r, buf[:32])
+	if er.Wrapped(err) == io.EOF {
 		return nil
 	} else if err != nil {
 		return err

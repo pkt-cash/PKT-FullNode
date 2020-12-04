@@ -72,7 +72,7 @@ var _ AutopilotServer = (*Server)(nil)
 // this method. If the macaroons we need aren't found in the filepath, then
 // we'll create them on start up. If we're unable to locate, or create the
 // macaroons we need, then we'll return with an error.
-func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, er.R) {
 	// We don't create any new macaroons for this subserver, instead reuse
 	// existing onchain/offchain permissions.
 	server := &Server{
@@ -86,7 +86,7 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
 // Start launches any helper goroutines required for the Server to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return nil
 	}
@@ -97,7 +97,7 @@ func (s *Server) Start() error {
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		return nil
 	}
@@ -119,7 +119,7 @@ func (s *Server) Name() string {
 // requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterAutopilotServer(grpcServer, s)
@@ -136,7 +136,7 @@ func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (s *Server) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -156,7 +156,7 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 //
 // NOTE: Part of the AutopilotServer interface.
 func (s *Server) Status(ctx context.Context,
-	in *StatusRequest) (*StatusResponse, error) {
+	in *StatusRequest) (*StatusResponse, er.R) {
 
 	return &StatusResponse{
 		Active: s.manager.IsActive(),
@@ -167,7 +167,7 @@ func (s *Server) Status(ctx context.Context,
 //
 // NOTE: Part of the AutopilotServer interface.
 func (s *Server) ModifyStatus(ctx context.Context,
-	in *ModifyStatusRequest) (*ModifyStatusResponse, error) {
+	in *ModifyStatusRequest) (*ModifyStatusResponse, er.R) {
 
 	log.Debugf("Setting agent enabled=%v", in.Enable)
 
@@ -186,11 +186,11 @@ func (s *Server) ModifyStatus(ctx context.Context,
 //
 // NOTE: Part of the AutopilotServer interface.
 func (s *Server) QueryScores(ctx context.Context, in *QueryScoresRequest) (
-	*QueryScoresResponse, error) {
+	*QueryScoresResponse, er.R) {
 
 	var nodes []autopilot.NodeID
 	for _, pubStr := range in.Pubkeys {
-		pubHex, err := hex.DecodeString(pubStr)
+		pubHex, err := util.DecodeHex(pubStr)
 		if err != nil {
 			return nil, err
 		}
@@ -243,11 +243,11 @@ func (s *Server) QueryScores(ctx context.Context, in *QueryScoresRequest) (
 //
 // NOTE: Part of the AutopilotServer interface.
 func (s *Server) SetScores(ctx context.Context,
-	in *SetScoresRequest) (*SetScoresResponse, error) {
+	in *SetScoresRequest) (*SetScoresResponse, er.R) {
 
 	scores := make(map[autopilot.NodeID]float64)
 	for pubStr, score := range in.Scores {
-		pubHex, err := hex.DecodeString(pubStr)
+		pubHex, err := util.DecodeHex(pubStr)
 		if err != nil {
 			return nil, err
 		}

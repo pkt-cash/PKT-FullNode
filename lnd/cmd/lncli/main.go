@@ -72,13 +72,13 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 	// created from the global options in the CLI context.
 	profile, err := getGlobalOptions(ctx, skipMacaroons)
 	if err != nil {
-		fatal(fmt.Errorf("could not load global options: %v", err))
+		fatal(er.Errorf("could not load global options: %v", err))
 	}
 
 	// Load the specified TLS certificate.
 	certPool, err := profile.cert()
 	if err != nil {
-		fatal(fmt.Errorf("could not create cert pool: %v", err))
+		fatal(er.Errorf("could not create cert pool: %v", err))
 	}
 
 	// Build transport credentials from the certificate pool. If there is no
@@ -115,7 +115,7 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 			}
 		}
 		if macEntry == nil {
-			fatal(fmt.Errorf("macaroon with name '%s' not found "+
+			fatal(er.Errorf("macaroon with name '%s' not found "+
 				"in profile", macName))
 		}
 
@@ -125,7 +125,7 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 		// don't need to ask for it every time.
 		mac, err := macEntry.loadMacaroon(readPassword)
 		if err != nil {
-			fatal(fmt.Errorf("could not load macaroon: %v", err))
+			fatal(er.Errorf("could not load macaroon: %v", err))
 		}
 
 		macConstraints := []macaroons.Constraint{
@@ -169,7 +169,7 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 
 	conn, err := grpc.Dial(profile.RPCServer, opts...)
 	if err != nil {
-		fatal(fmt.Errorf("unable to connect to RPC server: %v", err))
+		fatal(er.Errorf("unable to connect to RPC server: %v", err))
 	}
 
 	return conn
@@ -177,7 +177,7 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 
 // extractPathArgs parses the TLS certificate and macaroon paths from the
 // command.
-func extractPathArgs(ctx *cli.Context) (string, string, error) {
+func extractPathArgs(ctx *cli.Context) (string, string, er.R) {
 	// We'll start off by parsing the active chain and network. These are
 	// needed to determine the correct path to the macaroon when not
 	// specified.
@@ -185,14 +185,14 @@ func extractPathArgs(ctx *cli.Context) (string, string, error) {
 	switch chain {
 	case "bitcoin", "litecoin":
 	default:
-		return "", "", fmt.Errorf("unknown chain: %v", chain)
+		return "", "", er.Errorf("unknown chain: %v", chain)
 	}
 
 	network := strings.ToLower(ctx.GlobalString("network"))
 	switch network {
 	case "mainnet", "testnet", "regtest", "simnet":
 	default:
-		return "", "", fmt.Errorf("unknown network: %v", network)
+		return "", "", er.Errorf("unknown network: %v", network)
 	}
 
 	// We'll now fetch the lnddir so we can make a decision  on how to
@@ -368,7 +368,7 @@ func main() {
 
 // readPassword reads a password from the terminal. This requires there to be an
 // actual TTY so passing in a password from stdin won't work.
-func readPassword(text string) ([]byte, error) {
+func readPassword(text string) ([]byte, er.R) {
 	fmt.Print(text)
 
 	// The variable syscall.Stdin is of a different type in the Windows API

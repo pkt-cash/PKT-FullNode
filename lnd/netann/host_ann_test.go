@@ -181,11 +181,11 @@ func TestHostAnnouncerUpdates(t *testing.T) {
 			Hosts:         hosts,
 			AdvertisedIPs: testCase.preAdvertisedIPs,
 			RefreshTicker: ticker,
-			LookupHost: func(str string) (net.Addr, error) {
+			LookupHost: func(str string) (net.Addr, er.R) {
 				return <-hostResps, nil
 			},
 			AnnounceNewIPs: func(newAddrs []net.Addr,
-				removeAddrs map[string]struct{}) error {
+				removeAddrs map[string]struct{}) er.R {
 
 				annReqs <- annReq{
 					newAddrs:     newAddrs,

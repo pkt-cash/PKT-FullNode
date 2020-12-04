@@ -5,7 +5,6 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -123,7 +122,7 @@ func genIDs() (lnwire.ChannelID, lnwire.ChannelID, lnwire.ShortChannelID,
 
 // mockGetChanUpdateMessage helper function which returns topology update of
 // the channel
-func mockGetChanUpdateMessage(cid lnwire.ShortChannelID) (*lnwire.ChannelUpdate, error) {
+func mockGetChanUpdateMessage(cid lnwire.ShortChannelID) (*lnwire.ChannelUpdate, er.R) {
 	return &lnwire.ChannelUpdate{
 		Signature: wireSig,
 	}, nil
@@ -133,7 +132,7 @@ func mockGetChanUpdateMessage(cid lnwire.ShortChannelID) (*lnwire.ChannelUpdate,
 // It will return an error if the system's secure random
 // number generator fails to function correctly, in which
 // case the caller should not continue.
-func generateRandomBytes(n int) ([]byte, error) {
+func generateRandomBytes(n int) ([]byte, er.R) {
 	b := make([]byte, n)
 
 	// TODO(roasbeef): should use counter in tests (atomic) rather than
@@ -150,7 +149,7 @@ func generateRandomBytes(n int) ([]byte, error) {
 
 type testLightningChannel struct {
 	channel *lnwallet.LightningChannel
-	restore func() (*lnwallet.LightningChannel, error)
+	restore func() (*lnwallet.LightningChannel, er.R)
 }
 
 // createTestChannel creates the channel and returns our and remote channels
@@ -160,7 +159,7 @@ type testLightningChannel struct {
 func createTestChannel(alicePrivKey, bobPrivKey []byte,
 	aliceAmount, bobAmount, aliceReserve, bobReserve btcutil.Amount,
 	chanID lnwire.ShortChannelID) (*testLightningChannel,
-	*testLightningChannel, func(), error) {
+	*testLightningChannel, func(), er.R) {
 
 	aliceKeyPriv, aliceKeyPub := btcec.PrivKeyFromBytes(btcec.S256(), alicePrivKey)
 	bobKeyPriv, bobKeyPub := btcec.PrivKeyFromBytes(btcec.S256(), bobPrivKey)
@@ -417,7 +416,7 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		return nil, nil, nil, err
 	}
 
-	restoreAlice := func() (*lnwallet.LightningChannel, error) {
+	restoreAlice := func() (*lnwallet.LightningChannel, er.R) {
 		aliceStoredChannels, err := dbAlice.FetchOpenChannels(aliceKeyPub)
 		switch {
 		case err == nil:
@@ -448,7 +447,7 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		}
 
 		if aliceStoredChannel == nil {
-			return nil, errors.New("unable to find stored alice channel")
+			return nil, er.New("unable to find stored alice channel")
 		}
 
 		newAliceChannel, errr := lnwallet.NewLightningChannel(
@@ -462,7 +461,7 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		return newAliceChannel, nil
 	}
 
-	restoreBob := func() (*lnwallet.LightningChannel, error) {
+	restoreBob := func() (*lnwallet.LightningChannel, er.R) {
 		bobStoredChannels, err := dbBob.FetchOpenChannels(bobKeyPub)
 		switch {
 		case err == nil:
@@ -492,7 +491,7 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		}
 
 		if bobStoredChannel == nil {
-			return nil, errors.New("unable to find stored bob channel")
+			return nil, er.New("unable to find stored bob channel")
 		}
 
 		newBobChannel, errr := lnwallet.NewLightningChannel(
@@ -520,7 +519,7 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 }
 
 // getChanID retrieves the channel point from an lnnwire message.
-func getChanID(msg lnwire.Message) (lnwire.ChannelID, error) {
+func getChanID(msg lnwire.Message) (lnwire.ChannelID, er.R) {
 	var chanID lnwire.ChannelID
 	switch msg := msg.(type) {
 	case *lnwire.UpdateAddHTLC:
@@ -540,7 +539,7 @@ func getChanID(msg lnwire.Message) (lnwire.ChannelID, error) {
 	case *lnwire.UpdateFee:
 		chanID = msg.ChanID
 	default:
-		return chanID, fmt.Errorf("unknown type: %T", msg)
+		return chanID, er.Errorf("unknown type: %T", msg)
 	}
 
 	return chanID, nil
@@ -551,7 +550,7 @@ func getChanID(msg lnwire.Message) (lnwire.ChannelID, error) {
 func generatePaymentWithPreimage(invoiceAmt, htlcAmt lnwire.MilliSatoshi,
 	timelock uint32, blob [lnwire.OnionPacketSize]byte,
 	preimage *lntypes.Preimage, rhash, payAddr [32]byte) (
-	*channeldb.Invoice, *lnwire.UpdateAddHTLC, uint64, error) {
+	*channeldb.Invoice, *lnwire.UpdateAddHTLC, uint64, er.R) {
 
 	// Create the db invoice. Normally the payment requests needs to be set,
 	// because it is decoded in InvoiceRegistry to obtain the cltv expiry.
@@ -594,7 +593,7 @@ func generatePaymentWithPreimage(invoiceAmt, htlcAmt lnwire.MilliSatoshi,
 // invoice which should be added by destination peer.
 func generatePayment(invoiceAmt, htlcAmt lnwire.MilliSatoshi, timelock uint32,
 	blob [lnwire.OnionPacketSize]byte) (*channeldb.Invoice,
-	*lnwire.UpdateAddHTLC, uint64, error) {
+	*lnwire.UpdateAddHTLC, uint64, er.R) {
 
 	var preimage lntypes.Preimage
 	r, err := generateRandomBytes(sha256.Size)
@@ -619,11 +618,11 @@ func generatePayment(invoiceAmt, htlcAmt lnwire.MilliSatoshi, timelock uint32,
 
 // generateRoute generates the path blob by given array of peers.
 func generateRoute(hops ...*hop.Payload) (
-	[lnwire.OnionPacketSize]byte, error) {
+	[lnwire.OnionPacketSize]byte, er.R) {
 
 	var blob [lnwire.OnionPacketSize]byte
 	if len(hops) == 0 {
-		return blob, errors.New("empty path")
+		return blob, er.New("empty path")
 	}
 
 	iterator := newMockHopIterator(hops...)
@@ -722,26 +721,26 @@ type paymentResponse struct {
 	err   chan error
 }
 
-func (r *paymentResponse) Wait(d time.Duration) (lntypes.Hash, error) {
+func (r *paymentResponse) Wait(d time.Duration) (lntypes.Hash, er.R) {
 	return r.rhash, waitForPaymentResult(r.err, d)
 }
 
 // waitForPaymentResult waits for either an error to be received on c or a
 // timeout.
-func waitForPaymentResult(c chan error, d time.Duration) error {
+func waitForPaymentResult(c chan error, d time.Duration) er.R {
 	select {
 	case err := <-c:
 		close(c)
 		return err
 	case <-time.After(d):
-		return errors.New("htlc was not settled in time")
+		return er.New("htlc was not settled in time")
 	}
 }
 
 // waitForPayFuncResult executes the given function and waits for a result with
 // a timeout.
-func waitForPayFuncResult(payFunc func() error, d time.Duration) error {
-	errChan := make(chan error)
+func waitForPayFuncResult(payFunc func() error, d time.Duration) er.R {
+	errChan := make(chan er.R)
 	go func() {
 		errChan <- payFunc()
 	}()
@@ -794,7 +793,7 @@ func makePayment(sendingPeer, receivingPeer lnpeer.Peer,
 func preparePayment(sendingPeer, receivingPeer lnpeer.Peer,
 	firstHop lnwire.ShortChannelID, hops []*hop.Payload,
 	invoiceAmt, htlcAmt lnwire.MilliSatoshi,
-	timelock uint32) (*channeldb.Invoice, func() error, error) {
+	timelock uint32) (*channeldb.Invoice, func() error, er.R) {
 
 	sender := sendingPeer.(*mockServer)
 	receiver := receivingPeer.(*mockServer)
@@ -821,7 +820,7 @@ func preparePayment(sendingPeer, receivingPeer lnpeer.Peer,
 	}
 
 	// Send payment and expose err channel.
-	return invoice, func() error {
+	return invoice, func() er.R {
 		err := sender.htlcSwitch.SendHTLC(
 			firstHop, pid, htlc,
 		)
@@ -837,7 +836,7 @@ func preparePayment(sendingPeer, receivingPeer lnpeer.Peer,
 
 		result, ok := <-resultChan
 		if !ok {
-			return fmt.Errorf("shutting down")
+			return er.Errorf("shutting down")
 		}
 
 		if result.Error != nil {
@@ -849,7 +848,7 @@ func preparePayment(sendingPeer, receivingPeer lnpeer.Peer,
 }
 
 // start starts the three hop network alice,bob,carol servers.
-func (n *threeHopNetwork) start() error {
+func (n *threeHopNetwork) start() er.R {
 	if err := n.aliceServer.Start(); err != nil {
 		return err
 	}
@@ -901,7 +900,7 @@ type clusterChannels struct {
 // createClusterChannels creates lightning channels which are needed for
 // network cluster to be initialized.
 func createClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
-	*clusterChannels, func(), func() (*clusterChannels, error), error) {
+	*clusterChannels, func(), func() (*clusterChannels, error), er.R) {
 
 	_, _, firstChanID, secondChanID := genIDs()
 
@@ -928,7 +927,7 @@ func createClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
 		cleanBobCarol()
 	}
 
-	restoreFromDb := func() (*clusterChannels, error) {
+	restoreFromDb := func() (*clusterChannels, er.R) {
 
 		a2b, err := aliceChannel.restore()
 		if err != nil {
@@ -1098,7 +1097,7 @@ func serverOptionRejectHtlc(alice, bob, carol bool) serverOption {
 // a 2 hop network cluster to be initialized.
 func createTwoClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
 	*testLightningChannel, *testLightningChannel,
-	func(), error) {
+	func(), er.R) {
 
 	_, _, firstChanID, _ := genIDs()
 
@@ -1148,7 +1147,7 @@ func newHopNetwork() *hopNetwork {
 
 func (h *hopNetwork) createChannelLink(server, peer *mockServer,
 	channel *lnwallet.LightningChannel,
-	decoder *mockIteratorDecoder) (ChannelLink, error) {
+	decoder *mockIteratorDecoder) (ChannelLink, er.R) {
 
 	const (
 		fwdPkgTimeout       = 15 * time.Second
@@ -1172,7 +1171,7 @@ func (h *hopNetwork) createChannelLink(server, peer *mockServer,
 			Registry:               server.registry,
 			FeeEstimator:           h.feeEstimator,
 			PreimageCache:          server.pCache,
-			UpdateContractSignals: func(*contractcourt.ContractSignals) error {
+			UpdateContractSignals: func(*contractcourt.ContractSignals) er.R {
 				return nil
 			},
 			ChainEvents:             &contractcourt.ChainEventSubscription{},
@@ -1195,7 +1194,7 @@ func (h *hopNetwork) createChannelLink(server, peer *mockServer,
 		channel,
 	)
 	if err := server.htlcSwitch.AddLink(link); err != nil {
-		return nil, fmt.Errorf("unable to add channel link: %v", err)
+		return nil, er.Errorf("unable to add channel link: %v", err)
 	}
 
 	go func() {
@@ -1289,7 +1288,7 @@ func newTwoHopNetwork(t testing.TB,
 }
 
 // start starts the two hop network alice,bob servers.
-func (n *twoHopNetwork) start() error {
+func (n *twoHopNetwork) start() er.R {
 	if err := n.aliceServer.Start(); err != nil {
 		return err
 	}
@@ -1325,7 +1324,7 @@ func (n *twoHopNetwork) stop() {
 func (n *twoHopNetwork) makeHoldPayment(sendingPeer, receivingPeer lnpeer.Peer,
 	firstHop lnwire.ShortChannelID, hops []*hop.Payload,
 	invoiceAmt, htlcAmt lnwire.MilliSatoshi,
-	timelock uint32, preimage lntypes.Preimage) chan error {
+	timelock uint32, preimage lntypes.Preimage) chan er.R {
 
 	paymentErr := make(chan error, 1)
 
@@ -1381,7 +1380,7 @@ func (n *twoHopNetwork) makeHoldPayment(sendingPeer, receivingPeer lnpeer.Peer,
 
 		result, ok := <-resultChan
 		if !ok {
-			paymentErr <- fmt.Errorf("shutting down")
+			paymentErr <- er.Errorf("shutting down")
 			return
 		}
 
@@ -1397,13 +1396,13 @@ func (n *twoHopNetwork) makeHoldPayment(sendingPeer, receivingPeer lnpeer.Peer,
 
 // waitLinksEligible blocks until all links the provided name-to-link map are
 // eligible to forward HTLCs.
-func waitLinksEligible(links map[string]*channelLink) error {
-	return wait.NoError(func() error {
+func waitLinksEligible(links map[string]*channelLink) er.R {
+	return wait.NoError(func() er.R {
 		for name, link := range links {
 			if link.EligibleToForward() {
 				continue
 			}
-			return fmt.Errorf("%s channel link not eligible", name)
+			return er.Errorf("%s channel link not eligible", name)
 		}
 		return nil
 	}, 3*time.Second)

@@ -1,9 +1,10 @@
 package migration16
 
 import (
-	"encoding/hex"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migtest"
 )
@@ -62,7 +63,7 @@ var (
 // paymentHashIndex produces a string that represents the value we expect for
 // our payment indexes from a hex encoded payment hash string.
 func paymentHashIndex(hashStr string) string {
-	hash, err := hex.DecodeString(hashStr)
+	hash, err := util.DecodeHex(hashStr)
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +110,7 @@ func TestMigrateSequenceIndex(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			// Before the migration we have a payments bucket.
-			before := func(tx kvdb.RwTx) error {
+			before := func(tx kvdb.RwTx) er.R {
 				return migtest.RestoreDB(
 					tx, paymentsRootBucket, test.pre,
 				)
@@ -117,7 +118,7 @@ func TestMigrateSequenceIndex(t *testing.T) {
 
 			// After the migration, we should have an untouched
 			// payments bucket and a new index bucket.
-			after := func(tx kvdb.RwTx) error {
+			after := func(tx kvdb.RwTx) er.R {
 				if err := migtest.VerifyDB(
 					tx, paymentsRootBucket, test.pre,
 				); err != nil {

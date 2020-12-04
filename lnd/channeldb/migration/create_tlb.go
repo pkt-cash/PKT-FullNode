@@ -1,18 +1,17 @@
 package migration
 
 import (
-	"fmt"
-
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
 // CreateTLB creates a new top-level bucket with the passed bucket identifier.
-func CreateTLB(bucket []byte) func(kvdb.RwTx) error {
-	return func(tx kvdb.RwTx) error {
+func CreateTLB(bucket []byte) func(kvdb.RwTx) er.R {
+	return func(tx kvdb.RwTx) er.R {
 		log.Infof("Creating top-level bucket: \"%s\" ...", bucket)
 
 		if tx.ReadBucket(bucket) != nil {
-			return fmt.Errorf("top-level bucket \"%s\" "+
+			return er.Errorf("top-level bucket \"%s\" "+
 				"already exists", bucket)
 		}
 

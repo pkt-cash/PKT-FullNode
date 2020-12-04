@@ -3,11 +3,11 @@ package migtest
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -22,16 +22,16 @@ import (
 // 		hex("1111"): hex("5783492373"),
 // 	},
 // }
-func DumpDB(tx kvdb.RTx, rootKey []byte) error {
+func DumpDB(tx kvdb.RTx, rootKey []byte) er.R {
 	bucket := tx.ReadBucket(rootKey)
 	if bucket == nil {
-		return fmt.Errorf("bucket %v not found", string(rootKey))
+		return er.Errorf("bucket %v not found", string(rootKey))
 	}
 
 	return dumpBucket(bucket)
 }
 
-func dumpBucket(bucket kvdb.RBucket) error {
+func dumpBucket(bucket kvdb.RBucket) er.R {
 	fmt.Printf("map[string]interface{} {\n")
 	err := bucket.ForEach(func(k, v []byte) er.R {
 		key := toString(k)
@@ -41,7 +41,7 @@ func dumpBucket(bucket kvdb.RBucket) error {
 		if subBucket != nil {
 			err := dumpBucket(subBucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 		} else {
 			fmt.Print(toHex(v))
@@ -59,7 +59,7 @@ func dumpBucket(bucket kvdb.RBucket) error {
 }
 
 // RestoreDB primes the database with the given data set.
-func RestoreDB(tx kvdb.RwTx, rootKey []byte, data map[string]interface{}) error {
+func RestoreDB(tx kvdb.RwTx, rootKey []byte, data map[string]interface{}) er.R {
 	bucket, err := tx.CreateTopLevelBucket(rootKey)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func RestoreDB(tx kvdb.RwTx, rootKey []byte, data map[string]interface{}) error 
 	return restoreDB(bucket, data)
 }
 
-func restoreDB(bucket kvdb.RwBucket, data map[string]interface{}) error {
+func restoreDB(bucket kvdb.RwBucket, data map[string]interface{}) er.R {
 	for k, v := range data {
 		key := []byte(k)
 
@@ -93,7 +93,7 @@ func restoreDB(bucket kvdb.RwBucket, data map[string]interface{}) error {
 			}
 
 		default:
-			return errors.New("invalid type")
+			return er.New("invalid type")
 		}
 	}
 
@@ -101,16 +101,16 @@ func restoreDB(bucket kvdb.RwBucket, data map[string]interface{}) error {
 }
 
 // VerifyDB verifies the database against the given data set.
-func VerifyDB(tx kvdb.RTx, rootKey []byte, data map[string]interface{}) error {
+func VerifyDB(tx kvdb.RTx, rootKey []byte, data map[string]interface{}) er.R {
 	bucket := tx.ReadBucket(rootKey)
 	if bucket == nil {
-		return fmt.Errorf("bucket %v not found", string(rootKey))
+		return er.Errorf("bucket %v not found", string(rootKey))
 	}
 
 	return verifyDB(bucket, data)
 }
 
-func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) error {
+func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) er.R {
 	for k, v := range data {
 		key := []byte(k)
 
@@ -122,14 +122,14 @@ func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) error {
 			dbValue := bucket.Get(key)
 
 			if !bytes.Equal(dbValue, expectedValue) {
-				return errors.New("value mismatch")
+				return er.New("value mismatch")
 			}
 
 		// Key contains a sub-bucket.
 		case map[string]interface{}:
 			subBucket := bucket.NestedReadBucket(key)
 			if subBucket == nil {
-				return fmt.Errorf("bucket %v not found", k)
+				return er.Errorf("bucket %v not found", k)
 			}
 
 			err := verifyDB(subBucket, value)
@@ -138,7 +138,7 @@ func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) error {
 			}
 
 		default:
-			return errors.New("invalid type")
+			return er.New("invalid type")
 		}
 	}
 
@@ -151,7 +151,7 @@ func verifyDB(bucket kvdb.RBucket, data map[string]interface{}) error {
 		return err
 	}
 	if keyCount != len(data) {
-		return errors.New("unexpected keys in database")
+		return er.New("unexpected keys in database")
 	}
 
 	return nil
@@ -180,7 +180,7 @@ func toString(v []byte) string {
 // Hex is a test helper function to convert readable hex arrays to raw byte
 // strings.
 func Hex(value string) string {
-	b, err := hex.DecodeString(value)
+	b, err := util.DecodeHex(value)
 	if err != nil {
 		panic(err)
 	}

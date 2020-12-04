@@ -1,18 +1,19 @@
 package contractcourt
 
 import (
-	"encoding/binary"
 	"io"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/labels"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // htlcSuccessResolver is a resolver that's capable of sweeping an incoming
@@ -96,7 +97,7 @@ func (h *htlcSuccessResolver) ResolverKey() []byte {
 // TODO(roasbeef): create multi to batch
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcSuccessResolver) Resolve() (ContractResolver, error) {
+func (h *htlcSuccessResolver) Resolve() (ContractResolver, er.R) {
 	// If we're already resolved, then we can exit early.
 	if h.resolved {
 		return nil, nil
@@ -277,7 +278,7 @@ func (h *htlcSuccessResolver) Resolve() (ContractResolver, error) {
 // If this htlc was claimed two stages, it will write reports for both stages,
 // otherwise it will just write for the single htlc claim.
 func (h *htlcSuccessResolver) checkpointClaim(spendTx *chainhash.Hash,
-	outcome channeldb.ResolverOutcome) error {
+	outcome channeldb.ResolverOutcome) er.R {
 
 	// Create a resolver report for claiming of the htlc itself.
 	amt := btcutil.Amount(h.htlcResolution.SweepSignDesc.Output.Value)
@@ -334,7 +335,7 @@ func (h *htlcSuccessResolver) IsResolved() bool {
 // Writer.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcSuccessResolver) Encode(w io.Writer) error {
+func (h *htlcSuccessResolver) Encode(w io.Writer) er.R {
 	// First we'll encode our inner HTLC resolution.
 	if err := encodeIncomingResolution(w, &h.htlcResolution); err != nil {
 		return err
@@ -342,16 +343,16 @@ func (h *htlcSuccessResolver) Encode(w io.Writer) error {
 
 	// Next, we'll write out the fields that are specified to the contract
 	// resolver.
-	if err := binary.Write(w, endian, h.outputIncubating); err != nil {
+	if err := util.WriteBin(w, endian, h.outputIncubating); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, h.resolved); err != nil {
+	if err := util.WriteBin(w, endian, h.resolved); err != nil {
 		return err
 	}
-	if err := binary.Write(w, endian, h.broadcastHeight); err != nil {
+	if err := util.WriteBin(w, endian, h.broadcastHeight); err != nil {
 		return err
 	}
-	if _, err := w.Write(h.htlc.RHash[:]); err != nil {
+	if _, err := util.Write(w, h.htlc.RHash[:]); err != nil {
 		return err
 	}
 
@@ -362,7 +363,7 @@ func (h *htlcSuccessResolver) Encode(w io.Writer) error {
 // from the passed Reader instance, returning an active ContractResolver
 // instance.
 func newSuccessResolverFromReader(r io.Reader, resCfg ResolverConfig) (
-	*htlcSuccessResolver, error) {
+	*htlcSuccessResolver, er.R) {
 
 	h := &htlcSuccessResolver{
 		contractResolverKit: *newContractResolverKit(resCfg),
@@ -375,16 +376,16 @@ func newSuccessResolverFromReader(r io.Reader, resCfg ResolverConfig) (
 
 	// Next, we'll read all the fields that are specified to the contract
 	// resolver.
-	if err := binary.Read(r, endian, &h.outputIncubating); err != nil {
+	if err := util.ReadBin(r, endian, &h.outputIncubating); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, endian, &h.resolved); err != nil {
+	if err := util.ReadBin(r, endian, &h.resolved); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, endian, &h.broadcastHeight); err != nil {
+	if err := util.ReadBin(r, endian, &h.broadcastHeight); err != nil {
 		return nil, err
 	}
-	if _, err := io.ReadFull(r, h.htlc.RHash[:]); err != nil {
+	if _, err := util.ReadFull(r, h.htlc.RHash[:]); err != nil {
 		return nil, err
 	}
 

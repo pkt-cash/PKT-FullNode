@@ -8,7 +8,6 @@ package txscript
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/opcode"
@@ -326,11 +325,11 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // CalcWitnessSigHash computes the sighash digest for the specified input of
 // the target transaction observing the desired sig hash type.
 func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType params.SigHashType,
-	tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
+	tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
 
 	parsedScript, err := parsescript.ParseScript(script)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse output script: %v", err)
+		return nil, er.Errorf("cannot parse output script: %v", err)
 	}
 
 	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx,

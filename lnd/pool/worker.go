@@ -1,14 +1,15 @@
 package pool
 
 import (
-	"errors"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ErrWorkerPoolExiting signals that a shutdown of the Worker has been
 // requested.
-var ErrWorkerPoolExiting = errors.New("worker pool exiting")
+var ErrWorkerPoolExiting = er.GenericErrorType.CodeWithDetail("ErrWorkerPoolExiting", "worker pool exiting")
 
 // DefaultWorkerTimeout is the default duration after which a worker goroutine
 // will exit to free up resources after having received no newly submitted
@@ -76,7 +77,7 @@ type (
 	// both submit a task to the pool and respond with any errors
 	// encountered during the task's execution.
 	request struct {
-		fn      func(WorkerState) error
+		fn      func(WorkerState) er.R
 		errChan chan error
 	}
 )
@@ -93,7 +94,7 @@ func NewWorker(cfg *WorkerConfig) *Worker {
 }
 
 // Start safely spins up the Worker pool.
-func (w *Worker) Start() error {
+func (w *Worker) Start() er.R {
 	w.started.Do(func() {
 		w.wg.Add(1)
 		go w.requestHandler()
@@ -102,7 +103,7 @@ func (w *Worker) Start() error {
 }
 
 // Stop safely shuts down the Worker pool.
-func (w *Worker) Stop() error {
+func (w *Worker) Stop() er.R {
 	w.stopped.Do(func() {
 		close(w.quit)
 		w.wg.Wait()
@@ -113,7 +114,7 @@ func (w *Worker) Stop() error {
 // Submit accepts a function closure to the worker pool. The returned error will
 // be either the result of the closure's execution or an ErrWorkerPoolExiting if
 // a shutdown is requested.
-func (w *Worker) Submit(fn func(WorkerState) error) error {
+func (w *Worker) Submit(fn func(WorkerState) error) er.R {
 	req := &request{
 		fn:      fn,
 		errChan: make(chan error, 1),
@@ -129,7 +130,7 @@ func (w *Worker) Submit(fn func(WorkerState) error) error {
 	case w.work <- req:
 
 	case <-w.quit:
-		return ErrWorkerPoolExiting
+		return ErrWorkerPoolExiting.Default()
 	}
 
 	select {
@@ -139,7 +140,7 @@ func (w *Worker) Submit(fn func(WorkerState) error) error {
 		return err
 
 	case <-w.quit:
-		return ErrWorkerPoolExiting
+		return ErrWorkerPoolExiting.Default()
 	}
 }
 

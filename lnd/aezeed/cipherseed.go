@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"hash/crc32"
 	"io"
 	"time"
 
 	"github.com/Yawning/aez"
 	"github.com/kkdai/bstream"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -177,7 +180,7 @@ type CipherSeed struct {
 // If the entropy isn't provided, then a set of random bytes will be used in
 // place. The final argument should be the time at which the seed was created.
 func New(internalVersion uint8, entropy *[EntropySize]byte,
-	now time.Time) (*CipherSeed, error) {
+	now time.Time) (*CipherSeed, er.R) {
 
 	// TODO(roasbeef): pass randomness source? to make fully determinsitc?
 
@@ -186,7 +189,7 @@ func New(internalVersion uint8, entropy *[EntropySize]byte,
 	var seed [EntropySize]byte
 	if entropy == nil {
 		if _, err := rand.Read(seed[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 	} else {
 		// Otherwise, we'll copy the set of bytes.
@@ -207,7 +210,7 @@ func New(internalVersion uint8, entropy *[EntropySize]byte,
 	// Next, we'll read a random salt that will be used with scrypt to
 	// eventually derive our key.
 	if _, err := rand.Read(c.salt[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return c, nil
@@ -215,17 +218,17 @@ func New(internalVersion uint8, entropy *[EntropySize]byte,
 
 // encode attempts to encode the target cipherSeed into the passed io.Writer
 // instance.
-func (c *CipherSeed) encode(w io.Writer) error {
-	err := binary.Write(w, binary.BigEndian, c.InternalVersion)
+func (c *CipherSeed) encode(w io.Writer) er.R {
+	err := util.WriteBin(w, binary.BigEndian, c.InternalVersion)
 	if err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, binary.BigEndian, c.Birthday); err != nil {
+	if err := util.WriteBin(w, binary.BigEndian, c.Birthday); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(c.Entropy[:]); err != nil {
+	if _, err := util.Write(w, c.Entropy[:]); err != nil {
 		return err
 	}
 
@@ -234,17 +237,17 @@ func (c *CipherSeed) encode(w io.Writer) error {
 
 // decode attempts to decode an encoded cipher seed instance into the target
 // CipherSeed struct.
-func (c *CipherSeed) decode(r io.Reader) error {
-	err := binary.Read(r, binary.BigEndian, &c.InternalVersion)
+func (c *CipherSeed) decode(r io.Reader) er.R {
+	err := util.ReadBin(r, binary.BigEndian, &c.InternalVersion)
 	if err != nil {
 		return err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &c.Birthday); err != nil {
+	if err := util.ReadBin(r, binary.BigEndian, &c.Birthday); err != nil {
 		return err
 	}
 
-	if _, err := io.ReadFull(r, c.Entropy[:]); err != nil {
+	if _, err := util.ReadFull(r, c.Entropy[:]); err != nil {
 		return err
 	}
 
@@ -277,7 +280,7 @@ func extractAD(encipheredSeed [EncipheredCipherSeedSize]byte) [adSize]byte {
 // encoded seed, then appends a randomly generated seed used to stretch the
 // passphrase out into an appropriate key, then computes a checksum over the
 // preceding.
-func (c *CipherSeed) encipher(pass []byte) ([EncipheredCipherSeedSize]byte, error) {
+func (c *CipherSeed) encipher(pass []byte) ([EncipheredCipherSeedSize]byte, er.R) {
 	var cipherSeedBytes [EncipheredCipherSeedSize]byte
 
 	// If the passphrase wasn't provided, then we'll use the string
@@ -293,7 +296,7 @@ func (c *CipherSeed) encipher(pass []byte) ([EncipheredCipherSeedSize]byte, erro
 		passphrase, c.salt[:], scryptN, scryptR, scryptP, keyLen,
 	)
 	if err != nil {
-		return cipherSeedBytes, err
+		return cipherSeedBytes, er.E(err)
 	}
 
 	// Next, we'll encode the serialized plaintext cipherseed into a buffer
@@ -336,7 +339,7 @@ func (c *CipherSeed) encipher(pass []byte) ([EncipheredCipherSeedSize]byte, erro
 
 // cipherTextToMnemonic converts the aez ciphertext appended with the salt to a
 // 24-word mnemonic pass phrase.
-func cipherTextToMnemonic(cipherText [EncipheredCipherSeedSize]byte) (Mnemonic, error) {
+func cipherTextToMnemonic(cipherText [EncipheredCipherSeedSize]byte) (Mnemonic, er.R) {
 	var words [NummnemonicWords]string
 
 	// First, we'll convert the ciphertext itself into a bitstream for easy
@@ -348,7 +351,7 @@ func cipherTextToMnemonic(cipherText [EncipheredCipherSeedSize]byte) (Mnemonic, 
 	for i := 0; i < NummnemonicWords; i++ {
 		index, err := cipherBits.ReadBits(bitsPerWord)
 		if err != nil {
-			return Mnemonic{}, err
+			return Mnemonic{}, er.E(err)
 		}
 
 		words[i] = defaultWordList[index]
@@ -360,7 +363,7 @@ func cipherTextToMnemonic(cipherText [EncipheredCipherSeedSize]byte) (Mnemonic, 
 // ToMnemonic maps the final enciphered cipher seed to a human readable 24-word
 // mnemonic phrase. The password is optional, as if it isn't specified aezeed
 // will be used in its place.
-func (c *CipherSeed) ToMnemonic(pass []byte) (Mnemonic, error) {
+func (c *CipherSeed) ToMnemonic(pass []byte) (Mnemonic, er.R) {
 	// First, we'll convert the valid seed triple into an aez cipher text
 	// with our KDF salt appended to it.
 	cipherText, err := c.encipher(pass)
@@ -375,7 +378,7 @@ func (c *CipherSeed) ToMnemonic(pass []byte) (Mnemonic, error) {
 
 // Encipher maps the cipher seed to an aez ciphertext using an optional
 // passphrase.
-func (c *CipherSeed) Encipher(pass []byte) ([EncipheredCipherSeedSize]byte, error) {
+func (c *CipherSeed) Encipher(pass []byte) ([EncipheredCipherSeedSize]byte, er.R) {
 	return c.encipher(pass)
 }
 
@@ -424,7 +427,7 @@ func mnemonicToCipherText(mnemonic *Mnemonic) [EncipheredCipherSeedSize]byte {
 // slice. Then we'll attempt to decrypt the ciphertext using aez with the
 // passed passphrase, using the last 5 bytes of the ciphertext as a salt for
 // the KDF.
-func (m *Mnemonic) ToCipherSeed(pass []byte) (*CipherSeed, error) {
+func (m *Mnemonic) ToCipherSeed(pass []byte) (*CipherSeed, er.R) {
 	// First, we'll attempt to decipher the mnemonic by mapping back into
 	// our byte slice and applying our deciphering scheme.
 	plainSeed, err := m.Decipher(pass)
@@ -446,7 +449,7 @@ func (m *Mnemonic) ToCipherSeed(pass []byte) (*CipherSeed, error) {
 // using the passed passphrase. This function is the opposite of
 // the encipher method.
 func decipherCipherSeed(cipherSeedBytes [EncipheredCipherSeedSize]byte,
-	pass []byte) ([DecipheredCipherSeedSize]byte, error) {
+	pass []byte) ([DecipheredCipherSeedSize]byte, er.R) {
 
 	var plainSeed [DecipheredCipherSeedSize]byte
 
@@ -454,7 +457,7 @@ func decipherCipherSeed(cipherSeedBytes [EncipheredCipherSeedSize]byte,
 	// understand. Otherwise, we won't be able to decrypt, or even parse
 	// the cipher seed.
 	if uint8(cipherSeedBytes[0]) != CipherSeedVersion {
-		return plainSeed, ErrIncorrectVersion
+		return plainSeed, ErrIncorrectVersion.Default()
 	}
 
 	// Next, we'll slice off the salt from the pass cipher seed, then
@@ -468,14 +471,14 @@ func decipherCipherSeed(cipherSeedBytes [EncipheredCipherSeedSize]byte,
 	// the checksum to ensure that the user input the proper set of words.
 	freshChecksum := crc32.Checksum(cipherSeedBytes[:checkSumOffset], crcTable)
 	if freshChecksum != binary.BigEndian.Uint32(checksum) {
-		return plainSeed, ErrIncorrectMnemonic
+		return plainSeed, ErrIncorrectMnemonic.Default()
 	}
 
 	// With the salt separated from the cipher text, we'll now obtain the
 	// key used for encryption.
 	key, err := scrypt.Key(pass, salt, scryptN, scryptR, scryptP, keyLen)
 	if err != nil {
-		return plainSeed, err
+		return plainSeed, er.E(err)
 	}
 
 	// We'll also extract the AD that will be required to properly pass the
@@ -489,7 +492,7 @@ func decipherCipherSeed(cipherSeedBytes [EncipheredCipherSeedSize]byte,
 		key, nil, [][]byte{ad[:]}, CipherTextExpansion, cipherSeed, nil,
 	)
 	if !ok {
-		return plainSeed, ErrInvalidPass
+		return plainSeed, ErrInvalidPass.Default()
 	}
 	copy(plainSeed[:], plainSeedBytes)
 
@@ -500,7 +503,7 @@ func decipherCipherSeed(cipherSeedBytes [EncipheredCipherSeedSize]byte,
 // Decipher attempts to decipher the encoded mnemonic by first mapping to the
 // original chipertext, then applying our deciphering scheme. ErrInvalidPass
 // will be returned if the passphrase is incorrect.
-func (m *Mnemonic) Decipher(pass []byte) ([DecipheredCipherSeedSize]byte, error) {
+func (m *Mnemonic) Decipher(pass []byte) ([DecipheredCipherSeedSize]byte, er.R) {
 
 	// Before we attempt to map the mnemonic back to the original
 	// ciphertext, we'll ensure that all the word are actually a part of
@@ -513,10 +516,8 @@ func (m *Mnemonic) Decipher(pass []byte) ([DecipheredCipherSeedSize]byte, error)
 	for i, word := range m {
 		if _, ok := wordDict[word]; !ok {
 			emptySeed := [DecipheredCipherSeedSize]byte{}
-			return emptySeed, ErrUnknownMnenomicWord{
-				Word:  word,
-				Index: uint8(i),
-			}
+			return emptySeed, ErrUnknownMnenomicWord.New(
+				fmt.Sprintf("Invalid word [%s] at index [%d]", word, i), nil)
 		}
 	}
 
@@ -541,7 +542,7 @@ func (m *Mnemonic) Decipher(pass []byte) ([DecipheredCipherSeedSize]byte, error)
 // re-enciphers the plaintext cipher seed into a brand new mnemonic. This can
 // be used to allow users to re-encrypt the same seed with multiple pass
 // phrases, or just change the passphrase on an existing seed.
-func (m *Mnemonic) ChangePass(oldPass, newPass []byte) (Mnemonic, error) {
+func (m *Mnemonic) ChangePass(oldPass, newPass []byte) (Mnemonic, er.R) {
 	var newmnemonic Mnemonic
 
 	// First, we'll try to decrypt the current mnemonic using the existing

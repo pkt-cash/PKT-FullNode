@@ -30,7 +30,7 @@ func tempDecayedLogPath(t *testing.T) (string, string) {
 
 // startup sets up the DecayedLog and possibly the garbage collector.
 func startup(dbPath, dbFileName string, notifier bool) (sphinx.ReplayLog,
-	*mock.ChainNotifier, *sphinx.HashPrefix, error) {
+	*mock.ChainNotifier, *sphinx.HashPrefix, er.R) {
 
 	var log sphinx.ReplayLog
 	var chainNotifier *mock.ChainNotifier

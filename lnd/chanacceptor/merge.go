@@ -2,9 +2,9 @@ package chanacceptor
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -22,14 +22,14 @@ const (
 
 // fieldMismatchError returns a merge error for a named field when we get two
 // channel acceptor responses which have different values set.
-func fieldMismatchError(name string, current, new interface{}) error {
-	return fmt.Errorf("multiple values set for: %v, %v and %v",
+func fieldMismatchError(name string, current, new interface{}) er.R {
+	return er.Errorf("multiple values set for: %v, %v and %v",
 		name, current, new)
 }
 
 // mergeInt64 merges two int64 values, failing if they have different non-zero
 // values.
-func mergeInt64(name string, current, new int64) (int64, error) {
+func mergeInt64(name string, current, new int64) (int64, er.R) {
 	switch {
 	case current == 0:
 		return new, nil
@@ -48,7 +48,7 @@ func mergeInt64(name string, current, new int64) (int64, error) {
 // mergeMillisatoshi merges two msat values, failing if they have different
 // non-zero values.
 func mergeMillisatoshi(name string, current,
-	new lnwire.MilliSatoshi) (lnwire.MilliSatoshi, error) {
+	new lnwire.MilliSatoshi) (lnwire.MilliSatoshi, er.R) {
 
 	switch {
 	case current == 0:
@@ -68,7 +68,7 @@ func mergeMillisatoshi(name string, current,
 // mergeDeliveryAddress merges two delivery address values, failing if they have
 // different non-zero values.
 func mergeDeliveryAddress(name string, current,
-	new lnwire.DeliveryAddress) (lnwire.DeliveryAddress, error) {
+	new lnwire.DeliveryAddress) (lnwire.DeliveryAddress, er.R) {
 
 	switch {
 	case current == nil:
@@ -89,7 +89,7 @@ func mergeDeliveryAddress(name string, current,
 // fields, failing if any fields conflict (are non-zero and not equal). It
 // returns a new response that has all the merged fields in it.
 func mergeResponse(current, new ChannelAcceptResponse) (ChannelAcceptResponse,
-	error) {
+	er.R) {
 
 	csv, err := mergeInt64(
 		fieldCSV, int64(current.CSVDelay), int64(new.CSVDelay),

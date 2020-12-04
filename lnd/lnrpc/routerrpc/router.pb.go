@@ -16,7 +16,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -333,10 +333,10 @@ func (*SendPaymentRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{0}
 }
 
-func (m *SendPaymentRequest) XXX_Unmarshal(b []byte) error {
+func (m *SendPaymentRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SendPaymentRequest.Unmarshal(m, b)
 }
-func (m *SendPaymentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SendPaymentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SendPaymentRequest.Marshal(b, m, deterministic)
 }
 func (m *SendPaymentRequest) XXX_Merge(src proto.Message) {
@@ -504,10 +504,10 @@ func (*TrackPaymentRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{1}
 }
 
-func (m *TrackPaymentRequest) XXX_Unmarshal(b []byte) error {
+func (m *TrackPaymentRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_TrackPaymentRequest.Unmarshal(m, b)
 }
-func (m *TrackPaymentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TrackPaymentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_TrackPaymentRequest.Marshal(b, m, deterministic)
 }
 func (m *TrackPaymentRequest) XXX_Merge(src proto.Message) {
@@ -555,10 +555,10 @@ func (*RouteFeeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{2}
 }
 
-func (m *RouteFeeRequest) XXX_Unmarshal(b []byte) error {
+func (m *RouteFeeRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_RouteFeeRequest.Unmarshal(m, b)
 }
-func (m *RouteFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *RouteFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_RouteFeeRequest.Marshal(b, m, deterministic)
 }
 func (m *RouteFeeRequest) XXX_Merge(src proto.Message) {
@@ -609,10 +609,10 @@ func (*RouteFeeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{3}
 }
 
-func (m *RouteFeeResponse) XXX_Unmarshal(b []byte) error {
+func (m *RouteFeeResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_RouteFeeResponse.Unmarshal(m, b)
 }
-func (m *RouteFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *RouteFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_RouteFeeResponse.Marshal(b, m, deterministic)
 }
 func (m *RouteFeeResponse) XXX_Merge(src proto.Message) {
@@ -658,10 +658,10 @@ func (*SendToRouteRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{4}
 }
 
-func (m *SendToRouteRequest) XXX_Unmarshal(b []byte) error {
+func (m *SendToRouteRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SendToRouteRequest.Unmarshal(m, b)
 }
-func (m *SendToRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SendToRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SendToRouteRequest.Marshal(b, m, deterministic)
 }
 func (m *SendToRouteRequest) XXX_Merge(src proto.Message) {
@@ -707,10 +707,10 @@ func (*SendToRouteResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{5}
 }
 
-func (m *SendToRouteResponse) XXX_Unmarshal(b []byte) error {
+func (m *SendToRouteResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SendToRouteResponse.Unmarshal(m, b)
 }
-func (m *SendToRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SendToRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SendToRouteResponse.Marshal(b, m, deterministic)
 }
 func (m *SendToRouteResponse) XXX_Merge(src proto.Message) {
@@ -752,10 +752,10 @@ func (*ResetMissionControlRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{6}
 }
 
-func (m *ResetMissionControlRequest) XXX_Unmarshal(b []byte) error {
+func (m *ResetMissionControlRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ResetMissionControlRequest.Unmarshal(m, b)
 }
-func (m *ResetMissionControlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ResetMissionControlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ResetMissionControlRequest.Marshal(b, m, deterministic)
 }
 func (m *ResetMissionControlRequest) XXX_Merge(src proto.Message) {
@@ -783,10 +783,10 @@ func (*ResetMissionControlResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{7}
 }
 
-func (m *ResetMissionControlResponse) XXX_Unmarshal(b []byte) error {
+func (m *ResetMissionControlResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ResetMissionControlResponse.Unmarshal(m, b)
 }
-func (m *ResetMissionControlResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ResetMissionControlResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ResetMissionControlResponse.Marshal(b, m, deterministic)
 }
 func (m *ResetMissionControlResponse) XXX_Merge(src proto.Message) {
@@ -814,10 +814,10 @@ func (*QueryMissionControlRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{8}
 }
 
-func (m *QueryMissionControlRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryMissionControlRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_QueryMissionControlRequest.Unmarshal(m, b)
 }
-func (m *QueryMissionControlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryMissionControlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_QueryMissionControlRequest.Marshal(b, m, deterministic)
 }
 func (m *QueryMissionControlRequest) XXX_Merge(src proto.Message) {
@@ -848,10 +848,10 @@ func (*QueryMissionControlResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{9}
 }
 
-func (m *QueryMissionControlResponse) XXX_Unmarshal(b []byte) error {
+func (m *QueryMissionControlResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_QueryMissionControlResponse.Unmarshal(m, b)
 }
-func (m *QueryMissionControlResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryMissionControlResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_QueryMissionControlResponse.Marshal(b, m, deterministic)
 }
 func (m *QueryMissionControlResponse) XXX_Merge(src proto.Message) {
@@ -892,10 +892,10 @@ func (*PairHistory) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{10}
 }
 
-func (m *PairHistory) XXX_Unmarshal(b []byte) error {
+func (m *PairHistory) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PairHistory.Unmarshal(m, b)
 }
-func (m *PairHistory) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PairHistory) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PairHistory.Marshal(b, m, deterministic)
 }
 func (m *PairHistory) XXX_Merge(src proto.Message) {
@@ -960,10 +960,10 @@ func (*PairData) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{11}
 }
 
-func (m *PairData) XXX_Unmarshal(b []byte) error {
+func (m *PairData) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PairData.Unmarshal(m, b)
 }
-func (m *PairData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PairData) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PairData.Marshal(b, m, deterministic)
 }
 func (m *PairData) XXX_Merge(src proto.Message) {
@@ -1039,10 +1039,10 @@ func (*QueryProbabilityRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{12}
 }
 
-func (m *QueryProbabilityRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryProbabilityRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_QueryProbabilityRequest.Unmarshal(m, b)
 }
-func (m *QueryProbabilityRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryProbabilityRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_QueryProbabilityRequest.Marshal(b, m, deterministic)
 }
 func (m *QueryProbabilityRequest) XXX_Merge(src proto.Message) {
@@ -1095,10 +1095,10 @@ func (*QueryProbabilityResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{13}
 }
 
-func (m *QueryProbabilityResponse) XXX_Unmarshal(b []byte) error {
+func (m *QueryProbabilityResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_QueryProbabilityResponse.Unmarshal(m, b)
 }
-func (m *QueryProbabilityResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryProbabilityResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_QueryProbabilityResponse.Marshal(b, m, deterministic)
 }
 func (m *QueryProbabilityResponse) XXX_Merge(src proto.Message) {
@@ -1156,10 +1156,10 @@ func (*BuildRouteRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{14}
 }
 
-func (m *BuildRouteRequest) XXX_Unmarshal(b []byte) error {
+func (m *BuildRouteRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_BuildRouteRequest.Unmarshal(m, b)
 }
-func (m *BuildRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BuildRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_BuildRouteRequest.Marshal(b, m, deterministic)
 }
 func (m *BuildRouteRequest) XXX_Merge(src proto.Message) {
@@ -1218,10 +1218,10 @@ func (*BuildRouteResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{15}
 }
 
-func (m *BuildRouteResponse) XXX_Unmarshal(b []byte) error {
+func (m *BuildRouteResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_BuildRouteResponse.Unmarshal(m, b)
 }
-func (m *BuildRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BuildRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_BuildRouteResponse.Marshal(b, m, deterministic)
 }
 func (m *BuildRouteResponse) XXX_Merge(src proto.Message) {
@@ -1256,10 +1256,10 @@ func (*SubscribeHtlcEventsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{16}
 }
 
-func (m *SubscribeHtlcEventsRequest) XXX_Unmarshal(b []byte) error {
+func (m *SubscribeHtlcEventsRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SubscribeHtlcEventsRequest.Unmarshal(m, b)
 }
-func (m *SubscribeHtlcEventsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SubscribeHtlcEventsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SubscribeHtlcEventsRequest.Marshal(b, m, deterministic)
 }
 func (m *SubscribeHtlcEventsRequest) XXX_Merge(src proto.Message) {
@@ -1323,10 +1323,10 @@ func (*HtlcEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{17}
 }
 
-func (m *HtlcEvent) XXX_Unmarshal(b []byte) error {
+func (m *HtlcEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_HtlcEvent.Unmarshal(m, b)
 }
-func (m *HtlcEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *HtlcEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_HtlcEvent.Marshal(b, m, deterministic)
 }
 func (m *HtlcEvent) XXX_Merge(src proto.Message) {
@@ -1477,10 +1477,10 @@ func (*HtlcInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{18}
 }
 
-func (m *HtlcInfo) XXX_Unmarshal(b []byte) error {
+func (m *HtlcInfo) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_HtlcInfo.Unmarshal(m, b)
 }
-func (m *HtlcInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *HtlcInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_HtlcInfo.Marshal(b, m, deterministic)
 }
 func (m *HtlcInfo) XXX_Merge(src proto.Message) {
@@ -1538,10 +1538,10 @@ func (*ForwardEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{19}
 }
 
-func (m *ForwardEvent) XXX_Unmarshal(b []byte) error {
+func (m *ForwardEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ForwardEvent.Unmarshal(m, b)
 }
-func (m *ForwardEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ForwardEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ForwardEvent.Marshal(b, m, deterministic)
 }
 func (m *ForwardEvent) XXX_Merge(src proto.Message) {
@@ -1576,10 +1576,10 @@ func (*ForwardFailEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{20}
 }
 
-func (m *ForwardFailEvent) XXX_Unmarshal(b []byte) error {
+func (m *ForwardFailEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ForwardFailEvent.Unmarshal(m, b)
 }
-func (m *ForwardFailEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ForwardFailEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ForwardFailEvent.Marshal(b, m, deterministic)
 }
 func (m *ForwardFailEvent) XXX_Merge(src proto.Message) {
@@ -1607,10 +1607,10 @@ func (*SettleEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{21}
 }
 
-func (m *SettleEvent) XXX_Unmarshal(b []byte) error {
+func (m *SettleEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SettleEvent.Unmarshal(m, b)
 }
-func (m *SettleEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SettleEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SettleEvent.Marshal(b, m, deterministic)
 }
 func (m *SettleEvent) XXX_Merge(src proto.Message) {
@@ -1649,10 +1649,10 @@ func (*LinkFailEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{22}
 }
 
-func (m *LinkFailEvent) XXX_Unmarshal(b []byte) error {
+func (m *LinkFailEvent) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_LinkFailEvent.Unmarshal(m, b)
 }
-func (m *LinkFailEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LinkFailEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_LinkFailEvent.Marshal(b, m, deterministic)
 }
 func (m *LinkFailEvent) XXX_Merge(src proto.Message) {
@@ -1716,10 +1716,10 @@ func (*PaymentStatus) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{23}
 }
 
-func (m *PaymentStatus) XXX_Unmarshal(b []byte) error {
+func (m *PaymentStatus) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_PaymentStatus.Unmarshal(m, b)
 }
-func (m *PaymentStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PaymentStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_PaymentStatus.Marshal(b, m, deterministic)
 }
 func (m *PaymentStatus) XXX_Merge(src proto.Message) {
@@ -1772,10 +1772,10 @@ func (*CircuitKey) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{24}
 }
 
-func (m *CircuitKey) XXX_Unmarshal(b []byte) error {
+func (m *CircuitKey) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_CircuitKey.Unmarshal(m, b)
 }
-func (m *CircuitKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CircuitKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_CircuitKey.Marshal(b, m, deterministic)
 }
 func (m *CircuitKey) XXX_Merge(src proto.Message) {
@@ -1842,10 +1842,10 @@ func (*ForwardHtlcInterceptRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{25}
 }
 
-func (m *ForwardHtlcInterceptRequest) XXX_Unmarshal(b []byte) error {
+func (m *ForwardHtlcInterceptRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ForwardHtlcInterceptRequest.Unmarshal(m, b)
 }
-func (m *ForwardHtlcInterceptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ForwardHtlcInterceptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ForwardHtlcInterceptRequest.Marshal(b, m, deterministic)
 }
 func (m *ForwardHtlcInterceptRequest) XXX_Merge(src proto.Message) {
@@ -1950,10 +1950,10 @@ func (*ForwardHtlcInterceptResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7a0613f69d37b0a5, []int{26}
 }
 
-func (m *ForwardHtlcInterceptResponse) XXX_Unmarshal(b []byte) error {
+func (m *ForwardHtlcInterceptResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_ForwardHtlcInterceptResponse.Unmarshal(m, b)
 }
-func (m *ForwardHtlcInterceptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ForwardHtlcInterceptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_ForwardHtlcInterceptResponse.Marshal(b, m, deterministic)
 }
 func (m *ForwardHtlcInterceptResponse) XXX_Merge(src proto.Message) {
@@ -2210,65 +2210,65 @@ type RouterClient interface {
 	//SendPaymentV2 attempts to route a payment described by the passed
 	//PaymentRequest to the final destination. The call returns a stream of
 	//payment updates.
-	SendPaymentV2(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentV2Client, error)
+	SendPaymentV2(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentV2Client, er.R)
 	//
 	//TrackPaymentV2 returns an update stream for the payment identified by the
 	//payment hash.
-	TrackPaymentV2(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentV2Client, error)
+	TrackPaymentV2(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentV2Client, er.R)
 	//
 	//EstimateRouteFee allows callers to obtain a lower bound w.r.t how much it
 	//may cost to send an HTLC to the target end destination.
-	EstimateRouteFee(ctx context.Context, in *RouteFeeRequest, opts ...grpc.CallOption) (*RouteFeeResponse, error)
+	EstimateRouteFee(ctx context.Context, in *RouteFeeRequest, opts ...grpc.CallOption) (*RouteFeeResponse, er.R)
 	//
 	//Deprecated, use SendToRouteV2. SendToRoute attempts to make a payment via
 	//the specified route. This method differs from SendPayment in that it
 	//allows users to specify a full route manually. This can be used for
 	//things like rebalancing, and atomic swaps. It differs from the newer
 	//SendToRouteV2 in that it doesn't return the full HTLC information.
-	SendToRoute(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendToRouteResponse, error)
+	SendToRoute(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendToRouteResponse, er.R)
 	//
 	//SendToRouteV2 attempts to make a payment via the specified route. This
 	//method differs from SendPayment in that it allows users to specify a full
 	//route manually. This can be used for things like rebalancing, and atomic
 	//swaps.
-	SendToRouteV2(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*lnrpc.HTLCAttempt, error)
+	SendToRouteV2(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*lnrpc.HTLCAttempt, er.R)
 	//
 	//ResetMissionControl clears all mission control state and starts with a clean
 	//slate.
-	ResetMissionControl(ctx context.Context, in *ResetMissionControlRequest, opts ...grpc.CallOption) (*ResetMissionControlResponse, error)
+	ResetMissionControl(ctx context.Context, in *ResetMissionControlRequest, opts ...grpc.CallOption) (*ResetMissionControlResponse, er.R)
 	//
 	//QueryMissionControl exposes the internal mission control state to callers.
 	//It is a development feature.
-	QueryMissionControl(ctx context.Context, in *QueryMissionControlRequest, opts ...grpc.CallOption) (*QueryMissionControlResponse, error)
+	QueryMissionControl(ctx context.Context, in *QueryMissionControlRequest, opts ...grpc.CallOption) (*QueryMissionControlResponse, er.R)
 	//
 	//QueryProbability returns the current success probability estimate for a
 	//given node pair and amount.
-	QueryProbability(ctx context.Context, in *QueryProbabilityRequest, opts ...grpc.CallOption) (*QueryProbabilityResponse, error)
+	QueryProbability(ctx context.Context, in *QueryProbabilityRequest, opts ...grpc.CallOption) (*QueryProbabilityResponse, er.R)
 	//
 	//BuildRoute builds a fully specified route based on a list of hop public
 	//keys. It retrieves the relevant channel policies from the graph in order to
 	//calculate the correct fees and time locks.
-	BuildRoute(ctx context.Context, in *BuildRouteRequest, opts ...grpc.CallOption) (*BuildRouteResponse, error)
+	BuildRoute(ctx context.Context, in *BuildRouteRequest, opts ...grpc.CallOption) (*BuildRouteResponse, er.R)
 	//
 	//SubscribeHtlcEvents creates a uni-directional stream from the server to
 	//the client which delivers a stream of htlc events.
-	SubscribeHtlcEvents(ctx context.Context, in *SubscribeHtlcEventsRequest, opts ...grpc.CallOption) (Router_SubscribeHtlcEventsClient, error)
+	SubscribeHtlcEvents(ctx context.Context, in *SubscribeHtlcEventsRequest, opts ...grpc.CallOption) (Router_SubscribeHtlcEventsClient, er.R)
 	//
 	//Deprecated, use SendPaymentV2. SendPayment attempts to route a payment
 	//described by the passed PaymentRequest to the final destination. The call
 	//returns a stream of payment status updates.
-	SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentClient, error)
+	SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentClient, er.R)
 	//
 	//Deprecated, use TrackPaymentV2. TrackPayment returns an update stream for
 	//the payment identified by the payment hash.
-	TrackPayment(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentClient, error)
+	TrackPayment(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentClient, er.R)
 	//*
 	//HtlcInterceptor dispatches a bi-directional streaming RPC in which
 	//Forwarded HTLC requests are sent to the client and the client responds with
 	//a boolean that tells LND if this htlc should be intercepted.
 	//In case of interception, the htlc can be either settled, cancelled or
 	//resumed later by using the ResolveHoldForward endpoint.
-	HtlcInterceptor(ctx context.Context, opts ...grpc.CallOption) (Router_HtlcInterceptorClient, error)
+	HtlcInterceptor(ctx context.Context, opts ...grpc.CallOption) (Router_HtlcInterceptorClient, er.R)
 }
 
 type routerClient struct {
@@ -2279,7 +2279,7 @@ func NewRouterClient(cc *grpc.ClientConn) RouterClient {
 	return &routerClient{cc}
 }
 
-func (c *routerClient) SendPaymentV2(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentV2Client, error) {
+func (c *routerClient) SendPaymentV2(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentV2Client, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[0], "/routerrpc.Router/SendPaymentV2", opts...)
 	if err != nil {
 		return nil, err
@@ -2295,7 +2295,7 @@ func (c *routerClient) SendPaymentV2(ctx context.Context, in *SendPaymentRequest
 }
 
 type Router_SendPaymentV2Client interface {
-	Recv() (*lnrpc.Payment, error)
+	Recv() (*lnrpc.Payment, er.R)
 	grpc.ClientStream
 }
 
@@ -2303,7 +2303,7 @@ type routerSendPaymentV2Client struct {
 	grpc.ClientStream
 }
 
-func (x *routerSendPaymentV2Client) Recv() (*lnrpc.Payment, error) {
+func (x *routerSendPaymentV2Client) Recv() (*lnrpc.Payment, er.R) {
 	m := new(lnrpc.Payment)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2311,7 +2311,7 @@ func (x *routerSendPaymentV2Client) Recv() (*lnrpc.Payment, error) {
 	return m, nil
 }
 
-func (c *routerClient) TrackPaymentV2(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentV2Client, error) {
+func (c *routerClient) TrackPaymentV2(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentV2Client, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[1], "/routerrpc.Router/TrackPaymentV2", opts...)
 	if err != nil {
 		return nil, err
@@ -2327,7 +2327,7 @@ func (c *routerClient) TrackPaymentV2(ctx context.Context, in *TrackPaymentReque
 }
 
 type Router_TrackPaymentV2Client interface {
-	Recv() (*lnrpc.Payment, error)
+	Recv() (*lnrpc.Payment, er.R)
 	grpc.ClientStream
 }
 
@@ -2335,7 +2335,7 @@ type routerTrackPaymentV2Client struct {
 	grpc.ClientStream
 }
 
-func (x *routerTrackPaymentV2Client) Recv() (*lnrpc.Payment, error) {
+func (x *routerTrackPaymentV2Client) Recv() (*lnrpc.Payment, er.R) {
 	m := new(lnrpc.Payment)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2343,7 +2343,7 @@ func (x *routerTrackPaymentV2Client) Recv() (*lnrpc.Payment, error) {
 	return m, nil
 }
 
-func (c *routerClient) EstimateRouteFee(ctx context.Context, in *RouteFeeRequest, opts ...grpc.CallOption) (*RouteFeeResponse, error) {
+func (c *routerClient) EstimateRouteFee(ctx context.Context, in *RouteFeeRequest, opts ...grpc.CallOption) (*RouteFeeResponse, er.R) {
 	out := new(RouteFeeResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/EstimateRouteFee", in, out, opts...)
 	if err != nil {
@@ -2353,7 +2353,7 @@ func (c *routerClient) EstimateRouteFee(ctx context.Context, in *RouteFeeRequest
 }
 
 // Deprecated: Do not use.
-func (c *routerClient) SendToRoute(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendToRouteResponse, error) {
+func (c *routerClient) SendToRoute(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendToRouteResponse, er.R) {
 	out := new(SendToRouteResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/SendToRoute", in, out, opts...)
 	if err != nil {
@@ -2362,7 +2362,7 @@ func (c *routerClient) SendToRoute(ctx context.Context, in *SendToRouteRequest, 
 	return out, nil
 }
 
-func (c *routerClient) SendToRouteV2(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*lnrpc.HTLCAttempt, error) {
+func (c *routerClient) SendToRouteV2(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*lnrpc.HTLCAttempt, er.R) {
 	out := new(lnrpc.HTLCAttempt)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/SendToRouteV2", in, out, opts...)
 	if err != nil {
@@ -2371,7 +2371,7 @@ func (c *routerClient) SendToRouteV2(ctx context.Context, in *SendToRouteRequest
 	return out, nil
 }
 
-func (c *routerClient) ResetMissionControl(ctx context.Context, in *ResetMissionControlRequest, opts ...grpc.CallOption) (*ResetMissionControlResponse, error) {
+func (c *routerClient) ResetMissionControl(ctx context.Context, in *ResetMissionControlRequest, opts ...grpc.CallOption) (*ResetMissionControlResponse, er.R) {
 	out := new(ResetMissionControlResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/ResetMissionControl", in, out, opts...)
 	if err != nil {
@@ -2380,7 +2380,7 @@ func (c *routerClient) ResetMissionControl(ctx context.Context, in *ResetMission
 	return out, nil
 }
 
-func (c *routerClient) QueryMissionControl(ctx context.Context, in *QueryMissionControlRequest, opts ...grpc.CallOption) (*QueryMissionControlResponse, error) {
+func (c *routerClient) QueryMissionControl(ctx context.Context, in *QueryMissionControlRequest, opts ...grpc.CallOption) (*QueryMissionControlResponse, er.R) {
 	out := new(QueryMissionControlResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/QueryMissionControl", in, out, opts...)
 	if err != nil {
@@ -2389,7 +2389,7 @@ func (c *routerClient) QueryMissionControl(ctx context.Context, in *QueryMission
 	return out, nil
 }
 
-func (c *routerClient) QueryProbability(ctx context.Context, in *QueryProbabilityRequest, opts ...grpc.CallOption) (*QueryProbabilityResponse, error) {
+func (c *routerClient) QueryProbability(ctx context.Context, in *QueryProbabilityRequest, opts ...grpc.CallOption) (*QueryProbabilityResponse, er.R) {
 	out := new(QueryProbabilityResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/QueryProbability", in, out, opts...)
 	if err != nil {
@@ -2398,7 +2398,7 @@ func (c *routerClient) QueryProbability(ctx context.Context, in *QueryProbabilit
 	return out, nil
 }
 
-func (c *routerClient) BuildRoute(ctx context.Context, in *BuildRouteRequest, opts ...grpc.CallOption) (*BuildRouteResponse, error) {
+func (c *routerClient) BuildRoute(ctx context.Context, in *BuildRouteRequest, opts ...grpc.CallOption) (*BuildRouteResponse, er.R) {
 	out := new(BuildRouteResponse)
 	err := c.cc.Invoke(ctx, "/routerrpc.Router/BuildRoute", in, out, opts...)
 	if err != nil {
@@ -2407,7 +2407,7 @@ func (c *routerClient) BuildRoute(ctx context.Context, in *BuildRouteRequest, op
 	return out, nil
 }
 
-func (c *routerClient) SubscribeHtlcEvents(ctx context.Context, in *SubscribeHtlcEventsRequest, opts ...grpc.CallOption) (Router_SubscribeHtlcEventsClient, error) {
+func (c *routerClient) SubscribeHtlcEvents(ctx context.Context, in *SubscribeHtlcEventsRequest, opts ...grpc.CallOption) (Router_SubscribeHtlcEventsClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[2], "/routerrpc.Router/SubscribeHtlcEvents", opts...)
 	if err != nil {
 		return nil, err
@@ -2423,7 +2423,7 @@ func (c *routerClient) SubscribeHtlcEvents(ctx context.Context, in *SubscribeHtl
 }
 
 type Router_SubscribeHtlcEventsClient interface {
-	Recv() (*HtlcEvent, error)
+	Recv() (*HtlcEvent, er.R)
 	grpc.ClientStream
 }
 
@@ -2431,7 +2431,7 @@ type routerSubscribeHtlcEventsClient struct {
 	grpc.ClientStream
 }
 
-func (x *routerSubscribeHtlcEventsClient) Recv() (*HtlcEvent, error) {
+func (x *routerSubscribeHtlcEventsClient) Recv() (*HtlcEvent, er.R) {
 	m := new(HtlcEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2440,7 +2440,7 @@ func (x *routerSubscribeHtlcEventsClient) Recv() (*HtlcEvent, error) {
 }
 
 // Deprecated: Do not use.
-func (c *routerClient) SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentClient, error) {
+func (c *routerClient) SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (Router_SendPaymentClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[3], "/routerrpc.Router/SendPayment", opts...)
 	if err != nil {
 		return nil, err
@@ -2456,7 +2456,7 @@ func (c *routerClient) SendPayment(ctx context.Context, in *SendPaymentRequest, 
 }
 
 type Router_SendPaymentClient interface {
-	Recv() (*PaymentStatus, error)
+	Recv() (*PaymentStatus, er.R)
 	grpc.ClientStream
 }
 
@@ -2464,7 +2464,7 @@ type routerSendPaymentClient struct {
 	grpc.ClientStream
 }
 
-func (x *routerSendPaymentClient) Recv() (*PaymentStatus, error) {
+func (x *routerSendPaymentClient) Recv() (*PaymentStatus, er.R) {
 	m := new(PaymentStatus)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2473,7 +2473,7 @@ func (x *routerSendPaymentClient) Recv() (*PaymentStatus, error) {
 }
 
 // Deprecated: Do not use.
-func (c *routerClient) TrackPayment(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentClient, error) {
+func (c *routerClient) TrackPayment(ctx context.Context, in *TrackPaymentRequest, opts ...grpc.CallOption) (Router_TrackPaymentClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[4], "/routerrpc.Router/TrackPayment", opts...)
 	if err != nil {
 		return nil, err
@@ -2489,7 +2489,7 @@ func (c *routerClient) TrackPayment(ctx context.Context, in *TrackPaymentRequest
 }
 
 type Router_TrackPaymentClient interface {
-	Recv() (*PaymentStatus, error)
+	Recv() (*PaymentStatus, er.R)
 	grpc.ClientStream
 }
 
@@ -2497,7 +2497,7 @@ type routerTrackPaymentClient struct {
 	grpc.ClientStream
 }
 
-func (x *routerTrackPaymentClient) Recv() (*PaymentStatus, error) {
+func (x *routerTrackPaymentClient) Recv() (*PaymentStatus, er.R) {
 	m := new(PaymentStatus)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2505,7 +2505,7 @@ func (x *routerTrackPaymentClient) Recv() (*PaymentStatus, error) {
 	return m, nil
 }
 
-func (c *routerClient) HtlcInterceptor(ctx context.Context, opts ...grpc.CallOption) (Router_HtlcInterceptorClient, error) {
+func (c *routerClient) HtlcInterceptor(ctx context.Context, opts ...grpc.CallOption) (Router_HtlcInterceptorClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Router_serviceDesc.Streams[5], "/routerrpc.Router/HtlcInterceptor", opts...)
 	if err != nil {
 		return nil, err
@@ -2515,8 +2515,8 @@ func (c *routerClient) HtlcInterceptor(ctx context.Context, opts ...grpc.CallOpt
 }
 
 type Router_HtlcInterceptorClient interface {
-	Send(*ForwardHtlcInterceptResponse) error
-	Recv() (*ForwardHtlcInterceptRequest, error)
+	Send(*ForwardHtlcInterceptResponse) er.R
+	Recv() (*ForwardHtlcInterceptRequest, er.R)
 	grpc.ClientStream
 }
 
@@ -2524,11 +2524,11 @@ type routerHtlcInterceptorClient struct {
 	grpc.ClientStream
 }
 
-func (x *routerHtlcInterceptorClient) Send(m *ForwardHtlcInterceptResponse) error {
+func (x *routerHtlcInterceptorClient) Send(m *ForwardHtlcInterceptResponse) er.R {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *routerHtlcInterceptorClient) Recv() (*ForwardHtlcInterceptRequest, error) {
+func (x *routerHtlcInterceptorClient) Recv() (*ForwardHtlcInterceptRequest, er.R) {
 	m := new(ForwardHtlcInterceptRequest)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -2542,108 +2542,108 @@ type RouterServer interface {
 	//SendPaymentV2 attempts to route a payment described by the passed
 	//PaymentRequest to the final destination. The call returns a stream of
 	//payment updates.
-	SendPaymentV2(*SendPaymentRequest, Router_SendPaymentV2Server) error
+	SendPaymentV2(*SendPaymentRequest, Router_SendPaymentV2Server) er.R
 	//
 	//TrackPaymentV2 returns an update stream for the payment identified by the
 	//payment hash.
-	TrackPaymentV2(*TrackPaymentRequest, Router_TrackPaymentV2Server) error
+	TrackPaymentV2(*TrackPaymentRequest, Router_TrackPaymentV2Server) er.R
 	//
 	//EstimateRouteFee allows callers to obtain a lower bound w.r.t how much it
 	//may cost to send an HTLC to the target end destination.
-	EstimateRouteFee(context.Context, *RouteFeeRequest) (*RouteFeeResponse, error)
+	EstimateRouteFee(context.Context, *RouteFeeRequest) (*RouteFeeResponse, er.R)
 	//
 	//Deprecated, use SendToRouteV2. SendToRoute attempts to make a payment via
 	//the specified route. This method differs from SendPayment in that it
 	//allows users to specify a full route manually. This can be used for
 	//things like rebalancing, and atomic swaps. It differs from the newer
 	//SendToRouteV2 in that it doesn't return the full HTLC information.
-	SendToRoute(context.Context, *SendToRouteRequest) (*SendToRouteResponse, error)
+	SendToRoute(context.Context, *SendToRouteRequest) (*SendToRouteResponse, er.R)
 	//
 	//SendToRouteV2 attempts to make a payment via the specified route. This
 	//method differs from SendPayment in that it allows users to specify a full
 	//route manually. This can be used for things like rebalancing, and atomic
 	//swaps.
-	SendToRouteV2(context.Context, *SendToRouteRequest) (*lnrpc.HTLCAttempt, error)
+	SendToRouteV2(context.Context, *SendToRouteRequest) (*lnrpc.HTLCAttempt, er.R)
 	//
 	//ResetMissionControl clears all mission control state and starts with a clean
 	//slate.
-	ResetMissionControl(context.Context, *ResetMissionControlRequest) (*ResetMissionControlResponse, error)
+	ResetMissionControl(context.Context, *ResetMissionControlRequest) (*ResetMissionControlResponse, er.R)
 	//
 	//QueryMissionControl exposes the internal mission control state to callers.
 	//It is a development feature.
-	QueryMissionControl(context.Context, *QueryMissionControlRequest) (*QueryMissionControlResponse, error)
+	QueryMissionControl(context.Context, *QueryMissionControlRequest) (*QueryMissionControlResponse, er.R)
 	//
 	//QueryProbability returns the current success probability estimate for a
 	//given node pair and amount.
-	QueryProbability(context.Context, *QueryProbabilityRequest) (*QueryProbabilityResponse, error)
+	QueryProbability(context.Context, *QueryProbabilityRequest) (*QueryProbabilityResponse, er.R)
 	//
 	//BuildRoute builds a fully specified route based on a list of hop public
 	//keys. It retrieves the relevant channel policies from the graph in order to
 	//calculate the correct fees and time locks.
-	BuildRoute(context.Context, *BuildRouteRequest) (*BuildRouteResponse, error)
+	BuildRoute(context.Context, *BuildRouteRequest) (*BuildRouteResponse, er.R)
 	//
 	//SubscribeHtlcEvents creates a uni-directional stream from the server to
 	//the client which delivers a stream of htlc events.
-	SubscribeHtlcEvents(*SubscribeHtlcEventsRequest, Router_SubscribeHtlcEventsServer) error
+	SubscribeHtlcEvents(*SubscribeHtlcEventsRequest, Router_SubscribeHtlcEventsServer) er.R
 	//
 	//Deprecated, use SendPaymentV2. SendPayment attempts to route a payment
 	//described by the passed PaymentRequest to the final destination. The call
 	//returns a stream of payment status updates.
-	SendPayment(*SendPaymentRequest, Router_SendPaymentServer) error
+	SendPayment(*SendPaymentRequest, Router_SendPaymentServer) er.R
 	//
 	//Deprecated, use TrackPaymentV2. TrackPayment returns an update stream for
 	//the payment identified by the payment hash.
-	TrackPayment(*TrackPaymentRequest, Router_TrackPaymentServer) error
+	TrackPayment(*TrackPaymentRequest, Router_TrackPaymentServer) er.R
 	//*
 	//HtlcInterceptor dispatches a bi-directional streaming RPC in which
 	//Forwarded HTLC requests are sent to the client and the client responds with
 	//a boolean that tells LND if this htlc should be intercepted.
 	//In case of interception, the htlc can be either settled, cancelled or
 	//resumed later by using the ResolveHoldForward endpoint.
-	HtlcInterceptor(Router_HtlcInterceptorServer) error
+	HtlcInterceptor(Router_HtlcInterceptorServer) er.R
 }
 
 // UnimplementedRouterServer can be embedded to have forward compatible implementations.
 type UnimplementedRouterServer struct {
 }
 
-func (*UnimplementedRouterServer) SendPaymentV2(req *SendPaymentRequest, srv Router_SendPaymentV2Server) error {
+func (*UnimplementedRouterServer) SendPaymentV2(req *SendPaymentRequest, srv Router_SendPaymentV2Server) er.R {
 	return status.Errorf(codes.Unimplemented, "method SendPaymentV2 not implemented")
 }
-func (*UnimplementedRouterServer) TrackPaymentV2(req *TrackPaymentRequest, srv Router_TrackPaymentV2Server) error {
+func (*UnimplementedRouterServer) TrackPaymentV2(req *TrackPaymentRequest, srv Router_TrackPaymentV2Server) er.R {
 	return status.Errorf(codes.Unimplemented, "method TrackPaymentV2 not implemented")
 }
-func (*UnimplementedRouterServer) EstimateRouteFee(ctx context.Context, req *RouteFeeRequest) (*RouteFeeResponse, error) {
+func (*UnimplementedRouterServer) EstimateRouteFee(ctx context.Context, req *RouteFeeRequest) (*RouteFeeResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method EstimateRouteFee not implemented")
 }
-func (*UnimplementedRouterServer) SendToRoute(ctx context.Context, req *SendToRouteRequest) (*SendToRouteResponse, error) {
+func (*UnimplementedRouterServer) SendToRoute(ctx context.Context, req *SendToRouteRequest) (*SendToRouteResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendToRoute not implemented")
 }
-func (*UnimplementedRouterServer) SendToRouteV2(ctx context.Context, req *SendToRouteRequest) (*lnrpc.HTLCAttempt, error) {
+func (*UnimplementedRouterServer) SendToRouteV2(ctx context.Context, req *SendToRouteRequest) (*lnrpc.HTLCAttempt, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendToRouteV2 not implemented")
 }
-func (*UnimplementedRouterServer) ResetMissionControl(ctx context.Context, req *ResetMissionControlRequest) (*ResetMissionControlResponse, error) {
+func (*UnimplementedRouterServer) ResetMissionControl(ctx context.Context, req *ResetMissionControlRequest) (*ResetMissionControlResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResetMissionControl not implemented")
 }
-func (*UnimplementedRouterServer) QueryMissionControl(ctx context.Context, req *QueryMissionControlRequest) (*QueryMissionControlResponse, error) {
+func (*UnimplementedRouterServer) QueryMissionControl(ctx context.Context, req *QueryMissionControlRequest) (*QueryMissionControlResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryMissionControl not implemented")
 }
-func (*UnimplementedRouterServer) QueryProbability(ctx context.Context, req *QueryProbabilityRequest) (*QueryProbabilityResponse, error) {
+func (*UnimplementedRouterServer) QueryProbability(ctx context.Context, req *QueryProbabilityRequest) (*QueryProbabilityResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryProbability not implemented")
 }
-func (*UnimplementedRouterServer) BuildRoute(ctx context.Context, req *BuildRouteRequest) (*BuildRouteResponse, error) {
+func (*UnimplementedRouterServer) BuildRoute(ctx context.Context, req *BuildRouteRequest) (*BuildRouteResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method BuildRoute not implemented")
 }
-func (*UnimplementedRouterServer) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest, srv Router_SubscribeHtlcEventsServer) error {
+func (*UnimplementedRouterServer) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest, srv Router_SubscribeHtlcEventsServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method SubscribeHtlcEvents not implemented")
 }
-func (*UnimplementedRouterServer) SendPayment(req *SendPaymentRequest, srv Router_SendPaymentServer) error {
+func (*UnimplementedRouterServer) SendPayment(req *SendPaymentRequest, srv Router_SendPaymentServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method SendPayment not implemented")
 }
-func (*UnimplementedRouterServer) TrackPayment(req *TrackPaymentRequest, srv Router_TrackPaymentServer) error {
+func (*UnimplementedRouterServer) TrackPayment(req *TrackPaymentRequest, srv Router_TrackPaymentServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method TrackPayment not implemented")
 }
-func (*UnimplementedRouterServer) HtlcInterceptor(srv Router_HtlcInterceptorServer) error {
+func (*UnimplementedRouterServer) HtlcInterceptor(srv Router_HtlcInterceptorServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method HtlcInterceptor not implemented")
 }
 
@@ -2651,7 +2651,7 @@ func RegisterRouterServer(s *grpc.Server, srv RouterServer) {
 	s.RegisterService(&_Router_serviceDesc, srv)
 }
 
-func _Router_SendPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_SendPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(SendPaymentRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2660,7 +2660,7 @@ func _Router_SendPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) er
 }
 
 type Router_SendPaymentV2Server interface {
-	Send(*lnrpc.Payment) error
+	Send(*lnrpc.Payment) er.R
 	grpc.ServerStream
 }
 
@@ -2668,11 +2668,11 @@ type routerSendPaymentV2Server struct {
 	grpc.ServerStream
 }
 
-func (x *routerSendPaymentV2Server) Send(m *lnrpc.Payment) error {
+func (x *routerSendPaymentV2Server) Send(m *lnrpc.Payment) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Router_TrackPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_TrackPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(TrackPaymentRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2681,7 +2681,7 @@ func _Router_TrackPaymentV2_Handler(srv interface{}, stream grpc.ServerStream) e
 }
 
 type Router_TrackPaymentV2Server interface {
-	Send(*lnrpc.Payment) error
+	Send(*lnrpc.Payment) er.R
 	grpc.ServerStream
 }
 
@@ -2689,11 +2689,11 @@ type routerTrackPaymentV2Server struct {
 	grpc.ServerStream
 }
 
-func (x *routerTrackPaymentV2Server) Send(m *lnrpc.Payment) error {
+func (x *routerTrackPaymentV2Server) Send(m *lnrpc.Payment) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Router_EstimateRouteFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_EstimateRouteFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(RouteFeeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2705,13 +2705,13 @@ func _Router_EstimateRouteFee_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/EstimateRouteFee",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).EstimateRouteFee(ctx, req.(*RouteFeeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_SendToRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_SendToRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SendToRouteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2723,13 +2723,13 @@ func _Router_SendToRoute_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/SendToRoute",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).SendToRoute(ctx, req.(*SendToRouteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_SendToRouteV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_SendToRouteV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SendToRouteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2741,13 +2741,13 @@ func _Router_SendToRouteV2_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/SendToRouteV2",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).SendToRouteV2(ctx, req.(*SendToRouteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_ResetMissionControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_ResetMissionControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(ResetMissionControlRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2759,13 +2759,13 @@ func _Router_ResetMissionControl_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/ResetMissionControl",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).ResetMissionControl(ctx, req.(*ResetMissionControlRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_QueryMissionControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_QueryMissionControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(QueryMissionControlRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2777,13 +2777,13 @@ func _Router_QueryMissionControl_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/QueryMissionControl",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).QueryMissionControl(ctx, req.(*QueryMissionControlRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_QueryProbability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_QueryProbability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(QueryProbabilityRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2795,13 +2795,13 @@ func _Router_QueryProbability_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/QueryProbability",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).QueryProbability(ctx, req.(*QueryProbabilityRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_BuildRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Router_BuildRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(BuildRouteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2813,13 +2813,13 @@ func _Router_BuildRoute_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/routerrpc.Router/BuildRoute",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(RouterServer).BuildRoute(ctx, req.(*BuildRouteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_SubscribeHtlcEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_SubscribeHtlcEvents_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(SubscribeHtlcEventsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2828,7 +2828,7 @@ func _Router_SubscribeHtlcEvents_Handler(srv interface{}, stream grpc.ServerStre
 }
 
 type Router_SubscribeHtlcEventsServer interface {
-	Send(*HtlcEvent) error
+	Send(*HtlcEvent) er.R
 	grpc.ServerStream
 }
 
@@ -2836,11 +2836,11 @@ type routerSubscribeHtlcEventsServer struct {
 	grpc.ServerStream
 }
 
-func (x *routerSubscribeHtlcEventsServer) Send(m *HtlcEvent) error {
+func (x *routerSubscribeHtlcEventsServer) Send(m *HtlcEvent) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Router_SendPayment_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_SendPayment_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(SendPaymentRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2849,7 +2849,7 @@ func _Router_SendPayment_Handler(srv interface{}, stream grpc.ServerStream) erro
 }
 
 type Router_SendPaymentServer interface {
-	Send(*PaymentStatus) error
+	Send(*PaymentStatus) er.R
 	grpc.ServerStream
 }
 
@@ -2857,11 +2857,11 @@ type routerSendPaymentServer struct {
 	grpc.ServerStream
 }
 
-func (x *routerSendPaymentServer) Send(m *PaymentStatus) error {
+func (x *routerSendPaymentServer) Send(m *PaymentStatus) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Router_TrackPayment_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_TrackPayment_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(TrackPaymentRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -2870,7 +2870,7 @@ func _Router_TrackPayment_Handler(srv interface{}, stream grpc.ServerStream) err
 }
 
 type Router_TrackPaymentServer interface {
-	Send(*PaymentStatus) error
+	Send(*PaymentStatus) er.R
 	grpc.ServerStream
 }
 
@@ -2878,17 +2878,17 @@ type routerTrackPaymentServer struct {
 	grpc.ServerStream
 }
 
-func (x *routerTrackPaymentServer) Send(m *PaymentStatus) error {
+func (x *routerTrackPaymentServer) Send(m *PaymentStatus) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Router_HtlcInterceptor_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Router_HtlcInterceptor_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	return srv.(RouterServer).HtlcInterceptor(&routerHtlcInterceptorServer{stream})
 }
 
 type Router_HtlcInterceptorServer interface {
-	Send(*ForwardHtlcInterceptRequest) error
-	Recv() (*ForwardHtlcInterceptResponse, error)
+	Send(*ForwardHtlcInterceptRequest) er.R
+	Recv() (*ForwardHtlcInterceptResponse, er.R)
 	grpc.ServerStream
 }
 
@@ -2896,11 +2896,11 @@ type routerHtlcInterceptorServer struct {
 	grpc.ServerStream
 }
 
-func (x *routerHtlcInterceptorServer) Send(m *ForwardHtlcInterceptRequest) error {
+func (x *routerHtlcInterceptorServer) Send(m *ForwardHtlcInterceptRequest) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *routerHtlcInterceptorServer) Recv() (*ForwardHtlcInterceptResponse, error) {
+func (x *routerHtlcInterceptorServer) Recv() (*ForwardHtlcInterceptResponse, er.R) {
 	m := new(ForwardHtlcInterceptResponse)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err

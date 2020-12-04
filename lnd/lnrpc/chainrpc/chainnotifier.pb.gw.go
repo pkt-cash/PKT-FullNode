@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = descriptor.ForMessage
 
-func request_ChainNotifier_RegisterConfirmationsNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterConfirmationsNtfnClient, runtime.ServerMetadata, error) {
+func request_ChainNotifier_RegisterConfirmationsNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterConfirmationsNtfnClient, runtime.ServerMetadata, er.R) {
 	var protoReq ConfRequest
 	var metadata runtime.ServerMetadata
 
@@ -56,7 +56,7 @@ func request_ChainNotifier_RegisterConfirmationsNtfn_0(ctx context.Context, mars
 
 }
 
-func request_ChainNotifier_RegisterSpendNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterSpendNtfnClient, runtime.ServerMetadata, error) {
+func request_ChainNotifier_RegisterSpendNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterSpendNtfnClient, runtime.ServerMetadata, er.R) {
 	var protoReq SpendRequest
 	var metadata runtime.ServerMetadata
 
@@ -81,7 +81,7 @@ func request_ChainNotifier_RegisterSpendNtfn_0(ctx context.Context, marshaler ru
 
 }
 
-func request_ChainNotifier_RegisterBlockEpochNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterBlockEpochNtfnClient, runtime.ServerMetadata, error) {
+func request_ChainNotifier_RegisterBlockEpochNtfn_0(ctx context.Context, marshaler runtime.Marshaler, client ChainNotifierClient, req *http.Request, pathParams map[string]string) (ChainNotifier_RegisterBlockEpochNtfnClient, runtime.ServerMetadata, er.R) {
 	var protoReq BlockEpoch
 	var metadata runtime.ServerMetadata
 
@@ -109,7 +109,7 @@ func request_ChainNotifier_RegisterBlockEpochNtfn_0(ctx context.Context, marshal
 // RegisterChainNotifierHandlerServer registers the http handlers for service ChainNotifier to "mux".
 // UnaryRPC     :call ChainNotifierServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterChainNotifierHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ChainNotifierServer) error {
+func RegisterChainNotifierHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ChainNotifierServer) er.R {
 
 	mux.Handle("POST", pattern_ChainNotifier_RegisterConfirmationsNtfn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
@@ -162,7 +162,7 @@ func RegisterChainNotifierHandlerFromEndpoint(ctx context.Context, mux *runtime.
 
 // RegisterChainNotifierHandler registers the http handlers for service ChainNotifier to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterChainNotifierHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+func RegisterChainNotifierHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
 	return RegisterChainNotifierHandlerClient(ctx, mux, NewChainNotifierClient(conn))
 }
 
@@ -171,7 +171,7 @@ func RegisterChainNotifierHandler(ctx context.Context, mux *runtime.ServeMux, co
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "ChainNotifierClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "ChainNotifierClient" to call the correct interceptors.
-func RegisterChainNotifierHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ChainNotifierClient) error {
+func RegisterChainNotifierHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ChainNotifierClient) er.R {
 
 	mux.Handle("POST", pattern_ChainNotifier_RegisterConfirmationsNtfn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -189,7 +189,7 @@ func RegisterChainNotifierHandlerClient(ctx context.Context, mux *runtime.ServeM
 			return
 		}
 
-		forward_ChainNotifier_RegisterConfirmationsNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_ChainNotifier_RegisterConfirmationsNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -209,7 +209,7 @@ func RegisterChainNotifierHandlerClient(ctx context.Context, mux *runtime.ServeM
 			return
 		}
 
-		forward_ChainNotifier_RegisterSpendNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_ChainNotifier_RegisterSpendNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -229,7 +229,7 @@ func RegisterChainNotifierHandlerClient(ctx context.Context, mux *runtime.ServeM
 			return
 		}
 
-		forward_ChainNotifier_RegisterBlockEpochNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_ChainNotifier_RegisterBlockEpochNtfn_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 

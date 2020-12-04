@@ -3,6 +3,7 @@ package discovery
 import (
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -22,27 +23,27 @@ type ChannelGraphTimeSeries interface {
 	// height that's close to the current tip of the main chain as we
 	// know it.  We'll use this to start our QueryChannelRange dance with
 	// the remote node.
-	HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, error)
+	HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, er.R)
 
 	// UpdatesInHorizon returns all known channel and node updates with an
 	// update timestamp between the start time and end time. We'll use this
 	// to catch up a remote node to the set of channel updates that they
 	// may have missed out on within the target chain.
 	UpdatesInHorizon(chain chainhash.Hash,
-		startTime time.Time, endTime time.Time) ([]lnwire.Message, error)
+		startTime time.Time, endTime time.Time) ([]lnwire.Message, er.R)
 
 	// FilterKnownChanIDs takes a target chain, and a set of channel ID's,
 	// and returns a filtered set of chan ID's. This filtered set of chan
 	// ID's represents the ID's that we don't know of which were in the
 	// passed superSet.
 	FilterKnownChanIDs(chain chainhash.Hash,
-		superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error)
+		superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, er.R)
 
 	// FilterChannelRange returns the set of channels that we created
 	// between the start height and the end height. We'll use this to to a
 	// remote peer's QueryChannelRange message.
 	FilterChannelRange(chain chainhash.Hash,
-		startHeight, endHeight uint32) ([]lnwire.ShortChannelID, error)
+		startHeight, endHeight uint32) ([]lnwire.ShortChannelID, er.R)
 
 	// FetchChanAnns returns a full set of channel announcements as well as
 	// their updates that match the set of specified short channel ID's.
@@ -51,13 +52,13 @@ type ChannelGraphTimeSeries interface {
 	// ChannelAnnouncements, the latest ChannelUpdate for each of the
 	// announcements, and a unique set of NodeAnnouncements.
 	FetchChanAnns(chain chainhash.Hash,
-		shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, error)
+		shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, er.R)
 
 	// FetchChanUpdates returns the latest channel update messages for the
 	// specified short channel ID. If no channel updates are known for the
 	// channel, then an empty slice will be returned.
 	FetchChanUpdates(chain chainhash.Hash,
-		shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, error)
+		shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, er.R)
 }
 
 // ChanSeries is an implementation of the ChannelGraphTimeSeries
@@ -83,7 +84,7 @@ func NewChanSeries(graph *channeldb.ChannelGraph) *ChanSeries {
 // this to start our QueryChannelRange dance with the remote node.
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
-func (c *ChanSeries) HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, error) {
+func (c *ChanSeries) HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID, er.R) {
 	chanID, err := c.graph.HighestChanID()
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func (c *ChanSeries) HighestChanID(chain chainhash.Hash) (*lnwire.ShortChannelID
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) UpdatesInHorizon(chain chainhash.Hash,
-	startTime time.Time, endTime time.Time) ([]lnwire.Message, error) {
+	startTime time.Time, endTime time.Time) ([]lnwire.Message, er.R) {
 
 	var updates []lnwire.Message
 
@@ -180,7 +181,7 @@ func (c *ChanSeries) UpdatesInHorizon(chain chainhash.Hash,
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) FilterKnownChanIDs(chain chainhash.Hash,
-	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error) {
+	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, er.R) {
 
 	chanIDs := make([]uint64, 0, len(superSet))
 	for _, chanID := range superSet {
@@ -208,7 +209,7 @@ func (c *ChanSeries) FilterKnownChanIDs(chain chainhash.Hash,
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) FilterChannelRange(chain chainhash.Hash,
-	startHeight, endHeight uint32) ([]lnwire.ShortChannelID, error) {
+	startHeight, endHeight uint32) ([]lnwire.ShortChannelID, er.R) {
 
 	chansInRange, err := c.graph.FilterChannelRange(startHeight, endHeight)
 	if err != nil {
@@ -233,7 +234,7 @@ func (c *ChanSeries) FilterChannelRange(chain chainhash.Hash,
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) FetchChanAnns(chain chainhash.Hash,
-	shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, error) {
+	shortChanIDs []lnwire.ShortChannelID) ([]lnwire.Message, er.R) {
 
 	chanIDs := make([]uint64, 0, len(shortChanIDs))
 	for _, chanID := range shortChanIDs {
@@ -313,7 +314,7 @@ func (c *ChanSeries) FetchChanAnns(chain chainhash.Hash,
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) FetchChanUpdates(chain chainhash.Hash,
-	shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, error) {
+	shortChanID lnwire.ShortChannelID) ([]*lnwire.ChannelUpdate, er.R) {
 
 	chanInfo, e1, e2, err := c.graph.FetchChannelEdgesByID(
 		shortChanID.ToUint64(),

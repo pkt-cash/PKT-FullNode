@@ -1,8 +1,6 @@
 package btcwallet
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -17,20 +15,21 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.btcwallet")
 	// ErrOutputSpent is returned by the GetUtxo method if the target output
 	// for lookup has already been spent.
-	ErrOutputSpent = errors.New("target output has been spent")
+	ErrOutputSpent = Err.CodeWithDetail("ErrOutputSpent", "target output has been spent")
 
 	// ErrOutputNotFound signals that the desired output could not be
 	// located.
-	ErrOutputNotFound = errors.New("target output was not found")
+	ErrOutputNotFound = Err.CodeWithDetail("ErrOutputNotFound", "target output was not found")
 )
 
 // GetBestBlock returns the current height and hash of the best known block
 // within the main chain.
 //
 // This method is a part of the lnwallet.BlockChainIO interface.
-func (b *BtcWallet) GetBestBlock() (*chainhash.Hash, int32, error) {
+func (b *BtcWallet) GetBestBlock() (*chainhash.Hash, int32, er.R) {
 	return b.chain.GetBestBlock()
 }
 
@@ -39,7 +38,7 @@ func (b *BtcWallet) GetBestBlock() (*chainhash.Hash, int32, error) {
 //
 // This method is a part of the lnwallet.BlockChainIO interface.
 func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
-	heightHint uint32, cancel <-chan struct{}) (*wire.TxOut, error) {
+	heightHint uint32, cancel <-chan struct{}) (*wire.TxOut, er.R) {
 
 	switch backend := b.chain.(type) {
 
@@ -61,13 +60,13 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 		// If the spend report is nil, then the output was not found in
 		// the rescan.
 		if spendReport == nil {
-			return nil, ErrOutputNotFound
+			return nil, ErrOutputNotFound.Default()
 		}
 
 		// If the spending transaction is populated in the spend report,
 		// this signals that the output has already been spent.
 		if spendReport.SpendingTx != nil {
-			return nil, ErrOutputSpent
+			return nil, ErrOutputSpent.Default()
 		}
 
 		// Otherwise, the output is assumed to be in the UTXO.
@@ -78,7 +77,7 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 		if err != nil {
 			return nil, err
 		} else if txout == nil {
-			return nil, ErrOutputSpent
+			return nil, ErrOutputSpent.Default()
 		}
 
 		addr, err := btcutil.DecodeAddress(txout.Address, b.netParams)
@@ -98,14 +97,14 @@ func (b *BtcWallet) GetUtxo(op *wire.OutPoint, pkScript []byte,
 		}, nil
 
 	default:
-		return nil, fmt.Errorf("unknown backend")
+		return nil, er.Errorf("unknown backend")
 	}
 }
 
 // GetBlock returns a raw block from the server given its hash.
 //
 // This method is a part of the lnwallet.BlockChainIO interface.
-func (b *BtcWallet) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (b *BtcWallet) GetBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 	return b.chain.GetBlock(blockHash)
 }
 

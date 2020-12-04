@@ -11,6 +11,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -134,7 +135,7 @@ func createSweeperTestContext(t *testing.T) *sweeperTestContext {
 		},
 		Store:  store,
 		Signer: &mock.DummySigner{},
-		GenSweepScript: func() ([]byte, error) {
+		GenSweepScript: func() ([]byte, er.R) {
 			script := []byte{outputScriptCount}
 			outputScriptCount++
 			return script, nil
@@ -1344,7 +1345,7 @@ func TestCpfp(t *testing.T) {
 	result, err := ctx.sweeper.SweepInput(
 		&input, Params{Fee: feePref, Force: true},
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Because we sweep at 1000 sat/kw, the parent cannot be paid for. We
 	// expect the sweeper to remain idle.

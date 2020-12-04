@@ -2,10 +2,10 @@ package itest
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
@@ -83,7 +83,7 @@ func assertTimeoutError(ctxt context.Context, t *harnessTest,
 
 	// a DeadlineExceeded error will appear in the context if the above
 	// ctxtTimeout value is reached.
-	require.NoError(t.t, ctxt.Err(), "context time out")
+	util.RequireNoErr(t.t, ctxt.Err(), "context time out")
 
 	// Check that the network returns a timeout error.
 	require.Containsf(
@@ -93,7 +93,7 @@ func assertTimeoutError(ctxt context.Context, t *harnessTest,
 }
 
 func connect(ctxt context.Context, node *lntest.HarnessNode,
-	req *lnrpc.ConnectPeerRequest) error {
+	req *lnrpc.ConnectPeerRequest) er.R {
 
 	syncTimeout := time.After(15 * time.Second)
 	ticker := time.NewTicker(time.Millisecond * 100)
@@ -115,7 +115,7 @@ func connect(ctxt context.Context, node *lntest.HarnessNode,
 				return err
 			}
 		case <-syncTimeout:
-			return fmt.Errorf("chain backend did not " +
+			return er.Errorf("chain backend did not " +
 				"finish syncing")
 		}
 	}

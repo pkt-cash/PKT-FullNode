@@ -77,14 +77,14 @@ func testSendToRouteMultiPath(net *lntest.NetworkHarness, t *harnessTest) {
 
 	// Helper function for Alice to build a route from pubkeys.
 	buildRoute := func(amt btcutil.Amount, hops []*lntest.HarnessNode) (
-		*lnrpc.Route, error) {
+		*lnrpc.Route, er.R) {
 
 		rpcHops := make([][]byte, 0, len(hops))
 		for _, hop := range hops {
 			k := hop.PubKeyStr
 			pubkey, err := route.NewVertexFromStr(k)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing %v: %v",
+				return nil, er.Errorf("error parsing %v: %v",
 					k, err)
 			}
 			rpcHops = append(rpcHops, pubkey[:])

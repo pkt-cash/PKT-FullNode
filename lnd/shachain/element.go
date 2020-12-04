@@ -17,7 +17,7 @@ type element struct {
 }
 
 // newElementFromStr creates new element from the given hash string.
-func newElementFromStr(s string, index index) (*element, error) {
+func newElementFromStr(s string, index index) (*element, er.R) {
 	hash, err := hashFromString(s)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func newElementFromStr(s string, index index) (*element, error) {
 
 // derive computes one shachain element from another by applying a series of
 // bit flips and hashing operations based on the starting and ending index.
-func (e *element) derive(toIndex index) (*element, error) {
+func (e *element) derive(toIndex index) (*element, er.R) {
 	fromIndex := e.index
 
 	positions, err := fromIndex.deriveBitTransformations(toIndex)
@@ -124,7 +124,7 @@ func newIndex(v uint64) index {
 //    +---|---|---|---|---|---|---|---|---> index
 //        0   1   2   3   4   5   6   7
 //
-func (from index) deriveBitTransformations(to index) ([]uint8, error) {
+func (from index) deriveBitTransformations(to index) ([]uint8, er.R) {
 	var positions []uint8
 
 	if from == to {
@@ -147,7 +147,7 @@ func (from index) deriveBitTransformations(to index) ([]uint8, error) {
 	//	+ -- + ---- + --- +
 	zeros := countTrailingZeros(from)
 	if uint64(from) != getPrefix(to, zeros) {
-		return nil, errors.New("prefixes are different - indexes " +
+		return nil, er.New("prefixes are different - indexes " +
 			"aren't derivable")
 	}
 

@@ -2,11 +2,11 @@ package chanbackup
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 type mockChannelRestorer struct {
@@ -15,9 +15,9 @@ type mockChannelRestorer struct {
 	callCount int
 }
 
-func (m *mockChannelRestorer) RestoreChansFromSingles(...Single) error {
+func (m *mockChannelRestorer) RestoreChansFromSingles(...Single) er.R {
 	if m.fail {
-		return fmt.Errorf("fail")
+		return er.Errorf("fail")
 	}
 
 	m.callCount++
@@ -32,10 +32,10 @@ type mockPeerConnector struct {
 }
 
 func (m *mockPeerConnector) ConnectPeer(node *btcec.PublicKey,
-	addrs []net.Addr) error {
+	addrs []net.Addr) er.R {
 
 	if m.fail {
-		return fmt.Errorf("fail")
+		return er.Errorf("fail")
 	}
 
 	m.callCount++

@@ -167,11 +167,11 @@ var sendPaymentCommand = cli.Command{
 // retrieveFeeLimit retrieves the fee limit based on the different fee limit
 // flags passed. It always returns a value and doesn't rely on lnd applying a
 // default.
-func retrieveFeeLimit(ctx *cli.Context, amt int64) (int64, error) {
+func retrieveFeeLimit(ctx *cli.Context, amt int64) (int64, er.R) {
 	switch {
 
 	case ctx.IsSet("fee_limit") && ctx.IsSet("fee_limit_percent"):
-		return 0, fmt.Errorf("either fee_limit or fee_limit_percent " +
+		return 0, er.Errorf("either fee_limit or fee_limit_percent " +
 			"can be set, but not both")
 
 	case ctx.IsSet("fee_limit"):
@@ -190,7 +190,7 @@ func retrieveFeeLimit(ctx *cli.Context, amt int64) (int64, error) {
 	return amt, nil
 }
 
-func confirmPayReq(resp *lnrpc.PayReq, amt, feeLimit int64) error {
+func confirmPayReq(resp *lnrpc.PayReq, amt, feeLimit int64) er.R {
 	fmt.Printf("Payment hash: %v\n", resp.GetPaymentHash())
 	fmt.Printf("Description: %v\n", resp.GetDescription())
 	fmt.Printf("Amount (in satoshis): %v\n", amt)
@@ -199,13 +199,13 @@ func confirmPayReq(resp *lnrpc.PayReq, amt, feeLimit int64) error {
 
 	confirm := promptForConfirmation("Confirm payment (yes/no): ")
 	if !confirm {
-		return fmt.Errorf("payment not confirmed")
+		return er.Errorf("payment not confirmed")
 	}
 
 	return nil
 }
 
-func sendPayment(ctx *cli.Context) error {
+func sendPayment(ctx *cli.Context) er.R {
 	// Show command help if no arguments provided
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		_ = cli.ShowCommandHelp(ctx, "sendpayment")
@@ -233,19 +233,19 @@ func sendPayment(ctx *cli.Context) error {
 
 	switch {
 	case ctx.IsSet("dest"):
-		destNode, err = hex.DecodeString(ctx.String("dest"))
+		destNode, err = util.DecodeHex(ctx.String("dest"))
 	case args.Present():
-		destNode, err = hex.DecodeString(args.First())
+		destNode, err = util.DecodeHex(args.First())
 		args = args.Tail()
 	default:
-		return fmt.Errorf("destination txid argument missing")
+		return er.Errorf("destination txid argument missing")
 	}
 	if err != nil {
 		return err
 	}
 
 	if len(destNode) != 33 {
-		return fmt.Errorf("dest node pubkey must be exactly 33 bytes, is "+
+		return er.Errorf("dest node pubkey must be exactly 33 bytes, is "+
 			"instead: %v", len(destNode))
 	}
 
@@ -255,7 +255,7 @@ func sendPayment(ctx *cli.Context) error {
 		amount, err = strconv.ParseInt(args.First(), 10, 64)
 		args = args.Tail()
 		if err != nil {
-			return fmt.Errorf("unable to decode payment amount: %v", err)
+			return er.Errorf("unable to decode payment amount: %v", err)
 		}
 	}
 
@@ -269,7 +269,7 @@ func sendPayment(ctx *cli.Context) error {
 
 	if ctx.Bool("keysend") {
 		if ctx.IsSet("payment_hash") {
-			return errors.New("cannot set payment hash when using " +
+			return er.New("cannot set payment hash when using " +
 				"keysend")
 		}
 		var preimage lntypes.Preimage
@@ -287,12 +287,12 @@ func sendPayment(ctx *cli.Context) error {
 	} else {
 		switch {
 		case ctx.IsSet("payment_hash"):
-			rHash, err = hex.DecodeString(ctx.String("payment_hash"))
+			rHash, err = util.DecodeHex(ctx.String("payment_hash"))
 		case args.Present():
-			rHash, err = hex.DecodeString(args.First())
+			rHash, err = util.DecodeHex(args.First())
 			args = args.Tail()
 		default:
-			return fmt.Errorf("payment hash argument missing")
+			return er.Errorf("payment hash argument missing")
 		}
 	}
 
@@ -300,7 +300,7 @@ func sendPayment(ctx *cli.Context) error {
 		return err
 	}
 	if len(rHash) != 32 {
-		return fmt.Errorf("payment hash must be exactly 32 "+
+		return er.Errorf("payment hash must be exactly 32 "+
 			"bytes, is instead %v", len(rHash))
 	}
 	req.PaymentHash = rHash
@@ -320,7 +320,7 @@ func sendPayment(ctx *cli.Context) error {
 }
 
 func sendPaymentRequest(ctx *cli.Context,
-	req *routerrpc.SendPaymentRequest) error {
+	req *routerrpc.SendPaymentRequest) er.R {
 
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
@@ -346,7 +346,7 @@ func sendPaymentRequest(ctx *cli.Context,
 
 	pmtTimeout := ctx.Duration("timeout")
 	if pmtTimeout <= 0 {
-		return errors.New("payment timeout must be greater than zero")
+		return er.New("payment timeout must be greater than zero")
 	}
 	req.TimeoutSeconds = int32(pmtTimeout.Seconds())
 
@@ -361,19 +361,19 @@ func sendPaymentRequest(ctx *cli.Context,
 		for _, r := range records {
 			kv := strings.Split(r, "=")
 			if len(kv) != 2 {
-				return errors.New("invalid data format: " +
+				return er.New("invalid data format: " +
 					"multiple equal signs in record")
 			}
 
 			recordID, err := strconv.ParseUint(kv[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid data format: %v",
+				return er.Errorf("invalid data format: %v",
 					err)
 			}
 
-			hexValue, err := hex.DecodeString(kv[1])
+			hexValue, err := util.DecodeHex(kv[1])
 			if err != nil {
-				return fmt.Errorf("invalid data format: %v",
+				return er.Errorf("invalid data format: %v",
 					err)
 			}
 
@@ -444,7 +444,7 @@ func sendPaymentRequest(ctx *cli.Context,
 	// to main which eventually calls fatal() and returns
 	// with a non-zero exit code.
 	if finalState.Status != lnrpc.Payment_SUCCEEDED {
-		return errors.New(finalState.Status.String())
+		return er.New(finalState.Status.String())
 	}
 
 	return nil
@@ -462,7 +462,7 @@ var trackPaymentCommand = cli.Command{
 	Action:    actionDecorator(trackPayment),
 }
 
-func trackPayment(ctx *cli.Context) error {
+func trackPayment(ctx *cli.Context) er.R {
 	args := ctx.Args()
 
 	conn := getClientConn(ctx, false)
@@ -471,10 +471,10 @@ func trackPayment(ctx *cli.Context) error {
 	routerClient := routerrpc.NewRouterClient(conn)
 
 	if !args.Present() {
-		return fmt.Errorf("hash argument missing")
+		return er.Errorf("hash argument missing")
 	}
 
-	hash, err := hex.DecodeString(args.First())
+	hash, err := util.DecodeHex(args.First())
 	if err != nil {
 		return err
 	}
@@ -498,7 +498,7 @@ func trackPayment(ctx *cli.Context) error {
 // option uses terminal control codes to rewrite the output. This call
 // terminates when the payment reaches a final state.
 func printLivePayment(stream routerrpc.Router_TrackPaymentV2Client,
-	client lnrpc.LightningClient, json bool) (*lnrpc.Payment, error) {
+	client lnrpc.LightningClient, json bool) (*lnrpc.Payment, er.R) {
 
 	// Terminal escape codes aren't supported on Windows, fall back to json.
 	if !json && runtime.GOOS == "windows" {
@@ -698,7 +698,7 @@ var payInvoiceCommand = cli.Command{
 	Action: actionDecorator(payInvoice),
 }
 
-func payInvoice(ctx *cli.Context) error {
+func payInvoice(ctx *cli.Context) er.R {
 	args := ctx.Args()
 
 	var payReq string
@@ -708,7 +708,7 @@ func payInvoice(ctx *cli.Context) error {
 	case args.Present():
 		payReq = args.First()
 	default:
-		return fmt.Errorf("pay_req argument missing")
+		return er.Errorf("pay_req argument missing")
 	}
 
 	req := &routerrpc.SendPaymentRequest{
@@ -762,7 +762,7 @@ var sendToRouteCommand = cli.Command{
 	Action: sendToRoute,
 }
 
-func sendToRoute(ctx *cli.Context) error {
+func sendToRoute(ctx *cli.Context) er.R {
 	// Show command help if no arguments provided.
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		_ = cli.ShowCommandHelp(ctx, "sendtoroute")
@@ -777,13 +777,13 @@ func sendToRoute(ctx *cli.Context) error {
 	)
 	switch {
 	case ctx.IsSet("payment_hash"):
-		rHash, err = hex.DecodeString(ctx.String("payment_hash"))
+		rHash, err = util.DecodeHex(ctx.String("payment_hash"))
 	case args.Present():
-		rHash, err = hex.DecodeString(args.First())
+		rHash, err = util.DecodeHex(args.First())
 
 		args = args.Tail()
 	default:
-		return fmt.Errorf("payment hash argument missing")
+		return er.Errorf("payment hash argument missing")
 	}
 
 	if err != nil {
@@ -791,7 +791,7 @@ func sendToRoute(ctx *cli.Context) error {
 	}
 
 	if len(rHash) != 32 {
-		return fmt.Errorf("payment hash must be exactly 32 "+
+		return er.Errorf("payment hash must be exactly 32 "+
 			"bytes, is instead %d", len(rHash))
 	}
 
@@ -814,7 +814,7 @@ func sendToRoute(ctx *cli.Context) error {
 			return err
 		}
 		if len(b) == 0 {
-			return fmt.Errorf("queryroutes output is empty")
+			return er.Errorf("queryroutes output is empty")
 		}
 
 		jsonRoutes = string(b)
@@ -828,11 +828,11 @@ func sendToRoute(ctx *cli.Context) error {
 	err = jsonpb.UnmarshalString(jsonRoutes, routes)
 	if err == nil {
 		if len(routes.Routes) == 0 {
-			return fmt.Errorf("no routes provided")
+			return er.Errorf("no routes provided")
 		}
 
 		if len(routes.Routes) != 1 {
-			return fmt.Errorf("expected a single route, but got %v",
+			return er.Errorf("expected a single route, but got %v",
 				len(routes.Routes))
 		}
 
@@ -841,7 +841,7 @@ func sendToRoute(ctx *cli.Context) error {
 		routes := &routerrpc.BuildRouteResponse{}
 		err = jsonpb.UnmarshalString(jsonRoutes, routes)
 		if err != nil {
-			return fmt.Errorf("unable to unmarshal json string "+
+			return er.Errorf("unable to unmarshal json string "+
 				"from incoming array of routes: %v", err)
 		}
 
@@ -856,7 +856,7 @@ func sendToRoute(ctx *cli.Context) error {
 	return sendToRouteRequest(ctx, req)
 }
 
-func sendToRouteRequest(ctx *cli.Context, req *routerrpc.SendToRouteRequest) error {
+func sendToRouteRequest(ctx *cli.Context, req *routerrpc.SendToRouteRequest) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 

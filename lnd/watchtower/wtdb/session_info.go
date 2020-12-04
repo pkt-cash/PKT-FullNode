@@ -1,9 +1,9 @@
 package wtdb
 
 import (
-	"errors"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 )
@@ -11,30 +11,30 @@ import (
 var (
 	// ErrSessionNotFound is returned when querying by session id for a
 	// session that does not exist.
-	ErrSessionNotFound = errors.New("session not found in db")
+	ErrSessionNotFound = Err.CodeWithDetail("ErrSessionNotFound", "session not found in db")
 
 	// ErrSessionAlreadyExists signals that a session creation failed
 	// because a session with the same session id already exists.
-	ErrSessionAlreadyExists = errors.New("session already exists")
+	ErrSessionAlreadyExists = Err.CodeWithDetail("ErrSessionAlreadyExists", "session already exists")
 
 	// ErrUpdateOutOfOrder is returned when the sequence number is not equal
 	// to the server's LastApplied+1.
-	ErrUpdateOutOfOrder = errors.New("update sequence number is not " +
+	ErrUpdateOutOfOrder = er.New("update sequence number is not " +
 		"sequential")
 
 	// ErrLastAppliedReversion is returned when the client echos a
 	// last-applied value that is less than it claimed in a prior update.
-	ErrLastAppliedReversion = errors.New("update last applied must be " +
+	ErrLastAppliedReversion = er.New("update last applied must be " +
 		"non-decreasing")
 
 	// ErrSeqNumAlreadyApplied is returned when the client sends a sequence
 	// number for which they already claim to have an ACK.
-	ErrSeqNumAlreadyApplied = errors.New("update sequence number has " +
+	ErrSeqNumAlreadyApplied = er.New("update sequence number has " +
 		"already been applied")
 
 	// ErrSessionConsumed is returned if the client tries to send a sequence
 	// number larger than the session's max number of updates.
-	ErrSessionConsumed = errors.New("all session updates have been " +
+	ErrSessionConsumed = er.New("all session updates have been " +
 		"consumed")
 )
 
@@ -62,7 +62,7 @@ type SessionInfo struct {
 }
 
 // Encode serializes the session info to the given io.Writer.
-func (s *SessionInfo) Encode(w io.Writer) error {
+func (s *SessionInfo) Encode(w io.Writer) er.R {
 	return WriteElements(w,
 		s.ID,
 		s.Policy,
@@ -73,7 +73,7 @@ func (s *SessionInfo) Encode(w io.Writer) error {
 }
 
 // Decode deserializes the session infor from the given io.Reader.
-func (s *SessionInfo) Decode(r io.Reader) error {
+func (s *SessionInfo) Decode(r io.Reader) er.R {
 	return ReadElements(r,
 		&s.ID,
 		&s.Policy,
@@ -90,24 +90,24 @@ func (s *SessionInfo) Decode(r io.Reader) error {
 // are updated with the latest values presented by the client. Any errors
 // returned from this method are converted into an appropriate
 // wtwire.StateUpdateCode.
-func (s *SessionInfo) AcceptUpdateSequence(seqNum, lastApplied uint16) error {
+func (s *SessionInfo) AcceptUpdateSequence(seqNum, lastApplied uint16) er.R {
 	switch {
 
 	// Client already claims to have an ACK for this seqnum.
 	case seqNum <= lastApplied:
-		return ErrSeqNumAlreadyApplied
+		return ErrSeqNumAlreadyApplied.Default()
 
 	// Client echos a last applied that is lower than previously sent.
 	case lastApplied < s.ClientLastApplied:
-		return ErrLastAppliedReversion
+		return ErrLastAppliedReversion.Default()
 
 	// Client update exceeds capacity of session.
 	case seqNum > s.Policy.MaxUpdates:
-		return ErrSessionConsumed
+		return ErrSessionConsumed.Default()
 
 	// Client update does not match our expected next seqnum.
 	case seqNum != s.LastApplied && seqNum != s.LastApplied+1:
-		return ErrUpdateOutOfOrder
+		return ErrUpdateOutOfOrder.Default()
 	}
 
 	s.LastApplied = seqNum

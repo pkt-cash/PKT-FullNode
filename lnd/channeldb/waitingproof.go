@@ -8,8 +8,8 @@ import (
 
 	"bytes"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -20,12 +20,12 @@ var (
 
 	// ErrWaitingProofNotFound is returned if waiting proofs haven't been
 	// found by db.
-	ErrWaitingProofNotFound = errors.New("waiting proofs haven't been " +
+	ErrWaitingProofNotFound = er.New("waiting proofs haven't been " +
 		"found")
 
 	// ErrWaitingProofAlreadyExist is returned if waiting proofs haven't been
 	// found by db.
-	ErrWaitingProofAlreadyExist = errors.New("waiting proof with such " +
+	ErrWaitingProofAlreadyExist = er.New("waiting proof with such " +
 		"key already exist")
 )
 
@@ -41,17 +41,17 @@ type WaitingProofStore struct {
 }
 
 // NewWaitingProofStore creates new instance of proofs storage.
-func NewWaitingProofStore(db *DB) (*WaitingProofStore, error) {
+func NewWaitingProofStore(db *DB) (*WaitingProofStore, er.R) {
 	s := &WaitingProofStore{
 		db: db,
 	}
 
-	if err := s.ForAll(func(proof *WaitingProof) error {
+	if err := s.ForAll(func(proof *WaitingProof) er.R {
 		s.cache[proof.Key()] = struct{}{}
 		return nil
 	}, func() {
 		s.cache = make(map[WaitingProofKey]struct{})
-	}); err != nil && err != ErrWaitingProofNotFound {
+	}); err != nil && !ErrWaitingProofNotFound.Is(err) {
 		return nil, err
 	}
 
@@ -59,11 +59,11 @@ func NewWaitingProofStore(db *DB) (*WaitingProofStore, error) {
 }
 
 // Add adds new waiting proof in the storage.
-func (s *WaitingProofStore) Add(proof *WaitingProof) error {
+func (s *WaitingProofStore) Add(proof *WaitingProof) er.R {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	err := kvdb.Update(s.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
 		var err error
 		var b bytes.Buffer
 
@@ -94,19 +94,19 @@ func (s *WaitingProofStore) Add(proof *WaitingProof) error {
 }
 
 // Remove removes the proof from storage by its key.
-func (s *WaitingProofStore) Remove(key WaitingProofKey) error {
+func (s *WaitingProofStore) Remove(key WaitingProofKey) er.R {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.cache[key]; !ok {
-		return ErrWaitingProofNotFound
+		return ErrWaitingProofNotFound.Default()
 	}
 
-	err := kvdb.Update(s.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
 		// Get or create the top bucket.
 		bucket := tx.ReadWriteBucket(waitingProofsBucketKey)
 		if bucket == nil {
-			return ErrWaitingProofNotFound
+			return ErrWaitingProofNotFound.Default()
 		}
 
 		return bucket.Delete(key[:])
@@ -125,12 +125,12 @@ func (s *WaitingProofStore) Remove(key WaitingProofKey) error {
 // ForAll iterates thought all waiting proofs and passing the waiting proof
 // in the given callback.
 func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
-	reset func()) error {
+	reset func()) er.R {
 
-	return kvdb.View(s.db, func(tx kvdb.RTx) error {
+	return kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		bucket := tx.ReadBucket(waitingProofsBucketKey)
 		if bucket == nil {
-			return ErrWaitingProofNotFound
+			return ErrWaitingProofNotFound.Default()
 		}
 
 		// Iterate over objects buckets.
@@ -152,26 +152,26 @@ func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
 }
 
 // Get returns the object which corresponds to the given index.
-func (s *WaitingProofStore) Get(key WaitingProofKey) (*WaitingProof, error) {
+func (s *WaitingProofStore) Get(key WaitingProofKey) (*WaitingProof, er.R) {
 	var proof *WaitingProof
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if _, ok := s.cache[key]; !ok {
-		return nil, ErrWaitingProofNotFound
+		return nil, ErrWaitingProofNotFound.Default()
 	}
 
-	err := kvdb.View(s.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		bucket := tx.ReadBucket(waitingProofsBucketKey)
 		if bucket == nil {
-			return ErrWaitingProofNotFound
+			return ErrWaitingProofNotFound.Default()
 		}
 
 		// Iterate over objects buckets.
 		v := bucket.Get(key[:])
 		if v == nil {
-			return ErrWaitingProofNotFound
+			return ErrWaitingProofNotFound.Default()
 		}
 
 		r := bytes.NewReader(v)
@@ -228,8 +228,8 @@ func (p *WaitingProof) Key() WaitingProofKey {
 }
 
 // Encode writes the internal representation of waiting proof in byte stream.
-func (p *WaitingProof) Encode(w io.Writer) error {
-	if err := binary.Write(w, byteOrder, p.isRemote); err != nil {
+func (p *WaitingProof) Encode(w io.Writer) er.R {
+	if err := util.WriteBin(w, byteOrder, p.isRemote); err != nil {
 		return err
 	}
 
@@ -242,8 +242,8 @@ func (p *WaitingProof) Encode(w io.Writer) error {
 
 // Decode reads the data from the byte stream and initializes the
 // waiting proof object with it.
-func (p *WaitingProof) Decode(r io.Reader) error {
-	if err := binary.Read(r, byteOrder, &p.isRemote); err != nil {
+func (p *WaitingProof) Decode(r io.Reader) er.R {
+	if err := util.ReadBin(r, byteOrder, &p.isRemote); err != nil {
 		return err
 	}
 

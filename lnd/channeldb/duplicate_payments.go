@@ -3,12 +3,12 @@ package channeldb
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -79,7 +79,7 @@ func fetchDuplicatePaymentStatus(bucket kvdb.RBucket) PaymentStatus {
 }
 
 func deserializeDuplicateHTLCAttemptInfo(r io.Reader) (
-	*duplicateHTLCAttemptInfo, error) {
+	*duplicateHTLCAttemptInfo, er.R) {
 
 	a := &duplicateHTLCAttemptInfo{}
 	err := ReadElements(r, &a.attemptID, &a.sessionKey)
@@ -94,34 +94,34 @@ func deserializeDuplicateHTLCAttemptInfo(r io.Reader) (
 }
 
 func deserializeDuplicatePaymentCreationInfo(r io.Reader) (
-	*PaymentCreationInfo, error) {
+	*PaymentCreationInfo, er.R) {
 
 	var scratch [8]byte
 
 	c := &PaymentCreationInfo{}
 
-	if _, err := io.ReadFull(r, c.PaymentHash[:]); err != nil {
+	if _, err := util.ReadFull(r, c.PaymentHash[:]); err != nil {
 		return nil, err
 	}
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return nil, err
 	}
 	c.Value = lnwire.MilliSatoshi(byteOrder.Uint64(scratch[:]))
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return nil, err
 	}
 	c.CreationTime = time.Unix(int64(byteOrder.Uint64(scratch[:])), 0)
 
-	if _, err := io.ReadFull(r, scratch[:4]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:4]); err != nil {
 		return nil, err
 	}
 
 	reqLen := byteOrder.Uint32(scratch[:4])
 	payReq := make([]byte, reqLen)
 	if reqLen > 0 {
-		if _, err := io.ReadFull(r, payReq); err != nil {
+		if _, err := util.ReadFull(r, payReq); err != nil {
 			return nil, err
 		}
 	}
@@ -130,10 +130,10 @@ func deserializeDuplicatePaymentCreationInfo(r io.Reader) (
 	return c, nil
 }
 
-func fetchDuplicatePayment(bucket kvdb.RBucket) (*MPPayment, error) {
+func fetchDuplicatePayment(bucket kvdb.RBucket) (*MPPayment, er.R) {
 	seqBytes := bucket.Get(duplicatePaymentSequenceKey)
 	if seqBytes == nil {
-		return nil, fmt.Errorf("sequence number not found")
+		return nil, er.Errorf("sequence number not found")
 	}
 
 	sequenceNum := binary.BigEndian.Uint64(seqBytes)
@@ -144,7 +144,7 @@ func fetchDuplicatePayment(bucket kvdb.RBucket) (*MPPayment, error) {
 	// Get the PaymentCreationInfo.
 	b := bucket.Get(duplicatePaymentCreationInfoKey)
 	if b == nil {
-		return nil, fmt.Errorf("creation info not found")
+		return nil, er.Errorf("creation info not found")
 	}
 
 	r := bytes.NewReader(b)
@@ -211,7 +211,7 @@ func fetchDuplicatePayment(bucket kvdb.RBucket) (*MPPayment, error) {
 }
 
 func fetchDuplicatePayments(paymentHashBucket kvdb.RBucket) ([]*MPPayment,
-	error) {
+	er.R) {
 
 	var payments []*MPPayment
 
@@ -233,7 +233,7 @@ func fetchDuplicatePayments(paymentHashBucket kvdb.RBucket) ([]*MPPayment,
 
 		p, err := fetchDuplicatePayment(subBucket)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		payments = append(payments, p)

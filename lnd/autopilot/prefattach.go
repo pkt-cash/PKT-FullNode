@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // minMedianChanSizeFraction determines the minimum size a channel must have to
@@ -80,7 +81,7 @@ func (p *PrefAttachment) Name() string {
 // NOTE: This is a part of the AttachmentHeuristic interface.
 func (p *PrefAttachment) NodeScores(g ChannelGraph, chans []LocalChannel,
 	chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	// We first run though the graph once in order to find the median
 	// channel size.
@@ -88,8 +89,8 @@ func (p *PrefAttachment) NodeScores(g ChannelGraph, chans []LocalChannel,
 		allChans  []btcutil.Amount
 		seenChans = make(map[uint64]struct{})
 	)
-	if err := g.ForEachNode(func(n Node) error {
-		err := n.ForEachChannel(func(e ChannelEdge) error {
+	if err := g.ForEachNode(func(n Node) er.R {
+		err := n.ForEachChannel(func(e ChannelEdge) er.R {
 			if _, ok := seenChans[e.ChanID.ToUint64()]; ok {
 				return nil
 			}
@@ -114,9 +115,9 @@ func (p *PrefAttachment) NodeScores(g ChannelGraph, chans []LocalChannel,
 	// the graph.
 	var maxChans int
 	nodeChanNum := make(map[NodeID]int)
-	if err := g.ForEachNode(func(n Node) error {
+	if err := g.ForEachNode(func(n Node) er.R {
 		var nodeChans int
-		err := n.ForEachChannel(func(e ChannelEdge) error {
+		err := n.ForEachChannel(func(e ChannelEdge) er.R {
 			// Since connecting to nodes with a lot of small
 			// channels actually worsens our connectivity in the
 			// graph (we will potentially waste time trying to use

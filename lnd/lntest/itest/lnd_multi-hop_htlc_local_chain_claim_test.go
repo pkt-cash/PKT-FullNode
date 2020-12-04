@@ -2,9 +2,8 @@ package itest
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -13,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +50,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
 	carolInvoice, err := carol.AddHoldInvoice(ctxt, invoiceReq)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Now that we've created the invoice, we'll send a single payment from
 	// Alice to Carol. We won't wait for the response however, as Carol
@@ -65,15 +65,15 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// At this point, all 3 nodes should now have an active channel with
 	// the created HTLC pending on all of them.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() error {
+	err = wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash[:])
 	}, defaultTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Wait for carol to mark invoice as accepted. There is a small gap to
 	// bridge between adding the htlc to the channel and executing the exit
@@ -100,11 +100,11 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	_, err = waitForNTxsInMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Suspend Bob to force Carol to go to chain.
 	restartBob, err := net.SuspendNode(bob)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Settle invoice. This will just mark the invoice as settled, as there
 	// is no link anymore to remove the htlc from the commitment tx. For
@@ -116,7 +116,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	_, err = carol.SettleInvoice(ctx, &invoicesrpc.SettleInvoiceMsg{
 		Preimage: preimage[:],
 	})
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We'll now mine enough blocks so Carol decides that she needs to go
 	// on-chain to claim the HTLC as Bob has been inactive.
@@ -124,16 +124,16 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 		lncfg.DefaultIncomingBroadcastDelta))
 
 	_, err = net.Miner.Node.Generate(numBlocks)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Carol's commitment transaction should now be in the mempool. If there
 	// is an anchor, Carol will sweep that too.
 	_, err = waitForNTxsInMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	bobFundingTxid, err := lnd.GetChanPointFundingTxid(bobChanPoint)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	carolFundingPoint := wire.OutPoint{
 		Hash:  *bobFundingTxid,
 		Index: bobChanPoint.OutputIndex,
@@ -154,7 +154,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 
 	// Restart bob again.
 	err = restartBob()
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// After the force close transacion is mined, Carol should broadcast her
 	// second level HTLC transacion. Bob will broadcast a sweep tx to sweep
@@ -169,7 +169,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	txes, err := getNTxsFromMempool(
 		net.Miner.Node, expectedTxes, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Both Carol's second level transaction and Bob's sweep should be
 	// spending from the commitment transaction.
@@ -178,7 +178,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// At this point we suspend Alice to make sure she'll handle the
 	// on-chain settle after a restart.
 	restartAlice, err := net.SuspendNode(alice)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Mine a block to confirm the two transactions (+ the coinbase).
 	block = mineBlocks(t, net, 1, expectedTxes)[0]
@@ -193,11 +193,11 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	bobSecondLvlTx, err := waitForTxInMempool(
 		net.Miner.Node, minerMempoolTimeout,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// It should spend from the commitment in the channel with Alice.
 	tx, err := net.Miner.Node.GetRawTransaction(bobSecondLvlTx)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	require.Equal(
 		t.t, *bobForceClose, tx.MsgTx().TxIn[0].PreviousOutPoint.Hash,
@@ -207,18 +207,18 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// transaction, and should have sent it to the nursery for incubation.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(
-		ctxt, bob, 1, func(c *lnrpcForceCloseChannel) error {
+		ctxt, bob, 1, func(c *lnrpcForceCloseChannel) er.R {
 			if c.Channel.LocalBalance != 0 {
 				return nil
 			}
 
 			if len(c.PendingHtlcs) != 1 {
-				return fmt.Errorf("bob should have pending " +
+				return er.Errorf("bob should have pending " +
 					"htlc but doesn't")
 			}
 
 			if c.PendingHtlcs[0].Stage != 1 {
-				return fmt.Errorf("bob's htlc should have "+
+				return er.Errorf("bob's htlc should have "+
 					"advanced to the first stage but was "+
 					"stage: %v", c.PendingHtlcs[0].Stage)
 			}
@@ -226,7 +226,7 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 			return nil
 		},
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// We'll now mine a block which should confirm Bob's second layer
 	// transaction.
@@ -242,16 +242,16 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// Now that the preimage from Bob has hit the chain, restart Alice to
 	// ensure she'll pick it up.
 	err = restartAlice()
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// If we then mine 3 additional blocks, Carol's second level tx should
 	// mature, and she can pull the funds from it with a sweep tx.
 	_, err = net.Miner.Node.Generate(carolSecondLevelCSV)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	bobSecondLevelCSV -= carolSecondLevelCSV
 
 	carolSweep, err := waitForTxInMempool(net.Miner.Node, minerMempoolTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Mining one additional block, Bob's second level tx is mature, and he
 	// can sweep the output.
@@ -259,11 +259,11 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	assertTxInBlock(t, block, carolSweep)
 
 	bobSweep, err := waitForTxInMempool(net.Miner.Node, minerMempoolTimeout)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 
 	// Make sure it spends from the second level tx.
 	tx, err = net.Miner.Node.GetRawTransaction(bobSweep)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	require.Equal(
 		t.t, *bobSecondLvlTx, tx.MsgTx().TxIn[0].PreviousOutPoint.Hash,
 	)
@@ -276,12 +276,12 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
 	err = waitForNumChannelPendingForceClose(ctxt, bob, 0, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	assertNodeNumChannels(t, bob, 0)
 
 	// Also Carol should have no channels left (open nor pending).
 	err = waitForNumChannelPendingForceClose(ctxt, carol, 0, nil)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 	assertNodeNumChannels(t, carol, 0)
 
 	// Finally, check that the Alice's payment is correctly marked
@@ -290,5 +290,5 @@ func testMultiHopHtlcLocalChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	err = checkPaymentStatus(
 		ctxt, alice, preimage, lnrpc.Payment_SUCCEEDED,
 	)
-	require.NoError(t.t, err)
+	util.RequireNoErr(t.t, err)
 }

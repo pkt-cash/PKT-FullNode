@@ -2,14 +2,16 @@ package lnwire
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 var (
 	// ErrFeaturePairExists signals an error in feature vector construction
 	// where the opposing bit in a feature pair has already been set.
-	ErrFeaturePairExists = errors.New("feature pair exists")
+	ErrFeaturePairExists = er.GenericErrorType.CodeWithDetail("ErrFeaturePairExists", "feature pair exists")
 )
 
 // FeatureBit represents a feature that can be enabled in either a local or
@@ -182,7 +184,7 @@ func NewRawFeatureVector(bits ...FeatureBit) *RawFeatureVector {
 }
 
 // Merges sets all feature bits in other on the receiver's feature vector.
-func (fv *RawFeatureVector) Merge(other *RawFeatureVector) error {
+func (fv *RawFeatureVector) Merge(other *RawFeatureVector) er.R {
 	for bit := range other.features {
 		err := fv.SafeSet(bit)
 		if err != nil {
@@ -216,9 +218,9 @@ func (fv *RawFeatureVector) Set(feature FeatureBit) {
 // are creating properly structured feature vectors, and in some cases, that
 // peers are sending properly encoded ones, i.e. it can't be both optional and
 // required.
-func (fv *RawFeatureVector) SafeSet(feature FeatureBit) error {
+func (fv *RawFeatureVector) SafeSet(feature FeatureBit) er.R {
 	if _, ok := fv.features[feature^1]; ok {
-		return ErrFeaturePairExists
+		return ErrFeaturePairExists.Default()
 	}
 
 	fv.Set(feature)
@@ -266,12 +268,12 @@ func (fv *RawFeatureVector) serializeSize(width int) int {
 // encoded as a bit, and the bit vector is serialized using the least number of
 // bytes. Since the bit vector length is variable, the first two bytes of the
 // serialization represent the length.
-func (fv *RawFeatureVector) Encode(w io.Writer) error {
+func (fv *RawFeatureVector) Encode(w io.Writer) er.R {
 	// Write length of feature vector.
 	var l [2]byte
 	length := fv.SerializeSize()
 	binary.BigEndian.PutUint16(l[:], uint16(length))
-	if _, err := w.Write(l[:]); err != nil {
+	if _, err := util.Write(w, l[:]); err != nil {
 		return err
 	}
 
@@ -281,7 +283,7 @@ func (fv *RawFeatureVector) Encode(w io.Writer) error {
 // EncodeBase256 writes the feature vector in base256 representation. Every
 // feature is encoded as a bit, and the bit vector is serialized using the least
 // number of bytes.
-func (fv *RawFeatureVector) EncodeBase256(w io.Writer) error {
+func (fv *RawFeatureVector) EncodeBase256(w io.Writer) er.R {
 	length := fv.SerializeSize()
 	return fv.encode(w, length, 8)
 }
@@ -289,13 +291,13 @@ func (fv *RawFeatureVector) EncodeBase256(w io.Writer) error {
 // EncodeBase32 writes the feature vector in base32 representation. Every feature
 // is encoded as a bit, and the bit vector is serialized using the least number of
 // bytes.
-func (fv *RawFeatureVector) EncodeBase32(w io.Writer) error {
+func (fv *RawFeatureVector) EncodeBase32(w io.Writer) er.R {
 	length := fv.SerializeSize32()
 	return fv.encode(w, length, 5)
 }
 
 // encode writes the feature vector
-func (fv *RawFeatureVector) encode(w io.Writer, length, width int) error {
+func (fv *RawFeatureVector) encode(w io.Writer, length, width int) er.R {
 	// Generate the data and write it.
 	data := make([]byte, length)
 	for feature := range fv.features {
@@ -304,7 +306,7 @@ func (fv *RawFeatureVector) encode(w io.Writer, length, width int) error {
 		data[length-byteIndex-1] |= 1 << uint(bitIndex)
 	}
 
-	_, err := w.Write(data)
+	_, err := util.Write(w, data)
 	return err
 }
 
@@ -312,10 +314,10 @@ func (fv *RawFeatureVector) encode(w io.Writer, length, width int) error {
 // is encoded as a bit, and the bit vector is serialized using the least number
 // of bytes. Since the bit vector length is variable, the first two bytes of the
 // serialization represent the length.
-func (fv *RawFeatureVector) Decode(r io.Reader) error {
+func (fv *RawFeatureVector) Decode(r io.Reader) er.R {
 	// Read the length of the feature vector.
 	var l [2]byte
-	if _, err := io.ReadFull(r, l[:]); err != nil {
+	if _, err := util.ReadFull(r, l[:]); err != nil {
 		return err
 	}
 	length := binary.BigEndian.Uint16(l[:])
@@ -326,23 +328,23 @@ func (fv *RawFeatureVector) Decode(r io.Reader) error {
 // DecodeBase256 reads the feature vector from its base256 representation. Every
 // feature encoded as a bit, and the bit vector is serialized using the least
 // number of bytes.
-func (fv *RawFeatureVector) DecodeBase256(r io.Reader, length int) error {
+func (fv *RawFeatureVector) DecodeBase256(r io.Reader, length int) er.R {
 	return fv.decode(r, length, 8)
 }
 
 // DecodeBase32 reads the feature vector from its base32 representation. Every
 // feature encoded as a bit, and the bit vector is serialized using the least
 // number of bytes.
-func (fv *RawFeatureVector) DecodeBase32(r io.Reader, length int) error {
+func (fv *RawFeatureVector) DecodeBase32(r io.Reader, length int) er.R {
 	return fv.decode(r, length, 5)
 }
 
 // decode reads a feature vector from the next length bytes of the io.Reader,
 // assuming each byte has width feature bits encoded per byte.
-func (fv *RawFeatureVector) decode(r io.Reader, length, width int) error {
+func (fv *RawFeatureVector) decode(r io.Reader, length, width int) er.R {
 	// Read the feature vector data.
 	data := make([]byte, length)
-	if _, err := io.ReadFull(r, data); err != nil {
+	if _, err := util.ReadFull(r, data); err != nil {
 		return err
 	}
 

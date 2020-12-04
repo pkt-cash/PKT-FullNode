@@ -5,8 +5,6 @@ package zpay32
 
 import (
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,6 +12,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -55,7 +55,7 @@ var (
 	testCupOfNonsense  = "ナンセンス 1杯"
 	testPleaseConsider = "Please consider supporting this project"
 
-	testPrivKeyBytes, _     = hex.DecodeString("e126f68f7eafcc8b74f54d269fe206be715000f94dac067d1c04a8ca3b2db734")
+	testPrivKeyBytes, _     = util.DecodeHex("e126f68f7eafcc8b74f54d269fe206be715000f94dac067d1c04a8ca3b2db734")
 	testPrivKey, testPubKey = btcec.PrivKeyFromBytes(btcec.S256(), testPrivKeyBytes)
 
 	testDescriptionHashSlice = chainhash.HashB([]byte("One piece of chocolate cake, one icecream cone, one pickle, one slice of swiss cheese, one slice of salami, one lollypop, one piece of cherry pie, one sausage, one cupcake, and one slice of watermelon"))
@@ -69,9 +69,9 @@ var (
 	testAddrMainnetP2WPKH, _ = btcutil.DecodeAddress("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", &chaincfg.MainNetParams)
 	testAddrMainnetP2WSH, _  = btcutil.DecodeAddress("bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", &chaincfg.MainNetParams)
 
-	testHopHintPubkeyBytes1, _ = hex.DecodeString("029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255")
+	testHopHintPubkeyBytes1, _ = util.DecodeHex("029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255")
 	testHopHintPubkey1, _      = btcec.ParsePubKey(testHopHintPubkeyBytes1, btcec.S256())
-	testHopHintPubkeyBytes2, _ = hex.DecodeString("039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255")
+	testHopHintPubkeyBytes2, _ = util.DecodeHex("039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255")
 	testHopHintPubkey2, _      = btcec.ParsePubKey(testHopHintPubkeyBytes2, btcec.S256())
 
 	testSingleHop = []HopHint{
@@ -101,11 +101,11 @@ var (
 	}
 
 	testMessageSigner = MessageSigner{
-		SignCompact: func(msg []byte) ([]byte, error) {
+		SignCompact: func(msg []byte) ([]byte, er.R) {
 			sig, err := btcec.SignCompact(btcec.S256(),
 				testPrivKey, chainhash.HashB(msg), true)
 			if err != nil {
-				return nil, fmt.Errorf("can't sign the "+
+				return nil, er.Errorf("can't sign the "+
 					"message: %v", err)
 			}
 			return sig, nil
@@ -747,13 +747,13 @@ func TestNewInvoice(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		newInvoice     func() (*Invoice, error)
+		newInvoice     func() (*Invoice, er.R)
 		encodedInvoice string
 		valid          bool
 	}{
 		{
 			// Both Description and DescriptionHash set.
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&chaincfg.MainNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					DescriptionHash(testDescriptionHash),
@@ -763,7 +763,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// Invoice with no amount.
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(
 					&chaincfg.MainNetParams,
 					testPaymentHash,
@@ -776,7 +776,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// 'n' field set.
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&chaincfg.MainNetParams,
 					testPaymentHash, time.Unix(1503429093, 0),
 					Amount(testMillisat24BTC),
@@ -788,7 +788,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// On mainnet, with fallback address 1RustyRX2oai4EYYDpQGWvEL62BBGqN9T with extra routing info to go via nodes 029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255 then 039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&chaincfg.MainNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					Amount(testMillisat20mBTC),
@@ -802,7 +802,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// On simnet
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&chaincfg.SimNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					Amount(testMillisat24BTC),
@@ -814,7 +814,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// On regtest
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&chaincfg.RegressionNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					Amount(testMillisat24BTC),
@@ -826,7 +826,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// Create a litecoin testnet invoice
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&ltcTestNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					Amount(testMillisat24BTC),
@@ -838,7 +838,7 @@ func TestNewInvoice(t *testing.T) {
 		},
 		{
 			// Create a litecoin mainnet invoice
-			newInvoice: func() (*Invoice, error) {
+			newInvoice: func() (*Invoice, er.R) {
 				return NewInvoice(&ltcMainNetParams,
 					testPaymentHash, time.Unix(1496314658, 0),
 					Amount(testMillisat24BTC),
@@ -908,14 +908,14 @@ func TestMaxInvoiceLength(t *testing.T) {
 // destination is extracted from the signature.
 func TestInvoiceChecksumMalleability(t *testing.T) {
 	privKeyHex := "a50f3bdf9b6c4b1fdd7c51a8bbf4b5855cf381f413545ed155c0282f4412a1b1"
-	privKeyBytes, _ := hex.DecodeString(privKeyHex)
+	privKeyBytes, _ := util.DecodeHex(privKeyHex)
 	chain := &chaincfg.SimNetParams
 	var payHash [32]byte
 	ts := time.Unix(0, 0)
 
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBytes)
 	msgSigner := MessageSigner{
-		SignCompact: func(msg []byte) ([]byte, error) {
+		SignCompact: func(msg []byte) ([]byte, er.R) {
 			hash := chainhash.HashB(msg)
 			return btcec.SignCompact(btcec.S256(), privKey, hash, true)
 		},
@@ -953,54 +953,54 @@ func TestInvoiceChecksumMalleability(t *testing.T) {
 
 }
 
-func compareInvoices(expected, actual *Invoice) error {
+func compareInvoices(expected, actual *Invoice) er.R {
 	if !reflect.DeepEqual(expected.Net, actual.Net) {
-		return fmt.Errorf("expected net %v, got %v",
+		return er.Errorf("expected net %v, got %v",
 			expected.Net, actual.Net)
 	}
 
 	if !reflect.DeepEqual(expected.MilliSat, actual.MilliSat) {
-		return fmt.Errorf("expected milli sat %d, got %d",
+		return er.Errorf("expected milli sat %d, got %d",
 			*expected.MilliSat, *actual.MilliSat)
 	}
 
 	if expected.Timestamp != actual.Timestamp {
-		return fmt.Errorf("expected timestamp %v, got %v",
+		return er.Errorf("expected timestamp %v, got %v",
 			expected.Timestamp, actual.Timestamp)
 	}
 
 	if !compareHashes(expected.PaymentHash, actual.PaymentHash) {
-		return fmt.Errorf("expected payment hash %x, got %x",
+		return er.Errorf("expected payment hash %x, got %x",
 			*expected.PaymentHash, *actual.PaymentHash)
 	}
 
 	if !reflect.DeepEqual(expected.Description, actual.Description) {
-		return fmt.Errorf("expected description \"%s\", got \"%s\"",
+		return er.Errorf("expected description \"%s\", got \"%s\"",
 			*expected.Description, *actual.Description)
 	}
 
 	if !comparePubkeys(expected.Destination, actual.Destination) {
-		return fmt.Errorf("expected destination pubkey %x, got %x",
+		return er.Errorf("expected destination pubkey %x, got %x",
 			expected.Destination, actual.Destination)
 	}
 
 	if !compareHashes(expected.DescriptionHash, actual.DescriptionHash) {
-		return fmt.Errorf("expected description hash %x, got %x",
+		return er.Errorf("expected description hash %x, got %x",
 			*expected.DescriptionHash, *actual.DescriptionHash)
 	}
 
 	if expected.Expiry() != actual.Expiry() {
-		return fmt.Errorf("expected expiry %d, got %d",
+		return er.Errorf("expected expiry %d, got %d",
 			expected.Expiry(), actual.Expiry())
 	}
 
 	if !reflect.DeepEqual(expected.FallbackAddr, actual.FallbackAddr) {
-		return fmt.Errorf("expected FallbackAddr %v, got %v",
+		return er.Errorf("expected FallbackAddr %v, got %v",
 			expected.FallbackAddr, actual.FallbackAddr)
 	}
 
 	if len(expected.RouteHints) != len(actual.RouteHints) {
-		return fmt.Errorf("expected %d RouteHints, got %d",
+		return er.Errorf("expected %d RouteHints, got %d",
 			len(expected.RouteHints), len(actual.RouteHints))
 	}
 
@@ -1012,7 +1012,7 @@ func compareInvoices(expected, actual *Invoice) error {
 	}
 
 	if !reflect.DeepEqual(expected.Features, actual.Features) {
-		return fmt.Errorf("expected features %v, got %v",
+		return er.Errorf("expected features %v, got %v",
 			expected.Features, actual.Features)
 	}
 
@@ -1045,35 +1045,35 @@ func compareHashes(a, b *[32]byte) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
-func compareRouteHints(a, b []HopHint) error {
+func compareRouteHints(a, b []HopHint) er.R {
 	if len(a) != len(b) {
-		return fmt.Errorf("expected len routingInfo %d, got %d",
+		return er.Errorf("expected len routingInfo %d, got %d",
 			len(a), len(b))
 	}
 
 	for i := 0; i < len(a); i++ {
 		if !comparePubkeys(a[i].NodeID, b[i].NodeID) {
-			return fmt.Errorf("expected routeHint nodeID %x, "+
+			return er.Errorf("expected routeHint nodeID %x, "+
 				"got %x", a[i].NodeID, b[i].NodeID)
 		}
 
 		if a[i].ChannelID != b[i].ChannelID {
-			return fmt.Errorf("expected routeHint channelID "+
+			return er.Errorf("expected routeHint channelID "+
 				"%d, got %d", a[i].ChannelID, b[i].ChannelID)
 		}
 
 		if a[i].FeeBaseMSat != b[i].FeeBaseMSat {
-			return fmt.Errorf("expected routeHint feeBaseMsat %d, got %d",
+			return er.Errorf("expected routeHint feeBaseMsat %d, got %d",
 				a[i].FeeBaseMSat, b[i].FeeBaseMSat)
 		}
 
 		if a[i].FeeProportionalMillionths != b[i].FeeProportionalMillionths {
-			return fmt.Errorf("expected routeHint feeProportionalMillionths %d, got %d",
+			return er.Errorf("expected routeHint feeProportionalMillionths %d, got %d",
 				a[i].FeeProportionalMillionths, b[i].FeeProportionalMillionths)
 		}
 
 		if a[i].CLTVExpiryDelta != b[i].CLTVExpiryDelta {
-			return fmt.Errorf("expected routeHint cltvExpiryDelta "+
+			return er.Errorf("expected routeHint cltvExpiryDelta "+
 				"%d, got %d", a[i].CLTVExpiryDelta, b[i].CLTVExpiryDelta)
 		}
 	}

@@ -52,7 +52,7 @@ type MockSigner struct {
 // SignOutputRaw generates a signature for the passed transaction according to
 // the data within the passed SignDescriptor.
 func (m *MockSigner) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *SignDescriptor) (Signature, error) {
+	signDesc *SignDescriptor) (Signature, er.R) {
 
 	pubkey := signDesc.KeyDesc.PubKey
 	switch {
@@ -65,7 +65,7 @@ func (m *MockSigner) SignOutputRaw(tx *wire.MsgTx,
 	hash160 := btcutil.Hash160(pubkey.SerializeCompressed())
 	privKey := m.findKey(hash160, signDesc.SingleTweak, signDesc.DoubleTweak)
 	if privKey == nil {
-		return nil, fmt.Errorf("mock signer does not have key")
+		return nil, er.Errorf("mock signer does not have key")
 	}
 
 	sig, err := txscript.RawTxInWitnessSignature(tx, signDesc.SigHashes,
@@ -82,7 +82,7 @@ func (m *MockSigner) SignOutputRaw(tx *wire.MsgTx,
 // with the signature as defined within the passed SignDescriptor. This method
 // should be capable of generating the proper input script for both regular
 // p2wkh output and p2wkh outputs nested within a regular p2sh output.
-func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor) (*Script, error) {
+func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor) (*Script, er.R) {
 	scriptType, addresses, _, err := txscript.ExtractPkScriptAddrs(
 		signDesc.Output.PkScript, m.NetParams)
 	if err != nil {
@@ -94,7 +94,7 @@ func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor
 		privKey := m.findKey(addresses[0].ScriptAddress(), signDesc.SingleTweak,
 			signDesc.DoubleTweak)
 		if privKey == nil {
-			return nil, fmt.Errorf("mock signer does not have key for "+
+			return nil, er.Errorf("mock signer does not have key for "+
 				"address %v", addresses[0])
 		}
 
@@ -112,7 +112,7 @@ func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor
 		privKey := m.findKey(addresses[0].ScriptAddress(), signDesc.SingleTweak,
 			signDesc.DoubleTweak)
 		if privKey == nil {
-			return nil, fmt.Errorf("mock signer does not have key for "+
+			return nil, er.Errorf("mock signer does not have key for "+
 				"address %v", addresses[0])
 		}
 
@@ -126,7 +126,7 @@ func (m *MockSigner) ComputeInputScript(tx *wire.MsgTx, signDesc *SignDescriptor
 		return &Script{Witness: witnessScript}, nil
 
 	default:
-		return nil, fmt.Errorf("unexpected script type: %v", scriptType)
+		return nil, er.Errorf("unexpected script type: %v", scriptType)
 	}
 }
 
@@ -162,8 +162,8 @@ func (m *MockSigner) findKey(needleHash160 []byte, singleTweak []byte,
 }
 
 // pubkeyFromHex parses a Bitcoin public key from a hex encoded string.
-func pubkeyFromHex(keyHex string) (*btcec.PublicKey, error) {
-	bytes, err := hex.DecodeString(keyHex)
+func pubkeyFromHex(keyHex string) (*btcec.PublicKey, er.R) {
+	bytes, err := util.DecodeHex(keyHex)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +171,8 @@ func pubkeyFromHex(keyHex string) (*btcec.PublicKey, error) {
 }
 
 // privkeyFromHex parses a Bitcoin private key from a hex encoded string.
-func privkeyFromHex(keyHex string) (*btcec.PrivateKey, error) {
-	bytes, err := hex.DecodeString(keyHex)
+func privkeyFromHex(keyHex string) (*btcec.PrivateKey, er.R) {
+	bytes, err := util.DecodeHex(keyHex)
 	if err != nil {
 		return nil, err
 	}

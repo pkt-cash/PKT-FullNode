@@ -20,7 +20,7 @@ var versionCommand = cli.Command{
 	Action: actionDecorator(version),
 }
 
-func version(ctx *cli.Context) error {
+func version(ctx *cli.Context) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 
@@ -44,7 +44,7 @@ func version(ctx *cli.Context) error {
 	lndVersion, err := client.GetVersion(ctxb, &verrpc.VersionRequest{})
 	if err != nil {
 		printRespJSON(versions)
-		return fmt.Errorf("unable fetch version from lnd: %v", err)
+		return er.Errorf("unable fetch version from lnd: %v", err)
 	}
 	versions.Lnd = lndVersion
 

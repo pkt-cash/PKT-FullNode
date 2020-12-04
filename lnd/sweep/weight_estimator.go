@@ -27,7 +27,7 @@ func newWeightEstimator(feeRate chainfee.SatPerKWeight) *weightEstimator {
 }
 
 // add adds the weight of the given input to the weight estimate.
-func (w *weightEstimator) add(inp input.Input) error {
+func (w *weightEstimator) add(inp input.Input) er.R {
 	// If there is a parent tx, add the parent's fee and weight.
 	w.tryAddParent(inp)
 

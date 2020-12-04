@@ -206,7 +206,7 @@ type dlpTestCase struct {
 
 func executeStateTransitions(t *testing.T, htlcAmount lnwire.MilliSatoshi,
 	aliceChannel, bobChannel *lnwallet.LightningChannel,
-	numUpdates uint8) error {
+	numUpdates uint8) er.R {
 
 	for i := 0; i < int(numUpdates); i++ {
 		addFakeHTLC(

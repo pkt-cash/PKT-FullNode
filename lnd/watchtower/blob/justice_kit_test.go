@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
-	"io"
 	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
@@ -34,7 +34,7 @@ func makeSig(i int) lnwire.Sig {
 
 func makeAddr(size int) []byte {
 	addr := make([]byte, size)
-	if _, err := io.ReadFull(rand.Reader, addr); err != nil {
+	if _, err := util.ReadFull(rand.Reader, addr); err != nil {
 		panic("unable to create addr")
 	}
 
@@ -313,7 +313,7 @@ func testJusticeKitRemoteWitnessConstruction(
 	// ErrNoCommitToRemoteOutput since a valid pubkey could not be parsed
 	// from CommitToRemotePubKey.
 	_, errr = justiceKit.CommitToRemoteWitnessScript()
-	require.Error(t, blob.ErrNoCommitToRemoteOutput, errr)
+	util.RequireErr(t, blob.ErrNoCommitToRemoteOutput, errr)
 }
 
 // TestJusticeKitToLocalWitnessConstruction tests that a JusticeKit returns the

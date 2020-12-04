@@ -1,13 +1,13 @@
 package nat
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/jackpal/gateway"
 	natpmp "github.com/jackpal/go-nat-pmp"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Compile-time check to ensure PMP implements the Traversal interface.
@@ -24,7 +24,7 @@ type PMP struct {
 
 // DiscoverPMP attempts to scan the local network for a NAT-PMP enabled device
 // within the given timeout.
-func DiscoverPMP(timeout time.Duration) (*PMP, error) {
+func DiscoverPMP(timeout time.Duration) (*PMP, er.R) {
 	// Retrieve the gateway IP address of the local network.
 	gatewayIP, err := gateway.DiscoverGateway()
 	if err != nil {
@@ -46,7 +46,7 @@ func DiscoverPMP(timeout time.Duration) (*PMP, error) {
 }
 
 // ExternalIP returns the external IP address of the NAT-PMP enabled device.
-func (p *PMP) ExternalIP() (net.IP, error) {
+func (p *PMP) ExternalIP() (net.IP, er.R) {
 	res, err := p.client.GetExternalAddress()
 	if err != nil {
 		return nil, err
@@ -54,14 +54,14 @@ func (p *PMP) ExternalIP() (net.IP, error) {
 
 	ip := net.IP(res.ExternalIPAddress[:])
 	if isPrivateIP(ip) {
-		return nil, ErrMultipleNAT
+		return nil, ErrMultipleNAT.Default()
 	}
 
 	return ip, nil
 }
 
 // AddPortMapping enables port forwarding for the given port.
-func (p *PMP) AddPortMapping(port uint16) error {
+func (p *PMP) AddPortMapping(port uint16) er.R {
 	p.forwardedPortsMtx.Lock()
 	defer p.forwardedPortsMtx.Unlock()
 
@@ -76,12 +76,12 @@ func (p *PMP) AddPortMapping(port uint16) error {
 }
 
 // DeletePortMapping disables port forwarding for the given port.
-func (p *PMP) DeletePortMapping(port uint16) error {
+func (p *PMP) DeletePortMapping(port uint16) er.R {
 	p.forwardedPortsMtx.Lock()
 	defer p.forwardedPortsMtx.Unlock()
 
 	if _, exists := p.forwardedPorts[port]; !exists {
-		return fmt.Errorf("port %d is not being forwarded", port)
+		return er.Errorf("port %d is not being forwarded", port)
 	}
 
 	_, err := p.client.AddPortMapping("tcp", int(port), 0, 0)

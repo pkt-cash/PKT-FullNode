@@ -3,10 +3,9 @@ package migration16
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -48,7 +47,7 @@ type paymentIndex struct {
 // provides an index from sequence number to payment hash. This is required
 // for more efficient sequential lookup of payments, which are keyed by payment
 // hash before this migration.
-func MigrateSequenceIndex(tx kvdb.RwTx) error {
+func MigrateSequenceIndex(tx kvdb.RwTx) er.R {
 	log.Infof("Migrating payments to add sequence number index")
 
 	// Get a list of indices we need to write.
@@ -79,12 +78,12 @@ func MigrateSequenceIndex(tx kvdb.RwTx) error {
 
 // putIndex performs a sanity check that ensures we are not writing duplicate
 // indexes to disk then creates the index provided.
-func putIndex(bucket kvdb.RwBucket, sequenceNr, paymentHash []byte) error {
+func putIndex(bucket kvdb.RwBucket, sequenceNr, paymentHash []byte) er.R {
 	// Add a sanity check that we do not already have an entry with
 	// this sequence number.
 	existingEntry := bucket.Get(sequenceNr)
 	if existingEntry != nil {
-		return fmt.Errorf("sequence number: %x duplicated",
+		return er.Errorf("sequence number: %x duplicated",
 			sequenceNr)
 	}
 
@@ -99,10 +98,10 @@ func putIndex(bucket kvdb.RwBucket, sequenceNr, paymentHash []byte) error {
 // serializePaymentIndexEntry serializes a payment hash typed index. The value
 // produced contains a payment index type (which can be used in future to
 // signal different payment index types) and the payment hash.
-func serializePaymentIndexEntry(hash []byte) ([]byte, error) {
+func serializePaymentIndexEntry(hash []byte) ([]byte, er.R) {
 	var b bytes.Buffer
 
-	err := binary.Write(&b, byteOrder, paymentIndexTypeHash)
+	err := util.WriteBin(&b, byteOrder, paymentIndexTypeHash)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ func serializePaymentIndexEntry(hash []byte) ([]byte, error) {
 
 // getPaymentIndexList gets a list of indices we need to write for our current
 // set of payments.
-func getPaymentIndexList(tx kvdb.RTx) ([]paymentIndex, error) {
+func getPaymentIndexList(tx kvdb.RTx) ([]paymentIndex, er.R) {
 	// Iterate over all payments and store their indexing keys. This is
 	// needed, because no modifications are allowed inside a Bucket.ForEach
 	// loop.
@@ -141,7 +140,7 @@ func getPaymentIndexList(tx kvdb.RTx) ([]paymentIndex, error) {
 
 		seqNrs, err := fetchSequenceNumbers(bucket)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Create an index object with our payment hash and sequence
@@ -163,10 +162,10 @@ func getPaymentIndexList(tx kvdb.RTx) ([]paymentIndex, error) {
 
 // fetchSequenceNumbers fetches all the sequence numbers associated with a
 // payment, including those belonging to any duplicate payments.
-func fetchSequenceNumbers(paymentBucket kvdb.RBucket) ([][]byte, error) {
+func fetchSequenceNumbers(paymentBucket kvdb.RBucket) ([][]byte, er.R) {
 	seqNum := paymentBucket.Get(paymentSequenceKey)
 	if seqNum == nil {
-		return nil, errors.New("expected sequence number")
+		return nil, er.New("expected sequence number")
 	}
 
 	sequenceNumbers := [][]byte{seqNum}

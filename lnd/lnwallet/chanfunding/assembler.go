@@ -1,9 +1,10 @@
 package chanfunding
 
 import (
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // CoinSource is an interface that allows a caller to access a source of UTXOs
@@ -11,12 +12,12 @@ import (
 type CoinSource interface {
 	// ListCoins returns all UTXOs from the source that have between
 	// minConfs and maxConfs number of confirmations.
-	ListCoins(minConfs, maxConfs int32) ([]Coin, error)
+	ListCoins(minConfs, maxConfs int32) ([]Coin, er.R)
 
 	// CoinFromOutPoint attempts to locate details pertaining to a coin
 	// based on its outpoint. If the coin isn't under the control of the
 	// backing CoinSource, then an error should be returned.
-	CoinFromOutPoint(wire.OutPoint) (*Coin, error)
+	CoinFromOutPoint(wire.OutPoint) (*Coin, er.R)
 }
 
 // CoinSelectionLocker is an interface that allows the caller to perform an
@@ -30,7 +31,7 @@ type CoinSelectionLocker interface {
 	// proceeding while the closure is executing. This can be seen as the
 	// ability to execute a function closure under an exclusive coin
 	// selection lock.
-	WithCoinSelectLock(func() error) error
+	WithCoinSelectLock(func() error) er.R
 }
 
 // OutpointLocker allows a caller to lock/unlock an outpoint. When locked, the
@@ -77,7 +78,7 @@ type Request struct {
 
 	// ChangeAddr is a closure that will provide the Assembler with a
 	// change address for the funding transaction if needed.
-	ChangeAddr func() (btcutil.Address, error)
+	ChangeAddr func() (btcutil.Address, er.R)
 }
 
 // Intent is returned by an Assembler and represents the base functionality the
@@ -87,11 +88,11 @@ type Request struct {
 type Intent interface {
 	// FundingOutput returns the witness script, and the output that
 	// creates the funding output.
-	FundingOutput() ([]byte, *wire.TxOut, error)
+	FundingOutput() ([]byte, *wire.TxOut, er.R)
 
 	// ChanPoint returns the final outpoint that will create the funding
 	// output described above.
-	ChanPoint() (*wire.OutPoint, error)
+	ChanPoint() (*wire.OutPoint, er.R)
 
 	// RemoteFundingAmt is the amount the remote party put into the
 	// channel.
@@ -121,7 +122,7 @@ type Assembler interface {
 	// implementation of Assembler, additional state machine (Intent)
 	// actions may be required before the FundingOutput and ChanPoint are
 	// made available to the caller.
-	ProvisionChannel(*Request) (Intent, error)
+	ProvisionChannel(*Request) (Intent, er.R)
 }
 
 // FundingTxAssembler is a super-set of the regular Assembler interface that's

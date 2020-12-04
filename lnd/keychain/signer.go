@@ -1,6 +1,9 @@
 package keychain
 
-import "github.com/pkt-cash/pktd/btcec"
+import (
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 func NewPubKeyDigestSigner(keyDesc KeyDescriptor,
 	signer DigestSignerRing) *PubKeyDigestSigner {
@@ -21,13 +24,13 @@ func (p *PubKeyDigestSigner) PubKey() *btcec.PublicKey {
 }
 
 func (p *PubKeyDigestSigner) SignDigest(digest [32]byte) (*btcec.Signature,
-	error) {
+	er.R) {
 
 	return p.digestSigner.SignDigest(p.keyDesc, digest)
 }
 
 func (p *PubKeyDigestSigner) SignDigestCompact(digest [32]byte) ([]byte,
-	error) {
+	er.R) {
 
 	return p.digestSigner.SignDigestCompact(p.keyDesc, digest)
 }
@@ -41,13 +44,13 @@ func (p *PrivKeyDigestSigner) PubKey() *btcec.PublicKey {
 }
 
 func (p *PrivKeyDigestSigner) SignDigest(digest [32]byte) (*btcec.Signature,
-	error) {
+	er.R) {
 
 	return p.PrivKey.Sign(digest[:])
 }
 
 func (p *PrivKeyDigestSigner) SignDigestCompact(digest [32]byte) ([]byte,
-	error) {
+	er.R) {
 
 	return btcec.SignCompact(btcec.S256(), p.PrivKey, digest[:], true)
 }

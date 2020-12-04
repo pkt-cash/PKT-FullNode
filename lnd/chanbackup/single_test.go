@@ -8,14 +8,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -95,17 +96,17 @@ func assertSingleEqual(t *testing.T, a, b Single) {
 	}
 }
 
-func genRandomOpenChannelShell() (*channeldb.OpenChannel, error) {
+func genRandomOpenChannelShell() (*channeldb.OpenChannel, er.R) {
 	var testPriv [32]byte
 	if _, err := rand.Read(testPriv[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), testPriv[:])
 
 	var chanPoint wire.OutPoint
 	if _, err := rand.Read(chanPoint.Hash[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	pub.Curve = nil
@@ -114,7 +115,7 @@ func genRandomOpenChannelShell() (*channeldb.OpenChannel, error) {
 
 	var shaChainRoot [32]byte
 	if _, err := rand.Read(shaChainRoot[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	shaChainProducer := shachain.NewRevocationProducer(shaChainRoot)

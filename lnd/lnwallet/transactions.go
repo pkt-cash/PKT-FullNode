@@ -48,7 +48,7 @@ var (
 //   * <0> <sender sig> <recvr sig> <preimage>
 func createHtlcSuccessTx(chanType channeldb.ChannelType,
 	htlcOutput wire.OutPoint, htlcAmt btcutil.Amount, csvDelay uint32,
-	revocationKey, delayKey *btcec.PublicKey) (*wire.MsgTx, error) {
+	revocationKey, delayKey *btcec.PublicKey) (*wire.MsgTx, er.R) {
 
 	// Create a version two transaction (as the success version of this
 	// spends an output with a CSV timeout).
@@ -105,7 +105,7 @@ func createHtlcSuccessTx(chanType channeldb.ChannelType,
 func createHtlcTimeoutTx(chanType channeldb.ChannelType,
 	htlcOutput wire.OutPoint, htlcAmt btcutil.Amount,
 	cltvExpiry, csvDelay uint32,
-	revocationKey, delayKey *btcec.PublicKey) (*wire.MsgTx, error) {
+	revocationKey, delayKey *btcec.PublicKey) (*wire.MsgTx, er.R) {
 
 	// Create a version two transaction (as the success version of this
 	// spends an output with a CSV timeout), and set the lock-time to the
@@ -154,18 +154,18 @@ func createHtlcTimeoutTx(chanType channeldb.ChannelType,
 // obfuscator is XOR'd against the state number in order to hide the exact
 // state number from the PoV of outside parties.
 func SetStateNumHint(commitTx *wire.MsgTx, stateNum uint64,
-	obfuscator [StateHintSize]byte) error {
+	obfuscator [StateHintSize]byte) er.R {
 
 	// With the current schema we are only able to encode state num
 	// hints up to 2^48. Therefore if the passed height is greater than our
 	// state hint ceiling, then exit early.
 	if stateNum > maxStateHint {
-		return fmt.Errorf("unable to encode state, %v is greater "+
+		return er.Errorf("unable to encode state, %v is greater "+
 			"state num that max of %v", stateNum, maxStateHint)
 	}
 
 	if len(commitTx.TxIn) != 1 {
-		return fmt.Errorf("commitment tx must have exactly 1 input, "+
+		return er.Errorf("commitment tx must have exactly 1 input, "+
 			"instead has %v", len(commitTx.TxIn))
 	}
 

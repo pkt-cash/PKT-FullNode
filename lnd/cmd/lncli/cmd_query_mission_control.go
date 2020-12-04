@@ -15,7 +15,7 @@ var queryMissionControlCommand = cli.Command{
 	Action:   actionDecorator(queryMissionControl),
 }
 
-func queryMissionControl(ctx *cli.Context) error {
+func queryMissionControl(ctx *cli.Context) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 

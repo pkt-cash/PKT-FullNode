@@ -3,14 +3,13 @@ package migration_01_to_11
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 	"sort"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -153,16 +152,16 @@ func (ps PaymentStatus) Bytes() []byte {
 }
 
 // FromBytes sets status from slice of bytes.
-func (ps *PaymentStatus) FromBytes(status []byte) error {
+func (ps *PaymentStatus) FromBytes(status []byte) er.R {
 	if len(status) != 1 {
-		return errors.New("payment status is empty")
+		return er.New("payment status is empty")
 	}
 
 	switch PaymentStatus(status[0]) {
 	case StatusUnknown, StatusInFlight, StatusSucceeded, StatusFailed:
 		*ps = PaymentStatus(status[0])
 	default:
-		return errors.New("unknown payment status")
+		return er.New("unknown payment status")
 	}
 
 	return nil
@@ -252,10 +251,10 @@ type Payment struct {
 }
 
 // FetchPayments returns all sent payments found in the DB.
-func (db *DB) FetchPayments() ([]*Payment, error) {
+func (db *DB) FetchPayments() ([]*Payment, er.R) {
 	var payments []*Payment
 
-	err := kvdb.View(db, func(tx kvdb.RTx) error {
+	err := kvdb.View(db, func(tx kvdb.RTx) er.R {
 		paymentsBucket := tx.ReadBucket(paymentsRootBucket)
 		if paymentsBucket == nil {
 			return nil
@@ -272,7 +271,7 @@ func (db *DB) FetchPayments() ([]*Payment, error) {
 
 			p, err := fetchPayment(bucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			payments = append(payments, p)
@@ -297,7 +296,7 @@ func (db *DB) FetchPayments() ([]*Payment, error) {
 
 				p, err := fetchPayment(subBucket)
 				if err != nil {
-					return er.E(err)
+					return err
 				}
 
 				payments = append(payments, p)
@@ -319,15 +318,15 @@ func (db *DB) FetchPayments() ([]*Payment, error) {
 	return payments, nil
 }
 
-func fetchPayment(bucket kvdb.RBucket) (*Payment, error) {
+func fetchPayment(bucket kvdb.RBucket) (*Payment, er.R) {
 	var (
-		err error
+		err er.R
 		p   = &Payment{}
 	)
 
 	seqBytes := bucket.Get(paymentSequenceKey)
 	if seqBytes == nil {
-		return nil, fmt.Errorf("sequence number not found")
+		return nil, er.Errorf("sequence number not found")
 	}
 
 	p.sequenceNum = binary.BigEndian.Uint64(seqBytes)
@@ -338,7 +337,7 @@ func fetchPayment(bucket kvdb.RBucket) (*Payment, error) {
 	// Get the PaymentCreationInfo.
 	b := bucket.Get(paymentCreationInfoKey)
 	if b == nil {
-		return nil, fmt.Errorf("creation info not found")
+		return nil, er.Errorf("creation info not found")
 	}
 
 	r := bytes.NewReader(b)
@@ -377,62 +376,62 @@ func fetchPayment(bucket kvdb.RBucket) (*Payment, error) {
 	return p, nil
 }
 
-func serializePaymentCreationInfo(w io.Writer, c *PaymentCreationInfo) error {
+func serializePaymentCreationInfo(w io.Writer, c *PaymentCreationInfo) er.R {
 	var scratch [8]byte
 
-	if _, err := w.Write(c.PaymentHash[:]); err != nil {
+	if _, err := util.Write(w, c.PaymentHash[:]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint64(scratch[:], uint64(c.Value))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint64(scratch[:], uint64(c.CreationDate.Unix()))
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
 	byteOrder.PutUint32(scratch[:4], uint32(len(c.PaymentRequest)))
-	if _, err := w.Write(scratch[:4]); err != nil {
+	if _, err := util.Write(w, scratch[:4]); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(c.PaymentRequest[:]); err != nil {
+	if _, err := util.Write(w, c.PaymentRequest[:]); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func deserializePaymentCreationInfo(r io.Reader) (*PaymentCreationInfo, error) {
+func deserializePaymentCreationInfo(r io.Reader) (*PaymentCreationInfo, er.R) {
 	var scratch [8]byte
 
 	c := &PaymentCreationInfo{}
 
-	if _, err := io.ReadFull(r, c.PaymentHash[:]); err != nil {
+	if _, err := util.ReadFull(r, c.PaymentHash[:]); err != nil {
 		return nil, err
 	}
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return nil, err
 	}
 	c.Value = lnwire.MilliSatoshi(byteOrder.Uint64(scratch[:]))
 
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return nil, err
 	}
 	c.CreationDate = time.Unix(int64(byteOrder.Uint64(scratch[:])), 0)
 
-	if _, err := io.ReadFull(r, scratch[:4]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:4]); err != nil {
 		return nil, err
 	}
 
 	reqLen := uint32(byteOrder.Uint32(scratch[:4]))
 	payReq := make([]byte, reqLen)
 	if reqLen > 0 {
-		if _, err := io.ReadFull(r, payReq[:]); err != nil {
+		if _, err := util.ReadFull(r, payReq[:]); err != nil {
 			return nil, err
 		}
 	}
@@ -441,7 +440,7 @@ func deserializePaymentCreationInfo(r io.Reader) (*PaymentCreationInfo, error) {
 	return c, nil
 }
 
-func serializePaymentAttemptInfo(w io.Writer, a *PaymentAttemptInfo) error {
+func serializePaymentAttemptInfo(w io.Writer, a *PaymentAttemptInfo) er.R {
 	if err := WriteElements(w, a.PaymentID, a.SessionKey); err != nil {
 		return err
 	}
@@ -453,7 +452,7 @@ func serializePaymentAttemptInfo(w io.Writer, a *PaymentAttemptInfo) error {
 	return nil
 }
 
-func deserializePaymentAttemptInfo(r io.Reader) (*PaymentAttemptInfo, error) {
+func deserializePaymentAttemptInfo(r io.Reader) (*PaymentAttemptInfo, er.R) {
 	a := &PaymentAttemptInfo{}
 	err := ReadElements(r, &a.PaymentID, &a.SessionKey)
 	if err != nil {
@@ -466,7 +465,7 @@ func deserializePaymentAttemptInfo(r io.Reader) (*PaymentAttemptInfo, error) {
 	return a, nil
 }
 
-func serializeHop(w io.Writer, h *Hop) error {
+func serializeHop(w io.Writer, h *Hop) er.R {
 	if err := WriteElements(w,
 		h.PubKeyBytes[:], h.ChannelID, h.OutgoingTimeLock,
 		h.AmtToForward,
@@ -474,7 +473,7 @@ func serializeHop(w io.Writer, h *Hop) error {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, h.LegacyPayload); err != nil {
+	if err := util.WriteBin(w, byteOrder, h.LegacyPayload); err != nil {
 		return err
 	}
 
@@ -515,7 +514,7 @@ func serializeHop(w io.Writer, h *Hop) error {
 // to read/write a TLV stream larger than this.
 const maxOnionPayloadSize = 1300
 
-func deserializeHop(r io.Reader) (*Hop, error) {
+func deserializeHop(r io.Reader) (*Hop, er.R) {
 	h := &Hop{}
 
 	var pub []byte
@@ -532,7 +531,7 @@ func deserializeHop(r io.Reader) (*Hop, error) {
 
 	// TODO(roasbeef): change field to allow LegacyPayload false to be the
 	// legacy default?
-	err := binary.Read(r, byteOrder, &h.LegacyPayload)
+	err := util.ReadBin(r, byteOrder, &h.LegacyPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +569,7 @@ func deserializeHop(r io.Reader) (*Hop, error) {
 }
 
 // SerializeRoute serializes a route.
-func SerializeRoute(w io.Writer, r Route) error {
+func SerializeRoute(w io.Writer, r Route) er.R {
 	if err := WriteElements(w,
 		r.TotalTimeLock, r.TotalAmount, r.SourcePubKey[:],
 	); err != nil {
@@ -591,7 +590,7 @@ func SerializeRoute(w io.Writer, r Route) error {
 }
 
 // DeserializeRoute deserializes a route.
-func DeserializeRoute(r io.Reader) (Route, error) {
+func DeserializeRoute(r io.Reader) (Route, er.R) {
 	rt := Route{}
 	if err := ReadElements(r,
 		&rt.TotalTimeLock, &rt.TotalAmount,

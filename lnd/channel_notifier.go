@@ -5,10 +5,11 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channelnotifier"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // addrSource is an interface that allow us to get the addresses for a target
@@ -17,7 +18,7 @@ import (
 type addrSource interface {
 	// AddrsForNode returns all known addresses for the target node public
 	// key.
-	AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, error)
+	AddrsForNode(nodePub *btcec.PublicKey) ([]net.Addr, er.R)
 }
 
 // channelNotifier is an implementation of the chanbackup.ChannelNotifier
@@ -43,7 +44,7 @@ type channelNotifier struct {
 //
 // NOTE: This is part of the chanbackup.ChannelNotifier interface.
 func (c *channelNotifier) SubscribeChans(startingChans map[wire.OutPoint]struct{}) (
-	*chanbackup.ChannelSubscription, error) {
+	*chanbackup.ChannelSubscription, er.R) {
 
 	ltndLog.Infof("Channel backup proxy channel notifier starting")
 

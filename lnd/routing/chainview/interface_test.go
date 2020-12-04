@@ -46,7 +46,7 @@ var (
 	testScript, _ = txscript.PayToAddrScript(testAddr)
 )
 
-func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
+func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) er.R {
 	var found bool
 	var tx *btcutil.Tx
 	var err er.R
@@ -55,7 +55,7 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 		// Do a short wait
 		select {
 		case <-timeout:
-			return fmt.Errorf("timeout after 10s")
+			return er.Errorf("timeout after 10s")
 		default:
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -75,7 +75,7 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 	return nil
 }
 
-func getTestTXID(miner *rpctest.Harness) (*chainhash.Hash, error) {
+func getTestTXID(miner *rpctest.Harness) (*chainhash.Hash, er.R) {
 	script, err := txscript.PayToAddrScript(testAddr)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func getTestTXID(miner *rpctest.Harness) (*chainhash.Hash, error) {
 	return miner.SendOutputs(outputs, 2500)
 }
 
-func locateOutput(tx *wire.MsgTx, script []byte) (*wire.OutPoint, *wire.TxOut, error) {
+func locateOutput(tx *wire.MsgTx, script []byte) (*wire.OutPoint, *wire.TxOut, er.R) {
 	for i, txOut := range tx.TxOut {
 		if bytes.Equal(txOut.PkScript, script) {
 			return &wire.OutPoint{
@@ -100,10 +100,10 @@ func locateOutput(tx *wire.MsgTx, script []byte) (*wire.OutPoint, *wire.TxOut, e
 		}
 	}
 
-	return nil, nil, fmt.Errorf("unable to find output")
+	return nil, nil, er.Errorf("unable to find output")
 }
 
-func craftSpendTransaction(outpoint wire.OutPoint, payScript []byte) (*wire.MsgTx, error) {
+func craftSpendTransaction(outpoint wire.OutPoint, payScript []byte) (*wire.MsgTx, er.R) {
 	spendingTx := wire.NewMsgTx(1)
 	spendingTx.AddTxIn(&wire.TxIn{
 		PreviousOutPoint: outpoint,
@@ -733,7 +733,7 @@ func testFilterBlockDisconnected(node *rpctest.Harness,
 }
 
 type chainViewInitFunc func(rpcInfo rpcclient.ConnConfig,
-	p2pAddr string) (func(), FilteredChainView, error)
+	p2pAddr string) (func(), FilteredChainView, er.R)
 
 type testCase struct {
 	name string
@@ -766,7 +766,7 @@ var interfaceImpls = []struct {
 }{
 	{
 		name: "p2p_neutrino",
-		chainViewInit: func(_ rpcclient.ConnConfig, p2pAddr string) (func(), FilteredChainView, error) {
+		chainViewInit: func(_ rpcclient.ConnConfig, p2pAddr string) (func(), FilteredChainView, er.R) {
 			spvDir, err := ioutil.TempDir("", "neutrino")
 			if err != nil {
 				return nil, nil, err
@@ -813,7 +813,7 @@ var interfaceImpls = []struct {
 	},
 	{
 		name: "btcd_websockets",
-		chainViewInit: func(config rpcclient.ConnConfig, _ string) (func(), FilteredChainView, error) {
+		chainViewInit: func(config rpcclient.ConnConfig, _ string) (func(), FilteredChainView, er.R) {
 			chainView, err := NewBtcdFilteredChainView(config)
 			if err != nil {
 				return nil, nil, err

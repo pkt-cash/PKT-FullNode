@@ -244,16 +244,16 @@ func TestReliableSenderStaleMessages(t *testing.T) {
 	// message store since it is seen as stale and has been sent at least
 	// once. Once the message is removed, the peerHandler should be torn
 	// down as there are no longer any pending messages within the store.
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		msgs, err := reliableSender.cfg.MessageStore.MessagesForPeer(
 			peerPubKey,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to retrieve messages for "+
+			return er.Errorf("unable to retrieve messages for "+
 				"peer: %v", err)
 		}
 		if len(msgs) != 0 {
-			return fmt.Errorf("expected to not find any "+
+			return er.Errorf("expected to not find any "+
 				"messages for peer, found %d", len(msgs))
 		}
 

@@ -3,6 +3,8 @@ package wtdb
 import (
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
@@ -13,7 +15,7 @@ import (
 type UnknownElementType = channeldb.UnknownElementType
 
 // ReadElement deserializes a single element from the provided io.Reader.
-func ReadElement(r io.Reader, element interface{}) error {
+func ReadElement(r io.Reader, element interface{}) er.R {
 	err := channeldb.ReadElement(r, element)
 	switch {
 
@@ -32,12 +34,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 	switch e := element.(type) {
 
 	case *SessionID:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
 	case *blob.BreachHint:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
@@ -71,7 +73,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 }
 
 // WriteElement serializes a single element into the provided io.Writer.
-func WriteElement(w io.Writer, element interface{}) error {
+func WriteElement(w io.Writer, element interface{}) er.R {
 	err := channeldb.WriteElement(w, element)
 	switch {
 
@@ -90,12 +92,12 @@ func WriteElement(w io.Writer, element interface{}) error {
 	switch e := element.(type) {
 
 	case SessionID:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
 	case blob.BreachHint:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
@@ -120,7 +122,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 
 // WriteElements serializes a variadic list of elements into the given
 // io.Writer.
-func WriteElements(w io.Writer, elements ...interface{}) error {
+func WriteElements(w io.Writer, elements ...interface{}) er.R {
 	for _, element := range elements {
 		if err := WriteElement(w, element); err != nil {
 			return err
@@ -132,7 +134,7 @@ func WriteElements(w io.Writer, elements ...interface{}) error {
 
 // ReadElements deserializes the provided io.Reader into a variadic list of
 // target elements.
-func ReadElements(r io.Reader, elements ...interface{}) error {
+func ReadElements(r io.Reader, elements ...interface{}) er.R {
 	for _, element := range elements {
 		if err := ReadElement(r, element); err != nil {
 			return err

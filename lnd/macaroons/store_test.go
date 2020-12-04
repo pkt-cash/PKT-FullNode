@@ -24,7 +24,7 @@ var (
 // initializes a root key storage for that DB.
 func newTestStore(t *testing.T) (string, func(), *macaroons.RootKeyStorage) {
 	tempDir, err := ioutil.TempDir("", "macaroonstore-")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	cleanup, store := openTestStore(t, tempDir)
 	cleanup2 := func() {
@@ -43,7 +43,7 @@ func openTestStore(t *testing.T, tempDir string) (func(),
 	db, err := kvdb.Create(
 		kvdb.BoltBackendName, path.Join(tempDir, "weks.db"), true,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	store, errr := macaroons.NewRootKeyStorage(db)
 	if errr != nil {
@@ -72,7 +72,7 @@ func TestStore(t *testing.T) {
 
 	pw := []byte("weks")
 	err = store.CreateUnlock(&pw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Check ErrContextRootKeyID is returned when no root key ID found in
 	// context.
@@ -93,13 +93,13 @@ func TestStore(t *testing.T) {
 
 	// Create a context with root key ID value.
 	key, id, err := store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	rootID := id
 	require.Equal(t, macaroons.DefaultRootKeyID, rootID)
 
 	key2, err := store.Get(defaultRootKeyIDContext, id)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, key, key2)
 
 	badpw := []byte("badweks")
@@ -126,14 +126,14 @@ func TestStore(t *testing.T) {
 	require.Equal(t, macaroons.ErrStoreLocked, err)
 
 	err = store.CreateUnlock(&pw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	key, err = store.Get(defaultRootKeyIDContext, rootID)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, key, key2)
 
 	key, id, err = store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, key, key2)
 	require.Equal(t, rootID, id)
 }
@@ -151,19 +151,19 @@ func TestStoreGenerateNewRootKey(t *testing.T) {
 	// Unlock the store and read the current key.
 	pw := []byte("weks")
 	err = store.CreateUnlock(&pw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	oldRootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Replace the root key with a new random key.
 	err = store.GenerateNewRootKey()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Finally, read the root key from the DB and compare it to the one
 	// we got returned earlier. This makes sure that the encryption/
 	// decryption of the key in the DB worked as expected too.
 	newRootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.NotEqual(t, oldRootKey, newRootKey)
 }
 
@@ -181,9 +181,9 @@ func TestStoreChangePassword(t *testing.T) {
 	// the same after changing the password for the test to succeed.
 	pw := []byte("weks")
 	err = store.CreateUnlock(&pw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	rootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Both passwords must be set.
 	err = store.ChangePassword(nil, nil)
@@ -198,25 +198,25 @@ func TestStoreChangePassword(t *testing.T) {
 
 	// Now really do change the password.
 	err = store.ChangePassword(pw, newPw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Close the store. This will close the underlying DB and we need to
 	// create a new store instance. Let's make sure we can't use it again
 	// after closing.
 	err = store.Close()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	err = store.CreateUnlock(&newPw)
-	require.Error(t, err)
+	util.RequireErr(t, err)
 
 	// Let's open it again and try unlocking with the new password.
 	_, store = openTestStore(t, tempDir)
 	err = store.CreateUnlock(&newPw)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Finally read the root key from the DB using the new password and
 	// make sure the root key stayed the same.
 	rootKeyDb, _, err := store.RootKey(defaultRootKeyIDContext)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, rootKey, rootKeyDb)
 }

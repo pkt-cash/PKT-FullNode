@@ -4,9 +4,10 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Peer is an interface which represents a remote lightning node.
@@ -15,17 +16,17 @@ type Peer interface {
 	// remote peer.  The first argument denotes if the method should block
 	// until the messages have been sent to the remote peer or an error is
 	// returned, otherwise it returns immediately after queuing.
-	SendMessage(sync bool, msgs ...lnwire.Message) error
+	SendMessage(sync bool, msgs ...lnwire.Message) er.R
 
 	// SendMessageLazy sends a variadic number of low-priority message to
 	// remote peer. The first argument denotes if the method should block
 	// until the messages have been sent to the remote peer or an error is
 	// returned, otherwise it returns immediately after queueing.
-	SendMessageLazy(sync bool, msgs ...lnwire.Message) error
+	SendMessageLazy(sync bool, msgs ...lnwire.Message) er.R
 
 	// AddNewChannel adds a new channel to the peer. The channel should fail
 	// to be added if the cancel channel is closed.
-	AddNewChannel(channel *channeldb.OpenChannel, cancel <-chan struct{}) error
+	AddNewChannel(channel *channeldb.OpenChannel, cancel <-chan struct{}) er.R
 
 	// WipeChannel removes the channel uniquely identified by its channel
 	// point from all indexes associated with the peer.

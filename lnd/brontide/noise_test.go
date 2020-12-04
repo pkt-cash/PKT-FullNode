@@ -2,15 +2,17 @@ package brontide
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
 	"net"
 	"testing"
 	"testing/iotest"
+	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
@@ -18,10 +20,10 @@ import (
 
 type maybeNetConn struct {
 	conn net.Conn
-	err  error
+	err  er.R
 }
 
-func makeListener() (*Listener, *lnwire.NetAddress, error) {
+func makeListener() (*Listener, *lnwire.NetAddress, er.R) {
 	// First, generate the long-term private keys for the brontide listener.
 	localPriv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
@@ -47,7 +49,12 @@ func makeListener() (*Listener, *lnwire.NetAddress, error) {
 	return listener, netAddr, nil
 }
 
-func establishTestConnection() (net.Conn, net.Conn, func(), error) {
+func dialTimeout(network, address string, timeout time.Duration) (net.Conn, er.R) {
+	c, e := net.DialTimeout(network, address, timeout)
+	return c, er.E(e)
+}
+
+func establishTestConnection() (net.Conn, net.Conn, func(), er.R) {
 	listener, netAddr, err := makeListener()
 	if err != nil {
 		return nil, nil, nil, err
@@ -69,7 +76,7 @@ func establishTestConnection() (net.Conn, net.Conn, func(), error) {
 	go func() {
 		remoteConn, err := Dial(
 			remoteKeyECDH, netAddr,
-			tor.DefaultConnTimeout, net.DialTimeout,
+			tor.DefaultConnTimeout, dialTimeout,
 		)
 		remoteConnChan <- maybeNetConn{remoteConn, err}
 	}()
@@ -77,7 +84,7 @@ func establishTestConnection() (net.Conn, net.Conn, func(), error) {
 	localConnChan := make(chan maybeNetConn, 1)
 	go func() {
 		localConn, err := listener.Accept()
-		localConnChan <- maybeNetConn{localConn, err}
+		localConnChan <- maybeNetConn{localConn, er.E(err)}
 	}()
 
 	remote := <-remoteConnChan
@@ -168,7 +175,7 @@ func TestConcurrentHandshakes(t *testing.T) {
 	for i := 0; i < nblocking; i++ {
 		go func() {
 			conn, err := net.Dial("tcp", listener.Addr().String())
-			connChan <- maybeNetConn{conn, err}
+			connChan <- maybeNetConn{conn, er.E(err)}
 		}()
 	}
 
@@ -182,7 +189,7 @@ func TestConcurrentHandshakes(t *testing.T) {
 			defer result.conn.Close()
 		}
 		if result.err != nil {
-			tcpErrs = append(tcpErrs, result.err)
+			tcpErrs = append(tcpErrs, er.Native(result.err))
 		}
 	}
 	for _, tcpErr := range tcpErrs {
@@ -202,16 +209,16 @@ func TestConcurrentHandshakes(t *testing.T) {
 	go func() {
 		remoteConn, err := Dial(
 			remoteKeyECDH, netAddr,
-			tor.DefaultConnTimeout, net.DialTimeout,
+			tor.DefaultConnTimeout, dialTimeout,
 		)
 		connChan <- maybeNetConn{remoteConn, err}
 	}()
 
 	// This connection should be accepted without error, as the brontide
 	// connection should bypass stalled tcp connections.
-	conn, err := listener.Accept()
-	if err != nil {
-		t.Fatalf("unable to accept dial: %v", err)
+	conn, errr := listener.Accept()
+	if errr != nil {
+		t.Fatalf("unable to accept dial: %v", errr)
 	}
 	defer conn.Close()
 
@@ -235,7 +242,7 @@ func TestMaxPayloadLength(t *testing.T) {
 	// A write of the payload generated above to the state machine should
 	// be rejected as it's over the max payload length.
 	err := b.WriteMessage(payloadToReject)
-	if err != ErrMaxMessageLengthExceeded {
+	if !ErrMaxMessageLengthExceeded.Is(err) {
 		t.Fatalf("payload is over the max allowed length, the write " +
 			"should have been rejected")
 	}
@@ -254,7 +261,7 @@ func TestMaxPayloadLength(t *testing.T) {
 
 	// This payload should be rejected.
 	err = b.WriteMessage(payloadToReject)
-	if err != ErrMaxMessageLengthExceeded {
+	if !ErrMaxMessageLengthExceeded.Is(err) {
 		t.Fatalf("payload is over the max allowed length, the write " +
 			"should have been rejected")
 	}
@@ -277,27 +284,27 @@ func TestWriteMessageChunking(t *testing.T) {
 	// Launch a new goroutine to write the large message generated above in
 	// chunks. We spawn a new goroutine because otherwise, we may block as
 	// the kernel waits for the buffer to flush.
-	errCh := make(chan error)
+	errCh := make(chan er.R)
 	go func() {
 		defer close(errCh)
 
 		bytesWritten, err := localConn.Write(largeMessage)
 		if err != nil {
-			errCh <- fmt.Errorf("unable to write message: %v", err)
+			errCh <- er.Errorf("unable to write message: %v", err)
 			return
 		}
 
 		// The entire message should have been written out to the remote
 		// connection.
 		if bytesWritten != len(largeMessage) {
-			errCh <- fmt.Errorf("bytes not fully written")
+			errCh <- er.Errorf("bytes not fully written")
 			return
 		}
 	}()
 
 	// Attempt to read the entirety of the message generated above.
 	buf := make([]byte, len(largeMessage))
-	if _, err := io.ReadFull(remoteConn, buf); err != nil {
+	if _, err := util.ReadFull(remoteConn, buf); err != nil {
 		t.Fatalf("unable to read message: %v", err)
 	}
 
@@ -320,7 +327,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 
 	// First, we'll generate the state of the initiator from the test
 	// vectors at the appendix of BOLT-0008
-	initiatorKeyBytes, err := hex.DecodeString("1111111111111111111111" +
+	initiatorKeyBytes, err := util.DecodeHex("1111111111111111111111" +
 		"111111111111111111111111111111111111111111")
 	if err != nil {
 		t.Fatalf("unable to decode hex: %v", err)
@@ -331,7 +338,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 	initiatorKeyECDH := &keychain.PrivKeyECDH{PrivKey: initiatorPriv}
 
 	// We'll then do the same for the responder.
-	responderKeyBytes, err := hex.DecodeString("212121212121212121212121" +
+	responderKeyBytes, err := util.DecodeHex("212121212121212121212121" +
 		"2121212121212121212121212121212121212121")
 	if err != nil {
 		t.Fatalf("unable to decode hex: %v", err)
@@ -345,10 +352,10 @@ func TestBolt0008TestVectors(t *testing.T) {
 	// EphemeralGenerator function for the state machine to ensure that the
 	// initiator and responder both generate the ephemeral public key
 	// defined within the test vectors.
-	initiatorEphemeral := EphemeralGenerator(func() (*btcec.PrivateKey, error) {
+	initiatorEphemeral := EphemeralGenerator(func() (*btcec.PrivateKey, er.R) {
 		e := "121212121212121212121212121212121212121212121212121212" +
 			"1212121212"
-		eBytes, err := hex.DecodeString(e)
+		eBytes, err := util.DecodeHex(e)
 		if err != nil {
 			return nil, err
 		}
@@ -356,10 +363,10 @@ func TestBolt0008TestVectors(t *testing.T) {
 		priv, _ := btcec.PrivKeyFromBytes(btcec.S256(), eBytes)
 		return priv, nil
 	})
-	responderEphemeral := EphemeralGenerator(func() (*btcec.PrivateKey, error) {
+	responderEphemeral := EphemeralGenerator(func() (*btcec.PrivateKey, er.R) {
 		e := "222222222222222222222222222222222222222222222222222" +
 			"2222222222222"
-		eBytes, err := hex.DecodeString(e)
+		eBytes, err := util.DecodeHex(e)
 		if err != nil {
 			return nil, err
 		}
@@ -385,7 +392,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to generate act one: %v", err)
 	}
-	expectedActOne, err := hex.DecodeString("00036360e856310ce5d294e" +
+	expectedActOne, err := util.DecodeHex("00036360e856310ce5d294e" +
 		"8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df608655115" +
 		"1f58b8afe6c195782c6a")
 	if err != nil {
@@ -410,7 +417,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to generate act two: %v", err)
 	}
-	expectedActTwo, err := hex.DecodeString("0002466d7fcae563e5cb09a0" +
+	expectedActTwo, err := util.DecodeHex("0002466d7fcae563e5cb09a0" +
 		"d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac58" +
 		"3c9ef6eafca3f730ae")
 	if err != nil {
@@ -433,7 +440,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to generate act three: %v", err)
 	}
-	expectedActThree, err := hex.DecodeString("00b9e3a702e93e3a9948c2e" +
+	expectedActThree, err := util.DecodeHex("00b9e3a702e93e3a9948c2e" +
 		"d6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8f" +
 		"c28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba")
 	if err != nil {
@@ -452,18 +459,18 @@ func TestBolt0008TestVectors(t *testing.T) {
 
 	// As a final assertion, we'll ensure that both sides have derived the
 	// proper symmetric encryption keys.
-	sendingKey, err := hex.DecodeString("969ab31b4d288cedf6218839b27a3e2" +
+	sendingKey, err := util.DecodeHex("969ab31b4d288cedf6218839b27a3e2" +
 		"140827047f2c0f01bf5c04435d43511a9")
 	if err != nil {
 		t.Fatalf("unable to parse sending key: %v", err)
 	}
-	recvKey, err := hex.DecodeString("bb9020b8965f4df047e07f955f3c4b884" +
+	recvKey, err := util.DecodeHex("bb9020b8965f4df047e07f955f3c4b884" +
 		"18984aadc5cdb35096b9ea8fa5c3442")
 	if err != nil {
 		t.Fatalf("unable to parse receiving key: %v", err)
 	}
 
-	chainKey, err := hex.DecodeString("919219dbb2920afa8db80f9a51787a840" +
+	chainKey, err := util.DecodeHex("919219dbb2920afa8db80f9a51787a840" +
 		"bcf111ed8d588caf9ab4be716e42b01")
 	if err != nil {
 		t.Fatalf("unable to parse chaining key: %v", err)
@@ -531,7 +538,7 @@ func TestBolt0008TestVectors(t *testing.T) {
 			t.Fatalf("could not flush message: %v", err)
 		}
 		if val, ok := transportMessageVectors[i]; ok {
-			binaryVal, err := hex.DecodeString(val)
+			binaryVal, err := util.DecodeHex(val)
 			if err != nil {
 				t.Fatalf("Failed to decode hex string %s", val)
 			}
@@ -575,12 +582,12 @@ func (t *timeoutWriter) Write(p []byte) (int, error) {
 	if int64(n) > t.n {
 		n = int(t.n)
 	}
-	n, err := t.w.Write(p[:n])
+	n, err := util.Write(t.w, p[:n])
 	t.n -= int64(n)
 	if err == nil && t.n == 0 {
 		return n, iotest.ErrTimeout
 	}
-	return n, err
+	return n, er.Native(err)
 }
 
 const payloadSize = 10
@@ -724,7 +731,7 @@ func assertFlush(t *testing.T, b *Machine, w io.Writer, n int64, expN int,
 		w = NewTimeoutWriter(w, n)
 	}
 	nn, err := b.Flush(w)
-	if err != expErr {
+	if er.Native(err) != expErr {
 		t.Fatalf("expected flush err: %v, got: %v", expErr, err)
 	}
 	if nn != expN {

@@ -117,14 +117,14 @@ func NewController(controlAddr string, targetIPAddress string,
 // Start establishes and authenticates the connection between the controller and
 // a Tor server. Once done, the controller will be able to send commands and
 // expect responses.
-func (c *Controller) Start() error {
+func (c *Controller) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 		return nil
 	}
 
 	conn, err := textproto.Dial("tcp", c.controlAddr)
 	if err != nil {
-		return fmt.Errorf("unable to connect to Tor server: %v", err)
+		return er.Errorf("unable to connect to Tor server: %v", err)
 	}
 
 	c.conn = conn
@@ -133,7 +133,7 @@ func (c *Controller) Start() error {
 }
 
 // Stop closes the connection between the controller and the Tor server.
-func (c *Controller) Stop() error {
+func (c *Controller) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (c *Controller) Stop() error {
 
 // sendCommand sends a command to the Tor server and returns its response, as a
 // single space-delimited string, and code.
-func (c *Controller) sendCommand(command string) (int, string, error) {
+func (c *Controller) sendCommand(command string) (int, string, er.R) {
 	if err := c.conn.Writer.PrintfLine(command); err != nil {
 		return 0, "", err
 	}
@@ -190,7 +190,7 @@ func parseTorReply(reply string) map[string]string {
 // authenticate authenticates the connection between the controller and the
 // Tor server using either of the following supported authentication methods
 // depending on its configuration: SAFECOOKIE, HASHEDPASSWORD, and NULL.
-func (c *Controller) authenticate() error {
+func (c *Controller) authenticate() er.R {
 	protocolInfo, err := c.protocolInfo()
 	if err != nil {
 		return err
@@ -205,7 +205,7 @@ func (c *Controller) authenticate() error {
 	// HASHEDPASSWORD authentication method.
 	case c.password != "":
 		if !protocolInfo.supportsAuthMethod(authHashedPassword) {
-			return fmt.Errorf("%v authentication method not "+
+			return er.Errorf("%v authentication method not "+
 				"supported", authHashedPassword)
 		}
 
@@ -222,21 +222,21 @@ func (c *Controller) authenticate() error {
 
 	// No supported authentication methods, fail.
 	default:
-		return errors.New("the Tor server must be configured with " +
+		return er.New("the Tor server must be configured with " +
 			"NULL, SAFECOOKIE, or HASHEDPASSWORD authentication")
 	}
 }
 
 // authenticateViaNull authenticates the controller with the Tor server using
 // the NULL authentication method.
-func (c *Controller) authenticateViaNull() error {
+func (c *Controller) authenticateViaNull() er.R {
 	_, _, err := c.sendCommand("AUTHENTICATE")
 	return err
 }
 
 // authenticateViaHashedPassword authenticates the controller with the Tor
 // server using the HASHEDPASSWORD authentication method.
-func (c *Controller) authenticateViaHashedPassword() error {
+func (c *Controller) authenticateViaHashedPassword() er.R {
 	cmd := fmt.Sprintf("AUTHENTICATE \"%s\"", c.password)
 	_, _, err := c.sendCommand(cmd)
 	return err
@@ -244,7 +244,7 @@ func (c *Controller) authenticateViaHashedPassword() error {
 
 // authenticateViaSafeCookie authenticates the controller with the Tor server
 // using the SAFECOOKIE authentication method.
-func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
+func (c *Controller) authenticateViaSafeCookie(info protocolInfo) er.R {
 	// Before proceeding to authenticate the connection, we'll retrieve
 	// the authentication cookie of the Tor server. This will be used
 	// throughout the authentication routine. We do this before as once the
@@ -252,7 +252,7 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 	// mid-way.
 	cookie, err := c.getAuthCookie(info)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve authentication cookie: "+
+		return er.Errorf("unable to retrieve authentication cookie: "+
 			"%v", err)
 	}
 
@@ -261,7 +261,7 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 	// the AUTHCHALLENGE command followed by a hex-encoded 32-byte nonce.
 	clientNonce := make([]byte, nonceLen)
 	if _, err := rand.Read(clientNonce); err != nil {
-		return fmt.Errorf("unable to generate client nonce: %v", err)
+		return er.Errorf("unable to generate client nonce: %v", err)
 	}
 
 	cmd := fmt.Sprintf("AUTHCHALLENGE SAFECOOKIE %x", clientNonce)
@@ -286,26 +286,26 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 	// decoded.
 	serverHash, ok := replyParams["SERVERHASH"]
 	if !ok {
-		return errors.New("server hash not found in reply")
+		return er.New("server hash not found in reply")
 	}
-	decodedServerHash, err := hex.DecodeString(serverHash)
+	decodedServerHash, err := util.DecodeHex(serverHash)
 	if err != nil {
-		return fmt.Errorf("unable to decode server hash: %v", err)
+		return er.Errorf("unable to decode server hash: %v", err)
 	}
 	if len(decodedServerHash) != sha256.Size {
-		return errors.New("invalid server hash length")
+		return er.New("invalid server hash length")
 	}
 
 	serverNonce, ok := replyParams["SERVERNONCE"]
 	if !ok {
-		return errors.New("server nonce not found in reply")
+		return er.New("server nonce not found in reply")
 	}
-	decodedServerNonce, err := hex.DecodeString(serverNonce)
+	decodedServerNonce, err := util.DecodeHex(serverNonce)
 	if err != nil {
-		return fmt.Errorf("unable to decode server nonce: %v", err)
+		return er.Errorf("unable to decode server nonce: %v", err)
 	}
 	if len(decodedServerNonce) != nonceLen {
-		return errors.New("invalid server nonce length")
+		return er.New("invalid server nonce length")
 	}
 
 	// The server hash above was constructed by computing the HMAC-SHA256
@@ -317,7 +317,7 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 	)
 	computedServerHash := computeHMAC256(serverKey, hmacMessage)
 	if !hmac.Equal(computedServerHash, decodedServerHash) {
-		return fmt.Errorf("expected server hash %x, got %x",
+		return er.Errorf("expected server hash %x, got %x",
 			decodedServerHash, computedServerHash)
 	}
 
@@ -328,7 +328,7 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 	// key.
 	clientHash := computeHMAC256(controllerKey, hmacMessage)
 	if len(clientHash) != sha256.Size {
-		return errors.New("invalid client hash length")
+		return er.New("invalid client hash length")
 	}
 
 	cmd = fmt.Sprintf("AUTHENTICATE %x", clientHash)
@@ -341,11 +341,11 @@ func (c *Controller) authenticateViaSafeCookie(info protocolInfo) error {
 
 // getAuthCookie retrieves the authentication cookie in bytes from the Tor
 // server. Cookie authentication must be enabled for this to work.
-func (c *Controller) getAuthCookie(info protocolInfo) ([]byte, error) {
+func (c *Controller) getAuthCookie(info protocolInfo) ([]byte, er.R) {
 	// Retrieve the cookie file path from the PROTOCOLINFO reply.
 	cookieFilePath, ok := info["COOKIEFILE"]
 	if !ok {
-		return nil, errors.New("COOKIEFILE not found in PROTOCOLINFO " +
+		return nil, er.New("COOKIEFILE not found in PROTOCOLINFO " +
 			"reply")
 	}
 	cookieFilePath = strings.Trim(cookieFilePath, "\"")
@@ -357,7 +357,7 @@ func (c *Controller) getAuthCookie(info protocolInfo) ([]byte, error) {
 	}
 
 	if len(cookie) != cookieLen {
-		return nil, errors.New("invalid authentication cookie length")
+		return nil, er.New("invalid authentication cookie length")
 	}
 
 	return cookie, nil
@@ -374,12 +374,12 @@ func computeHMAC256(key, message []byte) []byte {
 // server and determines whether it supports creationg v3 onion services through
 // Tor's control port. The version string should be of the format:
 //	major.minor.revision.build
-func supportsV3(version string) error {
+func supportsV3(version string) er.R {
 	// We'll split the minimum Tor version that's supported and the given
 	// version in order to individually compare each number.
 	parts := strings.Split(version, ".")
 	if len(parts) != 4 {
-		return errors.New("version string is not of the format " +
+		return er.New("version string is not of the format " +
 			"major.minor.revision.build")
 	}
 
@@ -400,7 +400,7 @@ func supportsV3(version string) error {
 	// major.minor.revision.build, we can just do a string comparison to
 	// determine if it satisfies the minimum version supported.
 	if version < MinTorVersion {
-		return fmt.Errorf("version %v below minimum version supported "+
+		return er.Errorf("version %v below minimum version supported "+
 			"%v", version, MinTorVersion)
 	}
 
@@ -429,7 +429,7 @@ func (i protocolInfo) supportsAuthMethod(method string) bool {
 
 // protocolInfo sends a "PROTOCOLINFO" command to the Tor server and returns its
 // response.
-func (c *Controller) protocolInfo() (protocolInfo, error) {
+func (c *Controller) protocolInfo() (protocolInfo, er.R) {
 	cmd := fmt.Sprintf("PROTOCOLINFO %d", ProtocolInfoVersion)
 	_, reply, err := c.sendCommand(cmd)
 	if err != nil {

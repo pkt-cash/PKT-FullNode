@@ -114,7 +114,7 @@ func monowidthColumns(words []string, ncols int) []string {
 	return finalWords
 }
 
-func create(ctx *cli.Context) error {
+func create(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getWalletUnlockerClient(ctx)
 	defer cleanUp()
@@ -141,7 +141,7 @@ func create(ctx *cli.Context) error {
 
 	// Passed an invalid channel backup file.
 	case err != nil:
-		return fmt.Errorf("unable to parse chan backups: %v", err)
+		return er.Errorf("unable to parse chan backups: %v", err)
 
 	// We have an SCB recovery option with a valid backup file.
 	default:
@@ -203,7 +203,7 @@ func create(ctx *cli.Context) error {
 	// stateless init, it doesn't make sense to be set on its own.
 	statelessInit := ctx.Bool(statelessInitFlag.Name)
 	if !statelessInit && ctx.IsSet(saveToFlag.Name) {
-		return fmt.Errorf("cannot set save_to parameter without " +
+		return er.Errorf("cannot set save_to parameter without " +
 			"stateless_init")
 	}
 
@@ -274,7 +274,7 @@ mnemonicCheck:
 		fmt.Println()
 
 		if len(cipherSeedMnemonic) != 24 {
-			return fmt.Errorf("wrong cipher seed mnemonic "+
+			return er.Errorf("wrong cipher seed mnemonic "+
 				"length: got %v words, expecting %v words",
 				len(cipherSeedMnemonic), 24)
 		}
@@ -330,7 +330,7 @@ mnemonicCheck:
 			"(or press enter to proceed without a cipher seed " +
 			"passphrase): "
 		aezeedPass, err = capturePassword(
-			instruction, true, func(_ []byte) error { return nil },
+			instruction, true, func(_ []byte) er.R { return nil },
 		)
 		if err != nil {
 			return err
@@ -345,7 +345,7 @@ mnemonicCheck:
 		}
 		seedResp, err := client.GenSeed(ctxb, genSeedReq)
 		if err != nil {
-			return fmt.Errorf("unable to generate seed: %v", err)
+			return er.Errorf("unable to generate seed: %v", err)
 		}
 
 		cipherSeedMnemonic = seedResp.CipherSeedMnemonic
@@ -404,7 +404,7 @@ mnemonicCheck:
 // true, the function may return an empty byte array if the user opts against
 // using a password.
 func capturePassword(instruction string, optional bool,
-	validate func([]byte) error) ([]byte, error) {
+	validate func([]byte) error) ([]byte, er.R) {
 
 	for {
 		password, err := readPassword(instruction)
@@ -480,7 +480,7 @@ var unlockCommand = cli.Command{
 	Action: actionDecorator(unlock),
 }
 
-func unlock(ctx *cli.Context) error {
+func unlock(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getWalletUnlockerClient(ctx)
 	defer cleanUp()
@@ -590,7 +590,7 @@ var changePasswordCommand = cli.Command{
 	Action: actionDecorator(changePassword),
 }
 
-func changePassword(ctx *cli.Context) error {
+func changePassword(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getWalletUnlockerClient(ctx)
 	defer cleanUp()
@@ -611,7 +611,7 @@ func changePassword(ctx *cli.Context) error {
 	}
 
 	if !bytes.Equal(newPw, confirmPw) {
-		return fmt.Errorf("passwords don't match")
+		return er.Errorf("passwords don't match")
 	}
 
 	// Should the daemon be initialized stateless? Then we expect an answer
@@ -619,7 +619,7 @@ func changePassword(ctx *cli.Context) error {
 	// stateless init, it doesn't make sense to be set on its own.
 	statelessInit := ctx.Bool(statelessInitFlag.Name)
 	if !statelessInit && ctx.IsSet(saveToFlag.Name) {
-		return fmt.Errorf("cannot set save_to parameter without " +
+		return er.Errorf("cannot set save_to parameter without " +
 			"stateless_init")
 	}
 
@@ -644,7 +644,7 @@ func changePassword(ctx *cli.Context) error {
 
 // storeOrPrintAdminMac either stores the admin macaroon to a file specified or
 // prints it to standard out, depending on the user flags set.
-func storeOrPrintAdminMac(ctx *cli.Context, adminMac []byte) error {
+func storeOrPrintAdminMac(ctx *cli.Context, adminMac []byte) er.R {
 	// The user specified the optional --save_to parameter. We'll save the
 	// macaroon to that file.
 	if ctx.IsSet("save_to") {

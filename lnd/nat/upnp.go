@@ -2,11 +2,11 @@ package nat
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 
 	upnp "github.com/NebulousLabs/go-upnp"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Compile-time check to ensure UPnP implements the Traversal interface.
@@ -22,7 +22,7 @@ type UPnP struct {
 }
 
 // DiscoverUPnP scans the local network for a UPnP enabled device.
-func DiscoverUPnP(ctx context.Context) (*UPnP, error) {
+func DiscoverUPnP(ctx context.Context) (*UPnP, er.R) {
 	// Scan the local network for a UPnP-enabled device.
 	device, err := upnp.DiscoverCtx(ctx)
 	if err != nil {
@@ -44,21 +44,21 @@ func DiscoverUPnP(ctx context.Context) (*UPnP, error) {
 }
 
 // ExternalIP returns the external IP address of the UPnP enabled device.
-func (u *UPnP) ExternalIP() (net.IP, error) {
+func (u *UPnP) ExternalIP() (net.IP, er.R) {
 	ip, err := u.device.ExternalIP()
 	if err != nil {
 		return nil, err
 	}
 
 	if isPrivateIP(net.ParseIP(ip)) {
-		return nil, ErrMultipleNAT
+		return nil, ErrMultipleNAT.Default()
 	}
 
 	return net.ParseIP(ip), nil
 }
 
 // AddPortMapping enables port forwarding for the given port.
-func (u *UPnP) AddPortMapping(port uint16) error {
+func (u *UPnP) AddPortMapping(port uint16) er.R {
 	u.forwardedPortsMtx.Lock()
 	defer u.forwardedPortsMtx.Unlock()
 
@@ -72,12 +72,12 @@ func (u *UPnP) AddPortMapping(port uint16) error {
 }
 
 // DeletePortMapping disables port forwarding for the given port.
-func (u *UPnP) DeletePortMapping(port uint16) error {
+func (u *UPnP) DeletePortMapping(port uint16) er.R {
 	u.forwardedPortsMtx.Lock()
 	defer u.forwardedPortsMtx.Unlock()
 
 	if _, exists := u.forwardedPorts[port]; !exists {
-		return fmt.Errorf("port %d is not being forwarded", port)
+		return er.Errorf("port %d is not being forwarded", port)
 	}
 
 	if err := u.device.Clear(port); err != nil {

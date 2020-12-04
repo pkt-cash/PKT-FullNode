@@ -1,13 +1,12 @@
 package zpay32
 
 import (
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -84,17 +83,18 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd.zpay32")
 	// ErrInvoiceTooLarge is returned when an invoice exceeds
 	// maxInvoiceLength.
-	ErrInvoiceTooLarge = errors.New("invoice is too large")
+	ErrInvoiceTooLarge = Err.CodeWithDetail("ErrInvoiceTooLarge", "invoice is too large")
 
 	// ErrInvalidFieldLength is returned when a tagged field was specified
 	// with a length larger than the left over bytes of the data field.
-	ErrInvalidFieldLength = errors.New("invalid field length")
+	ErrInvalidFieldLength = Err.CodeWithDetail("ErrInvalidFieldLength", "invalid field length")
 
 	// ErrBrokenTaggedField is returned when the last tagged field is
 	// incorrectly formatted and doesn't have enough bytes to be read.
-	ErrBrokenTaggedField = errors.New("last tagged field is broken")
+	ErrBrokenTaggedField = Err.CodeWithDetail("ErrBrokenTaggedField", "last tagged field is broken")
 )
 
 // MessageSigner is passed to the Encode method to provide a signature
@@ -104,7 +104,7 @@ type MessageSigner struct {
 	// The returned signature should be 65 bytes, where the last 64 are the
 	// compact signature, and the first one is a header byte. This is the
 	// format returned by btcec.SignCompact.
-	SignCompact func(msg []byte) ([]byte, error)
+	SignCompact func(msg []byte) ([]byte, er.R)
 }
 
 // Invoice represents a decoded invoice, or to-be-encoded invoice. Some of the
@@ -279,7 +279,7 @@ func PaymentAddr(addr [32]byte) func(*Invoice) {
 // NOTE: Either Description  or DescriptionHash must be provided for the Invoice
 // to be considered valid.
 func NewInvoice(net *chaincfg.Params, paymentHash [32]byte,
-	timestamp time.Time, options ...func(*Invoice)) (*Invoice, error) {
+	timestamp time.Time, options ...func(*Invoice)) (*Invoice, er.R) {
 
 	invoice := &Invoice{
 		Net:         net,
@@ -329,45 +329,45 @@ func (invoice *Invoice) MinFinalCLTVExpiry() uint64 {
 
 // validateInvoice does a sanity check of the provided Invoice, making sure it
 // has all the necessary fields set for it to be considered valid by BOLT-0011.
-func validateInvoice(invoice *Invoice) error {
+func validateInvoice(invoice *Invoice) er.R {
 	// The net must be set.
 	if invoice.Net == nil {
-		return fmt.Errorf("net params not set")
+		return er.Errorf("net params not set")
 	}
 
 	// The invoice must contain a payment hash.
 	if invoice.PaymentHash == nil {
-		return fmt.Errorf("no payment hash found")
+		return er.Errorf("no payment hash found")
 	}
 
 	// Either Description or DescriptionHash must be set, not both.
 	if invoice.Description != nil && invoice.DescriptionHash != nil {
-		return fmt.Errorf("both description and description hash set")
+		return er.Errorf("both description and description hash set")
 	}
 	if invoice.Description == nil && invoice.DescriptionHash == nil {
-		return fmt.Errorf("neither description nor description hash set")
+		return er.Errorf("neither description nor description hash set")
 	}
 
 	// Check that we support the field lengths.
 	if len(invoice.PaymentHash) != 32 {
-		return fmt.Errorf("unsupported payment hash length: %d",
+		return er.Errorf("unsupported payment hash length: %d",
 			len(invoice.PaymentHash))
 	}
 
 	if invoice.DescriptionHash != nil && len(invoice.DescriptionHash) != 32 {
-		return fmt.Errorf("unsupported description hash length: %d",
+		return er.Errorf("unsupported description hash length: %d",
 			len(invoice.DescriptionHash))
 	}
 
 	if invoice.Destination != nil &&
 		len(invoice.Destination.SerializeCompressed()) != 33 {
-		return fmt.Errorf("unsupported pubkey length: %d",
+		return er.Errorf("unsupported pubkey length: %d",
 			len(invoice.Destination.SerializeCompressed()))
 	}
 
 	// Ensure that all invoices have feature vectors.
 	if invoice.Features == nil {
-		return fmt.Errorf("missing feature vector")
+		return er.Errorf("missing feature vector")
 	}
 
 	return nil

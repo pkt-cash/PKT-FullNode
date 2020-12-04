@@ -236,7 +236,7 @@ func assertTxInWallet(t *testing.T, w *lnwallet.LightningWallet,
 }
 
 func loadTestCredits(miner *rpctest.Harness, w *lnwallet.LightningWallet,
-	numOutputs int, btcPerOutput float64) error {
+	numOutputs int, btcPerOutput float64) er.R {
 
 	// For initial neutrino connection, wait a second.
 	// TODO(aakselrod): Eliminate the need for this.
@@ -248,7 +248,7 @@ func loadTestCredits(miner *rpctest.Harness, w *lnwallet.LightningWallet,
 	// give us btcPerOutput with each output.
 	satoshiPerOutput, err := btcutil.NewAmount(btcPerOutput)
 	if err != nil {
-		return fmt.Errorf("unable to create amt: %v", err)
+		return er.Errorf("unable to create amt: %v", err)
 	}
 	expectedBalance, errr := w.ConfirmedBalance(1)
 	if errr != nil {
@@ -306,7 +306,7 @@ func loadTestCredits(miner *rpctest.Harness, w *lnwallet.LightningWallet,
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("timed out after 30 seconds "+
+			return er.Errorf("timed out after 30 seconds "+
 				"waiting for balance %v, current balance %v, "+
 				"synced: %t", expectedBalance, balance, synced)
 		default:
@@ -322,7 +322,7 @@ func loadTestCredits(miner *rpctest.Harness, w *lnwallet.LightningWallet,
 func createTestWallet(tempTestDir string, miningNode *rpctest.Harness,
 	netParams *chaincfg.Params, notifier chainntnfs.ChainNotifier,
 	wc lnwallet.WalletController, keyRing keychain.SecretKeyRing,
-	signer input.Signer, bio lnwallet.BlockChainIO) (*lnwallet.LightningWallet, error) {
+	signer input.Signer, bio lnwallet.BlockChainIO) (*lnwallet.LightningWallet, er.R) {
 
 	dbDir := filepath.Join(tempTestDir, "cdb")
 	cdb, err := channeldb.Open(dbDir)
@@ -373,7 +373,7 @@ func testGetRecoveryInfo(miner *rpctest.Harness,
 	expectedProgress := float64(1)
 
 	isRecoveryMode, progress, err := alice.GetRecoveryInfo()
-	require.NoError(t, err, "unable to get alice's recovery info")
+	util.RequireNoErr(t, err, "unable to get alice's recovery info")
 
 	require.Equal(t,
 		expectedRecoveryMode, isRecoveryMode, "recovery mode incorrect",
@@ -383,14 +383,14 @@ func testGetRecoveryInfo(miner *rpctest.Harness,
 	// Generate 5 blocks and check the recovery process again.
 	const numBlocksMined = 5
 	_, err = miner.Node.Generate(numBlocksMined)
-	require.NoError(t, err, "unable to mine blocks")
+	util.RequireNoErr(t, err, "unable to mine blocks")
 
 	// Check the recovery process. Once synced, the progress should be 1.
 	err = waitForWalletSync(miner, alice)
-	require.NoError(t, err, "Couldn't sync Alice's wallet")
+	util.RequireNoErr(t, err, "Couldn't sync Alice's wallet")
 
 	isRecoveryMode, progress, err = alice.GetRecoveryInfo()
-	require.NoError(t, err, "unable to get alice's recovery info")
+	util.RequireNoErr(t, err, "unable to get alice's recovery info")
 
 	require.Equal(t,
 		expectedRecoveryMode, isRecoveryMode, "recovery mode incorrect",
@@ -402,7 +402,7 @@ func testGetRecoveryInfo(miner *rpctest.Harness,
 	expectedProgress = float64(0)
 
 	isRecoveryMode, progress, err = bob.GetRecoveryInfo()
-	require.NoError(t, err, "unable to get bob's recovery info")
+	util.RequireNoErr(t, err, "unable to get bob's recovery info")
 
 	require.Equal(t,
 		expectedRecoveryMode, isRecoveryMode, "recovery mode incorrect",
@@ -1442,19 +1442,19 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 			for i := 0; i < numTxns; i++ {
 				txDetail := <-txClient.UnconfirmedTransactions()
 				if txDetail.NumConfirmations != 0 {
-					errCh1 <- fmt.Errorf("incorrect number of confs, "+
+					errCh1 <- er.Errorf("incorrect number of confs, "+
 						"expected %v got %v", 0,
 						txDetail.NumConfirmations)
 					return
 				}
 				if int64(txDetail.Value) != outputAmt {
-					errCh1 <- fmt.Errorf("incorrect output amt, "+
+					errCh1 <- er.Errorf("incorrect output amt, "+
 						"expected %v got %v", outputAmt,
 						txDetail.Value)
 					return
 				}
 				if txDetail.BlockHash != nil {
-					errCh1 <- fmt.Errorf("block hash should be nil, "+
+					errCh1 <- er.Errorf("block hash should be nil, "+
 						"is instead %v",
 						txDetail.BlockHash)
 					return
@@ -1511,12 +1511,12 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 		for i := 0; i < numTxns; i++ {
 			txDetail := <-txClient.ConfirmedTransactions()
 			if txDetail.NumConfirmations != 1 {
-				errCh2 <- fmt.Errorf("incorrect number of confs for %s, expected %v got %v",
+				errCh2 <- er.Errorf("incorrect number of confs for %s, expected %v got %v",
 					txDetail.Hash, 1, txDetail.NumConfirmations)
 				return
 			}
 			if int64(txDetail.Value) != outputAmt {
-				errCh2 <- fmt.Errorf("incorrect output amt, expected %v got %v in txid %s",
+				errCh2 <- er.Errorf("incorrect output amt, expected %v got %v in txid %s",
 					outputAmt, txDetail.Value, txDetail.Hash)
 				return
 			}
@@ -1585,48 +1585,48 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 }
 
 // scriptFromKey creates a P2WKH script from the given pubkey.
-func scriptFromKey(pubkey *btcec.PublicKey) ([]byte, error) {
+func scriptFromKey(pubkey *btcec.PublicKey) ([]byte, er.R) {
 	pubkeyHash := btcutil.Hash160(pubkey.SerializeCompressed())
 	keyAddr, err := btcutil.NewAddressWitnessPubKeyHash(
 		pubkeyHash, &chaincfg.RegressionNetParams,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create addr: %v", err)
+		return nil, er.Errorf("unable to create addr: %v", err)
 	}
 	keyScript, err := txscript.PayToAddrScript(keyAddr)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate script: %v", err)
+		return nil, er.Errorf("unable to generate script: %v", err)
 	}
 
 	return keyScript, nil
 }
 
 // mineAndAssert mines a block and ensures the passed TX is part of that block.
-func mineAndAssert(r *rpctest.Harness, tx *wire.MsgTx) error {
+func mineAndAssert(r *rpctest.Harness, tx *wire.MsgTx) er.R {
 	txid := tx.TxHash()
 	err := waitForMempoolTx(r, &txid)
 	if err != nil {
-		return fmt.Errorf("tx not relayed to miner: %v", err)
+		return er.Errorf("tx not relayed to miner: %v", err)
 	}
 
 	blockHashes, err := r.Node.Generate(1)
 	if err != nil {
-		return fmt.Errorf("unable to generate block: %v", err)
+		return er.Errorf("unable to generate block: %v", err)
 	}
 
 	block, err := r.Node.GetBlock(blockHashes[0])
 	if err != nil {
-		return fmt.Errorf("unable to find block: %v", err)
+		return er.Errorf("unable to find block: %v", err)
 	}
 
 	if len(block.Transactions) != 2 {
-		return fmt.Errorf("expected 2 txs in block, got %d",
+		return er.Errorf("expected 2 txs in block, got %d",
 			len(block.Transactions))
 	}
 
 	blockTx := block.Transactions[1]
 	if blockTx.TxHash() != tx.TxHash() {
-		return fmt.Errorf("incorrect transaction was mined")
+		return er.Errorf("incorrect transaction was mined")
 	}
 
 	// Sleep for a second before returning, to make sure the block has
@@ -1639,12 +1639,12 @@ func mineAndAssert(r *rpctest.Harness, tx *wire.MsgTx) error {
 // spends the output from this tx, to an address derived from payToPubKey.
 func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 	payToPubKey *btcec.PublicKey, txFee btcutil.Amount,
-	rbf bool) (*wire.MsgTx, error) {
+	rbf bool) (*wire.MsgTx, er.R) {
 
 	// Generate the script we want to spend from.
 	keyScript, err := scriptFromKey(fromPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate script: %v", err)
+		return nil, er.Errorf("unable to generate script: %v", err)
 	}
 
 	// We assume the output was paid to the keyScript made earlier.
@@ -1679,7 +1679,7 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 	// Create a script to pay to.
 	payToScript, err := scriptFromKey(payToPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate script: %v", err)
+		return nil, er.Errorf("unable to generate script: %v", err)
 	}
 	tx1.AddTxOut(&wire.TxOut{
 		Value:    outputValue - int64(txFee),
@@ -1703,7 +1703,7 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 	// manually create a valid witness stack we'll use for signing.
 	spendSig, err := signer.SignOutputRaw(tx1, signDesc)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate signature: %v", err)
+		return nil, er.Errorf("unable to generate signature: %v", err)
 	}
 	witness := make([][]byte, 2)
 	witness[0] = append(spendSig.Serialize(), byte(params.SigHashAll))
@@ -1718,10 +1718,10 @@ func txFromOutput(tx *wire.MsgTx, signer input.Signer, fromPubKey,
 		nil, outputValue,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create engine: %v", err)
+		return nil, er.Errorf("unable to create engine: %v", err)
 	}
 	if err := vm.Execute(); err != nil {
-		return nil, fmt.Errorf("spend is invalid: %v", err)
+		return nil, er.Errorf("spend is invalid: %v", err)
 	}
 
 	return tx1, nil
@@ -2664,22 +2664,22 @@ func testCreateSimpleTx(r *rpctest.Harness, w *lnwallet.LightningWallet,
 		}
 
 		// Helper method to check that the two txs are similar.
-		assertSimilarTx := func(a, b *wire.MsgTx) error {
+		assertSimilarTx := func(a, b *wire.MsgTx) er.R {
 			if a.Version != b.Version {
-				return fmt.Errorf("different versions: "+
+				return er.Errorf("different versions: "+
 					"%v vs %v", a.Version, b.Version)
 			}
 			if a.LockTime != b.LockTime {
-				return fmt.Errorf("different locktimes: "+
+				return er.Errorf("different locktimes: "+
 					"%v vs %v", a.LockTime, b.LockTime)
 			}
 			if len(a.TxIn) != len(b.TxIn) {
-				return fmt.Errorf("different number of "+
+				return er.Errorf("different number of "+
 					"inputs: %v vs %v", len(a.TxIn),
 					len(b.TxIn))
 			}
 			if len(a.TxOut) != len(b.TxOut) {
-				return fmt.Errorf("different number of "+
+				return er.Errorf("different number of "+
 					"outputs: %v vs %v", len(a.TxOut),
 					len(b.TxOut))
 			}
@@ -2689,7 +2689,7 @@ func testCreateSimpleTx(r *rpctest.Harness, w *lnwallet.LightningWallet,
 				prevA := a.TxIn[i].PreviousOutPoint
 				prevB := b.TxIn[i].PreviousOutPoint
 				if prevA != prevB {
-					return fmt.Errorf("different inputs: "+
+					return er.Errorf("different inputs: "+
 						"%v vs %v", spew.Sdump(prevA),
 						spew.Sdump(prevB))
 				}
@@ -2707,7 +2707,7 @@ func testCreateSimpleTx(r *rpctest.Harness, w *lnwallet.LightningWallet,
 					}
 				}
 				if !found {
-					return fmt.Errorf("did not find "+
+					return er.Errorf("did not find "+
 						"output %v", spew.Sdump(outA))
 				}
 			}
@@ -2879,7 +2879,7 @@ func clearWalletStates(a, b *lnwallet.LightningWallet) er.R {
 	return b.Cfg.Database.Wipe()
 }
 
-func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
+func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) er.R {
 	var found bool
 	var tx *btcutil.Tx
 	var err er.R
@@ -2888,7 +2888,7 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 		// Do a short wait
 		select {
 		case <-timeout:
-			return fmt.Errorf("timeout after 10s")
+			return er.Errorf("timeout after 10s")
 		default:
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -2908,7 +2908,7 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) error {
 	return nil
 }
 
-func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) error {
+func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) er.R {
 	var (
 		synced                  bool
 		err                     error
@@ -2920,7 +2920,7 @@ func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) error {
 		// Do a short wait
 		select {
 		case <-timeout:
-			return fmt.Errorf("timeout after 30s")
+			return er.Errorf("timeout after 30s")
 		case <-time.Tick(100 * time.Millisecond):
 		}
 
@@ -2938,7 +2938,7 @@ func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) error {
 			continue
 		}
 		if *knownHash != *bestHash {
-			return fmt.Errorf("hash at height %d doesn't match: "+
+			return er.Errorf("hash at height %d doesn't match: "+
 				"expected %s, got %s", bestHeight, bestHash,
 				knownHash)
 		}
@@ -2991,7 +2991,7 @@ func testSingleFunderExternalFundingTx(miner *rpctest.Harness,
 		LocalAmt: btcutil.Amount(chanAmt),
 		MinConfs: 1,
 		FeeRate:  253,
-		ChangeAddr: func() (btcutil.Address, error) {
+		ChangeAddr: func() (btcutil.Address, er.R) {
 			return alice.NewAddress(lnwallet.WitnessPubKey, true)
 		},
 	})
@@ -3036,7 +3036,7 @@ func testSingleFunderExternalFundingTx(miner *rpctest.Harness,
 		LocalAmt: btcutil.Amount(chanAmt),
 		MinConfs: 1,
 		FeeRate:  253,
-		ChangeAddr: func() (btcutil.Address, error) {
+		ChangeAddr: func() (btcutil.Address, er.R) {
 			return bob.NewAddress(lnwallet.WitnessPubKey, true)
 		},
 	})

@@ -3,8 +3,6 @@ package walletunlocker
 import (
 	"context"
 	"crypto/rand"
-	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -23,7 +21,7 @@ import (
 var (
 	// ErrUnlockTimeout signals that we did not get the expected unlock
 	// message before the timeout occurred.
-	ErrUnlockTimeout = errors.New("got no unlock message before timeout")
+	ErrUnlockTimeout = er.GenericErrorType.CodeWithDetail("ErrUnlockTimeout", "got no unlock message before timeout")
 )
 
 // ChannelsToRecover wraps any set of packed (serialized+encrypted) channel
@@ -158,7 +156,7 @@ func New(chainDir string, params *chaincfg.Params, noFreelistSync bool,
 // method should be used to commit the newly generated seed, and create the
 // wallet.
 func (u *UnlockerService) GenSeed(_ context.Context,
-	in *lnrpc.GenSeedRequest) (*lnrpc.GenSeedResponse, error) {
+	in *lnrpc.GenSeedRequest) (*lnrpc.GenSeedResponse, er.R) {
 
 	// Before we start, we'll ensure that the wallet hasn't already created
 	// so we don't show a *new* seed to the user if one already exists.
@@ -169,7 +167,7 @@ func (u *UnlockerService) GenSeed(_ context.Context,
 		return nil, err
 	}
 	if walletExists {
-		return nil, fmt.Errorf("wallet already exists")
+		return nil, er.Errorf("wallet already exists")
 	}
 
 	var entropy [aezeed.EntropySize]byte
@@ -178,7 +176,7 @@ func (u *UnlockerService) GenSeed(_ context.Context,
 	// If the user provided any entropy, then we'll make sure it's sized
 	// properly.
 	case len(in.SeedEntropy) != 0 && len(in.SeedEntropy) != aezeed.EntropySize:
-		return nil, fmt.Errorf("incorrect entropy length: expected "+
+		return nil, er.Errorf("incorrect entropy length: expected "+
 			"16 bytes, instead got %v bytes", len(in.SeedEntropy))
 
 	// If the user provided the correct number of bytes, then we'll copy it
@@ -274,7 +272,7 @@ func extractChanBackups(chanBackups *lnrpc.ChanBackupSnapshot) *ChannelsToRecove
 // seed, then present it to the user. Once it has been verified by the user,
 // the seed can be fed into this RPC in order to commit the new wallet.
 func (u *UnlockerService) InitWallet(ctx context.Context,
-	in *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, error) {
+	in *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, er.R) {
 
 	// Make sure the password meets our constraints.
 	password := in.WalletPassword
@@ -285,7 +283,7 @@ func (u *UnlockerService) InitWallet(ctx context.Context,
 	// Require that the recovery window be non-negative.
 	recoveryWindow := in.RecoveryWindow
 	if recoveryWindow < 0 {
-		return nil, fmt.Errorf("recovery window %d must be "+
+		return nil, er.Errorf("recovery window %d must be "+
 			"non-negative", recoveryWindow)
 	}
 
@@ -304,7 +302,7 @@ func (u *UnlockerService) InitWallet(ctx context.Context,
 	// If the wallet already exists, then we'll exit early as we can't
 	// create the wallet if it already exists!
 	if walletExists {
-		return nil, fmt.Errorf("wallet already exists")
+		return nil, er.Errorf("wallet already exists")
 	}
 
 	// At this point, we know that the wallet doesn't already exist. So
@@ -350,11 +348,11 @@ func (u *UnlockerService) InitWallet(ctx context.Context,
 			}, nil
 
 		case <-ctx.Done():
-			return nil, ErrUnlockTimeout
+			return nil, ErrUnlockTimeout.Default()
 		}
 
 	case <-ctx.Done():
-		return nil, ErrUnlockTimeout
+		return nil, ErrUnlockTimeout.Default()
 	}
 }
 
@@ -362,7 +360,7 @@ func (u *UnlockerService) InitWallet(ctx context.Context,
 // over the UnlockMsgs channel in case it successfully decrypts an existing
 // wallet found in the chain's wallet database directory.
 func (u *UnlockerService) UnlockWallet(ctx context.Context,
-	in *lnrpc.UnlockWalletRequest) (*lnrpc.UnlockWalletResponse, error) {
+	in *lnrpc.UnlockWalletRequest) (*lnrpc.UnlockWalletResponse, er.R) {
 
 	password := in.WalletPassword
 	recoveryWindow := uint32(in.RecoveryWindow)
@@ -380,7 +378,7 @@ func (u *UnlockerService) UnlockWallet(ctx context.Context,
 
 	if !walletExists {
 		// Cannot unlock a wallet that does not exist!
-		return nil, fmt.Errorf("wallet not found")
+		return nil, er.Errorf("wallet not found")
 	}
 
 	// Try opening the existing wallet with the provided password.
@@ -421,11 +419,11 @@ func (u *UnlockerService) UnlockWallet(ctx context.Context,
 			return &lnrpc.UnlockWalletResponse{}, nil
 
 		case <-ctx.Done():
-			return nil, ErrUnlockTimeout
+			return nil, ErrUnlockTimeout.Default()
 		}
 
 	case <-ctx.Done():
-		return nil, ErrUnlockTimeout
+		return nil, ErrUnlockTimeout.Default()
 	}
 }
 
@@ -433,7 +431,7 @@ func (u *UnlockerService) UnlockWallet(ctx context.Context,
 // across the UnlockPasswords channel to automatically unlock the wallet if
 // successful.
 func (u *UnlockerService) ChangePassword(ctx context.Context,
-	in *lnrpc.ChangePasswordRequest) (*lnrpc.ChangePasswordResponse, error) {
+	in *lnrpc.ChangePasswordRequest) (*lnrpc.ChangePasswordResponse, er.R) {
 
 	netDir := btcwallet.NetworkDir(u.chainDir, u.netParams)
 	loader := wallet.NewLoader(u.netParams, netDir, "wallet.db", u.noFreelistSync, 0)
@@ -446,7 +444,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 	}
 
 	if !walletExists {
-		return nil, errors.New("wallet not found")
+		return nil, er.New("wallet not found")
 	}
 
 	publicPw := in.CurrentPassword
@@ -489,7 +487,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 		for _, file := range u.macaroonFiles {
 			err := os.Remove(file)
 			if err != nil && !in.StatelessInit {
-				return nil, fmt.Errorf("could not remove "+
+				return nil, er.Errorf("could not remove "+
 					"macaroon file: %v. if the wallet "+
 					"was initialized stateless please "+
 					"add the --stateless_init "+
@@ -505,7 +503,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 		publicPw, in.NewPassword, privatePw, in.NewPassword,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to change wallet passphrase: "+
+		return nil, er.Errorf("unable to change wallet passphrase: "+
 			"%v", err)
 	}
 
@@ -524,7 +522,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 	if err != nil {
 		closeErr := macaroonService.Close()
 		if closeErr != nil {
-			return nil, fmt.Errorf("could not create unlock: %v "+
+			return nil, er.Errorf("could not create unlock: %v "+
 				"--> follow-up error when closing: %v", err,
 				closeErr)
 		}
@@ -534,7 +532,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 	if err != nil {
 		closeErr := macaroonService.Close()
 		if closeErr != nil {
-			return nil, fmt.Errorf("could not change password: %v "+
+			return nil, er.Errorf("could not change password: %v "+
 				"--> follow-up error when closing: %v", err,
 				closeErr)
 		}
@@ -548,7 +546,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 		if err != nil {
 			closeErr := macaroonService.Close()
 			if closeErr != nil {
-				return nil, fmt.Errorf("could not generate "+
+				return nil, er.Errorf("could not generate "+
 					"new root key: %v --> follow-up error "+
 					"when closing: %v", err, closeErr)
 			}
@@ -558,7 +556,7 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 
 	err = macaroonService.Close()
 	if err != nil {
-		return nil, fmt.Errorf("could not close macaroon service: %v",
+		return nil, er.Errorf("could not close macaroon service: %v",
 			err)
 	}
 
@@ -583,19 +581,19 @@ func (u *UnlockerService) ChangePassword(ctx context.Context,
 			}, nil
 
 		case <-ctx.Done():
-			return nil, ErrUnlockTimeout
+			return nil, ErrUnlockTimeout.Default()
 		}
 
 	case <-ctx.Done():
-		return nil, ErrUnlockTimeout
+		return nil, ErrUnlockTimeout.Default()
 	}
 }
 
 // ValidatePassword assures the password meets all of our constraints.
-func ValidatePassword(password []byte) error {
+func ValidatePassword(password []byte) er.R {
 	// Passwords should have a length of at least 8 characters.
 	if len(password) < 8 {
-		return errors.New("password must have at least 8 characters")
+		return er.New("password must have at least 8 characters")
 	}
 
 	return nil

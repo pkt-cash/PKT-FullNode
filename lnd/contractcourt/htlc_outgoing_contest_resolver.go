@@ -48,7 +48,7 @@ func newOutgoingContestResolver(res lnwallet.OutgoingHtlcResolution,
 // When either of these two things happens, we'll create a new resolver which
 // is able to handle the final resolution of the contract. We're only the pivot
 // point.
-func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, error) {
+func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, er.R) {
 	// If we're already full resolved, then we don't have anything further
 	// to do.
 	if h.resolved {
@@ -148,7 +148,7 @@ func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, error) {
 			return h.claimCleanUp(commitSpend)
 
 		case <-h.quit:
-			return nil, fmt.Errorf("resolver canceled")
+			return nil, er.Errorf("resolver canceled")
 		}
 	}
 }
@@ -194,7 +194,7 @@ func (h *htlcOutgoingContestResolver) IsResolved() bool {
 // Writer.
 //
 // NOTE: Part of the ContractResolver interface.
-func (h *htlcOutgoingContestResolver) Encode(w io.Writer) error {
+func (h *htlcOutgoingContestResolver) Encode(w io.Writer) er.R {
 	return h.htlcTimeoutResolver.Encode(w)
 }
 
@@ -202,7 +202,7 @@ func (h *htlcOutgoingContestResolver) Encode(w io.Writer) error {
 // from the passed Reader instance, returning an active ContractResolver
 // instance.
 func newOutgoingContestResolverFromReader(r io.Reader, resCfg ResolverConfig) (
-	*htlcOutgoingContestResolver, error) {
+	*htlcOutgoingContestResolver, er.R) {
 
 	h := &htlcOutgoingContestResolver{}
 	timeoutResolver, err := newTimeoutResolverFromReader(r, resCfg)

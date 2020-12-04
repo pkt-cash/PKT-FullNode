@@ -2,10 +2,10 @@ package routing
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -45,7 +45,7 @@ func newMockNode(id byte) *mockNode {
 // nil, this node is considered to be the sender of the payment. The route
 // parameter describes the remaining route from this node onwards. If route.next
 // is nil, this node is the final hop.
-func (m *mockNode) fwd(from *mockNode, route *hop) (htlcResult, error) {
+func (m *mockNode) fwd(from *mockNode, route *hop) (htlcResult, er.R) {
 	next := route.next
 
 	// Get the incoming channel, if any.
@@ -66,7 +66,7 @@ func (m *mockNode) fwd(from *mockNode, route *hop) (htlcResult, error) {
 	outChan, ok := m.channels[next.node.pubkey]
 	if !ok {
 		return htlcResult{},
-			fmt.Errorf("%v: unknown next %v",
+			er.Errorf("%v: unknown next %v",
 				m.pubkey, next.node.pubkey)
 	}
 	if outChan.balance < route.amtToFwd {
@@ -160,12 +160,12 @@ func (m *mockGraph) addChannel(id uint64, node1id, node2id byte,
 // NOTE: Part of the routingGraph interface.
 func (m *mockGraph) forEachNodeChannel(nodePub route.Vertex,
 	cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-		*channeldb.ChannelEdgePolicy) error) error {
+		*channeldb.ChannelEdgePolicy) error) er.R {
 
 	// Look up the mock node.
 	node, ok := m.nodes[nodePub]
 	if !ok {
-		return channeldb.ErrGraphNodeNotFound
+		return channeldb.ErrGraphNodeNotFound.Default()
 	}
 
 	// Iterate over all of its channels.
@@ -221,7 +221,7 @@ func (m *mockGraph) sourceNode() route.Vertex {
 //
 // NOTE: Part of the routingGraph interface.
 func (m *mockGraph) fetchNodeFeatures(nodePub route.Vertex) (
-	*lnwire.FeatureVector, error) {
+	*lnwire.FeatureVector, er.R) {
 
 	return lnwire.EmptyFeatureVector(), nil
 }
@@ -242,7 +242,7 @@ type hop struct {
 
 // sendHtlc sends out an htlc on the mock network and synchronously returns the
 // final resolution of the htlc.
-func (m *mockGraph) sendHtlc(route *route.Route) (htlcResult, error) {
+func (m *mockGraph) sendHtlc(route *route.Route) (htlcResult, er.R) {
 	var next *hop
 
 	// Convert the route into a structure that is suitable for recursive

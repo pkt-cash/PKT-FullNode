@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/brontide"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
@@ -37,11 +38,11 @@ type Standalone struct {
 
 // New validates the passed Config and returns a fresh Standalone instance if
 // the tower's subsystems could be properly initialized.
-func New(cfg *Config) (*Standalone, error) {
+func New(cfg *Config) (*Standalone, er.R) {
 	// The tower must have listening address in order to accept new updates
 	// from clients.
 	if len(cfg.ListenAddrs) == 0 {
-		return nil, ErrNoListeners
+		return nil, ErrNoListeners.Default()
 	}
 
 	// Assign the default read timeout if none is provided.
@@ -106,7 +107,7 @@ func New(cfg *Config) (*Standalone, error) {
 
 // Start idempotently starts the Standalone, an error is returned if the
 // subsystems could not be initialized.
-func (w *Standalone) Start() error {
+func (w *Standalone) Start() er.R {
 	if !atomic.CompareAndSwapUint32(&w.started, 0, 1) {
 		return nil
 	}
@@ -137,7 +138,7 @@ func (w *Standalone) Start() error {
 
 // Stop idempotently stops the Standalone and blocks until the subsystems have
 // completed their shutdown.
-func (w *Standalone) Stop() error {
+func (w *Standalone) Stop() er.R {
 	if !atomic.CompareAndSwapUint32(&w.stopped, 0, 1) {
 		return nil
 	}
@@ -154,7 +155,7 @@ func (w *Standalone) Stop() error {
 
 // createNewHiddenService automatically sets up a v2 or v3 onion service in
 // order to listen for inbound connections over Tor.
-func (w *Standalone) createNewHiddenService() error {
+func (w *Standalone) createNewHiddenService() er.R {
 	// Get all the ports the watchtower is listening on. These will be used to
 	// map the hidden service's virtual port.
 	listenPorts := make([]int, 0, len(w.listeners))

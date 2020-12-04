@@ -67,7 +67,7 @@ var addInvoiceCommand = cli.Command{
 	Action: actionDecorator(addInvoice),
 }
 
-func addInvoice(ctx *cli.Context) error {
+func addInvoice(ctx *cli.Context) er.R {
 	var (
 		preimage []byte
 		descHash []byte
@@ -87,24 +87,24 @@ func addInvoice(ctx *cli.Context) error {
 		amt, err = strconv.ParseInt(args.First(), 10, 64)
 		args = args.Tail()
 		if err != nil {
-			return fmt.Errorf("unable to decode amt argument: %v", err)
+			return er.Errorf("unable to decode amt argument: %v", err)
 		}
 	}
 
 	switch {
 	case ctx.IsSet("preimage"):
-		preimage, err = hex.DecodeString(ctx.String("preimage"))
+		preimage, err = util.DecodeHex(ctx.String("preimage"))
 	case args.Present():
-		preimage, err = hex.DecodeString(args.First())
+		preimage, err = util.DecodeHex(args.First())
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to parse preimage: %v", err)
+		return er.Errorf("unable to parse preimage: %v", err)
 	}
 
-	descHash, err = hex.DecodeString(ctx.String("description_hash"))
+	descHash, err = util.DecodeHex(ctx.String("description_hash"))
 	if err != nil {
-		return fmt.Errorf("unable to parse description_hash: %v", err)
+		return er.Errorf("unable to parse description_hash: %v", err)
 	}
 
 	invoice := &lnrpc.Invoice{
@@ -142,7 +142,7 @@ var lookupInvoiceCommand = cli.Command{
 	Action: actionDecorator(lookupInvoice),
 }
 
-func lookupInvoice(ctx *cli.Context) error {
+func lookupInvoice(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -153,15 +153,15 @@ func lookupInvoice(ctx *cli.Context) error {
 
 	switch {
 	case ctx.IsSet("rhash"):
-		rHash, err = hex.DecodeString(ctx.String("rhash"))
+		rHash, err = util.DecodeHex(ctx.String("rhash"))
 	case ctx.Args().Present():
-		rHash, err = hex.DecodeString(ctx.Args().First())
+		rHash, err = util.DecodeHex(ctx.Args().First())
 	default:
-		return fmt.Errorf("rhash argument missing")
+		return er.Errorf("rhash argument missing")
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to decode rhash argument: %v", err)
+		return er.Errorf("unable to decode rhash argument: %v", err)
 	}
 
 	req := &lnrpc.PaymentHash{
@@ -224,7 +224,7 @@ var listInvoicesCommand = cli.Command{
 	Action: actionDecorator(listInvoices),
 }
 
-func listInvoices(ctx *cli.Context) error {
+func listInvoices(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -260,7 +260,7 @@ var decodePayReqCommand = cli.Command{
 	Action: actionDecorator(decodePayReq),
 }
 
-func decodePayReq(ctx *cli.Context) error {
+func decodePayReq(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
@@ -273,7 +273,7 @@ func decodePayReq(ctx *cli.Context) error {
 	case ctx.Args().Present():
 		payreq = ctx.Args().First()
 	default:
-		return fmt.Errorf("pay_req argument missing")
+		return er.Errorf("pay_req argument missing")
 	}
 
 	resp, err := client.DecodePayReq(ctxb, &lnrpc.PayReqString{

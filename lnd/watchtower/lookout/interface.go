@@ -1,11 +1,12 @@
 package lookout
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Service abstracts the lookout functionality, supporting the ability to start
@@ -13,17 +14,17 @@ import (
 // events.
 type Service interface {
 	// Start safely starts up the Interface.
-	Start() error
+	Start() er.R
 
 	// Stop safely stops the Interface.
-	Stop() error
+	Stop() er.R
 }
 
 // BlockFetcher supports the ability to fetch blocks from the backend or
 // network.
 type BlockFetcher interface {
 	// GetBlock fetches the block given the target block hash.
-	GetBlock(*chainhash.Hash) (*wire.MsgBlock, error)
+	GetBlock(*chainhash.Hash) (*wire.MsgBlock, er.R)
 }
 
 // DB abstracts the required persistent calls expected by the lookout. DB
@@ -33,16 +34,16 @@ type DB interface {
 	// GetLookoutTip returns the last block epoch at which the tower
 	// performed a match. If no match has been done, a nil epoch will be
 	// returned.
-	GetLookoutTip() (*chainntnfs.BlockEpoch, error)
+	GetLookoutTip() (*chainntnfs.BlockEpoch, er.R)
 
 	// QueryMatches searches its database for any state updates matching the
 	// provided breach hints. If any matches are found, they will be
 	// returned along with encrypted blobs so that justice can be exacted.
-	QueryMatches([]blob.BreachHint) ([]wtdb.Match, error)
+	QueryMatches([]blob.BreachHint) ([]wtdb.Match, er.R)
 
 	// SetLookoutTip writes the best epoch for which the watchtower has
 	// queried for breach hints.
-	SetLookoutTip(*chainntnfs.BlockEpoch) error
+	SetLookoutTip(*chainntnfs.BlockEpoch) er.R
 }
 
 // EpochRegistrar supports the ability to register for events corresponding to
@@ -54,7 +55,7 @@ type EpochRegistrar interface {
 	// notifications should be delivered in-order, and deliver reorged
 	// blocks.
 	RegisterBlockEpochNtfn(
-		*chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error)
+		*chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R)
 }
 
 // Punisher handles the construction and publication of justice transactions
@@ -65,5 +66,5 @@ type Punisher interface {
 	// be mined. The second parameter is a quit channel so that long-running
 	// operations required to track the confirmation of the transaction can
 	// be canceled on shutdown.
-	Punish(*JusticeDescriptor, <-chan struct{}) error
+	Punish(*JusticeDescriptor, <-chan struct{}) er.R
 }

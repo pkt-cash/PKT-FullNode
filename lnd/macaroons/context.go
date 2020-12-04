@@ -2,7 +2,8 @@ package macaroons
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (
@@ -11,7 +12,7 @@ var (
 
 	// ErrContextRootKeyID is used when the supplied context doesn't have
 	// a root key ID.
-	ErrContextRootKeyID = fmt.Errorf("failed to read root key ID " +
+	ErrContextRootKeyID = Err.CodeWithDetail("ErrContextRootKeyID", "failed to read root key ID "+
 		"from context")
 )
 
@@ -29,15 +30,15 @@ func ContextWithRootKeyID(ctx context.Context,
 
 // RootKeyIDFromContext retrieves the root key ID from context using the key
 // RootKeyIDContextKey.
-func RootKeyIDFromContext(ctx context.Context) ([]byte, error) {
+func RootKeyIDFromContext(ctx context.Context) ([]byte, er.R) {
 	id, ok := ctx.Value(RootKeyIDContextKey).([]byte)
 	if !ok {
-		return nil, ErrContextRootKeyID
+		return nil, ErrContextRootKeyID.Default()
 	}
 
 	// Check that the id is not empty.
 	if len(id) == 0 {
-		return nil, ErrMissingRootKeyID
+		return nil, ErrMissingRootKeyID.Default()
 	}
 
 	return id, nil

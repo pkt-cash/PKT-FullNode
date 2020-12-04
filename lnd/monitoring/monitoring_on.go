@@ -29,7 +29,7 @@ func GetPromInterceptors() ([]grpc.UnaryServerInterceptor, []grpc.StreamServerIn
 
 // ExportPrometheusMetrics sets server options, registers gRPC metrics and
 // launches the Prometheus exporter on the specified address.
-func ExportPrometheusMetrics(grpcServer *grpc.Server, cfg lncfg.Prometheus) error {
+func ExportPrometheusMetrics(grpcServer *grpc.Server, cfg lncfg.Prometheus) er.R {
 	started.Do(func() {
 		log.Infof("Prometheus exporter started on %v/metrics", cfg.Listen)
 

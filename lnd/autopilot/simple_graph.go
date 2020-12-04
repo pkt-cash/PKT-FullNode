@@ -1,5 +1,7 @@
 package autopilot
 
+import "github.com/pkt-cash/pktd/btcutil/er"
+
 // SimpleGraph stores a simplifed adj graph of a channel graph to speed
 // up graph processing by eliminating all unnecessary hashing and map access.
 type SimpleGraph struct {
@@ -13,7 +15,7 @@ type SimpleGraph struct {
 // NewSimpleGraph creates a simplified graph from the current channel graph.
 // Returns an error if the channel graph iteration fails due to underlying
 // failure.
-func NewSimpleGraph(g ChannelGraph) (*SimpleGraph, error) {
+func NewSimpleGraph(g ChannelGraph) (*SimpleGraph, er.R) {
 	nodes := make(map[NodeID]int)
 	adj := make(map[int][]int)
 	nextIndex := 0
@@ -37,10 +39,10 @@ func NewSimpleGraph(g ChannelGraph) (*SimpleGraph, error) {
 
 	// Iterate over each node and each channel and update the adj and the node
 	// index.
-	err := g.ForEachNode(func(node Node) error {
+	err := g.ForEachNode(func(node Node) er.R {
 		u := getNodeIndex(node)
 
-		return node.ForEachChannel(func(edge ChannelEdge) error {
+		return node.ForEachChannel(func(edge ChannelEdge) er.R {
 			v := getNodeIndex(edge.Peer)
 
 			adj[u] = append(adj[u], v)

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,15 +30,15 @@ func TestPutToEmpty(t *testing.T) {
 	}()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	apply := func(stm STM) error {
+	apply := func(stm STM) er.R {
 		stm.Put("123", "abc")
 		return nil
 	}
 
 	err = RunSTM(db.cli, apply, txQueue)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	require.Equal(t, "abc", f.Get("123"))
 }
@@ -64,22 +66,22 @@ func TestGetPutDel(t *testing.T) {
 	}
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	apply := func(stm STM) error {
+	apply := func(stm STM) er.R {
 		// Get some non existing keys.
 		v, err := stm.Get("")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Nil(t, v)
 
 		v, err = stm.Get("x")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Nil(t, v)
 
 		// Get all existing keys.
 		for _, kv := range testKeyValues {
 			v, err = stm.Get(kv.key)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 			require.Equal(t, []byte(kv.val), v)
 		}
 
@@ -87,34 +89,34 @@ func TestGetPutDel(t *testing.T) {
 		stm.Put("c", "6")
 
 		v, err = stm.Get("c")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, []byte("6"), v)
 
 		stm.Del("c")
 
 		v, err = stm.Get("c")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Nil(t, v)
 
 		// Re-add the deleted key.
 		stm.Put("c", "7")
 
 		v, err = stm.Get("c")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, []byte("7"), v)
 
 		// Add a new key.
 		stm.Put("x", "x")
 
 		v, err = stm.Get("x")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, []byte("x"), v)
 
 		return nil
 	}
 
 	err = RunSTM(db.cli, apply, txQueue)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	require.Equal(t, "1", f.Get("a"))
 	require.Equal(t, "2", f.Get("b"))
@@ -146,43 +148,43 @@ func TestFirstLastNextPrev(t *testing.T) {
 	}
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
-	apply := func(stm STM) error {
+	apply := func(stm STM) er.R {
 		// First/Last on valid multi item interval.
 		kv, err := stm.First("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kb", "1"}, kv)
 
 		kv, err = stm.Last("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"ke", "4"}, kv)
 
 		// First/Last on single item interval.
 		kv, err = stm.First("w")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"w", "w"}, kv)
 
 		kv, err = stm.Last("w")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"w", "w"}, kv)
 
 		// Next/Prev on start/end.
 		kv, err = stm.Next("k", "ke")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Nil(t, kv)
 
 		kv, err = stm.Prev("k", "kb")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Nil(t, kv)
 
 		// Next/Prev in the middle.
 		kv, err = stm.Next("k", "kc")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kda", "3"}, kv)
 
 		kv, err = stm.Prev("k", "ke")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kda", "3"}, kv)
 
 		// Delete first item, then add an item before the
@@ -192,11 +194,11 @@ func TestFirstLastNextPrev(t *testing.T) {
 		stm.Put("ka", "0")
 
 		kv, err = stm.First("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"ka", "0"}, kv)
 
 		kv, err = stm.Prev("k", "kc")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"ka", "0"}, kv)
 
 		// Similarly test that a new end is returned if
@@ -205,18 +207,18 @@ func TestFirstLastNextPrev(t *testing.T) {
 		stm.Put("kf", "5")
 
 		kv, err = stm.Last("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kf", "5"}, kv)
 
 		kv, err = stm.Next("k", "kda")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kf", "5"}, kv)
 
 		// Overwrite one in the middle.
 		stm.Put("kda", "6")
 
 		kv, err = stm.Next("k", "kc")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, &KV{"kda", "6"}, kv)
 
 		// Add three in the middle, then delete one.
@@ -230,12 +232,12 @@ func TestFirstLastNextPrev(t *testing.T) {
 		var kvs []KV
 
 		curr, err := stm.First("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		for curr != nil {
 			kvs = append(kvs, *curr)
 			curr, err = stm.Next("k", curr.key)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 		}
 
 		expected := []KV{
@@ -253,12 +255,12 @@ func TestFirstLastNextPrev(t *testing.T) {
 		kvs = []KV{}
 
 		curr, err = stm.Last("k")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		for curr != nil {
 			kvs = append(kvs, *curr)
 			curr, err = stm.Prev("k", curr.key)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 		}
 
 		expected = reverseKVs(expected)
@@ -268,7 +270,7 @@ func TestFirstLastNextPrev(t *testing.T) {
 	}
 
 	err = RunSTM(db.cli, apply, txQueue)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	require.Equal(t, "0", f.Get("ka"))
 	require.Equal(t, "2", f.Get("kc"))
@@ -290,7 +292,7 @@ func TestCommitError(t *testing.T) {
 	}()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Preset DB state.
 	f.Put("123", "xyz")
@@ -298,10 +300,10 @@ func TestCommitError(t *testing.T) {
 	// Count the number of applies.
 	cnt := 0
 
-	apply := func(stm STM) error {
+	apply := func(stm STM) er.R {
 		// STM must have the key/value.
 		val, err := stm.Get("123")
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		if cnt == 0 {
 			require.Equal(t, []byte("xyz"), val)
@@ -318,7 +320,7 @@ func TestCommitError(t *testing.T) {
 	}
 
 	err = RunSTM(db.cli, apply, txQueue)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, 2, cnt)
 
 	require.Equal(t, "abc", f.Get("123"))
@@ -335,7 +337,7 @@ func TestManualTxError(t *testing.T) {
 	}()
 
 	db, err := newEtcdBackend(f.BackendConfig())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Preset DB state.
 	f.Put("123", "xyz")
@@ -343,7 +345,7 @@ func TestManualTxError(t *testing.T) {
 	stm := NewSTM(db.cli, txQueue)
 
 	val, err := stm.Get("123")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, []byte("xyz"), val)
 
 	// Put a conflicting key/value.
@@ -351,7 +353,7 @@ func TestManualTxError(t *testing.T) {
 
 	// Should still get the original version.
 	val, err = stm.Get("123")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, []byte("xyz"), val)
 
 	// Commit will fail with CommitError.

@@ -222,7 +222,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 // WalletExists returns whether a file exists at the loader's database path.
 // This may return an error for unexpected I/O failures.
-func (l *Loader) WalletExists() (bool, error) {
+func (l *Loader) WalletExists() (bool, er.R) {
 	dbPath := filepath.Join(l.dbDirPath, l.walletName)
 	return fileExists(dbPath)
 }

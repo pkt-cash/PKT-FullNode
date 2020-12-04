@@ -1,14 +1,13 @@
 package btcdnotify
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
@@ -94,7 +93,7 @@ var _ chainntnfs.ChainNotifier = (*BtcdNotifier)(nil)
 // accept new websockets clients.
 func New(config *rpcclient.ConnConfig, chainParams *chaincfg.Params,
 	spendHintCache chainntnfs.SpendHintCache,
-	confirmHintCache chainntnfs.ConfirmHintCache) (*BtcdNotifier, error) {
+	confirmHintCache chainntnfs.ConfirmHintCache) (*BtcdNotifier, er.R) {
 
 	notifier := &BtcdNotifier{
 		chainParams: chainParams,
@@ -134,8 +133,8 @@ func New(config *rpcclient.ConnConfig, chainParams *chaincfg.Params,
 
 // Start connects to the running btcd node over websockets, registers for block
 // notifications, and finally launches all related helper goroutines.
-func (b *BtcdNotifier) Start() error {
-	var startErr error
+func (b *BtcdNotifier) Start() er.R {
+	var startErr er.R
 	b.start.Do(func() {
 		startErr = b.startNotifier()
 	})
@@ -148,7 +147,7 @@ func (b *BtcdNotifier) Started() bool {
 }
 
 // Stop shutsdown the BtcdNotifier.
-func (b *BtcdNotifier) Stop() error {
+func (b *BtcdNotifier) Stop() er.R {
 	// Already shutting down?
 	if atomic.AddInt32(&b.stopped, 1) != 1 {
 		return nil
@@ -177,7 +176,7 @@ func (b *BtcdNotifier) Stop() error {
 	return nil
 }
 
-func (b *BtcdNotifier) startNotifier() error {
+func (b *BtcdNotifier) startNotifier() er.R {
 	// Start our concurrent queues before starting the chain connection, to
 	// ensure onBlockConnected and onRedeemingTx callbacks won't be
 	// blocked.
@@ -496,7 +495,7 @@ out:
 // returns details about said block.
 func (b *BtcdNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequest,
 	startHeight, endHeight uint32) (*chainntnfs.TxConfirmation,
-	chainntnfs.TxConfStatus, error) {
+	chainntnfs.TxConfStatus, er.R) {
 
 	// If a txid was not provided, then we should dispatch upon seeing the
 	// script on-chain, so we'll short-circuit straight to scanning manually
@@ -544,7 +543,7 @@ func (b *BtcdNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequest,
 	// Unexpected txStatus returned.
 	default:
 		return nil, txStatus,
-			fmt.Errorf("Got unexpected txConfStatus: %v", txStatus)
+			er.Errorf("Got unexpected txConfStatus: %v", txStatus)
 	}
 
 	return txConf, txStatus, nil
@@ -556,7 +555,7 @@ func (b *BtcdNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequest,
 // confirmation details are returned. Otherwise, nil is returned.
 func (b *BtcdNotifier) confDetailsManually(confRequest chainntnfs.ConfRequest,
 	startHeight, endHeight uint32) (*chainntnfs.TxConfirmation,
-	chainntnfs.TxConfStatus, error) {
+	chainntnfs.TxConfStatus, er.R) {
 
 	// Begin scanning blocks at every height to determine where the
 	// transaction was included in.
@@ -566,14 +565,14 @@ func (b *BtcdNotifier) confDetailsManually(confRequest chainntnfs.ConfRequest,
 		select {
 		case <-b.quit:
 			return nil, chainntnfs.TxNotFoundManually,
-				chainntnfs.ErrChainNotifierShuttingDown
+				chainntnfs.ErrChainNotifierShuttingDown.Default()
 		default:
 		}
 
 		blockHash, err := b.chainConn.GetBlockHash(int64(height))
 		if err != nil {
 			return nil, chainntnfs.TxNotFoundManually,
-				fmt.Errorf("unable to get hash from block "+
+				er.Errorf("unable to get hash from block "+
 					"with height %d", height)
 		}
 
@@ -581,7 +580,7 @@ func (b *BtcdNotifier) confDetailsManually(confRequest chainntnfs.ConfRequest,
 		block, err := b.chainConn.GetBlock(blockHash)
 		if err != nil {
 			return nil, chainntnfs.TxNotFoundManually,
-				fmt.Errorf("unable to get block with hash "+
+				er.Errorf("unable to get block with hash "+
 					"%v: %v", blockHash, err)
 		}
 
@@ -612,13 +611,13 @@ func (b *BtcdNotifier) confDetailsManually(confRequest chainntnfs.ConfRequest,
 // now or after numConfirmations confs.
 // TODO(halseth): this is reusing the neutrino notifier implementation, unify
 // them.
-func (b *BtcdNotifier) handleBlockConnected(epoch chainntnfs.BlockEpoch) error {
+func (b *BtcdNotifier) handleBlockConnected(epoch chainntnfs.BlockEpoch) er.R {
 	// First, we'll fetch the raw block as we'll need to gather all the
 	// transactions to determine whether any are relevant to our registered
 	// clients.
 	rawBlock, err := b.chainConn.GetBlock(epoch.Hash)
 	if err != nil {
-		return fmt.Errorf("unable to get block: %v", err)
+		return er.Errorf("unable to get block: %v", err)
 	}
 	newBlock := &filteredBlock{
 		hash:    *epoch.Hash,
@@ -634,7 +633,7 @@ func (b *BtcdNotifier) handleBlockConnected(epoch chainntnfs.BlockEpoch) error {
 		&newBlock.hash, newBlock.height, newBlock.txns,
 	)
 	if errr != nil {
-		return fmt.Errorf("unable to connect tip: %v", errr)
+		return er.Errorf("unable to connect tip: %v", errr)
 	}
 
 	chainntnfs.Log.Infof("New block: height=%v, sha=%v", epoch.Height,
@@ -685,7 +684,7 @@ func (b *BtcdNotifier) notifyBlockEpochClient(epochClient *blockEpochRegistratio
 // Once a spend of has been detected, the details of the spending event will be
 // sent across the 'Spend' channel.
 func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
-	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, error) {
+	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, er.R) {
 
 	// Register the conf notification with the TxNotifier. A non-nil value
 	// for `dispatch` will be returned if we are required to perform a
@@ -705,7 +704,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 			pkScript, b.chainParams,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse script: %v", err)
+			return nil, er.Errorf("unable to parse script: %v", err)
 		}
 		if err := b.chainConn.NotifyReceived(addrs); err != nil {
 			return nil, err
@@ -743,7 +742,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 			pkScript, b.chainParams,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse address: %v", err)
+			return nil, er.Errorf("unable to parse address: %v", err)
 		}
 
 		asyncResult := b.chainConn.RescanAsync(startHash, addrs, nil)
@@ -790,7 +789,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 		int64(ntfn.HistoricalDispatch.StartHeight),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get block hash for height "+
+		return nil, er.Errorf("unable to get block hash for height "+
 			"%d: %v", ntfn.HistoricalDispatch.StartHeight, err)
 	}
 
@@ -803,7 +802,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 		// Avoid returning an error if the transaction was not found to
 		// proceed with fallback methods.
 		if !btcjson.ErrRPCNoTxInfo.Is(err) {
-			return nil, fmt.Errorf("unable to query for txid %v: %v",
+			return nil, er.Errorf("unable to query for txid %v: %v",
 				outpoint.Hash, err)
 		}
 	}
@@ -824,7 +823,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 		}
 		blockHeader, err := b.chainConn.GetBlockHeaderVerbose(blockHash)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get header for "+
+			return nil, er.Errorf("unable to get header for "+
 				"block %v: %v", blockHash, err)
 		}
 
@@ -833,7 +832,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 				int64(blockHeader.Height),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("unable to get block "+
+				return nil, er.Errorf("unable to get block "+
 					"hash for height %d: %v",
 					blockHeader.Height, err)
 			}
@@ -874,7 +873,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 // sent across the 'Confirmed' channel.
 func (b *BtcdNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	pkScript []byte,
-	numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, error) {
+	numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent, er.R) {
 
 	// Register the conf notification with the TxNotifier. A non-nil value
 	// for `dispatch` will be returned if we are required to perform a
@@ -895,7 +894,7 @@ func (b *BtcdNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	case b.notificationRegistry <- ntfn.HistoricalDispatch:
 		return ntfn.Event, nil
 	case <-b.quit:
-		return nil, chainntnfs.ErrChainNotifierShuttingDown
+		return nil, chainntnfs.ErrChainNotifierShuttingDown.Default()
 	}
 }
 
@@ -910,7 +909,7 @@ type blockEpochRegistration struct {
 
 	bestBlock *chainntnfs.BlockEpoch
 
-	errorChan chan error
+	errorChan chan er.R
 
 	cancelChan chan struct{}
 
@@ -930,7 +929,7 @@ type epochCancel struct {
 // they do not provide one, then a notification will be dispatched immediately
 // for the current tip of the chain upon a successful registration.
 func (b *BtcdNotifier) RegisterBlockEpochNtfn(
-	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, error) {
+	bestBlock *chainntnfs.BlockEpoch) (*chainntnfs.BlockEpochEvent, er.R) {
 
 	reg := &blockEpochRegistration{
 		epochQueue: queue.NewConcurrentQueue(20),
@@ -938,7 +937,7 @@ func (b *BtcdNotifier) RegisterBlockEpochNtfn(
 		cancelChan: make(chan struct{}),
 		epochID:    atomic.AddUint64(&b.epochClientCounter, 1),
 		bestBlock:  bestBlock,
-		errorChan:  make(chan error, 1),
+		errorChan:  make(chan er.R, 1),
 	}
 
 	reg.epochQueue.Start()
@@ -979,7 +978,7 @@ func (b *BtcdNotifier) RegisterBlockEpochNtfn(
 		// we'll stop the queue now ourselves.
 		reg.epochQueue.Stop()
 
-		return nil, errors.New("chainntnfs: system interrupt while " +
+		return nil, er.New("chainntnfs: system interrupt while " +
 			"attempting to register for block epoch notification.")
 	case b.notificationRegistry <- reg:
 		return &chainntnfs.BlockEpochEvent{

@@ -87,26 +87,26 @@ func newMockNet(cb func(wtserver.Peer)) *mockNet {
 }
 
 func (m *mockNet) Dial(network string, address string,
-	timeout time.Duration) (net.Conn, error) {
+	timeout time.Duration) (net.Conn, er.R) {
 
 	return nil, nil
 }
 
-func (m *mockNet) LookupHost(host string) ([]string, error) {
+func (m *mockNet) LookupHost(host string) ([]string, er.R) {
 	panic("not implemented")
 }
 
-func (m *mockNet) LookupSRV(service string, proto string, name string) (string, []*net.SRV, error) {
+func (m *mockNet) LookupSRV(service string, proto string, name string) (string, []*net.SRV, er.R) {
 	panic("not implemented")
 }
 
-func (m *mockNet) ResolveTCPAddr(network string, address string) (*net.TCPAddr, error) {
+func (m *mockNet) ResolveTCPAddr(network string, address string) (*net.TCPAddr, er.R) {
 	panic("not implemented")
 }
 
 func (m *mockNet) AuthDial(local keychain.SingleKeyECDH,
 	netAddr *lnwire.NetAddress,
-	dialer tor.DialFunc) (wtserver.Peer, error) {
+	dialer tor.DialFunc) (wtserver.Peer, er.R) {
 
 	localPk := local.PubKey()
 	localAddr := &net.TCPAddr{
@@ -422,7 +422,7 @@ func newHarness(t *testing.T, cfg harnessCfg) *testHarness {
 		ReadTimeout:  timeout,
 		WriteTimeout: timeout,
 		NodeKeyECDH:  privKeyECDH,
-		NewAddress: func() (btcutil.Address, error) {
+		NewAddress: func() (btcutil.Address, er.R) {
 			return addr, nil
 		},
 		NoAckCreateSession: cfg.noAckCreateSession,
@@ -444,7 +444,7 @@ func newHarness(t *testing.T, cfg harnessCfg) *testHarness {
 		AuthDial:      mockNet.AuthDial,
 		SecretKeyRing: wtmock.NewSecretKeyRing(),
 		Policy:        cfg.policy,
-		NewAddress: func() ([]byte, error) {
+		NewAddress: func() ([]byte, er.R) {
 			return addrScript, nil
 		},
 		ReadTimeout:  timeout,

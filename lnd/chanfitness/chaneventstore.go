@@ -11,11 +11,10 @@
 package chanfitness
 
 import (
-	"errors"
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channelnotifier"
 	"github.com/pkt-cash/pktd/lnd/clock"
@@ -23,6 +22,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -32,17 +32,18 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd.chanfitness")
 	// errShuttingDown is returned when the store cannot respond to a query
 	// because it has received the shutdown signal.
-	errShuttingDown = errors.New("channel event store shutting down")
+	errShuttingDown = Err.CodeWithDetail("errShuttingDown", "channel event store shutting down")
 
 	// ErrChannelNotFound is returned when a query is made for a channel
 	// that the event store does not have knowledge of.
-	ErrChannelNotFound = errors.New("channel not found in event store")
+	ErrChannelNotFound = Err.CodeWithDetail("ErrChannelNotFound", "channel not found in event store")
 
 	// ErrPeerNotFound is returned when a query is made for a channel
 	// that has a peer that the event store is not currently tracking.
-	ErrPeerNotFound = errors.New("peer not found in event store")
+	ErrPeerNotFound = Err.CodeWithDetail("ErrPeerNotFound", "peer not found in event store")
 )
 
 // ChannelEventStore maintains a set of event logs for the node's channels to
@@ -70,26 +71,26 @@ type ChannelEventStore struct {
 type Config struct {
 	// SubscribeChannelEvents provides a subscription client which provides
 	// a stream of channel events.
-	SubscribeChannelEvents func() (subscribe.Subscription, error)
+	SubscribeChannelEvents func() (subscribe.Subscription, er.R)
 
 	// SubscribePeerEvents provides a subscription client which provides a
 	// stream of peer online/offline events.
-	SubscribePeerEvents func() (subscribe.Subscription, error)
+	SubscribePeerEvents func() (subscribe.Subscription, er.R)
 
 	// GetOpenChannels provides a list of existing open channels which is
 	// used to populate the ChannelEventStore with a set of channels on
 	// startup.
-	GetOpenChannels func() ([]*channeldb.OpenChannel, error)
+	GetOpenChannels func() ([]*channeldb.OpenChannel, er.R)
 
 	// Clock is the time source that the subsystem uses, provided here
 	// for ease of testing.
 	Clock clock.Clock
 
 	// WriteFlapCounts records the flap count for a set of peers on disk.
-	WriteFlapCount func(map[route.Vertex]*channeldb.FlapCount) error
+	WriteFlapCount func(map[route.Vertex]*channeldb.FlapCount) er.R
 
 	// ReadFlapCount gets the flap count for a peer on disk.
-	ReadFlapCount func(route.Vertex) (*channeldb.FlapCount, error)
+	ReadFlapCount func(route.Vertex) (*channeldb.FlapCount, er.R)
 
 	// FlapCountTicker is a ticker which controls how often we flush our
 	// peer's flap count to disk.
@@ -108,7 +109,7 @@ type channelInfoRequest struct {
 
 type channelInfoResponse struct {
 	info *ChannelInfo
-	err  error
+	err  er.R
 }
 
 type peerRequest struct {
@@ -119,7 +120,7 @@ type peerRequest struct {
 type peerResponse struct {
 	flapCount int
 	ts        *time.Time
-	err       error
+	err       er.R
 }
 
 // NewChannelEventStore initializes an event store with the config provided.
@@ -141,7 +142,7 @@ func NewChannelEventStore(config *Config) *ChannelEventStore {
 // loop which records channel and peer events, and serves requests for
 // information from the store. If this function fails, it cancels its existing
 // subscriptions and returns an error.
-func (c *ChannelEventStore) Start() error {
+func (c *ChannelEventStore) Start() er.R {
 	// Create a subscription to channel events.
 	channelClient, err := c.cfg.SubscribeChannelEvents()
 	if err != nil {
@@ -232,7 +233,7 @@ func (c *ChannelEventStore) addChannel(channelPoint wire.OutPoint,
 // getPeerMonitor tries to get an existing peer monitor from our in memory list,
 // and falls back to creating a new monitor if it is not currently known.
 func (c *ChannelEventStore) getPeerMonitor(peer route.Vertex) (peerMonitor,
-	error) {
+	er.R) {
 
 	peerMonitor, ok := c.peers[peer]
 	if ok {
@@ -245,12 +246,12 @@ func (c *ChannelEventStore) getPeerMonitor(peer route.Vertex) (peerMonitor,
 	)
 
 	historicalFlap, err := c.cfg.ReadFlapCount(peer)
-	switch err {
+	switch {
 	// If we do not have any records for this peer we set a 0 flap count
 	// and timestamp.
-	case channeldb.ErrNoPeerBucket:
+	case channeldb.ErrNoPeerBucket.Is(err):
 
-	case nil:
+	case err == nil:
 		flapCount = int(historicalFlap.Count)
 		lastFlap = &historicalFlap.LastFlap
 
@@ -425,7 +426,7 @@ type ChannelInfo struct {
 
 // GetChanInfo gets all the information we have on a channel in the event store.
 func (c *ChannelEventStore) GetChanInfo(channelPoint wire.OutPoint,
-	peer route.Vertex) (*ChannelInfo, error) {
+	peer route.Vertex) (*ChannelInfo, er.R) {
 
 	request := channelInfoRequest{
 		peer:         peer,
@@ -439,7 +440,7 @@ func (c *ChannelEventStore) GetChanInfo(channelPoint wire.OutPoint,
 	select {
 	case c.chanInfoRequests <- request:
 	case <-c.quit:
-		return nil, errShuttingDown
+		return nil, errShuttingDown.Default()
 	}
 
 	// Return the response we receive on the response channel or exit early
@@ -449,18 +450,18 @@ func (c *ChannelEventStore) GetChanInfo(channelPoint wire.OutPoint,
 		return resp.info, resp.err
 
 	case <-c.quit:
-		return nil, errShuttingDown
+		return nil, errShuttingDown.Default()
 	}
 }
 
 // getChanInfo collects channel information for a channel. It gets uptime over
 // the full lifetime of the channel.
 func (c *ChannelEventStore) getChanInfo(req channelInfoRequest) (*ChannelInfo,
-	error) {
+	er.R) {
 
 	peerMonitor, ok := c.peers[req.peer]
 	if !ok {
-		return nil, ErrPeerNotFound
+		return nil, ErrPeerNotFound.Default()
 	}
 
 	lifetime, uptime, err := peerMonitor.channelUptime(req.channelPoint)
@@ -478,7 +479,7 @@ func (c *ChannelEventStore) getChanInfo(req channelInfoRequest) (*ChannelInfo,
 // last flap. If we do not have any flaps recorded for the peer, the last flap
 // timestamp will be nil.
 func (c *ChannelEventStore) FlapCount(peer route.Vertex) (int, *time.Time,
-	error) {
+	er.R) {
 
 	request := peerRequest{
 		peer:         peer,
@@ -491,7 +492,7 @@ func (c *ChannelEventStore) FlapCount(peer route.Vertex) (int, *time.Time,
 	select {
 	case c.peerRequests <- request:
 	case <-c.quit:
-		return 0, nil, errShuttingDown
+		return 0, nil, errShuttingDown.Default()
 	}
 
 	// Return the response we receive on the response channel or exit early
@@ -501,7 +502,7 @@ func (c *ChannelEventStore) FlapCount(peer route.Vertex) (int, *time.Time,
 		return resp.flapCount, resp.ts, resp.err
 
 	case <-c.quit:
-		return 0, nil, errShuttingDown
+		return 0, nil, errShuttingDown.Default()
 	}
 }
 
@@ -510,7 +511,7 @@ func (c *ChannelEventStore) FlapCount(peer route.Vertex) (int, *time.Time,
 // the peer. If we have no flap count recorded for the peer, a nil last flap
 // time will be returned.
 func (c *ChannelEventStore) flapCount(peer route.Vertex) (int, *time.Time,
-	error) {
+	er.R) {
 
 	// First check whether we are tracking this peer in memory, because this
 	// record will have the most accurate flap count. We do not fail if we
@@ -526,11 +527,11 @@ func (c *ChannelEventStore) flapCount(peer route.Vertex) (int, *time.Time,
 	// recorded, we return a nil last flap time to indicate that we have no
 	// record of the peer's flap count.
 	flapCount, err := c.cfg.ReadFlapCount(peer)
-	switch err {
-	case channeldb.ErrNoPeerBucket:
+	switch {
+	case channeldb.ErrNoPeerBucket.Is(err):
 		return 0, nil, nil
 
-	case nil:
+	case nil == err:
 		return int(flapCount.Count), &flapCount.LastFlap, nil
 
 	default:
@@ -540,7 +541,7 @@ func (c *ChannelEventStore) flapCount(peer route.Vertex) (int, *time.Time,
 
 // recordFlapCount will record our flap count for each peer that we are
 // currently tracking, skipping peers that have a 0 flap count.
-func (c *ChannelEventStore) recordFlapCount() error {
+func (c *ChannelEventStore) recordFlapCount() er.R {
 	updates := make(peerFlapCountMap)
 
 	for peer, monitor := range c.peers {

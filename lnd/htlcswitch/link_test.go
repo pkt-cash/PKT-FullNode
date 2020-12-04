@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"net"
 	"reflect"
 	"runtime"
@@ -18,6 +17,8 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/build"
@@ -104,7 +105,7 @@ type expectedMessage struct {
 // createLogFunc is a helper function which returns the function which will be
 // used for logging message are received from another peer.
 func createLogFunc(name string, channelID lnwire.ChannelID) messageInterceptor {
-	return func(m lnwire.Message) (bool, error) {
+	return func(m lnwire.Message) (bool, er.R) {
 		chanID, err := getChanID(m)
 		if err != nil {
 			return false, err
@@ -134,7 +135,7 @@ func createInterceptorFunc(prefix, receiver string, messages []expectedMessage,
 
 	// Return function which checks the message order and skip the
 	// messages.
-	return func(m lnwire.Message) (bool, error) {
+	return func(m lnwire.Message) (bool, er.R) {
 		messageChanID, err := getChanID(m)
 		if err != nil {
 			return false, err
@@ -484,7 +485,7 @@ func TestChannelLinkCancelFullCommitment(t *testing.T) {
 		// It's possible that the HTLCs have not been delivered to the
 		// invoice registry at this point, so we poll until we are able
 		// to settle.
-		err = wait.NoError(func() error {
+		err = wait.NoError(func() er.R {
 			return n.bobServer.registry.SettleHodlInvoice(preimage)
 		}, time.Minute)
 		if err != nil {
@@ -1599,23 +1600,23 @@ func (m *mockPeer) QuitSignal() <-chan struct{} {
 
 var _ lnpeer.Peer = (*mockPeer)(nil)
 
-func (m *mockPeer) SendMessage(sync bool, msgs ...lnwire.Message) error {
+func (m *mockPeer) SendMessage(sync bool, msgs ...lnwire.Message) er.R {
 	if m.disconnected {
-		return fmt.Errorf("disconnected")
+		return er.Errorf("disconnected")
 	}
 
 	select {
 	case m.sentMsgs <- msgs[0]:
 	case <-m.quit:
-		return fmt.Errorf("mockPeer shutting down")
+		return er.Errorf("mockPeer shutting down")
 	}
 	return nil
 }
-func (m *mockPeer) SendMessageLazy(sync bool, msgs ...lnwire.Message) error {
+func (m *mockPeer) SendMessageLazy(sync bool, msgs ...lnwire.Message) er.R {
 	return m.SendMessage(sync, msgs...)
 }
 func (m *mockPeer) AddNewChannel(_ *channeldb.OpenChannel,
-	_ <-chan struct{}) error {
+	_ <-chan struct{}) er.R {
 	return nil
 }
 func (m *mockPeer) WipeChannel(*wire.OutPoint) {}
@@ -1637,10 +1638,10 @@ func (m *mockPeer) RemoteFeatures() *lnwire.FeatureVector {
 
 func newSingleLinkTestHarness(chanAmt, chanReserve btcutil.Amount) (
 	ChannelLink, *lnwallet.LightningChannel, chan time.Time, func() error,
-	func(), func() (*lnwallet.LightningChannel, error), error) {
+	func(), func() (*lnwallet.LightningChannel, error), er.R) {
 
 	var chanIDBytes [8]byte
-	if _, err := io.ReadFull(rand.Reader, chanIDBytes[:]); err != nil {
+	if _, err := util.ReadFull(rand.Reader, chanIDBytes[:]); err != nil {
 		return nil, nil, nil, nil, nil, nil, err
 	}
 
@@ -1698,7 +1699,7 @@ func newSingleLinkTestHarness(chanAmt, chanReserve btcutil.Amount) (
 		OnChannelFailure: func(lnwire.ChannelID,
 			lnwire.ShortChannelID, LinkFailureError) {
 		},
-		UpdateContractSignals: func(*contractcourt.ContractSignals) error {
+		UpdateContractSignals: func(*contractcourt.ContractSignals) er.R {
 			return nil
 		},
 		Registry:            invoiceRegistry,
@@ -1720,7 +1721,7 @@ func newSingleLinkTestHarness(chanAmt, chanReserve btcutil.Amount) (
 	}
 
 	aliceLink := NewChannelLink(aliceCfg, aliceLc.channel)
-	start := func() error {
+	start := func() er.R {
 		return aliceSwitch.AddLink(aliceLink)
 	}
 	go func() {
@@ -1756,19 +1757,19 @@ func assertLinkBandwidth(t *testing.T, link ChannelLink,
 // handleStateUpdate handles the messages sent from the link after
 // the batch ticker has triggered a state update.
 func handleStateUpdate(link *channelLink,
-	remoteChannel *lnwallet.LightningChannel) error {
+	remoteChannel *lnwallet.LightningChannel) er.R {
 	sentMsgs := link.cfg.Peer.(*mockPeer).sentMsgs
 	var msg lnwire.Message
 	select {
 	case msg = <-sentMsgs:
 	case <-time.After(60 * time.Second):
-		return fmt.Errorf("did not receive CommitSig from Alice")
+		return er.Errorf("did not receive CommitSig from Alice")
 	}
 
 	// The link should be sending a commit sig at this point.
 	commitSig, ok := msg.(*lnwire.CommitSig)
 	if !ok {
-		return fmt.Errorf("expected CommitSig, got %T", msg)
+		return er.Errorf("expected CommitSig, got %T", msg)
 	}
 
 	// Let the remote channel receive the commit sig, and
@@ -1799,16 +1800,16 @@ func handleStateUpdate(link *channelLink,
 	select {
 	case msg = <-sentMsgs:
 	case <-time.After(60 * time.Second):
-		return fmt.Errorf("did not receive RevokeAndAck from Alice")
+		return er.Errorf("did not receive RevokeAndAck from Alice")
 	}
 
 	revoke, ok := msg.(*lnwire.RevokeAndAck)
 	if !ok {
-		return fmt.Errorf("expected RevokeAndAck got %T", msg)
+		return er.Errorf("expected RevokeAndAck got %T", msg)
 	}
 	_, _, _, _, err = remoteChannel.ReceiveRevocation(revoke)
 	if err != nil {
-		return fmt.Errorf("unable to receive "+
+		return er.Errorf("unable to receive "+
 			"revocation: %v", err)
 	}
 
@@ -1821,7 +1822,7 @@ func handleStateUpdate(link *channelLink,
 // make the remoteChannel initiate the state update.
 func updateState(batchTick chan time.Time, link *channelLink,
 	remoteChannel *lnwallet.LightningChannel,
-	initiateUpdate bool) error {
+	initiateUpdate bool) er.R {
 	sentMsgs := link.cfg.Peer.(*mockPeer).sentMsgs
 
 	if initiateUpdate {
@@ -1829,7 +1830,7 @@ func updateState(batchTick chan time.Time, link *channelLink,
 		select {
 		case batchTick <- time.Now():
 		case <-link.quit:
-			return fmt.Errorf("link shutting down")
+			return er.Errorf("link shutting down")
 		}
 		return handleStateUpdate(link, remoteChannel)
 	}
@@ -1852,28 +1853,28 @@ func updateState(batchTick chan time.Time, link *channelLink,
 	select {
 	case msg = <-sentMsgs:
 	case <-time.After(60 * time.Second):
-		return fmt.Errorf("did not receive RevokeAndAck from Alice")
+		return er.Errorf("did not receive RevokeAndAck from Alice")
 	}
 
 	revoke, ok := msg.(*lnwire.RevokeAndAck)
 	if !ok {
-		return fmt.Errorf("expected RevokeAndAck got %T",
+		return er.Errorf("expected RevokeAndAck got %T",
 			msg)
 	}
 	_, _, _, _, err = remoteChannel.ReceiveRevocation(revoke)
 	if err != nil {
-		return fmt.Errorf("unable to receive "+
+		return er.Errorf("unable to receive "+
 			"revocation: %v", err)
 	}
 	select {
 	case msg = <-sentMsgs:
 	case <-time.After(60 * time.Second):
-		return fmt.Errorf("did not receive CommitSig from Alice")
+		return er.Errorf("did not receive CommitSig from Alice")
 	}
 
 	commitSig, ok = msg.(*lnwire.CommitSig)
 	if !ok {
-		return fmt.Errorf("expected CommitSig, got %T", msg)
+		return er.Errorf("expected CommitSig, got %T", msg)
 	}
 
 	err = remoteChannel.ReceiveNewCommitment(
@@ -4017,7 +4018,7 @@ type persistentLinkHarness struct {
 	batchTicker chan time.Time
 	msgs        chan lnwire.Message
 
-	restoreChan func() (*lnwallet.LightningChannel, error)
+	restoreChan func() (*lnwallet.LightningChannel, er.R)
 }
 
 // newPersistentLinkHarness initializes a new persistentLinkHarness and derives
@@ -4155,7 +4156,7 @@ func (h *persistentLinkHarness) trySignNextCommitment() {
 func (h *persistentLinkHarness) restartLink(
 	aliceChannel *lnwallet.LightningChannel, restartSwitch bool,
 	hodlFlags []hodl.Flag) (
-	ChannelLink, chan time.Time, func(), error) {
+	ChannelLink, chan time.Time, func(), er.R) {
 
 	var (
 		decoder    = newMockIteratorDecoder()
@@ -4203,7 +4204,7 @@ func (h *persistentLinkHarness) restartLink(
 		OnChannelFailure: func(lnwire.ChannelID,
 			lnwire.ShortChannelID, LinkFailureError) {
 		},
-		UpdateContractSignals: func(*contractcourt.ContractSignals) error {
+		UpdateContractSignals: func(*contractcourt.ContractSignals) er.R {
 			return nil
 		},
 		Registry:            h.coreLink.cfg.Registry,
@@ -4408,7 +4409,7 @@ func checkHasPreimages(t *testing.T, coreLink *channelLink,
 
 	t.Helper()
 
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		for i := range htlcs {
 			_, ok := coreLink.cfg.PreimageCache.LookupPreimage(
 				htlcs[i].PaymentHash,
@@ -4417,7 +4418,7 @@ func checkHasPreimages(t *testing.T, coreLink *channelLink,
 				continue
 			}
 
-			return fmt.Errorf("expected to find witness: %v, "+
+			return er.Errorf("expected to find witness: %v, "+
 				"got %v for hash=%x", expOk, ok,
 				htlcs[i].PaymentHash)
 		}
@@ -5081,33 +5082,33 @@ type mockPackager struct {
 	failLoadFwdPkgs bool
 }
 
-func (*mockPackager) AddFwdPkg(tx kvdb.RwTx, fwdPkg *channeldb.FwdPkg) error {
+func (*mockPackager) AddFwdPkg(tx kvdb.RwTx, fwdPkg *channeldb.FwdPkg) er.R {
 	return nil
 }
 
 func (*mockPackager) SetFwdFilter(tx kvdb.RwTx, height uint64,
-	fwdFilter *channeldb.PkgFilter) error {
+	fwdFilter *channeldb.PkgFilter) er.R {
 	return nil
 }
 
 func (*mockPackager) AckAddHtlcs(tx kvdb.RwTx,
-	addRefs ...channeldb.AddRef) error {
+	addRefs ...channeldb.AddRef) er.R {
 	return nil
 }
 
-func (m *mockPackager) LoadFwdPkgs(tx kvdb.RTx) ([]*channeldb.FwdPkg, error) {
+func (m *mockPackager) LoadFwdPkgs(tx kvdb.RTx) ([]*channeldb.FwdPkg, er.R) {
 	if m.failLoadFwdPkgs {
-		return nil, fmt.Errorf("failing LoadFwdPkgs")
+		return nil, er.Errorf("failing LoadFwdPkgs")
 	}
 	return nil, nil
 }
 
-func (*mockPackager) RemovePkg(tx kvdb.RwTx, height uint64) error {
+func (*mockPackager) RemovePkg(tx kvdb.RwTx, height uint64) er.R {
 	return nil
 }
 
 func (*mockPackager) AckSettleFails(tx kvdb.RwTx,
-	settleFailRefs ...channeldb.SettleFailRef) error {
+	settleFailRefs ...channeldb.SettleFailRef) er.R {
 	return nil
 }
 
@@ -5449,7 +5450,7 @@ func TestForwardingAsymmetricTimeLockPolicies(t *testing.T) {
 func TestCheckHtlcForward(t *testing.T) {
 
 	fetchLastChannelUpdate := func(lnwire.ShortChannelID) (
-		*lnwire.ChannelUpdate, error) {
+		*lnwire.ChannelUpdate, er.R) {
 
 		return &lnwire.ChannelUpdate{}, nil
 	}
@@ -5606,12 +5607,12 @@ type hodlInvoiceTestCtx struct {
 	amount              lnwire.MilliSatoshi
 	errChan             chan error
 
-	restoreBob func() (*lnwallet.LightningChannel, error)
+	restoreBob func() (*lnwallet.LightningChannel, er.R)
 
 	cleanUp func()
 }
 
-func newHodlInvoiceTestCtx(t *testing.T) (*hodlInvoiceTestCtx, error) {
+func newHodlInvoiceTestCtx(t *testing.T) (*hodlInvoiceTestCtx, er.R) {
 	// Setup a alice-bob network.
 	alice, bob, cleanUp, err := createTwoClusterChannels(
 		btcutil.UnitsPerCoin()*3,

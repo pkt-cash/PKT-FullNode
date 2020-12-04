@@ -171,7 +171,7 @@ func NewChannelReservation(capacity, localFundingAmt btcutil.Amount,
 	id uint64, pushMSat lnwire.MilliSatoshi, chainHash *chainhash.Hash,
 	flags lnwire.FundingFlag, commitType CommitmentType,
 	fundingAssembler chanfunding.Assembler,
-	pendingChanID [32]byte, thawHeight uint32) (*ChannelReservation, error) {
+	pendingChanID [32]byte, thawHeight uint32) (*ChannelReservation, er.R) {
 
 	var (
 		ourBalance   lnwire.MilliSatoshi
@@ -384,7 +384,7 @@ func (r *ChannelReservation) SetNumConfsRequired(numConfs uint16) {
 // will also attempt to verify the constraints for sanity, returning an error
 // if the parameters are seemed unsound.
 func (r *ChannelReservation) CommitConstraints(c *channeldb.ChannelConstraints,
-	maxLocalCSVDelay uint16) error {
+	maxLocalCSVDelay uint16) er.R {
 	r.Lock()
 	defer r.Unlock()
 
@@ -472,7 +472,7 @@ func (r *ChannelReservation) OurContribution() *ChannelContribution {
 // transaction belonging to the wallet are available. Additionally, the wallet
 // will generate a signature to the counterparty's version of the commitment
 // transaction.
-func (r *ChannelReservation) ProcessContribution(theirContribution *ChannelContribution) error {
+func (r *ChannelReservation) ProcessContribution(theirContribution *ChannelContribution) er.R {
 	errChan := make(chan error, 1)
 
 	r.wallet.msgChan <- &addContributionMsg{
@@ -501,7 +501,7 @@ func (r *ChannelReservation) IsCannedShim() bool {
 // ProcessPsbt continues a previously paused funding flow that involves PSBT to
 // construct the funding transaction. This method can be called once the PSBT is
 // finalized and the signed transaction is available.
-func (r *ChannelReservation) ProcessPsbt() error {
+func (r *ChannelReservation) ProcessPsbt() er.R {
 	errChan := make(chan error, 1)
 
 	r.wallet.msgChan <- &continueContributionMsg{
@@ -526,7 +526,7 @@ func (r *ChannelReservation) RemoteCanceled() {
 // to this pending single funder channel. Internally, no further action is
 // taken other than recording the initiator's contribution to the single funder
 // channel.
-func (r *ChannelReservation) ProcessSingleContribution(theirContribution *ChannelContribution) error {
+func (r *ChannelReservation) ProcessSingleContribution(theirContribution *ChannelContribution) er.R {
 	errChan := make(chan error, 1)
 
 	r.wallet.msgChan <- &addSingleContributionMsg{
@@ -580,7 +580,7 @@ func (r *ChannelReservation) OurSignatures() ([]*input.Script,
 // confirmations. Once the method unblocks, a LightningChannel instance is
 // returned, marking the channel available for updates.
 func (r *ChannelReservation) CompleteReservation(fundingInputScripts []*input.Script,
-	commitmentSig input.Signature) (*channeldb.OpenChannel, error) {
+	commitmentSig input.Signature) (*channeldb.OpenChannel, er.R) {
 
 	// TODO(roasbeef): add flag for watch or not?
 	errChan := make(chan error, 1)
@@ -607,7 +607,7 @@ func (r *ChannelReservation) CompleteReservation(fundingInputScripts []*input.Sc
 // called as a response to a single funder channel, only a commitment signature
 // will be populated.
 func (r *ChannelReservation) CompleteReservationSingle(fundingPoint *wire.OutPoint,
-	commitSig input.Signature) (*channeldb.OpenChannel, error) {
+	commitSig input.Signature) (*channeldb.OpenChannel, er.R) {
 
 	errChan := make(chan error, 1)
 	completeChan := make(chan *channeldb.OpenChannel, 1)
@@ -682,7 +682,7 @@ func (r *ChannelReservation) Capacity() btcutil.Amount {
 // cancellation, all resources previously reserved for this pending payment
 // channel are returned to the free pool, allowing subsequent reservations to
 // utilize the now freed resources.
-func (r *ChannelReservation) Cancel() error {
+func (r *ChannelReservation) Cancel() er.R {
 	errChan := make(chan error, 1)
 	r.wallet.msgChan <- &fundingReserveCancelMsg{
 		pendingFundingID: r.reservationID,

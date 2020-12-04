@@ -3,12 +3,12 @@ package pool_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"fmt"
-	"io"
 	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/buffer"
 	"github.com/pkt-cash/pktd/lnd/pool"
 )
@@ -105,7 +105,7 @@ func submitNonblockingGeneric(t *testing.T, p interface{}, nWorkers int) {
 	nUnblocked := 2 * nWorkers
 
 	// First we'll queue all of the tasks for the pool.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	semChan := make(chan struct{})
 	for i := 0; i < nUnblocked; i++ {
 		go func() { errChan <- submitGeneric(p, semChan) }()
@@ -130,7 +130,7 @@ func submitBlockingGeneric(t *testing.T, p interface{}, nWorkers int) {
 	nBlocked := 2 * nWorkers
 
 	// First, queue all of the blocking tasks for the pool.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	semChan := make(chan struct{})
 	for i := 0; i < nBlocked; i++ {
 		go func() { errChan <- submitGeneric(p, semChan) }()
@@ -158,7 +158,7 @@ func submitPartialBlockingGeneric(t *testing.T, p interface{}, nWorkers int) {
 	nUnblocked := 2*nWorkers - nBlocked
 
 	// First, submit all of the blocking tasks to the pool.
-	errChan := make(chan error)
+	errChan := make(chan er.R)
 	semChan := make(chan struct{})
 	for i := 0; i < nBlocked; i++ {
 		go func() { errChan <- submitGeneric(p, semChan) }()
@@ -281,22 +281,22 @@ func stopGeneric(t *testing.T, p interface{}) {
 	}
 }
 
-func submitGeneric(p interface{}, sem <-chan struct{}) error {
+func submitGeneric(p interface{}, sem <-chan struct{}) er.R {
 	var err error
 	switch pp := p.(type) {
 	case *pool.Write:
-		err = pp.Submit(func(buf *bytes.Buffer) error {
+		err = pp.Submit(func(buf *bytes.Buffer) er.R {
 			// Verify that the provided buffer has been reset to be
 			// zero length.
 			if buf.Len() != 0 {
-				return fmt.Errorf("buf should be length zero, "+
+				return er.Errorf("buf should be length zero, "+
 					"instead has length %d", buf.Len())
 			}
 
 			// Verify that the capacity of the buffer has the
 			// correct underlying size of a buffer.WriteSize.
 			if buf.Cap() != buffer.WriteSize {
-				return fmt.Errorf("buf should have capacity "+
+				return er.Errorf("buf should have capacity "+
 					"%d, instead has capacity %d",
 					buffer.WriteSize, buf.Cap())
 			}
@@ -304,7 +304,7 @@ func submitGeneric(p interface{}, sem <-chan struct{}) error {
 			// Sample some random bytes that we'll use to dirty the
 			// buffer.
 			b := make([]byte, rand.Intn(buf.Cap()))
-			_, err := io.ReadFull(crand.Reader, b)
+			_, err := util.ReadFull(crand.Reader, b)
 			if err != nil {
 				return err
 			}
@@ -319,20 +319,20 @@ func submitGeneric(p interface{}, sem <-chan struct{}) error {
 		})
 
 	case *pool.Read:
-		err = pp.Submit(func(buf *buffer.Read) error {
+		err = pp.Submit(func(buf *buffer.Read) er.R {
 			// Assert that all of the bytes in the provided array
 			// are zero, indicating that the buffer was reset
 			// between uses.
 			for i := range buf[:] {
 				if buf[i] != 0x00 {
-					return fmt.Errorf("byte %d of "+
+					return er.Errorf("byte %d of "+
 						"buffer.Read should be "+
 						"0, instead is %d", i, buf[i])
 				}
 			}
 
 			// Sample some random bytes to read into the buffer.
-			_, err := io.ReadFull(crand.Reader, buf[:])
+			_, err := util.ReadFull(crand.Reader, buf[:])
 
 			// Wait until this task is signaled to exit.
 			<-sem
@@ -342,11 +342,11 @@ func submitGeneric(p interface{}, sem <-chan struct{}) error {
 		})
 
 	default:
-		return fmt.Errorf("unknown worker pool type: %T", p)
+		return er.Errorf("unknown worker pool type: %T", p)
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to submit task: %v", err)
+		return er.Errorf("unable to submit task: %v", err)
 	}
 
 	return nil

@@ -1,6 +1,10 @@
 package lnwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // Init is the first message reveals the features supported or required by this
 // node. Nodes wait for receipt of the other's features to simplify error
@@ -38,7 +42,7 @@ var _ Message = (*Init)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (msg *Init) Decode(r io.Reader, pver uint32) error {
+func (msg *Init) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&msg.GlobalFeatures,
 		&msg.Features,
@@ -49,7 +53,7 @@ func (msg *Init) Decode(r io.Reader, pver uint32) error {
 // the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (msg *Init) Encode(w io.Writer, pver uint32) error {
+func (msg *Init) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		msg.GlobalFeatures,
 		msg.Features,

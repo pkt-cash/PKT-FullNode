@@ -2,15 +2,16 @@ package channeldb
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // HTLCAttemptInfo contains static information about a specific HTLC attempt
@@ -179,7 +180,7 @@ func (m *MPPayment) InFlightHTLCs() []HTLCAttempt {
 }
 
 // GetAttempt returns the specified htlc attempt on the payment.
-func (m *MPPayment) GetAttempt(id uint64) (*HTLCAttempt, error) {
+func (m *MPPayment) GetAttempt(id uint64) (*HTLCAttempt, er.R) {
 	for _, htlc := range m.HTLCs {
 		htlc := htlc
 		if htlc.AttemptID == id {
@@ -187,12 +188,12 @@ func (m *MPPayment) GetAttempt(id uint64) (*HTLCAttempt, error) {
 		}
 	}
 
-	return nil, errors.New("htlc attempt not found on payment")
+	return nil, er.New("htlc attempt not found on payment")
 }
 
 // serializeHTLCSettleInfo serializes the details of a settled htlc.
-func serializeHTLCSettleInfo(w io.Writer, s *HTLCSettleInfo) error {
-	if _, err := w.Write(s.Preimage[:]); err != nil {
+func serializeHTLCSettleInfo(w io.Writer, s *HTLCSettleInfo) er.R {
+	if _, err := util.Write(w, s.Preimage[:]); err != nil {
 		return err
 	}
 
@@ -204,9 +205,9 @@ func serializeHTLCSettleInfo(w io.Writer, s *HTLCSettleInfo) error {
 }
 
 // deserializeHTLCSettleInfo deserializes the details of a settled htlc.
-func deserializeHTLCSettleInfo(r io.Reader) (*HTLCSettleInfo, error) {
+func deserializeHTLCSettleInfo(r io.Reader) (*HTLCSettleInfo, er.R) {
 	s := &HTLCSettleInfo{}
-	if _, err := io.ReadFull(r, s.Preimage[:]); err != nil {
+	if _, err := util.ReadFull(r, s.Preimage[:]); err != nil {
 		return nil, err
 	}
 
@@ -221,7 +222,7 @@ func deserializeHTLCSettleInfo(r io.Reader) (*HTLCSettleInfo, error) {
 
 // serializeHTLCFailInfo serializes the details of a failed htlc including the
 // wire failure.
-func serializeHTLCFailInfo(w io.Writer, f *HTLCFailInfo) error {
+func serializeHTLCFailInfo(w io.Writer, f *HTLCFailInfo) er.R {
 	if err := serializeTime(w, f.FailTime); err != nil {
 		return err
 	}
@@ -244,7 +245,7 @@ func serializeHTLCFailInfo(w io.Writer, f *HTLCFailInfo) error {
 
 // deserializeHTLCFailInfo deserializes the details of a failed htlc including
 // the wire failure.
-func deserializeHTLCFailInfo(r io.Reader) (*HTLCFailInfo, error) {
+func deserializeHTLCFailInfo(r io.Reader) (*HTLCFailInfo, er.R) {
 	f := &HTLCFailInfo{}
 	var err error
 	f.FailTime, err = deserializeTime(r)
@@ -279,9 +280,9 @@ func deserializeHTLCFailInfo(r io.Reader) (*HTLCFailInfo, error) {
 }
 
 // deserializeTime deserializes time as unix nanoseconds.
-func deserializeTime(r io.Reader) (time.Time, error) {
+func deserializeTime(r io.Reader) (time.Time, er.R) {
 	var scratch [8]byte
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return time.Time{}, err
 	}
 
@@ -296,7 +297,7 @@ func deserializeTime(r io.Reader) (time.Time, error) {
 }
 
 // serializeTime serializes time as unix nanoseconds.
-func serializeTime(w io.Writer, t time.Time) error {
+func serializeTime(w io.Writer, t time.Time) er.R {
 	var scratch [8]byte
 
 	// Convert to unix nano seconds, but only if time is non-zero. Calling
@@ -307,6 +308,6 @@ func serializeTime(w io.Writer, t time.Time) error {
 	}
 
 	byteOrder.PutUint64(scratch[:], uint64(unixNano))
-	_, err := w.Write(scratch[:])
+	_, err := util.Write(w, scratch[:])
 	return err
 }

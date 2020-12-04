@@ -2,9 +2,9 @@ package itest
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
@@ -21,7 +21,7 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 	// Create an ephemeral key, extracts its public key, and make a
 	// PrivKeyECDH using the ephemeral key.
 	ephemeralPriv, err := btcec.NewPrivateKey(btcec.S256())
-	require.NoError(t.t, err, "failed to create ephemeral key")
+	util.RequireNoErr(t.t, err, "failed to create ephemeral key")
 
 	ephemeralPubBytes := ephemeralPriv.PubKey().SerializeCompressed()
 	privKeyECDH := &keychain.PrivKeyECDH{PrivKey: ephemeralPriv}
@@ -33,7 +33,7 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		resp, err := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
-		require.NoError(t.t, err, "calling DeriveSharedKey failed")
+		util.RequireNoErr(t.t, err, "calling DeriveSharedKey failed")
 
 		sharedKey, _ := privKeyECDH.ECDH(pub)
 		require.Equal(
@@ -43,14 +43,14 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 	}
 
 	nodePub, err := btcec.ParsePubKey(net.Alice.PubKey[:], btcec.S256())
-	require.NoError(t.t, err, "failed to parse node pubkey")
+	util.RequireNoErr(t.t, err, "failed to parse node pubkey")
 
 	customizedKeyFamily := int32(keychain.KeyFamilyMultiSig)
 	customizedIndex := int32(1)
 	customizedPub, errr := deriveCustomizedKey(
 		ctxb, net.Alice, customizedKeyFamily, customizedIndex,
 	)
-	require.NoError(t.t, errr, "failed to create customized pubkey")
+	util.RequireNoErr(t.t, errr, "failed to create customized pubkey")
 
 	// Test DeriveSharedKey with no optional arguments. It will result in
 	// performing an ECDH between the ephemeral key and the node's pubkey.
@@ -136,7 +136,7 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 	assertErrorMatch := func(match string, req *signrpc.SharedKeyRequest) {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
 		_, err := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
-		require.Error(t.t, err, "expected to have an error")
+		util.RequireErr(t.t, err, "expected to have an error")
 		require.Contains(
 			t.t, err.Error(), match, "error failed to match",
 		)
@@ -185,7 +185,7 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 // deriveCustomizedKey uses the family and index to derive a public key from
 // the node's walletkit client.
 func deriveCustomizedKey(ctx context.Context, node *lntest.HarnessNode,
-	family, index int32) (*btcec.PublicKey, error) {
+	family, index int32) (*btcec.PublicKey, er.R) {
 
 	ctxt, _ := context.WithTimeout(ctx, defaultTimeout)
 	req := &signrpc.KeyLocator{
@@ -194,11 +194,11 @@ func deriveCustomizedKey(ctx context.Context, node *lntest.HarnessNode,
 	}
 	resp, err := node.WalletKitClient.DeriveKey(ctxt, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to derive key: %v", err)
+		return nil, er.Errorf("failed to derive key: %v", err)
 	}
 	pub, err := btcec.ParsePubKey(resp.RawKeyBytes, btcec.S256())
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse node pubkey: %v", err)
+		return nil, er.Errorf("failed to parse node pubkey: %v", err)
 	}
 	return pub, nil
 }

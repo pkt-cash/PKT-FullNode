@@ -7,13 +7,14 @@ import (
 	"os"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
-	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -66,12 +67,12 @@ var (
 // makeTestDB creates a new instance of the ChannelDB for testing purposes. A
 // callback which cleans up the created temporary directories is also returned
 // and intended to be executed after the test completes.
-func makeTestDB() (*DB, func(), error) {
+func makeTestDB() (*DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.
@@ -88,7 +89,7 @@ func makeTestDB() (*DB, func(), error) {
 	return cdb, cleanUp, nil
 }
 
-func createTestChannelState(cdb *DB) (*OpenChannel, error) {
+func createTestChannelState(cdb *DB) (*OpenChannel, er.R) {
 	// Simulate 1000 channel updates.
 	producer, err := shachain.NewRevocationProducerFromBytes(key[:])
 	if err != nil {

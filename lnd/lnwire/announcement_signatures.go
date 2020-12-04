@@ -3,6 +3,8 @@ package lnwire
 import (
 	"io"
 	"io/ioutil"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // AnnounceSignatures this is a direct message between two endpoints of a
@@ -51,7 +53,7 @@ var _ Message = (*AnnounceSignatures)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *AnnounceSignatures) Decode(r io.Reader, pver uint32) error {
+func (a *AnnounceSignatures) Decode(r io.Reader, pver uint32) er.R {
 	err := ReadElements(r,
 		&a.ChannelID,
 		&a.ShortChannelID,
@@ -66,9 +68,10 @@ func (a *AnnounceSignatures) Decode(r io.Reader, pver uint32) error {
 	// we'll collect the remainder into the ExtraOpaqueData field. If there
 	// aren't any bytes, then we'll snip off the slice to avoid carrying
 	// around excess capacity.
-	a.ExtraOpaqueData, err = ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	var errr error
+	a.ExtraOpaqueData, errr = ioutil.ReadAll(r)
+	if errr != nil {
+		return er.E(errr)
 	}
 	if len(a.ExtraOpaqueData) == 0 {
 		a.ExtraOpaqueData = nil
@@ -81,7 +84,7 @@ func (a *AnnounceSignatures) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (a *AnnounceSignatures) Encode(w io.Writer, pver uint32) error {
+func (a *AnnounceSignatures) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		a.ChannelID,
 		a.ShortChannelID,

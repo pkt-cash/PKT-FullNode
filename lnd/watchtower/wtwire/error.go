@@ -27,7 +27,7 @@ var _ Message = (*Error)(nil)
 // observing the specified protocol version.
 //
 // This is part of the wtwire.Message interface.
-func (e *Error) Decode(r io.Reader, pver uint32) error {
+func (e *Error) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&e.Code,
 		&e.Data,
@@ -38,7 +38,7 @@ func (e *Error) Decode(r io.Reader, pver uint32) error {
 // protocol version specified.
 //
 // This is part of the wtwire.Message interface.
-func (e *Error) Encode(w io.Writer, prver uint32) error {
+func (e *Error) Encode(w io.Writer, prver uint32) er.R {
 	return WriteElements(w,
 		e.Code,
 		e.Data,

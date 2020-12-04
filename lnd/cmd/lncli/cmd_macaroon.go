@@ -74,7 +74,7 @@ var bakeMacaroonCommand = cli.Command{
 	Action: actionDecorator(bakeMacaroon),
 }
 
-func bakeMacaroon(ctx *cli.Context) error {
+func bakeMacaroon(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -100,14 +100,14 @@ func bakeMacaroon(ctx *cli.Context) error {
 	if ctx.IsSet("timeout") {
 		timeout = ctx.Int64("timeout")
 		if timeout <= 0 {
-			return fmt.Errorf("timeout must be greater than 0")
+			return er.Errorf("timeout must be greater than 0")
 		}
 	}
 
 	if ctx.IsSet("ip_address") {
 		ipAddress = net.ParseIP(ctx.String("ip_address"))
 		if ipAddress == nil {
-			return fmt.Errorf("unable to parse ip_address: %s",
+			return er.Errorf("unable to parse ip_address: %s",
 				ctx.String("ip_address"))
 		}
 	}
@@ -122,16 +122,16 @@ func bakeMacaroon(ctx *cli.Context) error {
 	for _, permission := range args {
 		tuple := strings.Split(permission, ":")
 		if len(tuple) != 2 {
-			return fmt.Errorf("unable to parse "+
+			return er.Errorf("unable to parse "+
 				"permission tuple: %s", permission)
 		}
 		entity, action := tuple[0], tuple[1]
 		if entity == "" {
-			return fmt.Errorf("invalid permission [%s]. entity "+
+			return er.Errorf("invalid permission [%s]. entity "+
 				"cannot be empty", permission)
 		}
 		if action == "" {
-			return fmt.Errorf("invalid permission [%s]. action "+
+			return er.Errorf("invalid permission [%s]. action "+
 				"cannot be empty", permission)
 		}
 
@@ -158,7 +158,7 @@ func bakeMacaroon(ctx *cli.Context) error {
 
 	// Now we should have gotten a valid macaroon. Unmarshal it so we can
 	// add first-party caveats (if necessary) to it.
-	macBytes, err := hex.DecodeString(resp.Macaroon)
+	macBytes, err := util.DecodeHex(resp.Macaroon)
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ var listMacaroonIDsCommand = cli.Command{
 	Action:   actionDecorator(listMacaroonIDs),
 }
 
-func listMacaroonIDs(ctx *cli.Context) error {
+func listMacaroonIDs(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -249,7 +249,7 @@ var deleteMacaroonIDCommand = cli.Command{
 	Action: actionDecorator(deleteMacaroonID),
 }
 
-func deleteMacaroonID(ctx *cli.Context) error {
+func deleteMacaroonID(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -263,14 +263,14 @@ func deleteMacaroonID(ctx *cli.Context) error {
 	// Convert string into uint64.
 	rootKeyID, err := strconv.ParseUint(rootKeyIDString, 10, 64)
 	if err != nil {
-		return fmt.Errorf("root key ID must be a positive integer")
+		return er.Errorf("root key ID must be a positive integer")
 	}
 
 	// Check that the value is not equal to DefaultRootKeyID. Note that the
 	// server also validates the root key ID when removing it. However, we check
 	// it here too so that we can give users a nice warning.
 	if bytes.Equal([]byte(rootKeyIDString), macaroons.DefaultRootKeyID) {
-		return fmt.Errorf("deleting the default root key ID 0 is not allowed")
+		return er.Errorf("deleting the default root key ID 0 is not allowed")
 	}
 
 	// Make the actual RPC call.
@@ -294,7 +294,7 @@ var listPermissionsCommand = cli.Command{
 	Action: actionDecorator(listPermissions),
 }
 
-func listPermissions(ctx *cli.Context) error {
+func listPermissions(ctx *cli.Context) er.R {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
@@ -337,7 +337,7 @@ var printMacaroonCommand = cli.Command{
 	Action: actionDecorator(printMacaroon),
 }
 
-func printMacaroon(ctx *cli.Context) error {
+func printMacaroon(ctx *cli.Context) er.R {
 	// Show command help if no arguments or flags are set.
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		return cli.ShowCommandHelp(ctx, "printmacaroon")
@@ -355,35 +355,35 @@ func printMacaroon(ctx *cli.Context) error {
 		// Load the specified macaroon file.
 		macBytes, err = ioutil.ReadFile(macPath)
 		if err != nil {
-			return fmt.Errorf("unable to read macaroon path %v: %v",
+			return er.Errorf("unable to read macaroon path %v: %v",
 				macPath, err)
 		}
 
 	case args.Present():
-		macBytes, err = hex.DecodeString(args.First())
+		macBytes, err = util.DecodeHex(args.First())
 		if err != nil {
-			return fmt.Errorf("unable to hex decode macaroon: %v",
+			return er.Errorf("unable to hex decode macaroon: %v",
 				err)
 		}
 
 	default:
-		return fmt.Errorf("macaroon parameter missing")
+		return er.Errorf("macaroon parameter missing")
 	}
 
 	// Decode the macaroon and its protobuf encoded internal identifier.
 	mac := &macaroon.Macaroon{}
 	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return fmt.Errorf("unable to decode macaroon: %v", err)
+		return er.Errorf("unable to decode macaroon: %v", err)
 	}
 	rawID := mac.Id()
 	if rawID[0] != byte(bakery.LatestVersion) {
-		return fmt.Errorf("invalid macaroon version: %x", rawID)
+		return er.Errorf("invalid macaroon version: %x", rawID)
 	}
 	decodedID := &lnrpc.MacaroonId{}
 	idProto := rawID[1:]
 	err = proto.Unmarshal(idProto, decodedID)
 	if err != nil {
-		return fmt.Errorf("unable to decode macaroon version: %v", err)
+		return er.Errorf("unable to decode macaroon version: %v", err)
 	}
 
 	// Prepare everything to be printed in a more human readable format.

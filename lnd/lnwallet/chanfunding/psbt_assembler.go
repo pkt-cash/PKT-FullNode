@@ -2,17 +2,17 @@ package chanfunding
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // PsbtState is a type for the state of the PSBT intent state machine.
@@ -86,14 +86,15 @@ func (s PsbtState) String() string {
 }
 
 var (
+	Err = er.NewErrorType("chanfunding")
 	// ErrRemoteCanceled is the error that is returned to the user if the
 	// funding flow was canceled by the remote peer.
-	ErrRemoteCanceled = errors.New("remote canceled funding, possibly " +
+	ErrRemoteCanceled = Err.CodeWithDetail("ErrRemoteCanceled", "remote canceled funding, possibly "+
 		"timed out")
 
 	// ErrUserCanceled is the error that is returned through the PsbtReady
 	// channel if the user canceled the funding flow.
-	ErrUserCanceled = errors.New("user canceled funding")
+	ErrUserCanceled = Err.CodeWithDetail("ErrUserCanceled", "user canceled funding")
 )
 
 // PsbtIntent is an intent created by the PsbtAssembler which represents a
@@ -165,7 +166,7 @@ func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
 	error) {
 
 	if i.State != PsbtOutputKnown {
-		return nil, 0, nil, fmt.Errorf("invalid state, got %v "+
+		return nil, 0, nil, er.Errorf("invalid state, got %v "+
 			"expected %v", i.State, PsbtOutputKnown)
 	}
 
@@ -174,7 +175,7 @@ func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
 	// already.
 	witnessScript, out, err := i.FundingOutput()
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("unable to create funding "+
+		return nil, 0, nil, er.Errorf("unable to create funding "+
 			"output: %v", err)
 	}
 	witnessScriptHash := sha256.Sum256(witnessScript)
@@ -184,7 +185,7 @@ func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
 		witnessScriptHash[:], i.netParams,
 	)
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("unable to encode address: %v",
+		return nil, 0, nil, er.Errorf("unable to encode address: %v",
 			err)
 	}
 
@@ -195,7 +196,7 @@ func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
 	if packet == nil {
 		packet, err = psbt.New(nil, nil, 2, 0, nil)
 		if err != nil {
-			return nil, 0, nil, fmt.Errorf("unable to create "+
+			return nil, 0, nil, er.Errorf("unable to create "+
 				"PSBT: %v", err)
 		}
 	}
@@ -207,19 +208,19 @@ func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
 // Verify makes sure the PSBT that is given to the intent has an output that
 // sends to the channel funding multisig address with the correct amount. A
 // simple check that at least a single input has been specified is performed.
-func (i *PsbtIntent) Verify(packet *psbt.Packet) error {
+func (i *PsbtIntent) Verify(packet *psbt.Packet) er.R {
 	if packet == nil {
-		return fmt.Errorf("PSBT is nil")
+		return er.Errorf("PSBT is nil")
 	}
 	if i.State != PsbtOutputKnown {
-		return fmt.Errorf("invalid state. got %v expected %v", i.State,
+		return er.Errorf("invalid state. got %v expected %v", i.State,
 			PsbtOutputKnown)
 	}
 
 	// Try to locate the channel funding multisig output.
 	_, expectedOutput, err := i.FundingOutput()
 	if err != nil {
-		return fmt.Errorf("funding output cannot be created: %v", err)
+		return er.Errorf("funding output cannot be created: %v", err)
 	}
 	outputFound := false
 	outputSum := int64(0)
@@ -230,7 +231,7 @@ func (i *PsbtIntent) Verify(packet *psbt.Packet) error {
 		}
 	}
 	if !outputFound {
-		return fmt.Errorf("funding output not found in PSBT")
+		return er.Errorf("funding output not found in PSBT")
 	}
 
 	// At least one input needs to be specified and it must be large enough
@@ -238,14 +239,14 @@ func (i *PsbtIntent) Verify(packet *psbt.Packet) error {
 	// here so we just assume that if the input amount exceeds the output
 	// amount, the chosen fee is sufficient.
 	if len(packet.UnsignedTx.TxIn) == 0 {
-		return fmt.Errorf("PSBT has no inputs")
+		return er.Errorf("PSBT has no inputs")
 	}
 	sum, err := psbt.SumUtxoInputValues(packet)
 	if err != nil {
-		return fmt.Errorf("error determining input sum: %v", err)
+		return er.Errorf("error determining input sum: %v", err)
 	}
 	if sum <= outputSum {
-		return fmt.Errorf("input amount sum must be larger than " +
+		return er.Errorf("input amount sum must be larger than " +
 			"output amount sum")
 	}
 
@@ -259,12 +260,12 @@ func (i *PsbtIntent) Verify(packet *psbt.Packet) error {
 // transaction we previously verified. If everything checks out, the funding
 // manager is informed that the channel can now be opened and the funding
 // transaction be broadcast.
-func (i *PsbtIntent) Finalize(packet *psbt.Packet) error {
+func (i *PsbtIntent) Finalize(packet *psbt.Packet) er.R {
 	if packet == nil {
-		return fmt.Errorf("PSBT is nil")
+		return er.Errorf("PSBT is nil")
 	}
 	if i.State != PsbtVerified {
-		return fmt.Errorf("invalid state. got %v expected %v", i.State,
+		return er.Errorf("invalid state. got %v expected %v", i.State,
 			PsbtVerified)
 	}
 
@@ -272,11 +273,11 @@ func (i *PsbtIntent) Finalize(packet *psbt.Packet) error {
 	// broadcast.
 	err := psbt.MaybeFinalizeAll(packet)
 	if err != nil {
-		return fmt.Errorf("error finalizing PSBT: %v", err)
+		return er.Errorf("error finalizing PSBT: %v", err)
 	}
 	rawTx, err := psbt.Extract(packet)
 	if err != nil {
-		return fmt.Errorf("unable to extract funding TX: %v", err)
+		return er.Errorf("unable to extract funding TX: %v", err)
 	}
 
 	return i.FinalizeRawTX(rawTx)
@@ -287,12 +288,12 @@ func (i *PsbtIntent) Finalize(packet *psbt.Packet) error {
 // outputs as the pending transaction we previously verified. If everything
 // checks out, the funding manager is informed that the channel can now be
 // opened and the funding transaction be broadcast.
-func (i *PsbtIntent) FinalizeRawTX(rawTx *wire.MsgTx) error {
+func (i *PsbtIntent) FinalizeRawTX(rawTx *wire.MsgTx) er.R {
 	if rawTx == nil {
-		return fmt.Errorf("raw transaction is nil")
+		return er.Errorf("raw transaction is nil")
 	}
 	if i.State != PsbtVerified {
-		return fmt.Errorf("invalid state. got %v expected %v", i.State,
+		return er.Errorf("invalid state. got %v expected %v", i.State,
 			PsbtVerified)
 	}
 
@@ -302,19 +303,19 @@ func (i *PsbtIntent) FinalizeRawTX(rawTx *wire.MsgTx) error {
 	// the inputs of the wire transaction because the fields in the PSBT
 	// part are allowed to change.
 	if i.PendingPsbt == nil {
-		return fmt.Errorf("PSBT was not verified first")
+		return er.Errorf("PSBT was not verified first")
 	}
 	err := psbt.VerifyOutputsEqual(
 		rawTx.TxOut, i.PendingPsbt.UnsignedTx.TxOut,
 	)
 	if err != nil {
-		return fmt.Errorf("outputs differ from verified PSBT: %v", err)
+		return er.Errorf("outputs differ from verified PSBT: %v", err)
 	}
 	err = psbt.VerifyInputPrevOutpointsEqual(
 		rawTx.TxIn, i.PendingPsbt.UnsignedTx.TxIn,
 	)
 	if err != nil {
-		return fmt.Errorf("inputs differ from verified PSBT: %v", err)
+		return er.Errorf("inputs differ from verified PSBT: %v", err)
 	}
 
 	// We also check that we have a signed TX. This is only necessary if the
@@ -322,7 +323,7 @@ func (i *PsbtIntent) FinalizeRawTX(rawTx *wire.MsgTx) error {
 	// extracting the TX from a PSBT.
 	err = verifyInputsSigned(rawTx.TxIn)
 	if err != nil {
-		return fmt.Errorf("inputs not signed: %v", err)
+		return er.Errorf("inputs not signed: %v", err)
 	}
 
 	// As far as we can tell, this TX is ok to be used as a funding
@@ -342,20 +343,20 @@ func (i *PsbtIntent) FinalizeRawTX(rawTx *wire.MsgTx) error {
 // CompileFundingTx finalizes the previously verified PSBT and returns the
 // extracted binary serialized transaction from it. It also prepares the channel
 // point for which this funding intent was initiated for.
-func (i *PsbtIntent) CompileFundingTx() (*wire.MsgTx, error) {
+func (i *PsbtIntent) CompileFundingTx() (*wire.MsgTx, er.R) {
 	if i.State != PsbtFinalized {
-		return nil, fmt.Errorf("invalid state. got %v expected %v",
+		return nil, er.Errorf("invalid state. got %v expected %v",
 			i.State, PsbtFinalized)
 	}
 
 	// Identify our funding outpoint now that we know everything's ready.
 	_, txOut, err := i.FundingOutput()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get funding output: %v", err)
+		return nil, er.Errorf("cannot get funding output: %v", err)
 	}
 	ok, idx := input.FindScriptOutputIndex(i.FinalTX, txOut.PkScript)
 	if !ok {
-		return nil, fmt.Errorf("funding output not found in PSBT")
+		return nil, er.Errorf("funding output not found in PSBT")
 	}
 	i.chanPoint = &wire.OutPoint{
 		Hash:  i.FinalTX.TxHash(),
@@ -432,11 +433,11 @@ func NewPsbtAssembler(fundingAmt btcutil.Amount, basePsbt *psbt.Packet,
 // funding output as they've already been created outside lnd.
 //
 // NOTE: This method satisfies the chanfunding.Assembler interface.
-func (p *PsbtAssembler) ProvisionChannel(req *Request) (Intent, error) {
+func (p *PsbtAssembler) ProvisionChannel(req *Request) (Intent, er.R) {
 	// We'll exit out if this field is set as the funding transaction will
 	// be assembled externally, so we don't influence coin selection.
 	if req.SubtractFees {
-		return nil, fmt.Errorf("SubtractFees not supported for PSBT")
+		return nil, er.Errorf("SubtractFees not supported for PSBT")
 	}
 
 	intent := &PsbtIntent{
@@ -452,7 +453,7 @@ func (p *PsbtAssembler) ProvisionChannel(req *Request) (Intent, error) {
 	// A simple sanity check to ensure the provisioned request matches the
 	// re-made shim intent.
 	if req.LocalAmt+req.RemoteAmt != p.fundingAmt {
-		return nil, fmt.Errorf("intent doesn't match PSBT "+
+		return nil, er.Errorf("intent doesn't match PSBT "+
 			"assembler: local_amt=%v, remote_amt=%v, funding_amt=%v",
 			req.LocalAmt, req.RemoteAmt, p.fundingAmt)
 	}
@@ -475,13 +476,13 @@ var _ ConditionalPublishAssembler = (*PsbtAssembler)(nil)
 
 // verifyInputsSigned verifies that the given list of inputs is non-empty and
 // that all the inputs either contain a script signature or a witness stack.
-func verifyInputsSigned(ins []*wire.TxIn) error {
+func verifyInputsSigned(ins []*wire.TxIn) er.R {
 	if len(ins) == 0 {
-		return fmt.Errorf("no inputs in transaction")
+		return er.Errorf("no inputs in transaction")
 	}
 	for idx, in := range ins {
 		if len(in.SignatureScript) == 0 && len(in.Witness) == 0 {
-			return fmt.Errorf("input %d has no signature data "+
+			return er.Errorf("input %d has no signature data "+
 				"attached", idx)
 		}
 	}

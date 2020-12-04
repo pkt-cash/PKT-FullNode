@@ -109,7 +109,7 @@ func NewLegacyPayload(f *sphinx.HopData) *Payload {
 
 // NewPayloadFromReader builds a new Hop from the passed io.Reader. The reader
 // should correspond to the bytes encapsulated in a TLV onion payload.
-func NewPayloadFromReader(r io.Reader) (*Payload, error) {
+func NewPayloadFromReader(r io.Reader) (*Payload, er.R) {
 	var (
 		cid  uint64
 		amt  uint64
@@ -195,7 +195,7 @@ func NewCustomRecords(parsedTypes tlv.TypeMap) record.CustomSet {
 // boolean should be true if the payload was parsed for an exit hop. The
 // requirements for this method are described in BOLT 04.
 func ValidateParsedPayloadTypes(parsedTypes tlv.TypeMap,
-	nextHop lnwire.ShortChannelID) error {
+	nextHop lnwire.ShortChannelID) er.R {
 
 	isFinalHop := nextHop == Exit
 

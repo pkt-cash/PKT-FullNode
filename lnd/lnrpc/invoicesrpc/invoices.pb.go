@@ -16,7 +16,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -40,10 +40,10 @@ func (*CancelInvoiceMsg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{0}
 }
 
-func (m *CancelInvoiceMsg) XXX_Unmarshal(b []byte) error {
+func (m *CancelInvoiceMsg) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_CancelInvoiceMsg.Unmarshal(m, b)
 }
-func (m *CancelInvoiceMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CancelInvoiceMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_CancelInvoiceMsg.Marshal(b, m, deterministic)
 }
 func (m *CancelInvoiceMsg) XXX_Merge(src proto.Message) {
@@ -78,10 +78,10 @@ func (*CancelInvoiceResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{1}
 }
 
-func (m *CancelInvoiceResp) XXX_Unmarshal(b []byte) error {
+func (m *CancelInvoiceResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_CancelInvoiceResp.Unmarshal(m, b)
 }
-func (m *CancelInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CancelInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_CancelInvoiceResp.Marshal(b, m, deterministic)
 }
 func (m *CancelInvoiceResp) XXX_Merge(src proto.Message) {
@@ -144,10 +144,10 @@ func (*AddHoldInvoiceRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{2}
 }
 
-func (m *AddHoldInvoiceRequest) XXX_Unmarshal(b []byte) error {
+func (m *AddHoldInvoiceRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddHoldInvoiceRequest.Unmarshal(m, b)
 }
-func (m *AddHoldInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddHoldInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddHoldInvoiceRequest.Marshal(b, m, deterministic)
 }
 func (m *AddHoldInvoiceRequest) XXX_Merge(src proto.Message) {
@@ -250,10 +250,10 @@ func (*AddHoldInvoiceResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{3}
 }
 
-func (m *AddHoldInvoiceResp) XXX_Unmarshal(b []byte) error {
+func (m *AddHoldInvoiceResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_AddHoldInvoiceResp.Unmarshal(m, b)
 }
-func (m *AddHoldInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddHoldInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_AddHoldInvoiceResp.Marshal(b, m, deterministic)
 }
 func (m *AddHoldInvoiceResp) XXX_Merge(src proto.Message) {
@@ -291,10 +291,10 @@ func (*SettleInvoiceMsg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{4}
 }
 
-func (m *SettleInvoiceMsg) XXX_Unmarshal(b []byte) error {
+func (m *SettleInvoiceMsg) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SettleInvoiceMsg.Unmarshal(m, b)
 }
-func (m *SettleInvoiceMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SettleInvoiceMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SettleInvoiceMsg.Marshal(b, m, deterministic)
 }
 func (m *SettleInvoiceMsg) XXX_Merge(src proto.Message) {
@@ -329,10 +329,10 @@ func (*SettleInvoiceResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{5}
 }
 
-func (m *SettleInvoiceResp) XXX_Unmarshal(b []byte) error {
+func (m *SettleInvoiceResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SettleInvoiceResp.Unmarshal(m, b)
 }
-func (m *SettleInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SettleInvoiceResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SettleInvoiceResp.Marshal(b, m, deterministic)
 }
 func (m *SettleInvoiceResp) XXX_Merge(src proto.Message) {
@@ -362,10 +362,10 @@ func (*SubscribeSingleInvoiceRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_090ab9c4958b987d, []int{6}
 }
 
-func (m *SubscribeSingleInvoiceRequest) XXX_Unmarshal(b []byte) error {
+func (m *SubscribeSingleInvoiceRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SubscribeSingleInvoiceRequest.Unmarshal(m, b)
 }
-func (m *SubscribeSingleInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SubscribeSingleInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SubscribeSingleInvoiceRequest.Marshal(b, m, deterministic)
 }
 func (m *SubscribeSingleInvoiceRequest) XXX_Merge(src proto.Message) {
@@ -452,20 +452,20 @@ type InvoicesClient interface {
 	//SubscribeSingleInvoice returns a uni-directional stream (server -> client)
 	//to notify the client of state transitions of the specified invoice.
 	//Initially the current invoice state is always sent out.
-	SubscribeSingleInvoice(ctx context.Context, in *SubscribeSingleInvoiceRequest, opts ...grpc.CallOption) (Invoices_SubscribeSingleInvoiceClient, error)
+	SubscribeSingleInvoice(ctx context.Context, in *SubscribeSingleInvoiceRequest, opts ...grpc.CallOption) (Invoices_SubscribeSingleInvoiceClient, er.R)
 	//
 	//CancelInvoice cancels a currently open invoice. If the invoice is already
 	//canceled, this call will succeed. If the invoice is already settled, it will
 	//fail.
-	CancelInvoice(ctx context.Context, in *CancelInvoiceMsg, opts ...grpc.CallOption) (*CancelInvoiceResp, error)
+	CancelInvoice(ctx context.Context, in *CancelInvoiceMsg, opts ...grpc.CallOption) (*CancelInvoiceResp, er.R)
 	//
 	//AddHoldInvoice creates a hold invoice. It ties the invoice to the hash
 	//supplied in the request.
-	AddHoldInvoice(ctx context.Context, in *AddHoldInvoiceRequest, opts ...grpc.CallOption) (*AddHoldInvoiceResp, error)
+	AddHoldInvoice(ctx context.Context, in *AddHoldInvoiceRequest, opts ...grpc.CallOption) (*AddHoldInvoiceResp, er.R)
 	//
 	//SettleInvoice settles an accepted invoice. If the invoice is already
 	//settled, this call will succeed.
-	SettleInvoice(ctx context.Context, in *SettleInvoiceMsg, opts ...grpc.CallOption) (*SettleInvoiceResp, error)
+	SettleInvoice(ctx context.Context, in *SettleInvoiceMsg, opts ...grpc.CallOption) (*SettleInvoiceResp, er.R)
 }
 
 type invoicesClient struct {
@@ -476,7 +476,7 @@ func NewInvoicesClient(cc *grpc.ClientConn) InvoicesClient {
 	return &invoicesClient{cc}
 }
 
-func (c *invoicesClient) SubscribeSingleInvoice(ctx context.Context, in *SubscribeSingleInvoiceRequest, opts ...grpc.CallOption) (Invoices_SubscribeSingleInvoiceClient, error) {
+func (c *invoicesClient) SubscribeSingleInvoice(ctx context.Context, in *SubscribeSingleInvoiceRequest, opts ...grpc.CallOption) (Invoices_SubscribeSingleInvoiceClient, er.R) {
 	stream, err := c.cc.NewStream(ctx, &_Invoices_serviceDesc.Streams[0], "/invoicesrpc.Invoices/SubscribeSingleInvoice", opts...)
 	if err != nil {
 		return nil, err
@@ -492,7 +492,7 @@ func (c *invoicesClient) SubscribeSingleInvoice(ctx context.Context, in *Subscri
 }
 
 type Invoices_SubscribeSingleInvoiceClient interface {
-	Recv() (*lnrpc.Invoice, error)
+	Recv() (*lnrpc.Invoice, er.R)
 	grpc.ClientStream
 }
 
@@ -500,7 +500,7 @@ type invoicesSubscribeSingleInvoiceClient struct {
 	grpc.ClientStream
 }
 
-func (x *invoicesSubscribeSingleInvoiceClient) Recv() (*lnrpc.Invoice, error) {
+func (x *invoicesSubscribeSingleInvoiceClient) Recv() (*lnrpc.Invoice, er.R) {
 	m := new(lnrpc.Invoice)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -508,7 +508,7 @@ func (x *invoicesSubscribeSingleInvoiceClient) Recv() (*lnrpc.Invoice, error) {
 	return m, nil
 }
 
-func (c *invoicesClient) CancelInvoice(ctx context.Context, in *CancelInvoiceMsg, opts ...grpc.CallOption) (*CancelInvoiceResp, error) {
+func (c *invoicesClient) CancelInvoice(ctx context.Context, in *CancelInvoiceMsg, opts ...grpc.CallOption) (*CancelInvoiceResp, er.R) {
 	out := new(CancelInvoiceResp)
 	err := c.cc.Invoke(ctx, "/invoicesrpc.Invoices/CancelInvoice", in, out, opts...)
 	if err != nil {
@@ -517,7 +517,7 @@ func (c *invoicesClient) CancelInvoice(ctx context.Context, in *CancelInvoiceMsg
 	return out, nil
 }
 
-func (c *invoicesClient) AddHoldInvoice(ctx context.Context, in *AddHoldInvoiceRequest, opts ...grpc.CallOption) (*AddHoldInvoiceResp, error) {
+func (c *invoicesClient) AddHoldInvoice(ctx context.Context, in *AddHoldInvoiceRequest, opts ...grpc.CallOption) (*AddHoldInvoiceResp, er.R) {
 	out := new(AddHoldInvoiceResp)
 	err := c.cc.Invoke(ctx, "/invoicesrpc.Invoices/AddHoldInvoice", in, out, opts...)
 	if err != nil {
@@ -526,7 +526,7 @@ func (c *invoicesClient) AddHoldInvoice(ctx context.Context, in *AddHoldInvoiceR
 	return out, nil
 }
 
-func (c *invoicesClient) SettleInvoice(ctx context.Context, in *SettleInvoiceMsg, opts ...grpc.CallOption) (*SettleInvoiceResp, error) {
+func (c *invoicesClient) SettleInvoice(ctx context.Context, in *SettleInvoiceMsg, opts ...grpc.CallOption) (*SettleInvoiceResp, er.R) {
 	out := new(SettleInvoiceResp)
 	err := c.cc.Invoke(ctx, "/invoicesrpc.Invoices/SettleInvoice", in, out, opts...)
 	if err != nil {
@@ -541,36 +541,36 @@ type InvoicesServer interface {
 	//SubscribeSingleInvoice returns a uni-directional stream (server -> client)
 	//to notify the client of state transitions of the specified invoice.
 	//Initially the current invoice state is always sent out.
-	SubscribeSingleInvoice(*SubscribeSingleInvoiceRequest, Invoices_SubscribeSingleInvoiceServer) error
+	SubscribeSingleInvoice(*SubscribeSingleInvoiceRequest, Invoices_SubscribeSingleInvoiceServer) er.R
 	//
 	//CancelInvoice cancels a currently open invoice. If the invoice is already
 	//canceled, this call will succeed. If the invoice is already settled, it will
 	//fail.
-	CancelInvoice(context.Context, *CancelInvoiceMsg) (*CancelInvoiceResp, error)
+	CancelInvoice(context.Context, *CancelInvoiceMsg) (*CancelInvoiceResp, er.R)
 	//
 	//AddHoldInvoice creates a hold invoice. It ties the invoice to the hash
 	//supplied in the request.
-	AddHoldInvoice(context.Context, *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, error)
+	AddHoldInvoice(context.Context, *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, er.R)
 	//
 	//SettleInvoice settles an accepted invoice. If the invoice is already
 	//settled, this call will succeed.
-	SettleInvoice(context.Context, *SettleInvoiceMsg) (*SettleInvoiceResp, error)
+	SettleInvoice(context.Context, *SettleInvoiceMsg) (*SettleInvoiceResp, er.R)
 }
 
 // UnimplementedInvoicesServer can be embedded to have forward compatible implementations.
 type UnimplementedInvoicesServer struct {
 }
 
-func (*UnimplementedInvoicesServer) SubscribeSingleInvoice(req *SubscribeSingleInvoiceRequest, srv Invoices_SubscribeSingleInvoiceServer) error {
+func (*UnimplementedInvoicesServer) SubscribeSingleInvoice(req *SubscribeSingleInvoiceRequest, srv Invoices_SubscribeSingleInvoiceServer) er.R {
 	return status.Errorf(codes.Unimplemented, "method SubscribeSingleInvoice not implemented")
 }
-func (*UnimplementedInvoicesServer) CancelInvoice(ctx context.Context, req *CancelInvoiceMsg) (*CancelInvoiceResp, error) {
+func (*UnimplementedInvoicesServer) CancelInvoice(ctx context.Context, req *CancelInvoiceMsg) (*CancelInvoiceResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelInvoice not implemented")
 }
-func (*UnimplementedInvoicesServer) AddHoldInvoice(ctx context.Context, req *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, error) {
+func (*UnimplementedInvoicesServer) AddHoldInvoice(ctx context.Context, req *AddHoldInvoiceRequest) (*AddHoldInvoiceResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddHoldInvoice not implemented")
 }
-func (*UnimplementedInvoicesServer) SettleInvoice(ctx context.Context, req *SettleInvoiceMsg) (*SettleInvoiceResp, error) {
+func (*UnimplementedInvoicesServer) SettleInvoice(ctx context.Context, req *SettleInvoiceMsg) (*SettleInvoiceResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SettleInvoice not implemented")
 }
 
@@ -578,7 +578,7 @@ func RegisterInvoicesServer(s *grpc.Server, srv InvoicesServer) {
 	s.RegisterService(&_Invoices_serviceDesc, srv)
 }
 
-func _Invoices_SubscribeSingleInvoice_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Invoices_SubscribeSingleInvoice_Handler(srv interface{}, stream grpc.ServerStream) er.R {
 	m := new(SubscribeSingleInvoiceRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -587,7 +587,7 @@ func _Invoices_SubscribeSingleInvoice_Handler(srv interface{}, stream grpc.Serve
 }
 
 type Invoices_SubscribeSingleInvoiceServer interface {
-	Send(*lnrpc.Invoice) error
+	Send(*lnrpc.Invoice) er.R
 	grpc.ServerStream
 }
 
@@ -595,11 +595,11 @@ type invoicesSubscribeSingleInvoiceServer struct {
 	grpc.ServerStream
 }
 
-func (x *invoicesSubscribeSingleInvoiceServer) Send(m *lnrpc.Invoice) error {
+func (x *invoicesSubscribeSingleInvoiceServer) Send(m *lnrpc.Invoice) er.R {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Invoices_CancelInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Invoices_CancelInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(CancelInvoiceMsg)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -611,13 +611,13 @@ func _Invoices_CancelInvoice_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/invoicesrpc.Invoices/CancelInvoice",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(InvoicesServer).CancelInvoice(ctx, req.(*CancelInvoiceMsg))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Invoices_AddHoldInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Invoices_AddHoldInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(AddHoldInvoiceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -629,13 +629,13 @@ func _Invoices_AddHoldInvoice_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/invoicesrpc.Invoices/AddHoldInvoice",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(InvoicesServer).AddHoldInvoice(ctx, req.(*AddHoldInvoiceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Invoices_SettleInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Invoices_SettleInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SettleInvoiceMsg)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -647,7 +647,7 @@ func _Invoices_SettleInvoice_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/invoicesrpc.Invoices/SettleInvoice",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(InvoicesServer).SettleInvoice(ctx, req.(*SettleInvoiceMsg))
 	}
 	return interceptor(ctx, in, info, handler)

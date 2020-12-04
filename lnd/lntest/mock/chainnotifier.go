@@ -29,7 +29,7 @@ func (c *ChainNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 // RegisterSpendNtfn returns a SpendEvent that contains a channel that the spend
 // details will go over.
 func (c *ChainNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
-	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, error) {
+	pkScript []byte, heightHint uint32) (*chainntnfs.SpendEvent, er.R) {
 
 	return &chainntnfs.SpendEvent{
 		Spend:  c.SpendChan,
@@ -40,7 +40,7 @@ func (c *ChainNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 // RegisterBlockEpochNtfn returns a BlockEpochEvent that contains a channel that
 // block epochs will go over.
 func (c *ChainNotifier) RegisterBlockEpochNtfn(blockEpoch *chainntnfs.BlockEpoch) (
-	*chainntnfs.BlockEpochEvent, error) {
+	*chainntnfs.BlockEpochEvent, er.R) {
 
 	return &chainntnfs.BlockEpochEvent{
 		Epochs: c.EpochChan,
@@ -49,7 +49,7 @@ func (c *ChainNotifier) RegisterBlockEpochNtfn(blockEpoch *chainntnfs.BlockEpoch
 }
 
 // Start currently returns a dummy value.
-func (c *ChainNotifier) Start() error {
+func (c *ChainNotifier) Start() er.R {
 	return nil
 }
 
@@ -59,6 +59,6 @@ func (c *ChainNotifier) Started() bool {
 }
 
 // Stop currently returns a dummy value.
-func (c *ChainNotifier) Stop() error {
+func (c *ChainNotifier) Stop() er.R {
 	return nil
 }

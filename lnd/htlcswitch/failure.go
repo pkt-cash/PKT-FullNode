@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -140,7 +141,7 @@ type ErrorDecrypter interface {
 	// hop, to the source of the error. A fully populated
 	// lnwire.FailureMessage is returned along with the source of the
 	// error.
-	DecryptError(lnwire.OpaqueReason) (*ForwardingError, error)
+	DecryptError(lnwire.OpaqueReason) (*ForwardingError, er.R)
 }
 
 // UnknownEncrypterType is an error message used to signal that an unexpected
@@ -160,7 +161,7 @@ type OnionErrorDecrypter interface {
 	// node where error have occurred. As a result, in order to decrypt the
 	// error we need get all shared secret and apply decryption in the
 	// reverse order.
-	DecryptError(encryptedData []byte) (*sphinx.DecryptedError, error)
+	DecryptError(encryptedData []byte) (*sphinx.DecryptedError, er.R)
 }
 
 // SphinxErrorDecrypter wraps the sphinx data SphinxErrorDecrypter and maps the
@@ -175,7 +176,7 @@ type SphinxErrorDecrypter struct {
 //
 // NOTE: Part of the ErrorDecrypter interface.
 func (s *SphinxErrorDecrypter) DecryptError(reason lnwire.OpaqueReason) (
-	*ForwardingError, error) {
+	*ForwardingError, er.R) {
 
 	failure, err := s.OnionErrorDecrypter.DecryptError(reason)
 	if err != nil {

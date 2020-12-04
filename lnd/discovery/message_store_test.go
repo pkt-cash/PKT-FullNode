@@ -236,7 +236,7 @@ func TestMessageStoreUnsupportedMessage(t *testing.T) {
 	if _, err := lnwire.WriteMessage(&rawMsg, unsupportedMsg, 0); err != nil {
 		t.Fatalf("unable to serialize message: %v", err)
 	}
-	err = kvdb.Update(msgStore.db, func(tx kvdb.RwTx) error {
+	err = kvdb.Update(msgStore.db, func(tx kvdb.RwTx) er.R {
 		messageStore := tx.ReadWriteBucket(messageStoreBucket)
 		return messageStore.Put(msgKey, rawMsg.Bytes())
 	}, func() {})

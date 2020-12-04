@@ -2,7 +2,6 @@ package wtserver
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -19,13 +18,14 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.wtserver")
 	// ErrPeerAlreadyConnected signals that a peer with the same session id
 	// is already active within the server.
-	ErrPeerAlreadyConnected = errors.New("peer already connected")
+	ErrPeerAlreadyConnected = Err.CodeWithDetail("ErrPeerAlreadyConnected", "peer already connected")
 
 	// ErrServerExiting signals that a request could not be processed
 	// because the server has been requested to shut down.
-	ErrServerExiting = errors.New("server shutting down")
+	ErrServerExiting = Err.CodeWithDetail("ErrServerExiting", "server shutting down")
 )
 
 // Config abstracts the primary components and dependencies of the server.
@@ -52,7 +52,7 @@ type Config struct {
 
 	// NewAddress is used to generate reward addresses, where a cut of
 	// successfully sent funds can be received.
-	NewAddress func() (btcutil.Address, error)
+	NewAddress func() (btcutil.Address, er.R)
 
 	// ChainHash identifies the network that the server is watching.
 	ChainHash chainhash.Hash
@@ -95,7 +95,7 @@ type Server struct {
 // New creates a new server to handle watchtower clients. The server will accept
 // clients connecting to the listener addresses, and allows them to open
 // sessions and send state updates.
-func New(cfg *Config) (*Server, error) {
+func New(cfg *Config) (*Server, er.R) {
 	localInit := wtwire.NewInitMessage(
 		lnwire.NewRawFeatureVector(wtwire.AltruistSessionsOptional),
 		cfg.ChainHash,
@@ -124,7 +124,7 @@ func New(cfg *Config) (*Server, error) {
 }
 
 // Start begins listening on the server's listeners.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	s.started.Do(func() {
 		log.Infof("Starting watchtower server")
 
@@ -139,7 +139,7 @@ func (s *Server) Start() error {
 }
 
 // Stop shutdowns down the server's listeners and any active requests.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	s.stopped.Do(func() {
 		log.Infof("Stopping watchtower server")
 
@@ -306,12 +306,12 @@ func (f *connFailure) Error() string {
 // error is returned if a message is not received before the server's read
 // timeout, the read off the wire failed, or the message could not be
 // deserialized.
-func (s *Server) readMessage(peer Peer) (wtwire.Message, error) {
+func (s *Server) readMessage(peer Peer) (wtwire.Message, er.R) {
 	// Set a read timeout to ensure we drop the client if not sent in a
 	// timely manner.
 	err := peer.SetReadDeadline(time.Now().Add(s.cfg.ReadTimeout))
 	if err != nil {
-		err = fmt.Errorf("unable to set read deadline: %v", err)
+		err = er.Errorf("unable to set read deadline: %v", err)
 		return nil, err
 	}
 
@@ -319,14 +319,14 @@ func (s *Server) readMessage(peer Peer) (wtwire.Message, error) {
 	// watchtower wire specification.
 	rawMsg, err := peer.ReadNextMessage()
 	if err != nil {
-		err = fmt.Errorf("unable to read message: %v", err)
+		err = er.Errorf("unable to read message: %v", err)
 		return nil, err
 	}
 
 	msgReader := bytes.NewReader(rawMsg)
 	msg, err := wtwire.ReadMessage(msgReader, 0)
 	if err != nil {
-		err = fmt.Errorf("unable to parse message: %v", err)
+		err = er.Errorf("unable to parse message: %v", err)
 		return nil, err
 	}
 
@@ -336,19 +336,19 @@ func (s *Server) readMessage(peer Peer) (wtwire.Message, error) {
 }
 
 // sendMessage sends a watchtower wire message to the target peer.
-func (s *Server) sendMessage(peer Peer, msg wtwire.Message) error {
+func (s *Server) sendMessage(peer Peer, msg wtwire.Message) er.R {
 	// TODO(conner): use buffer pool?
 
 	var b bytes.Buffer
 	_, err := wtwire.WriteMessage(&b, msg, 0)
 	if err != nil {
-		err = fmt.Errorf("unable to encode msg: %v", err)
+		err = er.Errorf("unable to encode msg: %v", err)
 		return err
 	}
 
 	err = peer.SetWriteDeadline(time.Now().Add(s.cfg.WriteTimeout))
 	if err != nil {
-		err = fmt.Errorf("unable to set write deadline: %v", err)
+		err = er.Errorf("unable to set write deadline: %v", err)
 		return err
 	}
 
@@ -360,14 +360,14 @@ func (s *Server) sendMessage(peer Peer, msg wtwire.Message) error {
 
 // addPeer stores a client in the server's client map. An error is returned if a
 // client with the same session id already exists.
-func (s *Server) addPeer(id *wtdb.SessionID, peer Peer) error {
+func (s *Server) addPeer(id *wtdb.SessionID, peer Peer) er.R {
 	s.clientMtx.Lock()
 	defer s.clientMtx.Unlock()
 
 	if existingPeer, ok := s.clients[*id]; ok {
 		log.Infof("Already connected to peer %s@%s, disconnecting %s",
 			id, existingPeer.RemoteAddr(), peer.RemoteAddr())
-		return ErrPeerAlreadyConnected
+		return ErrPeerAlreadyConnected.Default()
 	}
 	s.clients[*id] = peer
 

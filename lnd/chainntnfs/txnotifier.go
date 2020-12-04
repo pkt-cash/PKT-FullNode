@@ -2,12 +2,12 @@ package chainntnfs
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/txscript"
@@ -44,24 +44,25 @@ var (
 var (
 	// ErrTxNotifierExiting is an error returned when attempting to interact
 	// with the TxNotifier but it been shut down.
-	ErrTxNotifierExiting = errors.New("TxNotifier is exiting")
+	ErrTxNotifierExiting = Err.CodeWithDetail("ErrTxNotifierExiting", "TxNotifier is exiting")
 
 	// ErrNoScript is an error returned when a confirmation/spend
 	// registration is attempted without providing an accompanying output
 	// script.
-	ErrNoScript = errors.New("an output script must be provided")
+	ErrNoScript = Err.CodeWithDetail("ErrNoScript", "an output script must be provided")
 
 	// ErrNoHeightHint is an error returned when a confirmation/spend
 	// registration is attempted without providing an accompanying height
 	// hint.
-	ErrNoHeightHint = errors.New("a height hint greater than 0 must be " +
-		"provided")
+	ErrNoHeightHint = Err.CodeWithDetail("ErrNoHeightHint",
+		"a height hint greater than 0 must be provided")
 
 	// ErrNumConfsOutOfRange is an error returned when a confirmation/spend
 	// registration is attempted and the number of confirmations provided is
 	// out of range.
-	ErrNumConfsOutOfRange = fmt.Errorf("number of confirmations must be "+
-		"between %d and %d", 1, MaxNumConfs)
+	ErrNumConfsOutOfRange = Err.CodeWithDetail("ErrNumConfsOutOfRange",
+		fmt.Sprintf("number of confirmations must be "+
+			"between %d and %d", 1, MaxNumConfs))
 )
 
 // rescanState indicates the progression of a registration before the notifier
@@ -162,7 +163,7 @@ type ConfRequest struct {
 // NewConfRequest creates a request for a confirmation notification of either a
 // txid or output script. A nil txid or an allocated ZeroHash can be used to
 // dispatch the confirmation notification on the script.
-func NewConfRequest(txid *chainhash.Hash, pkScript []byte) (ConfRequest, error) {
+func NewConfRequest(txid *chainhash.Hash, pkScript []byte) (ConfRequest, er.R) {
 	var r ConfRequest
 	outputScript, err := txscript.ParsePkScript(pkScript)
 	if err != nil {
@@ -190,7 +191,7 @@ func (r ConfRequest) String() string {
 
 // ConfHintKey returns the key that will be used to index the confirmation
 // request's hint within the height hint cache.
-func (r ConfRequest) ConfHintKey() ([]byte, error) {
+func (r ConfRequest) ConfHintKey() ([]byte, er.R) {
 	if r.TxID == ZeroHash {
 		return r.PkScript.Script(), nil
 	}
@@ -307,7 +308,7 @@ type SpendRequest struct {
 // NewSpendRequest creates a request for a spend notification of either an
 // outpoint or output script. A nil outpoint or an allocated ZeroOutPoint can be
 // used to dispatch the confirmation notification on the script.
-func NewSpendRequest(op *wire.OutPoint, pkScript []byte) (SpendRequest, error) {
+func NewSpendRequest(op *wire.OutPoint, pkScript []byte) (SpendRequest, er.R) {
 	var r SpendRequest
 	outputScript, err := txscript.ParsePkScript(pkScript)
 	if err != nil {
@@ -336,7 +337,7 @@ func (r SpendRequest) String() string {
 
 // SpendHintKey returns the key that will be used to index the spend request's
 // hint within the height hint cache.
-func (r SpendRequest) SpendHintKey() ([]byte, error) {
+func (r SpendRequest) SpendHintKey() ([]byte, er.R) {
 	if r.OutPoint == ZeroOutPoint {
 		return r.PkScript.Script(), nil
 	}
@@ -356,7 +357,7 @@ func (r SpendRequest) SpendHintKey() ([]byte, error) {
 // matches. Otherwise, we'll need to match on the output script being spent, so
 // we'll recompute it for each input of the transaction to determine if it
 // matches.
-func (r SpendRequest) MatchesTx(tx *wire.MsgTx) (bool, uint32, error) {
+func (r SpendRequest) MatchesTx(tx *wire.MsgTx) (bool, uint32, er.R) {
 	if r.OutPoint != ZeroOutPoint {
 		for i, txIn := range tx.TxIn {
 			if txIn.PreviousOutPoint == r.OutPoint {
@@ -371,7 +372,7 @@ func (r SpendRequest) MatchesTx(tx *wire.MsgTx) (bool, uint32, error) {
 		pkScript, err := txscript.ComputePkScript(
 			txIn.SignatureScript, txIn.Witness,
 		)
-		if err == txscript.ErrUnsupportedScriptType {
+		if txscript.ErrUnsupportedScriptType.Is(err) {
 			continue
 		}
 		if err != nil {
@@ -545,23 +546,23 @@ func NewTxNotifier(startHeight uint32, reorgSafetyLimit uint32,
 // newConfNtfn validates all of the parameters required to successfully create
 // and register a confirmation notification.
 func (n *TxNotifier) newConfNtfn(txid *chainhash.Hash,
-	pkScript []byte, numConfs, heightHint uint32) (*ConfNtfn, error) {
+	pkScript []byte, numConfs, heightHint uint32) (*ConfNtfn, er.R) {
 
 	// An accompanying output script must always be provided.
 	if len(pkScript) == 0 {
-		return nil, ErrNoScript
+		return nil, ErrNoScript.Default()
 	}
 
 	// Enforce that we will not dispatch confirmations beyond the reorg
 	// safety limit.
 	if numConfs == 0 || numConfs > n.reorgSafetyLimit {
-		return nil, ErrNumConfsOutOfRange
+		return nil, ErrNumConfsOutOfRange.Default()
 	}
 
 	// A height hint must be provided to prevent scanning from the genesis
 	// block.
 	if heightHint == 0 {
-		return nil, ErrNoHeightHint
+		return nil, ErrNoHeightHint.Default()
 	}
 
 	// Ensure the output script is of a supported type.
@@ -591,11 +592,11 @@ func (n *TxNotifier) newConfNtfn(txid *chainhash.Hash,
 // UpdateConfDetails method, otherwise we will wait for the transaction/output
 // script to confirm even though it already has.
 func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
-	numConfs, heightHint uint32) (*ConfRegistration, error) {
+	numConfs, heightHint uint32) (*ConfRegistration, er.R) {
 
 	select {
 	case <-n.quit:
-		return nil, ErrTxNotifierExiting
+		return nil, ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -618,7 +619,7 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 				startHeight)
 			startHeight = hint
 		}
-	} else if err != ErrConfirmHintNotFound {
+	} else if !ErrConfirmHintNotFound.Is(err) {
 		Log.Errorf("Unable to query confirm hint for %v: %v",
 			ntfn.ConfRequest, err)
 	}
@@ -775,11 +776,11 @@ func (n *TxNotifier) CancelConf(confRequest ConfRequest, confID uint64) {
 // NOTE: The notification should be registered first to ensure notifications are
 // dispatched correctly.
 func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
-	details *TxConfirmation) error {
+	details *TxConfirmation) er.R {
 
 	select {
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -792,7 +793,7 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 	// notification for the given txid/script.
 	confSet, ok := n.confNotifications[confRequest]
 	if !ok {
-		return fmt.Errorf("confirmation notification for %v not found",
+		return er.Errorf("confirmation notification for %v not found",
 			confRequest)
 	}
 
@@ -870,7 +871,7 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 // client if the transaction/output script has sufficiently confirmed. If the
 // provided details are nil, this method will be a no-op.
 func (n *TxNotifier) dispatchConfDetails(
-	ntfn *ConfNtfn, details *TxConfirmation) error {
+	ntfn *ConfNtfn, details *TxConfirmation) er.R {
 
 	// If no details are provided, return early as we can't dispatch.
 	if details == nil {
@@ -894,14 +895,14 @@ func (n *TxNotifier) dispatchConfDetails(
 		select {
 		case ntfn.Event.Updates <- 0:
 		case <-n.quit:
-			return ErrTxNotifierExiting
+			return ErrTxNotifierExiting.Default()
 		}
 
 		select {
 		case ntfn.Event.Confirmed <- details:
 			ntfn.dispatched = true
 		case <-n.quit:
-			return ErrTxNotifierExiting
+			return ErrTxNotifierExiting.Default()
 		}
 	} else {
 		Log.Debugf("Queueing %v confirmation notification for %v at tip ",
@@ -924,7 +925,7 @@ func (n *TxNotifier) dispatchConfDetails(
 		select {
 		case ntfn.Event.Updates <- numConfsLeft:
 		case <-n.quit:
-			return ErrTxNotifierExiting
+			return ErrTxNotifierExiting.Default()
 		}
 	}
 
@@ -946,17 +947,17 @@ func (n *TxNotifier) dispatchConfDetails(
 // newSpendNtfn validates all of the parameters required to successfully create
 // and register a spend notification.
 func (n *TxNotifier) newSpendNtfn(outpoint *wire.OutPoint,
-	pkScript []byte, heightHint uint32) (*SpendNtfn, error) {
+	pkScript []byte, heightHint uint32) (*SpendNtfn, er.R) {
 
 	// An accompanying output script must always be provided.
 	if len(pkScript) == 0 {
-		return nil, ErrNoScript
+		return nil, ErrNoScript.Default()
 	}
 
 	// A height hint must be provided to prevent scanning from the genesis
 	// block.
 	if heightHint == 0 {
-		return nil, ErrNoHeightHint
+		return nil, ErrNoHeightHint.Default()
 	}
 
 	// Ensure the output script is of a supported type.
@@ -985,11 +986,11 @@ func (n *TxNotifier) newSpendNtfn(outpoint *wire.OutPoint,
 // the UpdateSpendDetails method, otherwise we will wait for the outpoint/output
 // script to be spent at tip, even though it already has.
 func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
-	heightHint uint32) (*SpendRegistration, error) {
+	heightHint uint32) (*SpendRegistration, er.R) {
 
 	select {
 	case <-n.quit:
-		return nil, ErrTxNotifierExiting
+		return nil, ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1010,7 +1011,7 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 				startHeight)
 			startHeight = hint
 		}
-	} else if err != ErrSpendHintNotFound {
+	} else if !ErrSpendHintNotFound.Is(err) {
 		Log.Errorf("Unable to query spend hint for %v: %v",
 			ntfn.SpendRequest, err)
 	}
@@ -1147,11 +1148,11 @@ func (n *TxNotifier) CancelSpend(spendRequest SpendRequest, spendID uint64) {
 // outpoints/output scripts for which we currently have registered notifications
 // for. If it is relevant, spend notifications will be dispatched to the caller.
 func (n *TxNotifier) ProcessRelevantSpendTx(tx *btcutil.Tx,
-	blockHeight uint32) error {
+	blockHeight uint32) er.R {
 
 	select {
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1195,11 +1196,11 @@ func (n *TxNotifier) ProcessRelevantSpendTx(tx *btcutil.Tx,
 // NOTE: A notification request for the outpoint/output script must be
 // registered first to ensure notifications are delivered.
 func (n *TxNotifier) UpdateSpendDetails(spendRequest SpendRequest,
-	details *SpendDetail) error {
+	details *SpendDetail) er.R {
 
 	select {
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1218,13 +1219,13 @@ func (n *TxNotifier) UpdateSpendDetails(spendRequest SpendRequest,
 //
 // NOTE: This method must be called with the TxNotifier's lock held.
 func (n *TxNotifier) updateSpendDetails(spendRequest SpendRequest,
-	details *SpendDetail) error {
+	details *SpendDetail) er.R {
 
 	// Mark the ongoing historical rescan for this request as finished. This
 	// will allow us to update the spend hints for it at tip.
 	spendSet, ok := n.spendNotifications[spendRequest]
 	if !ok {
-		return fmt.Errorf("spend notification for %v not found",
+		return er.Errorf("spend notification for %v not found",
 			spendRequest)
 	}
 
@@ -1301,7 +1302,7 @@ func (n *TxNotifier) updateSpendDetails(spendRequest SpendRequest,
 // dispatchSpendDetails dispatches a spend notification to the client.
 //
 // NOTE: This must be called with the TxNotifier's lock held.
-func (n *TxNotifier) dispatchSpendDetails(ntfn *SpendNtfn, details *SpendDetail) error {
+func (n *TxNotifier) dispatchSpendDetails(ntfn *SpendNtfn, details *SpendDetail) er.R {
 	// If there are no spend details to dispatch or if the notification has
 	// already been dispatched, then we can skip dispatching to this client.
 	if details == nil || ntfn.dispatched {
@@ -1319,7 +1320,7 @@ func (n *TxNotifier) dispatchSpendDetails(ntfn *SpendNtfn, details *SpendDetail)
 	case ntfn.Event.Spend <- details:
 		ntfn.dispatched = true
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	}
 
 	return nil
@@ -1345,11 +1346,11 @@ func (n *TxNotifier) dispatchSpendDetails(ntfn *SpendNtfn, details *SpendDetail)
 // clients, NotifyHeight must be called with the same block height in order to
 // maintain correctness.
 func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
-	txns []*btcutil.Tx) error {
+	txns []*btcutil.Tx) er.R {
 
 	select {
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1357,7 +1358,7 @@ func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
 	defer n.Unlock()
 
 	if blockHeight != n.currentHeight+1 {
-		return fmt.Errorf("received blocks out of order: "+
+		return er.Errorf("received blocks out of order: "+
 			"current height=%d, new height=%d",
 			n.currentHeight, blockHeight)
 	}
@@ -1391,7 +1392,7 @@ func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
 				select {
 				case ntfn.Event.Done <- struct{}{}:
 				case <-n.quit:
-					return ErrTxNotifierExiting
+					return ErrTxNotifierExiting.Default()
 				}
 			}
 
@@ -1405,7 +1406,7 @@ func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
 				select {
 				case ntfn.Event.Done <- struct{}{}:
 				case <-n.quit:
-					return ErrTxNotifierExiting
+					return ErrTxNotifierExiting.Default()
 				}
 			}
 
@@ -1620,7 +1621,7 @@ func (n *TxNotifier) handleSpendDetailsAtTip(spendRequest SpendRequest,
 // NotifyHeight dispatches confirmation and spend notifications to the clients
 // who registered for a notification which has been fulfilled at the passed
 // height.
-func (n *TxNotifier) NotifyHeight(height uint32) error {
+func (n *TxNotifier) NotifyHeight(height uint32) er.R {
 	n.Lock()
 	defer n.Unlock()
 
@@ -1647,7 +1648,7 @@ func (n *TxNotifier) NotifyHeight(height uint32) error {
 				select {
 				case ntfn.Event.Updates <- numConfsLeft:
 				case <-n.quit:
-					return ErrTxNotifierExiting
+					return ErrTxNotifierExiting.Default()
 				}
 			}
 		}
@@ -1665,7 +1666,7 @@ func (n *TxNotifier) NotifyHeight(height uint32) error {
 		case ntfn.Event.Confirmed <- confSet.details:
 			ntfn.dispatched = true
 		case <-n.quit:
-			return ErrTxNotifierExiting
+			return ErrTxNotifierExiting.Default()
 		}
 	}
 	delete(n.ntfnsByConfirmHeight, height)
@@ -1691,10 +1692,10 @@ func (n *TxNotifier) NotifyHeight(height uint32) error {
 // are consumed (if not already), and reorg notifications are dispatched
 // instead. Confirmation/spend notifications will be dispatched again upon block
 // inclusion.
-func (n *TxNotifier) DisconnectTip(blockHeight uint32) error {
+func (n *TxNotifier) DisconnectTip(blockHeight uint32) er.R {
 	select {
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1702,7 +1703,7 @@ func (n *TxNotifier) DisconnectTip(blockHeight uint32) error {
 	defer n.Unlock()
 
 	if blockHeight != n.currentHeight {
-		return fmt.Errorf("received blocks out of order: "+
+		return er.Errorf("received blocks out of order: "+
 			"current height=%d, disconnected height=%d",
 			n.currentHeight, blockHeight)
 	}
@@ -1735,7 +1736,7 @@ func (n *TxNotifier) DisconnectTip(blockHeight uint32) error {
 				select {
 				case <-ntfn.Event.Updates:
 				case <-n.quit:
-					return ErrTxNotifierExiting
+					return ErrTxNotifierExiting.Default()
 				default:
 				}
 
@@ -1880,7 +1881,7 @@ func (n *TxNotifier) unspentRequests() []SpendRequest {
 //
 // NOTE: This must be called with the TxNotifier's lock held.
 func (n *TxNotifier) dispatchConfReorg(ntfn *ConfNtfn,
-	heightDisconnected uint32) error {
+	heightDisconnected uint32) er.R {
 
 	// If the request's confirmation notification has yet to be dispatched,
 	// we'll need to clear its entry within the ntfnsByConfirmHeight index
@@ -1901,7 +1902,7 @@ func (n *TxNotifier) dispatchConfReorg(ntfn *ConfNtfn,
 	select {
 	case <-ntfn.Event.Confirmed:
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	default:
 	}
 
@@ -1912,7 +1913,7 @@ func (n *TxNotifier) dispatchConfReorg(ntfn *ConfNtfn,
 	select {
 	case ntfn.Event.NegativeConf <- int32(n.reorgDepth):
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	}
 
 	return nil
@@ -1922,7 +1923,7 @@ func (n *TxNotifier) dispatchConfReorg(ntfn *ConfNtfn,
 // notiification was already delivered.
 //
 // NOTE: This must be called with the TxNotifier's lock held.
-func (n *TxNotifier) dispatchSpendReorg(ntfn *SpendNtfn) error {
+func (n *TxNotifier) dispatchSpendReorg(ntfn *SpendNtfn) er.R {
 	if !ntfn.dispatched {
 		return nil
 	}
@@ -1939,7 +1940,7 @@ func (n *TxNotifier) dispatchSpendReorg(ntfn *SpendNtfn) error {
 	select {
 	case ntfn.Event.Reorg <- struct{}{}:
 	case <-n.quit:
-		return ErrTxNotifierExiting
+		return ErrTxNotifierExiting.Default()
 	}
 
 	ntfn.dispatched = false

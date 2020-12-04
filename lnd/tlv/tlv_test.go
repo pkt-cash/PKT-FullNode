@@ -17,7 +17,7 @@ type nodeAmts struct {
 	amt2   uint64
 }
 
-func ENodeAmts(w io.Writer, val interface{}, buf *[8]byte) error {
+func ENodeAmts(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if t, ok := val.(*nodeAmts); ok {
 		if err := tlv.EPubKey(w, &t.nodeID, buf); err != nil {
 			return err
@@ -30,7 +30,7 @@ func ENodeAmts(w io.Writer, val interface{}, buf *[8]byte) error {
 	return tlv.NewTypeForEncodingErr(val, "nodeAmts")
 }
 
-func DNodeAmts(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DNodeAmts(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if t, ok := val.(*nodeAmts); ok && l == 49 {
 		if err := tlv.DPubKey(r, &t.nodeID, buf, 33); err != nil {
 			return err
@@ -74,11 +74,11 @@ func NewN1() *N1 {
 	return n
 }
 
-func (n *N1) Encode(w io.Writer) error {
+func (n *N1) Encode(w io.Writer) er.R {
 	return n.stream.Encode(w)
 }
 
-func (n *N1) Decode(r io.Reader) error {
+func (n *N1) Decode(r io.Reader) er.R {
 	return n.stream.Decode(r)
 }
 
@@ -112,11 +112,11 @@ func NewN2() *N2 {
 	return n
 }
 
-func (n *N2) Encode(w io.Writer) error {
+func (n *N2) Encode(w io.Writer) er.R {
 	return n.stream.Encode(w)
 }
 
-func (n *N2) Decode(r io.Reader) error {
+func (n *N2) Decode(r io.Reader) er.R {
 	return n.stream.Decode(r)
 }
 
@@ -304,7 +304,7 @@ var tlvDecodingFailureTests = []struct {
 			0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x02,
 		},
-		expErr: errors.New("invalid magic in compressed pubkey string: 4"),
+		expErr: er.New("invalid magic in compressed pubkey string: 4"),
 		skipN2: true,
 	},
 	{

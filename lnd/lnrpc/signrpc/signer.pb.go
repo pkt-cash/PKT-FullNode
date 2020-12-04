@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -41,10 +41,10 @@ func (*KeyLocator) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{0}
 }
 
-func (m *KeyLocator) XXX_Unmarshal(b []byte) error {
+func (m *KeyLocator) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_KeyLocator.Unmarshal(m, b)
 }
-func (m *KeyLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *KeyLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_KeyLocator.Marshal(b, m, deterministic)
 }
 func (m *KeyLocator) XXX_Merge(src proto.Message) {
@@ -94,10 +94,10 @@ func (*KeyDescriptor) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{1}
 }
 
-func (m *KeyDescriptor) XXX_Unmarshal(b []byte) error {
+func (m *KeyDescriptor) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_KeyDescriptor.Unmarshal(m, b)
 }
-func (m *KeyDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *KeyDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_KeyDescriptor.Marshal(b, m, deterministic)
 }
 func (m *KeyDescriptor) XXX_Merge(src proto.Message) {
@@ -143,10 +143,10 @@ func (*TxOut) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{2}
 }
 
-func (m *TxOut) XXX_Unmarshal(b []byte) error {
+func (m *TxOut) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_TxOut.Unmarshal(m, b)
 }
-func (m *TxOut) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TxOut) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_TxOut.Marshal(b, m, deterministic)
 }
 func (m *TxOut) XXX_Merge(src proto.Message) {
@@ -230,10 +230,10 @@ func (*SignDescriptor) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{3}
 }
 
-func (m *SignDescriptor) XXX_Unmarshal(b []byte) error {
+func (m *SignDescriptor) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SignDescriptor.Unmarshal(m, b)
 }
-func (m *SignDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SignDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SignDescriptor.Marshal(b, m, deterministic)
 }
 func (m *SignDescriptor) XXX_Merge(src proto.Message) {
@@ -314,10 +314,10 @@ func (*SignReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{4}
 }
 
-func (m *SignReq) XXX_Unmarshal(b []byte) error {
+func (m *SignReq) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SignReq.Unmarshal(m, b)
 }
-func (m *SignReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SignReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SignReq.Marshal(b, m, deterministic)
 }
 func (m *SignReq) XXX_Merge(src proto.Message) {
@@ -363,10 +363,10 @@ func (*SignResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{5}
 }
 
-func (m *SignResp) XXX_Unmarshal(b []byte) error {
+func (m *SignResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SignResp.Unmarshal(m, b)
 }
-func (m *SignResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SignResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SignResp.Marshal(b, m, deterministic)
 }
 func (m *SignResp) XXX_Merge(src proto.Message) {
@@ -407,10 +407,10 @@ func (*InputScript) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{6}
 }
 
-func (m *InputScript) XXX_Unmarshal(b []byte) error {
+func (m *InputScript) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_InputScript.Unmarshal(m, b)
 }
-func (m *InputScript) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *InputScript) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_InputScript.Marshal(b, m, deterministic)
 }
 func (m *InputScript) XXX_Merge(src proto.Message) {
@@ -454,10 +454,10 @@ func (*InputScriptResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{7}
 }
 
-func (m *InputScriptResp) XXX_Unmarshal(b []byte) error {
+func (m *InputScriptResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_InputScriptResp.Unmarshal(m, b)
 }
-func (m *InputScriptResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *InputScriptResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_InputScriptResp.Marshal(b, m, deterministic)
 }
 func (m *InputScriptResp) XXX_Merge(src proto.Message) {
@@ -496,10 +496,10 @@ func (*SignMessageReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{8}
 }
 
-func (m *SignMessageReq) XXX_Unmarshal(b []byte) error {
+func (m *SignMessageReq) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SignMessageReq.Unmarshal(m, b)
 }
-func (m *SignMessageReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SignMessageReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SignMessageReq.Marshal(b, m, deterministic)
 }
 func (m *SignMessageReq) XXX_Merge(src proto.Message) {
@@ -544,10 +544,10 @@ func (*SignMessageResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{9}
 }
 
-func (m *SignMessageResp) XXX_Unmarshal(b []byte) error {
+func (m *SignMessageResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SignMessageResp.Unmarshal(m, b)
 }
-func (m *SignMessageResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SignMessageResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SignMessageResp.Marshal(b, m, deterministic)
 }
 func (m *SignMessageResp) XXX_Merge(src proto.Message) {
@@ -590,10 +590,10 @@ func (*VerifyMessageReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{10}
 }
 
-func (m *VerifyMessageReq) XXX_Unmarshal(b []byte) error {
+func (m *VerifyMessageReq) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_VerifyMessageReq.Unmarshal(m, b)
 }
-func (m *VerifyMessageReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *VerifyMessageReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_VerifyMessageReq.Marshal(b, m, deterministic)
 }
 func (m *VerifyMessageReq) XXX_Merge(src proto.Message) {
@@ -644,10 +644,10 @@ func (*VerifyMessageResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{11}
 }
 
-func (m *VerifyMessageResp) XXX_Unmarshal(b []byte) error {
+func (m *VerifyMessageResp) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_VerifyMessageResp.Unmarshal(m, b)
 }
-func (m *VerifyMessageResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *VerifyMessageResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_VerifyMessageResp.Marshal(b, m, deterministic)
 }
 func (m *VerifyMessageResp) XXX_Merge(src proto.Message) {
@@ -694,10 +694,10 @@ func (*SharedKeyRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{12}
 }
 
-func (m *SharedKeyRequest) XXX_Unmarshal(b []byte) error {
+func (m *SharedKeyRequest) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SharedKeyRequest.Unmarshal(m, b)
 }
-func (m *SharedKeyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SharedKeyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SharedKeyRequest.Marshal(b, m, deterministic)
 }
 func (m *SharedKeyRequest) XXX_Merge(src proto.Message) {
@@ -749,10 +749,10 @@ func (*SharedKeyResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ecd772f6c7ffacf, []int{13}
 }
 
-func (m *SharedKeyResponse) XXX_Unmarshal(b []byte) error {
+func (m *SharedKeyResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_SharedKeyResponse.Unmarshal(m, b)
 }
-func (m *SharedKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SharedKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_SharedKeyResponse.Marshal(b, m, deterministic)
 }
 func (m *SharedKeyResponse) XXX_Merge(src proto.Message) {
@@ -867,7 +867,7 @@ type SignerClient interface {
 	//
 	//If we are  unable to sign using the specified keys, then an error will be
 	//returned.
-	SignOutputRaw(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignResp, error)
+	SignOutputRaw(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignResp, er.R)
 	//
 	//ComputeInputScript generates a complete InputIndex for the passed
 	//transaction with the signature as defined within the passed SignDescriptor.
@@ -879,21 +879,21 @@ type SignerClient interface {
 	//the only items of the SignDescriptor that need to be populated are pkScript
 	//in the TxOut field, the value in that same field, and finally the input
 	//index.
-	ComputeInputScript(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*InputScriptResp, error)
+	ComputeInputScript(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*InputScriptResp, er.R)
 	//
 	//SignMessage signs a message with the key specified in the key locator. The
 	//returned signature is fixed-size LN wire format encoded.
 	//
 	//The main difference to SignMessage in the main RPC is that a specific key is
 	//used to sign the message instead of the node identity private key.
-	SignMessage(ctx context.Context, in *SignMessageReq, opts ...grpc.CallOption) (*SignMessageResp, error)
+	SignMessage(ctx context.Context, in *SignMessageReq, opts ...grpc.CallOption) (*SignMessageResp, er.R)
 	//
 	//VerifyMessage verifies a signature over a message using the public key
 	//provided. The signature must be fixed-size LN wire format encoded.
 	//
 	//The main difference to VerifyMessage in the main RPC is that the public key
 	//used to sign the message does not have to be a node known to the network.
-	VerifyMessage(ctx context.Context, in *VerifyMessageReq, opts ...grpc.CallOption) (*VerifyMessageResp, error)
+	VerifyMessage(ctx context.Context, in *VerifyMessageReq, opts ...grpc.CallOption) (*VerifyMessageResp, er.R)
 	//
 	//DeriveSharedKey returns a shared secret key by performing Diffie-Hellman key
 	//derivation between the ephemeral public key in the request and the node's
@@ -903,7 +903,7 @@ type SignerClient interface {
 	//P_shared = privKeyNode * ephemeralPubkey
 	//The resulting shared public key is serialized in the compressed format and
 	//hashed with sha256, resulting in the final key length of 256bit.
-	DeriveSharedKey(ctx context.Context, in *SharedKeyRequest, opts ...grpc.CallOption) (*SharedKeyResponse, error)
+	DeriveSharedKey(ctx context.Context, in *SharedKeyRequest, opts ...grpc.CallOption) (*SharedKeyResponse, er.R)
 }
 
 type signerClient struct {
@@ -914,7 +914,7 @@ func NewSignerClient(cc *grpc.ClientConn) SignerClient {
 	return &signerClient{cc}
 }
 
-func (c *signerClient) SignOutputRaw(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignResp, error) {
+func (c *signerClient) SignOutputRaw(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignResp, er.R) {
 	out := new(SignResp)
 	err := c.cc.Invoke(ctx, "/signrpc.Signer/SignOutputRaw", in, out, opts...)
 	if err != nil {
@@ -923,7 +923,7 @@ func (c *signerClient) SignOutputRaw(ctx context.Context, in *SignReq, opts ...g
 	return out, nil
 }
 
-func (c *signerClient) ComputeInputScript(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*InputScriptResp, error) {
+func (c *signerClient) ComputeInputScript(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*InputScriptResp, er.R) {
 	out := new(InputScriptResp)
 	err := c.cc.Invoke(ctx, "/signrpc.Signer/ComputeInputScript", in, out, opts...)
 	if err != nil {
@@ -932,7 +932,7 @@ func (c *signerClient) ComputeInputScript(ctx context.Context, in *SignReq, opts
 	return out, nil
 }
 
-func (c *signerClient) SignMessage(ctx context.Context, in *SignMessageReq, opts ...grpc.CallOption) (*SignMessageResp, error) {
+func (c *signerClient) SignMessage(ctx context.Context, in *SignMessageReq, opts ...grpc.CallOption) (*SignMessageResp, er.R) {
 	out := new(SignMessageResp)
 	err := c.cc.Invoke(ctx, "/signrpc.Signer/SignMessage", in, out, opts...)
 	if err != nil {
@@ -941,7 +941,7 @@ func (c *signerClient) SignMessage(ctx context.Context, in *SignMessageReq, opts
 	return out, nil
 }
 
-func (c *signerClient) VerifyMessage(ctx context.Context, in *VerifyMessageReq, opts ...grpc.CallOption) (*VerifyMessageResp, error) {
+func (c *signerClient) VerifyMessage(ctx context.Context, in *VerifyMessageReq, opts ...grpc.CallOption) (*VerifyMessageResp, er.R) {
 	out := new(VerifyMessageResp)
 	err := c.cc.Invoke(ctx, "/signrpc.Signer/VerifyMessage", in, out, opts...)
 	if err != nil {
@@ -950,7 +950,7 @@ func (c *signerClient) VerifyMessage(ctx context.Context, in *VerifyMessageReq, 
 	return out, nil
 }
 
-func (c *signerClient) DeriveSharedKey(ctx context.Context, in *SharedKeyRequest, opts ...grpc.CallOption) (*SharedKeyResponse, error) {
+func (c *signerClient) DeriveSharedKey(ctx context.Context, in *SharedKeyRequest, opts ...grpc.CallOption) (*SharedKeyResponse, er.R) {
 	out := new(SharedKeyResponse)
 	err := c.cc.Invoke(ctx, "/signrpc.Signer/DeriveSharedKey", in, out, opts...)
 	if err != nil {
@@ -970,7 +970,7 @@ type SignerServer interface {
 	//
 	//If we are  unable to sign using the specified keys, then an error will be
 	//returned.
-	SignOutputRaw(context.Context, *SignReq) (*SignResp, error)
+	SignOutputRaw(context.Context, *SignReq) (*SignResp, er.R)
 	//
 	//ComputeInputScript generates a complete InputIndex for the passed
 	//transaction with the signature as defined within the passed SignDescriptor.
@@ -982,21 +982,21 @@ type SignerServer interface {
 	//the only items of the SignDescriptor that need to be populated are pkScript
 	//in the TxOut field, the value in that same field, and finally the input
 	//index.
-	ComputeInputScript(context.Context, *SignReq) (*InputScriptResp, error)
+	ComputeInputScript(context.Context, *SignReq) (*InputScriptResp, er.R)
 	//
 	//SignMessage signs a message with the key specified in the key locator. The
 	//returned signature is fixed-size LN wire format encoded.
 	//
 	//The main difference to SignMessage in the main RPC is that a specific key is
 	//used to sign the message instead of the node identity private key.
-	SignMessage(context.Context, *SignMessageReq) (*SignMessageResp, error)
+	SignMessage(context.Context, *SignMessageReq) (*SignMessageResp, er.R)
 	//
 	//VerifyMessage verifies a signature over a message using the public key
 	//provided. The signature must be fixed-size LN wire format encoded.
 	//
 	//The main difference to VerifyMessage in the main RPC is that the public key
 	//used to sign the message does not have to be a node known to the network.
-	VerifyMessage(context.Context, *VerifyMessageReq) (*VerifyMessageResp, error)
+	VerifyMessage(context.Context, *VerifyMessageReq) (*VerifyMessageResp, er.R)
 	//
 	//DeriveSharedKey returns a shared secret key by performing Diffie-Hellman key
 	//derivation between the ephemeral public key in the request and the node's
@@ -1006,26 +1006,26 @@ type SignerServer interface {
 	//P_shared = privKeyNode * ephemeralPubkey
 	//The resulting shared public key is serialized in the compressed format and
 	//hashed with sha256, resulting in the final key length of 256bit.
-	DeriveSharedKey(context.Context, *SharedKeyRequest) (*SharedKeyResponse, error)
+	DeriveSharedKey(context.Context, *SharedKeyRequest) (*SharedKeyResponse, er.R)
 }
 
 // UnimplementedSignerServer can be embedded to have forward compatible implementations.
 type UnimplementedSignerServer struct {
 }
 
-func (*UnimplementedSignerServer) SignOutputRaw(ctx context.Context, req *SignReq) (*SignResp, error) {
+func (*UnimplementedSignerServer) SignOutputRaw(ctx context.Context, req *SignReq) (*SignResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignOutputRaw not implemented")
 }
-func (*UnimplementedSignerServer) ComputeInputScript(ctx context.Context, req *SignReq) (*InputScriptResp, error) {
+func (*UnimplementedSignerServer) ComputeInputScript(ctx context.Context, req *SignReq) (*InputScriptResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method ComputeInputScript not implemented")
 }
-func (*UnimplementedSignerServer) SignMessage(ctx context.Context, req *SignMessageReq) (*SignMessageResp, error) {
+func (*UnimplementedSignerServer) SignMessage(ctx context.Context, req *SignMessageReq) (*SignMessageResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignMessage not implemented")
 }
-func (*UnimplementedSignerServer) VerifyMessage(ctx context.Context, req *VerifyMessageReq) (*VerifyMessageResp, error) {
+func (*UnimplementedSignerServer) VerifyMessage(ctx context.Context, req *VerifyMessageReq) (*VerifyMessageResp, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyMessage not implemented")
 }
-func (*UnimplementedSignerServer) DeriveSharedKey(ctx context.Context, req *SharedKeyRequest) (*SharedKeyResponse, error) {
+func (*UnimplementedSignerServer) DeriveSharedKey(ctx context.Context, req *SharedKeyRequest) (*SharedKeyResponse, er.R) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeriveSharedKey not implemented")
 }
 
@@ -1033,7 +1033,7 @@ func RegisterSignerServer(s *grpc.Server, srv SignerServer) {
 	s.RegisterService(&_Signer_serviceDesc, srv)
 }
 
-func _Signer_SignOutputRaw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Signer_SignOutputRaw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SignReq)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1045,13 +1045,13 @@ func _Signer_SignOutputRaw_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/signrpc.Signer/SignOutputRaw",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(SignerServer).SignOutputRaw(ctx, req.(*SignReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Signer_ComputeInputScript_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Signer_ComputeInputScript_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SignReq)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1063,13 +1063,13 @@ func _Signer_ComputeInputScript_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/signrpc.Signer/ComputeInputScript",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(SignerServer).ComputeInputScript(ctx, req.(*SignReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Signer_SignMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Signer_SignMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SignMessageReq)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1081,13 +1081,13 @@ func _Signer_SignMessage_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/signrpc.Signer/SignMessage",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(SignerServer).SignMessage(ctx, req.(*SignMessageReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Signer_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Signer_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(VerifyMessageReq)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1099,13 +1099,13 @@ func _Signer_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/signrpc.Signer/VerifyMessage",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(SignerServer).VerifyMessage(ctx, req.(*VerifyMessageReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Signer_DeriveSharedKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Signer_DeriveSharedKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
 	in := new(SharedKeyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1117,7 +1117,7 @@ func _Signer_DeriveSharedKey_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/signrpc.Signer/DeriveSharedKey",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
 		return srv.(SignerServer).DeriveSharedKey(ctx, req.(*SharedKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)

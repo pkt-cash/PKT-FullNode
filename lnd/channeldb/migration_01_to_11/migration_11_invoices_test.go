@@ -2,15 +2,15 @@ package migration_01_to_11
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 	"time"
 
+	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/zpay32"
-	litecoinCfg "github.com/ltcsuite/ltcd/chaincfg"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 
 // beforeMigrationFuncV11 insert the test invoices in the database.
 func beforeMigrationFuncV11(t *testing.T, d *DB, invoices []Invoice) {
-	err := kvdb.Update(d, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 		invoicesBucket, err := tx.CreateTopLevelBucket(
 			invoiceBucket,
 		)
@@ -146,7 +146,7 @@ func TestMigrateInvoicesHodl(t *testing.T) {
 
 // signDigestCompact generates a test signature to be used in the generation of
 // test payment requests.
-func signDigestCompact(hash []byte) ([]byte, error) {
+func signDigestCompact(hash []byte) ([]byte, er.R) {
 	// Should the signature reference a compressed public key or not.
 	isCompressedKey := true
 
@@ -157,14 +157,14 @@ func signDigestCompact(hash []byte) ([]byte, error) {
 		btcec.S256(), privKey, hash, isCompressedKey,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("can't sign the hash: %v", err)
+		return nil, er.Errorf("can't sign the hash: %v", err)
 	}
 
 	return sig, nil
 }
 
 // getPayReq creates a payment request for the given net.
-func getPayReq(net *bitcoinCfg.Params) (string, error) {
+func getPayReq(net *bitcoinCfg.Params) (string, er.R) {
 	options := []func(*zpay32.Invoice){
 		zpay32.CLTVExpiry(uint64(testCltvDelta)),
 		zpay32.Description("test"),

@@ -1,6 +1,7 @@
 package wtdb
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
@@ -8,7 +9,7 @@ import (
 // migration is a function which takes a prior outdated version of the database
 // instances and mutates the key/bucket structure to arrive at a more
 // up-to-date version of the database.
-type migration func(tx kvdb.RwTx) error
+type migration func(tx kvdb.RwTx) er.R
 
 // version pairs a version number with the migration that would need to be
 // applied from the prior version to upgrade.
@@ -46,15 +47,15 @@ func getMigrations(versions []version, curVersion uint32) []version {
 
 // getDBVersion retrieves the current database version from the metadata bucket
 // using the dbVersionKey.
-func getDBVersion(tx kvdb.RTx) (uint32, error) {
+func getDBVersion(tx kvdb.RTx) (uint32, er.R) {
 	metadata := tx.ReadBucket(metadataBkt)
 	if metadata == nil {
-		return 0, ErrUninitializedDB
+		return 0, ErrUninitializedDB.Default()
 	}
 
 	versionBytes := metadata.Get(dbVersionKey)
 	if len(versionBytes) != 4 {
-		return 0, ErrNoDBVersion
+		return 0, ErrNoDBVersion.Default()
 	}
 
 	return byteOrder.Uint32(versionBytes), nil
@@ -62,7 +63,7 @@ func getDBVersion(tx kvdb.RTx) (uint32, error) {
 
 // initDBVersion initializes the top-level metadata bucket and writes the passed
 // version number as the current version.
-func initDBVersion(tx kvdb.RwTx, version uint32) error {
+func initDBVersion(tx kvdb.RwTx, version uint32) er.R {
 	_, err := tx.CreateTopLevelBucket(metadataBkt)
 	if err != nil {
 		return err
@@ -73,10 +74,10 @@ func initDBVersion(tx kvdb.RwTx, version uint32) error {
 
 // putDBVersion stores the passed database version in the metadata bucket under
 // the dbVersionKey.
-func putDBVersion(tx kvdb.RwTx, version uint32) error {
+func putDBVersion(tx kvdb.RwTx, version uint32) er.R {
 	metadata := tx.ReadWriteBucket(metadataBkt)
 	if metadata == nil {
-		return ErrUninitializedDB
+		return ErrUninitializedDB.Default()
 	}
 
 	versionBytes := make([]byte, 4)
@@ -92,7 +93,7 @@ type versionedDB interface {
 	bdb() kvdb.Backend
 
 	// Version returns the current version stored in the database.
-	Version() (uint32, error)
+	Version() (uint32, er.R)
 }
 
 // initOrSyncVersions ensures that the database version is properly set before
@@ -101,11 +102,11 @@ type versionedDB interface {
 // will simply write the latest version to the database. Otherwise, passing init
 // as false will cause the database to apply any needed migrations to ensure its
 // version matches the latest version in the provided versions list.
-func initOrSyncVersions(db versionedDB, init bool, versions []version) error {
+func initOrSyncVersions(db versionedDB, init bool, versions []version) er.R {
 	// If the database has not yet been created, we'll initialize the
 	// database version with the latest known version.
 	if init {
-		return kvdb.Update(db.bdb(), func(tx kvdb.RwTx) error {
+		return kvdb.Update(db.bdb(), func(tx kvdb.RwTx) er.R {
 			return initDBVersion(tx, getLatestDBVersion(versions))
 		}, func() {})
 	}
@@ -119,7 +120,7 @@ func initOrSyncVersions(db versionedDB, init bool, versions []version) error {
 // known database version, applying any migrations that have not been made. If
 // the highest known version number is lower than the database's version, this
 // method will fail to prevent accidental reversions.
-func syncVersions(db versionedDB, versions []version) error {
+func syncVersions(db versionedDB, versions []version) er.R {
 	curVersion, err := db.Version()
 	if err != nil {
 		return err
@@ -131,7 +132,7 @@ func syncVersions(db versionedDB, versions []version) error {
 	// Current version is higher than any known version, fail to prevent
 	// reversion.
 	case curVersion > latestVersion:
-		return channeldb.ErrDBReversion
+		return channeldb.ErrDBReversion.Default()
 
 	// Current version matches highest known version, nothing to do.
 	case curVersion == latestVersion:
@@ -141,7 +142,7 @@ func syncVersions(db versionedDB, versions []version) error {
 	// Otherwise, apply any migrations in order to bring the database
 	// version up to the highest known version.
 	updates := getMigrations(versions, curVersion)
-	return kvdb.Update(db.bdb(), func(tx kvdb.RwTx) error {
+	return kvdb.Update(db.bdb(), func(tx kvdb.RwTx) er.R {
 		for i, update := range updates {
 			if update.migration == nil {
 				continue

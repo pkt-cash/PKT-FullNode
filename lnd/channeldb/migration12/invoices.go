@@ -6,10 +6,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tlv"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -154,8 +156,8 @@ type Invoice struct {
 
 // LegacyDeserializeInvoice decodes an invoice from the passed io.Reader using
 // the pre-TLV serialization.
-func LegacyDeserializeInvoice(r io.Reader) (Invoice, error) {
-	var err error
+func LegacyDeserializeInvoice(r io.Reader) (Invoice, er.R) {
+	var err er.R
 	invoice := Invoice{}
 
 	// TODO(roasbeef): use read full everywhere
@@ -173,12 +175,12 @@ func LegacyDeserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 
-	if err := binary.Read(r, byteOrder, &invoice.FinalCltvDelta); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.FinalCltvDelta); err != nil {
 		return invoice, err
 	}
 
 	var expiry int64
-	if err := binary.Read(r, byteOrder, &expiry); err != nil {
+	if err := util.ReadBin(r, byteOrder, &expiry); err != nil {
 		return invoice, err
 	}
 	invoice.Expiry = time.Duration(expiry)
@@ -188,7 +190,7 @@ func LegacyDeserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.CreationDate.UnmarshalBinary(birthBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
 	settledBytes, err := wire.ReadVarBytes(r, 0, 300, "settled")
@@ -196,29 +198,29 @@ func LegacyDeserializeInvoice(r io.Reader) (Invoice, error) {
 		return invoice, err
 	}
 	if err := invoice.SettleDate.UnmarshalBinary(settledBytes); err != nil {
-		return invoice, err
+		return invoice, er.E(err)
 	}
 
-	if _, err := io.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
+	if _, err := util.ReadFull(r, invoice.Terms.PaymentPreimage[:]); err != nil {
 		return invoice, err
 	}
 	var scratch [8]byte
-	if _, err := io.ReadFull(r, scratch[:]); err != nil {
+	if _, err := util.ReadFull(r, scratch[:]); err != nil {
 		return invoice, err
 	}
 	invoice.Terms.Value = lnwire.MilliSatoshi(byteOrder.Uint64(scratch[:]))
 
-	if err := binary.Read(r, byteOrder, &invoice.Terms.State); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.Terms.State); err != nil {
 		return invoice, err
 	}
 
-	if err := binary.Read(r, byteOrder, &invoice.AddIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AddIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.SettleIndex); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.SettleIndex); err != nil {
 		return invoice, err
 	}
-	if err := binary.Read(r, byteOrder, &invoice.AmtPaid); err != nil {
+	if err := util.ReadBin(r, byteOrder, &invoice.AmtPaid); err != nil {
 		return invoice, err
 	}
 
@@ -232,24 +234,24 @@ func LegacyDeserializeInvoice(r io.Reader) (Invoice, error) {
 
 // deserializeHtlcs reads a list of invoice htlcs from a reader and returns it
 // as a flattened byte slice.
-func deserializeHtlcs(r io.Reader) ([]byte, error) {
+func deserializeHtlcs(r io.Reader) ([]byte, er.R) {
 	var b bytes.Buffer
 	_, err := io.Copy(&b, r)
-	return b.Bytes(), err
+	return b.Bytes(), er.E(err)
 }
 
 // SerializeInvoice serializes an invoice to a writer.
 //
 // nolint: dupl
-func SerializeInvoice(w io.Writer, i *Invoice) error {
-	creationDateBytes, err := i.CreationDate.MarshalBinary()
-	if err != nil {
-		return err
+func SerializeInvoice(w io.Writer, i *Invoice) er.R {
+	creationDateBytes, errr := i.CreationDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
-	settleDateBytes, err := i.SettleDate.MarshalBinary()
-	if err != nil {
-		return err
+	settleDateBytes, errr := i.SettleDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	var fb bytes.Buffer
@@ -299,12 +301,12 @@ func SerializeInvoice(w io.Writer, i *Invoice) error {
 		return err
 	}
 
-	err = binary.Write(w, byteOrder, uint64(b.Len()))
+	err = util.WriteBin(w, byteOrder, uint64(b.Len()))
 	if err != nil {
 		return err
 	}
 
-	if _, err = w.Write(b.Bytes()); err != nil {
+	if _, err = util.Write(w, b.Bytes()); err != nil {
 		return err
 	}
 
@@ -312,7 +314,7 @@ func SerializeInvoice(w io.Writer, i *Invoice) error {
 }
 
 // serializeHtlcs writes a serialized list of invoice htlcs into a writer.
-func serializeHtlcs(w io.Writer, htlcs []byte) error {
-	_, err := w.Write(htlcs)
+func serializeHtlcs(w io.Writer, htlcs []byte) er.R {
+	_, err := util.Write(w, htlcs)
 	return err
 }

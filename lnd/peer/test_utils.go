@@ -4,7 +4,6 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"encoding/binary"
-	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -13,6 +12,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -106,7 +107,7 @@ var noUpdate = func(a, b *channeldb.OpenChannel) {}
 // the channel states for each peer.
 func createTestPeer(notifier chainntnfs.ChainNotifier,
 	publTx chan *wire.MsgTx, updateChan func(a, b *channeldb.OpenChannel)) (
-	*Brontide, *lnwallet.LightningChannel, func(), error) {
+	*Brontide, *lnwallet.LightningChannel, func(), er.R) {
 
 	aliceKeyPriv, aliceKeyPub := btcec.PrivKeyFromBytes(
 		btcec.S256(), alicesPrivKey,
@@ -257,7 +258,7 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 	}
 
 	var chanIDBytes [8]byte
-	if _, err := io.ReadFull(crand.Reader, chanIDBytes[:]); err != nil {
+	if _, err := util.ReadFull(crand.Reader, chanIDBytes[:]); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -393,7 +394,7 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		MessageSigner:            nodeSignerAlice,
 		OurPubKey:                aliceKeyPub,
 		IsChannelActive:          htlcSwitch.HasActiveLink,
-		ApplyChannelUpdate:       func(*lnwire.ChannelUpdate) error { return nil },
+		ApplyChannelUpdate:       func(*lnwire.ChannelUpdate) er.R { return nil },
 	})
 	if errr != nil {
 		return nil, nil, nil, errr
@@ -431,7 +432,7 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		Wallet:         wallet,
 		ChainNotifier:  notifier,
 		ChanStatusMgr:  chanStatusMgr,
-		DisconnectPeer: func(b *btcec.PublicKey) error { return nil },
+		DisconnectPeer: func(b *btcec.PublicKey) er.R { return nil },
 	}
 
 	alicePeer := NewBrontide(*cfg)

@@ -23,7 +23,7 @@ func (m MacaroonCredential) RequireTransportSecurity() bool {
 // With this, the macaroon will be available within the request handling scope
 // of the ultimate gRPC server implementation.
 func (m MacaroonCredential) GetRequestMetadata(ctx context.Context,
-	uri ...string) (map[string]string, error) {
+	uri ...string) (map[string]string, er.R) {
 
 	macBytes, err := m.MarshalBinary()
 	if err != nil {

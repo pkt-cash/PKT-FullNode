@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -17,19 +16,19 @@ import (
 // (one for nodes and one for edges) to keep track of the last time a node or
 // edge was updated on the network. These new indexes allow us to implement the
 // new graph sync protocol added.
-func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
+func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) er.R {
 	// First, we'll populating the node portion of the new index. Before we
 	// can add new values to the index, we'll first create the new bucket
 	// where these items will be housed.
 	nodes, err := tx.CreateTopLevelBucket(nodeBucket)
 	if err != nil {
-		return fmt.Errorf("unable to create node bucket: %v", err)
+		return er.Errorf("unable to create node bucket: %v", err)
 	}
 	nodeUpdateIndex, err := nodes.CreateBucketIfNotExists(
 		nodeUpdateIndexBucket,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to create node update index: %v", err)
+		return er.Errorf("unable to create node update index: %v", err)
 	}
 
 	log.Infof("Populating new node update index bucket")
@@ -58,7 +57,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 		return nodeUpdateIndex.Put(indexKey[:], nil)
 	})
 	if err != nil {
-		return fmt.Errorf("unable to update node indexes: %v", err)
+		return er.Errorf("unable to update node indexes: %v", err)
 	}
 
 	log.Infof("Populating new edge update index bucket")
@@ -67,13 +66,13 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 	// corresponding entry in the edge update index.
 	edges, err := tx.CreateTopLevelBucket(edgeBucket)
 	if err != nil {
-		return fmt.Errorf("unable to create edge bucket: %v", err)
+		return er.Errorf("unable to create edge bucket: %v", err)
 	}
 	edgeUpdateIndex, err := edges.CreateBucketIfNotExists(
 		edgeUpdateIndexBucket,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to create edge update index: %v", err)
+		return er.Errorf("unable to create edge update index: %v", err)
 	}
 
 	// We'll now run through each edge policy in the database, and update
@@ -93,7 +92,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 			edgePolicyReader, nodes,
 		)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		log.Tracef("Adding chan_id=%v to edge update index",
@@ -110,7 +109,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 		return edgeUpdateIndex.Put(indexKey[:], nil)
 	})
 	if err != nil {
-		return fmt.Errorf("unable to update edge indexes: %v", err)
+		return er.Errorf("unable to update edge indexes: %v", err)
 	}
 
 	log.Infof("Migration to node and edge update indexes complete!")
@@ -122,7 +121,7 @@ func MigrateNodeAndEdgeUpdateIndex(tx kvdb.RwTx) error {
 // invoices an index in the add and/or the settle index. Additionally, all
 // existing invoices will have their bytes padded out in order to encode the
 // add+settle index as well as the amount paid.
-func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
+func MigrateInvoiceTimeSeries(tx kvdb.RwTx) er.R {
 	invoices, err := tx.CreateTopLevelBucket(invoiceBucket)
 	if err != nil {
 		return err
@@ -179,13 +178,13 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 
 		// First, we'll get the new sequence in the addIndex in order
 		// to create the proper mapping.
-		nextAddSeqNo, errr := addIndex.NextSequence()
-		if errr != nil {
-			return er.E(errr)
+		nextAddSeqNo, err := addIndex.NextSequence()
+		if err != nil {
+			return err
 		}
 		var seqNoBytes [8]byte
 		byteOrder.PutUint64(seqNoBytes[:], nextAddSeqNo)
-		err := addIndex.Put(seqNoBytes[:], invoiceNum[:])
+		err = addIndex.Put(seqNoBytes[:], invoiceNum[:])
 		if err != nil {
 			return err
 		}
@@ -198,9 +197,9 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 		// so, then we'll also add it to the settle index.
 		var nextSettleSeqNo uint64
 		if invoice.Terms.State == ContractSettled {
-			nextSettleSeqNo, errr = settleIndex.NextSequence()
-			if errr != nil {
-				return er.E(errr)
+			nextSettleSeqNo, err = settleIndex.NextSequence()
+			if err != nil {
+				return err
 			}
 
 			var seqNoBytes [8]byte
@@ -227,8 +226,8 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 		// We've fully migrated an invoice, so we'll now update the
 		// invoice in-place.
 		var b bytes.Buffer
-		if errr := serializeInvoiceLegacy(&b, &invoice); errr != nil {
-			return er.E(errr)
+		if err := serializeInvoiceLegacy(&b, &invoice); err != nil {
+			return err
 		}
 
 		// Save the key and value pending update for after the ForEach
@@ -259,7 +258,7 @@ func MigrateInvoiceTimeSeries(tx kvdb.RwTx) error {
 // migrateInvoiceTimeSeries migration. As at the time of writing, the
 // OutgoingPayment struct embeddeds an instance of the Invoice struct. As a
 // result, we also need to migrate the internal invoice to the new format.
-func MigrateInvoiceTimeSeriesOutgoingPayments(tx kvdb.RwTx) error {
+func MigrateInvoiceTimeSeriesOutgoingPayments(tx kvdb.RwTx) er.R {
 	payBucket := tx.ReadWriteBucket(paymentBucket)
 	if payBucket == nil {
 		return nil
@@ -340,7 +339,7 @@ func MigrateInvoiceTimeSeriesOutgoingPayments(tx kvdb.RwTx) error {
 // bucket. It ensure that edges with unknown policies will also have an entry
 // in the bucket. After the migration, there will be two edge entries for
 // every channel, regardless of whether the policies are known.
-func MigrateEdgePolicies(tx kvdb.RwTx) error {
+func MigrateEdgePolicies(tx kvdb.RwTx) er.R {
 	nodes := tx.ReadWriteBucket(nodeBucket)
 	if nodes == nil {
 		return nil
@@ -359,14 +358,14 @@ func MigrateEdgePolicies(tx kvdb.RwTx) error {
 	// checkKey gets the policy from the database with a low-level call
 	// so that it is still possible to distinguish between unknown and
 	// not present.
-	checkKey := func(channelId uint64, keyBytes []byte) error {
+	checkKey := func(channelId uint64, keyBytes []byte) er.R {
 		var channelID [8]byte
 		byteOrder.PutUint64(channelID[:], channelId)
 
 		_, err := fetchChanEdgePolicy(edges,
 			channelID[:], keyBytes, nodes)
 
-		if err == ErrEdgeNotFound {
+		if ErrEdgeNotFound.Is(err) {
 			log.Tracef("Adding unknown edge policy present for node %x, channel %v",
 				keyBytes, channelId)
 
@@ -386,14 +385,14 @@ func MigrateEdgePolicies(tx kvdb.RwTx) error {
 		infoReader := bytes.NewReader(edgeInfoBytes)
 		edgeInfo, err := deserializeChanEdgeInfo(infoReader)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		for _, key := range [][]byte{edgeInfo.NodeKey1Bytes[:],
 			edgeInfo.NodeKey2Bytes[:]} {
 
 			if err := checkKey(edgeInfo.ChannelID, key); err != nil {
-				return er.E(err)
+				return err
 			}
 		}
 
@@ -401,7 +400,7 @@ func MigrateEdgePolicies(tx kvdb.RwTx) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("unable to update edge policies: %v", err)
+		return er.Errorf("unable to update edge policies: %v", err)
 	}
 
 	log.Infof("Migration of edge policies complete!")
@@ -412,7 +411,7 @@ func MigrateEdgePolicies(tx kvdb.RwTx) error {
 // PaymentStatusesMigration is a database migration intended for adding payment
 // statuses for each existing payment entity in bucket to be able control
 // transitions of statuses and prevent cases such as double payment
-func PaymentStatusesMigration(tx kvdb.RwTx) error {
+func PaymentStatusesMigration(tx kvdb.RwTx) er.R {
 	// Get the bucket dedicated to storing statuses of payments,
 	// where a key is payment hash, value is payment status.
 	paymentStatuses, err := tx.CreateTopLevelBucket(paymentStatusBucket)
@@ -472,7 +471,7 @@ func PaymentStatusesMigration(tx kvdb.RwTx) error {
 		r := bytes.NewReader(v)
 		payment, err := deserializeOutgoingPayment(r)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Calculate payment hash for current payment.
@@ -499,7 +498,7 @@ func PaymentStatusesMigration(tx kvdb.RwTx) error {
 // migration also fixes the case where the public keys within edge policies were
 // being serialized with an extra byte, causing an even greater error when
 // attempting to perform the offset calculation described earlier.
-func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
+func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) er.R {
 	// To begin the migration, we'll retrieve the update index bucket. If it
 	// does not exist, we have nothing left to do so we can simply exit.
 	edges := tx.ReadWriteBucket(edgeBucket)
@@ -516,15 +515,15 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 	// well.
 	edgeIndex, err := edges.CreateBucketIfNotExists(edgeIndexBucket)
 	if err != nil {
-		return fmt.Errorf("error creating edge index bucket: %s", err)
+		return er.Errorf("error creating edge index bucket: %s", err)
 	}
 	if edgeIndex == nil {
-		return fmt.Errorf("unable to create/fetch edge index " +
+		return er.Errorf("unable to create/fetch edge index " +
 			"bucket")
 	}
 	nodes, err := tx.CreateTopLevelBucket(nodeBucket)
 	if err != nil {
-		return fmt.Errorf("unable to make node bucket")
+		return er.Errorf("unable to make node bucket")
 	}
 
 	log.Info("Migrating database to properly prune edge update index")
@@ -546,7 +545,7 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("unable to gather existing edge policies: %v",
+		return er.Errorf("unable to gather existing edge policies: %v",
 			err)
 	}
 
@@ -560,7 +559,7 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("unable to gather existing edge updates: %v",
+		return er.Errorf("unable to gather existing edge updates: %v",
 			err)
 	}
 
@@ -613,7 +612,7 @@ func MigratePruneEdgeUpdateIndex(tx kvdb.RwTx) error {
 // MigrateOptionalChannelCloseSummaryFields migrates the serialized format of
 // ChannelCloseSummary to a format where optional fields' presence is indicated
 // with boolean markers.
-func MigrateOptionalChannelCloseSummaryFields(tx kvdb.RwTx) error {
+func MigrateOptionalChannelCloseSummaryFields(tx kvdb.RwTx) er.R {
 	closedChanBucket := tx.ReadWriteBucket(closedChannelBucket)
 	if closedChanBucket == nil {
 		return nil
@@ -632,14 +631,14 @@ func MigrateOptionalChannelCloseSummaryFields(tx kvdb.RwTx) error {
 		// Read the old (v6) format from the database.
 		c, err := deserializeCloseChannelSummaryV6(r)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Serialize using the new format, and put back into the
 		// bucket.
 		var b bytes.Buffer
 		if err := serializeChannelCloseSummary(&b, c); err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Now that we know the modifications was successful, we'll
@@ -650,7 +649,7 @@ func MigrateOptionalChannelCloseSummaryFields(tx kvdb.RwTx) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("unable to update closed channels: %v", err)
+		return er.Errorf("unable to update closed channels: %v", err)
 	}
 
 	// Now put the new format back into the DB.
@@ -672,7 +671,7 @@ var messageStoreBucket = []byte("message-store")
 // MigrateGossipMessageStoreKeys migrates the key format for gossip messages
 // found in the message store to a new one that takes into consideration the of
 // the message being stored.
-func MigrateGossipMessageStoreKeys(tx kvdb.RwTx) error {
+func MigrateGossipMessageStoreKeys(tx kvdb.RwTx) er.R {
 	// We'll start by retrieving the bucket in which these messages are
 	// stored within. If there isn't one, there's nothing left for us to do
 	// so we can avoid the migration.
@@ -696,7 +695,7 @@ func MigrateGossipMessageStoreKeys(tx kvdb.RwTx) error {
 
 		msg := &lnwire.AnnounceSignatures{}
 		if err := msg.Decode(bytes.NewReader(v), 0); err != nil {
-			return er.E(err)
+			return err
 		}
 
 		msgs[msgKey] = msg
@@ -748,7 +747,7 @@ func MigrateGossipMessageStoreKeys(tx kvdb.RwTx) error {
 // InFlight (we have no PaymentAttemptInfo available for pre-migration
 // payments) we delete those statuses, so only Completed payments remain in the
 // new bucket structure.
-func MigrateOutgoingPayments(tx kvdb.RwTx) error {
+func MigrateOutgoingPayments(tx kvdb.RwTx) er.R {
 	log.Infof("Migrating outgoing payments to new bucket structure")
 
 	oldPayments := tx.ReadWriteBucket(paymentBucket)
@@ -766,16 +765,16 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 
 	// Helper method to get the source pubkey. We define it such that we
 	// only attempt to fetch it if needed.
-	sourcePub := func() ([33]byte, error) {
+	sourcePub := func() ([33]byte, er.R) {
 		var pub [33]byte
 		nodes := tx.ReadWriteBucket(nodeBucket)
 		if nodes == nil {
-			return pub, ErrGraphNotFound
+			return pub, ErrGraphNotFound.Default()
 		}
 
 		selfPub := nodes.Get(sourceKey)
 		if selfPub == nil {
-			return pub, ErrSourceNodeNotSet
+			return pub, ErrSourceNodeNotSet.Default()
 		}
 		copy(pub[:], selfPub[:])
 		return pub, nil
@@ -789,9 +788,9 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 
 		// Read the old payment format.
 		r := bytes.NewReader(v)
-		payment, errr := deserializeOutgoingPayment(r)
-		if errr != nil {
-			return er.E(errr)
+		payment, err := deserializeOutgoingPayment(r)
+		if err != nil {
+			return err
 		}
 
 		// Calculate payment hash from the payment preimage.
@@ -806,13 +805,13 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		}
 
 		var infoBuf bytes.Buffer
-		if errr := serializePaymentCreationInfo(&infoBuf, c); errr != nil {
-			return er.E(errr)
+		if err := serializePaymentCreationInfo(&infoBuf, c); err != nil {
+			return err
 		}
 
-		sourcePubKey, errr := sourcePub()
-		if errr != nil {
-			return er.E(errr)
+		sourcePubKey, err := sourcePub()
+		if err != nil {
+			return err
 		}
 
 		// Do the same for the PaymentAttemptInfo.
@@ -848,8 +847,8 @@ func MigrateOutgoingPayments(tx kvdb.RwTx) error {
 		}
 
 		var attemptBuf bytes.Buffer
-		if errr := serializePaymentAttemptInfoMigration9(&attemptBuf, s); errr != nil {
-			return er.E(errr)
+		if err := serializePaymentAttemptInfoMigration9(&attemptBuf, s); err != nil {
+			return err
 		}
 
 		// Reuse the existing payment sequence number.

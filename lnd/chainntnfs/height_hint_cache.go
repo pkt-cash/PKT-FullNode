@@ -2,8 +2,8 @@ package chainntnfs
 
 import (
 	"bytes"
-	"errors"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
@@ -20,19 +20,21 @@ var (
 	// confirmed within.
 	confirmHintBucket = []byte("confirm-hints")
 
+	Err = er.NewErrorType("lnd.chainntnfs")
+
 	// ErrCorruptedHeightHintCache indicates that the on-disk bucketing
 	// structure has altered since the height hint cache instance was
 	// initialized.
-	ErrCorruptedHeightHintCache = errors.New("height hint cache has been " +
-		"corrupted")
+	ErrCorruptedHeightHintCache = Err.CodeWithDetail("ErrCorruptedHeightHintCache",
+		"height hint cache has been corrupted")
 
 	// ErrSpendHintNotFound is an error returned when a spend hint for an
 	// outpoint was not found.
-	ErrSpendHintNotFound = errors.New("spend hint not found")
+	ErrSpendHintNotFound = Err.CodeWithDetail("ErrSpendHintNotFound", "spend hint not found")
 
 	// ErrConfirmHintNotFound is an error returned when a confirm hint for a
 	// transaction was not found.
-	ErrConfirmHintNotFound = errors.New("confirm hint not found")
+	ErrConfirmHintNotFound = Err.CodeWithDetail("ErrConfirmHintNotFound", "confirm hint not found")
 )
 
 // CacheConfig contains the HeightHintCache configuration
@@ -49,16 +51,16 @@ type CacheConfig struct {
 // which an outpoint could have been spent within.
 type SpendHintCache interface {
 	// CommitSpendHint commits a spend hint for the outpoints to the cache.
-	CommitSpendHint(height uint32, spendRequests ...SpendRequest) error
+	CommitSpendHint(height uint32, spendRequests ...SpendRequest) er.R
 
 	// QuerySpendHint returns the latest spend hint for an outpoint.
 	// ErrSpendHintNotFound is returned if a spend hint does not exist
 	// within the cache for the outpoint.
-	QuerySpendHint(spendRequest SpendRequest) (uint32, error)
+	QuerySpendHint(spendRequest SpendRequest) (uint32, er.R)
 
 	// PurgeSpendHint removes the spend hint for the outpoints from the
 	// cache.
-	PurgeSpendHint(spendRequests ...SpendRequest) error
+	PurgeSpendHint(spendRequests ...SpendRequest) er.R
 }
 
 // ConfirmHintCache is an interface whose duty is to cache confirm hints for
@@ -67,16 +69,16 @@ type SpendHintCache interface {
 type ConfirmHintCache interface {
 	// CommitConfirmHint commits a confirm hint for the transactions to the
 	// cache.
-	CommitConfirmHint(height uint32, confRequests ...ConfRequest) error
+	CommitConfirmHint(height uint32, confRequests ...ConfRequest) er.R
 
 	// QueryConfirmHint returns the latest confirm hint for a transaction
 	// hash. ErrConfirmHintNotFound is returned if a confirm hint does not
 	// exist within the cache for the transaction hash.
-	QueryConfirmHint(confRequest ConfRequest) (uint32, error)
+	QueryConfirmHint(confRequest ConfRequest) (uint32, er.R)
 
 	// PurgeConfirmHint removes the confirm hint for the transactions from
 	// the cache.
-	PurgeConfirmHint(confRequests ...ConfRequest) error
+	PurgeConfirmHint(confRequests ...ConfRequest) er.R
 }
 
 // HeightHintCache is an implementation of the SpendHintCache and
@@ -93,7 +95,7 @@ var _ SpendHintCache = (*HeightHintCache)(nil)
 var _ ConfirmHintCache = (*HeightHintCache)(nil)
 
 // NewHeightHintCache returns a new height hint cache backed by a database.
-func NewHeightHintCache(cfg CacheConfig, db *channeldb.DB) (*HeightHintCache, error) {
+func NewHeightHintCache(cfg CacheConfig, db *channeldb.DB) (*HeightHintCache, er.R) {
 	cache := &HeightHintCache{cfg, db}
 	if err := cache.initBuckets(); err != nil {
 		return nil, err
@@ -104,8 +106,8 @@ func NewHeightHintCache(cfg CacheConfig, db *channeldb.DB) (*HeightHintCache, er
 
 // initBuckets ensures that the primary buckets used by the circuit are
 // initialized so that we can assume their existence after startup.
-func (c *HeightHintCache) initBuckets() error {
-	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) error {
+func (c *HeightHintCache) initBuckets() er.R {
+	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		_, err := tx.CreateTopLevelBucket(spendHintBucket)
 		if err != nil {
 			return err
@@ -118,7 +120,7 @@ func (c *HeightHintCache) initBuckets() error {
 
 // CommitSpendHint commits a spend hint for the outpoints to the cache.
 func (c *HeightHintCache) CommitSpendHint(height uint32,
-	spendRequests ...SpendRequest) error {
+	spendRequests ...SpendRequest) er.R {
 
 	if len(spendRequests) == 0 {
 		return nil
@@ -127,10 +129,10 @@ func (c *HeightHintCache) CommitSpendHint(height uint32,
 	Log.Tracef("Updating spend hint to height %d for %v", height,
 		spendRequests)
 
-	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		spendHints := tx.ReadWriteBucket(spendHintBucket)
 		if spendHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		var hint bytes.Buffer
@@ -156,17 +158,17 @@ func (c *HeightHintCache) CommitSpendHint(height uint32,
 // QuerySpendHint returns the latest spend hint for an outpoint.
 // ErrSpendHintNotFound is returned if a spend hint does not exist within the
 // cache for the outpoint.
-func (c *HeightHintCache) QuerySpendHint(spendRequest SpendRequest) (uint32, error) {
+func (c *HeightHintCache) QuerySpendHint(spendRequest SpendRequest) (uint32, er.R) {
 	var hint uint32
 	if c.cfg.QueryDisable {
 		Log.Debugf("Ignoring spend height hint for %v (height hint cache "+
 			"query disabled)", spendRequest)
 		return 0, nil
 	}
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		spendHints := tx.ReadBucket(spendHintBucket)
 		if spendHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		spendHintKey, err := spendRequest.SpendHintKey()
@@ -175,7 +177,7 @@ func (c *HeightHintCache) QuerySpendHint(spendRequest SpendRequest) (uint32, err
 		}
 		spendHint := spendHints.Get(spendHintKey)
 		if spendHint == nil {
-			return ErrSpendHintNotFound
+			return ErrSpendHintNotFound.Default()
 		}
 
 		return channeldb.ReadElement(bytes.NewReader(spendHint), &hint)
@@ -190,17 +192,17 @@ func (c *HeightHintCache) QuerySpendHint(spendRequest SpendRequest) (uint32, err
 }
 
 // PurgeSpendHint removes the spend hint for the outpoints from the cache.
-func (c *HeightHintCache) PurgeSpendHint(spendRequests ...SpendRequest) error {
+func (c *HeightHintCache) PurgeSpendHint(spendRequests ...SpendRequest) er.R {
 	if len(spendRequests) == 0 {
 		return nil
 	}
 
 	Log.Tracef("Removing spend hints for %v", spendRequests)
 
-	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		spendHints := tx.ReadWriteBucket(spendHintBucket)
 		if spendHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		for _, spendRequest := range spendRequests {
@@ -219,7 +221,7 @@ func (c *HeightHintCache) PurgeSpendHint(spendRequests ...SpendRequest) error {
 
 // CommitConfirmHint commits a confirm hint for the transactions to the cache.
 func (c *HeightHintCache) CommitConfirmHint(height uint32,
-	confRequests ...ConfRequest) error {
+	confRequests ...ConfRequest) er.R {
 
 	if len(confRequests) == 0 {
 		return nil
@@ -228,10 +230,10 @@ func (c *HeightHintCache) CommitConfirmHint(height uint32,
 	Log.Tracef("Updating confirm hints to height %d for %v", height,
 		confRequests)
 
-	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		confirmHints := tx.ReadWriteBucket(confirmHintBucket)
 		if confirmHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		var hint bytes.Buffer
@@ -257,17 +259,17 @@ func (c *HeightHintCache) CommitConfirmHint(height uint32,
 // QueryConfirmHint returns the latest confirm hint for a transaction hash.
 // ErrConfirmHintNotFound is returned if a confirm hint does not exist within
 // the cache for the transaction hash.
-func (c *HeightHintCache) QueryConfirmHint(confRequest ConfRequest) (uint32, error) {
+func (c *HeightHintCache) QueryConfirmHint(confRequest ConfRequest) (uint32, er.R) {
 	var hint uint32
 	if c.cfg.QueryDisable {
 		Log.Debugf("Ignoring confirmation height hint for %v (height hint "+
 			"cache query disabled)", confRequest)
 		return 0, nil
 	}
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		confirmHints := tx.ReadBucket(confirmHintBucket)
 		if confirmHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		confHintKey, err := confRequest.ConfHintKey()
@@ -276,7 +278,7 @@ func (c *HeightHintCache) QueryConfirmHint(confRequest ConfRequest) (uint32, err
 		}
 		confirmHint := confirmHints.Get(confHintKey)
 		if confirmHint == nil {
-			return ErrConfirmHintNotFound
+			return ErrConfirmHintNotFound.Default()
 		}
 
 		return channeldb.ReadElement(bytes.NewReader(confirmHint), &hint)
@@ -292,17 +294,17 @@ func (c *HeightHintCache) QueryConfirmHint(confRequest ConfRequest) (uint32, err
 
 // PurgeConfirmHint removes the confirm hint for the transactions from the
 // cache.
-func (c *HeightHintCache) PurgeConfirmHint(confRequests ...ConfRequest) error {
+func (c *HeightHintCache) PurgeConfirmHint(confRequests ...ConfRequest) er.R {
 	if len(confRequests) == 0 {
 		return nil
 	}
 
 	Log.Tracef("Removing confirm hints for %v", confRequests)
 
-	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		confirmHints := tx.ReadWriteBucket(confirmHintBucket)
 		if confirmHints == nil {
-			return ErrCorruptedHeightHintCache
+			return ErrCorruptedHeightHintCache.Default()
 		}
 
 		for _, confRequest := range confRequests {

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/urfave/cli"
 	"gopkg.in/macaroon.v2"
@@ -67,7 +68,7 @@ var profileListCommand = cli.Command{
 	Action: profileList,
 }
 
-func profileList(_ *cli.Context) error {
+func profileList(_ *cli.Context) er.R {
 	f, err := loadProfileFile(defaultProfileFile)
 	if err != nil {
 		return err
@@ -99,7 +100,7 @@ var profileAddCommand = cli.Command{
 	Action: profileAdd,
 }
 
-func profileAdd(ctx *cli.Context) error {
+func profileAdd(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		return cli.ShowCommandHelp(ctx, "add")
 	}
@@ -119,7 +120,7 @@ func profileAdd(ctx *cli.Context) error {
 	// Create a profile struct from all the global options.
 	profile, err := profileFromContext(ctx, true, false)
 	if err != nil {
-		return fmt.Errorf("could not load global options: %v", err)
+		return er.Errorf("could not load global options: %v", err)
 	}
 
 	// Finally, all that's left is to get the profile name from either
@@ -131,13 +132,13 @@ func profileAdd(ctx *cli.Context) error {
 	case args.Present():
 		profile.Name = args.First()
 	default:
-		return fmt.Errorf("name argument missing")
+		return er.Errorf("name argument missing")
 	}
 
 	// Is there already a profile with that name?
 	for _, p := range f.Profiles {
 		if p.Name == profile.Name {
-			return fmt.Errorf("a profile with the name %s already "+
+			return er.Errorf("a profile with the name %s already "+
 				"exists", profile.Name)
 		}
 	}
@@ -150,7 +151,7 @@ func profileAdd(ctx *cli.Context) error {
 	// All done, store the updated profile file.
 	f.Profiles = append(f.Profiles, profile)
 	if err = saveProfileFile(defaultProfileFile, f); err != nil {
-		return fmt.Errorf("error writing profile file %s: %v",
+		return er.Errorf("error writing profile file %s: %v",
 			defaultProfileFile, err)
 	}
 
@@ -173,7 +174,7 @@ var profileRemoveCommand = cli.Command{
 	Action: profileRemove,
 }
 
-func profileRemove(ctx *cli.Context) error {
+func profileRemove(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		return cli.ShowCommandHelp(ctx, "remove")
 	}
@@ -181,7 +182,7 @@ func profileRemove(ctx *cli.Context) error {
 	// Load the default profile file.
 	f, err := loadProfileFile(defaultProfileFile)
 	if err != nil {
-		return fmt.Errorf("could not load profile file: %v", err)
+		return er.Errorf("could not load profile file: %v", err)
 	}
 
 	// Get the profile name from either positional argument or flag.
@@ -196,7 +197,7 @@ func profileRemove(ctx *cli.Context) error {
 	case args.Present():
 		name = args.First()
 	default:
-		return fmt.Errorf("name argument missing")
+		return er.Errorf("name argument missing")
 	}
 
 	// Create a copy of all profiles but don't include the one to delete.
@@ -219,7 +220,7 @@ func profileRemove(ctx *cli.Context) error {
 	// If what we were looking for didn't exist in the first place, there's
 	// no need for updating the file.
 	if !found {
-		return fmt.Errorf("profile with name %s not found in file",
+		return er.Errorf("profile with name %s not found in file",
 			name)
 	}
 
@@ -248,7 +249,7 @@ var profileSetDefaultCommand = cli.Command{
 	Action: profileSetDefault,
 }
 
-func profileSetDefault(ctx *cli.Context) error {
+func profileSetDefault(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		return cli.ShowCommandHelp(ctx, "setdefault")
 	}
@@ -256,7 +257,7 @@ func profileSetDefault(ctx *cli.Context) error {
 	// Load the default profile file.
 	f, err := loadProfileFile(defaultProfileFile)
 	if err != nil {
-		return fmt.Errorf("could not load profile file: %v", err)
+		return er.Errorf("could not load profile file: %v", err)
 	}
 
 	// Get the profile name from either positional argument or flag.
@@ -271,7 +272,7 @@ func profileSetDefault(ctx *cli.Context) error {
 	case args.Present():
 		name = args.First()
 	default:
-		return fmt.Errorf("name argument missing")
+		return er.Errorf("name argument missing")
 	}
 
 	// Make sure the new default profile actually exists.
@@ -287,7 +288,7 @@ func profileSetDefault(ctx *cli.Context) error {
 	// If the default profile doesn't exist, there's no need for updating
 	// the file.
 	if !found {
-		return fmt.Errorf("profile with name %s not found in file",
+		return er.Errorf("profile with name %s not found in file",
 			name)
 	}
 
@@ -305,11 +306,11 @@ var profileUnsetDefaultCommand = cli.Command{
 	Action: profileUnsetDefault,
 }
 
-func profileUnsetDefault(_ *cli.Context) error {
+func profileUnsetDefault(_ *cli.Context) er.R {
 	// Load the default profile file.
 	f, err := loadProfileFile(defaultProfileFile)
 	if err != nil {
-		return fmt.Errorf("could not load profile file: %v", err)
+		return er.Errorf("could not load profile file: %v", err)
 	}
 
 	// Save the file with the flag disabled.
@@ -346,7 +347,7 @@ var profileAddMacaroonCommand = cli.Command{
 	Action: profileAddMacaroon,
 }
 
-func profileAddMacaroon(ctx *cli.Context) error {
+func profileAddMacaroon(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
 		return cli.ShowCommandHelp(ctx, "addmacaroon")
 	}
@@ -355,7 +356,7 @@ func profileAddMacaroon(ctx *cli.Context) error {
 	// yet.
 	f, err := loadProfileFile(defaultProfileFile)
 	if err != nil {
-		return fmt.Errorf("could not load profile file: %v", err)
+		return er.Errorf("could not load profile file: %v", err)
 	}
 
 	// Finally, all that's left is to get the profile name from either
@@ -371,12 +372,12 @@ func profileAddMacaroon(ctx *cli.Context) error {
 	case args.Present():
 		macName = args.First()
 	default:
-		return fmt.Errorf("name argument missing")
+		return er.Errorf("name argument missing")
 	}
 
 	// Make sure the user actually set a macaroon path to use.
 	if !ctx.GlobalIsSet("macaroonpath") {
-		return fmt.Errorf("macaroonpath global option missing")
+		return er.Errorf("macaroonpath global option missing")
 	}
 
 	// Find out which profile we should add the macaroon. The global flag
@@ -388,7 +389,7 @@ func profileAddMacaroon(ctx *cli.Context) error {
 		profileName = ctx.GlobalString("profile")
 	}
 	if len(strings.TrimSpace(profileName)) == 0 {
-		return fmt.Errorf("no profile specified and no default " +
+		return er.Errorf("no profile specified and no default " +
 			"profile exists")
 	}
 
@@ -401,13 +402,13 @@ func profileAddMacaroon(ctx *cli.Context) error {
 		}
 	}
 	if selectedProfile == nil {
-		return fmt.Errorf("profile with name %s not found", profileName)
+		return er.Errorf("profile with name %s not found", profileName)
 	}
 
 	// Does a macaroon with that name already exist?
 	for _, m := range selectedProfile.Macaroons.Jar {
 		if m.Name == macName {
-			return fmt.Errorf("a macaroon with the name %s "+
+			return er.Errorf("a macaroon with the name %s "+
 				"already exists", macName)
 		}
 	}
@@ -421,17 +422,17 @@ func profileAddMacaroon(ctx *cli.Context) error {
 	macPath := lncfg.CleanAndExpandPath(ctx.GlobalString("macaroonpath"))
 	macBytes, err := ioutil.ReadFile(macPath)
 	if err != nil {
-		return fmt.Errorf("unable to read macaroon path: %v", err)
+		return er.Errorf("unable to read macaroon path: %v", err)
 	}
 	mac := &macaroon.Macaroon{}
 	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return fmt.Errorf("unable to decode macaroon: %v", err)
+		return er.Errorf("unable to decode macaroon: %v", err)
 	}
 	macEntry := &macaroonEntry{
 		Name: macName,
 	}
 	if err = macEntry.storeMacaroon(mac, nil); err != nil {
-		return fmt.Errorf("unable to store macaroon: %v", err)
+		return er.Errorf("unable to store macaroon: %v", err)
 	}
 
 	// All done, store the updated profile file.
@@ -439,7 +440,7 @@ func profileAddMacaroon(ctx *cli.Context) error {
 		selectedProfile.Macaroons.Jar, macEntry,
 	)
 	if err = saveProfileFile(defaultProfileFile, f); err != nil {
-		return fmt.Errorf("error writing profile file %s: %v",
+		return er.Errorf("error writing profile file %s: %v",
 			defaultProfileFile, err)
 	}
 

@@ -1,9 +1,8 @@
 package autopilot
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // WeightedHeuristic is a tuple that associates a weight to an
@@ -25,7 +24,7 @@ type WeightedCombAttachment struct {
 
 // NewWeightedCombAttachment creates a new instance of a WeightedCombAttachment.
 func NewWeightedCombAttachment(h ...*WeightedHeuristic) (
-	*WeightedCombAttachment, error) {
+	*WeightedCombAttachment, er.R) {
 
 	// The sum of weights given to the sub-heuristics must sum to exactly
 	// 1.0.
@@ -35,7 +34,7 @@ func NewWeightedCombAttachment(h ...*WeightedHeuristic) (
 	}
 
 	if sum != 1.0 {
-		return nil, fmt.Errorf("weights MUST sum to 1.0 (was %v)", sum)
+		return nil, er.Errorf("weights MUST sum to 1.0 (was %v)", sum)
 	}
 
 	return &WeightedCombAttachment{
@@ -72,7 +71,7 @@ func (c *WeightedCombAttachment) Name() string {
 // NOTE: This is a part of the AttachmentHeuristic interface.
 func (c *WeightedCombAttachment) NodeScores(g ChannelGraph, chans []LocalChannel,
 	chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	// We now query each heuristic to determine the score they give to the
 	// nodes for the given channel size.
@@ -84,7 +83,7 @@ func (c *WeightedCombAttachment) NodeScores(g ChannelGraph, chans []LocalChannel
 			g, chans, chanSize, nodes,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get sub score: %v",
+			return nil, er.Errorf("unable to get sub score: %v",
 				err)
 		}
 
@@ -130,7 +129,7 @@ func (c *WeightedCombAttachment) NodeScores(g ChannelGraph, chans []LocalChannel
 
 		// Sanity check the new score.
 		case score.Score < 0 || score.Score > 1.0:
-			return nil, fmt.Errorf("invalid node score from "+
+			return nil, er.Errorf("invalid node score from "+
 				"combination: %v", score.Score)
 		}
 
@@ -151,7 +150,7 @@ func (c *WeightedCombAttachment) NodeScores(g ChannelGraph, chans []LocalChannel
 //
 // NOTE: This is a part of the ScoreSettable interface.
 func (c *WeightedCombAttachment) SetNodeScores(targetHeuristic string,
-	newScores map[NodeID]float64) (bool, error) {
+	newScores map[NodeID]float64) (bool, er.R) {
 
 	found := false
 	for _, h := range c.heuristics {

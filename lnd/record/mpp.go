@@ -42,7 +42,7 @@ func (r *MPP) TotalMsat() lnwire.MilliSatoshi {
 }
 
 // MPPEncoder writes the MPP record to the provided io.Writer.
-func MPPEncoder(w io.Writer, val interface{}, buf *[8]byte) error {
+func MPPEncoder(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if v, ok := val.(*MPP); ok {
 		err := tlv.EBytes32(w, &v.paymentAddr, buf)
 		if err != nil {
@@ -67,7 +67,7 @@ const (
 )
 
 // MPPDecoder reads the MPP record to the provided io.Reader.
-func MPPDecoder(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func MPPDecoder(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if v, ok := val.(*MPP); ok && minMPPLength <= l && l <= maxMPPLength {
 		if err := tlv.DBytes32(r, &v.paymentAddr, buf, 32); err != nil {
 			return err

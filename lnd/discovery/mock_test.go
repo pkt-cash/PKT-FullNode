@@ -22,7 +22,7 @@ type mockPeer struct {
 
 var _ lnpeer.Peer = (*mockPeer)(nil)
 
-func (p *mockPeer) SendMessage(_ bool, msgs ...lnwire.Message) error {
+func (p *mockPeer) SendMessage(_ bool, msgs ...lnwire.Message) er.R {
 	if p.sentMsgs == nil && p.quit == nil {
 		return nil
 	}
@@ -31,18 +31,18 @@ func (p *mockPeer) SendMessage(_ bool, msgs ...lnwire.Message) error {
 		select {
 		case p.sentMsgs <- msg:
 		case <-p.quit:
-			return errors.New("peer disconnected")
+			return er.New("peer disconnected")
 		}
 	}
 
 	return nil
 }
 
-func (p *mockPeer) SendMessageLazy(sync bool, msgs ...lnwire.Message) error {
+func (p *mockPeer) SendMessageLazy(sync bool, msgs ...lnwire.Message) er.R {
 	return p.SendMessage(sync, msgs...)
 }
 
-func (p *mockPeer) AddNewChannel(_ *channeldb.OpenChannel, _ <-chan struct{}) error {
+func (p *mockPeer) AddNewChannel(_ *channeldb.OpenChannel, _ <-chan struct{}) er.R {
 	return nil
 }
 func (p *mockPeer) WipeChannel(_ *wire.OutPoint)  {}
@@ -78,7 +78,7 @@ func newMockMessageStore() *mockMessageStore {
 
 var _ GossipMessageStore = (*mockMessageStore)(nil)
 
-func (s *mockMessageStore) AddMessage(msg lnwire.Message, pubKey [33]byte) error {
+func (s *mockMessageStore) AddMessage(msg lnwire.Message, pubKey [33]byte) er.R {
 	s.Lock()
 	defer s.Unlock()
 
@@ -91,7 +91,7 @@ func (s *mockMessageStore) AddMessage(msg lnwire.Message, pubKey [33]byte) error
 	return nil
 }
 
-func (s *mockMessageStore) DeleteMessage(msg lnwire.Message, pubKey [33]byte) error {
+func (s *mockMessageStore) DeleteMessage(msg lnwire.Message, pubKey [33]byte) er.R {
 	s.Lock()
 	defer s.Unlock()
 
@@ -104,7 +104,7 @@ func (s *mockMessageStore) DeleteMessage(msg lnwire.Message, pubKey [33]byte) er
 	return nil
 }
 
-func (s *mockMessageStore) Messages() (map[[33]byte][]lnwire.Message, error) {
+func (s *mockMessageStore) Messages() (map[[33]byte][]lnwire.Message, er.R) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -117,7 +117,7 @@ func (s *mockMessageStore) Messages() (map[[33]byte][]lnwire.Message, error) {
 	return msgs, nil
 }
 
-func (s *mockMessageStore) Peers() (map[[33]byte]struct{}, error) {
+func (s *mockMessageStore) Peers() (map[[33]byte]struct{}, er.R) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -128,7 +128,7 @@ func (s *mockMessageStore) Peers() (map[[33]byte]struct{}, error) {
 	return peers, nil
 }
 
-func (s *mockMessageStore) MessagesForPeer(pubKey [33]byte) ([]lnwire.Message, error) {
+func (s *mockMessageStore) MessagesForPeer(pubKey [33]byte) ([]lnwire.Message, er.R) {
 	s.Lock()
 	defer s.Unlock()
 

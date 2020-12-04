@@ -1,12 +1,11 @@
 package brontide
 
 import (
-	"errors"
-	"fmt"
-	"io"
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 )
 
@@ -35,16 +34,16 @@ var _ net.Listener = (*Listener)(nil)
 // NewListener returns a new net.Listener which enforces the Brontide scheme
 // during both initial connection establishment and data transfer.
 func NewListener(localStatic keychain.SingleKeyECDH,
-	listenAddr string) (*Listener, error) {
+	listenAddr string) (*Listener, er.R) {
 
 	addr, err := net.ResolveTCPAddr("tcp", listenAddr)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	brontideListener := &Listener{
@@ -79,7 +78,7 @@ func (l *Listener) listen() {
 
 		conn, err := l.tcp.Accept()
 		if err != nil {
-			l.rejectConn(err)
+			l.rejectConn(er.E(err))
 			l.handshakeSema <- struct{}{}
 			continue
 		}
@@ -90,8 +89,8 @@ func (l *Listener) listen() {
 
 // rejectedConnErr is a helper function that prepends the remote address of the
 // failed connection attempt to the original error message.
-func rejectedConnErr(err error, remoteAddr string) error {
-	return fmt.Errorf("unable to accept connection from %v: %v", remoteAddr,
+func rejectedConnErr(err er.R, remoteAddr string) er.R {
+	return er.Errorf("unable to accept connection from %v: %v", remoteAddr,
 		err)
 }
 
@@ -117,10 +116,10 @@ func (l *Listener) doHandshake(conn net.Conn) {
 	// We'll ensure that we get ActOne from the remote peer in a timely
 	// manner. If they don't respond within 1s, then we'll kill the
 	// connection.
-	err := conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
-	if err != nil {
+	errr := conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
+	if errr != nil {
 		brontideConn.conn.Close()
-		l.rejectConn(rejectedConnErr(err, remoteAddr))
+		l.rejectConn(rejectedConnErr(er.E(errr), remoteAddr))
 		return
 	}
 
@@ -128,7 +127,7 @@ func (l *Listener) doHandshake(conn net.Conn) {
 	// connecting node doesn't know our long-term static public key, then
 	// this portion will fail with a non-nil error.
 	var actOne [ActOneSize]byte
-	if _, err := io.ReadFull(conn, actOne[:]); err != nil {
+	if _, err := util.ReadFull(conn, actOne[:]); err != nil {
 		brontideConn.conn.Close()
 		l.rejectConn(rejectedConnErr(err, remoteAddr))
 		return
@@ -149,7 +148,7 @@ func (l *Listener) doHandshake(conn net.Conn) {
 	}
 	if _, err := conn.Write(actTwo[:]); err != nil {
 		brontideConn.conn.Close()
-		l.rejectConn(rejectedConnErr(err, remoteAddr))
+		l.rejectConn(rejectedConnErr(er.E(err), remoteAddr))
 		return
 	}
 
@@ -162,10 +161,10 @@ func (l *Listener) doHandshake(conn net.Conn) {
 	// We'll ensure that we get ActTwo from the remote peer in a timely
 	// manner. If they don't respond within 1 second, then we'll kill the
 	// connection.
-	err = conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
-	if err != nil {
+	errr = conn.SetReadDeadline(time.Now().Add(handshakeReadTimeout))
+	if errr != nil {
 		brontideConn.conn.Close()
-		l.rejectConn(rejectedConnErr(err, remoteAddr))
+		l.rejectConn(rejectedConnErr(er.E(errr), remoteAddr))
 		return
 	}
 
@@ -173,7 +172,7 @@ func (l *Listener) doHandshake(conn net.Conn) {
 	// the connection peer's static public key. If this succeeds then both
 	// sides have mutually authenticated each other.
 	var actThree [ActThreeSize]byte
-	if _, err := io.ReadFull(conn, actThree[:]); err != nil {
+	if _, err := util.ReadFull(conn, actThree[:]); err != nil {
 		brontideConn.conn.Close()
 		l.rejectConn(rejectedConnErr(err, remoteAddr))
 		return
@@ -186,10 +185,10 @@ func (l *Listener) doHandshake(conn net.Conn) {
 
 	// We'll reset the deadline as it's no longer critical beyond the
 	// initial handshake.
-	err = conn.SetReadDeadline(time.Time{})
-	if err != nil {
+	errr = conn.SetReadDeadline(time.Time{})
+	if errr != nil {
 		brontideConn.conn.Close()
-		l.rejectConn(rejectedConnErr(err, remoteAddr))
+		l.rejectConn(rejectedConnErr(er.E(errr), remoteAddr))
 		return
 	}
 
@@ -200,7 +199,7 @@ func (l *Listener) doHandshake(conn net.Conn) {
 // handshake.
 type maybeConn struct {
 	conn *Conn
-	err  error
+	err  er.R
 }
 
 // acceptConn returns a connection that successfully performed a handshake.
@@ -212,7 +211,7 @@ func (l *Listener) acceptConn(conn *Conn) {
 }
 
 // rejectConn returns any errors encountered during connection or handshake.
-func (l *Listener) rejectConn(err error) {
+func (l *Listener) rejectConn(err er.R) {
 	select {
 	case l.conns <- maybeConn{err: err}:
 	case <-l.quit:
@@ -229,9 +228,9 @@ func (l *Listener) rejectConn(err error) {
 func (l *Listener) Accept() (net.Conn, error) {
 	select {
 	case result := <-l.conns:
-		return result.conn, result.err
+		return result.conn, er.Native(result.err)
 	case <-l.quit:
-		return nil, errors.New("brontide connection closed")
+		return nil, er.Native(er.New("brontide connection closed"))
 	}
 }
 

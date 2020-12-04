@@ -12,7 +12,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = fmt.Errorf
+var _ = er.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -38,10 +38,10 @@ func (*VersionResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_88b54c9c61b986c4, []int{0}
 }
 
-func (m *VersionResponse) XXX_Unmarshal(b []byte) error {
+func (m *VersionResponse) XXX_Unmarshal(b []byte) er.R {
 	return xxx_messageInfo_VersionResponse.Unmarshal(m, b)
 }
-func (m *VersionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *VersionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
 	return xxx_messageInfo_VersionResponse.Marshal(b, m, deterministic)
 }
 func (m *VersionResponse) XXX_Merge(src proto.Message) {

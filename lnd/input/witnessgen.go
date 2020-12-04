@@ -3,6 +3,7 @@ package input
 import (
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -13,7 +14,7 @@ import (
 // outputs. This function acts as an abstraction layer, hiding the details of
 // the underlying script.
 type WitnessGenerator func(tx *wire.MsgTx, hc *txscript.TxSigHashes,
-	inputIndex int) (*Script, error)
+	inputIndex int) (*Script, er.R)
 
 // WitnessType determines how an output's witness will be generated. This
 // interface can be implemented to be used for custom sweep scripts if the
@@ -32,11 +33,11 @@ type WitnessType interface {
 	// WitnessType if it would be included in a tx. It also returns if the
 	// output itself is a nested p2sh output, if so then we need to take
 	// into account the extra sigScript data size.
-	SizeUpperBound() (int, bool, error)
+	SizeUpperBound() (int, bool, er.R)
 
 	// AddWeightEstimation adds the estimated size of the witness in bytes
 	// to the given weight estimator.
-	AddWeightEstimation(e *TxWeightEstimator) error
+	AddWeightEstimation(e *TxWeightEstimator) er.R
 }
 
 // StandardWitnessType is a numeric representation of standard pre-defined types
@@ -196,7 +197,7 @@ func (wt StandardWitnessType) WitnessGenerator(signer Signer,
 	descriptor *SignDescriptor) WitnessGenerator {
 
 	return func(tx *wire.MsgTx, hc *txscript.TxSigHashes,
-		inputIndex int) (*Script, error) {
+		inputIndex int) (*Script, er.R) {
 
 		desc := descriptor
 		desc.SigHashes = hc
@@ -334,7 +335,7 @@ func (wt StandardWitnessType) WitnessGenerator(signer Signer,
 			return signer.ComputeInputScript(tx, desc)
 
 		default:
-			return nil, fmt.Errorf("unknown witness type: %v", wt)
+			return nil, er.Errorf("unknown witness type: %v", wt)
 		}
 	}
 }
@@ -345,7 +346,7 @@ func (wt StandardWitnessType) WitnessGenerator(signer Signer,
 // sigScript data size.
 //
 // NOTE: This is part of the WitnessType interface.
-func (wt StandardWitnessType) SizeUpperBound() (int, bool, error) {
+func (wt StandardWitnessType) SizeUpperBound() (int, bool, er.R) {
 	switch wt {
 
 	// Outputs on a remote commitment transaction that pay directly to us.
@@ -415,14 +416,14 @@ func (wt StandardWitnessType) SizeUpperBound() (int, bool, error) {
 		return ToLocalPenaltyWitnessSize, false, nil
 	}
 
-	return 0, false, fmt.Errorf("unexpected witness type: %v", wt)
+	return 0, false, er.Errorf("unexpected witness type: %v", wt)
 }
 
 // AddWeightEstimation adds the estimated size of the witness in bytes to the
 // given weight estimator.
 //
 // NOTE: This is part of the WitnessType interface.
-func (wt StandardWitnessType) AddWeightEstimation(e *TxWeightEstimator) error {
+func (wt StandardWitnessType) AddWeightEstimation(e *TxWeightEstimator) er.R {
 	// For fee estimation purposes, we'll now attempt to obtain an
 	// upper bound on the weight this input will add when fully
 	// populated.

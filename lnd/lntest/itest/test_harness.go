@@ -154,7 +154,7 @@ type testCase struct {
 // miner's mempool. An error is returned if *one* transaction isn't found within
 // the given timeout.
 func waitForTxInMempool(miner *rpcclient.Client,
-	timeout time.Duration) (*chainhash.Hash, error) {
+	timeout time.Duration) (*chainhash.Hash, er.R) {
 
 	txs, err := waitForNTxsInMempool(miner, 1, timeout)
 	if err != nil {
@@ -168,7 +168,7 @@ func waitForTxInMempool(miner *rpcclient.Client,
 // in the provided miner's mempool. An error is returned if this number is not
 // met after the given timeout.
 func waitForNTxsInMempool(miner *rpcclient.Client, n int,
-	timeout time.Duration) ([]*chainhash.Hash, error) {
+	timeout time.Duration) ([]*chainhash.Hash, er.R) {
 
 	breakTimeout := time.After(timeout)
 	ticker := time.NewTicker(50 * time.Millisecond)
@@ -179,7 +179,7 @@ func waitForNTxsInMempool(miner *rpcclient.Client, n int,
 	for {
 		select {
 		case <-breakTimeout:
-			return nil, fmt.Errorf("wanted %v, found %v txs "+
+			return nil, er.Errorf("wanted %v, found %v txs "+
 				"in mempool: %v", n, len(mempool), mempool)
 		case <-ticker.C:
 			mempool, err = miner.GetRawMempool()
@@ -252,7 +252,7 @@ func assertTxInBlock(t *harnessTest, block *wire.MsgBlock, txid *chainhash.Hash)
 func assertWalletUnspent(t *harnessTest, node *lntest.HarnessNode, out *lnrpc.OutPoint) {
 	t.t.Helper()
 
-	err := wait.NoError(func() error {
+	err := wait.NoError(func() er.R {
 		ctxt, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
 		unspent, err := node.ListUnspent(ctxt, &lnrpc.ListUnspentRequest{})
@@ -260,13 +260,13 @@ func assertWalletUnspent(t *harnessTest, node *lntest.HarnessNode, out *lnrpc.Ou
 			return err
 		}
 
-		err = errors.New("tx with wanted txhash never found")
+		err = er.New("tx with wanted txhash never found")
 		for _, utxo := range unspent.Utxos {
 			if !bytes.Equal(utxo.Outpoint.TxidBytes, out.TxidBytes) {
 				continue
 			}
 
-			err = errors.New("wanted output is not a wallet utxo")
+			err = er.New("wanted output is not a wallet utxo")
 			if utxo.Outpoint.OutputIndex != out.OutputIndex {
 				continue
 			}

@@ -1,11 +1,10 @@
 package lookout
 
 import (
-	"errors"
-
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/txsort"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
@@ -15,13 +14,14 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lookout")
 	// ErrOutputNotFound signals that the breached output could not be found
 	// on the commitment transaction.
-	ErrOutputNotFound = errors.New("unable to find output on commit tx")
+	ErrOutputNotFound = Err.CodeWithDetail("ErrOutputNotFound", "unable to find output on commit tx")
 
 	// ErrUnknownSweepAddrType signals that client provided an output that
 	// was not p2wkh or p2wsh.
-	ErrUnknownSweepAddrType = errors.New("sweep addr is not p2wkh or p2wsh")
+	ErrUnknownSweepAddrType = Err.CodeWithDetail("ErrUnknownSweepAddrType", "sweep addr is not p2wkh or p2wsh")
 )
 
 // JusticeDescriptor contains the information required to sweep a breached
@@ -53,7 +53,7 @@ type breachedInput struct {
 
 // commitToLocalInput extracts the information required to spend the commit
 // to-local output.
-func (p *JusticeDescriptor) commitToLocalInput() (*breachedInput, error) {
+func (p *JusticeDescriptor) commitToLocalInput() (*breachedInput, er.R) {
 	// Retrieve the to-local witness script from the justice kit.
 	toLocalScript, err := p.JusticeKit.CommitToLocalWitnessScript()
 	if err != nil {
@@ -98,7 +98,7 @@ func (p *JusticeDescriptor) commitToLocalInput() (*breachedInput, error) {
 
 // commitToRemoteInput extracts the information required to spend the commit
 // to-remote output.
-func (p *JusticeDescriptor) commitToRemoteInput() (*breachedInput, error) {
+func (p *JusticeDescriptor) commitToRemoteInput() (*breachedInput, er.R) {
 	// Retrieve the to-remote witness script from the justice kit.
 	toRemoteScript, err := p.JusticeKit.CommitToRemoteWitnessScript()
 	if err != nil {
@@ -128,12 +128,11 @@ func (p *JusticeDescriptor) commitToRemoteInput() (*breachedInput, error) {
 
 		// Compute the witness script hash from the to-remote pubkey, which will
 		// be used to locate the input on the breach commitment transaction.
-		var errr error
-		toRemoteScriptHash, errr = input.CommitScriptUnencumbered(
+		toRemoteScriptHash, err = input.CommitScriptUnencumbered(
 			toRemotePubKey,
 		)
-		if errr != nil {
-			return nil, errr
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -171,7 +170,7 @@ func (p *JusticeDescriptor) commitToRemoteInput() (*breachedInput, error) {
 // and attempts to construct the justice transaction that sweeps the victims
 // funds to their wallet and claims the watchtower's reward.
 func (p *JusticeDescriptor) assembleJusticeTxn(txWeight int64,
-	inputs ...*breachedInput) (*wire.MsgTx, error) {
+	inputs ...*breachedInput) (*wire.MsgTx, er.R) {
 
 	justiceTxn := wire.NewMsgTx(2)
 
@@ -250,7 +249,7 @@ func (p *JusticeDescriptor) assembleJusticeTxn(txWeight int64,
 // the tower is reconstructing with the newer constant because the output values
 // might differ. This method retains that original behavior to not invalidate
 // historical signatures.
-func (p *JusticeDescriptor) CreateJusticeTxn() (*wire.MsgTx, error) {
+func (p *JusticeDescriptor) CreateJusticeTxn() (*wire.MsgTx, er.R) {
 	var (
 		sweepInputs    = make([]*breachedInput, 0, 2)
 		weightEstimate input.TxWeightEstimator
@@ -266,7 +265,7 @@ func (p *JusticeDescriptor) CreateJusticeTxn() (*wire.MsgTx, error) {
 		weightEstimate.AddP2WSHOutput()
 
 	default:
-		return nil, ErrUnknownSweepAddrType
+		return nil, ErrUnknownSweepAddrType.Default()
 	}
 
 	// Add our reward address to the weight estimate if the policy's blob
@@ -325,11 +324,11 @@ func (p *JusticeDescriptor) CreateJusticeTxn() (*wire.MsgTx, error) {
 //
 // NOTE: The search stops after the first match is found.
 func findTxOutByPkScript(txn *wire.MsgTx,
-	pkScript []byte) (uint32, *wire.TxOut, error) {
+	pkScript []byte) (uint32, *wire.TxOut, er.R) {
 
 	found, index := input.FindScriptOutputIndex(txn, pkScript)
 	if !found {
-		return 0, nil, ErrOutputNotFound
+		return 0, nil, ErrOutputNotFound.Default()
 	}
 
 	return index, txn.TxOut[index], nil

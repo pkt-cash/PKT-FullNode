@@ -2,10 +2,10 @@ package lnrpc
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 )
@@ -23,11 +23,11 @@ type MacaroonPerms map[string][]bakery.Op
 // each sub-server in a generalized manner.
 type SubServer interface {
 	// Start starts the sub-server and all goroutines it needs to operate.
-	Start() error
+	Start() er.R
 
 	// Stop signals that the sub-server should wrap up any lingering
 	// requests, and being a graceful shutdown.
-	Stop() error
+	Stop() er.R
 
 	// Name returns a unique string representation of the sub-server. This
 	// can be used to identify the sub-server and also de-duplicate them.
@@ -37,14 +37,14 @@ type SubServer interface {
 	// direct a sub RPC server to register itself with the main gRPC root
 	// server. Until this is called, each sub-server won't be able to have
 	// requests routed towards it.
-	RegisterWithRootServer(*grpc.Server) error
+	RegisterWithRootServer(*grpc.Server) er.R
 
 	// RegisterWithRestServer will be called by the root REST mux to direct
 	// a sub RPC server to register itself with the main REST mux server.
 	// Until this is called, each sub-server won't be able to have requests
 	// routed towards it.
 	RegisterWithRestServer(context.Context, *runtime.ServeMux, string,
-		[]grpc.DialOption) error
+		[]grpc.DialOption) er.R
 }
 
 // SubServerConfigDispatcher is an interface that all sub-servers will use to
@@ -75,7 +75,7 @@ type SubServerDriver struct {
 	// return the SubServer, ready for action, along with the set of
 	// macaroon permissions that the sub-server wishes to pass on to the
 	// root server for all methods routed towards it.
-	New func(subCfgs SubServerConfigDispatcher) (SubServer, MacaroonPerms, error)
+	New func(subCfgs SubServerConfigDispatcher) (SubServer, MacaroonPerms, er.R)
 }
 
 var (
@@ -111,12 +111,12 @@ func RegisteredSubServers() []*SubServerDriver {
 // satisfy the necessary interfaces.
 //
 // NOTE: This function is safe for concurrent access.
-func RegisterSubServer(driver *SubServerDriver) error {
+func RegisterSubServer(driver *SubServerDriver) er.R {
 	registerMtx.Lock()
 	defer registerMtx.Unlock()
 
 	if _, ok := subServers[driver.SubServerName]; ok {
-		return fmt.Errorf("subserver already registered")
+		return er.Errorf("subserver already registered")
 	}
 
 	subServers[driver.SubServerName] = driver

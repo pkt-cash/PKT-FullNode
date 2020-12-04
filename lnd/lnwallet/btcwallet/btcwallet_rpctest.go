@@ -13,7 +13,7 @@ func init() {
 	// considerably.
 	fastScrypt := waddrmgr.FastScryptOptions
 	keyGen := func(passphrase *[]byte, config *waddrmgr.ScryptOptions) (
-		*snacl.SecretKey, error) {
+		*snacl.SecretKey, er.R) {
 
 		return snacl.NewSecretKey(
 			passphrase, fastScrypt.N, fastScrypt.R, fastScrypt.P,

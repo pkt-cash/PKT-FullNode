@@ -1,9 +1,7 @@
 package chainreg
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +10,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs/btcdnotify"
@@ -178,7 +178,7 @@ type ChainControl struct {
 	// HealthCheck is a function which can be used to send a low-cost, fast
 	// query to the chain backend to ensure we still have access to our
 	// node.
-	HealthCheck func() error
+	HealthCheck func() er.R
 
 	// FeeEstimator is used to estimate an optimal fee for transactions important to us.
 	FeeEstimator chainfee.Estimator
@@ -219,7 +219,7 @@ type ChainControl struct {
 // full-node, another backed by a running bitcoind full-node, and the other
 // backed by a running neutrino light client instance. When running with a
 // neutrino light client instance, `neutrinoCS` must be non-nil.
-func NewChainControl(cfg *Config) (*ChainControl, error) {
+func NewChainControl(cfg *Config) (*ChainControl, er.R) {
 
 	// Set the RPC config from the "home" chain. Multi-chain isn't yet
 	// active, so we'll restrict usage to a particular chain for now.
@@ -257,7 +257,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 			DefaultLitecoinStaticFeePerKW, 0,
 		)
 	default:
-		return nil, fmt.Errorf("default routing policy for chain %v is "+
+		return nil, er.Errorf("default routing policy for chain %v is "+
 			"unknown", cfg.PrimaryChain())
 	}
 
@@ -272,7 +272,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		Wallet:         cfg.Wallet,
 	}
 
-	var err error
+	var err er.R
 
 	heightHintCacheConfig := chainntnfs.CacheConfig{
 		QueryDisable: cfg.HeightHintCacheQueryDisable,
@@ -286,7 +286,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		heightHintCacheConfig, cfg.LocalChanDB,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize height hint "+
+		return nil, er.Errorf("unable to initialize height hint "+
 			"cache: %v", err)
 	}
 
@@ -310,7 +310,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		// url.
 		if cfg.NeutrinoMode.FeeURL != "" {
 			if cfg.FeeURL != "" {
-				return nil, errors.New("feeurl and " +
+				return nil, er.New("feeurl and " +
 					"neutrino.feeurl are mutually exclusive")
 			}
 
@@ -322,7 +322,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		)
 
 		// Get our best block as a health check.
-		cc.HealthCheck = func() error {
+		cc.HealthCheck = func() er.R {
 			_, _, err := walletConfig.ChainSource.GetBestBlock()
 			return err
 		}
@@ -343,21 +343,21 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		}
 		var rpcCert []byte
 		if btcdMode.RawRPCCert != "" {
-			rpcCert, err = hex.DecodeString(btcdMode.RawRPCCert)
+			rpcCert, err = util.DecodeHex(btcdMode.RawRPCCert)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			certFile, err := os.Open(btcdMode.RPCCert)
 			if err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 			rpcCert, err = ioutil.ReadAll(certFile)
 			if err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 			if err := certFile.Close(); err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 		}
 
@@ -411,7 +411,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 		walletConfig.ChainSource = chainRPC
 
 		// Use a query for our best block as a health check.
-		cc.HealthCheck = func() error {
+		cc.HealthCheck = func() er.R {
 			_, _, err := walletConfig.ChainSource.GetBestBlock()
 			return err
 		}
@@ -428,16 +428,15 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 			// live fee estimates, rather than a statically coded
 			// value.
 			fallBackFeeRate := chainfee.SatPerKVByte(25 * 1000)
-			var errr error
-			cc.FeeEstimator, errr = chainfee.NewBtcdEstimator(
+			cc.FeeEstimator, err = chainfee.NewBtcdEstimator(
 				*rpcConfig, fallBackFeeRate.FeePerKWeight(),
 			)
-			if errr != nil {
-				return nil, errr
+			if err != nil {
+				return nil, err
 			}
 		}
 	default:
-		return nil, fmt.Errorf("unknown node type: %s",
+		return nil, er.Errorf("unknown node type: %s",
 			homeChainConfig.Node)
 	}
 
@@ -520,7 +519,7 @@ func NewChainControl(cfg *Config) (*ChainControl, error) {
 // command, because it has no locking and is an inexpensive call, which was
 // added in version 0.15. If we are on an earlier version, we fallback to using
 // getblockchaininfo.
-func getBitcoindHealthCheckCmd(client *rpcclient.Client) (string, error) {
+func getBitcoindHealthCheckCmd(client *rpcclient.Client) (string, er.R) {
 	// Query bitcoind to get our current version.
 	resp, err := client.RawRequest("getnetworkinfo", nil)
 	if err != nil {
@@ -532,7 +531,7 @@ func getBitcoindHealthCheckCmd(client *rpcclient.Client) (string, error) {
 		Version int64 `json:"version"`
 	}{}
 	if err := json.Unmarshal(resp, &info); err != nil {
-		return "", err
+		return "", er.E(err)
 	}
 
 	// Bitcoind returns a single value representing the semantic version:

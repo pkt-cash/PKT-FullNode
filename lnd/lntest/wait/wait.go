@@ -10,7 +10,7 @@ import (
 // timing doesn't always line up well when running integration tests with
 // several running lnd nodes. This function gives callers a way to assert that
 // some property is upheld within a particular time frame.
-func Predicate(pred func() bool, timeout time.Duration) error {
+func Predicate(pred func() bool, timeout time.Duration) er.R {
 	const pollInterval = 20 * time.Millisecond
 
 	exitTimer := time.After(timeout)
@@ -19,7 +19,7 @@ func Predicate(pred func() bool, timeout time.Duration) error {
 
 		select {
 		case <-exitTimer:
-			return fmt.Errorf("predicate not satisfied after time out")
+			return er.Errorf("predicate not satisfied after time out")
 		default:
 		}
 
@@ -32,7 +32,7 @@ func Predicate(pred func() bool, timeout time.Duration) error {
 // NoError is a wrapper around Predicate that waits for the passed method f to
 // execute without error, and returns the last error encountered if this doesn't
 // happen within the timeout.
-func NoError(f func() error, timeout time.Duration) error {
+func NoError(f func() error, timeout time.Duration) er.R {
 	var predErr error
 	pred := func() bool {
 		if err := f(); err != nil {
@@ -57,7 +57,7 @@ func NoError(f func() error, timeout time.Duration) error {
 // integration tests with several running lnd nodes. This function gives callers
 // a way to assert that some property is maintained over a particular time
 // frame.
-func Invariant(statement func() bool, timeout time.Duration) error {
+func Invariant(statement func() bool, timeout time.Duration) er.R {
 	const pollInterval = 20 * time.Millisecond
 
 	exitTimer := time.After(timeout)
@@ -66,7 +66,7 @@ func Invariant(statement func() bool, timeout time.Duration) error {
 
 		// Fail if the invariant is broken while polling.
 		if !statement() {
-			return fmt.Errorf("invariant broken before time out")
+			return er.Errorf("invariant broken before time out")
 		}
 
 		select {
@@ -80,7 +80,7 @@ func Invariant(statement func() bool, timeout time.Duration) error {
 // InvariantNoError is a wrapper around Invariant that waits out the duration
 // specified by timeout. It fails if the predicate ever returns an error during
 // that time.
-func InvariantNoError(f func() error, timeout time.Duration) error {
+func InvariantNoError(f func() error, timeout time.Duration) er.R {
 	var predErr error
 	pred := func() bool {
 		if err := f(); err != nil {

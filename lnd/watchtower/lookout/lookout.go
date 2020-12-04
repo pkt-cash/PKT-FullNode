@@ -53,7 +53,7 @@ func New(cfg *Config) *Lookout {
 }
 
 // Start safely spins up the Lookout and begins monitoring for breaches.
-func (l *Lookout) Start() error {
+func (l *Lookout) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&l.started, 0, 1) {
 		return nil
 	}
@@ -87,7 +87,7 @@ func (l *Lookout) Start() error {
 }
 
 // Stop safely shuts down the Lookout.
-func (l *Lookout) Stop() error {
+func (l *Lookout) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&l.shutdown, 0, 1) {
 		return nil
 	}
@@ -148,7 +148,7 @@ func (l *Lookout) watchBlocks(epochs *chainntnfs.BlockEpochEvent) {
 // responds by attempting to decrypt the encrypted blob and publishing the
 // justice transaction.
 func (l *Lookout) processEpoch(epoch *chainntnfs.BlockEpoch,
-	block *wire.MsgBlock) error {
+	block *wire.MsgBlock) er.R {
 
 	numTxnsInBlock := len(block.Transactions)
 

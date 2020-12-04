@@ -2,14 +2,14 @@ package chanbackup
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"os"
 	"sync"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Swapper is an interface that allows the chanbackup.SubSwapper to update the
@@ -18,11 +18,11 @@ import (
 type Swapper interface {
 	// UpdateAndSwap attempts to atomically update the main multi back up
 	// file location with the new fully packed multi-channel backup.
-	UpdateAndSwap(newBackup PackedMulti) error
+	UpdateAndSwap(newBackup PackedMulti) er.R
 
 	// ExtractMulti attempts to obtain and decode the current SCB instance
 	// stored by the Swapper instance.
-	ExtractMulti(keychain keychain.KeyRing) (*Multi, error)
+	ExtractMulti(keychain keychain.KeyRing) (*Multi, er.R)
 }
 
 // ChannelWithAddrs bundles an open channel along with all the addresses for
@@ -67,7 +67,7 @@ type ChannelNotifier interface {
 	// synchronization point to ensure that the chanbackup.SubSwapper does
 	// not miss any channel open or close events in the period between when
 	// it's created, and when it requests the channel subscription.
-	SubscribeChans(map[wire.OutPoint]struct{}) (*ChannelSubscription, error)
+	SubscribeChans(map[wire.OutPoint]struct{}) (*ChannelSubscription, er.R)
 }
 
 // SubSwapper subscribes to new updates to the open channel state, and then
@@ -104,7 +104,7 @@ type SubSwapper struct {
 // updates, pack a multi backup, and swap the current best backup from its
 // storage location.
 func NewSubSwapper(startingChans []Single, chanNotifier ChannelNotifier,
-	keyRing keychain.KeyRing, backupSwapper Swapper) (*SubSwapper, error) {
+	keyRing keychain.KeyRing, backupSwapper Swapper) (*SubSwapper, er.R) {
 
 	// First, we'll subscribe to the latest set of channel updates given
 	// the set of channels we already know of.
@@ -134,8 +134,8 @@ func NewSubSwapper(startingChans []Single, chanNotifier ChannelNotifier,
 }
 
 // Start starts the chanbackup.SubSwapper.
-func (s *SubSwapper) Start() error {
-	var startErr error
+func (s *SubSwapper) Start() er.R {
+	var startErr er.R
 	s.started.Do(func() {
 		log.Infof("Starting chanbackup.SubSwapper")
 
@@ -143,7 +143,7 @@ func (s *SubSwapper) Start() error {
 		// state with the latest Single state, as nodes may have new
 		// advertised addresses.
 		if err := s.updateBackupFile(); err != nil {
-			startErr = fmt.Errorf("unable to refresh backup "+
+			startErr = er.Errorf("unable to refresh backup "+
 				"file: %v", err)
 			return
 		}
@@ -156,7 +156,7 @@ func (s *SubSwapper) Start() error {
 }
 
 // Stop signals the SubSwapper to being a graceful shutdown.
-func (s *SubSwapper) Stop() error {
+func (s *SubSwapper) Stop() er.R {
 	s.stopped.Do(func() {
 		log.Infof("Stopping chanbackup.SubSwapper")
 
@@ -169,7 +169,7 @@ func (s *SubSwapper) Stop() error {
 // updateBackupFile updates the backup file in place given the current state of
 // the SubSwapper. We accept the set of channels that were closed between this
 // update and the last to make sure we leave them out of our backup set union.
-func (s *SubSwapper) updateBackupFile(closedChans ...wire.OutPoint) error {
+func (s *SubSwapper) updateBackupFile(closedChans ...wire.OutPoint) er.R {
 	// Before we pack the new set of SCBs, we'll first decode what we
 	// already have on-disk, to make sure we can decode it (proper seed)
 	// and that we're able to combine it with our new data.
@@ -178,8 +178,8 @@ func (s *SubSwapper) updateBackupFile(closedChans ...wire.OutPoint) error {
 	// If the file doesn't exist on disk, then that's OK as it was never
 	// created. In this case we'll continue onwards as it isn't a critical
 	// error.
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("unable to extract on disk encrypted "+
+	if err != nil && !os.IsNotExist(er.Wrapped(err)) {
+		return er.Errorf("unable to extract on disk encrypted "+
 			"SCB: %v", err)
 	}
 
@@ -225,7 +225,7 @@ func (s *SubSwapper) updateBackupFile(closedChans ...wire.OutPoint) error {
 	var b bytes.Buffer
 	err = newMulti.PackToWriter(&b, s.keyRing)
 	if err != nil {
-		return fmt.Errorf("unable to pack multi backup: %v", err)
+		return er.Errorf("unable to pack multi backup: %v", err)
 	}
 
 	// Finally, we'll swap out the old backup for this new one in a single
@@ -233,7 +233,7 @@ func (s *SubSwapper) updateBackupFile(closedChans ...wire.OutPoint) error {
 	// channels.
 	err = s.Swapper.UpdateAndSwap(PackedMulti(b.Bytes()))
 	if err != nil {
-		return fmt.Errorf("unable to update multi backup: %v", err)
+		return er.Errorf("unable to update multi backup: %v", err)
 	}
 
 	return nil

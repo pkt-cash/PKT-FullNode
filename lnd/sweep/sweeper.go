@@ -1,7 +1,6 @@
 package sweep
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -9,14 +8,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -39,27 +39,29 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd.sweep")
+
 	// ErrRemoteSpend is returned in case an output that we try to sweep is
 	// confirmed in a tx of the remote party.
-	ErrRemoteSpend = errors.New("remote party swept utxo")
+	ErrRemoteSpend = Err.CodeWithDetail("ErrRemoteSpend", "remote party swept utxo")
 
 	// ErrTooManyAttempts is returned in case sweeping an output has failed
 	// for the configured max number of attempts.
-	ErrTooManyAttempts = errors.New("sweep failed after max attempts")
+	ErrTooManyAttempts = Err.CodeWithDetail("ErrTooManyAttempts", "sweep failed after max attempts")
 
 	// ErrNoFeePreference is returned when we attempt to satisfy a sweep
 	// request from a client whom did not specify a fee preference.
-	ErrNoFeePreference = errors.New("no fee preference specified")
+	ErrNoFeePreference = Err.CodeWithDetail("ErrNoFeePreference", "no fee preference specified")
 
 	// ErrExclusiveGroupSpend is returned in case a different input of the
 	// same exclusive group was spent.
-	ErrExclusiveGroupSpend = errors.New("other member of exclusive group " +
-		"was spent")
+	ErrExclusiveGroupSpend = Err.CodeWithDetail("ErrExclusiveGroupSpend",
+		"other member of exclusive group was spent")
 
 	// ErrSweeperShuttingDown is an error returned when a client attempts to
 	// make a request to the UtxoSweeper, but it is unable to handle it as
 	// it is/has already been stopped.
-	ErrSweeperShuttingDown = errors.New("utxo sweeper shutting down")
+	ErrSweeperShuttingDown = Err.CodeWithDetail("ErrSweeperShuttingDown", "utxo sweeper shutting down")
 
 	// DefaultMaxSweepAttempts specifies the default maximum number of times
 	// an input is included in a publish attempt before giving up and
@@ -196,7 +198,7 @@ type updateReq struct {
 // updateReq from the UtxoSweeper's main event loop back to the caller.
 type updateResp struct {
 	resultChan chan Result
-	err        error
+	err        er.R
 }
 
 // UtxoSweeper is responsible for sweeping outputs back into the wallet
@@ -239,7 +241,7 @@ type UtxoSweeper struct {
 type UtxoSweeperConfig struct {
 	// GenSweepScript generates a P2WKH script belonging to the wallet where
 	// funds can be swept.
-	GenSweepScript func() ([]byte, error)
+	GenSweepScript func() ([]byte, er.R)
 
 	// FeeEstimator is used when crafting sweep transactions to estimate
 	// the necessary fee relative to the expected size of the sweep
@@ -303,7 +305,7 @@ type Result struct {
 	// Err is the final result of the sweep. It is nil when the input is
 	// swept successfully by us. ErrRemoteSpend is returned when another
 	// party took the input.
-	Err error
+	Err er.R
 
 	// Tx is the transaction that spent the input.
 	Tx *wire.MsgTx
@@ -331,7 +333,7 @@ func New(cfg *UtxoSweeperConfig) *UtxoSweeper {
 }
 
 // Start starts the process of constructing and publish sweep txes.
-func (s *UtxoSweeper) Start() error {
+func (s *UtxoSweeper) Start() er.R {
 	if !atomic.CompareAndSwapUint32(&s.started, 0, 1) {
 		return nil
 	}
@@ -341,7 +343,7 @@ func (s *UtxoSweeper) Start() error {
 	// Retrieve last published tx from database.
 	lastTx, err := s.cfg.Store.GetLastPublishedTx()
 	if err != nil {
-		return fmt.Errorf("get last published tx: %v", err)
+		return er.Errorf("get last published tx: %v", err)
 	}
 
 	// Republish in case the previous call crashed lnd. We don't care about
@@ -357,7 +359,7 @@ func (s *UtxoSweeper) Start() error {
 		// Error can be ignored. Because we are starting up, there are
 		// no pending inputs to update based on the publish result.
 		err := s.cfg.Wallet.PublishTransaction(lastTx, "")
-		if err != nil && err != lnwallet.ErrDoubleSpend {
+		if err != nil && !lnwallet.ErrDoubleSpend.Is(err) {
 			log.Errorf("last tx publish: %v", err)
 		}
 	}
@@ -371,7 +373,7 @@ func (s *UtxoSweeper) Start() error {
 	// if we don't provide any epoch. We'll wait for that in the collector.
 	blockEpochs, err := s.cfg.Notifier.RegisterBlockEpochNtfn(nil)
 	if err != nil {
-		return fmt.Errorf("register block epoch ntfn: %v", err)
+		return er.Errorf("register block epoch ntfn: %v", err)
 	}
 
 	// Start sweeper main loop.
@@ -394,7 +396,7 @@ func (s *UtxoSweeper) RelayFeePerKW() chainfee.SatPerKWeight {
 
 // Stop stops sweeper from listening to block epochs and constructing sweep
 // txes.
-func (s *UtxoSweeper) Stop() error {
+func (s *UtxoSweeper) Stop() er.R {
 	if !atomic.CompareAndSwapUint32(&s.stopped, 0, 1) {
 		return nil
 	}
@@ -420,10 +422,10 @@ func (s *UtxoSweeper) Stop() error {
 // Because it is an interface and we don't know what is exactly behind it, we
 // cannot make a local copy in sweeper.
 func (s *UtxoSweeper) SweepInput(input input.Input,
-	params Params) (chan Result, error) {
+	params Params) (chan Result, er.R) {
 
 	if input == nil || input.OutPoint() == nil || input.SignDesc() == nil {
-		return nil, errors.New("nil input received")
+		return nil, er.New("nil input received")
 	}
 
 	// Ensure the client provided a sane fee preference.
@@ -446,7 +448,7 @@ func (s *UtxoSweeper) SweepInput(input input.Input,
 	select {
 	case s.newInputs <- sweeperInput:
 	case <-s.quit:
-		return nil, ErrSweeperShuttingDown
+		return nil, ErrSweeperShuttingDown.Default()
 	}
 
 	return sweeperInput.resultChan, nil
@@ -455,12 +457,12 @@ func (s *UtxoSweeper) SweepInput(input input.Input,
 // feeRateForPreference returns a fee rate for the given fee preference. It
 // ensures that the fee rate respects the bounds of the UtxoSweeper.
 func (s *UtxoSweeper) feeRateForPreference(
-	feePreference FeePreference) (chainfee.SatPerKWeight, error) {
+	feePreference FeePreference) (chainfee.SatPerKWeight, er.R) {
 
 	// Ensure a type of fee preference is specified to prevent using a
 	// default below.
 	if feePreference.FeeRate == 0 && feePreference.ConfTarget == 0 {
-		return 0, ErrNoFeePreference
+		return 0, ErrNoFeePreference.Default()
 	}
 
 	feeRate, err := DetermineFeePerKw(s.cfg.FeeEstimator, feePreference)
@@ -468,11 +470,11 @@ func (s *UtxoSweeper) feeRateForPreference(
 		return 0, err
 	}
 	if feeRate < s.relayFeeRate {
-		return 0, fmt.Errorf("fee preference resulted in invalid fee "+
+		return 0, er.Errorf("fee preference resulted in invalid fee "+
 			"rate %v, minimum is %v", feeRate, s.relayFeeRate)
 	}
 	if feeRate > s.cfg.MaxFeeRate {
-		return 0, fmt.Errorf("fee preference resulted in invalid fee "+
+		return 0, er.Errorf("fee preference resulted in invalid fee "+
 			"rate %v, maximum is %v", feeRate, s.cfg.MaxFeeRate)
 	}
 
@@ -540,7 +542,7 @@ func (s *UtxoSweeper) collector(blockEpochs <-chan *chainntnfs.BlockEpoch) {
 				input.input.HeightHint(),
 			)
 			if err != nil {
-				err := fmt.Errorf("wait for spend: %v", err)
+				err := er.Errorf("wait for spend: %v", err)
 				s.signalAndRemove(&outpoint, Result{Err: err})
 				continue
 			}
@@ -594,9 +596,9 @@ func (s *UtxoSweeper) collector(blockEpochs <-chan *chainntnfs.BlockEpoch) {
 				}
 
 				// Return either a nil or a remote spend result.
-				var err error
+				var err er.R
 				if !isOurTx {
-					err = ErrRemoteSpend
+					err = ErrRemoteSpend.Default()
 				}
 
 				// Signal result channels.
@@ -703,31 +705,31 @@ func (s *UtxoSweeper) removeExclusiveGroup(group uint64) {
 
 		// Signal result channels.
 		s.signalAndRemove(&outpoint, Result{
-			Err: ErrExclusiveGroupSpend,
+			Err: ErrExclusiveGroupSpend.Default(),
 		})
 	}
 }
 
 // sweepCluster tries to sweep the given input cluster.
 func (s *UtxoSweeper) sweepCluster(cluster inputCluster,
-	currentHeight int32) error {
+	currentHeight int32) er.R {
 
 	// Execute the sweep within a coin select lock. Otherwise the coins that
 	// we are going to spend may be selected for other transactions like
 	// funding of a channel.
-	return s.cfg.Wallet.WithCoinSelectLock(func() error {
+	return s.cfg.Wallet.WithCoinSelectLock(func() er.R {
 		// Examine pending inputs and try to construct
 		// lists of inputs.
 		inputLists, err := s.getInputLists(cluster, currentHeight)
 		if err != nil {
-			return fmt.Errorf("unable to examine pending inputs: %v", err)
+			return er.Errorf("unable to examine pending inputs: %v", err)
 		}
 
 		// Sweep selected inputs.
 		for _, inputs := range inputLists {
 			err := s.sweep(inputs, cluster.sweepFeeRate, currentHeight)
 			if err != nil {
-				return fmt.Errorf("unable to sweep inputs: %v", err)
+				return er.Errorf("unable to sweep inputs: %v", err)
 			}
 		}
 
@@ -1003,7 +1005,7 @@ func mergeClusters(a, b inputCluster) []inputCluster {
 
 // scheduleSweep starts the sweep timer to create an opportunity for more inputs
 // to be added.
-func (s *UtxoSweeper) scheduleSweep(currentHeight int32) error {
+func (s *UtxoSweeper) scheduleSweep(currentHeight int32) er.R {
 	// The timer is already ticking, no action needed for the sweep to
 	// happen.
 	if s.timer != nil {
@@ -1021,7 +1023,7 @@ func (s *UtxoSweeper) scheduleSweep(currentHeight int32) error {
 		// coins that we select now may be used in other transactions.
 		inputLists, err := s.getInputLists(cluster, currentHeight)
 		if err != nil {
-			return fmt.Errorf("get input lists: %v", err)
+			return er.Errorf("get input lists: %v", err)
 		}
 
 		log.Infof("Sweep candidates at height=%v with fee_rate=%v, "+
@@ -1088,7 +1090,7 @@ func (s *UtxoSweeper) signalAndRemove(outpoint *wire.OutPoint, result Result) {
 // below the dust limit are not published. Those inputs remain pending and will
 // be bundled with future inputs if possible.
 func (s *UtxoSweeper) getInputLists(cluster inputCluster,
-	currentHeight int32) ([]inputSet, error) {
+	currentHeight int32) ([]inputSet, er.R) {
 
 	// Filter for inputs that need to be swept. Create two lists: all
 	// sweepable inputs and a list containing only the new, never tried
@@ -1127,7 +1129,7 @@ func (s *UtxoSweeper) getInputLists(cluster inputCluster,
 			s.cfg.Wallet,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("input partitionings: %v", err)
+			return nil, er.Errorf("input partitionings: %v", err)
 		}
 	}
 
@@ -1137,7 +1139,7 @@ func (s *UtxoSweeper) getInputLists(cluster inputCluster,
 		s.cfg.MaxInputsPerTx, s.cfg.Wallet,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("input partitionings: %v", err)
+		return nil, er.Errorf("input partitionings: %v", err)
 	}
 
 	log.Debugf("Sweep candidates at height=%v: total_num_pending=%v, "+
@@ -1151,13 +1153,13 @@ func (s *UtxoSweeper) getInputLists(cluster inputCluster,
 // sweep takes a set of preselected inputs, creates a sweep tx and publishes the
 // tx. The output address is only marked as used if the publish succeeds.
 func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
-	currentHeight int32) error {
+	currentHeight int32) er.R {
 
 	// Generate an output script if there isn't an unused script available.
 	if s.currentOutputScript == nil {
 		pkScript, err := s.cfg.GenSweepScript()
 		if err != nil {
-			return fmt.Errorf("gen sweep script: %v", err)
+			return er.Errorf("gen sweep script: %v", err)
 		}
 		s.currentOutputScript = pkScript
 	}
@@ -1168,7 +1170,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 		dustLimit(s.relayFeeRate), s.cfg.Signer,
 	)
 	if err != nil {
-		return fmt.Errorf("create sweep tx: %v", err)
+		return er.Errorf("create sweep tx: %v", err)
 	}
 
 	// Add tx before publication, so that we will always know that a spend
@@ -1178,7 +1180,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 	// then and would also not add the hash to the store.
 	err = s.cfg.Store.NotifyPublishTx(tx)
 	if err != nil {
-		return fmt.Errorf("notify publish tx: %v", err)
+		return er.Errorf("notify publish tx: %v", err)
 	}
 
 	// Publish sweep tx.
@@ -1195,7 +1197,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 
 	// In case of an unexpected error, don't try to recover.
 	if err != nil && err != lnwallet.ErrDoubleSpend {
-		return fmt.Errorf("publish tx: %v", err)
+		return er.Errorf("publish tx: %v", err)
 	}
 
 	// Keep the output script in case of an error, so that it can be reused
@@ -1237,7 +1239,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 		if pi.publishAttempts >= s.cfg.MaxSweepAttempts {
 			// Signal result channels sweep result.
 			s.signalAndRemove(&input.PreviousOutPoint, Result{
-				Err: ErrTooManyAttempts,
+				Err: ErrTooManyAttempts.Default(),
 			})
 		}
 	}
@@ -1248,7 +1250,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 // waitForSpend registers a spend notification with the chain notifier. It
 // returns a cancel function that can be used to cancel the registration.
 func (s *UtxoSweeper) waitForSpend(outpoint wire.OutPoint,
-	script []byte, heightHint uint32) (func(), error) {
+	script []byte, heightHint uint32) (func(), er.R) {
 
 	log.Debugf("Wait for spend of %v", outpoint)
 
@@ -1256,7 +1258,7 @@ func (s *UtxoSweeper) waitForSpend(outpoint wire.OutPoint,
 		&outpoint, script, heightHint,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("register spend ntfn: %v", err)
+		return nil, er.Errorf("register spend ntfn: %v", err)
 	}
 
 	s.wg.Add(1)
@@ -1288,21 +1290,21 @@ func (s *UtxoSweeper) waitForSpend(outpoint wire.OutPoint,
 
 // PendingInputs returns the set of inputs that the UtxoSweeper is currently
 // attempting to sweep.
-func (s *UtxoSweeper) PendingInputs() (map[wire.OutPoint]*PendingInput, error) {
+func (s *UtxoSweeper) PendingInputs() (map[wire.OutPoint]*PendingInput, er.R) {
 	respChan := make(chan map[wire.OutPoint]*PendingInput, 1)
 	select {
 	case s.pendingSweepsReqs <- &pendingSweepsReq{
 		respChan: respChan,
 	}:
 	case <-s.quit:
-		return nil, ErrSweeperShuttingDown
+		return nil, ErrSweeperShuttingDown.Default()
 	}
 
 	select {
 	case pendingSweeps := <-respChan:
 		return pendingSweeps, nil
 	case <-s.quit:
-		return nil, ErrSweeperShuttingDown
+		return nil, ErrSweeperShuttingDown.Default()
 	}
 }
 
@@ -1342,7 +1344,7 @@ func (s *UtxoSweeper) handlePendingSweepsReq(
 // is actually successful. The responsibility of doing so should be handled by
 // the caller.
 func (s *UtxoSweeper) UpdateParams(input wire.OutPoint,
-	params ParamsUpdate) (chan Result, error) {
+	params ParamsUpdate) (chan Result, er.R) {
 
 	// Ensure the client provided a sane fee preference.
 	if _, err := s.feeRateForPreference(params.Fee); err != nil {
@@ -1357,14 +1359,14 @@ func (s *UtxoSweeper) UpdateParams(input wire.OutPoint,
 		responseChan: responseChan,
 	}:
 	case <-s.quit:
-		return nil, ErrSweeperShuttingDown
+		return nil, ErrSweeperShuttingDown.Default()
 	}
 
 	select {
 	case response := <-responseChan:
 		return response.resultChan, response.err
 	case <-s.quit:
-		return nil, ErrSweeperShuttingDown
+		return nil, ErrSweeperShuttingDown.Default()
 	}
 }
 
@@ -1380,7 +1382,7 @@ func (s *UtxoSweeper) UpdateParams(input wire.OutPoint,
 //     did not exist in the original sweep transaction, resulting in an invalid
 //     replacement transaction.
 func (s *UtxoSweeper) handleUpdateReq(req *updateReq, bestHeight int32) (
-	chan Result, error) {
+	chan Result, er.R) {
 
 	// If the UtxoSweeper is already trying to sweep this input, then we can
 	// simply just increase its fee rate. This will allow the input to be
@@ -1389,7 +1391,7 @@ func (s *UtxoSweeper) handleUpdateReq(req *updateReq, bestHeight int32) (
 	// sweeping transaction.
 	pendingInput, ok := s.pendingInputs[req.input]
 	if !ok {
-		return nil, lnwallet.ErrNotMine
+		return nil, lnwallet.ErrNotMine.Default()
 	}
 
 	// Create the updated parameters struct. Leave the exclusive group
@@ -1441,7 +1443,7 @@ func (s *UtxoSweeper) handleUpdateReq(req *updateReq, bestHeight int32) (
 // - Thwart future possible fee sniping attempts.
 // - Make us blend in with the bitcoind wallet.
 func (s *UtxoSweeper) CreateSweepTx(inputs []input.Input, feePref FeePreference,
-	currentBlockHeight uint32) (*wire.MsgTx, error) {
+	currentBlockHeight uint32) (*wire.MsgTx, er.R) {
 
 	feePerKw, err := DetermineFeePerKw(s.cfg.FeeEstimator, feePref)
 	if err != nil {
@@ -1469,7 +1471,7 @@ func DefaultNextAttemptDeltaFunc(attempts int) int32 {
 }
 
 // ListSweeps returns a list of the the sweeps recorded by the sweep store.
-func (s *UtxoSweeper) ListSweeps() ([]chainhash.Hash, error) {
+func (s *UtxoSweeper) ListSweeps() ([]chainhash.Hash, er.R) {
 	return s.cfg.Store.ListSweeps()
 }
 

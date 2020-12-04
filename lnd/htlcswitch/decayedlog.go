@@ -3,8 +3,6 @@ package htlcswitch
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -35,11 +33,11 @@ var (
 var (
 	// ErrDecayedLogInit is used to indicate a decayed log failed to create
 	// the proper bucketing structure on startup.
-	ErrDecayedLogInit = errors.New("unable to initialize decayed log")
+	ErrDecayedLogInit = Err.CodeWithDetail("ErrDecayedLogInit", "unable to initialize decayed log")
 
 	// ErrDecayedLogCorrupted signals that the anticipated bucketing
 	// structure has diverged since initialization.
-	ErrDecayedLogCorrupted = errors.New("decayed log structure corrupted")
+	ErrDecayedLogCorrupted = Err.CodeWithDetail("ErrDecayedLogCorrupted", "decayed log structure corrupted")
 )
 
 // DecayedLog implements the PersistLog interface. It stores the first
@@ -91,7 +89,7 @@ func NewDecayedLog(dbPath, dbFileName string, boltCfg *kvdb.BoltConfig,
 // Start opens the database we will be using to store hashed shared secrets.
 // It also starts the garbage collector in a goroutine to remove stale
 // database entries.
-func (d *DecayedLog) Start() error {
+func (d *DecayedLog) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&d.started, 0, 1) {
 		return nil
 	}
@@ -100,7 +98,7 @@ func (d *DecayedLog) Start() error {
 	var err error
 	d.db, err = kvdb.GetBoltBackend(d.cfg)
 	if err != nil {
-		return fmt.Errorf("could not open boltdb: %v", err)
+		return er.Errorf("could not open boltdb: %v", err)
 	}
 
 	// Initialize the primary buckets used by the decayed log.
@@ -112,7 +110,7 @@ func (d *DecayedLog) Start() error {
 	if d.notifier != nil {
 		epochClient, err := d.notifier.RegisterBlockEpochNtfn(nil)
 		if err != nil {
-			return fmt.Errorf("unable to register for epoch "+
+			return er.Errorf("unable to register for epoch "+
 				"notifications: %v", err)
 		}
 
@@ -125,16 +123,16 @@ func (d *DecayedLog) Start() error {
 
 // initBuckets initializes the primary buckets used by the decayed log, namely
 // the shared hash bucket, and batch replay
-func (d *DecayedLog) initBuckets() error {
-	return kvdb.Update(d.db, func(tx kvdb.RwTx) error {
+func (d *DecayedLog) initBuckets() er.R {
+	return kvdb.Update(d.db, func(tx kvdb.RwTx) er.R {
 		_, err := tx.CreateTopLevelBucket(sharedHashBucket)
 		if err != nil {
-			return ErrDecayedLogInit
+			return ErrDecayedLogInit.Default()
 		}
 
 		_, err = tx.CreateTopLevelBucket(batchReplayBucket)
 		if err != nil {
-			return ErrDecayedLogInit
+			return ErrDecayedLogInit.Default()
 		}
 
 		return nil
@@ -142,7 +140,7 @@ func (d *DecayedLog) initBuckets() error {
 }
 
 // Stop halts the garbage collector and closes boltdb.
-func (d *DecayedLog) Stop() error {
+func (d *DecayedLog) Stop() er.R {
 	if !atomic.CompareAndSwapInt32(&d.stopped, 0, 1) {
 		return nil
 	}
@@ -200,16 +198,16 @@ func (d *DecayedLog) garbageCollector(epochClient *chainntnfs.BlockEpochEvent) {
 
 // gcExpiredHashes purges the decaying log of all entries whose CLTV expires
 // below the provided height.
-func (d *DecayedLog) gcExpiredHashes(height uint32) (uint32, error) {
+func (d *DecayedLog) gcExpiredHashes(height uint32) (uint32, er.R) {
 	var numExpiredHashes uint32
 
-	err := kvdb.Batch(d.db, func(tx kvdb.RwTx) error {
+	err := kvdb.Batch(d.db, func(tx kvdb.RwTx) er.R {
 		numExpiredHashes = 0
 
 		// Grab the shared hash bucket
 		sharedHashes := tx.ReadWriteBucket(sharedHashBucket)
 		if sharedHashes == nil {
-			return fmt.Errorf("sharedHashBucket " +
+			return er.Errorf("sharedHashBucket " +
 				"is nil")
 		}
 
@@ -252,11 +250,11 @@ func (d *DecayedLog) gcExpiredHashes(height uint32) (uint32, error) {
 
 // Delete removes a <shared secret hash, CLTV> key-pair from the
 // sharedHashBucket.
-func (d *DecayedLog) Delete(hash *sphinx.HashPrefix) error {
-	return kvdb.Batch(d.db, func(tx kvdb.RwTx) error {
+func (d *DecayedLog) Delete(hash *sphinx.HashPrefix) er.R {
+	return kvdb.Batch(d.db, func(tx kvdb.RwTx) er.R {
 		sharedHashes := tx.ReadWriteBucket(sharedHashBucket)
 		if sharedHashes == nil {
-			return ErrDecayedLogCorrupted
+			return ErrDecayedLogCorrupted.Default()
 		}
 
 		return sharedHashes.Delete(hash[:])
@@ -265,22 +263,22 @@ func (d *DecayedLog) Delete(hash *sphinx.HashPrefix) error {
 
 // Get retrieves the CLTV of a processed HTLC given the first 20 bytes of the
 // Sha-256 hash of the shared secret.
-func (d *DecayedLog) Get(hash *sphinx.HashPrefix) (uint32, error) {
+func (d *DecayedLog) Get(hash *sphinx.HashPrefix) (uint32, er.R) {
 	var value uint32
 
-	err := kvdb.View(d.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(d.db, func(tx kvdb.RTx) er.R {
 		// Grab the shared hash bucket which stores the mapping from
 		// truncated sha-256 hashes of shared secrets to CLTV's.
 		sharedHashes := tx.ReadBucket(sharedHashBucket)
 		if sharedHashes == nil {
-			return fmt.Errorf("sharedHashes is nil, could " +
+			return er.Errorf("sharedHashes is nil, could " +
 				"not retrieve CLTV value")
 		}
 
 		// Retrieve the bytes which represents the CLTV
 		valueBytes := sharedHashes.Get(hash[:])
 		if valueBytes == nil {
-			return sphinx.ErrLogEntryNotFound
+			return sphinx.ErrLogEntryNotFound.Default()
 		}
 
 		// The first 4 bytes represent the CLTV, store it in value.
@@ -298,22 +296,22 @@ func (d *DecayedLog) Get(hash *sphinx.HashPrefix) (uint32, error) {
 }
 
 // Put stores a shared secret hash as the key and the CLTV as the value.
-func (d *DecayedLog) Put(hash *sphinx.HashPrefix, cltv uint32) error {
+func (d *DecayedLog) Put(hash *sphinx.HashPrefix, cltv uint32) er.R {
 	// Optimisitically serialize the cltv value into the scratch buffer.
 	var scratch [4]byte
 	binary.BigEndian.PutUint32(scratch[:], cltv)
 
-	return kvdb.Batch(d.db, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(d.db, func(tx kvdb.RwTx) er.R {
 		sharedHashes := tx.ReadWriteBucket(sharedHashBucket)
 		if sharedHashes == nil {
-			return ErrDecayedLogCorrupted
+			return ErrDecayedLogCorrupted.Default()
 		}
 
 		// Check to see if this hash prefix has been recorded before. If
 		// a value is found, this packet is being replayed.
 		valueBytes := sharedHashes.Get(hash[:])
 		if valueBytes != nil {
-			return sphinx.ErrReplayedPacket
+			return sphinx.ErrReplayedPacket.Default()
 		}
 
 		return sharedHashes.Put(hash[:], scratch[:])
@@ -328,7 +326,7 @@ func (d *DecayedLog) Put(hash *sphinx.HashPrefix, cltv uint32) error {
 // value to subsequent calls. For the indices of the replay set to be aligned
 // properly, the batch MUST be constructed identically to the first attempt,
 // pruning will cause the indices to become invalid.
-func (d *DecayedLog) PutBatch(b *sphinx.Batch) (*sphinx.ReplaySet, error) {
+func (d *DecayedLog) PutBatch(b *sphinx.Batch) (*sphinx.ReplaySet, er.R) {
 	// Since batched boltdb txns may be executed multiple times before
 	// succeeding, we will create a new replay set for each invocation to
 	// avoid any side-effects. If the txn is successful, this replay set
@@ -336,10 +334,10 @@ func (d *DecayedLog) PutBatch(b *sphinx.Batch) (*sphinx.ReplaySet, error) {
 	// to generate the complete replay set. If this batch was previously
 	// processed, the replay set will be deserialized from disk.
 	var replays *sphinx.ReplaySet
-	if err := kvdb.Batch(d.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(d.db, func(tx kvdb.RwTx) er.R {
 		sharedHashes := tx.ReadWriteBucket(sharedHashBucket)
 		if sharedHashes == nil {
-			return ErrDecayedLogCorrupted
+			return ErrDecayedLogCorrupted.Default()
 		}
 
 		// Load the batch replay bucket, which will be used to either
@@ -347,7 +345,7 @@ func (d *DecayedLog) PutBatch(b *sphinx.Batch) (*sphinx.ReplaySet, error) {
 		// to write the result of this operation.
 		batchReplayBkt := tx.ReadWriteBucket(batchReplayBucket)
 		if batchReplayBkt == nil {
-			return ErrDecayedLogCorrupted
+			return ErrDecayedLogCorrupted.Default()
 		}
 
 		// Check for the existence of this batch's id in the replay
@@ -366,7 +364,7 @@ func (d *DecayedLog) PutBatch(b *sphinx.Batch) (*sphinx.ReplaySet, error) {
 		var scratch [4]byte
 
 		replays = sphinx.NewReplaySet()
-		err := b.ForEach(func(seqNum uint16, hashPrefix *sphinx.HashPrefix, cltv uint32) error {
+		err := b.ForEach(func(seqNum uint16, hashPrefix *sphinx.HashPrefix, cltv uint32) er.R {
 			// Retrieve the bytes which represents the CLTV
 			valueBytes := sharedHashes.Get(hashPrefix[:])
 			if valueBytes != nil {

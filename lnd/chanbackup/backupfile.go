@@ -1,11 +1,11 @@
 package chanbackup
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 )
 
@@ -23,11 +23,13 @@ const (
 var (
 	// ErrNoBackupFileExists is returned if caller attempts to call
 	// UpdateAndSwap with the file name not set.
-	ErrNoBackupFileExists = fmt.Errorf("back up file name not set")
+	ErrNoBackupFileExists = er.GenericErrorType.CodeWithDetail("ErrNoBackupFileExists",
+		"back up file name not set")
 
 	// ErrNoTempBackupFile is returned if caller attempts to call
 	// UpdateAndSwap with the temp back up file name not set.
-	ErrNoTempBackupFile = fmt.Errorf("temp backup file not set")
+	ErrNoTempBackupFile = er.GenericErrorType.CodeWithDetail("ErrNoTempBackupFile",
+		"temp backup file not set")
 )
 
 // MultiFile represents a file on disk that a caller can use to read the packed
@@ -67,10 +69,10 @@ func NewMultiFile(fileName string) *MultiFile {
 // UpdateAndSwap will attempt write a new temporary backup file to disk with
 // the newBackup encoded, then atomically swap (via rename) the old file for
 // the new file by updating the name of the new file to the old.
-func (b *MultiFile) UpdateAndSwap(newBackup PackedMulti) error {
+func (b *MultiFile) UpdateAndSwap(newBackup PackedMulti) er.R {
 	// If the main backup file isn't set, then we can't proceed.
 	if b.fileName == "" {
-		return ErrNoBackupFileExists
+		return ErrNoBackupFileExists.Default()
 	}
 
 	log.Infof("Updating backup file at %v", b.fileName)
@@ -83,7 +85,7 @@ func (b *MultiFile) UpdateAndSwap(newBackup PackedMulti) error {
 
 		err = os.Remove(b.tempFileName)
 		if err != nil {
-			return fmt.Errorf("unable to remove temp "+
+			return er.Errorf("unable to remove temp "+
 				"backup file: %v", err)
 		}
 	}
@@ -93,17 +95,17 @@ func (b *MultiFile) UpdateAndSwap(newBackup PackedMulti) error {
 	var err error
 	b.tempFile, err = os.Create(b.tempFileName)
 	if err != nil {
-		return fmt.Errorf("unable to create temp file: %v", err)
+		return er.Errorf("unable to create temp file: %v", err)
 	}
 
 	// With the file created, we'll write the new packed multi backup and
 	// remove the temporary file all together once this method exits.
 	_, err = b.tempFile.Write([]byte(newBackup))
 	if err != nil {
-		return fmt.Errorf("unable to write backup to temp file: %v", err)
+		return er.Errorf("unable to write backup to temp file: %v", err)
 	}
 	if err := b.tempFile.Sync(); err != nil {
-		return fmt.Errorf("unable to sync temp file: %v", err)
+		return er.Errorf("unable to sync temp file: %v", err)
 	}
 	defer os.Remove(b.tempFileName)
 
@@ -114,24 +116,24 @@ func (b *MultiFile) UpdateAndSwap(newBackup PackedMulti) error {
 	// sure to close the current file as some OSes don't support
 	// renaming a file that's already open (Windows).
 	if err := b.tempFile.Close(); err != nil {
-		return fmt.Errorf("unable to close file: %v", err)
+		return er.Errorf("unable to close file: %v", err)
 	}
 
 	// Finally, we'll attempt to atomically rename the temporary file to
 	// the main back up file. If this succeeds, then we'll only have a
 	// single file on disk once this method exits.
-	return os.Rename(b.tempFileName, b.fileName)
+	return er.E(os.Rename(b.tempFileName, b.fileName))
 }
 
 // ExtractMulti attempts to extract the packed multi backup we currently point
 // to into an unpacked version. This method will fail if no backup file
 // currently exists as the specified location.
-func (b *MultiFile) ExtractMulti(keyChain keychain.KeyRing) (*Multi, error) {
+func (b *MultiFile) ExtractMulti(keyChain keychain.KeyRing) (*Multi, er.R) {
 	var err error
 
 	// We'll return an error if the main file isn't currently set.
 	if b.fileName == "" {
-		return nil, ErrNoBackupFileExists
+		return nil, ErrNoBackupFileExists.Default()
 	}
 
 	// Now that we've confirmed the target file is populated, we'll read
@@ -139,7 +141,7 @@ func (b *MultiFile) ExtractMulti(keyChain keychain.KeyRing) (*Multi, error) {
 	// always closed, even if we can't read the contents.
 	multiBytes, err := ioutil.ReadFile(b.fileName)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Finally, we'll attempt to unpack the file and return the unpack

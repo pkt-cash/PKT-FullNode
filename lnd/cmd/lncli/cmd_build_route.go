@@ -42,14 +42,14 @@ var buildRouteCommand = cli.Command{
 	},
 }
 
-func buildRoute(ctx *cli.Context) error {
+func buildRoute(ctx *cli.Context) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 
 	client := routerrpc.NewRouterClient(conn)
 
 	if !ctx.IsSet("hops") {
-		return errors.New("hops required")
+		return er.New("hops required")
 	}
 
 	// Build list of hop addresses for the rpc.
@@ -58,7 +58,7 @@ func buildRoute(ctx *cli.Context) error {
 	for _, k := range hops {
 		pubkey, err := route.NewVertexFromStr(k)
 		if err != nil {
-			return fmt.Errorf("error parsing %v: %v", k, err)
+			return er.Errorf("error parsing %v: %v", k, err)
 		}
 		rpcHops = append(rpcHops, pubkey[:])
 	}
@@ -68,7 +68,7 @@ func buildRoute(ctx *cli.Context) error {
 	if hasAmt {
 		amtMsat = ctx.Int64("amt") * 1000
 		if amtMsat == 0 {
-			return fmt.Errorf("non-zero amount required")
+			return er.Errorf("non-zero amount required")
 		}
 	}
 

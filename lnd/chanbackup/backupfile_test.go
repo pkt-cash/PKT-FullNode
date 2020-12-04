@@ -2,18 +2,19 @@ package chanbackup
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
-func makeFakePackedMulti() (PackedMulti, error) {
+func makeFakePackedMulti() (PackedMulti, er.R) {
 	newPackedMulti := make([]byte, 50)
 	if _, err := rand.Read(newPackedMulti[:]); err != nil {
-		return nil, fmt.Errorf("unable to make test backup: %v", err)
+		return nil, er.Errorf("unable to make test backup: %v", err)
 	}
 
 	return PackedMulti(newPackedMulti), nil
@@ -212,15 +213,15 @@ func TestExtractMulti(t *testing.T) {
 
 	// Finally, we'll make a new temporary file, then write out the packed
 	// multi directly to to it.
-	tempFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("unable to create temp file: %v", err)
+	tempFile, errr := ioutil.TempFile("", "")
+	if errr != nil {
+		t.Fatalf("unable to create temp file: %v", errr)
 	}
 	defer os.Remove(tempFile.Name())
 
-	_, err = tempFile.Write(packedMulti)
-	if err != nil {
-		t.Fatalf("unable to write temp file: %v", err)
+	_, errr = tempFile.Write(packedMulti)
+	if errr != nil {
+		t.Fatalf("unable to write temp file: %v", errr)
 	}
 	if err := tempFile.Sync(); err != nil {
 		t.Fatalf("unable to sync temp file: %v", err)

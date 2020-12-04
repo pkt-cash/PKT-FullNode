@@ -211,7 +211,7 @@ func TestInvalidPassphraseRejection(t *testing.T) {
 	// If we try to decipher with the wrong passphrase, we should get the
 	// proper error.
 	wrongPass := []byte("kek")
-	if _, err := mnemonic.ToCipherSeed(wrongPass); err != ErrInvalidPass {
+	if _, err := mnemonic.ToCipherSeed(wrongPass); !ErrInvalidPass.Is(err) {
 		t.Fatalf("expected ErrInvalidPass, instead got %v", err)
 	}
 }
@@ -285,7 +285,7 @@ func TestInvalidExternalVersion(t *testing.T) {
 	// With the version swapped, if we try to decipher it, (no matter the
 	// passphrase), it should fail.
 	_, err = decipherCipherSeed(cipherText, []byte("kek"))
-	if err != ErrIncorrectVersion {
+	if !ErrIncorrectVersion.Is(err) {
 		t.Fatalf("wrong error: expected ErrIncorrectVersion, "+
 			"got %v", err)
 	}
@@ -358,7 +358,7 @@ func TestChangePassphraseWrongPass(t *testing.T) {
 	wrongPass := []byte("kek")
 	newPass := []byte("strongerpassyeh!")
 	_, err = mnemonic.ChangePass(wrongPass, newPass)
-	if err != ErrInvalidPass {
+	if !ErrInvalidPass.Is(err) {
 		t.Fatalf("expected ErrInvalidPass, instead got %v", err)
 	}
 }
@@ -538,17 +538,8 @@ func TestDecipherUnknownMnenomicWord(t *testing.T) {
 		t.Fatalf("expected ErrUnknownMnenomicWord error")
 	}
 
-	wordErr, ok := err.(ErrUnknownMnenomicWord)
-	if !ok {
+	if !ErrUnknownMnenomicWord.Is(err) {
 		t.Fatalf("expected ErrUnknownMnenomicWord instead got %T", err)
-	}
-
-	if wordErr.Word != "kek" {
-		t.Fatalf("word mismatch: expected %v, got %v", "kek", wordErr.Word)
-	}
-	if int32(wordErr.Index) != randIndex {
-		t.Fatalf("wrong index detected: expected %v, got %v",
-			randIndex, wordErr.Index)
 	}
 
 	// If the mnemonic includes a word that is not in the englishList
@@ -562,8 +553,7 @@ func TestDecipherUnknownMnenomicWord(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected ErrUnknownMnenomicWord error")
 	}
-	_, ok = err.(ErrUnknownMnenomicWord)
-	if !ok {
+	if !ErrUnknownMnenomicWord.Is(err) {
 		t.Fatalf("expected ErrUnknownMnenomicWord instead got %T", err)
 	}
 }
@@ -595,7 +585,7 @@ func TestDecipherIncorrectMnemonic(t *testing.T) {
 	// If we attempt to map back to the original cipher seed now, then we
 	// should get ErrUnknownMnenomicWord.
 	_, err = mnemonic.ToCipherSeed(pass)
-	if err != ErrIncorrectMnemonic {
+	if !ErrIncorrectMnemonic.Is(err) {
 		t.Fatalf("expected ErrIncorrectMnemonic error")
 	}
 }

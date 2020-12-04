@@ -3,11 +3,12 @@ package sphinx
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // TestOnionFailure checks the ability of sender of payment to decode the
@@ -136,7 +137,7 @@ var onionErrorData = []struct {
 	},
 }
 
-func getSpecPubKeys() ([]*btcec.PublicKey, error) {
+func getSpecPubKeys() ([]*btcec.PublicKey, er.R) {
 	specPubKeys := []string{
 		"02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619",
 		"0324653eac434488002cc06bbfb7f10fe18991e35f9fe4302dbea6d2353dc0ab1c",
@@ -147,7 +148,7 @@ func getSpecPubKeys() ([]*btcec.PublicKey, error) {
 
 	keys := make([]*btcec.PublicKey, len(specPubKeys))
 	for i, sKey := range specPubKeys {
-		bKey, err := hex.DecodeString(sKey)
+		bKey, err := util.DecodeHex(sKey)
 		if err != nil {
 			return nil, err
 		}
@@ -161,8 +162,8 @@ func getSpecPubKeys() ([]*btcec.PublicKey, error) {
 	return keys, nil
 }
 
-func getSpecSessionKey() (*btcec.PrivateKey, error) {
-	bKey, err := hex.DecodeString("4141414141414141414141414141414141414" +
+func getSpecSessionKey() (*btcec.PrivateKey, er.R) {
+	bKey, err := util.DecodeHex("4141414141414141414141414141414141414" +
 		"141414141414141414141414141")
 	if err != nil {
 		return nil, err
@@ -172,9 +173,9 @@ func getSpecSessionKey() (*btcec.PrivateKey, error) {
 	return privKey, nil
 }
 
-func getSpecOnionErrorData() ([]byte, error) {
+func getSpecOnionErrorData() ([]byte, er.R) {
 	sData := "0002200200fe0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-	return hex.DecodeString(sData)
+	return util.DecodeHex(sData)
 }
 
 // TestOnionFailureSpecVector checks that onion error corresponds to the
@@ -205,7 +206,7 @@ func TestOnionFailureSpecVector(t *testing.T) {
 
 		// Decode the shared secret and check that it matchs with
 		// specification.
-		expectedSharedSecret, err := hex.DecodeString(test.sharedSecret)
+		expectedSharedSecret, err := util.DecodeHex(test.sharedSecret)
 		if err != nil {
 			t.Fatalf("unable to decode spec shared secret: %v",
 				err)
@@ -247,7 +248,7 @@ func TestOnionFailureSpecVector(t *testing.T) {
 
 		// Decode the obfuscated data and check that it matches the
 		// specification.
-		expectedEncryptErrordData, err := hex.DecodeString(test.obfuscatedData)
+		expectedEncryptErrordData, err := util.DecodeHex(test.obfuscatedData)
 		if err != nil {
 			t.Fatalf("unable to decode spec obfusacted "+
 				"data: %v", err)

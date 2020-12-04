@@ -1,7 +1,7 @@
 package htlcswitch
 
 import (
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/invoices"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // InvoiceDatabase is an interface which represents the persistent subsystem
@@ -16,7 +17,7 @@ import (
 type InvoiceDatabase interface {
 	// LookupInvoice attempts to look up an invoice according to its 32
 	// byte payment hash.
-	LookupInvoice(lntypes.Hash) (channeldb.Invoice, error)
+	LookupInvoice(lntypes.Hash) (channeldb.Invoice, er.R)
 
 	// NotifyExitHopHtlc attempts to mark an invoice as settled. If the
 	// invoice is a debug invoice, then this method is a noop as debug
@@ -28,14 +29,14 @@ type InvoiceDatabase interface {
 	NotifyExitHopHtlc(payHash lntypes.Hash, paidAmount lnwire.MilliSatoshi,
 		expiry uint32, currentHeight int32,
 		circuitKey channeldb.CircuitKey, hodlChan chan<- interface{},
-		payload invoices.Payload) (invoices.HtlcResolution, error)
+		payload invoices.Payload) (invoices.HtlcResolution, er.R)
 
 	// CancelInvoice attempts to cancel the invoice corresponding to the
 	// passed payment hash.
-	CancelInvoice(payHash lntypes.Hash) error
+	CancelInvoice(payHash lntypes.Hash) er.R
 
 	// SettleHodlInvoice settles a hold invoice.
-	SettleHodlInvoice(preimage lntypes.Preimage) error
+	SettleHodlInvoice(preimage lntypes.Preimage) er.R
 
 	// HodlUnsubscribeAll unsubscribes from all htlc resolutions.
 	HodlUnsubscribeAll(subscriber chan<- interface{})
@@ -69,11 +70,11 @@ type ChannelLink interface {
 	//
 	// NOTE: This function MUST be non-blocking (or block as little as
 	// possible).
-	HandleSwitchPacket(*htlcPacket) error
+	HandleSwitchPacket(*htlcPacket) er.R
 
 	// HandleLocalAddPacket handles a locally-initiated UpdateAddHTLC
 	// packet. It will be processed synchronously.
-	HandleLocalAddPacket(*htlcPacket) error
+	HandleLocalAddPacket(*htlcPacket) er.R
 
 	// HandleChannelUpdate handles the htlc requests as settle/add/fail
 	// which sent to us from remote peer we have a channel with.
@@ -98,7 +99,7 @@ type ChannelLink interface {
 	// be required in the event that a link is created before the short
 	// chan ID for it is known, or a re-org occurs, and the funding
 	// transaction changes location within the chain.
-	UpdateShortChanID() (lnwire.ShortChannelID, error)
+	UpdateShortChanID() (lnwire.ShortChannelID, er.R)
 
 	// UpdateForwardingPolicy updates the forwarding policy for the target
 	// ChannelLink. Once updated, the link will use the new forwarding
@@ -151,7 +152,7 @@ type ChannelLink interface {
 
 	// Start/Stop are used to initiate the start/stop of the channel link
 	// functioning.
-	Start() error
+	Start() er.R
 	Stop()
 }
 
@@ -164,7 +165,7 @@ type ForwardingLog interface {
 	// forwarding events in a batch to persistent storage. Outside
 	// sub-systems can then query the contents of the log for analysis,
 	// visualizations, etc.
-	AddForwardingEvents([]channeldb.ForwardingEvent) error
+	AddForwardingEvents([]channeldb.ForwardingEvent) er.R
 }
 
 // TowerClient is the primary interface used by the daemon to backup pre-signed
@@ -174,7 +175,7 @@ type TowerClient interface {
 	// parameters within the client. This should be called during link
 	// startup to ensure that the client is able to support the link during
 	// operation.
-	RegisterChannel(lnwire.ChannelID) error
+	RegisterChannel(lnwire.ChannelID) er.R
 
 	// BackupState initiates a request to back up a particular revoked
 	// state. If the method returns nil, the backup is guaranteed to be
@@ -183,7 +184,7 @@ type TowerClient interface {
 	// abide by the negotiated policy. If the channel we're trying to back
 	// up doesn't have a tweak for the remote party's output, then
 	// isTweakless should be true.
-	BackupState(*lnwire.ChannelID, *lnwallet.BreachRetribution, bool) error
+	BackupState(*lnwire.ChannelID, *lnwallet.BreachRetribution, bool) er.R
 }
 
 // InterceptableHtlcForwarder is the interface to set the interceptor
@@ -248,14 +249,14 @@ type InterceptedForward interface {
 	// Resume notifies the intention to resume an existing hold forward. This
 	// basically means the caller wants to resume with the default behavior for
 	// this htlc which usually means forward it.
-	Resume() error
+	Resume() er.R
 
 	// Settle notifies the intention to settle an existing hold
 	// forward with a given preimage.
-	Settle(lntypes.Preimage) error
+	Settle(lntypes.Preimage) er.R
 
 	// Fails notifies the intention to fail an existing hold forward
-	Fail() error
+	Fail() er.R
 }
 
 // htlcNotifier is an interface which represents the input side of the

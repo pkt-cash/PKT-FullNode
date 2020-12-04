@@ -11,7 +11,7 @@ import (
 // MigrateRouteSerialization migrates the way we serialize routes across the
 // entire database. At the time of writing of this migration, this includes our
 // payment attempts, as well as the payment results in mission control.
-func MigrateRouteSerialization(tx kvdb.RwTx) error {
+func MigrateRouteSerialization(tx kvdb.RwTx) er.R {
 	// First, we'll do all the payment attempts.
 	rootPaymentBucket := tx.ReadWriteBucket(paymentsRootBucket)
 	if rootPaymentBucket == nil {
@@ -96,7 +96,7 @@ func MigrateRouteSerialization(tx kvdb.RwTx) error {
 
 // migrateAttemptEncoding migrates payment attempts using the legacy format to
 // the new format.
-func migrateAttemptEncoding(tx kvdb.RwTx, payHashBucket kvdb.RwBucket) error {
+func migrateAttemptEncoding(tx kvdb.RwTx, payHashBucket kvdb.RwBucket) er.R {
 	payAttemptBytes := payHashBucket.Get(paymentAttemptInfoKey)
 	if payAttemptBytes == nil {
 		return nil
@@ -129,7 +129,7 @@ func migrateAttemptEncoding(tx kvdb.RwTx, payHashBucket kvdb.RwBucket) error {
 	return payHashBucket.Put(paymentAttemptInfoKey, b.Bytes())
 }
 
-func deserializePaymentAttemptInfoLegacy(r io.Reader) (*PaymentAttemptInfo, error) {
+func deserializePaymentAttemptInfoLegacy(r io.Reader) (*PaymentAttemptInfo, er.R) {
 	a := &PaymentAttemptInfo{}
 	err := ReadElements(r, &a.PaymentID, &a.SessionKey)
 	if err != nil {
@@ -142,7 +142,7 @@ func deserializePaymentAttemptInfoLegacy(r io.Reader) (*PaymentAttemptInfo, erro
 	return a, nil
 }
 
-func serializePaymentAttemptInfoLegacy(w io.Writer, a *PaymentAttemptInfo) error {
+func serializePaymentAttemptInfoLegacy(w io.Writer, a *PaymentAttemptInfo) er.R {
 	if err := WriteElements(w, a.PaymentID, a.SessionKey); err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func serializePaymentAttemptInfoLegacy(w io.Writer, a *PaymentAttemptInfo) error
 	return nil
 }
 
-func deserializeHopLegacy(r io.Reader) (*Hop, error) {
+func deserializeHopLegacy(r io.Reader) (*Hop, er.R) {
 	h := &Hop{}
 
 	var pub []byte
@@ -172,7 +172,7 @@ func deserializeHopLegacy(r io.Reader) (*Hop, error) {
 	return h, nil
 }
 
-func serializeHopLegacy(w io.Writer, h *Hop) error {
+func serializeHopLegacy(w io.Writer, h *Hop) er.R {
 	if err := WriteElements(w,
 		h.PubKeyBytes[:], h.ChannelID, h.OutgoingTimeLock,
 		h.AmtToForward,
@@ -183,7 +183,7 @@ func serializeHopLegacy(w io.Writer, h *Hop) error {
 	return nil
 }
 
-func deserializeRouteLegacy(r io.Reader) (Route, error) {
+func deserializeRouteLegacy(r io.Reader) (Route, er.R) {
 	rt := Route{}
 	if err := ReadElements(r,
 		&rt.TotalTimeLock, &rt.TotalAmount,
@@ -215,7 +215,7 @@ func deserializeRouteLegacy(r io.Reader) (Route, error) {
 	return rt, nil
 }
 
-func serializeRouteLegacy(w io.Writer, r Route) error {
+func serializeRouteLegacy(w io.Writer, r Route) er.R {
 	if err := WriteElements(w,
 		r.TotalTimeLock, r.TotalAmount, r.SourcePubKey[:],
 	); err != nil {

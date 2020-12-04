@@ -145,7 +145,7 @@ type testChan struct {
 // makeTestGraph creates a new instance of a channeldb.ChannelGraph for testing
 // purposes. A callback which cleans up the created temporary directories is
 // also returned and intended to be executed after the test completes.
-func makeTestGraph() (*channeldb.ChannelGraph, func(), error) {
+func makeTestGraph() (*channeldb.ChannelGraph, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
 	tempDirName, err := ioutil.TempDir("", "channeldb")
@@ -169,7 +169,7 @@ func makeTestGraph() (*channeldb.ChannelGraph, func(), error) {
 
 // parseTestGraph returns a fully populated ChannelGraph given a path to a JSON
 // file which encodes a test graph.
-func parseTestGraph(path string) (*testGraphInstance, error) {
+func parseTestGraph(path string) (*testGraphInstance, er.R) {
 	graphJSON, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func parseTestGraph(path string) (*testGraphInstance, error) {
 
 	// First we insert all the nodes within the graph as vertexes.
 	for _, node := range g.Nodes {
-		pubBytes, err := hex.DecodeString(node.PubKey)
+		pubBytes, err := util.DecodeHex(node.PubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +222,7 @@ func parseTestGraph(path string) (*testGraphInstance, error) {
 		// We require all aliases within the graph to be unique for our
 		// tests.
 		if _, ok := aliasMap[node.Alias]; ok {
-			return nil, errors.New("aliases for nodes " +
+			return nil, er.New("aliases for nodes " +
 				"must be unique!")
 		}
 
@@ -239,7 +239,7 @@ func parseTestGraph(path string) (*testGraphInstance, error) {
 			// iteration, then the JSON has an error as only ONE
 			// node can be the source in the graph.
 			if source != nil {
-				return nil, errors.New("JSON is invalid " +
+				return nil, er.New("JSON is invalid " +
 					"multiple nodes are tagged as the source")
 			}
 
@@ -263,18 +263,18 @@ func parseTestGraph(path string) (*testGraphInstance, error) {
 	// With all the vertexes inserted, we can now insert the edges into the
 	// test graph.
 	for _, edge := range g.Edges {
-		node1Bytes, err := hex.DecodeString(edge.Node1)
+		node1Bytes, err := util.DecodeHex(edge.Node1)
 		if err != nil {
 			return nil, err
 		}
 
-		node2Bytes, err := hex.DecodeString(edge.Node2)
+		node2Bytes, err := util.DecodeHex(edge.Node2)
 		if err != nil {
 			return nil, err
 		}
 
 		if bytes.Compare(node1Bytes, node2Bytes) == 1 {
-			return nil, fmt.Errorf(
+			return nil, er.Errorf(
 				"channel %v node order incorrect",
 				edge.ChannelID,
 			)
@@ -410,7 +410,7 @@ type testGraphInstance struct {
 // not required and derived from the channel data. The goal is to keep
 // instantiating a test channel graph as light weight as possible.
 func createTestGraphFromChannels(testChannels []*testChannel, source string) (
-	*testGraphInstance, error) {
+	*testGraphInstance, er.R) {
 
 	// We'll use this fake address for the IP address of all the nodes in
 	// our tests. This value isn't needed for path finding so it doesn't
@@ -433,7 +433,7 @@ func createTestGraphFromChannels(testChannels []*testChannel, source string) (
 
 	nodeIndex := byte(0)
 	addNodeWithAlias := func(alias string, features *lnwire.FeatureVector) (
-		*channeldb.LightningNode, error) {
+		*channeldb.LightningNode, er.R) {
 
 		keyBytes := []byte{
 			0, 0, 0, 0, 0, 0, 0, 0,
@@ -968,7 +968,7 @@ func TestPathFindingWithAdditionalEdges(t *testing.T) {
 	// create a private channel between it and songoku. We'll then attempt
 	// to find a path from our source node, roasbeef, to doge.
 	dogePubKeyHex := "03dd46ff29a6941b4a2607525b043ec9b020b3f318a1bf281536fd7011ec59c882"
-	dogePubKeyBytes, err := hex.DecodeString(dogePubKeyHex)
+	dogePubKeyBytes, err := util.DecodeHex(dogePubKeyHex)
 	if err != nil {
 		t.Fatalf("unable to decode public key: %v", err)
 	}
@@ -998,7 +998,7 @@ func TestPathFindingWithAdditionalEdges(t *testing.T) {
 	}
 
 	find := func(r *RestrictParams) (
-		[]*channeldb.ChannelEdgePolicy, error) {
+		[]*channeldb.ChannelEdgePolicy, er.R) {
 
 		return dbFindPath(
 			graph.graph, additionalEdges, nil,
@@ -1419,7 +1419,7 @@ func TestPathNotAvailable(t *testing.T) {
 	// are either unreachable within the graph, or unknown result in an
 	// error.
 	unknownNodeStr := "03dd46ff29a6941b4a2607525b043ec9b020b3f318a1bf281536fd7011ec59c882"
-	unknownNodeBytes, err := hex.DecodeString(unknownNodeStr)
+	unknownNodeBytes, err := util.DecodeHex(unknownNodeStr)
 	if err != nil {
 		t.Fatalf("unable to parse bytes: %v", err)
 	}
@@ -1480,7 +1480,7 @@ func TestDestTLVGraphFallback(t *testing.T) {
 	}
 
 	find := func(r *RestrictParams,
-		target route.Vertex) ([]*channeldb.ChannelEdgePolicy, error) {
+		target route.Vertex) ([]*channeldb.ChannelEdgePolicy, er.R) {
 
 		return dbFindPath(
 			ctx.graph, nil, nil,
@@ -2902,7 +2902,7 @@ func dbFindPath(graph *channeldb.ChannelGraph,
 	bandwidthHints map[uint64]lnwire.MilliSatoshi,
 	r *RestrictParams, cfg *PathFindingConfig,
 	source, target route.Vertex, amt lnwire.MilliSatoshi,
-	finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, error) {
+	finalHtlcExpiry int32) ([]*channeldb.ChannelEdgePolicy, er.R) {
 
 	routingTx, err := newDbRoutingTx(graph)
 	if err != nil {

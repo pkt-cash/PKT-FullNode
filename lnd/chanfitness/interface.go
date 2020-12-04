@@ -3,6 +3,7 @@ package chanfitness
 import (
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -13,10 +14,10 @@ type peerMonitor interface {
 	onlineEvent(online bool)
 
 	// addChannel adds a new channel.
-	addChannel(channelPoint wire.OutPoint) error
+	addChannel(channelPoint wire.OutPoint) er.R
 
 	// removeChannel removes a channel.
-	removeChannel(channelPoint wire.OutPoint) error
+	removeChannel(channelPoint wire.OutPoint) er.R
 
 	// channelCount returns the number of channels that we currently have
 	// with the peer.
@@ -25,7 +26,7 @@ type peerMonitor interface {
 	// channelUptime looks up a channel and returns the amount of time that
 	// the channel has been monitored for and its uptime over this period.
 	channelUptime(channelPoint wire.OutPoint) (time.Duration,
-		time.Duration, error)
+		time.Duration, er.R)
 
 	// getFlapCount returns the peer's flap count and the timestamp that we
 	// last recorded a flap, which may be nil if we have never recorded a

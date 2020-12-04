@@ -5,18 +5,18 @@ package chainrpc
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/wire"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 )
@@ -63,12 +63,12 @@ var (
 	// ErrChainNotifierServerShuttingDown is an error returned when we are
 	// waiting for a notification to arrive but the chain notifier server
 	// has been shut down.
-	ErrChainNotifierServerShuttingDown = errors.New("chain notifier RPC " +
+	ErrChainNotifierServerShuttingDown = er.New("chain notifier RPC " +
 		"subserver shutting down")
 
 	// ErrChainNotifierServerNotActive indicates that the chain notifier hasn't
 	// finished the startup process.
-	ErrChainNotifierServerNotActive = errors.New("chain notifier RPC is " +
+	ErrChainNotifierServerNotActive = er.New("chain notifier RPC is " +
 		"still in the process of starting")
 )
 
@@ -91,7 +91,7 @@ type Server struct {
 // this method. If the macaroons we need aren't found in the filepath, then
 // we'll create them on start up. If we're unable to locate, or create the
 // macaroons we need, then we'll return with an error.
-func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
+func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, er.R) {
 	// If the path of the chain notifier macaroon wasn't generated, then
 	// we'll assume that it's found at the default network directory.
 	if cfg.ChainNotifierMacPath == "" {
@@ -145,7 +145,7 @@ var _ lnrpc.SubServer = (*Server)(nil)
 // Start launches any helper goroutines required for the server to function.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Start() error {
+func (s *Server) Start() er.R {
 	s.started.Do(func() {})
 	return nil
 }
@@ -153,7 +153,7 @@ func (s *Server) Start() error {
 // Stop signals any active goroutines for a graceful closure.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) Stop() error {
+func (s *Server) Stop() er.R {
 	s.stopped.Do(func() {
 		close(s.quit)
 	})
@@ -173,7 +173,7 @@ func (s *Server) Name() string {
 // called, each sub-server won't be able to have requests routed towards it.
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
-func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
+func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) er.R {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
 	RegisterChainNotifierServer(grpcServer, s)
@@ -190,7 +190,7 @@ func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 //
 // NOTE: This is part of the lnrpc.SubServer interface.
 func (s *Server) RegisterWithRestServer(ctx context.Context,
-	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) error {
+	mux *runtime.ServeMux, dest string, opts []grpc.DialOption) er.R {
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
@@ -216,10 +216,10 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 //
 // NOTE: This is part of the chainrpc.ChainNotifierService interface.
 func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
-	confStream ChainNotifier_RegisterConfirmationsNtfnServer) error {
+	confStream ChainNotifier_RegisterConfirmationsNtfnServer) er.R {
 
 	if !s.cfg.ChainNotifier.Started() {
-		return ErrChainNotifierServerNotActive
+		return ErrChainNotifierServerNotActive.Default()
 	}
 
 	// We'll start by reconstructing the RPC request into what the
@@ -245,7 +245,7 @@ func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
 		// dispatch an event to the caller indicating so.
 		case details, ok := <-confEvent.Confirmed:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			var rawTxBuf bytes.Buffer
@@ -274,7 +274,7 @@ func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
 		// of the chain, so we'll send an event describing so.
 		case _, ok := <-confEvent.NegativeConf:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			reorg := &ConfEvent{
@@ -289,7 +289,7 @@ func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
 		// so we can safely exit.
 		case _, ok := <-confEvent.Done:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			return nil
@@ -302,7 +302,7 @@ func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
 
 		// The server has been requested to shut down.
 		case <-s.quit:
-			return ErrChainNotifierServerShuttingDown
+			return ErrChainNotifierServerShuttingDown.Default()
 		}
 	}
 }
@@ -316,10 +316,10 @@ func (s *Server) RegisterConfirmationsNtfn(in *ConfRequest,
 //
 // NOTE: This is part of the chainrpc.ChainNotifierService interface.
 func (s *Server) RegisterSpendNtfn(in *SpendRequest,
-	spendStream ChainNotifier_RegisterSpendNtfnServer) error {
+	spendStream ChainNotifier_RegisterSpendNtfnServer) er.R {
 
 	if !s.cfg.ChainNotifier.Started() {
-		return ErrChainNotifierServerNotActive
+		return ErrChainNotifierServerNotActive.Default()
 	}
 
 	// We'll start by reconstructing the RPC request into what the
@@ -349,7 +349,7 @@ func (s *Server) RegisterSpendNtfn(in *SpendRequest,
 		// includes the details of the spending transaction.
 		case details, ok := <-spendEvent.Spend:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			var rawSpendingTxBuf bytes.Buffer
@@ -382,7 +382,7 @@ func (s *Server) RegisterSpendNtfn(in *SpendRequest,
 		// the chain. We'll return an event to the caller indicating so.
 		case _, ok := <-spendEvent.Reorg:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			reorg := &SpendEvent{
@@ -397,7 +397,7 @@ func (s *Server) RegisterSpendNtfn(in *SpendRequest,
 		// of the chain, so we can safely exit.
 		case _, ok := <-spendEvent.Done:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			return nil
@@ -410,7 +410,7 @@ func (s *Server) RegisterSpendNtfn(in *SpendRequest,
 
 		// The server has been requested to shut down.
 		case <-s.quit:
-			return ErrChainNotifierServerShuttingDown
+			return ErrChainNotifierServerShuttingDown.Default()
 		}
 	}
 }
@@ -427,10 +427,10 @@ func (s *Server) RegisterSpendNtfn(in *SpendRequest,
 //
 // NOTE: This is part of the chainrpc.ChainNotifierService interface.
 func (s *Server) RegisterBlockEpochNtfn(in *BlockEpoch,
-	epochStream ChainNotifier_RegisterBlockEpochNtfnServer) error {
+	epochStream ChainNotifier_RegisterBlockEpochNtfnServer) er.R {
 
 	if !s.cfg.ChainNotifier.Started() {
-		return ErrChainNotifierServerNotActive
+		return ErrChainNotifierServerNotActive.Default()
 	}
 
 	// We'll start by reconstructing the RPC request into what the
@@ -462,7 +462,7 @@ func (s *Server) RegisterBlockEpochNtfn(in *BlockEpoch,
 		// either be a new block or stale.
 		case blockEpoch, ok := <-epochEvent.Epochs:
 			if !ok {
-				return chainntnfs.ErrChainNotifierShuttingDown
+				return chainntnfs.ErrChainNotifierShuttingDown.Default()
 			}
 
 			epoch := &BlockEpoch{
@@ -481,7 +481,7 @@ func (s *Server) RegisterBlockEpochNtfn(in *BlockEpoch,
 
 		// The server has been requested to shut down.
 		case <-s.quit:
-			return ErrChainNotifierServerShuttingDown
+			return ErrChainNotifierServerShuttingDown.Default()
 		}
 	}
 }

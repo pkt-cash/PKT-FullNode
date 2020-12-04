@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -18,7 +20,7 @@ var (
 	testNow       = time.Unix(1, 0)
 )
 
-func randInvoice(value lnwire.MilliSatoshi) (*Invoice, error) {
+func randInvoice(value lnwire.MilliSatoshi) (*Invoice, er.R) {
 	var (
 		pre     lntypes.Preimage
 		payAddr [32]byte
@@ -292,25 +294,25 @@ func testInvoiceWorkflow(t *testing.T, test invWorkflowTest) {
 func TestAddDuplicatePayAddr(t *testing.T) {
 	db, cleanUp, err := MakeTestDB()
 	defer cleanUp()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create two invoices with the same payment addr.
 	invoice1, err := randInvoice(1000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	invoice2, err := randInvoice(20000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	invoice2.Terms.PaymentAddr = invoice1.Terms.PaymentAddr
 
 	// First insert should succeed.
 	inv1Hash := invoice1.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice1, inv1Hash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Second insert should fail with duplicate payment addr.
 	inv2Hash := invoice2.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice2, inv2Hash)
-	require.Error(t, err, ErrDuplicatePayAddr)
+	util.RequireErr(t, err, ErrDuplicatePayAddr)
 }
 
 // TestAddDuplicateKeysendPayAddr asserts that we permit duplicate payment
@@ -319,26 +321,26 @@ func TestAddDuplicatePayAddr(t *testing.T) {
 func TestAddDuplicateKeysendPayAddr(t *testing.T) {
 	db, cleanUp, err := MakeTestDB()
 	defer cleanUp()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create two invoices with the same _blank_ payment addr.
 	invoice1, err := randInvoice(1000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	invoice1.Terms.PaymentAddr = BlankPayAddr
 
 	invoice2, err := randInvoice(20000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	invoice2.Terms.PaymentAddr = BlankPayAddr
 
 	// Inserting both should succeed without a duplicate payment address
 	// failure.
 	inv1Hash := invoice1.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice1, inv1Hash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	inv2Hash := invoice2.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice2, inv2Hash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Querying for each should succeed. Here we use hash+addr refs since
 	// the lookup will fail if the hash and addr point to different
@@ -346,12 +348,12 @@ func TestAddDuplicateKeysendPayAddr(t *testing.T) {
 	// in the payment address index.
 	ref1 := InvoiceRefByHashAndAddr(inv1Hash, BlankPayAddr)
 	dbInv1, err := db.LookupInvoice(ref1)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, invoice1, &dbInv1)
 
 	ref2 := InvoiceRefByHashAndAddr(inv2Hash, BlankPayAddr)
 	dbInv2, err := db.LookupInvoice(ref2)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, invoice2, &dbInv2)
 }
 
@@ -360,37 +362,37 @@ func TestAddDuplicateKeysendPayAddr(t *testing.T) {
 func TestInvRefEquivocation(t *testing.T) {
 	db, cleanUp, err := MakeTestDB()
 	defer cleanUp()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Add two random invoices.
 	invoice1, err := randInvoice(1000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	inv1Hash := invoice1.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice1, inv1Hash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	invoice2, err := randInvoice(2000)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	inv2Hash := invoice2.Terms.PaymentPreimage.Hash()
 	_, err = db.AddInvoice(invoice2, inv2Hash)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Now, query using invoice 1's payment address, but invoice 2's payment
 	// hash. We expect an error since the invref points to multiple
 	// invoices.
 	ref := InvoiceRefByHashAndAddr(inv2Hash, invoice1.Terms.PaymentAddr)
 	_, err = db.LookupInvoice(ref)
-	require.Error(t, err, ErrInvRefEquivocation)
+	util.RequireErr(t, err, ErrInvRefEquivocation)
 
 	// The same error should be returned when updating an equivocating
 	// reference.
-	nop := func(_ *Invoice) (*InvoiceUpdateDesc, error) {
+	nop := func(_ *Invoice) (*InvoiceUpdateDesc, er.R) {
 		return nil, nil
 	}
 	_, err = db.UpdateInvoice(ref, nop)
-	require.Error(t, err, ErrInvRefEquivocation)
+	util.RequireErr(t, err, ErrInvRefEquivocation)
 }
 
 // TestInvoiceCancelSingleHtlc tests that a single htlc can be canceled on the
@@ -429,7 +431,7 @@ func TestInvoiceCancelSingleHtlc(t *testing.T) {
 
 	ref := InvoiceRefByHash(paymentHash)
 	invoice, err := db.UpdateInvoice(ref,
-		func(invoice *Invoice) (*InvoiceUpdateDesc, error) {
+		func(invoice *Invoice) (*InvoiceUpdateDesc, er.R) {
 			return &InvoiceUpdateDesc{
 				AddHtlcs: map[CircuitKey]*HtlcAcceptDesc{
 					key: &htlc,
@@ -448,7 +450,7 @@ func TestInvoiceCancelSingleHtlc(t *testing.T) {
 
 	// Cancel the htlc again.
 	invoice, err = db.UpdateInvoice(ref,
-		func(invoice *Invoice) (*InvoiceUpdateDesc, error) {
+		func(invoice *Invoice) (*InvoiceUpdateDesc, er.R) {
 			return &InvoiceUpdateDesc{
 				CancelHtlcs: map[CircuitKey]struct{}{
 					key: {},
@@ -479,7 +481,7 @@ func TestInvoiceAddTimeSeries(t *testing.T) {
 	}
 
 	_, err = db.InvoicesAddedSince(0)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// We'll start off by creating 20 random invoices, and inserting them
 	// into the database.
@@ -553,7 +555,7 @@ func TestInvoiceAddTimeSeries(t *testing.T) {
 	}
 
 	_, err = db.InvoicesSettledSince(0)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	var settledInvoices []Invoice
 	var settleIndex uint64 = 1
@@ -647,7 +649,7 @@ func TestScanInvoices(t *testing.T) {
 
 	}
 
-	scanFunc := func(paymentHash lntypes.Hash, invoice *Invoice) error {
+	scanFunc := func(paymentHash lntypes.Hash, invoice *Invoice) er.R {
 		invoices[paymentHash] = invoice
 		callCount++
 
@@ -655,7 +657,7 @@ func TestScanInvoices(t *testing.T) {
 	}
 
 	// With an empty DB we expect to not scan any invoices.
-	require.NoError(t, db.ScanInvoices(scanFunc, reset))
+	util.RequireNoErr(t, db.ScanInvoices(scanFunc, reset))
 	require.Equal(t, 0, len(invoices))
 	require.Equal(t, 0, callCount)
 	require.Equal(t, 1, resetCount)
@@ -667,17 +669,17 @@ func TestScanInvoices(t *testing.T) {
 	// payment hashes as expected.
 	for i := 1; i <= numInvoices; i++ {
 		invoice, err := randInvoice(lnwire.MilliSatoshi(i))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		paymentHash := invoice.Terms.PaymentPreimage.Hash()
 		testInvoices[paymentHash] = invoice
 
 		_, err = db.AddInvoice(invoice, paymentHash)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 	}
 
 	resetCount = 0
-	require.NoError(t, db.ScanInvoices(scanFunc, reset))
+	util.RequireNoErr(t, db.ScanInvoices(scanFunc, reset))
 	require.Equal(t, numInvoices, callCount)
 	require.Equal(t, testInvoices, invoices)
 	require.Equal(t, 1, resetCount)
@@ -1040,9 +1042,9 @@ func TestQueryInvoices(t *testing.T) {
 // getUpdateInvoice returns an invoice update callback that, when called,
 // settles the invoice with the given amount.
 func getUpdateInvoice(amt lnwire.MilliSatoshi) InvoiceUpdateCallback {
-	return func(invoice *Invoice) (*InvoiceUpdateDesc, error) {
+	return func(invoice *Invoice) (*InvoiceUpdateDesc, er.R) {
 		if invoice.State == ContractSettled {
-			return nil, ErrInvoiceAlreadySettled
+			return nil, ErrInvoiceAlreadySettled.Default()
 		}
 
 		noRecords := make(record.CustomSet)
@@ -1101,7 +1103,7 @@ func TestCustomRecords(t *testing.T) {
 
 	ref := InvoiceRefByHash(paymentHash)
 	_, err = db.UpdateInvoice(ref,
-		func(invoice *Invoice) (*InvoiceUpdateDesc, error) {
+		func(invoice *Invoice) (*InvoiceUpdateDesc, er.R) {
 			return &InvoiceUpdateDesc{
 				AddHtlcs: map[CircuitKey]*HtlcAcceptDesc{
 					key: {
@@ -1159,7 +1161,7 @@ func TestDeleteInvoices(t *testing.T) {
 
 	db, cleanup, err := MakeTestDB()
 	defer cleanup()
-	require.NoError(t, err, "unable to make test db")
+	util.RequireNoErr(t, err, "unable to make test db")
 
 	// Add some invoices to the test db.
 	numInvoices := 3
@@ -1167,11 +1169,11 @@ func TestDeleteInvoices(t *testing.T) {
 
 	for i := 0; i < numInvoices; i++ {
 		invoice, err := randInvoice(lnwire.MilliSatoshi(i + 1))
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		paymentHash := invoice.Terms.PaymentPreimage.Hash()
 		addIndex, err := db.AddInvoice(invoice, paymentHash)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		// Settle the second invoice.
 		if i == 1 {
@@ -1179,7 +1181,7 @@ func TestDeleteInvoices(t *testing.T) {
 				InvoiceRefByHash(paymentHash),
 				getUpdateInvoice(invoice.Terms.Value),
 			)
-			require.NoError(t, err, "unable to settle invoice")
+			util.RequireNoErr(t, err, "unable to settle invoice")
 		}
 
 		// store the delete ref for later.
@@ -1202,13 +1204,13 @@ func TestDeleteInvoices(t *testing.T) {
 
 		// Check that we really have 3 invoices.
 		response, err := db.QueryInvoices(query)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		require.Equal(t, count, len(response.Invoices))
 	}
 
 	// XOR one byte of one of the references' hash and attempt to delete.
 	invoicesToDelete[0].PayHash[2] ^= 3
-	require.Error(t, db.DeleteInvoice(invoicesToDelete))
+	util.RequireErr(t, db.DeleteInvoice(invoicesToDelete))
 	assertInvoiceCount(3)
 
 	// Restore the hash.
@@ -1217,7 +1219,7 @@ func TestDeleteInvoices(t *testing.T) {
 	// XOR one byte of one of the references' payment address and attempt
 	// to delete.
 	invoicesToDelete[1].PayAddr[5] ^= 7
-	require.Error(t, db.DeleteInvoice(invoicesToDelete))
+	util.RequireErr(t, db.DeleteInvoice(invoicesToDelete))
 	assertInvoiceCount(3)
 
 	// Restore the payment address.
@@ -1226,7 +1228,7 @@ func TestDeleteInvoices(t *testing.T) {
 	// XOR the second invoice's payment settle index as it is settled, and
 	// attempt to delete.
 	invoicesToDelete[1].SettleIndex ^= 11
-	require.Error(t, db.DeleteInvoice(invoicesToDelete))
+	util.RequireErr(t, db.DeleteInvoice(invoicesToDelete))
 	assertInvoiceCount(3)
 
 	// Restore the settle index.
@@ -1234,13 +1236,13 @@ func TestDeleteInvoices(t *testing.T) {
 
 	// XOR the add index for one of the references and attempt to delete.
 	invoicesToDelete[2].AddIndex ^= 13
-	require.Error(t, db.DeleteInvoice(invoicesToDelete))
+	util.RequireErr(t, db.DeleteInvoice(invoicesToDelete))
 	assertInvoiceCount(3)
 
 	// Restore the add index.
 	invoicesToDelete[2].AddIndex ^= 13
 
 	// Delete should succeed with all the valid references.
-	require.NoError(t, db.DeleteInvoice(invoicesToDelete))
+	util.RequireNoErr(t, db.DeleteInvoice(invoicesToDelete))
 	assertInvoiceCount(0)
 }

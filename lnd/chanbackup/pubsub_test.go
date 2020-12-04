@@ -1,12 +1,12 @@
 package chanbackup
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type mockSwapper struct {
@@ -27,14 +27,14 @@ func newMockSwapper(keychain keychain.KeyRing) *mockSwapper {
 	}
 }
 
-func (m *mockSwapper) UpdateAndSwap(newBackup PackedMulti) error {
+func (m *mockSwapper) UpdateAndSwap(newBackup PackedMulti) er.R {
 	if m.fail {
-		return fmt.Errorf("fail")
+		return er.Errorf("fail")
 	}
 
 	swapState, err := newBackup.Unpack(m.keyChain)
 	if err != nil {
-		return fmt.Errorf("unable to decode on disk swaps: %v", err)
+		return er.Errorf("unable to decode on disk swaps: %v", err)
 	}
 
 	m.swapState = swapState
@@ -44,7 +44,7 @@ func (m *mockSwapper) UpdateAndSwap(newBackup PackedMulti) error {
 	return nil
 }
 
-func (m *mockSwapper) ExtractMulti(keychain keychain.KeyRing) (*Multi, error) {
+func (m *mockSwapper) ExtractMulti(keychain keychain.KeyRing) (*Multi, er.R) {
 	return m.swapState, nil
 }
 
@@ -61,10 +61,10 @@ func newMockChannelNotifier() *mockChannelNotifier {
 }
 
 func (m *mockChannelNotifier) SubscribeChans(chans map[wire.OutPoint]struct{}) (
-	*ChannelSubscription, error) {
+	*ChannelSubscription, er.R) {
 
 	if m.fail {
-		return nil, fmt.Errorf("fail")
+		return nil, er.Errorf("fail")
 	}
 
 	return &ChannelSubscription{

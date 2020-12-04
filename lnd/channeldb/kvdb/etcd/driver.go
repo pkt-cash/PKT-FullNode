@@ -13,9 +13,9 @@ const (
 )
 
 // parseArgs parses the arguments from the walletdb Open/Create methods.
-func parseArgs(funcName string, args ...interface{}) (*BackendConfig, error) {
+func parseArgs(funcName string, args ...interface{}) (*BackendConfig, er.R) {
 	if len(args) != 1 {
-		return nil, fmt.Errorf("invalid number of arguments to %s.%s -- "+
+		return nil, er.Errorf("invalid number of arguments to %s.%s -- "+
 			"expected: etcd.BackendConfig",
 			dbType, funcName,
 		)
@@ -23,7 +23,7 @@ func parseArgs(funcName string, args ...interface{}) (*BackendConfig, error) {
 
 	config, ok := args[0].(BackendConfig)
 	if !ok {
-		return nil, fmt.Errorf("argument to %s.%s is invalid -- "+
+		return nil, er.Errorf("argument to %s.%s is invalid -- "+
 			"expected: etcd.BackendConfig",
 			dbType, funcName,
 		)
@@ -34,7 +34,7 @@ func parseArgs(funcName string, args ...interface{}) (*BackendConfig, error) {
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(args ...interface{}) (walletdb.DB, error) {
+func createDBDriver(args ...interface{}) (walletdb.DB, er.R) {
 	config, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func createDBDriver(args ...interface{}) (walletdb.DB, error) {
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(args ...interface{}) (walletdb.DB, error) {
+func openDBDriver(args ...interface{}) (walletdb.DB, er.R) {
 	config, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err

@@ -10,9 +10,10 @@ import (
 
 	"net"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/wire"
@@ -74,89 +75,89 @@ func (a addressType) AddrLen() uint16 {
 //
 // TODO(roasbeef): this should eventually draw from a buffer pool for
 // serialization.
-func WriteElement(w io.Writer, element interface{}) error {
+func WriteElement(w io.Writer, element interface{}) er.R {
 	switch e := element.(type) {
 	case NodeAlias:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
 	case ShortChanIDEncoding:
 		var b [1]byte
 		b[0] = uint8(e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case uint8:
 		var b [1]byte
 		b[0] = e
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case FundingFlag:
 		var b [1]byte
 		b[0] = uint8(e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case uint16:
 		var b [2]byte
 		binary.BigEndian.PutUint16(b[:], e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case ChanUpdateMsgFlags:
 		var b [1]byte
 		b[0] = uint8(e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case ChanUpdateChanFlags:
 		var b [1]byte
 		b[0] = uint8(e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case MilliSatoshi:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(e))
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case btcutil.Amount:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(e))
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case uint32:
 		var b [4]byte
 		binary.BigEndian.PutUint32(b[:], e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case uint64:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], e)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case *btcec.PublicKey:
 		if e == nil {
-			return fmt.Errorf("cannot write nil pubkey")
+			return er.Errorf("cannot write nil pubkey")
 		}
 
 		var b [33]byte
 		serializedPubkey := e.SerializeCompressed()
 		copy(b[:], serializedPubkey)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	case []Sig:
 		var b [2]byte
 		numSigs := uint16(len(e))
 		binary.BigEndian.PutUint16(b[:], numSigs)
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 
@@ -167,55 +168,55 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 	case Sig:
 		// Write buffer
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case PingPayload:
 		var l [2]byte
 		binary.BigEndian.PutUint16(l[:], uint16(len(e)))
-		if _, err := w.Write(l[:]); err != nil {
+		if _, err := util.Write(w, l[:]); err != nil {
 			return err
 		}
 
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case PongPayload:
 		var l [2]byte
 		binary.BigEndian.PutUint16(l[:], uint16(len(e)))
-		if _, err := w.Write(l[:]); err != nil {
+		if _, err := util.Write(w, l[:]); err != nil {
 			return err
 		}
 
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case ErrorData:
 		var l [2]byte
 		binary.BigEndian.PutUint16(l[:], uint16(len(e)))
-		if _, err := w.Write(l[:]); err != nil {
+		if _, err := util.Write(w, l[:]); err != nil {
 			return err
 		}
 
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case OpaqueReason:
 		var l [2]byte
 		binary.BigEndian.PutUint16(l[:], uint16(len(e)))
-		if _, err := w.Write(l[:]); err != nil {
+		if _, err := util.Write(w, l[:]); err != nil {
 			return err
 		}
 
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case [33]byte:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case []byte:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case PkScript:
@@ -223,7 +224,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		// 34 bytes long.
 		scriptLength := len(e)
 		if scriptLength > 34 {
-			return fmt.Errorf("'PkScript' too long")
+			return er.Errorf("'PkScript' too long")
 		}
 
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
@@ -231,7 +232,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 	case *RawFeatureVector:
 		if e == nil {
-			return fmt.Errorf("cannot write nil feature vector")
+			return er.Errorf("cannot write nil feature vector")
 		}
 
 		if err := e.Encode(w); err != nil {
@@ -241,24 +242,24 @@ func WriteElement(w io.Writer, element interface{}) error {
 	case wire.OutPoint:
 		var h [32]byte
 		copy(h[:], e.Hash[:])
-		if _, err := w.Write(h[:]); err != nil {
+		if _, err := util.Write(w, h[:]); err != nil {
 			return err
 		}
 
 		if e.Index > math.MaxUint16 {
-			return fmt.Errorf("index for outpoint (%v) is "+
+			return er.Errorf("index for outpoint (%v) is "+
 				"greater than max index of %v", e.Index,
 				math.MaxUint16)
 		}
 
 		var idx [2]byte
 		binary.BigEndian.PutUint16(idx[:], uint16(e.Index))
-		if _, err := w.Write(idx[:]); err != nil {
+		if _, err := util.Write(w, idx[:]); err != nil {
 			return err
 		}
 
 	case ChannelID:
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 	case FailCode:
@@ -268,105 +269,105 @@ func WriteElement(w io.Writer, element interface{}) error {
 	case ShortChannelID:
 		// Check that field fit in 3 bytes and write the blockHeight
 		if e.BlockHeight > ((1 << 24) - 1) {
-			return errors.New("block height should fit in 3 bytes")
+			return er.New("block height should fit in 3 bytes")
 		}
 
 		var blockHeight [4]byte
 		binary.BigEndian.PutUint32(blockHeight[:], e.BlockHeight)
 
-		if _, err := w.Write(blockHeight[1:]); err != nil {
+		if _, err := util.Write(w, blockHeight[1:]); err != nil {
 			return err
 		}
 
 		// Check that field fit in 3 bytes and write the txIndex
 		if e.TxIndex > ((1 << 24) - 1) {
-			return errors.New("tx index should fit in 3 bytes")
+			return er.New("tx index should fit in 3 bytes")
 		}
 
 		var txIndex [4]byte
 		binary.BigEndian.PutUint32(txIndex[:], e.TxIndex)
-		if _, err := w.Write(txIndex[1:]); err != nil {
+		if _, err := util.Write(w, txIndex[1:]); err != nil {
 			return err
 		}
 
 		// Write the txPosition
 		var txPosition [2]byte
 		binary.BigEndian.PutUint16(txPosition[:], e.TxPosition)
-		if _, err := w.Write(txPosition[:]); err != nil {
+		if _, err := util.Write(w, txPosition[:]); err != nil {
 			return err
 		}
 
 	case *net.TCPAddr:
 		if e == nil {
-			return fmt.Errorf("cannot write nil TCPAddr")
+			return er.Errorf("cannot write nil TCPAddr")
 		}
 
 		if e.IP.To4() != nil {
 			var descriptor [1]byte
 			descriptor[0] = uint8(tcp4Addr)
-			if _, err := w.Write(descriptor[:]); err != nil {
+			if _, err := util.Write(w, descriptor[:]); err != nil {
 				return err
 			}
 
 			var ip [4]byte
 			copy(ip[:], e.IP.To4())
-			if _, err := w.Write(ip[:]); err != nil {
+			if _, err := util.Write(w, ip[:]); err != nil {
 				return err
 			}
 		} else {
 			var descriptor [1]byte
 			descriptor[0] = uint8(tcp6Addr)
-			if _, err := w.Write(descriptor[:]); err != nil {
+			if _, err := util.Write(w, descriptor[:]); err != nil {
 				return err
 			}
 			var ip [16]byte
 			copy(ip[:], e.IP.To16())
-			if _, err := w.Write(ip[:]); err != nil {
+			if _, err := util.Write(w, ip[:]); err != nil {
 				return err
 			}
 		}
 		var port [2]byte
 		binary.BigEndian.PutUint16(port[:], uint16(e.Port))
-		if _, err := w.Write(port[:]); err != nil {
+		if _, err := util.Write(w, port[:]); err != nil {
 			return err
 		}
 
 	case *tor.OnionAddr:
 		if e == nil {
-			return errors.New("cannot write nil onion address")
+			return er.New("cannot write nil onion address")
 		}
 
 		var suffixIndex int
 		switch len(e.OnionService) {
 		case tor.V2Len:
 			descriptor := []byte{byte(v2OnionAddr)}
-			if _, err := w.Write(descriptor); err != nil {
+			if _, err := util.Write(w, descriptor); err != nil {
 				return err
 			}
 			suffixIndex = tor.V2Len - tor.OnionSuffixLen
 		case tor.V3Len:
 			descriptor := []byte{byte(v3OnionAddr)}
-			if _, err := w.Write(descriptor); err != nil {
+			if _, err := util.Write(w, descriptor); err != nil {
 				return err
 			}
 			suffixIndex = tor.V3Len - tor.OnionSuffixLen
 		default:
-			return errors.New("unknown onion service length")
+			return er.New("unknown onion service length")
 		}
 
-		host, err := tor.Base32Encoding.DecodeString(
+		host, errr := tor.Base32Encoding.DecodeString(
 			e.OnionService[:suffixIndex],
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return er.E(errr)
 		}
-		if _, err := w.Write(host); err != nil {
+		if _, err := util.Write(w, host); err != nil {
 			return err
 		}
 
 		var port [2]byte
 		binary.BigEndian.PutUint16(port[:], uint16(e.Port))
-		if _, err := w.Write(port[:]); err != nil {
+		if _, err := util.Write(w, port[:]); err != nil {
 			return err
 		}
 
@@ -391,7 +392,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		// Finally, we'll write out the raw addresses themselves, but
 		// only if we have any bytes to write.
 		if addrLen > 0 {
-			if _, err := w.Write(addrBuf.Bytes()); err != nil {
+			if _, err := util.Write(w, addrBuf.Bytes()); err != nil {
 				return err
 			}
 		}
@@ -403,10 +404,10 @@ func WriteElement(w io.Writer, element interface{}) error {
 	case DeliveryAddress:
 		var length [2]byte
 		binary.BigEndian.PutUint16(length[:], uint16(len(e)))
-		if _, err := w.Write(length[:]); err != nil {
+		if _, err := util.Write(w, length[:]); err != nil {
 			return err
 		}
-		if _, err := w.Write(e[:]); err != nil {
+		if _, err := util.Write(w, e[:]); err != nil {
 			return err
 		}
 
@@ -415,11 +416,11 @@ func WriteElement(w io.Writer, element interface{}) error {
 		if e {
 			b[0] = 1
 		}
-		if _, err := w.Write(b[:]); err != nil {
+		if _, err := util.Write(w, b[:]); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown type in WriteElement: %T", e)
+		return er.Errorf("unknown type in WriteElement: %T", e)
 	}
 
 	return nil
@@ -427,7 +428,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 
 // WriteElements is writes each element in the elements slice to the passed
 // io.Writer using WriteElement.
-func WriteElements(w io.Writer, elements ...interface{}) error {
+func WriteElements(w io.Writer, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := WriteElement(w, element)
 		if err != nil {
@@ -439,12 +440,11 @@ func WriteElements(w io.Writer, elements ...interface{}) error {
 
 // ReadElement is a one-stop utility function to deserialize any datastructure
 // encoded using the serialization format of lnwire.
-func ReadElement(r io.Reader, element interface{}) error {
-	var err error
+func ReadElement(r io.Reader, element interface{}) er.R {
 	switch e := element.(type) {
 	case *bool:
 		var b [1]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 
@@ -454,7 +454,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case *NodeAlias:
 		var a [32]byte
-		if _, err := io.ReadFull(r, a[:]); err != nil {
+		if _, err := util.ReadFull(r, a[:]); err != nil {
 			return err
 		}
 
@@ -467,66 +467,66 @@ func ReadElement(r io.Reader, element interface{}) error {
 	case *ShortChanIDEncoding:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = ShortChanIDEncoding(b[0])
 	case *uint8:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = b[0]
 	case *FundingFlag:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = FundingFlag(b[0])
 	case *uint16:
 		var b [2]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 		*e = binary.BigEndian.Uint16(b[:])
 	case *ChanUpdateMsgFlags:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = ChanUpdateMsgFlags(b[0])
 	case *ChanUpdateChanFlags:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = ChanUpdateChanFlags(b[0])
 	case *uint32:
 		var b [4]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 		*e = binary.BigEndian.Uint32(b[:])
 	case *uint64:
 		var b [8]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 		*e = binary.BigEndian.Uint64(b[:])
 	case *MilliSatoshi:
 		var b [8]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 		*e = MilliSatoshi(int64(binary.BigEndian.Uint64(b[:])))
 	case *btcutil.Amount:
 		var b [8]byte
-		if _, err := io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 		*e = btcutil.Amount(int64(binary.BigEndian.Uint64(b[:])))
 	case **btcec.PublicKey:
 		var b [btcec.PubKeyBytesLenCompressed]byte
-		if _, err = io.ReadFull(r, b[:]); err != nil {
+		if _, err := util.ReadFull(r, b[:]); err != nil {
 			return err
 		}
 
@@ -537,7 +537,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = pubKey
 	case **RawFeatureVector:
 		f := NewRawFeatureVector()
-		err = f.Decode(r)
+		err := f.Decode(r)
 		if err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	case *[]Sig:
 		var l [2]byte
-		if _, err := io.ReadFull(r, l[:]); err != nil {
+		if _, err := util.ReadFull(r, l[:]); err != nil {
 			return err
 		}
 		numSigs := binary.BigEndian.Uint16(l[:])
@@ -564,59 +564,59 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = sigs
 
 	case *Sig:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 	case *OpaqueReason:
 		var l [2]byte
-		if _, err := io.ReadFull(r, l[:]); err != nil {
+		if _, err := util.ReadFull(r, l[:]); err != nil {
 			return err
 		}
 		reasonLen := binary.BigEndian.Uint16(l[:])
 
 		*e = OpaqueReason(make([]byte, reasonLen))
-		if _, err := io.ReadFull(r, *e); err != nil {
+		if _, err := util.ReadFull(r, *e); err != nil {
 			return err
 		}
 	case *ErrorData:
 		var l [2]byte
-		if _, err := io.ReadFull(r, l[:]); err != nil {
+		if _, err := util.ReadFull(r, l[:]); err != nil {
 			return err
 		}
 		errorLen := binary.BigEndian.Uint16(l[:])
 
 		*e = ErrorData(make([]byte, errorLen))
-		if _, err := io.ReadFull(r, *e); err != nil {
+		if _, err := util.ReadFull(r, *e); err != nil {
 			return err
 		}
 	case *PingPayload:
 		var l [2]byte
-		if _, err := io.ReadFull(r, l[:]); err != nil {
+		if _, err := util.ReadFull(r, l[:]); err != nil {
 			return err
 		}
 		pingLen := binary.BigEndian.Uint16(l[:])
 
 		*e = PingPayload(make([]byte, pingLen))
-		if _, err := io.ReadFull(r, *e); err != nil {
+		if _, err := util.ReadFull(r, *e); err != nil {
 			return err
 		}
 	case *PongPayload:
 		var l [2]byte
-		if _, err := io.ReadFull(r, l[:]); err != nil {
+		if _, err := util.ReadFull(r, l[:]); err != nil {
 			return err
 		}
 		pongLen := binary.BigEndian.Uint16(l[:])
 
 		*e = PongPayload(make([]byte, pongLen))
-		if _, err := io.ReadFull(r, *e); err != nil {
+		if _, err := util.ReadFull(r, *e); err != nil {
 			return err
 		}
 	case *[33]byte:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 	case []byte:
-		if _, err := io.ReadFull(r, e); err != nil {
+		if _, err := util.ReadFull(r, e); err != nil {
 			return err
 		}
 	case *PkScript:
@@ -627,7 +627,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = pkScript
 	case *wire.OutPoint:
 		var h [32]byte
-		if _, err = io.ReadFull(r, h[:]); err != nil {
+		if _, err := util.ReadFull(r, h[:]); err != nil {
 			return err
 		}
 		hash, err := chainhash.NewHash(h[:])
@@ -636,7 +636,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 
 		var idxBytes [2]byte
-		_, errr := io.ReadFull(r, idxBytes[:])
+		_, errr := util.ReadFull(r, idxBytes[:])
 		if errr != nil {
 			return errr
 		}
@@ -651,23 +651,23 @@ func ReadElement(r io.Reader, element interface{}) error {
 			return err
 		}
 	case *ChannelID:
-		if _, err := io.ReadFull(r, e[:]); err != nil {
+		if _, err := util.ReadFull(r, e[:]); err != nil {
 			return err
 		}
 
 	case *ShortChannelID:
 		var blockHeight [4]byte
-		if _, err = io.ReadFull(r, blockHeight[1:]); err != nil {
+		if _, err := util.ReadFull(r, blockHeight[1:]); err != nil {
 			return err
 		}
 
 		var txIndex [4]byte
-		if _, err = io.ReadFull(r, txIndex[1:]); err != nil {
+		if _, err := util.ReadFull(r, txIndex[1:]); err != nil {
 			return err
 		}
 
 		var txPosition [2]byte
-		if _, err = io.ReadFull(r, txPosition[:]); err != nil {
+		if _, err := util.ReadFull(r, txPosition[:]); err != nil {
 			return err
 		}
 
@@ -681,7 +681,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		// First, we'll read the number of total bytes that have been
 		// used to encode the set of addresses.
 		var numAddrsBytes [2]byte
-		if _, err = io.ReadFull(r, numAddrsBytes[:]); err != nil {
+		if _, err := util.ReadFull(r, numAddrsBytes[:]); err != nil {
 			return err
 		}
 		addrsLen := binary.BigEndian.Uint16(numAddrsBytes[:])
@@ -689,7 +689,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		// With the number of addresses, read, we'll now pull in the
 		// buffer of the encoded addresses into memory.
 		addrs := make([]byte, addrsLen)
-		if _, err := io.ReadFull(r, addrs[:]); err != nil {
+		if _, err := util.ReadFull(r, addrs[:]); err != nil {
 			return err
 		}
 		addrBuf := bytes.NewReader(addrs)
@@ -704,7 +704,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 		for addrBytesRead < addrsLen {
 			var descriptor [1]byte
-			if _, err = io.ReadFull(addrBuf, descriptor[:]); err != nil {
+			if _, err := util.ReadFull(addrBuf, descriptor[:]); err != nil {
 				return err
 			}
 
@@ -718,12 +718,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 			case tcp4Addr:
 				var ip [4]byte
-				if _, err := io.ReadFull(addrBuf, ip[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, ip[:]); err != nil {
 					return err
 				}
 
 				var port [2]byte
-				if _, err := io.ReadFull(addrBuf, port[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, port[:]); err != nil {
 					return err
 				}
 
@@ -735,12 +735,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 			case tcp6Addr:
 				var ip [16]byte
-				if _, err := io.ReadFull(addrBuf, ip[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, ip[:]); err != nil {
 					return err
 				}
 
 				var port [2]byte
-				if _, err := io.ReadFull(addrBuf, port[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, port[:]); err != nil {
 					return err
 				}
 
@@ -752,12 +752,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 			case v2OnionAddr:
 				var h [tor.V2DecodedLen]byte
-				if _, err := io.ReadFull(addrBuf, h[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, h[:]); err != nil {
 					return err
 				}
 
 				var p [2]byte
-				if _, err := io.ReadFull(addrBuf, p[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, p[:]); err != nil {
 					return err
 				}
 
@@ -773,12 +773,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 			case v3OnionAddr:
 				var h [tor.V3DecodedLen]byte
-				if _, err := io.ReadFull(addrBuf, h[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, h[:]); err != nil {
 					return err
 				}
 
 				var p [2]byte
-				if _, err := io.ReadFull(addrBuf, p[:]); err != nil {
+				if _, err := util.ReadFull(addrBuf, p[:]); err != nil {
 					return err
 				}
 
@@ -793,7 +793,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 				addrBytesRead += aType.AddrLen()
 
 			default:
-				return &ErrUnknownAddrType{aType}
+				return ErrUnknownAddrType.New(fmt.Sprintf("%v", aType), nil)
 			}
 
 			addresses = append(addresses, address)
@@ -811,21 +811,21 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 	case *DeliveryAddress:
 		var addrLen [2]byte
-		if _, err = io.ReadFull(r, addrLen[:]); err != nil {
+		if _, err := util.ReadFull(r, addrLen[:]); err != nil {
 			return err
 		}
 		length := binary.BigEndian.Uint16(addrLen[:])
 
 		var addrBytes [deliveryAddressMaxSize]byte
 		if length > deliveryAddressMaxSize {
-			return fmt.Errorf("cannot read %d bytes into addrBytes", length)
+			return er.Errorf("cannot read %d bytes into addrBytes", length)
 		}
-		if _, err = io.ReadFull(r, addrBytes[:length]); err != nil {
+		if _, err := util.ReadFull(r, addrBytes[:length]); err != nil {
 			return err
 		}
 		*e = addrBytes[:length]
 	default:
-		return fmt.Errorf("unknown type in ReadElement: %T", e)
+		return er.Errorf("unknown type in ReadElement: %T", e)
 	}
 
 	return nil
@@ -834,7 +834,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 // ReadElements deserializes a variable number of elements into the passed
 // io.Reader, with each element being deserialized according to the ReadElement
 // function.
-func ReadElements(r io.Reader, elements ...interface{}) error {
+func ReadElements(r io.Reader, elements ...interface{}) er.R {
 	for _, element := range elements {
 		err := ReadElement(r, element)
 		if err != nil {

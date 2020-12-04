@@ -1,8 +1,7 @@
 package wtserver
 
 import (
-	"fmt"
-
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
 )
@@ -12,7 +11,7 @@ import (
 // updates will be consumed if the peer does not signal IsComplete on a
 // particular update.
 func (s *Server) handleStateUpdates(peer Peer, id *wtdb.SessionID,
-	update *wtwire.StateUpdate) error {
+	update *wtwire.StateUpdate) er.R {
 
 	// Set the current update to the first update read off the wire.
 	// Additional updates will be read if this value is set to nil after
@@ -30,7 +29,7 @@ func (s *Server) handleStateUpdates(peer Peer, id *wtdb.SessionID,
 			var ok bool
 			curUpdate, ok = nextMsg.(*wtwire.StateUpdate)
 			if !ok {
-				return fmt.Errorf("client sent %T after "+
+				return er.Errorf("client sent %T after "+
 					"StateUpdate", nextMsg)
 			}
 		}
@@ -53,7 +52,7 @@ func (s *Server) handleStateUpdates(peer Peer, id *wtdb.SessionID,
 
 		select {
 		case <-s.quit:
-			return ErrServerExiting
+			return ErrServerExiting.Default()
 		default:
 		}
 	}
@@ -65,7 +64,7 @@ func (s *Server) handleStateUpdates(peer Peer, id *wtdb.SessionID,
 // StateUpdateCodes specified by the watchtower wire protocol, and sent back
 // using a StateUpdateReply message.
 func (s *Server) handleStateUpdate(peer Peer, id *wtdb.SessionID,
-	update *wtwire.StateUpdate) error {
+	update *wtwire.StateUpdate) er.R {
 
 	var (
 		lastApplied uint16
@@ -131,7 +130,7 @@ func (s *Server) handleStateUpdate(peer Peer, id *wtdb.SessionID,
 // Otherwise, this method returns a connection error to ensure we don't continue
 // communication with the client.
 func (s *Server) replyStateUpdate(peer Peer, id *wtdb.SessionID,
-	code wtwire.StateUpdateCode, lastApplied uint16) error {
+	code wtwire.StateUpdateCode, lastApplied uint16) er.R {
 
 	msg := &wtwire.StateUpdateReply{
 		Code:        code,

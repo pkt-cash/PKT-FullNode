@@ -1,10 +1,13 @@
 package sphinx
 
-import "errors"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // ErrAlreadyCommitted signals that an entry could not be added to the
 // batch because it has already been persisted.
-var ErrAlreadyCommitted = errors.New("cannot add to batch after committing")
+var ErrAlreadyCommitted = Err.CodeWithDetail("ErrAlreadyCommitted",
+	"cannot add to batch after committing")
 
 // Batch is an object used to incrementally construct a set of entries to add to
 // the replay log. After construction is completed, it can be added to the log
@@ -51,10 +54,10 @@ func NewBatch(id []byte) *Batch {
 // returns an error in the event that the batch was already committed to disk.
 // Decisions regarding whether or not a particular sequence number is a replay
 // is ultimately reported via the batch's ReplaySet after committing to disk.
-func (b *Batch) Put(seqNum uint16, hashPrefix *HashPrefix, cltv uint32) error {
+func (b *Batch) Put(seqNum uint16, hashPrefix *HashPrefix, cltv uint32) er.R {
 	// Abort if this batch was already written to disk.
 	if b.IsCommitted {
-		return ErrAlreadyCommitted
+		return ErrAlreadyCommitted.Default()
 	}
 
 	// Check to see if this hash prefix is already included in this batch.
@@ -83,7 +86,7 @@ func (b *Batch) Put(seqNum uint16, hashPrefix *HashPrefix, cltv uint32) error {
 
 // ForEach iterates through each entry in the batch and calls the provided
 // function with the sequence number and entry contents as arguments.
-func (b *Batch) ForEach(fn func(seqNum uint16, hashPrefix *HashPrefix, cltv uint32) error) error {
+func (b *Batch) ForEach(fn func(seqNum uint16, hashPrefix *HashPrefix, cltv uint32) er.R) er.R {
 	for seqNum, entry := range b.entries {
 		if err := fn(seqNum, &entry.hashPrefix, entry.cltv); err != nil {
 			return err

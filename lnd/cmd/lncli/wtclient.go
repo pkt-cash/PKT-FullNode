@@ -50,7 +50,7 @@ var addTowerCommand = cli.Command{
 	Action:    actionDecorator(addTower),
 }
 
-func addTower(ctx *cli.Context) error {
+func addTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 0 {
@@ -59,11 +59,11 @@ func addTower(ctx *cli.Context) error {
 
 	parts := strings.Split(ctx.Args().First(), "@")
 	if len(parts) != 2 {
-		return errors.New("expected tower of format pubkey@address")
+		return er.New("expected tower of format pubkey@address")
 	}
-	pubKey, err := hex.DecodeString(parts[0])
+	pubKey, err := util.DecodeHex(parts[0])
 	if err != nil {
-		return fmt.Errorf("invalid public key: %v", err)
+		return er.Errorf("invalid public key: %v", err)
 	}
 	address := parts[1]
 
@@ -95,7 +95,7 @@ var removeTowerCommand = cli.Command{
 	Action:    actionDecorator(removeTower),
 }
 
-func removeTower(ctx *cli.Context) error {
+func removeTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 0 {
@@ -112,11 +112,11 @@ func removeTower(ctx *cli.Context) error {
 	// watchtower's database record.
 	parts := strings.Split(ctx.Args().First(), "@")
 	if len(parts) > 2 {
-		return errors.New("expected tower of format pubkey@address")
+		return er.New("expected tower of format pubkey@address")
 	}
-	pubKey, err := hex.DecodeString(parts[0])
+	pubKey, err := util.DecodeHex(parts[0])
 	if err != nil {
-		return fmt.Errorf("invalid public key: %v", err)
+		return er.Errorf("invalid public key: %v", err)
 	}
 	var address string
 	if len(parts) == 2 {
@@ -152,7 +152,7 @@ var listTowersCommand = cli.Command{
 	Action: actionDecorator(listTowers),
 }
 
-func listTowers(ctx *cli.Context) error {
+func listTowers(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 1 {
@@ -189,7 +189,7 @@ var getTowerCommand = cli.Command{
 	Action: actionDecorator(getTower),
 }
 
-func getTower(ctx *cli.Context) error {
+func getTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 1 {
@@ -199,9 +199,9 @@ func getTower(ctx *cli.Context) error {
 	// The command only has one argument, which we expect to be the
 	// hex-encoded public key of the watchtower we'll display information
 	// about.
-	pubKey, err := hex.DecodeString(ctx.Args().Get(0))
+	pubKey, err := util.DecodeHex(ctx.Args().Get(0))
 	if err != nil {
-		return fmt.Errorf("invalid public key: %v", err)
+		return er.Errorf("invalid public key: %v", err)
 	}
 
 	client, cleanUp := getWtclient(ctx)
@@ -226,7 +226,7 @@ var statsCommand = cli.Command{
 	Action: actionDecorator(stats),
 }
 
-func stats(ctx *cli.Context) error {
+func stats(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 0 {
@@ -252,7 +252,7 @@ var policyCommand = cli.Command{
 	Action: actionDecorator(policy),
 }
 
-func policy(ctx *cli.Context) error {
+func policy(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 0 {

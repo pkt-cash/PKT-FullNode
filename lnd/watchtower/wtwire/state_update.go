@@ -47,7 +47,7 @@ var _ Message = (*StateUpdate)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the wtwire.Message interface.
-func (m *StateUpdate) Decode(r io.Reader, pver uint32) error {
+func (m *StateUpdate) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&m.SeqNum,
 		&m.LastApplied,
@@ -61,7 +61,7 @@ func (m *StateUpdate) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the wtwire.Message interface.
-func (m *StateUpdate) Encode(w io.Writer, pver uint32) error {
+func (m *StateUpdate) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		m.SeqNum,
 		m.LastApplied,

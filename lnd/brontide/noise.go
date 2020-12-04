@@ -4,8 +4,6 @@ import (
 	"crypto/cipher"
 	"crypto/sha256"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 	"math"
 	"time"
@@ -14,6 +12,8 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 )
 
@@ -48,14 +48,15 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd.brontide")
 	// ErrMaxMessageLengthExceeded is returned when a message to be written to
 	// the cipher session exceeds the maximum allowed message payload.
-	ErrMaxMessageLengthExceeded = errors.New("the generated payload exceeds " +
-		"the max allowed message length of (2^16)-1")
+	ErrMaxMessageLengthExceeded = Err.CodeWithDetail("ErrMaxMessageLengthExceeded",
+		"the generated payload exceeds the max allowed message length of (2^16)-1")
 
 	// ErrMessageNotFlushed signals that the connection cannot accept a new
 	// message because the prior message has not been fully flushed.
-	ErrMessageNotFlushed = errors.New("prior message not flushed")
+	ErrMessageNotFlushed = Err.CodeWithDetail("ErrMessageNotFlushed", "prior message not flushed")
 
 	// lightningPrologue is the noise prologue that is used to initialize
 	// the brontide noise handshake.
@@ -63,7 +64,7 @@ var (
 
 	// ephemeralGen is the default ephemeral key generator, used to derive a
 	// unique ephemeral key for each brontide handshake.
-	ephemeralGen = func() (*btcec.PrivateKey, error) {
+	ephemeralGen = func() (*btcec.PrivateKey, er.R) {
 		return btcec.NewPrivateKey(btcec.S256())
 	}
 )
@@ -72,7 +73,7 @@ var (
 
 // ecdh performs an ECDH operation between pub and priv. The returned value is
 // the sha256 of the compressed shared point.
-func ecdh(pub *btcec.PublicKey, priv keychain.SingleKeyECDH) ([]byte, error) {
+func ecdh(pub *btcec.PublicKey, priv keychain.SingleKeyECDH) ([]byte, er.R) {
 	hash, err := priv.ECDH(pub)
 	return hash[:], err
 }
@@ -123,7 +124,7 @@ func (c *cipherState) Encrypt(associatedData, cipherText, plainText []byte) []by
 // Decrypt attempts to decrypt the passed ciphertext observing the specified
 // associatedData within the AEAD construction. In the case that the final MAC
 // check fails, then a non-nil error will be returned.
-func (c *cipherState) Decrypt(associatedData, plainText, cipherText []byte) ([]byte, error) {
+func (c *cipherState) Decrypt(associatedData, plainText, cipherText []byte) ([]byte, er.R) {
 	defer func() {
 		c.nonce++
 
@@ -135,7 +136,8 @@ func (c *cipherState) Decrypt(associatedData, plainText, cipherText []byte) ([]b
 	var nonce [12]byte
 	binary.LittleEndian.PutUint64(nonce[4:], c.nonce)
 
-	return c.cipher.Open(plainText, nonce[:], cipherText, associatedData)
+	o, e := c.cipher.Open(plainText, nonce[:], cipherText, associatedData)
+	return o, er.E(e)
 }
 
 // InitializeKey initializes the secret key and AEAD cipher scheme based off of
@@ -254,7 +256,7 @@ func (s *symmetricState) EncryptAndHash(plaintext []byte) []byte {
 // DecryptAndHash returns the authenticated decryption of the passed
 // ciphertext.  When encrypting the handshake digest (h) is used as the
 // associated data to the AEAD cipher.
-func (s *symmetricState) DecryptAndHash(ciphertext []byte) ([]byte, error) {
+func (s *symmetricState) DecryptAndHash(ciphertext []byte) ([]byte, er.R) {
 	plaintext, err := s.Decrypt(s.handshakeDigest[:], nil, ciphertext)
 	if err != nil {
 		return nil, err
@@ -329,7 +331,7 @@ func newHandshakeState(initiator bool, prologue []byte,
 // a custom function for use when generating ephemeral keys for ActOne or
 // ActTwo. The function closure returned by this function can be passed into
 // NewBrontideMachine as a function option parameter.
-func EphemeralGenerator(gen func() (*btcec.PrivateKey, error)) func(*Machine) {
+func EphemeralGenerator(gen func() (*btcec.PrivateKey, er.R)) func(*Machine) {
 	return func(m *Machine) {
 		m.ephemeralGen = gen
 	}
@@ -364,7 +366,7 @@ type Machine struct {
 	sendCipher cipherState
 	recvCipher cipherState
 
-	ephemeralGen func() (*btcec.PrivateKey, error)
+	ephemeralGen func() (*btcec.PrivateKey, er.R)
 
 	handshakeState
 
@@ -447,7 +449,7 @@ const (
 // derived from this result.
 //
 //    -> e, es
-func (b *Machine) GenActOne() ([ActOneSize]byte, error) {
+func (b *Machine) GenActOne() ([ActOneSize]byte, er.R) {
 	var actOne [ActOneSize]byte
 
 	// e
@@ -482,9 +484,9 @@ func (b *Machine) GenActOne() ([ActOneSize]byte, error) {
 // executes the mirrored actions to that of the initiator extending the
 // handshake digest and deriving a new shared secret based on an ECDH with the
 // initiator's ephemeral key and responder's static key.
-func (b *Machine) RecvActOne(actOne [ActOneSize]byte) error {
+func (b *Machine) RecvActOne(actOne [ActOneSize]byte) er.R {
 	var (
-		err error
+		err er.R
 		e   [33]byte
 		p   [16]byte
 	)
@@ -492,7 +494,7 @@ func (b *Machine) RecvActOne(actOne [ActOneSize]byte) error {
 	// If the handshake version is unknown, then the handshake fails
 	// immediately.
 	if actOne[0] != HandshakeVersion {
-		return fmt.Errorf("act one: invalid handshake version: %v, "+
+		return er.Errorf("act one: invalid handshake version: %v, "+
 			"only %v is valid, msg=%x", actOne[0], HandshakeVersion,
 			actOne[:])
 	}
@@ -526,7 +528,7 @@ func (b *Machine) RecvActOne(actOne [ActOneSize]byte) error {
 // initiator's and responder's ephemeral keys.
 //
 //    <- e, ee
-func (b *Machine) GenActTwo() ([ActTwoSize]byte, error) {
+func (b *Machine) GenActTwo() ([ActTwoSize]byte, er.R) {
 	var actTwo [ActTwoSize]byte
 
 	// e
@@ -560,9 +562,9 @@ func (b *Machine) GenActTwo() ([ActTwoSize]byte, error) {
 // RecvActTwo processes the second packet (act two) sent from the responder to
 // the initiator. A successful processing of this packet authenticates the
 // initiator to the responder.
-func (b *Machine) RecvActTwo(actTwo [ActTwoSize]byte) error {
+func (b *Machine) RecvActTwo(actTwo [ActTwoSize]byte) er.R {
 	var (
-		err error
+		err er.R
 		e   [33]byte
 		p   [16]byte
 	)
@@ -570,7 +572,7 @@ func (b *Machine) RecvActTwo(actTwo [ActTwoSize]byte) error {
 	// If the handshake version is unknown, then the handshake fails
 	// immediately.
 	if actTwo[0] != HandshakeVersion {
-		return fmt.Errorf("act two: invalid handshake version: %v, "+
+		return er.Errorf("act two: invalid handshake version: %v, "+
 			"only %v is valid, msg=%x", actTwo[0], HandshakeVersion,
 			actTwo[:])
 	}
@@ -603,7 +605,7 @@ func (b *Machine) RecvActTwo(actTwo [ActTwoSize]byte) error {
 // the final session.
 //
 //    -> s, se
-func (b *Machine) GenActThree() ([ActThreeSize]byte, error) {
+func (b *Machine) GenActThree() ([ActThreeSize]byte, er.R) {
 	var actThree [ActThreeSize]byte
 
 	ourPubkey := b.localStatic.PubKey().SerializeCompressed()
@@ -632,9 +634,9 @@ func (b *Machine) GenActThree() ([ActThreeSize]byte, error) {
 // the responder. After processing this act, the responder learns of the
 // initiator's static public key. Decryption of the static key serves to
 // authenticate the initiator to the responder.
-func (b *Machine) RecvActThree(actThree [ActThreeSize]byte) error {
+func (b *Machine) RecvActThree(actThree [ActThreeSize]byte) er.R {
 	var (
-		err error
+		err er.R
 		s   [33 + 16]byte
 		p   [16]byte
 	)
@@ -642,7 +644,7 @@ func (b *Machine) RecvActThree(actThree [ActThreeSize]byte) error {
 	// If the handshake version is unknown, then the handshake fails
 	// immediately.
 	if actThree[0] != HandshakeVersion {
-		return fmt.Errorf("act three: invalid handshake version: %v, "+
+		return er.Errorf("act three: invalid handshake version: %v, "+
 			"only %v is valid, msg=%x", actThree[0], HandshakeVersion,
 			actThree[:])
 	}
@@ -720,19 +722,19 @@ func (b *Machine) split() {
 //
 // NOTE: This DOES NOT write the message to the wire, it should be followed by a
 // call to Flush to ensure the message is written.
-func (b *Machine) WriteMessage(p []byte) error {
+func (b *Machine) WriteMessage(p []byte) er.R {
 	// The total length of each message payload including the MAC size
 	// payload exceed the largest number encodable within a 16-bit unsigned
 	// integer.
 	if len(p) > math.MaxUint16 {
-		return ErrMaxMessageLengthExceeded
+		return ErrMaxMessageLengthExceeded.Default()
 	}
 
 	// If a prior message was written but it hasn't been fully flushed,
 	// return an error as we only support buffering of one message at a
 	// time.
 	if len(b.nextHeaderSend) > 0 || len(b.nextBodySend) > 0 {
-		return ErrMessageNotFlushed
+		return ErrMessageNotFlushed.Default()
 	}
 
 	// The full length of the packet is only the packet length, and does
@@ -759,7 +761,7 @@ func (b *Machine) WriteMessage(p []byte) error {
 // account for the overhead of the header or MACs.
 //
 // NOTE: It is safe to call this method again iff a timeout error is returned.
-func (b *Machine) Flush(w io.Writer) (int, error) {
+func (b *Machine) Flush(w io.Writer) (int, er.R) {
 	// First, write out the pending header bytes, if any exist. Any header
 	// bytes written will not count towards the total amount flushed.
 	if len(b.nextHeaderSend) > 0 {
@@ -767,7 +769,7 @@ func (b *Machine) Flush(w io.Writer) (int, error) {
 		// to the next segment of unwritten bytes. If an error is
 		// encountered, we can continue to write the header from where
 		// we left off on a subsequent call to Flush.
-		n, err := w.Write(b.nextHeaderSend)
+		n, err := util.Write(w, b.nextHeaderSend)
 		b.nextHeaderSend = b.nextHeaderSend[n:]
 		if err != nil {
 			return 0, err
@@ -782,7 +784,7 @@ func (b *Machine) Flush(w io.Writer) (int, error) {
 	if len(b.nextBodySend) > 0 {
 		// Write out all bytes excluding the mac and shift the body
 		// slice depending on the number of actual bytes written.
-		n, err := w.Write(b.nextBodySend)
+		n, err := util.Write(w, b.nextBodySend)
 		b.nextBodySend = b.nextBodySend[n:]
 
 		// If we partially or fully wrote any of the body's MAC, we'll
@@ -828,7 +830,7 @@ func (b *Machine) Flush(w io.Writer) (int, error) {
 
 // ReadMessage attempts to read the next message from the passed io.Reader. In
 // the case of an authentication error, a non-nil error is returned.
-func (b *Machine) ReadMessage(r io.Reader) ([]byte, error) {
+func (b *Machine) ReadMessage(r io.Reader) ([]byte, er.R) {
 	pktLen, err := b.ReadHeader(r)
 	if err != nil {
 		return nil, err
@@ -847,8 +849,8 @@ func (b *Machine) ReadMessage(r io.Reader) ([]byte, error) {
 // adversarial and induce long delays. If the caller needs to set read deadlines
 // appropriately, it is preferred that they use the split ReadHeader and
 // ReadBody methods so that the deadlines can be set appropriately on each.
-func (b *Machine) ReadHeader(r io.Reader) (uint32, error) {
-	_, err := io.ReadFull(r, b.nextCipherHeader[:])
+func (b *Machine) ReadHeader(r io.Reader) (uint32, er.R) {
+	_, err := util.ReadFull(r, b.nextCipherHeader[:])
 	if err != nil {
 		return 0, err
 	}
@@ -871,11 +873,11 @@ func (b *Machine) ReadHeader(r io.Reader) (uint32, error) {
 // The provided buffer MUST be the length indicated by the packet length
 // returned by the preceding call to ReadHeader. In the case of an
 // authentication eerror, a non-nil error is returned.
-func (b *Machine) ReadBody(r io.Reader, buf []byte) ([]byte, error) {
+func (b *Machine) ReadBody(r io.Reader, buf []byte) ([]byte, er.R) {
 	// Next, using the length read from the packet header, read the
 	// encrypted packet itself into the buffer allocated by the read
 	// pool.
-	_, err := io.ReadFull(r, buf)
+	_, err := util.ReadFull(r, buf)
 	if err != nil {
 		return nil, err
 	}

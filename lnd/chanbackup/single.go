@@ -2,17 +2,18 @@ package chanbackup
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // SingleBackupVersion denotes the version of the single static channel backup.
@@ -178,7 +179,7 @@ func NewSingle(channel *channeldb.OpenChannel,
 
 // Serialize attempts to write out the serialized version of the target
 // StaticChannelBackup into the passed io.Writer.
-func (s *Single) Serialize(w io.Writer) error {
+func (s *Single) Serialize(w io.Writer) er.R {
 	// Check to ensure that we'll only attempt to serialize a version that
 	// we're aware of.
 	switch s.Version {
@@ -186,7 +187,7 @@ func (s *Single) Serialize(w io.Writer) error {
 	case TweaklessCommitVersion:
 	case AnchorsCommitVersion:
 	default:
-		return fmt.Errorf("unable to serialize w/ unknown "+
+		return er.Errorf("unable to serialize w/ unknown "+
 			"version: %v", s.Version)
 	}
 
@@ -268,7 +269,7 @@ func (s *Single) Serialize(w io.Writer) error {
 // the nonce as associated data such that we'll be able to package the two
 // together for storage. Before writing out the encrypted payload, we prepend
 // the nonce to the final blob.
-func (s *Single) PackToWriter(w io.Writer, keyRing keychain.KeyRing) error {
+func (s *Single) PackToWriter(w io.Writer, keyRing keychain.KeyRing) er.R {
 	// First, we'll serialize the SCB (StaticChannelBackup) into a
 	// temporary buffer so we can store it in a temporary place before we
 	// go to encrypt the entire thing.
@@ -286,7 +287,7 @@ func (s *Single) PackToWriter(w io.Writer, keyRing keychain.KeyRing) error {
 // readLocalKeyDesc reads a KeyDescriptor encoded within an unpacked Single.
 // For local KeyDescs, we only write out the KeyLocator information as we can
 // re-derive the pubkey from it.
-func readLocalKeyDesc(r io.Reader) (keychain.KeyDescriptor, error) {
+func readLocalKeyDesc(r io.Reader) (keychain.KeyDescriptor, er.R) {
 	var keyDesc keychain.KeyDescriptor
 
 	var keyFam uint32
@@ -305,13 +306,13 @@ func readLocalKeyDesc(r io.Reader) (keychain.KeyDescriptor, error) {
 // readRemoteKeyDesc reads a remote KeyDescriptor encoded within an unpacked
 // Single. For remote KeyDescs, we write out only the PubKey since we don't
 // actually have the KeyLocator data.
-func readRemoteKeyDesc(r io.Reader) (keychain.KeyDescriptor, error) {
+func readRemoteKeyDesc(r io.Reader) (keychain.KeyDescriptor, er.R) {
 	var (
 		keyDesc keychain.KeyDescriptor
 		pub     [33]byte
 	)
 
-	_, err := io.ReadFull(r, pub[:])
+	_, err := util.ReadFull(r, pub[:])
 	if err != nil {
 		return keychain.KeyDescriptor{}, err
 	}
@@ -329,7 +330,7 @@ func readRemoteKeyDesc(r io.Reader) (keychain.KeyDescriptor, error) {
 // Deserialize attempts to read the raw plaintext serialized SCB from the
 // passed io.Reader. If the method is successful, then the target
 // StaticChannelBackup will be fully populated.
-func (s *Single) Deserialize(r io.Reader) error {
+func (s *Single) Deserialize(r io.Reader) er.R {
 	// First, we'll need to read the version of this single-back up so we
 	// can know how to unpack each of the SCB.
 	var version byte
@@ -345,7 +346,7 @@ func (s *Single) Deserialize(r io.Reader) error {
 	case TweaklessCommitVersion:
 	case AnchorsCommitVersion:
 	default:
-		return fmt.Errorf("unable to de-serialize w/ unknown "+
+		return er.Errorf("unable to de-serialize w/ unknown "+
 			"version: %v", s.Version)
 	}
 
@@ -446,7 +447,7 @@ func (s *Single) Deserialize(r io.Reader) error {
 // for details w.r.t the encryption scheme used. If we're unable to decrypt the
 // payload for whatever reason (wrong key, wrong nonce, etc), then this method
 // will return an error.
-func (s *Single) UnpackFromReader(r io.Reader, keyRing keychain.KeyRing) error {
+func (s *Single) UnpackFromReader(r io.Reader, keyRing keychain.KeyRing) er.R {
 	plaintext, err := decryptPayloadFromReader(r, keyRing)
 	if err != nil {
 		return err
@@ -463,7 +464,7 @@ func (s *Single) UnpackFromReader(r io.Reader, keyRing keychain.KeyRing) error {
 // static channel backups. The passed keyRing should be backed by the users
 // root HD seed in order to ensure full determinism.
 func PackStaticChanBackups(backups []Single,
-	keyRing keychain.KeyRing) (map[wire.OutPoint][]byte, error) {
+	keyRing keychain.KeyRing) (map[wire.OutPoint][]byte, er.R) {
 
 	packedBackups := make(map[wire.OutPoint][]byte)
 	for _, chanBackup := range backups {
@@ -472,7 +473,7 @@ func PackStaticChanBackups(backups []Single,
 		var b bytes.Buffer
 		err := chanBackup.PackToWriter(&b, keyRing)
 		if err != nil {
-			return nil, fmt.Errorf("unable to pack chan backup "+
+			return nil, er.Errorf("unable to pack chan backup "+
 				"for %v: %v", chanPoint, err)
 		}
 
@@ -491,7 +492,7 @@ type PackedSingles [][]byte
 // each one into a new SCB struct. The passed keyRing should be backed by the
 // same HD seed as was used to encrypt the set of backups in the first place.
 // If we're unable to decrypt any of the back ups, then we'll return an error.
-func (p PackedSingles) Unpack(keyRing keychain.KeyRing) ([]Single, error) {
+func (p PackedSingles) Unpack(keyRing keychain.KeyRing) ([]Single, er.R) {
 
 	backups := make([]Single, len(p))
 	for i, encryptedBackup := range p {

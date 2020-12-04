@@ -2,9 +2,9 @@ package migration12_test
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration12"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migtest"
@@ -121,15 +121,15 @@ var (
 
 type migrationTest struct {
 	name            string
-	beforeMigration func(kvdb.RwTx) error
-	afterMigration  func(kvdb.RwTx) error
+	beforeMigration func(kvdb.RwTx) er.R
+	afterMigration  func(kvdb.RwTx) er.R
 }
 
 var migrationTests = []migrationTest{
 	{
 		name:            "no invoices",
-		beforeMigration: func(kvdb.RwTx) error { return nil },
-		afterMigration:  func(kvdb.RwTx) error { return nil },
+		beforeMigration: func(kvdb.RwTx) er.R { return nil },
+		afterMigration:  func(kvdb.RwTx) er.R { return nil },
 	},
 	{
 		name:            "zero htlcs",
@@ -145,8 +145,8 @@ var migrationTests = []migrationTest{
 
 // genBeforeMigration creates a closure that inserts an invoice serialized under
 // the old format under the test payment hash.
-func genBeforeMigration(beforeBytes []byte) func(kvdb.RwTx) error {
-	return func(tx kvdb.RwTx) error {
+func genBeforeMigration(beforeBytes []byte) func(kvdb.RwTx) er.R {
+	return func(tx kvdb.RwTx) er.R {
 		invoices, err := tx.CreateTopLevelBucket(
 			invoiceBucket,
 		)
@@ -162,18 +162,18 @@ func genBeforeMigration(beforeBytes []byte) func(kvdb.RwTx) error {
 // succeeded, but comparing the resulting encoding of the invoice to the
 // expected serialization. In addition, the decoded invoice is compared against
 // the expected invoice for equality.
-func genAfterMigration(afterBytes []byte) func(kvdb.RwTx) error {
-	return func(tx kvdb.RwTx) error {
+func genAfterMigration(afterBytes []byte) func(kvdb.RwTx) er.R {
+	return func(tx kvdb.RwTx) er.R {
 		invoices := tx.ReadWriteBucket(invoiceBucket)
 		if invoices == nil {
-			return fmt.Errorf("invoice bucket not found")
+			return er.Errorf("invoice bucket not found")
 		}
 
 		// Fetch the new invoice bytes and check that they match our
 		// expected serialization.
 		invoiceBytes := invoices.Get(hash[:])
 		if !bytes.Equal(invoiceBytes, afterBytes) {
-			return fmt.Errorf("invoice bytes mismatch, "+
+			return er.Errorf("invoice bytes mismatch, "+
 				"want: %x, got: %x",
 				invoiceBytes, afterBytes)
 		}

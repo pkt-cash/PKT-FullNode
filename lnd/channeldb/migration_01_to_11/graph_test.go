@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -28,7 +29,7 @@ var (
 	testFeatures = lnwire.NewFeatureVector(nil, nil)
 )
 
-func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, error) {
+func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, er.R) {
 	updateTime := prand.Int63()
 
 	pub := priv.PubKey().SerializeCompressed()
@@ -47,7 +48,7 @@ func createLightningNode(db *DB, priv *btcec.PrivateKey) (*LightningNode, error)
 	return n, nil
 }
 
-func createTestVertex(db *DB) (*LightningNode, error) {
+func createTestVertex(db *DB) (*LightningNode, er.R) {
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, err

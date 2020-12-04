@@ -17,10 +17,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/connmgr"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
@@ -97,18 +97,19 @@ const (
 )
 
 var (
+	Err = er.NewErrorType("lnd")
 	// ErrPeerNotConnected signals that the server has no connection to the
 	// given peer.
-	ErrPeerNotConnected = errors.New("peer is not connected")
+	ErrPeerNotConnected = Err.CodeWithDetail("ErrPeerNotConnected", "peer is not connected")
 
 	// ErrServerNotActive indicates that the server has started but hasn't
 	// fully finished the startup process.
-	ErrServerNotActive = errors.New("server is still in the process of " +
-		"starting")
+	ErrServerNotActive = Err.CodeWithDetail("ErrServerNotActive",
+		"server is still in the process of starting")
 
 	// ErrServerShuttingDown indicates that the server is in the process of
 	// gracefully exiting.
-	ErrServerShuttingDown = errors.New("server is shutting down")
+	ErrServerShuttingDown = Err.CodeWithDetail("ErrServerShuttingDown", "server is shutting down")
 
 	// validColorRegexp is a regexp that lets you check if a particular
 	// color string matches the standard hex color format #RRGGBB.
@@ -289,7 +290,7 @@ type server struct {
 }
 
 // parseAddr parses an address from its string format to a net.Addr.
-func parseAddr(address string, netCfg tor.Net) (net.Addr, error) {
+func parseAddr(address string, netCfg tor.Net) (net.Addr, er.R) {
 	var (
 		host string
 		port int
@@ -343,7 +344,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller) (*server, error) {
+	torController *tor.Controller) (*server, er.R) {
 
 	var (
 		err           error
@@ -555,7 +556,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 			pmp, err := nat.DiscoverPMP(discoveryTimeout)
 			if err != nil {
-				err := fmt.Errorf("unable to discover a "+
+				err := er.Errorf("unable to discover a "+
 					"NAT-PMP enabled device on the local "+
 					"network: %v", err)
 				srvrLog.Error(err)
@@ -650,7 +651,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	// network so we can properly sign it.
 	nodeAnn, err := selfNode.NodeAnnouncement(false)
 	if err != nil {
-		return nil, fmt.Errorf("unable to gen self node ann: %v", err)
+		return nil, er.Errorf("unable to gen self node ann: %v", err)
 	}
 
 	// With the announcement generated, we'll sign it to properly
@@ -659,7 +660,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		s.nodeSigner, s.identityECDH.PubKey(), nodeAnn,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate signature for "+
+		return nil, er.Errorf("unable to generate signature for "+
 			"self node announcement: %v", err)
 	}
 	selfNode.AuthSigBytes = authSig.Serialize()
@@ -673,7 +674,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	// Finally, we'll update the representation on disk, and update our
 	// cached in-memory version as well.
 	if err := chanGraph.SetSourceNode(selfNode); err != nil {
-		return nil, fmt.Errorf("can't set self node: %v", err)
+		return nil, er.Errorf("can't set self node: %v", err)
 	}
 	s.currentNodeAnn = nodeAnn
 
@@ -723,7 +724,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("can't create mission control: %v", err)
+		return nil, er.Errorf("can't create mission control: %v", err)
 	}
 
 	srvrLog.Debugf("Instantiating payment session source with config: "+
@@ -768,7 +769,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		Clock:              clock.NewDefaultClock(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("can't create router: %v", err)
+		return nil, er.Errorf("can't create router: %v", err)
 	}
 
 	chanSeries := discovery.NewChanSeries(s.localChanDB.ChannelGraph())
@@ -789,7 +790,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		ChanSeries:        chanSeries,
 		NotifyWhenOnline:  s.NotifyWhenOnline,
 		NotifyWhenOffline: s.NotifyWhenOffline,
-		SelfNodeAnnouncement: func(refresh bool) (lnwire.NodeAnnouncement, error) {
+		SelfNodeAnnouncement: func(refresh bool) (lnwire.NodeAnnouncement, er.R) {
 			return s.genNodeAnnouncement(refresh)
 		},
 		ProofMatureDelta:        0,
@@ -883,7 +884,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		OutgoingBroadcastDelta: lncfg.DefaultOutgoingBroadcastDelta,
 		NewSweepAddr:           newSweepPkScriptGen(cc.Wallet),
 		PublishTx:              cc.Wallet.PublishTransaction,
-		DeliverResolutionMsg: func(msgs ...contractcourt.ResolutionMsg) error {
+		DeliverResolutionMsg: func(msgs ...contractcourt.ResolutionMsg) er.R {
 			for _, msg := range msgs {
 				err := s.htlcSwitch.ProcessContractResolution(msg)
 				if err != nil {
@@ -895,7 +896,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		IncubateOutputs: func(chanPoint wire.OutPoint,
 			outHtlcRes *lnwallet.OutgoingHtlcResolution,
 			inHtlcRes *lnwallet.IncomingHtlcResolution,
-			broadcastHeight uint32) error {
+			broadcastHeight uint32) er.R {
 
 			var (
 				inRes  []lnwallet.IncomingHtlcResolution
@@ -918,14 +919,14 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		Signer:       cc.Wallet.Cfg.Signer,
 		FeeEstimator: cc.FeeEstimator,
 		ChainIO:      cc.ChainIO,
-		MarkLinkInactive: func(chanPoint wire.OutPoint) error {
+		MarkLinkInactive: func(chanPoint wire.OutPoint) er.R {
 			chanID := lnwire.NewChanIDFromOutPoint(&chanPoint)
 			s.htlcSwitch.RemoveLink(chanID)
 			return nil
 		},
 		IsOurAddress: cc.Wallet.IsOurAddress,
 		ContractBreach: func(chanPoint wire.OutPoint,
-			breachRet *lnwallet.BreachRetribution) error {
+			breachRet *lnwallet.BreachRetribution) er.R {
 			event := &ContractBreachEvent{
 				ChanPoint:         chanPoint,
 				ProcessACK:        make(chan error, 1),
@@ -936,7 +937,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			select {
 			case contractBreaches <- event:
 			case <-s.quit:
-				return ErrServerShuttingDown
+				return ErrServerShuttingDown.Default()
 			}
 
 			// Wait for the breachArbiter to ACK the event.
@@ -944,7 +945,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			case err := <-event.ProcessACK:
 				return err
 			case <-s.quit:
-				return ErrServerShuttingDown
+				return ErrServerShuttingDown.Default()
 			}
 		},
 		DisableChannel:                s.chanStatusMgr.RequestDisable,
@@ -991,13 +992,13 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		IDKey:              nodeKeyECDH.PubKey(),
 		Wallet:             cc.Wallet,
 		PublishTransaction: cc.Wallet.PublishTransaction,
-		UpdateLabel: func(hash chainhash.Hash, label string) error {
+		UpdateLabel: func(hash chainhash.Hash, label string) er.R {
 			return cc.Wallet.LabelTransaction(hash, label, true)
 		},
 		Notifier:     cc.ChainNotifier,
 		FeeEstimator: cc.FeeEstimator,
 		SignMessage: func(pubKey *btcec.PublicKey,
-			msg []byte) (input.Signature, error) {
+			msg []byte) (input.Signature, er.R) {
 
 			if pubKey.IsEqual(nodeKeyECDH.PubKey()) {
 				return s.nodeSigner.SignMessage(pubKey, msg)
@@ -1005,11 +1006,11 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 			return cc.MsgSigner.SignMessage(pubKey, msg)
 		},
-		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, error) {
+		CurrentNodeAnnouncement: func() (lnwire.NodeAnnouncement, er.R) {
 			return s.genNodeAnnouncement(true)
 		},
 		SendAnnouncement: func(msg lnwire.Message,
-			optionalFields ...discovery.OptionalMsgField) chan error {
+			optionalFields ...discovery.OptionalMsgField) chan er.R {
 
 			return s.authGossiper.ProcessLocalAnnouncement(
 				msg, nodeKeyECDH.PubKey(), optionalFields...,
@@ -1018,7 +1019,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		NotifyWhenOnline: s.NotifyWhenOnline,
 		TempChanIDSeed:   chanIDSeed,
 		FindChannel: func(chanID lnwire.ChannelID) (
-			*channeldb.OpenChannel, error) {
+			*channeldb.OpenChannel, er.R) {
 
 			dbChannels, err := remoteChanDB.FetchAllChannels()
 			if err != nil {
@@ -1031,7 +1032,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 				}
 			}
 
-			return nil, fmt.Errorf("unable to find channel")
+			return nil, er.Errorf("unable to find channel")
 		},
 		DefaultRoutingPolicy: cc.RoutingPolicy,
 		DefaultMinHtlcIn:     cc.MinHtlcIn,
@@ -1115,7 +1116,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			return delay
 		},
 		WatchNewChannel: func(channel *channeldb.OpenChannel,
-			peerKey *btcec.PublicKey) error {
+			peerKey *btcec.PublicKey) er.R {
 
 			// First, we'll mark this new peer as a persistent peer
 			// for re-connection purposes. If the peer is not yet
@@ -1134,7 +1135,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			// the chain arb so it can react to on-chain events.
 			return s.chainArb.WatchNewChannel(channel)
 		},
-		ReportShortChanID: func(chanPoint wire.OutPoint) error {
+		ReportShortChanID: func(chanPoint wire.OutPoint) er.R {
 			cid := lnwire.NewChanIDFromOutPoint(&chanPoint)
 			return s.htlcSwitch.UpdateShortChanID(cid)
 		},
@@ -1210,10 +1211,10 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 	// Create a channel event store which monitors all open channels.
 	s.chanEventStore = chanfitness.NewChannelEventStore(&chanfitness.Config{
-		SubscribeChannelEvents: func() (subscribe.Subscription, error) {
+		SubscribeChannelEvents: func() (subscribe.Subscription, er.R) {
 			return s.channelNotifier.SubscribeChannelEvents()
 		},
-		SubscribePeerEvents: func() (subscribe.Subscription, error) {
+		SubscribePeerEvents: func() (subscribe.Subscription, er.R) {
 			return s.peerNotifier.SubscribePeerEvents()
 		},
 		GetOpenChannels: s.remoteChanDB.FetchAllOpenChannels,
@@ -1243,7 +1244,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		// watchtower.
 		authDial := func(localKey keychain.SingleKeyECDH,
 			netAddr *lnwire.NetAddress,
-			dialer tor.DialFunc) (wtserver.Peer, error) {
+			dialer tor.DialFunc) (wtserver.Peer, er.R) {
 
 			return brontide.Dial(
 				localKey, netAddr, cfg.ConnectionTimeout, dialer,
@@ -1277,7 +1278,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		s.hostAnn = netann.NewHostAnnouncer(netann.HostAnnouncerConfig{
 			Hosts:         cfg.ExternalHosts,
 			RefreshTicker: ticker.New(defaultHostSampleInterval),
-			LookupHost: func(host string) (net.Addr, error) {
+			LookupHost: func(host string) (net.Addr, er.R) {
 				return lncfg.ParseAddressString(
 					host, strconv.Itoa(defaultPeerPort),
 					cfg.net.ResolveTCPAddr,
@@ -1302,7 +1303,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 	diskCheck := healthcheck.NewObservation(
 		"disk space",
-		func() error {
+		func() er.R {
 			free, err := healthcheck.AvailableDiskSpaceRatio(
 				cfg.LndDir,
 			)
@@ -1316,7 +1317,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 				return nil
 			}
 
-			return fmt.Errorf("require: %v free space, got: %v",
+			return er.Errorf("require: %v free space, got: %v",
 				cfg.HealthChecks.DiskCheck.RequiredRemaining,
 				free)
 		},
@@ -1367,7 +1368,7 @@ func (s *server) Started() bool {
 // Start starts the main daemon server, all requested listeners, and any helper
 // goroutines.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Start() error {
+func (s *server) Start() er.R {
 	var startErr error
 	s.start.Do(func() {
 		if s.torController != nil {
@@ -1500,7 +1501,7 @@ func (s *server) Start() error {
 				s.cc.KeyRing, chanRestorer, s,
 			)
 			if err != nil {
-				startErr = fmt.Errorf("unable to unpack single "+
+				startErr = er.Errorf("unable to unpack single "+
 					"backups: %v", err)
 				return
 			}
@@ -1511,7 +1512,7 @@ func (s *server) Start() error {
 				s.cc.KeyRing, chanRestorer, s,
 			)
 			if err != nil {
-				startErr = fmt.Errorf("unable to unpack chan "+
+				startErr = er.Errorf("unable to unpack chan "+
 					"backup: %v", err)
 				return
 			}
@@ -1622,7 +1623,7 @@ func (s *server) Start() error {
 // any active goroutines, or helper objects to exit, then blocks until they've
 // all successfully exited. Additionally, any/all listeners are closed.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Stop() error {
+func (s *server) Stop() er.R {
 	s.stop.Do(func() {
 		atomic.StoreInt32(&s.stopping, 1)
 
@@ -1715,7 +1716,7 @@ func (s *server) Stopped() bool {
 //
 // NOTE: This should only be used when using some kind of NAT traversal to
 // automatically set up forwarding rules.
-func (s *server) configurePortForwarding(ports ...uint16) ([]string, error) {
+func (s *server) configurePortForwarding(ports ...uint16) ([]string, er.R) {
 	ip, err := s.natTraversal.ExternalIP()
 	if err != nil {
 		return nil, err
@@ -1894,7 +1895,7 @@ out:
 // initNetworkBootstrappers initializes a set of network peer bootstrappers
 // based on the server, and currently active bootstrap mechanisms as defined
 // within the current configuration.
-func initNetworkBootstrappers(s *server) ([]discovery.NetworkPeerBootstrapper, error) {
+func initNetworkBootstrappers(s *server) ([]discovery.NetworkPeerBootstrapper, er.R) {
 	srvrLog.Infof("Initializing peer network bootstrappers!")
 
 	var bootStrappers []discovery.NetworkPeerBootstrapper
@@ -2182,7 +2183,7 @@ func (s *server) initialPeerBootstrap(ignore map[autopilot.NodeID]struct{},
 
 // createNewHiddenService automatically sets up a v2 or v3 onion service in
 // order to listen for inbound connections over Tor.
-func (s *server) createNewHiddenService() error {
+func (s *server) createNewHiddenService() er.R {
 	// Determine the different ports the server is listening on. The onion
 	// service's virtual port will map to these ports and one will be picked
 	// at random when the onion service is being accessed.
@@ -2221,7 +2222,7 @@ func (s *server) createNewHiddenService() error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("unable to generate new node "+
+		return er.Errorf("unable to generate new node "+
 			"announcement: %v", err)
 	}
 
@@ -2240,7 +2241,7 @@ func (s *server) createNewHiddenService() error {
 	}
 	copy(selfNode.PubKeyBytes[:], s.identityECDH.PubKey().SerializeCompressed())
 	if err := s.localChanDB.ChannelGraph().SetSourceNode(selfNode); err != nil {
-		return fmt.Errorf("can't set self node: %v", err)
+		return er.Errorf("can't set self node: %v", err)
 	}
 
 	return nil
@@ -2250,7 +2251,7 @@ func (s *server) createNewHiddenService() error {
 // announcement. If refresh is true, then the time stamp of the announcement
 // will be updated in order to ensure it propagates through the network.
 func (s *server) genNodeAnnouncement(refresh bool,
-	modifiers ...netann.NodeAnnModifier) (lnwire.NodeAnnouncement, error) {
+	modifiers ...netann.NodeAnnModifier) (lnwire.NodeAnnouncement, er.R) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -2287,7 +2288,7 @@ type nodeAddresses struct {
 // to all our direct channel collaborators. In order to promote liveness of our
 // active channels, we instruct the connection manager to attempt to establish
 // and maintain persistent connections to all our direct channel counterparties.
-func (s *server) establishPersistentConnections() error {
+func (s *server) establishPersistentConnections() er.R {
 	// nodeAddrsMap stores the combination of node public keys and addresses
 	// that we'll attempt to reconnect to. PubKey strings are used as keys
 	// since other PubKey forms can't be compared.
@@ -2324,7 +2325,7 @@ func (s *server) establishPersistentConnections() error {
 	err = sourceNode.ForEachChannel(nil, func(
 		tx kvdb.RTx,
 		chanInfo *channeldb.ChannelEdgeInfo,
-		policy, _ *channeldb.ChannelEdgePolicy) error {
+		policy, _ *channeldb.ChannelEdgePolicy) er.R {
 
 		// If the remote party has announced the channel to us, but we
 		// haven't yet, then we won't have a policy. However, we don't
@@ -2338,7 +2339,7 @@ func (s *server) establishPersistentConnections() error {
 		// channel so we can queue up a direct connection to them.
 		channelPeer, err := chanInfo.FetchOtherNode(tx, selfPub)
 		if err != nil {
-			return fmt.Errorf("unable to fetch channel peer for "+
+			return er.Errorf("unable to fetch channel peer for "+
 				"ChannelPoint(%v): %v", chanInfo.ChannelPoint,
 				err)
 		}
@@ -2508,7 +2509,7 @@ func (s *server) prunePersistentPeerConnection(compressedPubKey [33]byte) {
 //
 // NOTE: This function is safe for concurrent access.
 func (s *server) BroadcastMessage(skips map[route.Vertex]struct{},
-	msgs ...lnwire.Message) error {
+	msgs ...lnwire.Message) er.R {
 
 	srvrLog.Debugf("Broadcasting %v messages", len(msgs))
 
@@ -2619,7 +2620,7 @@ func (s *server) NotifyWhenOffline(peerPubKey [33]byte) <-chan struct{} {
 // daemon's local representation of the remote peer.
 //
 // NOTE: This function is safe for concurrent access.
-func (s *server) FindPeer(peerKey *btcec.PublicKey) (*peer.Brontide, error) {
+func (s *server) FindPeer(peerKey *btcec.PublicKey) (*peer.Brontide, er.R) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -2633,7 +2634,7 @@ func (s *server) FindPeer(peerKey *btcec.PublicKey) (*peer.Brontide, error) {
 // public key.
 //
 // NOTE: This function is safe for concurrent access.
-func (s *server) FindPeerByPubStr(pubStr string) (*peer.Brontide, error) {
+func (s *server) FindPeerByPubStr(pubStr string) (*peer.Brontide, er.R) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -2642,10 +2643,10 @@ func (s *server) FindPeerByPubStr(pubStr string) (*peer.Brontide, error) {
 
 // findPeerByPubStr is an internal method that retrieves the specified peer from
 // the server's internal state using.
-func (s *server) findPeerByPubStr(pubStr string) (*peer.Brontide, error) {
+func (s *server) findPeerByPubStr(pubStr string) (*peer.Brontide, er.R) {
 	peer, ok := s.peersByPub[pubStr]
 	if !ok {
-		return nil, ErrPeerNotConnected
+		return nil, ErrPeerNotConnected.Default()
 	}
 
 	return peer, nil
@@ -3146,7 +3147,7 @@ func (s *server) peerInitializer(p *peer.Brontide) {
 	// Start the peer! If an error occurs, we Disconnect the peer, which
 	// will unblock the peerTerminationWatcher.
 	if err := p.Start(); err != nil {
-		p.Disconnect(fmt.Errorf("unable to start peer: %v", err))
+		p.Disconnect(er.Errorf("unable to start peer: %v", err))
 		return
 	}
 
@@ -3361,7 +3362,7 @@ func (s *server) removePeer(p *peer.Brontide) {
 
 	// As the peer is now finished, ensure that the TCP connection is
 	// closed and all of its related goroutines have exited.
-	p.Disconnect(fmt.Errorf("server: disconnecting peer %v", p))
+	p.Disconnect(er.Errorf("server: disconnecting peer %v", p))
 
 	// If this peer had an active persistent connection request, remove it.
 	if p.ConnReq() != nil {
@@ -3462,7 +3463,7 @@ type openChanReq struct {
 //
 // NOTE: This function is safe for concurrent access.
 func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
-	perm bool, timeout time.Duration) error {
+	perm bool, timeout time.Duration) er.R {
 
 	targetPub := string(addr.IdentityKey.SerializeCompressed())
 
@@ -3530,7 +3531,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 	case err := <-errChan:
 		return err
 	case <-s.quit:
-		return ErrServerShuttingDown
+		return ErrServerShuttingDown.Default()
 	}
 }
 
@@ -3561,7 +3562,7 @@ func (s *server) connectToPeer(addr *lnwire.NetAddress,
 // identified by public key.
 //
 // NOTE: This function is safe for concurrent access.
-func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) error {
+func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) er.R {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3573,7 +3574,7 @@ func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) error {
 	// currently connected to.
 	peer, err := s.findPeerByPubStr(pubStr)
 	if err == ErrPeerNotConnected {
-		return fmt.Errorf("peer %x is not connected", pubBytes)
+		return er.Errorf("peer %x is not connected", pubBytes)
 	}
 
 	srvrLog.Infof("Disconnecting from %v", peer)
@@ -3616,7 +3617,7 @@ func (s *server) OpenChannel(
 	if !ok {
 		s.mu.RUnlock()
 
-		req.err <- fmt.Errorf("peer %x is not online", pubKeyBytes)
+		req.err <- er.Errorf("peer %x is not online", pubKeyBytes)
 		return req.updates, req.err
 	}
 	s.mu.RUnlock()
@@ -3626,7 +3627,7 @@ func (s *server) OpenChannel(
 	select {
 	case <-peer.ActiveSignal():
 	case <-peer.QuitSignal():
-		req.err <- fmt.Errorf("peer %x disconnected", pubKeyBytes)
+		req.err <- er.Errorf("peer %x disconnected", pubKeyBytes)
 		return req.updates, req.err
 	case <-s.quit:
 		req.err <- ErrServerShuttingDown
@@ -3672,16 +3673,16 @@ func (s *server) Peers() []*peer.Brontide {
 // parseHexColor takes a hex string representation of a color in the
 // form "#RRGGBB", parses the hex color values, and returns a color.RGBA
 // struct of the same color.
-func parseHexColor(colorStr string) (color.RGBA, error) {
+func parseHexColor(colorStr string) (color.RGBA, er.R) {
 	// Check if the hex color string is a valid color representation.
 	if !validColorRegexp.MatchString(colorStr) {
-		return color.RGBA{}, errors.New("Color must be specified " +
+		return color.RGBA{}, er.New("Color must be specified " +
 			"using a hexadecimal value in the form #RRGGBB")
 	}
 
 	// Decode the hex color string to bytes.
 	// The resulting byte array is in the form [R, G, B].
-	colorBytes, err := hex.DecodeString(colorStr[1:])
+	colorBytes, err := util.DecodeHex(colorStr[1:])
 	if err != nil {
 		return color.RGBA{}, err
 	}
@@ -3719,10 +3720,10 @@ func computeNextBackoff(currBackoff, maxBackoff time.Duration) time.Duration {
 
 // errNoAdvertisedAddr is an error returned when we attempt to retrieve the
 // advertised address of a node, but they don't have one.
-var errNoAdvertisedAddr = errors.New("no advertised address found")
+var errNoAdvertisedAddr = er.New("no advertised address found")
 
 // fetchNodeAdvertisedAddr attempts to fetch an advertised address of a node.
-func (s *server) fetchNodeAdvertisedAddr(pub *btcec.PublicKey) (net.Addr, error) {
+func (s *server) fetchNodeAdvertisedAddr(pub *btcec.PublicKey) (net.Addr, er.R) {
 	vertex, err := route.NewVertexFromBytes(pub.SerializeCompressed())
 	if err != nil {
 		return nil, err
@@ -3743,10 +3744,10 @@ func (s *server) fetchNodeAdvertisedAddr(pub *btcec.PublicKey) (net.Addr, error)
 // fetchLastChanUpdate returns a function which is able to retrieve our latest
 // channel update for a target channel.
 func (s *server) fetchLastChanUpdate() func(lnwire.ShortChannelID) (
-	*lnwire.ChannelUpdate, error) {
+	*lnwire.ChannelUpdate, er.R) {
 
 	ourPubKey := s.identityECDH.PubKey().SerializeCompressed()
-	return func(cid lnwire.ShortChannelID) (*lnwire.ChannelUpdate, error) {
+	return func(cid lnwire.ShortChannelID) (*lnwire.ChannelUpdate, er.R) {
 		info, edge1, edge2, err := s.chanRouter.GetChannelByID(cid)
 		if err != nil {
 			return nil, err
@@ -3760,14 +3761,14 @@ func (s *server) fetchLastChanUpdate() func(lnwire.ShortChannelID) (
 
 // applyChannelUpdate applies the channel update to the different sub-systems of
 // the server.
-func (s *server) applyChannelUpdate(update *lnwire.ChannelUpdate) error {
+func (s *server) applyChannelUpdate(update *lnwire.ChannelUpdate) er.R {
 	pubKey := s.identityECDH.PubKey()
 	errChan := s.authGossiper.ProcessLocalAnnouncement(update, pubKey)
 	select {
 	case err := <-errChan:
 		return err
 	case <-s.quit:
-		return ErrServerShuttingDown
+		return ErrServerShuttingDown.Default()
 	}
 }
 
@@ -3776,9 +3777,9 @@ func (s *server) applyChannelUpdate(update *lnwire.ChannelUpdate) error {
 // Specifically, the script generated is a version 0, pay-to-witness-pubkey-hash
 // (p2wkh) output.
 func newSweepPkScriptGen(
-	wallet lnwallet.WalletController) func() ([]byte, error) {
+	wallet lnwallet.WalletController) func() ([]byte, er.R) {
 
-	return func() ([]byte, error) {
+	return func() ([]byte, er.R) {
 		sweepAddr, err := wallet.NewAddress(lnwallet.WitnessPubKey, false)
 		if err != nil {
 			return nil, err

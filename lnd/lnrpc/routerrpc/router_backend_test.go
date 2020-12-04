@@ -47,7 +47,7 @@ func TestQueryRoutes(t *testing.T) {
 }
 
 func testQueryRoutes(t *testing.T, useMissionControl bool, useMsat bool) {
-	ignoreNodeBytes, err := hex.DecodeString(ignoreNodeKey)
+	ignoreNodeBytes, err := util.DecodeHex(ignoreNodeKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func testQueryRoutes(t *testing.T, useMissionControl bool, useMsat bool) {
 	var ignoreNodeVertex route.Vertex
 	copy(ignoreNodeVertex[:], ignoreNodeBytes)
 
-	destNodeBytes, err := hex.DecodeString(destKey)
+	destNodeBytes, err := util.DecodeHex(destKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func testQueryRoutes(t *testing.T, useMissionControl bool, useMsat bool) {
 		amt lnwire.MilliSatoshi, restrictions *routing.RestrictParams,
 		_ record.CustomSet,
 		routeHints map[route.Vertex][]*channeldb.ChannelEdgePolicy,
-		finalExpiry uint16) (*route.Route, error) {
+		finalExpiry uint16) (*route.Route, er.R) {
 
 		if int64(amt) != amtSat*1000 {
 			t.Fatal("unexpected amount")
@@ -189,13 +189,13 @@ func testQueryRoutes(t *testing.T, useMissionControl bool, useMsat bool) {
 		FindRoute: findRoute,
 		SelfNode:  route.Vertex{1, 2, 3},
 		FetchChannelCapacity: func(chanID uint64) (
-			btcutil.Amount, error) {
+			btcutil.Amount, er.R) {
 
 			return 1, nil
 		},
 		MissionControl: &mockMissionControl{},
 		FetchChannelEndpoints: func(chanID uint64) (route.Vertex,
-			route.Vertex, error) {
+			route.Vertex, er.R) {
 
 			if chanID != 555 {
 				t.Fatal("expected endpoints to be fetched for "+
@@ -224,7 +224,7 @@ func (m *mockMissionControl) GetProbability(fromNode, toNode route.Vertex,
 	return testMissionControlProb
 }
 
-func (m *mockMissionControl) ResetHistory() error {
+func (m *mockMissionControl) ResetHistory() er.R {
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -67,7 +68,7 @@ var _ Message = (*ChannelAnnouncement)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (a *ChannelAnnouncement) Decode(r io.Reader, pver uint32) error {
+func (a *ChannelAnnouncement) Decode(r io.Reader, pver uint32) er.R {
 	err := ReadElements(r,
 		&a.NodeSig1,
 		&a.NodeSig2,
@@ -89,9 +90,10 @@ func (a *ChannelAnnouncement) Decode(r io.Reader, pver uint32) error {
 	// we'll collect the remainder into the ExtraOpaqueData field. If there
 	// aren't any bytes, then we'll snip off the slice to avoid carrying
 	// around excess capacity.
-	a.ExtraOpaqueData, err = ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	var errr error
+	a.ExtraOpaqueData, errr = ioutil.ReadAll(r)
+	if errr != nil {
+		return er.E(errr)
 	}
 	if len(a.ExtraOpaqueData) == 0 {
 		a.ExtraOpaqueData = nil
@@ -104,7 +106,7 @@ func (a *ChannelAnnouncement) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (a *ChannelAnnouncement) Encode(w io.Writer, pver uint32) error {
+func (a *ChannelAnnouncement) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		a.NodeSig1,
 		a.NodeSig2,
@@ -139,7 +141,7 @@ func (a *ChannelAnnouncement) MaxPayloadLength(pver uint32) uint32 {
 
 // DataToSign is used to retrieve part of the announcement message which should
 // be signed.
-func (a *ChannelAnnouncement) DataToSign() ([]byte, error) {
+func (a *ChannelAnnouncement) DataToSign() ([]byte, er.R) {
 	// We should not include the signatures itself.
 	var w bytes.Buffer
 	err := WriteElements(&w,

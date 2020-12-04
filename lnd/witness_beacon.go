@@ -80,7 +80,7 @@ func (p *preimageBeacon) LookupPreimage(
 
 // AddPreimages adds a batch of newly discovered preimages to the global cache,
 // and also signals any subscribers of the newly discovered witness.
-func (p *preimageBeacon) AddPreimages(preimages ...lntypes.Preimage) error {
+func (p *preimageBeacon) AddPreimages(preimages ...lntypes.Preimage) er.R {
 	// Exit early if no preimages are presented.
 	if len(preimages) == 0 {
 		return nil

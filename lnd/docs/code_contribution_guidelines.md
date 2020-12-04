@@ -431,14 +431,14 @@ the comment body.
 **WRONG**
 ```go
    func foo(a, b, c, 
-       d, e) error {
+       d, e) er.R {
        var a int 
    }
 ```
 **RIGHT**
 ```go
    func foo(a, b, c, 
-       d, e) error {
+       d, e) er.R {
 
        var a int 
    }

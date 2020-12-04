@@ -64,7 +64,7 @@ var deps = depDesc{
 // transitive dependencies properly. It assumes that the dependencies between
 // optional and required features are identical, e.g. if a feature is required
 // but its dependency is optional, that is sufficient.
-func ValidateDeps(fv *lnwire.FeatureVector) error {
+func ValidateDeps(fv *lnwire.FeatureVector) er.R {
 	features := fv.Features()
 	supported := initSupported(features)
 
@@ -73,7 +73,7 @@ func ValidateDeps(fv *lnwire.FeatureVector) error {
 
 // validateDeps is a subroutine that recursively checks that the passed features
 // have all of their associated dependencies in the supported map.
-func validateDeps(features featureSet, supported supportedFeatures) error {
+func validateDeps(features featureSet, supported supportedFeatures) er.R {
 	for bit := range features {
 		// Convert any required bits to optional.
 		bit = mapToOptional(bit)

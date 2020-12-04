@@ -3,6 +3,7 @@ package lnwire
 import (
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -37,7 +38,7 @@ var _ Message = (*ReplyShortChanIDsEnd)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *ReplyShortChanIDsEnd) Decode(r io.Reader, pver uint32) error {
+func (c *ReplyShortChanIDsEnd) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		c.ChainHash[:],
 		&c.Complete,
@@ -48,7 +49,7 @@ func (c *ReplyShortChanIDsEnd) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *ReplyShortChanIDsEnd) Encode(w io.Writer, pver uint32) error {
+func (c *ReplyShortChanIDsEnd) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChainHash[:],
 		c.Complete,

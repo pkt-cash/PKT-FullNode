@@ -2,13 +2,13 @@ package chainview
 
 import (
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/rpcclient"
@@ -58,7 +58,7 @@ var _ FilteredChainView = (*BtcdFilteredChainView)(nil)
 
 // NewBtcdFilteredChainView creates a new instance of a FilteredChainView from
 // RPC credentials for an active btcd instance.
-func NewBtcdFilteredChainView(config rpcclient.ConnConfig) (*BtcdFilteredChainView, error) {
+func NewBtcdFilteredChainView(config rpcclient.ConnConfig) (*BtcdFilteredChainView, er.R) {
 	chainView := &BtcdFilteredChainView{
 		chainFilter:     make(map[wire.OutPoint]struct{}),
 		filterUpdates:   make(chan filterUpdate),
@@ -89,7 +89,7 @@ func NewBtcdFilteredChainView(config rpcclient.ConnConfig) (*BtcdFilteredChainVi
 // Start starts all goroutines necessary for normal operation.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (b *BtcdFilteredChainView) Start() error {
+func (b *BtcdFilteredChainView) Start() er.R {
 	// Already started?
 	if atomic.AddInt32(&b.started, 1) != 1 {
 		return nil
@@ -127,7 +127,7 @@ func (b *BtcdFilteredChainView) Start() error {
 // method.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (b *BtcdFilteredChainView) Stop() error {
+func (b *BtcdFilteredChainView) Stop() er.R {
 	// Already shutting down?
 	if atomic.AddInt32(&b.stopped, 1) != 1 {
 		return nil
@@ -225,7 +225,7 @@ type filterBlockReq struct {
 // selected lock, then the internal chainFilter will also be updated.
 //
 // NOTE: This is part of the FilteredChainView interface.
-func (b *BtcdFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, error) {
+func (b *BtcdFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*FilteredBlock, er.R) {
 	req := &filterBlockReq{
 		blockHash: blockHash,
 		resp:      make(chan *FilteredBlock, 1),
@@ -235,7 +235,7 @@ func (b *BtcdFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*Filtere
 	select {
 	case b.filterBlockReqs <- req:
 	case <-b.quit:
-		return nil, fmt.Errorf("FilteredChainView shutting down")
+		return nil, er.Errorf("FilteredChainView shutting down")
 	}
 
 	return <-req.resp, <-req.err
@@ -286,7 +286,7 @@ func (b *BtcdFilteredChainView) chainFilterer() {
 	}
 
 	decodeJSONBlock := func(block *btcjson.RescannedBlock,
-		height uint32) (*FilteredBlock, error) {
+		height uint32) (*FilteredBlock, er.R) {
 		hash, err := chainhash.NewHashFromStr(block.Hash)
 		if err != nil {
 			return nil, err
@@ -294,7 +294,7 @@ func (b *BtcdFilteredChainView) chainFilterer() {
 		}
 		txs := make([]*wire.MsgTx, 0, len(block.Transactions))
 		for _, str := range block.Transactions {
-			b, err := hex.DecodeString(str)
+			b, err := util.DecodeHex(str)
 			if err != nil {
 				return nil, err
 			}
@@ -448,7 +448,7 @@ type filterUpdate struct {
 //
 // NOTE: This is part of the FilteredChainView interface.
 func (b *BtcdFilteredChainView) UpdateFilter(ops []channeldb.EdgePoint,
-	updateHeight uint32) error {
+	updateHeight uint32) er.R {
 
 	newUtxos := make([]wire.OutPoint, len(ops))
 	for i, op := range ops {
@@ -464,7 +464,7 @@ func (b *BtcdFilteredChainView) UpdateFilter(ops []channeldb.EdgePoint,
 		return nil
 
 	case <-b.quit:
-		return fmt.Errorf("chain filter shutting down")
+		return er.Errorf("chain filter shutting down")
 	}
 }
 

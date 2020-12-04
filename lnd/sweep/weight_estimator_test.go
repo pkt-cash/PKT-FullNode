@@ -3,12 +3,12 @@ package sweep
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +25,7 @@ func TestWeightEstimator(t *testing.T) {
 		&input.SignDescriptor{}, 0, nil,
 	)
 
-	require.NoError(t, w.add(&input1))
+	util.RequireNoErr(t, w.add(&input1))
 
 	// The expectations is that this input is added.
 	const expectedWeight1 = 322
@@ -45,7 +45,7 @@ func TestWeightEstimator(t *testing.T) {
 		parentTxHighFee,
 	)
 
-	require.NoError(t, w.add(&input2))
+	util.RequireNoErr(t, w.add(&input2))
 
 	// Pay for parent isn't possible because the parent pays a higher fee
 	// rate than the child. We expect no additional fee on the child.
@@ -65,7 +65,7 @@ func TestWeightEstimator(t *testing.T) {
 		&input.SignDescriptor{}, 0,
 		parentTxLowFee,
 	)
-	require.NoError(t, w.add(&input3))
+	util.RequireNoErr(t, w.add(&input3))
 
 	// Expect the weight to increase because of the third input.
 	const expectedWeight3 = expectedWeight2 + 280
@@ -89,10 +89,10 @@ func TestWeightEstimatorAddOutput(t *testing.T) {
 	p2wkhAddr, err := btcutil.NewAddressWitnessPubKeyHash(
 		make([]byte, 20), &chaincfg.MainNetParams,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	p2wkhScript, err := txscript.PayToAddrScript(p2wkhAddr)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create two estimators, add the raw P2WKH out to one.
 	txOut := &wire.TxOut{

@@ -4,6 +4,7 @@ import (
 	"io"
 	"math"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -40,7 +41,7 @@ var _ Message = (*QueryChannelRange)(nil)
 // passed io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (q *QueryChannelRange) Decode(r io.Reader, pver uint32) error {
+func (q *QueryChannelRange) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		q.ChainHash[:],
 		&q.FirstBlockHeight,
@@ -52,7 +53,7 @@ func (q *QueryChannelRange) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (q *QueryChannelRange) Encode(w io.Writer, pver uint32) error {
+func (q *QueryChannelRange) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		q.ChainHash[:],
 		q.FirstBlockHeight,

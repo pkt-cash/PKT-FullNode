@@ -8,7 +8,7 @@ import (
 // handleDeleteSession processes a DeleteSession request for a client with given
 // SessionID. The id is assumed to have been previously authenticated by the
 // brontide connection.
-func (s *Server) handleDeleteSession(peer Peer, id *wtdb.SessionID) error {
+func (s *Server) handleDeleteSession(peer Peer, id *wtdb.SessionID) er.R {
 	var failCode wtwire.DeleteSessionCode
 
 	// Delete all session data associated with id.
@@ -32,7 +32,7 @@ func (s *Server) handleDeleteSession(peer Peer, id *wtdb.SessionID) error {
 // replyDeleteSession sends a DeleteSessionReply back to the peer containing the
 // error code resulting from processes a DeleteSession request.
 func (s *Server) replyDeleteSession(peer Peer, id *wtdb.SessionID,
-	code wtwire.DeleteSessionCode) error {
+	code wtwire.DeleteSessionCode) er.R {
 
 	msg := &wtwire.DeleteSessionReply{
 		Code: code,

@@ -1,8 +1,9 @@
 package autopilot
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // stack is a simple int stack to help with readability of Brandes'
@@ -72,10 +73,10 @@ type BetweennessCentrality struct {
 
 // NewBetweennessCentralityMetric creates a new BetweennessCentrality instance.
 // Users can specify the number of workers to use for calculating centrality.
-func NewBetweennessCentralityMetric(workers int) (*BetweennessCentrality, error) {
+func NewBetweennessCentralityMetric(workers int) (*BetweennessCentrality, er.R) {
 	// There should be at least one worker.
 	if workers < 1 {
-		return nil, fmt.Errorf("workers must be positive")
+		return nil, er.Errorf("workers must be positive")
 	}
 	return &BetweennessCentrality{
 		workers: workers,
@@ -168,7 +169,7 @@ func betweennessCentrality(g *SimpleGraph, s int, centrality []float64) {
 }
 
 // Refresh recaculates and stores centrality values.
-func (bc *BetweennessCentrality) Refresh(graph ChannelGraph) error {
+func (bc *BetweennessCentrality) Refresh(graph ChannelGraph) er.R {
 	cache, err := NewSimpleGraph(graph)
 	if err != nil {
 		return err

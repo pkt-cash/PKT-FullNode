@@ -2,7 +2,6 @@ package channeldb
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -132,9 +132,9 @@ func TestSentPaymentSerialization(t *testing.T) {
 
 // assertRouteEquals compares to routes for equality and returns an error if
 // they are not equal.
-func assertRouteEqual(a, b *route.Route) error {
+func assertRouteEqual(a, b *route.Route) er.R {
 	if !reflect.DeepEqual(a, b) {
-		return fmt.Errorf("HTLCAttemptInfos don't match: %v vs %v",
+		return er.Errorf("HTLCAttemptInfos don't match: %v vs %v",
 			spew.Sdump(a), spew.Sdump(b))
 	}
 
@@ -168,7 +168,7 @@ func TestRouteSerialization(t *testing.T) {
 func deletePayment(t *testing.T, db *DB, paymentHash lntypes.Hash, seqNr uint64) {
 	t.Helper()
 
-	err := kvdb.Update(db, func(tx kvdb.RwTx) error {
+	err := kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 		payments := tx.ReadWriteBucket(paymentsRootBucket)
 
 		// Delete the payment bucket.
@@ -408,7 +408,7 @@ func TestQueryPayments(t *testing.T) {
 			// Make a preliminary query to make sure it's ok to
 			// query when we have no payments.
 			resp, err := db.QueryPayments(tt.query)
-			require.NoError(t, err)
+			util.RequireNoErr(t, err)
 			require.Len(t, resp.Payments, 0)
 
 			// Populate the database with a set of test payments.
@@ -441,7 +441,7 @@ func TestQueryPayments(t *testing.T) {
 					pmt, err := pControl.FetchPayment(
 						info.PaymentHash,
 					)
-					require.NoError(t, err)
+					util.RequireNoErr(t, err)
 
 					deletePayment(t, db, info.PaymentHash,
 						pmt.SequenceNum)
@@ -454,7 +454,7 @@ func TestQueryPayments(t *testing.T) {
 					pmt, err := pControl.FetchPayment(
 						info.PaymentHash,
 					)
-					require.NoError(t, err)
+					util.RequireNoErr(t, err)
 
 					appendDuplicatePayment(
 						t, pControl.db,
@@ -513,7 +513,7 @@ func TestQueryPayments(t *testing.T) {
 // present when we expect it to be.
 func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 	db, cleanup, err := MakeTestDB()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	defer cleanup()
 
@@ -521,31 +521,31 @@ func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 
 	// Generate a test payment which does not have duplicates.
 	noDuplicates, _, _, err := genInfo()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create a new payment entry in the database.
 	err = pControl.InitPayment(noDuplicates.PaymentHash, noDuplicates)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Fetch the payment so we can get its sequence nr.
 	noDuplicatesPayment, err := pControl.FetchPayment(
 		noDuplicates.PaymentHash,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Generate a test payment which we will add duplicates to.
 	hasDuplicates, _, _, err := genInfo()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create a new payment entry in the database.
 	err = pControl.InitPayment(hasDuplicates.PaymentHash, hasDuplicates)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Fetch the payment so we can get its sequence nr.
 	hasDuplicatesPayment, err := pControl.FetchPayment(
 		hasDuplicates.PaymentHash,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// We declare the sequence numbers used here so that we can reference
 	// them in tests.
@@ -611,7 +611,7 @@ func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			err := kvdb.Update(db,
-				func(tx walletdb.ReadWriteTx) error {
+				func(tx walletdb.ReadWriteTx) er.R {
 
 					var seqNrBytes [8]byte
 					byteOrder.PutUint64(
@@ -636,7 +636,7 @@ func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 func appendDuplicatePayment(t *testing.T, db *DB, paymentHash lntypes.Hash,
 	seqNr uint64) {
 
-	err := kvdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+	err := kvdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		bucket, err := fetchPaymentBucketUpdate(
 			tx, paymentHash,
 		)
@@ -663,7 +663,7 @@ func appendDuplicatePayment(t *testing.T, db *DB, paymentHash lntypes.Hash,
 		// Finally, once we have created our entry we add an index for
 		// it.
 		err = createPaymentIndexEntry(tx, sequenceKey[:], paymentHash)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		return nil
 	}, func() {})
@@ -680,14 +680,14 @@ func putDuplicatePayment(t *testing.T, duplicateBucket kvdb.RwBucket,
 	paymentBucket, err := duplicateBucket.CreateBucketIfNotExists(
 		sequenceKey,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	err = paymentBucket.Put(duplicatePaymentSequenceKey, sequenceKey)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Generate fake information for the duplicate payment.
 	info, _, _, errr := genInfo()
-	require.NoError(t, errr)
+	util.RequireNoErr(t, errr)
 
 	// Write the payment info to disk under the creation info key. This code
 	// is copied rather than using serializePaymentCreationInfo to ensure
@@ -695,20 +695,20 @@ func putDuplicatePayment(t *testing.T, duplicateBucket kvdb.RwBucket,
 	var b bytes.Buffer
 	var scratch [8]byte
 	_, errr = b.Write(paymentHash[:])
-	require.NoError(t, errr)
+	util.RequireNoErr(t, errr)
 
 	byteOrder.PutUint64(scratch[:], uint64(info.Value))
 	_, errr = b.Write(scratch[:])
-	require.NoError(t, errr)
+	util.RequireNoErr(t, errr)
 
 	errr = serializeTime(&b, info.CreationTime)
-	require.NoError(t, errr)
+	util.RequireNoErr(t, errr)
 
 	byteOrder.PutUint32(scratch[:4], 0)
 	_, errr = b.Write(scratch[:4])
-	require.NoError(t, errr)
+	util.RequireNoErr(t, errr)
 
 	// Get the PaymentCreationInfo.
 	err = paymentBucket.Put(duplicatePaymentCreationInfoKey, b.Bytes())
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 }

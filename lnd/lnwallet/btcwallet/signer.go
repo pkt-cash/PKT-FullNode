@@ -21,7 +21,7 @@ import (
 // of ErrNotMine should be returned instead.
 //
 // This is a part of the WalletController interface.
-func (b *BtcWallet) FetchInputInfo(prevOut *wire.OutPoint) (*lnwallet.Utxo, error) {
+func (b *BtcWallet) FetchInputInfo(prevOut *wire.OutPoint) (*lnwallet.Utxo, er.R) {
 	_, txOut, confirmations, err := b.wallet.FetchInputInfo(prevOut)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func deriveFromKeyLoc(scopedMgr *waddrmgr.ScopedKeyManager,
 
 // deriveKeyByLocator attempts to derive a key stored in the wallet given a
 // valid key locator.
-func (b *BtcWallet) deriveKeyByLocator(keyLoc keychain.KeyLocator) (*btcec.PrivateKey, error) {
+func (b *BtcWallet) deriveKeyByLocator(keyLoc keychain.KeyLocator) (*btcec.PrivateKey, er.R) {
 	// We'll assume the special lightning key scope in this case.
 	scopedMgr, err := b.wallet.Manager.FetchScopedKeyManager(
 		b.chainKeyScope,
@@ -111,7 +111,7 @@ func (b *BtcWallet) deriveKeyByLocator(keyLoc keychain.KeyLocator) (*btcec.Priva
 
 // fetchPrivKey attempts to retrieve the raw private key corresponding to the
 // passed public key if populated, or the key descriptor path (if non-empty).
-func (b *BtcWallet) fetchPrivKey(keyDesc *keychain.KeyDescriptor) (*btcec.PrivateKey, error) {
+func (b *BtcWallet) fetchPrivKey(keyDesc *keychain.KeyDescriptor) (*btcec.PrivateKey, er.R) {
 	// If the key locator within the descriptor *isn't* empty, then we can
 	// directly derive the keys raw.
 	emptyLocator := keyDesc.KeyLocator.IsEmpty()
@@ -174,7 +174,7 @@ func maybeTweakPrivKey(signDesc *input.SignDescriptor,
 //
 // This is a part of the WalletController interface.
 func (b *BtcWallet) SignOutputRaw(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (input.Signature, error) {
+	signDesc *input.SignDescriptor) (input.Signature, er.R) {
 
 	witnessScript := signDesc.WitnessScript
 
@@ -215,7 +215,7 @@ func (b *BtcWallet) SignOutputRaw(tx *wire.MsgTx,
 //
 // This is a part of the WalletController interface.
 func (b *BtcWallet) ComputeInputScript(tx *wire.MsgTx,
-	signDesc *input.SignDescriptor) (*input.Script, error) {
+	signDesc *input.SignDescriptor) (*input.Script, er.R) {
 
 	// If a tweak (single or double) is specified, then we'll need to use
 	// this tweak to derive the final private key to be used for signing
@@ -250,7 +250,7 @@ var _ input.Signer = (*BtcWallet)(nil)
 //
 // NOTE: This is a part of the MessageSigner interface.
 func (b *BtcWallet) SignMessage(pubKey *btcec.PublicKey,
-	msg []byte) (input.Signature, error) {
+	msg []byte) (input.Signature, er.R) {
 
 	// First attempt to fetch the private key which corresponds to the
 	// specified public key.

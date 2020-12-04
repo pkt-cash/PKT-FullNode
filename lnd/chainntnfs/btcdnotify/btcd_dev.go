@@ -17,7 +17,7 @@ import (
 // since if they are generated ahead of UnsafeStart the chainConn may start up
 // with an outdated best block and miss sending ntfns. Used for testing.
 func (b *BtcdNotifier) UnsafeStart(bestHeight int32, bestHash *chainhash.Hash,
-	syncHeight int32, generateBlocks func() error) error {
+	syncHeight int32, generateBlocks func() error) er.R {
 
 	// Connect to btcd, and register for notifications on connected, and
 	// disconnected blocks.
@@ -56,7 +56,7 @@ func (b *BtcdNotifier) UnsafeStart(bestHeight int32, bestHash *chainhash.Hash,
 					break loop
 				}
 			case <-timeout:
-				return fmt.Errorf("unable to catch up to height %d",
+				return er.Errorf("unable to catch up to height %d",
 					syncHeight)
 			}
 		}

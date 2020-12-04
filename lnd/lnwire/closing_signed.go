@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ClosingSigned is sent by both parties to a channel once the channel is clear
@@ -48,7 +49,7 @@ var _ Message = (*ClosingSigned)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *ClosingSigned) Decode(r io.Reader, pver uint32) error {
+func (c *ClosingSigned) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r, &c.ChannelID, &c.FeeSatoshis, &c.Signature)
 }
 
@@ -56,7 +57,7 @@ func (c *ClosingSigned) Decode(r io.Reader, pver uint32) error {
 // observing the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *ClosingSigned) Encode(w io.Writer, pver uint32) error {
+func (c *ClosingSigned) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w, c.ChannelID, c.FeeSatoshis, c.Signature)
 }
 

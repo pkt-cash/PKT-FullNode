@@ -1,7 +1,6 @@
 package migration_01_to_11
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -9,12 +8,13 @@ import (
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -591,7 +591,7 @@ type ChannelCloseSummary struct {
 	LastChanSyncMsg *lnwire.ChannelReestablish
 }
 
-func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) error {
+func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) er.R {
 	err := WriteElements(w,
 		cs.ChanPoint, cs.ShortChanID, cs.ChainHash, cs.ClosingTXID,
 		cs.CloseHeight, cs.RemotePub, cs.Capacity, cs.SettledBalance,
@@ -650,7 +650,7 @@ func serializeChannelCloseSummary(w io.Writer, cs *ChannelCloseSummary) error {
 	return nil
 }
 
-func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
+func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, er.R) {
 	c := &ChannelCloseSummary{}
 
 	err := ReadElements(r,
@@ -705,7 +705,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 	// Check if we have a channel sync message to read.
 	var hasChanSyncMsg bool
 	err = ReadElements(r, &hasChanSyncMsg)
-	if err == io.EOF {
+	if er.Wrapped(err) == io.EOF {
 		return c, nil
 	} else if err != nil {
 		return nil, err
@@ -722,7 +722,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 
 		chanSync, ok := msg.(*lnwire.ChannelReestablish)
 		if !ok {
-			return nil, errors.New("unable cast db Message to " +
+			return nil, er.New("unable cast db Message to " +
 				"ChannelReestablish")
 		}
 		c.LastChanSyncMsg = chanSync
@@ -731,7 +731,7 @@ func deserializeCloseChannelSummary(r io.Reader) (*ChannelCloseSummary, error) {
 	return c, nil
 }
 
-func writeChanConfig(b io.Writer, c *ChannelConfig) error {
+func writeChanConfig(b io.Writer, c *ChannelConfig) er.R {
 	return WriteElements(b,
 		c.DustLimit, c.MaxPendingAmount, c.ChanReserve, c.MinHTLC,
 		c.MaxAcceptedHtlcs, c.CsvDelay, c.MultiSigKey,
@@ -740,7 +740,7 @@ func writeChanConfig(b io.Writer, c *ChannelConfig) error {
 	)
 }
 
-func readChanConfig(b io.Reader, c *ChannelConfig) error {
+func readChanConfig(b io.Reader, c *ChannelConfig) er.R {
 	return ReadElements(b,
 		&c.DustLimit, &c.MaxPendingAmount, &c.ChanReserve,
 		&c.MinHTLC, &c.MaxAcceptedHtlcs, &c.CsvDelay,

@@ -3,6 +3,7 @@ package wtmock
 import (
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
@@ -28,7 +29,7 @@ func NewTowerDB() *TowerDB {
 // the update is well-formed in the context of other updates sent for the same
 // session. This include verifying that the sequence number is incremented
 // properly and the last applied values echoed by the client are sane.
-func (db *TowerDB) InsertStateUpdate(update *wtdb.SessionStateUpdate) (uint16, error) {
+func (db *TowerDB) InsertStateUpdate(update *wtdb.SessionStateUpdate) (uint16, er.R) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -59,7 +60,7 @@ func (db *TowerDB) InsertStateUpdate(update *wtdb.SessionStateUpdate) (uint16, e
 
 // GetSessionInfo retrieves the session for the passed session id. An error is
 // returned if the session could not be found.
-func (db *TowerDB) GetSessionInfo(id *wtdb.SessionID) (*wtdb.SessionInfo, error) {
+func (db *TowerDB) GetSessionInfo(id *wtdb.SessionID) (*wtdb.SessionInfo, er.R) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -67,18 +68,18 @@ func (db *TowerDB) GetSessionInfo(id *wtdb.SessionID) (*wtdb.SessionInfo, error)
 		return info, nil
 	}
 
-	return nil, wtdb.ErrSessionNotFound
+	return nil, wtdb.ErrSessionNotFound.Default()
 }
 
 // InsertSessionInfo records a negotiated session in the tower database. An
 // error is returned if the session already exists.
-func (db *TowerDB) InsertSessionInfo(info *wtdb.SessionInfo) error {
+func (db *TowerDB) InsertSessionInfo(info *wtdb.SessionInfo) er.R {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
 	dbInfo, ok := db.sessions[info.ID]
 	if ok && dbInfo.LastApplied > 0 {
-		return wtdb.ErrSessionAlreadyExists
+		return wtdb.ErrSessionAlreadyExists.Default()
 	}
 
 	// Perform a quick sanity check on the session policy before accepting.
@@ -93,13 +94,13 @@ func (db *TowerDB) InsertSessionInfo(info *wtdb.SessionInfo) error {
 
 // DeleteSession removes all data associated with a particular session id from
 // the tower's database.
-func (db *TowerDB) DeleteSession(target wtdb.SessionID) error {
+func (db *TowerDB) DeleteSession(target wtdb.SessionID) er.R {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
 	// Fail if the session doesn't exit.
 	if _, ok := db.sessions[target]; !ok {
-		return wtdb.ErrSessionNotFound
+		return wtdb.ErrSessionNotFound.Default()
 	}
 
 	// Remove the target session.
@@ -124,7 +125,7 @@ func (db *TowerDB) DeleteSession(target wtdb.SessionID) error {
 // passed breachHints. More than one Match will be returned for a given hint if
 // they exist in the database.
 func (db *TowerDB) QueryMatches(
-	breachHints []blob.BreachHint) ([]wtdb.Match, error) {
+	breachHints []blob.BreachHint) ([]wtdb.Match, er.R) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -158,14 +159,14 @@ func (db *TowerDB) QueryMatches(
 
 // SetLookoutTip stores the provided epoch as the latest lookout tip epoch in
 // the tower database.
-func (db *TowerDB) SetLookoutTip(epoch *chainntnfs.BlockEpoch) error {
+func (db *TowerDB) SetLookoutTip(epoch *chainntnfs.BlockEpoch) er.R {
 	db.lastEpoch = epoch
 	return nil
 }
 
 // GetLookoutTip retrieves the current lookout tip block epoch from the tower
 // database.
-func (db *TowerDB) GetLookoutTip() (*chainntnfs.BlockEpoch, error) {
+func (db *TowerDB) GetLookoutTip() (*chainntnfs.BlockEpoch, er.R) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 

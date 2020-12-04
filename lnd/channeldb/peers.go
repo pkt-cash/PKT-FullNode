@@ -2,10 +2,9 @@ package channeldb
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 )
@@ -34,7 +33,7 @@ var (
 var (
 	// ErrNoPeerBucket is returned when we try to read entries for a peer
 	// that is not tracked.
-	ErrNoPeerBucket = errors.New("peer bucket not found")
+	ErrNoPeerBucket = Err.CodeWithDetail("ErrNoPeerBucket", "peer bucket not found")
 )
 
 // FlapCount contains information about a peer's flap count.
@@ -49,8 +48,8 @@ type FlapCount struct {
 // WriteFlapCounts writes the flap count for a set of peers to disk, creating a
 // bucket for the peer's pubkey if necessary. Note that this function overwrites
 // the current value.
-func (d *DB) WriteFlapCounts(flapCounts map[route.Vertex]*FlapCount) error {
-	return kvdb.Update(d, func(tx kvdb.RwTx) error {
+func (d *DB) WriteFlapCounts(flapCounts map[route.Vertex]*FlapCount) er.R {
+	return kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 		// Run through our set of flap counts and record them for
 		// each peer, creating a bucket for the peer pubkey if required.
 		for peer, flapCount := range flapCounts {
@@ -85,20 +84,20 @@ func (d *DB) WriteFlapCounts(flapCounts map[route.Vertex]*FlapCount) error {
 
 // ReadFlapCount attempts to read the flap count for a peer, failing if the
 // peer is not found or we do not have flap count stored.
-func (d *DB) ReadFlapCount(pubkey route.Vertex) (*FlapCount, error) {
+func (d *DB) ReadFlapCount(pubkey route.Vertex) (*FlapCount, er.R) {
 	var flapCount FlapCount
 
-	if err := kvdb.View(d, func(tx kvdb.RTx) error {
+	if err := kvdb.View(d, func(tx kvdb.RTx) er.R {
 		peers := tx.ReadBucket(peersBucket)
 
 		peerBucket := peers.NestedReadBucket(pubkey[:])
 		if peerBucket == nil {
-			return ErrNoPeerBucket
+			return ErrNoPeerBucket.Default()
 		}
 
 		flapBytes := peerBucket.Get(flapCountKey)
 		if flapBytes == nil {
-			return fmt.Errorf("flap count not recorded for: %v",
+			return er.Errorf("flap count not recorded for: %v",
 				pubkey)
 		}
 

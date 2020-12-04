@@ -1,11 +1,11 @@
 package chanfitness
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/clock"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type eventType int
@@ -182,10 +182,10 @@ func (p *peerLog) addEvent(online bool, time time.Time) {
 // events for our peer yet, we create one with our peer's current online state
 // so that we know the state that the peer had at channel start, which is
 // required to calculate uptime over the channel's lifetime.
-func (p *peerLog) addChannel(channelPoint wire.OutPoint) error {
+func (p *peerLog) addChannel(channelPoint wire.OutPoint) er.R {
 	_, ok := p.channels[channelPoint]
 	if ok {
-		return fmt.Errorf("channel: %v already present", channelPoint)
+		return er.Errorf("channel: %v already present", channelPoint)
 	}
 
 	openTime := p.clock.Now()
@@ -205,10 +205,10 @@ func (p *peerLog) addChannel(channelPoint wire.OutPoint) error {
 
 // removeChannel removes a channel from our log. If we have no more channels
 // with the peer after removing this one, we clear our list of events.
-func (p *peerLog) removeChannel(channelPoint wire.OutPoint) error {
+func (p *peerLog) removeChannel(channelPoint wire.OutPoint) er.R {
 	_, ok := p.channels[channelPoint]
 	if !ok {
-		return fmt.Errorf("channel: %v not present", channelPoint)
+		return er.Errorf("channel: %v not present", channelPoint)
 	}
 
 	delete(p.channels, channelPoint)
@@ -233,11 +233,11 @@ func (p *peerLog) channelCount() int {
 // channelUptime looks up a channel and returns the amount of time that the
 // channel has been monitored for and its uptime over this period.
 func (p *peerLog) channelUptime(channelPoint wire.OutPoint) (time.Duration,
-	time.Duration, error) {
+	time.Duration, er.R) {
 
 	channel, ok := p.channels[channelPoint]
 	if !ok {
-		return 0, 0, ErrChannelNotFound
+		return 0, 0, ErrChannelNotFound.Default()
 	}
 
 	now := p.clock.Now()
@@ -372,15 +372,15 @@ func (p *peerLog) getOnlinePeriods() []*onlinePeriod {
 // uptime calculates the total uptime we have recorded for a peer over the
 // inclusive range specified. An error is returned if the end of the range is
 // before the start or a zero end time is returned.
-func (p *peerLog) uptime(start, end time.Time) (time.Duration, error) {
+func (p *peerLog) uptime(start, end time.Time) (time.Duration, er.R) {
 	// Error if we are provided with an invalid range to calculate uptime
 	// for.
 	if end.Before(start) {
-		return 0, fmt.Errorf("end time: %v before start time: %v",
+		return 0, er.Errorf("end time: %v before start time: %v",
 			end, start)
 	}
 	if end.IsZero() {
-		return 0, fmt.Errorf("zero end time")
+		return 0, er.Errorf("zero end time")
 	}
 
 	var uptime time.Duration

@@ -28,12 +28,12 @@ func NewNodeSigner(keySigner keychain.SingleKeyDigestSigner) *NodeSigner {
 // resident node's private key. If the target public key is _not_ the node's
 // private key, then an error will be returned.
 func (n *NodeSigner) SignMessage(pubKey *btcec.PublicKey,
-	msg []byte) (input.Signature, error) {
+	msg []byte) (input.Signature, er.R) {
 
 	// If this isn't our identity public key, then we'll exit early with an
 	// error as we can't sign with this key.
 	if !pubKey.IsEqual(n.keySigner.PubKey()) {
-		return nil, fmt.Errorf("unknown public key")
+		return nil, er.Errorf("unknown public key")
 	}
 
 	// Otherwise, we'll sign the dsha256 of the target message.
@@ -41,7 +41,7 @@ func (n *NodeSigner) SignMessage(pubKey *btcec.PublicKey,
 	copy(digest[:], chainhash.DoubleHashB(msg))
 	sig, err := n.keySigner.SignDigest(digest)
 	if err != nil {
-		return nil, fmt.Errorf("can't sign the message: %v", err)
+		return nil, er.Errorf("can't sign the message: %v", err)
 	}
 
 	return sig, nil
@@ -50,7 +50,7 @@ func (n *NodeSigner) SignMessage(pubKey *btcec.PublicKey,
 // SignCompact signs a double-sha256 digest of the msg parameter under the
 // resident node's private key. The returned signature is a pubkey-recoverable
 // signature.
-func (n *NodeSigner) SignCompact(msg []byte) ([]byte, error) {
+func (n *NodeSigner) SignCompact(msg []byte) ([]byte, er.R) {
 	// We'll sign the dsha256 of the target message.
 	digest := chainhash.DoubleHashB(msg)
 
@@ -59,14 +59,14 @@ func (n *NodeSigner) SignCompact(msg []byte) ([]byte, error) {
 
 // SignDigestCompact signs the provided message digest under the resident
 // node's private key. The returned signature is a pubkey-recoverable signature.
-func (n *NodeSigner) SignDigestCompact(hash []byte) ([]byte, error) {
+func (n *NodeSigner) SignDigestCompact(hash []byte) ([]byte, er.R) {
 	var digest [32]byte
 	copy(digest[:], hash)
 
 	// keychain.SignDigestCompact returns a pubkey-recoverable signature.
 	sig, err := n.keySigner.SignDigestCompact(digest)
 	if err != nil {
-		return nil, fmt.Errorf("can't sign the hash: %v", err)
+		return nil, er.Errorf("can't sign the hash: %v", err)
 	}
 
 	return sig, nil

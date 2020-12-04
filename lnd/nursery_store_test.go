@@ -6,9 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type incubateTest struct {
@@ -367,7 +368,7 @@ func assertNumChanOutputs(t *testing.T, ns NurseryStore,
 	chanPoint *wire.OutPoint, expectedNum int) {
 
 	var count int
-	err := ns.ForChanOutputs(chanPoint, func([]byte, []byte) error {
+	err := ns.ForChanOutputs(chanPoint, func([]byte, []byte) er.R {
 		count++
 		return nil
 	}, func() {
@@ -550,7 +551,7 @@ func assertCanRemoveChannel(t *testing.T, ns NurseryStore,
 	if canRemove && err != nil {
 		t.Fatalf("expected nil when removing active channel, got: %v",
 			err)
-	} else if !canRemove && err != ErrImmatureChannel {
+	} else if !canRemove && !ErrImmatureChannel.Is(err) {
 		t.Fatalf("expected ErrImmatureChannel when removing "+
 			"active channel: %v", err)
 	}

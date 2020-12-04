@@ -2,8 +2,6 @@ package migration_01_to_11
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"image/color"
 	"io"
 	"net"
@@ -11,6 +9,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -173,14 +173,14 @@ func newChannelGraph(db *DB, rejectCacheSize, chanCacheSize int) *ChannelGraph {
 // as the center node within a star-graph. This method may be used to kick off
 // a path finding algorithm in order to explore the reachability of another
 // node based off the source node.
-func (c *ChannelGraph) SourceNode() (*LightningNode, error) {
+func (c *ChannelGraph) SourceNode() (*LightningNode, er.R) {
 	var source *LightningNode
-	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
 		// First grab the nodes bucket which stores the mapping from
 		// pubKey to node information.
 		nodes := tx.ReadBucket(nodeBucket)
 		if nodes == nil {
-			return ErrGraphNotFound
+			return ErrGraphNotFound.Default()
 		}
 
 		node, err := c.sourceNode(nodes)
@@ -204,10 +204,10 @@ func (c *ChannelGraph) SourceNode() (*LightningNode, error) {
 // of the graph. The source node is treated as the center node within a
 // star-graph. This method may be used to kick off a path finding algorithm in
 // order to explore the reachability of another node based off the source node.
-func (c *ChannelGraph) sourceNode(nodes kvdb.RBucket) (*LightningNode, error) {
+func (c *ChannelGraph) sourceNode(nodes kvdb.RBucket) (*LightningNode, er.R) {
 	selfPub := nodes.Get(sourceKey)
 	if selfPub == nil {
-		return nil, ErrSourceNodeNotSet
+		return nil, ErrSourceNodeNotSet.Default()
 	}
 
 	// With the pubKey of the source node retrieved, we're able to
@@ -224,10 +224,10 @@ func (c *ChannelGraph) sourceNode(nodes kvdb.RBucket) (*LightningNode, error) {
 // SetSourceNode sets the source node within the graph database. The source
 // node is to be used as the center of a star-graph within path finding
 // algorithms.
-func (c *ChannelGraph) SetSourceNode(node *LightningNode) error {
+func (c *ChannelGraph) SetSourceNode(node *LightningNode) er.R {
 	nodePubBytes := node.PubKeyBytes[:]
 
-	return kvdb.Update(c.db, func(tx kvdb.RwTx) error {
+	return kvdb.Update(c.db, func(tx kvdb.RwTx) er.R {
 		// First grab the nodes bucket which stores the mapping from
 		// pubKey to node information.
 		nodes, err := tx.CreateTopLevelBucket(nodeBucket)
@@ -247,7 +247,7 @@ func (c *ChannelGraph) SetSourceNode(node *LightningNode) error {
 	}, func() {})
 }
 
-func addLightningNode(tx kvdb.RwTx, node *LightningNode) error {
+func addLightningNode(tx kvdb.RwTx, node *LightningNode) er.R {
 	nodes, err := tx.CreateTopLevelBucket(nodeBucket)
 	if err != nil {
 		return err
@@ -272,15 +272,15 @@ func addLightningNode(tx kvdb.RwTx, node *LightningNode) error {
 // buckets using an existing database transaction. The returned boolean will be
 // true if the updated policy belongs to node1, and false if the policy belonged
 // to node2.
-func updateEdgePolicy(tx kvdb.RwTx, edge *ChannelEdgePolicy) (bool, error) {
+func updateEdgePolicy(tx kvdb.RwTx, edge *ChannelEdgePolicy) (bool, er.R) {
 	edges, err := tx.CreateTopLevelBucket(edgeBucket)
 	if err != nil {
-		return false, ErrEdgeNotFound
+		return false, ErrEdgeNotFound.Default()
 
 	}
 	edgeIndex := edges.NestedReadWriteBucket(edgeIndexBucket)
 	if edgeIndex == nil {
-		return false, ErrEdgeNotFound
+		return false, ErrEdgeNotFound.Default()
 	}
 	nodes, err := tx.CreateTopLevelBucket(nodeBucket)
 	if err != nil {
@@ -296,7 +296,7 @@ func updateEdgePolicy(tx kvdb.RwTx, edge *ChannelEdgePolicy) (bool, error) {
 	// nodes which connect this channel edge.
 	nodeInfo := edgeIndex.Get(chanID[:])
 	if nodeInfo == nil {
-		return false, ErrEdgeNotFound
+		return false, ErrEdgeNotFound.Default()
 	}
 
 	// Depending on the flags value passed above, either the first
@@ -379,7 +379,7 @@ type LightningNode struct {
 //
 // NOTE: By having this method to access an attribute, we ensure we only need
 // to fully deserialize the pubkey if absolutely necessary.
-func (l *LightningNode) PubKey() (*btcec.PublicKey, error) {
+func (l *LightningNode) PubKey() (*btcec.PublicKey, er.R) {
 	if l.pubKey != nil {
 		return l.pubKey, nil
 	}
@@ -554,7 +554,7 @@ func (c *ChannelEdgePolicy) IsDisabled() bool {
 }
 
 func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
-	updateIndex kvdb.RwBucket, node *LightningNode) error {
+	updateIndex kvdb.RwBucket, node *LightningNode) er.R {
 
 	var (
 		scratch [16]byte
@@ -575,11 +575,11 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 
 	byteOrder.PutUint64(scratch[:8], updateUnix)
 	if _, err := b.Write(scratch[:8]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if _, err := b.Write(nodePub); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// If we got a node announcement for this node, we will have the rest
@@ -588,7 +588,7 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 		// Write HaveNodeAnnouncement=0.
 		byteOrder.PutUint16(scratch[:2], 0)
 		if _, err := b.Write(scratch[:2]); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		return nodeBucket.Put(nodePub, b.Bytes())
@@ -597,16 +597,16 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 	// Write HaveNodeAnnouncement=1.
 	byteOrder.PutUint16(scratch[:2], 1)
 	if _, err := b.Write(scratch[:2]); err != nil {
-		return err
+		return er.E(err)
 	}
 
-	if err := binary.Write(&b, byteOrder, node.Color.R); err != nil {
+	if err := util.WriteBin(&b, byteOrder, node.Color.R); err != nil {
 		return err
 	}
-	if err := binary.Write(&b, byteOrder, node.Color.G); err != nil {
+	if err := util.WriteBin(&b, byteOrder, node.Color.G); err != nil {
 		return err
 	}
-	if err := binary.Write(&b, byteOrder, node.Color.B); err != nil {
+	if err := util.WriteBin(&b, byteOrder, node.Color.B); err != nil {
 		return err
 	}
 
@@ -621,7 +621,7 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 	numAddresses := uint16(len(node.Addresses))
 	byteOrder.PutUint16(scratch[:2], numAddresses)
 	if _, err := b.Write(scratch[:2]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	for _, address := range node.Addresses {
@@ -632,7 +632,7 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 
 	sigLen := len(node.AuthSigBytes)
 	if sigLen > 80 {
-		return fmt.Errorf("max sig len allowed is 80, had %v",
+		return er.Errorf("max sig len allowed is 80, had %v",
 			sigLen)
 	}
 
@@ -683,37 +683,37 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket,
 }
 
 func fetchLightningNode(nodeBucket kvdb.RBucket,
-	nodePub []byte) (LightningNode, error) {
+	nodePub []byte) (LightningNode, er.R) {
 
 	nodeBytes := nodeBucket.Get(nodePub)
 	if nodeBytes == nil {
-		return LightningNode{}, ErrGraphNodeNotFound
+		return LightningNode{}, ErrGraphNodeNotFound.Default()
 	}
 
 	nodeReader := bytes.NewReader(nodeBytes)
 	return deserializeLightningNode(nodeReader)
 }
 
-func deserializeLightningNode(r io.Reader) (LightningNode, error) {
+func deserializeLightningNode(r io.Reader) (LightningNode, er.R) {
 	var (
 		node    LightningNode
 		scratch [8]byte
-		err     error
+		err     er.R
 	)
 
 	if _, err := r.Read(scratch[:]); err != nil {
-		return LightningNode{}, err
+		return LightningNode{}, er.E(err)
 	}
 
 	unix := int64(byteOrder.Uint64(scratch[:]))
 	node.LastUpdate = time.Unix(unix, 0)
 
-	if _, err := io.ReadFull(r, node.PubKeyBytes[:]); err != nil {
+	if _, err := util.ReadFull(r, node.PubKeyBytes[:]); err != nil {
 		return LightningNode{}, err
 	}
 
 	if _, err := r.Read(scratch[:2]); err != nil {
-		return LightningNode{}, err
+		return LightningNode{}, er.E(err)
 	}
 
 	hasNodeAnn := byteOrder.Uint16(scratch[:2])
@@ -731,13 +731,13 @@ func deserializeLightningNode(r io.Reader) (LightningNode, error) {
 
 	// We did get a node announcement for this node, so we'll have the rest
 	// of the data available.
-	if err := binary.Read(r, byteOrder, &node.Color.R); err != nil {
+	if err := util.ReadBin(r, byteOrder, &node.Color.R); err != nil {
 		return LightningNode{}, err
 	}
-	if err := binary.Read(r, byteOrder, &node.Color.G); err != nil {
+	if err := util.ReadBin(r, byteOrder, &node.Color.G); err != nil {
 		return LightningNode{}, err
 	}
-	if err := binary.Read(r, byteOrder, &node.Color.B); err != nil {
+	if err := util.ReadBin(r, byteOrder, &node.Color.B); err != nil {
 		return LightningNode{}, err
 	}
 
@@ -754,7 +754,7 @@ func deserializeLightningNode(r io.Reader) (LightningNode, error) {
 	node.Features = fv
 
 	if _, err := r.Read(scratch[:2]); err != nil {
-		return LightningNode{}, err
+		return LightningNode{}, er.E(err)
 	}
 	numAddresses := int(byteOrder.Uint16(scratch[:2]))
 
@@ -779,8 +779,8 @@ func deserializeLightningNode(r io.Reader) (LightningNode, error) {
 		r, 0, MaxAllowedExtraOpaqueBytes, "blob",
 	)
 	switch {
-	case err == io.ErrUnexpectedEOF:
-	case err == io.EOF:
+	case er.Wrapped(err) == io.ErrUnexpectedEOF:
+	case er.Wrapped(err) == io.EOF:
 	case err != nil:
 		return LightningNode{}, err
 	}
@@ -788,22 +788,22 @@ func deserializeLightningNode(r io.Reader) (LightningNode, error) {
 	return node, nil
 }
 
-func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
+func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, er.R) {
 	var (
-		err      error
+		err      er.R
 		edgeInfo ChannelEdgeInfo
 	)
 
-	if _, err := io.ReadFull(r, edgeInfo.NodeKey1Bytes[:]); err != nil {
+	if _, err := util.ReadFull(r, edgeInfo.NodeKey1Bytes[:]); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
-	if _, err := io.ReadFull(r, edgeInfo.NodeKey2Bytes[:]); err != nil {
+	if _, err := util.ReadFull(r, edgeInfo.NodeKey2Bytes[:]); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
-	if _, err := io.ReadFull(r, edgeInfo.BitcoinKey1Bytes[:]); err != nil {
+	if _, err := util.ReadFull(r, edgeInfo.BitcoinKey1Bytes[:]); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
-	if _, err := io.ReadFull(r, edgeInfo.BitcoinKey2Bytes[:]); err != nil {
+	if _, err := util.ReadFull(r, edgeInfo.BitcoinKey2Bytes[:]); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
 
@@ -839,14 +839,14 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
 	if err := readOutpoint(r, &edgeInfo.ChannelPoint); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
-	if err := binary.Read(r, byteOrder, &edgeInfo.Capacity); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edgeInfo.Capacity); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
-	if err := binary.Read(r, byteOrder, &edgeInfo.ChannelID); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edgeInfo.ChannelID); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
 
-	if _, err := io.ReadFull(r, edgeInfo.ChainHash[:]); err != nil {
+	if _, err := util.ReadFull(r, edgeInfo.ChainHash[:]); err != nil {
 		return ChannelEdgeInfo{}, err
 	}
 
@@ -856,8 +856,8 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
 		r, 0, MaxAllowedExtraOpaqueBytes, "blob",
 	)
 	switch {
-	case err == io.ErrUnexpectedEOF:
-	case err == io.EOF:
+	case er.Wrapped(err) == io.ErrUnexpectedEOF:
+	case er.Wrapped(err) == io.EOF:
 	case err != nil:
 		return ChannelEdgeInfo{}, err
 	}
@@ -866,7 +866,7 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
 }
 
 func putChanEdgePolicy(edges, nodes kvdb.RwBucket, edge *ChannelEdgePolicy,
-	from, to []byte) error {
+	from, to []byte) er.R {
 
 	var edgeKey [33 + 8]byte
 	copy(edgeKey[:], from)
@@ -908,7 +908,7 @@ func putChanEdgePolicy(edges, nodes kvdb.RwBucket, edge *ChannelEdgePolicy,
 		oldEdgePolicy, err := deserializeChanEdgePolicy(
 			bytes.NewReader(edgeBytes), nodes,
 		)
-		if err != nil && err != ErrEdgePolicyOptionalFieldNotFound {
+		if err != nil && !ErrEdgePolicyOptionalFieldNotFound.Is(err) {
 			return err
 		}
 
@@ -946,7 +946,7 @@ func putChanEdgePolicy(edges, nodes kvdb.RwBucket, edge *ChannelEdgePolicy,
 // Maintaining the bucket this way allows a fast retrieval of disabled
 // channels, for example when prune is needed.
 func updateEdgePolicyDisabledIndex(edges kvdb.RwBucket, chanID uint64,
-	direction bool, disabled bool) error {
+	direction bool, disabled bool) er.R {
 
 	var disabledEdgeKey [8 + 1]byte
 	byteOrder.PutUint64(disabledEdgeKey[0:], chanID)
@@ -971,14 +971,14 @@ func updateEdgePolicyDisabledIndex(edges kvdb.RwBucket, chanID uint64,
 // putChanEdgePolicyUnknown marks the edge policy as unknown
 // in the edges bucket.
 func putChanEdgePolicyUnknown(edges kvdb.RwBucket, channelID uint64,
-	from []byte) error {
+	from []byte) er.R {
 
 	var edgeKey [33 + 8]byte
 	copy(edgeKey[:], from)
 	byteOrder.PutUint64(edgeKey[33:], channelID)
 
 	if edges.Get(edgeKey[:]) != nil {
-		return fmt.Errorf("Cannot write unknown policy for channel %v "+
+		return er.Errorf("Cannot write unknown policy for channel %v "+
 			" when there is already a policy present", channelID)
 	}
 
@@ -986,7 +986,7 @@ func putChanEdgePolicyUnknown(edges kvdb.RwBucket, channelID uint64,
 }
 
 func fetchChanEdgePolicy(edges kvdb.RBucket, chanID []byte,
-	nodePub []byte, nodes kvdb.RBucket) (*ChannelEdgePolicy, error) {
+	nodePub []byte, nodes kvdb.RBucket) (*ChannelEdgePolicy, er.R) {
 
 	var edgeKey [33 + 8]byte
 	copy(edgeKey[:], nodePub)
@@ -994,7 +994,7 @@ func fetchChanEdgePolicy(edges kvdb.RBucket, chanID []byte,
 
 	edgeBytes := edges.Get(edgeKey[:])
 	if edgeBytes == nil {
-		return nil, ErrEdgeNotFound
+		return nil, ErrEdgeNotFound.Default()
 	}
 
 	// No need to deserialize unknown policy.
@@ -1008,7 +1008,7 @@ func fetchChanEdgePolicy(edges kvdb.RBucket, chanID []byte,
 	switch {
 	// If the db policy was missing an expected optional field, we return
 	// nil as if the policy was unknown.
-	case err == ErrEdgePolicyOptionalFieldNotFound:
+	case ErrEdgePolicyOptionalFieldNotFound.Is(err):
 		return nil, nil
 
 	case err != nil:
@@ -1019,44 +1019,44 @@ func fetchChanEdgePolicy(edges kvdb.RBucket, chanID []byte,
 }
 
 func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
-	to []byte) error {
+	to []byte) er.R {
 
 	err := wire.WriteVarBytes(w, 0, edge.SigBytes)
 	if err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, edge.ChannelID); err != nil {
+	if err := util.WriteBin(w, byteOrder, edge.ChannelID); err != nil {
 		return err
 	}
 
 	var scratch [8]byte
 	updateUnix := uint64(edge.LastUpdate.Unix())
 	byteOrder.PutUint64(scratch[:], updateUnix)
-	if _, err := w.Write(scratch[:]); err != nil {
+	if _, err := util.Write(w, scratch[:]); err != nil {
 		return err
 	}
 
-	if err := binary.Write(w, byteOrder, edge.MessageFlags); err != nil {
+	if err := util.WriteBin(w, byteOrder, edge.MessageFlags); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, edge.ChannelFlags); err != nil {
+	if err := util.WriteBin(w, byteOrder, edge.ChannelFlags); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, edge.TimeLockDelta); err != nil {
+	if err := util.WriteBin(w, byteOrder, edge.TimeLockDelta); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, uint64(edge.MinHTLC)); err != nil {
+	if err := util.WriteBin(w, byteOrder, uint64(edge.MinHTLC)); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, uint64(edge.FeeBaseMSat)); err != nil {
+	if err := util.WriteBin(w, byteOrder, uint64(edge.FeeBaseMSat)); err != nil {
 		return err
 	}
-	if err := binary.Write(w, byteOrder, uint64(edge.FeeProportionalMillionths)); err != nil {
+	if err := util.WriteBin(w, byteOrder, uint64(edge.FeeProportionalMillionths)); err != nil {
 		return err
 	}
 
-	if _, err := w.Write(to); err != nil {
+	if _, err := util.Write(w, to); err != nil {
 		return err
 	}
 
@@ -1066,7 +1066,7 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 	// TODO(halseth): clean up when moving to TLV.
 	var opaqueBuf bytes.Buffer
 	if edge.MessageFlags.HasMaxHtlc() {
-		err := binary.Write(&opaqueBuf, byteOrder, uint64(edge.MaxHTLC))
+		err := util.WriteBin(&opaqueBuf, byteOrder, uint64(edge.MaxHTLC))
 		if err != nil {
 			return err
 		}
@@ -1076,7 +1076,7 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 		return ErrTooManyExtraOpaqueBytes(len(edge.ExtraOpaqueData))
 	}
 	if _, err := opaqueBuf.Write(edge.ExtraOpaqueData); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if err := wire.WriteVarBytes(w, 0, opaqueBuf.Bytes()); err != nil {
@@ -1086,61 +1086,61 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 }
 
 func deserializeChanEdgePolicy(r io.Reader,
-	nodes kvdb.RBucket) (*ChannelEdgePolicy, error) {
+	nodes kvdb.RBucket) (*ChannelEdgePolicy, er.R) {
 
 	edge := &ChannelEdgePolicy{}
 
-	var err error
+	var err er.R
 	edge.SigBytes, err = wire.ReadVarBytes(r, 0, 80, "sig")
 	if err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(r, byteOrder, &edge.ChannelID); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edge.ChannelID); err != nil {
 		return nil, err
 	}
 
 	var scratch [8]byte
 	if _, err := r.Read(scratch[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	unix := int64(byteOrder.Uint64(scratch[:]))
 	edge.LastUpdate = time.Unix(unix, 0)
 
-	if err := binary.Read(r, byteOrder, &edge.MessageFlags); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edge.MessageFlags); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, byteOrder, &edge.ChannelFlags); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edge.ChannelFlags); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(r, byteOrder, &edge.TimeLockDelta); err != nil {
+	if err := util.ReadBin(r, byteOrder, &edge.TimeLockDelta); err != nil {
 		return nil, err
 	}
 
 	var n uint64
-	if err := binary.Read(r, byteOrder, &n); err != nil {
+	if err := util.ReadBin(r, byteOrder, &n); err != nil {
 		return nil, err
 	}
 	edge.MinHTLC = lnwire.MilliSatoshi(n)
 
-	if err := binary.Read(r, byteOrder, &n); err != nil {
+	if err := util.ReadBin(r, byteOrder, &n); err != nil {
 		return nil, err
 	}
 	edge.FeeBaseMSat = lnwire.MilliSatoshi(n)
 
-	if err := binary.Read(r, byteOrder, &n); err != nil {
+	if err := util.ReadBin(r, byteOrder, &n); err != nil {
 		return nil, err
 	}
 	edge.FeeProportionalMillionths = lnwire.MilliSatoshi(n)
 
 	var pub [33]byte
 	if _, err := r.Read(pub[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	node, err := fetchLightningNode(nodes, pub[:])
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch node: %x, %v",
+		return nil, er.Errorf("unable to fetch node: %x, %v",
 			pub[:], err)
 	}
 	edge.Node = &node
@@ -1151,8 +1151,8 @@ func deserializeChanEdgePolicy(r io.Reader,
 		r, 0, MaxAllowedExtraOpaqueBytes, "blob",
 	)
 	switch {
-	case err == io.ErrUnexpectedEOF:
-	case err == io.EOF:
+	case er.Wrapped(err) == io.ErrUnexpectedEOF:
+	case er.Wrapped(err) == io.EOF:
 	case err != nil:
 		return nil, err
 	}
@@ -1167,7 +1167,7 @@ func deserializeChanEdgePolicy(r io.Reader,
 		// stored before this field was validated. We'll return the
 		// edge along with an error.
 		if len(opq) < 8 {
-			return edge, ErrEdgePolicyOptionalFieldNotFound
+			return edge, ErrEdgePolicyOptionalFieldNotFound.Default()
 		}
 
 		maxHtlc := byteOrder.Uint64(opq[:8])

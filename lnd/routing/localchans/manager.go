@@ -1,15 +1,15 @@
 package localchans
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/discovery"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Manager manages the node's local channels. The only operation that is
@@ -23,16 +23,16 @@ type Manager struct {
 	// PropagateChanPolicyUpdate is called to persist a new policy to disk
 	// and broadcast it to the network.
 	PropagateChanPolicyUpdate func(
-		edgesToUpdate []discovery.EdgeWithInfo) error
+		edgesToUpdate []discovery.EdgeWithInfo) er.R
 
 	// ForAllOutgoingChannels is required to iterate over all our local
 	// channels.
 	ForAllOutgoingChannels func(cb func(*channeldb.ChannelEdgeInfo,
-		*channeldb.ChannelEdgePolicy) error) error
+		*channeldb.ChannelEdgePolicy) error) er.R
 
 	// FetchChannel is used to query local channel parameters.
 	FetchChannel func(chanPoint wire.OutPoint) (*channeldb.OpenChannel,
-		error)
+		er.R)
 
 	// policyUpdateLock ensures that the database and the link do not fall
 	// out of sync if there are concurrent fee update calls. Without it,
@@ -45,7 +45,7 @@ type Manager struct {
 // UpdatePolicy updates the policy for the specified channels on disk and in the
 // active links.
 func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
-	chanPoints ...wire.OutPoint) error {
+	chanPoints ...wire.OutPoint) er.R {
 
 	r.policyUpdateLock.Lock()
 	defer r.policyUpdateLock.Unlock()
@@ -67,7 +67,7 @@ func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
 	// otherwise we'll collect them all.
 	err := r.ForAllOutgoingChannels(func(
 		info *channeldb.ChannelEdgeInfo,
-		edge *channeldb.ChannelEdgePolicy) error {
+		edge *channeldb.ChannelEdgePolicy) er.R {
 
 		// If we have a channel filter, and this channel isn't a part
 		// of it, then we'll skip it.
@@ -125,7 +125,7 @@ func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
 // updateEdge updates the given edge with the new schema.
 func (r *Manager) updateEdge(chanPoint wire.OutPoint,
 	edge *channeldb.ChannelEdgePolicy,
-	newSchema routing.ChannelPolicy) error {
+	newSchema routing.ChannelPolicy) er.R {
 
 	// Update forwarding fee scheme and required time lock delta.
 	edge.FeeBaseMSat = newSchema.BaseFee
@@ -171,18 +171,18 @@ func (r *Manager) updateEdge(chanPoint wire.OutPoint,
 	// Validate htlc amount constraints.
 	switch {
 	case edge.MinHTLC < amtMin:
-		return fmt.Errorf("min htlc amount of %v msat is below "+
+		return er.Errorf("min htlc amount of %v msat is below "+
 			"min htlc parameter of %v msat for channel %v",
 			edge.MinHTLC, amtMin,
 			chanPoint)
 
 	case edge.MaxHTLC > amtMax:
-		return fmt.Errorf("max htlc size of %v msat is above "+
+		return er.Errorf("max htlc size of %v msat is above "+
 			"max pending amount of %v msat for channel %v",
 			edge.MaxHTLC, amtMax, chanPoint)
 
 	case edge.MinHTLC > edge.MaxHTLC:
-		return fmt.Errorf("min_htlc %v greater than max_htlc %v",
+		return er.Errorf("min_htlc %v greater than max_htlc %v",
 			edge.MinHTLC, edge.MaxHTLC)
 	}
 
@@ -195,7 +195,7 @@ func (r *Manager) updateEdge(chanPoint wire.OutPoint,
 // getHtlcAmtLimits retrieves the negotiated channel min and max htlc amount
 // constraints.
 func (r *Manager) getHtlcAmtLimits(chanPoint wire.OutPoint) (
-	lnwire.MilliSatoshi, lnwire.MilliSatoshi, error) {
+	lnwire.MilliSatoshi, lnwire.MilliSatoshi, er.R) {
 
 	ch, err := r.FetchChannel(chanPoint)
 	if err != nil {

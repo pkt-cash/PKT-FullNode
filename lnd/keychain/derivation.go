@@ -1,9 +1,8 @@
 package keychain
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const (
@@ -33,7 +32,8 @@ var (
 	// ErrCannotDerivePrivKey is returned when DerivePrivKey is unable to
 	// derive a private key given only the public key and target key
 	// family.
-	ErrCannotDerivePrivKey = fmt.Errorf("unable to derive private key")
+	ErrCannotDerivePrivKey = er.GenericErrorType.CodeWithDetail("ErrCannotDerivePrivKey",
+		"unable to derive private key")
 )
 
 // KeyFamily represents a "family" of keys that will be used within various
@@ -158,13 +158,13 @@ type KeyRing interface {
 	// DeriveNextKey attempts to derive the *next* key within the key
 	// family (account in BIP43) specified. This method should return the
 	// next external child within this branch.
-	DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error)
+	DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, er.R)
 
 	// DeriveKey attempts to derive an arbitrary key specified by the
 	// passed KeyLocator. This may be used in several recovery scenarios,
 	// or when manually rotating something like our current default node
 	// key.
-	DeriveKey(keyLoc KeyLocator) (KeyDescriptor, error)
+	DeriveKey(keyLoc KeyLocator) (KeyDescriptor, er.R)
 }
 
 // SecretKeyRing is a ring similar to the regular KeyRing interface, but it is
@@ -185,7 +185,7 @@ type SecretKeyRing interface {
 	// method will perform an in-order scan over the key set, with a max of
 	// MaxKeyRangeScan keys. In order for this to work, the caller MUST set
 	// the KeyFamily within the partially populated KeyLocator.
-	DerivePrivKey(keyDesc KeyDescriptor) (*btcec.PrivateKey, error)
+	DerivePrivKey(keyDesc KeyDescriptor) (*btcec.PrivateKey, er.R)
 }
 
 // DigestSignerRing is an interface that abstracts away basic low-level ECDSA
@@ -194,12 +194,12 @@ type DigestSignerRing interface {
 	// SignDigest signs the given SHA256 message digest with the private key
 	// described in the key descriptor.
 	SignDigest(keyDesc KeyDescriptor, digest [32]byte) (*btcec.Signature,
-		error)
+		er.R)
 
 	// SignDigestCompact signs the given SHA256 message digest with the
 	// private key described in the key descriptor and returns the signature
 	// in the compact, public key recoverable format.
-	SignDigestCompact(keyDesc KeyDescriptor, digest [32]byte) ([]byte, error)
+	SignDigestCompact(keyDesc KeyDescriptor, digest [32]byte) ([]byte, er.R)
 }
 
 // SingleKeyDigestSigner is an abstraction interface that hides the
@@ -211,12 +211,12 @@ type SingleKeyDigestSigner interface {
 
 	// SignDigest signs the given SHA256 message digest with the wrapped
 	// private key.
-	SignDigest(digest [32]byte) (*btcec.Signature, error)
+	SignDigest(digest [32]byte) (*btcec.Signature, er.R)
 
 	// SignDigestCompact signs the given SHA256 message digest with the
 	// wrapped private key and returns the signature in the compact, public
 	// key recoverable format.
-	SignDigestCompact(digest [32]byte) ([]byte, error)
+	SignDigestCompact(digest [32]byte) ([]byte, er.R)
 }
 
 // ECDHRing is an interface that abstracts away basic low-level ECDH shared key
@@ -230,7 +230,7 @@ type ECDHRing interface {
 	//
 	//  sx := k*P
 	//  s := sha256(sx.SerializeCompressed())
-	ECDH(keyDesc KeyDescriptor, pubKey *btcec.PublicKey) ([32]byte, error)
+	ECDH(keyDesc KeyDescriptor, pubKey *btcec.PublicKey) ([32]byte, er.R)
 }
 
 // SingleKeyECDH is an abstraction interface that hides the implementation of an
@@ -243,7 +243,7 @@ type SingleKeyECDH interface {
 	// the wrapped private key and remote public key. The output returned
 	// will be the sha256 of the resulting shared point serialized in
 	// compressed format.
-	ECDH(pubKey *btcec.PublicKey) ([32]byte, error)
+	ECDH(pubKey *btcec.PublicKey) ([32]byte, er.R)
 }
 
 // TODO(roasbeef): extend to actually support scalar mult of key?

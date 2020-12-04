@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/hex"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaroon.v2"
 )
@@ -11,7 +11,7 @@ import (
 var (
 	dummyMacStr = "0201047465737402067788991234560000062052d26ed139ea5af8" +
 		"3e675500c4ccb2471f62191b745bab820f129e5588a255d2"
-	dummyMac, _    = hex.DecodeString(dummyMacStr)
+	dummyMac, _    = util.DecodeHex(dummyMacStr)
 	encryptedEntry = &macaroonEntry{
 		Name: "encryptedMac",
 		Data: "snacl:exX8xbUOb6Gih88ybL2jZGo+DBDPU2tYKkvo0eVVmbDGDoFP" +
@@ -26,10 +26,10 @@ var (
 	}
 
 	testPassword = []byte("S3curePazzw0rd")
-	pwCallback   = func(string) ([]byte, error) {
+	pwCallback   = func(string) ([]byte, er.R) {
 		return testPassword, nil
 	}
-	noPwCallback = func(string) ([]byte, error) {
+	noPwCallback = func(string) ([]byte, er.R) {
 		return nil, nil
 	}
 )
@@ -43,13 +43,13 @@ func TestMacaroonJarEncrypted(t *testing.T) {
 		Name: "encryptedMac",
 	}
 	err := newEntry.storeMacaroon(toMacaroon(t, dummyMac), testPassword)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Now decrypt it again and make sure we get the same content back.
 	mac, err := newEntry.loadMacaroon(pwCallback)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	macBytes, err := mac.MarshalBinary()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, dummyMac, macBytes)
 
 	// The encrypted data of the entry we just created shouldn't be the
@@ -59,9 +59,9 @@ func TestMacaroonJarEncrypted(t *testing.T) {
 	// Decrypt the hard coded test entry and make sure the decrypted content
 	// matches our created entry.
 	mac, err = encryptedEntry.loadMacaroon(pwCallback)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	macBytes, err = mac.MarshalBinary()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, dummyMac, macBytes)
 }
 
@@ -74,29 +74,29 @@ func TestMacaroonJarPlaintext(t *testing.T) {
 		Name: "plaintextMac",
 	}
 	err := newEntry.storeMacaroon(toMacaroon(t, dummyMac), nil)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Now decrypt it again and make sure we get the same content back.
 	mac, err := newEntry.loadMacaroon(noPwCallback)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	macBytes, err := mac.MarshalBinary()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, dummyMac, macBytes)
 	require.Equal(t, plaintextEntry.Data, newEntry.Data)
 
 	// Load the hard coded plaintext test entry and make sure the loaded
 	// content matches our created entry.
 	mac, err = plaintextEntry.loadMacaroon(noPwCallback)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	macBytes, err = mac.MarshalBinary()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 	require.Equal(t, dummyMac, macBytes)
 }
 
 func toMacaroon(t *testing.T, macData []byte) *macaroon.Macaroon {
 	mac := &macaroon.Macaroon{}
 	err := mac.UnmarshalBinary(macData)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	return mac
 }

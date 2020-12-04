@@ -42,7 +42,7 @@ type SessionSource struct {
 
 // getRoutingGraph returns a routing graph and a clean-up function for
 // pathfinding.
-func (m *SessionSource) getRoutingGraph() (routingGraph, func(), error) {
+func (m *SessionSource) getRoutingGraph() (routingGraph, func(), er.R) {
 	routingTx, err := newDbRoutingTx(m.Graph)
 	if err != nil {
 		return nil, nil, err
@@ -60,7 +60,7 @@ func (m *SessionSource) getRoutingGraph() (routingGraph, func(), error) {
 // in order to populate additional edges to explore when finding a path to the
 // payment's destination.
 func (m *SessionSource) NewPaymentSession(p *LightningPayment) (
-	PaymentSession, error) {
+	PaymentSession, er.R) {
 
 	sourceNode, err := m.Graph.SourceNode()
 	if err != nil {
@@ -96,7 +96,7 @@ func (m *SessionSource) NewPaymentSessionEmpty() PaymentSession {
 // RouteHintsToEdges converts a list of invoice route hints to an edge map that
 // can be passed into pathfinding.
 func RouteHintsToEdges(routeHints [][]zpay32.HopHint, target route.Vertex) (
-	map[route.Vertex][]*channeldb.ChannelEdgePolicy, error) {
+	map[route.Vertex][]*channeldb.ChannelEdgePolicy, er.R) {
 
 	edges := make(map[route.Vertex][]*channeldb.ChannelEdgePolicy)
 

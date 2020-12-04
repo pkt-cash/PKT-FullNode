@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 )
 
@@ -74,8 +75,8 @@ const (
 )
 
 var (
-	ErrMaxRoutingInfoSizeExceeded = fmt.Errorf(
-		"max routing info size of %v bytes exceeded", routingInfoSize)
+	ErrMaxRoutingInfoSizeExceeded = Err.CodeWithDetail("ErrMaxRoutingInfoSizeExceeded",
+		fmt.Sprintf("max routing info size of %v bytes exceeded", routingInfoSize))
 )
 
 // OnionPacket is the onion wrapped hop-to-hop routing information necessary to
@@ -116,7 +117,7 @@ type OnionPacket struct {
 // generateSharedSecrets by the given nodes pubkeys, generates the shared
 // secrets.
 func generateSharedSecrets(paymentPath []*btcec.PublicKey,
-	sessionKey *btcec.PrivateKey) ([]Hash256, error) {
+	sessionKey *btcec.PrivateKey) ([]Hash256, er.R) {
 
 	// Each hop performs ECDH with our ephemeral key pair to arrive at a
 	// shared secret. Additionally, each hop randomizes the group element
@@ -196,32 +197,32 @@ func generateSharedSecrets(paymentPath []*btcec.PublicKey,
 // NewOnionPacket creates a new onion packet which is capable of obliviously
 // routing a message through the mix-net path outline by 'paymentPath'.
 func NewOnionPacket(paymentPath *PaymentPath, sessionKey *btcec.PrivateKey,
-	assocData []byte, pktFiller PacketFiller) (*OnionPacket, error) {
+	assocData []byte, pktFiller PacketFiller) (*OnionPacket, er.R) {
 
 	// Check whether total payload size doesn't exceed the hard maximum.
 	if paymentPath.TotalPayloadSize() > routingInfoSize {
-		return nil, ErrMaxRoutingInfoSizeExceeded
+		return nil, ErrMaxRoutingInfoSizeExceeded.Default()
 	}
 
 	// If we don't actually have a partially populated route, then we'll
 	// exit early.
 	numHops := paymentPath.TrueRouteLength()
 	if numHops == 0 {
-		return nil, fmt.Errorf("route of length zero passed in")
+		return nil, er.Errorf("route of length zero passed in")
 	}
 
 	// We'll force the caller to provide a packet filler, as otherwise we
 	// may default to an insecure filling method (which should only really
 	// be used to generate test vectors).
 	if pktFiller == nil {
-		return nil, fmt.Errorf("packet filler must be specified")
+		return nil, er.Errorf("packet filler must be specified")
 	}
 
 	hopSharedSecrets, err := generateSharedSecrets(
 		paymentPath.NodeKeys(), sessionKey,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error generating shared secret: %v", err)
+		return nil, er.Errorf("error generating shared secret: %v", err)
 	}
 
 	// Generate the padding, called "filler strings" in the paper.
@@ -357,7 +358,11 @@ func generateHeaderPadding(key string, path *PaymentPath, sharedSecrets []Hash25
 // Encode serializes the raw bytes of the onion packet into the passed
 // io.Writer. The form encoded within the passed io.Writer is suitable for
 // either storing on disk, or sending over the network.
-func (f *OnionPacket) Encode(w io.Writer) error {
+func (f *OnionPacket) Encode(w io.Writer) er.R {
+	return er.E(f.encode(w))
+}
+
+func (f *OnionPacket) encode(w io.Writer) error {
 	ephemeral := f.EphemeralKey.SerializeCompressed()
 
 	if _, err := w.Write([]byte{f.Version}); err != nil {
@@ -383,36 +388,36 @@ func (f *OnionPacket) Encode(w io.Writer) error {
 // encoded within the io.Reader. In the case of any decoding errors, an error
 // will be returned. If the method success, then the new OnionPacket is ready
 // to be processed by an instance of SphinxNode.
-func (f *OnionPacket) Decode(r io.Reader) error {
-	var err error
+func (f *OnionPacket) Decode(r io.Reader) er.R {
+	var err er.R
 
 	var buf [1]byte
 	if _, err := io.ReadFull(r, buf[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	f.Version = buf[0]
 
 	// If version of the onion packet protocol unknown for us than in might
 	// lead to improperly decoded data.
 	if f.Version != baseVersion {
-		return ErrInvalidOnionVersion
+		return ErrInvalidOnionVersion.Default()
 	}
 
 	var ephemeral [33]byte
 	if _, err := io.ReadFull(r, ephemeral[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	f.EphemeralKey, err = btcec.ParsePubKey(ephemeral[:], btcec.S256())
 	if err != nil {
-		return ErrInvalidOnionKey
+		return ErrInvalidOnionKey.Default()
 	}
 
 	if _, err := io.ReadFull(r, f.RoutingInfo[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if _, err := io.ReadFull(r, f.HeaderMAC[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -512,7 +517,7 @@ func NewRouter(nodeKey SingleKeyECDH, net *chaincfg.Params, log ReplayLog) *Rout
 
 // Start starts / opens the ReplayLog's channeldb and its accompanying
 // garbage collector goroutine.
-func (r *Router) Start() error {
+func (r *Router) Start() er.R {
 	return r.log.Start()
 }
 
@@ -532,7 +537,7 @@ func (r *Router) Stop() {
 // returned which houses the newly parsed packet, along with instructions on
 // what to do next.
 func (r *Router) ProcessOnionPacket(onionPkt *OnionPacket,
-	assocData []byte, incomingCltv uint32) (*ProcessedPacket, error) {
+	assocData []byte, incomingCltv uint32) (*ProcessedPacket, er.R) {
 
 	// Compute the shared secret for this onion packet.
 	sharedSecret, err := r.generateSharedSecret(onionPkt.EphemeralKey)
@@ -566,7 +571,7 @@ func (r *Router) ProcessOnionPacket(onionPkt *OnionPacket,
 // NOTE: This method does not do any sort of replay protection, and should only
 // be used to reconstruct packets that were successfully processed previously.
 func (r *Router) ReconstructOnionPacket(onionPkt *OnionPacket,
-	assocData []byte) (*ProcessedPacket, error) {
+	assocData []byte) (*ProcessedPacket, er.R) {
 
 	// Compute the shared secret for this onion packet.
 	sharedSecret, err := r.generateSharedSecret(onionPkt.EphemeralKey)
@@ -583,7 +588,7 @@ func (r *Router) ReconstructOnionPacket(onionPkt *OnionPacket,
 // packet. This function returns the next inner onion packet layer, along with
 // the hop data extracted from the outer onion packet.
 func unwrapPacket(onionPkt *OnionPacket, sharedSecret *Hash256,
-	assocData []byte) (*OnionPacket, *HopPayload, error) {
+	assocData []byte) (*OnionPacket, *HopPayload, er.R) {
 
 	dhKey := onionPkt.EphemeralKey
 	routeInfo := onionPkt.RoutingInfo
@@ -595,7 +600,7 @@ func unwrapPacket(onionPkt *OnionPacket, sharedSecret *Hash256,
 	message := append(routeInfo[:], assocData...)
 	calculatedMac := calcMac(generateKey("mu", sharedSecret), message)
 	if !hmac.Equal(headerMac[:], calculatedMac[:]) {
-		return nil, nil, ErrInvalidOnionHMAC
+		return nil, nil, ErrInvalidOnionHMAC.Default()
 	}
 
 	// Attach the padding zeroes in order to properly strip an encryption
@@ -642,7 +647,7 @@ func unwrapPacket(onionPkt *OnionPacket, sharedSecret *Hash256,
 // if the packet was not flagged as a replayed packet.
 func processOnionPacket(onionPkt *OnionPacket, sharedSecret *Hash256,
 	assocData []byte,
-	sharedSecretGen sharedSecretGenerator) (*ProcessedPacket, error) {
+	sharedSecretGen sharedSecretGenerator) (*ProcessedPacket, er.R) {
 
 	// First, we'll unwrap an initial layer of the onion packet. Typically,
 	// we'll only have a single layer to unwrap, However, if the sender has
@@ -727,7 +732,7 @@ func (r *Router) BeginTxn(id []byte, nels int) *Tx {
 // returned which houses the newly parsed packet, along with instructions on
 // what to do next.
 func (t *Tx) ProcessOnionPacket(seqNum uint16, onionPkt *OnionPacket,
-	assocData []byte, incomingCltv uint32) error {
+	assocData []byte, incomingCltv uint32) er.R {
 
 	// Compute the shared secret for this onion packet.
 	sharedSecret, err := t.router.generateSharedSecret(
@@ -769,7 +774,7 @@ func (t *Tx) ProcessOnionPacket(seqNum uint16, onionPkt *OnionPacket,
 
 // Commit writes this transaction's batch of sphinx packets to the replay log,
 // performing a final check against the log for replays.
-func (t *Tx) Commit() ([]ProcessedPacket, *ReplaySet, error) {
+func (t *Tx) Commit() ([]ProcessedPacket, *ReplaySet, er.R) {
 	if t.batch.IsCommitted {
 		return t.packets, t.batch.ReplaySet, nil
 	}

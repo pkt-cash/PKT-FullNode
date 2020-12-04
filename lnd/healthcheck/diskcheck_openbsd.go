@@ -4,7 +4,7 @@ import "golang.org/x/sys/unix"
 
 // AvailableDiskSpaceRatio returns ratio of available disk space to total
 // capacity for openbsd.
-func AvailableDiskSpaceRatio(path string) (float64, error) {
+func AvailableDiskSpaceRatio(path string) (float64, er.R) {
 	s := unix.Statfs_t{}
 	err := unix.Statfs(path, &s)
 	if err != nil {
@@ -18,7 +18,7 @@ func AvailableDiskSpaceRatio(path string) (float64, error) {
 
 // AvailableDiskSpace returns the available disk space in bytes of the given
 // file system for openbsd.
-func AvailableDiskSpace(path string) (uint64, error) {
+func AvailableDiskSpace(path string) (uint64, er.R) {
 	s := unix.Statfs_t{}
 	err := unix.Statfs(path, &s)
 	if err != nil {

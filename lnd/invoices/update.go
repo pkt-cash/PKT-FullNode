@@ -67,7 +67,7 @@ func (i invoiceUpdateCtx) acceptRes(outcome acceptResolutionResult) *htlcAcceptR
 // settlement logic. It returns a hltc resolution that indicates what the
 // outcome of the update was.
 func updateInvoice(ctx *invoiceUpdateCtx, inv *channeldb.Invoice) (
-	*channeldb.InvoiceUpdateDesc, HtlcResolution, error) {
+	*channeldb.InvoiceUpdateDesc, HtlcResolution, er.R) {
 
 	// Don't update the invoice when this is a replayed htlc.
 	htlc, ok := inv.Htlcs[ctx.circuitKey]
@@ -86,7 +86,7 @@ func updateInvoice(ctx *invoiceUpdateCtx, inv *channeldb.Invoice) (
 			), nil
 
 		default:
-			return nil, nil, errors.New("unknown htlc state")
+			return nil, nil, er.New("unknown htlc state")
 		}
 	}
 
@@ -101,7 +101,7 @@ func updateInvoice(ctx *invoiceUpdateCtx, inv *channeldb.Invoice) (
 // settlement logic for mpp payments.
 func updateMpp(ctx *invoiceUpdateCtx,
 	inv *channeldb.Invoice) (*channeldb.InvoiceUpdateDesc,
-	HtlcResolution, error) {
+	HtlcResolution, er.R) {
 
 	// Start building the accept descriptor.
 	acceptDesc := &channeldb.HtlcAcceptDesc{
@@ -207,7 +207,7 @@ func updateMpp(ctx *invoiceUpdateCtx,
 // updateLegacy is a callback for DB.UpdateInvoice that contains the invoice
 // settlement logic for legacy payments.
 func updateLegacy(ctx *invoiceUpdateCtx,
-	inv *channeldb.Invoice) (*channeldb.InvoiceUpdateDesc, HtlcResolution, error) {
+	inv *channeldb.Invoice) (*channeldb.InvoiceUpdateDesc, HtlcResolution, er.R) {
 
 	// If the invoice is already canceled, there is no further
 	// checking to do.

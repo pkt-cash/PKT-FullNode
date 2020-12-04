@@ -1,9 +1,9 @@
 package routing
 
 import (
-	"errors"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -12,7 +12,7 @@ import (
 // ErrVBarrierShuttingDown signals that the barrier has been requested to
 // shutdown, and that the caller should not treat the wait condition as
 // fulfilled.
-var ErrVBarrierShuttingDown = errors.New("validation barrier shutting down")
+var ErrVBarrierShuttingDown = Err.CodeWithDetail("ErrVBarrierShuttingDown", "validation barrier shutting down")
 
 // ValidationBarrier is a barrier used to ensure proper validation order while
 // concurrently validating new announcements for channel edges, and the
@@ -159,7 +159,7 @@ func (v *ValidationBarrier) CompleteJob() {
 // finished executing. This allows us a graceful way to schedule goroutines
 // based on any pending uncompleted dependent jobs. If this job doesn't have an
 // active dependent, then this function will return immediately.
-func (v *ValidationBarrier) WaitForDependants(job interface{}) error {
+func (v *ValidationBarrier) WaitForDependants(job interface{}) er.R {
 
 	var (
 		signal chan struct{}
@@ -203,7 +203,7 @@ func (v *ValidationBarrier) WaitForDependants(job interface{}) error {
 	if ok {
 		select {
 		case <-v.quit:
-			return ErrVBarrierShuttingDown
+			return ErrVBarrierShuttingDown.Default()
 		case <-signal:
 			return nil
 		}

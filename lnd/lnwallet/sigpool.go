@@ -1,13 +1,13 @@
 package lnwallet
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 const (
@@ -39,7 +39,7 @@ type VerifyJob struct {
 
 	// SigHash is a function closure generates the sighashes that the
 	// passed signature is known to have signed.
-	SigHash func() ([]byte, error)
+	SigHash func() ([]byte, er.R)
 
 	// HtlcIndex is the index of the HTLC from the PoV of the remote
 	// party's update log.
@@ -153,7 +153,7 @@ func NewSigPool(numWorkers int, signer input.Signer) *SigPool {
 
 // Start starts of all goroutines that the sigPool sig pool needs to
 // carry out its duties.
-func (s *SigPool) Start() error {
+func (s *SigPool) Start() er.R {
 	s.started.Do(func() {
 		for i := 0; i < s.numWorkers; i++ {
 			s.wg.Add(1)
@@ -165,7 +165,7 @@ func (s *SigPool) Start() error {
 
 // Stop signals any active workers carrying out jobs to exit so the sigPool can
 // gracefully shutdown.
-func (s *SigPool) Stop() error {
+func (s *SigPool) Stop() er.R {
 	s.stopped.Do(func() {
 		close(s.quit)
 		s.wg.Wait()
@@ -237,7 +237,7 @@ func (s *SigPool) poolWorker() {
 			rawSig := verifyMsg.Sig
 
 			if !rawSig.Verify(sigHash, verifyMsg.PubKey) {
-				err := fmt.Errorf("invalid signature "+
+				err := er.Errorf("invalid signature "+
 					"sighash: %x, sig: %x", sigHash,
 					rawSig.Serialize())
 

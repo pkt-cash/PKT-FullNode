@@ -17,6 +17,8 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -67,7 +69,7 @@ func newTestContext(t *testing.T) (tc *testContext) {
 
 	priv := func(v string) *btcec.PrivateKey {
 		k, err := privkeyFromHex(v)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		return k
 	}
@@ -81,11 +83,11 @@ func newTestContext(t *testing.T) (tc *testContext) {
 
 	var err error
 	tc.localPerCommitSecret, err = lntypes.MakeHashFromStr("1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	const fundingTxHex = "0200000001adbb20ea41a8423ea937e76e8151636bf6093b70eaff942930d20576600521fd000000006b48304502210090587b6201e166ad6af0227d3036a9454223d49a1f11839c1a362184340ef0240220577f7cd5cca78719405cbf1de7414ac027f0239ef6e214c90fcaab0454d84b3b012103535b32d5eb0a6ed0982a0479bbadc9868d9836f6ba94dd5a63be16d875069184ffffffff028096980000000000220020c015c4a6be010e21657068fc2e6a9d02b27ebe4d490a25846f7237f104d1a3cd20256d29010000001600143ca33c2e4446f4a305f23c80df8ad1afdcf652f900000000"
 	tc.fundingTx, err = txFromHex(fundingTxHex)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	tc.localCsvDelay = 144
 	tc.fundingAmount = 10000000
@@ -184,10 +186,10 @@ func TestCommitmentAndHTLCTransactions(t *testing.T) {
 		var testCases []testCase
 
 		jsonText, err := ioutil.ReadFile(set.jsonFile)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		err = json.Unmarshal(jsonText, &testCases)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		t.Run(set.name, func(t *testing.T) {
 			for _, test := range testCases {
@@ -209,7 +211,7 @@ func addTestHtlcs(t *testing.T, remote,
 	hash160map := make(map[[20]byte]lntypes.Preimage)
 	for _, htlc := range testHtlcs {
 		preimage, err := lntypes.MakePreimageFromStr(htlc.preimage)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		hash := preimage.Hash()
 
@@ -230,18 +232,18 @@ func addTestHtlcs(t *testing.T, remote,
 		}
 		if htlc.incoming {
 			htlcID, err := remote.AddHTLC(msg, nil)
-			require.NoError(t, err, "unable to add htlc")
+			util.RequireNoErr(t, err, "unable to add htlc")
 
 			msg.ID = htlcID
 			_, err = local.ReceiveHTLC(msg)
-			require.NoError(t, err, "unable to recv htlc")
+			util.RequireNoErr(t, err, "unable to recv htlc")
 		} else {
 			htlcID, err := local.AddHTLC(msg, nil)
-			require.NoError(t, err, "unable to add htlc")
+			util.RequireNoErr(t, err, "unable to add htlc")
 
 			msg.ID = htlcID
 			_, err = remote.ReceiveHTLC(msg)
-			require.NoError(t, err, "unable to recv htlc")
+			util.RequireNoErr(t, err, "unable to recv htlc")
 		}
 	}
 
@@ -290,19 +292,19 @@ func testVectors(t *testing.T, chanType channeldb.ChannelType, test testCase) {
 	// Execute commit dance to arrive at the point where the local node has
 	// received the test commitment and the remote signature.
 	localSig, localHtlcSigs, _, err := localChannel.SignNextCommitment()
-	require.NoError(t, err, "local unable to sign commitment")
+	util.RequireNoErr(t, err, "local unable to sign commitment")
 
 	err = remoteChannel.ReceiveNewCommitment(localSig, localHtlcSigs)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	revMsg, _, err := remoteChannel.RevokeCurrentCommitment()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	_, _, _, _, err = localChannel.ReceiveRevocation(revMsg)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	remoteSig, remoteHtlcSigs, _, err := remoteChannel.SignNextCommitment()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	require.Equal(t, test.RemoteSigHex, hex.EncodeToString(remoteSig.ToSignatureBytes()))
 
@@ -311,19 +313,19 @@ func testVectors(t *testing.T, chanType channeldb.ChannelType, test testCase) {
 	}
 
 	err = localChannel.ReceiveNewCommitment(remoteSig, remoteHtlcSigs)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	_, _, err = localChannel.RevokeCurrentCommitment()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Now the local node force closes the channel so that we can inspect
 	// its state.
 	forceCloseSum, err := localChannel.ForceClose()
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Assert that the commitment transaction itself is as expected.
 	var txBytes bytes.Buffer
-	require.NoError(t, forceCloseSum.CloseTx.Serialize(&txBytes))
+	util.RequireNoErr(t, forceCloseSum.CloseTx.Serialize(&txBytes))
 
 	require.Equal(t, test.ExpectedCommitmentTxHex, hex.EncodeToString(txBytes.Bytes()))
 
@@ -368,7 +370,7 @@ func testVectors(t *testing.T, chanType channeldb.ChannelType, test testCase) {
 		tx := secondLevelTxes[idx]
 		var b bytes.Buffer
 		err := tx.Serialize(&b)
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 
 		require.Equal(
 			t,
@@ -748,12 +750,12 @@ type mockProducer struct {
 	secret chainhash.Hash
 }
 
-func (p *mockProducer) AtIndex(uint64) (*chainhash.Hash, error) {
+func (p *mockProducer) AtIndex(uint64) (*chainhash.Hash, er.R) {
 	return &p.secret, nil
 }
 
-func (p *mockProducer) Encode(w io.Writer) error {
-	_, err := w.Write(p.secret[:])
+func (p *mockProducer) Encode(w io.Writer) er.R {
+	_, err := util.Write(w, p.secret[:])
 	return err
 }
 
@@ -783,7 +785,7 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 	}
 	for _, keyRef := range generateKeys {
 		privkey, err := btcec.NewPrivateKey(btcec.S256())
-		require.NoError(t, err)
+		util.RequireNoErr(t, err)
 		*keyRef = privkey
 	}
 
@@ -861,16 +863,16 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 
 	// Create temporary databases.
 	remotePath, err := ioutil.TempDir("", "remotedb")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	dbRemote, err := channeldb.Open(remotePath)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	localPath, err := ioutil.TempDir("", "localdb")
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	dbLocal, err := channeldb.Open(localPath)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Create the initial commitment transactions for the channel.
 	feePerKw := chainfee.SatPerKWeight(feeRate)
@@ -890,7 +892,7 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 		&remoteCfg, &localCfg, remoteCommitPoint,
 		localCommitPoint, *fundingTxIn, chanType,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Set up the full channel state.
 
@@ -918,8 +920,8 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 	}
 
 	var chanIDBytes [8]byte
-	_, err = io.ReadFull(rand.Reader, chanIDBytes[:])
-	require.NoError(t, err)
+	_, err = util.ReadFull(rand.Reader, chanIDBytes[:])
+	util.RequireNoErr(t, err)
 
 	shortChanID := lnwire.NewShortChanIDFromInt(
 		binary.BigEndian.Uint64(chanIDBytes[:]),
@@ -977,45 +979,45 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 	channelRemote, err := NewLightningChannel(
 		remoteSigner, remoteChannelState, remotePool,
 	)
-	require.NoError(t, err)
-	require.NoError(t, remotePool.Start())
+	util.RequireNoErr(t, err)
+	util.RequireNoErr(t, remotePool.Start())
 
 	localPool := NewSigPool(1, localSigner)
 	channelLocal, err := NewLightningChannel(
 		localSigner, localChannelState, localPool,
 	)
-	require.NoError(t, err)
-	require.NoError(t, localPool.Start())
+	util.RequireNoErr(t, err)
+	util.RequireNoErr(t, localPool.Start())
 
 	// Create state hunt obfuscator for the commitment transaction.
 	obfuscator := createStateHintObfuscator(remoteChannelState)
 	err = SetStateNumHint(
 		remoteCommitTx, commitHeight, obfuscator,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	err = SetStateNumHint(
 		localCommitTx, commitHeight, obfuscator,
 	)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Initialize the database.
 	addr := &net.TCPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 18556,
 	}
-	require.NoError(t, channelRemote.channelState.SyncPending(addr, 101))
+	util.RequireNoErr(t, channelRemote.channelState.SyncPending(addr, 101))
 
 	addr = &net.TCPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 18555,
 	}
-	require.NoError(t, channelLocal.channelState.SyncPending(addr, 101))
+	util.RequireNoErr(t, channelLocal.channelState.SyncPending(addr, 101))
 
 	// Now that the channel are open, simulate the start of a session by
 	// having local and remote extend their revocation windows to each other.
 	err = initRevocationWindows(channelRemote, channelLocal)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Return a clean up function that stops goroutines and removes the test
 	// databases.
@@ -1026,8 +1028,8 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 		os.RemoveAll(localPath)
 		os.RemoveAll(remotePath)
 
-		require.NoError(t, remotePool.Stop())
-		require.NoError(t, localPool.Stop())
+		util.RequireNoErr(t, remotePool.Stop())
+		util.RequireNoErr(t, localPool.Stop())
 	}
 
 	return channelRemote, channelLocal, cleanUpFunc

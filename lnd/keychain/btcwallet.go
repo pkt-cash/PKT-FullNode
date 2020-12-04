@@ -2,7 +2,6 @@ package keychain
 
 import (
 	"crypto/sha256"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -84,7 +83,7 @@ func NewBtcWalletKeyRing(w *wallet.Wallet, coinType uint32) SecretKeyRing {
 // our keys. If the scope has already been fetched from the database, then a
 // cached version will be returned. Otherwise, we'll fetch it from the database
 // and cache it for subsequent accesses.
-func (b *BtcWalletKeyRing) keyScope() (*waddrmgr.ScopedKeyManager, error) {
+func (b *BtcWalletKeyRing) keyScope() (*waddrmgr.ScopedKeyManager, er.R) {
 	// If the scope has already been populated, then we'll return it
 	// directly.
 	if b.lightningScope != nil {
@@ -94,7 +93,7 @@ func (b *BtcWalletKeyRing) keyScope() (*waddrmgr.ScopedKeyManager, error) {
 	// Otherwise, we'll first do a check to ensure that the root manager
 	// isn't locked, as otherwise we won't be able to *use* the scope.
 	if b.wallet.Manager.IsLocked() {
-		return nil, fmt.Errorf("cannot create BtcWalletKeyRing with " +
+		return nil, er.Errorf("cannot create BtcWalletKeyRing with " +
 			"locked waddrmgr.Manager")
 	}
 
@@ -114,7 +113,7 @@ func (b *BtcWalletKeyRing) keyScope() (*waddrmgr.ScopedKeyManager, error) {
 // family if it doesn't already exist in the database.
 func (b *BtcWalletKeyRing) createAccountIfNotExists(
 	addrmgrNs walletdb.ReadWriteBucket, keyFam KeyFamily,
-	scope *waddrmgr.ScopedKeyManager) error {
+	scope *waddrmgr.ScopedKeyManager) er.R {
 
 	// If this is the multi-sig key family, then we can return early as
 	// this is the default account that's created.
@@ -139,7 +138,7 @@ func (b *BtcWalletKeyRing) createAccountIfNotExists(
 // child within this branch.
 //
 // NOTE: This is part of the keychain.KeyRing interface.
-func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error) {
+func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, er.R) {
 	var (
 		pubKey *btcec.PublicKey
 		keyLoc KeyLocator
@@ -149,17 +148,17 @@ func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, errr := b.keyScope()
-		if errr != nil {
-			return er.E(errr)
+		scope, err := b.keyScope()
+		if err != nil {
+			return err
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		errr = b.createAccountIfNotExists(addrmgrNs, keyFam, scope)
-		if errr != nil {
-			return er.E(errr)
+		err = b.createAccountIfNotExists(addrmgrNs, keyFam, scope)
+		if err != nil {
+			return err
 		}
 
 		addrs, err := scope.NextExternalAddresses(
@@ -202,24 +201,24 @@ func (b *BtcWalletKeyRing) DeriveNextKey(keyFam KeyFamily) (KeyDescriptor, error
 // rotating something like our current default node key.
 //
 // NOTE: This is part of the keychain.KeyRing interface.
-func (b *BtcWalletKeyRing) DeriveKey(keyLoc KeyLocator) (KeyDescriptor, error) {
+func (b *BtcWalletKeyRing) DeriveKey(keyLoc KeyLocator) (KeyDescriptor, er.R) {
 	var keyDesc KeyDescriptor
 
 	db := b.wallet.Database()
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, errr := b.keyScope()
-		if errr != nil {
-			return er.E(errr)
+		scope, err := b.keyScope()
+		if err != nil {
+			return err
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		errr = b.createAccountIfNotExists(addrmgrNs, keyLoc.Family, scope)
-		if errr != nil {
-			return er.E(errr)
+		err = b.createAccountIfNotExists(addrmgrNs, keyLoc.Family, scope)
+		if err != nil {
+			return err
 		}
 
 		path := waddrmgr.DerivationPath{
@@ -249,7 +248,7 @@ func (b *BtcWalletKeyRing) DeriveKey(keyLoc KeyLocator) (KeyDescriptor, error) {
 //
 // NOTE: This is part of the keychain.SecretKeyRing interface.
 func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
-	*btcec.PrivateKey, error) {
+	*btcec.PrivateKey, er.R) {
 
 	var key *btcec.PrivateKey
 
@@ -257,19 +256,19 @@ func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
 	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 
-		scope, errr := b.keyScope()
-		if errr != nil {
-			return er.E(errr)
+		scope, err := b.keyScope()
+		if err != nil {
+			return err
 		}
 
 		// If the account doesn't exist, then we may need to create it
 		// for the first time in order to derive the keys that we
 		// require.
-		errr = b.createAccountIfNotExists(
+		err = b.createAccountIfNotExists(
 			addrmgrNs, keyDesc.Family, scope,
 		)
-		if errr != nil {
-			return er.E(errr)
+		if err != nil {
+			return err
 		}
 
 		// If the public key isn't set or they have a non-zero index,
@@ -339,7 +338,7 @@ func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
 
 		// If we reach this point, then we we're unable to derive the
 		// private key, so return an error back to the user.
-		return er.E(ErrCannotDerivePrivKey)
+		return ErrCannotDerivePrivKey.Default()
 	})
 	if err != nil {
 		return nil, err
@@ -358,7 +357,7 @@ func (b *BtcWalletKeyRing) DerivePrivKey(keyDesc KeyDescriptor) (
 //
 // NOTE: This is part of the keychain.ECDHRing interface.
 func (b *BtcWalletKeyRing) ECDH(keyDesc KeyDescriptor,
-	pub *btcec.PublicKey) ([32]byte, error) {
+	pub *btcec.PublicKey) ([32]byte, er.R) {
 
 	privKey, err := b.DerivePrivKey(keyDesc)
 	if err != nil {
@@ -380,7 +379,7 @@ func (b *BtcWalletKeyRing) ECDH(keyDesc KeyDescriptor,
 //
 // NOTE: This is part of the keychain.DigestSignerRing interface.
 func (b *BtcWalletKeyRing) SignDigest(keyDesc KeyDescriptor,
-	digest [32]byte) (*btcec.Signature, error) {
+	digest [32]byte) (*btcec.Signature, er.R) {
 
 	privKey, err := b.DerivePrivKey(keyDesc)
 	if err != nil {
@@ -395,7 +394,7 @@ func (b *BtcWalletKeyRing) SignDigest(keyDesc KeyDescriptor,
 //
 // NOTE: This is part of the keychain.DigestSignerRing interface.
 func (b *BtcWalletKeyRing) SignDigestCompact(keyDesc KeyDescriptor,
-	digest [32]byte) ([]byte, error) {
+	digest [32]byte) ([]byte, er.R) {
 
 	privKey, err := b.DerivePrivKey(keyDesc)
 	if err != nil {

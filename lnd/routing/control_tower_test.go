@@ -3,15 +3,15 @@ package routing
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -301,7 +301,7 @@ func testPaymentControlSubscribeFail(t *testing.T, registerAttempt bool) {
 	}
 }
 
-func initDB() (*channeldb.DB, error) {
+func initDB() (*channeldb.DB, er.R) {
 	tempPath, err := ioutil.TempDir("", "routingdb")
 	if err != nil {
 		return nil, err
@@ -316,11 +316,11 @@ func initDB() (*channeldb.DB, error) {
 }
 
 func genInfo() (*channeldb.PaymentCreationInfo, *channeldb.HTLCAttemptInfo,
-	lntypes.Preimage, error) {
+	lntypes.Preimage, er.R) {
 
 	preimage, err := genPreimage()
 	if err != nil {
-		return nil, nil, preimage, fmt.Errorf("unable to "+
+		return nil, nil, preimage, er.Errorf("unable to "+
 			"generate preimage: %v", err)
 	}
 
@@ -338,9 +338,9 @@ func genInfo() (*channeldb.PaymentCreationInfo, *channeldb.HTLCAttemptInfo,
 		}, preimage, nil
 }
 
-func genPreimage() ([32]byte, error) {
+func genPreimage() ([32]byte, er.R) {
 	var preimage [32]byte
-	if _, err := io.ReadFull(rand.Reader, preimage[:]); err != nil {
+	if _, err := util.ReadFull(rand.Reader, preimage[:]); err != nil {
 		return preimage, err
 	}
 	return preimage, nil

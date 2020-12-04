@@ -3,6 +3,8 @@ package watchtower
 import (
 	"strconv"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Conf specifies the watchtower options that can be configured from the command
@@ -27,14 +29,14 @@ type Conf struct {
 // If the corresponding values parsed by Conf are already set in the Config,
 // those fields will be not be modified.
 func (c *Conf) Apply(cfg *Config,
-	normalizer AddressNormalizer) (*Config, error) {
+	normalizer AddressNormalizer) (*Config, er.R) {
 
 	// Set the Config's listening addresses if they are empty.
 	if cfg.ListenAddrs == nil {
 		// Without a network, we will be unable to resolve the listening
 		// addresses.
 		if cfg.Net == nil {
-			return nil, ErrNoNetwork
+			return nil, ErrNoNetwork.Default()
 		}
 
 		// If no addresses are specified by the Config, we will resort
@@ -61,7 +63,7 @@ func (c *Conf) Apply(cfg *Config,
 		// Without a network, we will be unable to resolve the external
 		// IP addresses.
 		if cfg.Net == nil {
-			return nil, ErrNoNetwork
+			return nil, ErrNoNetwork.Default()
 		}
 
 		var err error

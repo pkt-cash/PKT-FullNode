@@ -1,8 +1,7 @@
 package channeldb
 
 import (
-	"fmt"
-
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 )
@@ -10,10 +9,12 @@ import (
 var (
 	// ErrNoWitnesses is an error that's returned when no new witnesses have
 	// been added to the WitnessCache.
-	ErrNoWitnesses = fmt.Errorf("no witnesses")
+	ErrNoWitnesses = Err.CodeWithDetail("ErrNoWitnesses",
+		"no witnesses")
 
 	// ErrUnknownWitnessType is returned if a caller attempts to
-	ErrUnknownWitnessType = fmt.Errorf("unknown witness type")
+	ErrUnknownWitnessType = Err.CodeWithDetail("ErrUnknownWitnessType",
+		"unknown witness type")
 )
 
 // WitnessType is enum that denotes what "type" of witness is being
@@ -30,14 +31,14 @@ var (
 
 // toDBKey is a helper method that maps a witness type to the key that we'll
 // use to store it within the database.
-func (w WitnessType) toDBKey() ([]byte, error) {
+func (w WitnessType) toDBKey() ([]byte, er.R) {
 	switch w {
 
 	case Sha256HashWitness:
 		return []byte{byte(w)}, nil
 
 	default:
-		return nil, ErrUnknownWitnessType
+		return nil, ErrUnknownWitnessType.Default()
 	}
 }
 
@@ -80,7 +81,7 @@ type witnessEntry struct {
 // AddSha256Witnesses adds a batch of new sha256 preimages into the witness
 // cache. This is an alias for AddWitnesses that uses Sha256HashWitness as the
 // preimages' witness type.
-func (w *WitnessCache) AddSha256Witnesses(preimages ...lntypes.Preimage) error {
+func (w *WitnessCache) AddSha256Witnesses(preimages ...lntypes.Preimage) er.R {
 	// Optimistically compute the preimages' hashes before attempting to
 	// start the db transaction.
 	entries := make([]witnessEntry, 0, len(preimages))
@@ -99,14 +100,14 @@ func (w *WitnessCache) AddSha256Witnesses(preimages ...lntypes.Preimage) error {
 // using the appropriate witness type to segment the namespace of possible
 // witness types.
 func (w *WitnessCache) addWitnessEntries(wType WitnessType,
-	entries []witnessEntry) error {
+	entries []witnessEntry) er.R {
 
 	// Exit early if there are no witnesses to add.
 	if len(entries) == 0 {
 		return nil
 	}
 
-	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) error {
+	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) er.R {
 		witnessBucket, err := tx.CreateTopLevelBucket(witnessBucketKey)
 		if err != nil {
 			return err
@@ -136,7 +137,7 @@ func (w *WitnessCache) addWitnessEntries(wType WitnessType,
 
 // LookupSha256Witness attempts to lookup the preimage for a sha256 hash. If
 // the witness isn't found, ErrNoWitnesses will be returned.
-func (w *WitnessCache) LookupSha256Witness(hash lntypes.Hash) (lntypes.Preimage, error) {
+func (w *WitnessCache) LookupSha256Witness(hash lntypes.Hash) (lntypes.Preimage, er.R) {
 	witness, err := w.lookupWitness(Sha256HashWitness, hash[:])
 	if err != nil {
 		return lntypes.Preimage{}, err
@@ -148,12 +149,12 @@ func (w *WitnessCache) LookupSha256Witness(hash lntypes.Hash) (lntypes.Preimage,
 // lookupWitness attempts to lookup a witness according to its type and also
 // its witness key. In the case that the witness isn't found, ErrNoWitnesses
 // will be returned.
-func (w *WitnessCache) lookupWitness(wType WitnessType, witnessKey []byte) ([]byte, error) {
+func (w *WitnessCache) lookupWitness(wType WitnessType, witnessKey []byte) ([]byte, er.R) {
 	var witness []byte
-	err := kvdb.View(w.db, func(tx kvdb.RTx) error {
+	err := kvdb.View(w.db, func(tx kvdb.RTx) er.R {
 		witnessBucket := tx.ReadBucket(witnessBucketKey)
 		if witnessBucket == nil {
-			return ErrNoWitnesses
+			return ErrNoWitnesses.Default()
 		}
 
 		witnessTypeBucketKey, err := wType.toDBKey()
@@ -162,12 +163,12 @@ func (w *WitnessCache) lookupWitness(wType WitnessType, witnessKey []byte) ([]by
 		}
 		witnessTypeBucket := witnessBucket.NestedReadBucket(witnessTypeBucketKey)
 		if witnessTypeBucket == nil {
-			return ErrNoWitnesses
+			return ErrNoWitnesses.Default()
 		}
 
 		dbWitness := witnessTypeBucket.Get(witnessKey)
 		if dbWitness == nil {
-			return ErrNoWitnesses
+			return ErrNoWitnesses.Default()
 		}
 
 		witness = make([]byte, len(dbWitness))
@@ -185,13 +186,13 @@ func (w *WitnessCache) lookupWitness(wType WitnessType, witnessKey []byte) ([]by
 }
 
 // DeleteSha256Witness attempts to delete a sha256 preimage identified by hash.
-func (w *WitnessCache) DeleteSha256Witness(hash lntypes.Hash) error {
+func (w *WitnessCache) DeleteSha256Witness(hash lntypes.Hash) er.R {
 	return w.deleteWitness(Sha256HashWitness, hash[:])
 }
 
 // deleteWitness attempts to delete a particular witness from the database.
-func (w *WitnessCache) deleteWitness(wType WitnessType, witnessKey []byte) error {
-	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) error {
+func (w *WitnessCache) deleteWitness(wType WitnessType, witnessKey []byte) er.R {
+	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) er.R {
 		witnessBucket, err := tx.CreateTopLevelBucket(witnessBucketKey)
 		if err != nil {
 			return err
@@ -214,8 +215,8 @@ func (w *WitnessCache) deleteWitness(wType WitnessType, witnessKey []byte) error
 
 // DeleteWitnessClass attempts to delete an *entire* class of witnesses. After
 // this function return with a non-nil error,
-func (w *WitnessCache) DeleteWitnessClass(wType WitnessType) error {
-	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) error {
+func (w *WitnessCache) DeleteWitnessClass(wType WitnessType) er.R {
+	return kvdb.Batch(w.db.Backend, func(tx kvdb.RwTx) er.R {
 		witnessBucket, err := tx.CreateTopLevelBucket(witnessBucketKey)
 		if err != nil {
 			return err

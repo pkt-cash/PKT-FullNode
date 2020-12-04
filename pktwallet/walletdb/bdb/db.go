@@ -266,13 +266,14 @@ func (b *bucket) Tx() walletdb.ReadWriteTx {
 }
 
 // NextSequence returns an autoincrementing integer for the bucket.
-func (b *bucket) NextSequence() (uint64, error) {
-	return (*bbolt.Bucket)(b).NextSequence()
+func (b *bucket) NextSequence() (uint64, er.R) {
+	i, e := (*bbolt.Bucket)(b).NextSequence()
+	return i, er.E(e)
 }
 
 // SetSequence updates the sequence number for the bucket.
-func (b *bucket) SetSequence(v uint64) error {
-	return (*bbolt.Bucket)(b).SetSequence(v)
+func (b *bucket) SetSequence(v uint64) er.R {
+	return er.E((*bbolt.Bucket)(b).SetSequence(v))
 }
 
 // Sequence returns the current integer for the bucket without incrementing it.

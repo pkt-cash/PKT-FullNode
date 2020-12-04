@@ -1,8 +1,6 @@
 package autopilot
 
 import (
-	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -86,7 +85,7 @@ func (m *mockHeuristic) Name() string {
 
 func (m *mockHeuristic) NodeScores(g ChannelGraph, chans []LocalChannel,
 	chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	if m.nodeScoresArgs != nil {
 		directive := directiveArg{
@@ -99,7 +98,7 @@ func (m *mockHeuristic) NodeScores(g ChannelGraph, chans []LocalChannel,
 		select {
 		case m.nodeScoresArgs <- directive:
 		case <-m.quit:
-			return nil, errors.New("exiting")
+			return nil, er.New("exiting")
 		}
 	}
 
@@ -107,7 +106,7 @@ func (m *mockHeuristic) NodeScores(g ChannelGraph, chans []LocalChannel,
 	case resp := <-m.nodeScoresResps:
 		return resp, nil
 	case <-m.quit:
-		return nil, errors.New("exiting")
+		return nil, er.New("exiting")
 	}
 }
 
@@ -125,7 +124,7 @@ type mockChanController struct {
 }
 
 func (m *mockChanController) OpenChannel(target *btcec.PublicKey,
-	amt btcutil.Amount) error {
+	amt btcutil.Amount) er.R {
 
 	m.openChanSignals <- openChanIntent{
 		target:  target,
@@ -136,7 +135,7 @@ func (m *mockChanController) OpenChannel(target *btcec.PublicKey,
 	return nil
 }
 
-func (m *mockChanController) CloseChannel(chanPoint *wire.OutPoint) error {
+func (m *mockChanController) CloseChannel(chanPoint *wire.OutPoint) er.R {
 	return nil
 }
 
@@ -200,15 +199,15 @@ func setup(t *testing.T, initialChans []LocalChannel) (*testContext, func()) {
 		Self:           self,
 		Heuristic:      heuristic,
 		ChanController: chanController,
-		WalletBalance: func() (btcutil.Amount, error) {
+		WalletBalance: func() (btcutil.Amount, er.R) {
 			ctx.Lock()
 			defer ctx.Unlock()
 			return ctx.walletBalance, nil
 		},
-		ConnectToPeer: func(*btcec.PublicKey, []net.Addr) (bool, error) {
+		ConnectToPeer: func(*btcec.PublicKey, []net.Addr) (bool, er.R) {
 			return false, nil
 		},
-		DisconnectPeer: func(*btcec.PublicKey) error {
+		DisconnectPeer: func(*btcec.PublicKey) er.R {
 			return nil
 		},
 		Graph:       memGraph,
@@ -376,11 +375,11 @@ type mockFailingChanController struct {
 }
 
 func (m *mockFailingChanController) OpenChannel(target *btcec.PublicKey,
-	amt btcutil.Amount) error {
-	return errors.New("failure")
+	amt btcutil.Amount) er.R {
+	return er.New("failure")
 }
 
-func (m *mockFailingChanController) CloseChannel(chanPoint *wire.OutPoint) error {
+func (m *mockFailingChanController) CloseChannel(chanPoint *wire.OutPoint) er.R {
 	return nil
 }
 
@@ -856,21 +855,21 @@ func TestAgentSkipPendingConns(t *testing.T) {
 	testCtx, cleanup := setup(t, nil)
 	defer cleanup()
 
-	connect := make(chan chan error)
-	testCtx.agent.cfg.ConnectToPeer = func(*btcec.PublicKey, []net.Addr) (bool, error) {
-		errChan := make(chan error)
+	connect := make(chan chan er.R)
+	testCtx.agent.cfg.ConnectToPeer = func(*btcec.PublicKey, []net.Addr) (bool, er.R) {
+		errChan := make(chan er.R)
 
 		select {
 		case connect <- errChan:
 		case <-testCtx.quit:
-			return false, errors.New("quit")
+			return false, er.New("quit")
 		}
 
 		select {
 		case err := <-errChan:
 			return false, err
 		case <-testCtx.quit:
-			return false, errors.New("quit")
+			return false, er.New("quit")
 		}
 	}
 
@@ -931,7 +930,7 @@ func TestAgentSkipPendingConns(t *testing.T) {
 	}
 
 	// The agent should attempt connection to the node.
-	var errChan chan error
+	var errChan chan er.R
 	select {
 	case errChan = <-connect:
 	case <-time.After(time.Second * 10):
@@ -982,7 +981,7 @@ func TestAgentSkipPendingConns(t *testing.T) {
 	// Now, timeout the original request, which should still be waiting for
 	// a response.
 	select {
-	case errChan <- fmt.Errorf("connection timeout"):
+	case errChan <- er.Errorf("connection timeout"):
 	case <-time.After(time.Second * 10):
 		t.Fatalf("agent did not receive connection timeout")
 	}
@@ -1041,22 +1040,22 @@ func TestAgentQuitWhenPendingConns(t *testing.T) {
 	testCtx, cleanup := setup(t, nil)
 	defer cleanup()
 
-	connect := make(chan chan error)
+	connect := make(chan chan er.R)
 
-	testCtx.agent.cfg.ConnectToPeer = func(*btcec.PublicKey, []net.Addr) (bool, error) {
-		errChan := make(chan error)
+	testCtx.agent.cfg.ConnectToPeer = func(*btcec.PublicKey, []net.Addr) (bool, er.R) {
+		errChan := make(chan er.R)
 
 		select {
 		case connect <- errChan:
 		case <-testCtx.quit:
-			return false, errors.New("quit")
+			return false, er.New("quit")
 		}
 
 		select {
 		case err := <-errChan:
 			return false, err
 		case <-testCtx.quit:
-			return false, errors.New("quit")
+			return false, er.New("quit")
 		}
 	}
 
@@ -1113,7 +1112,7 @@ func TestAgentQuitWhenPendingConns(t *testing.T) {
 
 	// Make sure that we are able to stop the agent, even though there is a
 	// pending connection.
-	stopped := make(chan error)
+	stopped := make(chan er.R)
 	go func() {
 		stopped <- testCtx.agent.Stop()
 	}()

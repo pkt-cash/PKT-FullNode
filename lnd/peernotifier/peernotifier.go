@@ -37,7 +37,7 @@ func New() *PeerNotifier {
 }
 
 // Start starts the PeerNotifier's subscription server.
-func (p *PeerNotifier) Start() error {
+func (p *PeerNotifier) Start() er.R {
 	var err error
 
 	p.started.Do(func() {
@@ -58,7 +58,7 @@ func (p *PeerNotifier) Stop() {
 
 // SubscribePeerEvents returns a subscribe.Client that will receive updates
 // any time the Server is informed of a peer event.
-func (p *PeerNotifier) SubscribePeerEvents() (*subscribe.Client, error) {
+func (p *PeerNotifier) SubscribePeerEvents() (*subscribe.Client, er.R) {
 	return p.ntfnServer.Subscribe()
 }
 

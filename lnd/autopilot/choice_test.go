@@ -15,7 +15,7 @@ func TestWeightedChoiceEmptyMap(t *testing.T) {
 
 	var w []float64
 	_, err := weightedChoice(w)
-	if err != ErrNoPositive {
+	if !ErrNoPositive.Is(err) {
 		t.Fatalf("expected ErrNoPositive when choosing in "+
 			"empty map, instead got %v", err)
 	}

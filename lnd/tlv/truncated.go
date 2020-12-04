@@ -2,13 +2,15 @@ package tlv
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // ErrTUintNotMinimal signals that decoding a truncated uint failed because the
 // value was not minimally encoded.
-var ErrTUintNotMinimal = errors.New("truncated uint not minimally encoded")
+var ErrTUintNotMinimal = Err.CodeWithDetail("ErrTUintNotMinimal", "truncated uint not minimally encoded")
 
 // numLeadingZeroBytes16 computes the number of leading zeros for a uint16.
 func numLeadingZeroBytes16(v uint16) uint64 {
@@ -30,11 +32,11 @@ func SizeTUint16(v uint16) uint64 {
 
 // ETUint16 is an Encoder for truncated uint16 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint16.
-func ETUint16(w io.Writer, val interface{}, buf *[8]byte) error {
+func ETUint16(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if t, ok := val.(*uint16); ok {
 		binary.BigEndian.PutUint16(buf[:2], *t)
 		numZeros := numLeadingZeroBytes16(*t)
-		_, err := w.Write(buf[numZeros:2])
+		_, err := util.Write(w, buf[numZeros:2])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint16")
@@ -42,25 +44,25 @@ func ETUint16(w io.Writer, val interface{}, buf *[8]byte) error {
 
 // ETUint16T is an Encoder for truncated uint16 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint16.
-func ETUint16T(w io.Writer, val uint16, buf *[8]byte) error {
+func ETUint16T(w io.Writer, val uint16, buf *[8]byte) er.R {
 	binary.BigEndian.PutUint16(buf[:2], val)
 	numZeros := numLeadingZeroBytes16(val)
-	_, err := w.Write(buf[numZeros:2])
+	_, err := util.Write(w, buf[numZeros:2])
 	return err
 }
 
 // DTUint16 is an Decoder for truncated uint16 values, where leading zeros will
 // be resurrected. An error is returned if val is not a *uint16.
-func DTUint16(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DTUint16(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if t, ok := val.(*uint16); ok && l <= 2 {
-		_, err := io.ReadFull(r, buf[2-l:2])
+		_, err := util.ReadFull(r, buf[2-l:2])
 		if err != nil {
 			return err
 		}
 		zero(buf[:2-l])
 		*t = binary.BigEndian.Uint16(buf[:2])
 		if 2-numLeadingZeroBytes16(*t) != l {
-			return ErrTUintNotMinimal
+			return ErrTUintNotMinimal.Default()
 		}
 		return nil
 	}
@@ -91,11 +93,11 @@ func SizeTUint32(v uint32) uint64 {
 
 // ETUint32 is an Encoder for truncated uint32 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint32.
-func ETUint32(w io.Writer, val interface{}, buf *[8]byte) error {
+func ETUint32(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if t, ok := val.(*uint32); ok {
 		binary.BigEndian.PutUint32(buf[:4], *t)
 		numZeros := numLeadingZeroBytes32(*t)
-		_, err := w.Write(buf[numZeros:4])
+		_, err := util.Write(w, buf[numZeros:4])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint32")
@@ -103,25 +105,25 @@ func ETUint32(w io.Writer, val interface{}, buf *[8]byte) error {
 
 // ETUint32T is an Encoder for truncated uint32 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint32.
-func ETUint32T(w io.Writer, val uint32, buf *[8]byte) error {
+func ETUint32T(w io.Writer, val uint32, buf *[8]byte) er.R {
 	binary.BigEndian.PutUint32(buf[:4], val)
 	numZeros := numLeadingZeroBytes32(val)
-	_, err := w.Write(buf[numZeros:4])
+	_, err := util.Write(w, buf[numZeros:4])
 	return err
 }
 
 // DTUint32 is an Decoder for truncated uint32 values, where leading zeros will
 // be resurrected. An error is returned if val is not a *uint32.
-func DTUint32(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DTUint32(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if t, ok := val.(*uint32); ok && l <= 4 {
-		_, err := io.ReadFull(r, buf[4-l:4])
+		_, err := util.ReadFull(r, buf[4-l:4])
 		if err != nil {
 			return err
 		}
 		zero(buf[:4-l])
 		*t = binary.BigEndian.Uint32(buf[:4])
 		if 4-numLeadingZeroBytes32(*t) != l {
-			return ErrTUintNotMinimal
+			return ErrTUintNotMinimal.Default()
 		}
 		return nil
 	}
@@ -162,11 +164,11 @@ func SizeTUint64(v uint64) uint64 {
 
 // ETUint64 is an Encoder for truncated uint64 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint64.
-func ETUint64(w io.Writer, val interface{}, buf *[8]byte) error {
+func ETUint64(w io.Writer, val interface{}, buf *[8]byte) er.R {
 	if t, ok := val.(*uint64); ok {
 		binary.BigEndian.PutUint64(buf[:], *t)
 		numZeros := numLeadingZeroBytes64(*t)
-		_, err := w.Write(buf[numZeros:])
+		_, err := util.Write(w, buf[numZeros:])
 		return err
 	}
 	return NewTypeForEncodingErr(val, "uint64")
@@ -174,25 +176,25 @@ func ETUint64(w io.Writer, val interface{}, buf *[8]byte) error {
 
 // ETUint64T is an Encoder for truncated uint64 values, where leading zeros will
 // be omitted. An error is returned if val is not a *uint64.
-func ETUint64T(w io.Writer, val uint64, buf *[8]byte) error {
+func ETUint64T(w io.Writer, val uint64, buf *[8]byte) er.R {
 	binary.BigEndian.PutUint64(buf[:], val)
 	numZeros := numLeadingZeroBytes64(val)
-	_, err := w.Write(buf[numZeros:])
+	_, err := util.Write(w, buf[numZeros:])
 	return err
 }
 
 // DTUint64 is an Decoder for truncated uint64 values, where leading zeros will
 // be resurrected. An error is returned if val is not a *uint64.
-func DTUint64(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+func DTUint64(r io.Reader, val interface{}, buf *[8]byte, l uint64) er.R {
 	if t, ok := val.(*uint64); ok && l <= 8 {
-		_, err := io.ReadFull(r, buf[8-l:])
+		_, err := util.ReadFull(r, buf[8-l:])
 		if err != nil {
 			return err
 		}
 		zero(buf[:8-l])
 		*t = binary.BigEndian.Uint64(buf[:])
 		if 8-numLeadingZeroBytes64(*t) != l {
-			return ErrTUintNotMinimal
+			return ErrTUintNotMinimal.Default()
 		}
 		return nil
 	}

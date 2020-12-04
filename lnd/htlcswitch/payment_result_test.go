@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
-	"github.com/stretchr/testify/require"
 )
 
 // TestNetworkResultSerialization checks that NetworkResults are properly
@@ -201,15 +201,15 @@ func TestNetworkResultStore(t *testing.T) {
 	}
 	// Finally, delete the result.
 	err = store.cleanStore(toKeep)
-	require.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Payment IDs 0 and 1 should be found, 2 and 3 should be deleted.
 	for i := uint64(0); i < numResults; i++ {
 		_, err = store.getResult(i)
 		if i <= 1 {
-			require.NoError(t, err, "unable to get result")
+			util.RequireNoErr(t, err, "unable to get result")
 		}
-		if i >= 2 && err != ErrPaymentIDNotFound {
+		if i >= 2 && !ErrPaymentIDNotFound.Is(err) {
 			t.Fatalf("expected ErrPaymentIDNotFound, got %v", err)
 		}
 

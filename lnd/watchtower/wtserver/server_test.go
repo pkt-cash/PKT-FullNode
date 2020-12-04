@@ -58,7 +58,7 @@ func initServer(t *testing.T, db wtserver.DB,
 		DB:           db,
 		ReadTimeout:  timeout,
 		WriteTimeout: timeout,
-		NewAddress: func() (btcutil.Address, error) {
+		NewAddress: func() (btcutil.Address, er.R) {
 			return addr, nil
 		},
 		ChainHash: testnetChainHash,

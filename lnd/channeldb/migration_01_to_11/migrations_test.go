@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -59,7 +58,7 @@ func TestPaymentStatusesMigration(t *testing.T) {
 		// locally-sourced payment should end up with an InFlight
 		// status, while the other should remain unchanged, which
 		// defaults to Grounded.
-		err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			circuits, err := tx.CreateTopLevelBucket(
 				[]byte("circuit-adds"),
 			)
@@ -377,7 +376,7 @@ func TestMigrateOptionalChannelCloseSummaryFields(t *testing.T) {
 			// Get the old serialization format for this test's
 			// close summary, and it to the closed channel bucket.
 			old := test.oldSerialization(test.closeSummary)
-			err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+			err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 				closedChanBucket, err := tx.CreateTopLevelBucket(
 					closedChannelBucket,
 				)
@@ -404,17 +403,17 @@ func TestMigrateOptionalChannelCloseSummaryFields(t *testing.T) {
 			newSerialization := b.Bytes()
 
 			var dbSummary []byte
-			err = kvdb.View(d, func(tx kvdb.RTx) error {
+			err = kvdb.View(d, func(tx kvdb.RTx) er.R {
 				closedChanBucket := tx.ReadBucket(closedChannelBucket)
 				if closedChanBucket == nil {
-					return errors.New("unable to find bucket")
+					return er.New("unable to find bucket")
 				}
 
 				// Get the serialized verision from the DB and
 				// make sure it matches what we expected.
 				dbSummary = closedChanBucket.Get(chanID)
 				if !bytes.Equal(dbSummary, newSerialization) {
-					return fmt.Errorf("unexpected new " +
+					return er.Errorf("unexpected new " +
 						"serialization")
 				}
 				return nil
@@ -484,7 +483,7 @@ func TestMigrateGossipMessageStoreKeys(t *testing.T) {
 			t.Fatalf("unable to serialize message: %v", err)
 		}
 
-		err := kvdb.Update(db, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(db, func(tx kvdb.RwTx) er.R {
 			messageStore, err := tx.CreateTopLevelBucket(
 				messageStoreBucket,
 			)
@@ -505,10 +504,10 @@ func TestMigrateGossipMessageStoreKeys(t *testing.T) {
 	//   3. The message matches the original.
 	afterMigration := func(db *DB) {
 		var rawMsg []byte
-		err := kvdb.View(db, func(tx kvdb.RTx) error {
+		err := kvdb.View(db, func(tx kvdb.RTx) er.R {
 			messageStore := tx.ReadBucket(messageStoreBucket)
 			if messageStore == nil {
-				return errors.New("message store bucket not " +
+				return er.New("message store bucket not " +
 					"found")
 			}
 			rawMsg = messageStore.Get(oldMsgKey[:])
@@ -518,7 +517,7 @@ func TestMigrateGossipMessageStoreKeys(t *testing.T) {
 			}
 			rawMsg = messageStore.Get(newMsgKey[:])
 			if rawMsg == nil {
-				return fmt.Errorf("expected to find message " +
+				return er.Errorf("expected to find message " +
 					"under new key, but didn't")
 			}
 
@@ -558,7 +557,7 @@ func TestOutgoingPaymentsMigration(t *testing.T) {
 	beforeMigrationFunc := func(d *DB) {
 		for i := 0; i < numPayments; i++ {
 			var p *outgoingPayment
-			var err error
+			var err er.R
 
 			// We fill the database with random payments. For the
 			// very last one we'll use a duplicate of the first, to
@@ -670,15 +669,15 @@ func TestOutgoingPaymentsMigration(t *testing.T) {
 
 		// Finally, check that the payment sequence number is updated
 		// to reflect the migrated payments.
-		err = kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err = kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			payments := tx.ReadWriteBucket(paymentsRootBucket)
 			if payments == nil {
-				return fmt.Errorf("payments bucket not found")
+				return er.Errorf("payments bucket not found")
 			}
 
 			seq := payments.Sequence()
 			if seq != numPayments {
-				return fmt.Errorf("expected sequence to be "+
+				return er.Errorf("expected sequence to be "+
 					"%d, got %d", numPayments, seq)
 			}
 
@@ -696,10 +695,10 @@ func TestOutgoingPaymentsMigration(t *testing.T) {
 		false)
 }
 
-func makeRandPaymentCreationInfo() (*PaymentCreationInfo, error) {
+func makeRandPaymentCreationInfo() (*PaymentCreationInfo, er.R) {
 	var payHash lntypes.Hash
 	if _, err := rand.Read(payHash[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return &PaymentCreationInfo{
@@ -750,7 +749,7 @@ func TestPaymentRouteSerialization(t *testing.T) {
 	// We'll first add a series of fake payments, using the existing legacy
 	// serialization format.
 	beforeMigrationFunc := func(d *DB) {
-		err := kvdb.Update(d, func(tx kvdb.RwTx) error {
+		err := kvdb.Update(d, func(tx kvdb.RwTx) er.R {
 			paymentsBucket, err := tx.CreateTopLevelBucket(
 				paymentsRootBucket,
 			)
@@ -770,11 +769,10 @@ func TestPaymentRouteSerialization(t *testing.T) {
 				// duplicate payment hash bucket.
 				var payInfo *PaymentCreationInfo
 				if i < numPayments-1 {
-					var errr error
-					payInfo, errr = makeRandPaymentCreationInfo()
-					if errr != nil {
+					payInfo, err = makeRandPaymentCreationInfo()
+					if err != nil {
 						t.Fatalf("unable to create "+
-							"payment: %v", errr)
+							"payment: %v", err)
 					}
 				} else {
 					payInfo = oldPayments[0].Info

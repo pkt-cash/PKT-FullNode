@@ -1,10 +1,10 @@
 package autopilot
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // ExternalScoreAttachment is an implementation of the AttachmentHeuristic
@@ -42,7 +42,7 @@ func (s *ExternalScoreAttachment) Name() string {
 //
 // NOTE: This is a part of the ScoreSettable interface.
 func (s *ExternalScoreAttachment) SetNodeScores(targetHeuristic string,
-	newScores map[NodeID]float64) (bool, error) {
+	newScores map[NodeID]float64) (bool, er.R) {
 
 	// Return if this heuristic wasn't targeted.
 	if targetHeuristic != s.Name() {
@@ -53,7 +53,7 @@ func (s *ExternalScoreAttachment) SetNodeScores(targetHeuristic string,
 	// 1.0], we validate them before setting the internal list.
 	for nID, s := range newScores {
 		if s < 0 || s > 1.0 {
-			return false, fmt.Errorf("invalid score %v for "+
+			return false, er.Errorf("invalid score %v for "+
 				"nodeID %v", s, nID)
 		}
 	}
@@ -82,7 +82,7 @@ func (s *ExternalScoreAttachment) SetNodeScores(targetHeuristic string,
 // NOTE: This is a part of the AttachmentHeuristic interface.
 func (s *ExternalScoreAttachment) NodeScores(g ChannelGraph, chans []LocalChannel,
 	chanSize btcutil.Amount, nodes map[NodeID]struct{}) (
-	map[NodeID]*NodeScore, error) {
+	map[NodeID]*NodeScore, er.R) {
 
 	existingPeers := make(map[NodeID]struct{})
 	for _, c := range chans {

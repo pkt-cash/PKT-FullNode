@@ -76,7 +76,7 @@ func New(chanDB *channeldb.DB) *ChannelNotifier {
 }
 
 // Start starts the ChannelNotifier and all goroutines it needs to carry out its task.
-func (c *ChannelNotifier) Start() error {
+func (c *ChannelNotifier) Start() er.R {
 	var err error
 	c.started.Do(func() {
 		log.Trace("ChannelNotifier starting")
@@ -98,7 +98,7 @@ func (c *ChannelNotifier) Stop() {
 //
 // TODO(carlaKC): update  to allow subscriptions to specify a block height from
 // which we would like to subscribe to events.
-func (c *ChannelNotifier) SubscribeChannelEvents() (*subscribe.Client, error) {
+func (c *ChannelNotifier) SubscribeChannelEvents() (*subscribe.Client, er.R) {
 	return c.ntfnServer.Subscribe()
 }
 

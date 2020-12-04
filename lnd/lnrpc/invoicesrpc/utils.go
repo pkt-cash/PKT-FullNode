@@ -18,13 +18,13 @@ import (
 // is no payment request present, a dummy request will be returned. This can
 // happen with just-in-time inserted keysend invoices.
 func decodePayReq(invoice *channeldb.Invoice,
-	activeNetParams *chaincfg.Params) (*zpay32.Invoice, error) {
+	activeNetParams *chaincfg.Params) (*zpay32.Invoice, er.R) {
 
 	paymentRequest := string(invoice.PaymentRequest)
 	if paymentRequest == "" {
 		preimage := invoice.Terms.PaymentPreimage
 		if preimage == nil {
-			return nil, errors.New("cannot reconstruct pay req")
+			return nil, er.New("cannot reconstruct pay req")
 		}
 		hash := [32]byte(preimage.Hash())
 		return &zpay32.Invoice{
@@ -35,7 +35,7 @@ func decodePayReq(invoice *channeldb.Invoice,
 	var err error
 	decoded, err := zpay32.Decode(paymentRequest, activeNetParams)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode payment "+
+		return nil, er.Errorf("unable to decode payment "+
 			"request: %v", err)
 	}
 	return decoded, nil
@@ -44,7 +44,7 @@ func decodePayReq(invoice *channeldb.Invoice,
 
 // CreateRPCInvoice creates an *lnrpc.Invoice from the *channeldb.Invoice.
 func CreateRPCInvoice(invoice *channeldb.Invoice,
-	activeNetParams *chaincfg.Params) (*lnrpc.Invoice, error) {
+	activeNetParams *chaincfg.Params) (*lnrpc.Invoice, er.R) {
 
 	decoded, err := decodePayReq(invoice, activeNetParams)
 	if err != nil {
@@ -86,7 +86,7 @@ func CreateRPCInvoice(invoice *channeldb.Invoice,
 	case channeldb.ContractAccepted:
 		state = lnrpc.Invoice_ACCEPTED
 	default:
-		return nil, fmt.Errorf("unknown invoice state %v",
+		return nil, er.Errorf("unknown invoice state %v",
 			invoice.State)
 	}
 
@@ -101,7 +101,7 @@ func CreateRPCInvoice(invoice *channeldb.Invoice,
 		case channeldb.HtlcStateCanceled:
 			state = lnrpc.InvoiceHTLCState_CANCELED
 		default:
-			return nil, fmt.Errorf("unknown state %v", htlc.State)
+			return nil, er.Errorf("unknown state %v", htlc.State)
 		}
 
 		rpcHtlc := lnrpc.InvoiceHTLC{
@@ -208,12 +208,12 @@ func CreateRPCRouteHints(routeHints [][]zpay32.HopHint) []*lnrpc.RouteHint {
 
 // CreateZpay32HopHints takes in the lnrpc form of route hints and converts them
 // into an invoice decoded form.
-func CreateZpay32HopHints(routeHints []*lnrpc.RouteHint) ([][]zpay32.HopHint, error) {
+func CreateZpay32HopHints(routeHints []*lnrpc.RouteHint) ([][]zpay32.HopHint, er.R) {
 	var res [][]zpay32.HopHint
 	for _, route := range routeHints {
 		hopHints := make([]zpay32.HopHint, 0, len(route.HopHints))
 		for _, hop := range route.HopHints {
-			pubKeyBytes, err := hex.DecodeString(hop.NodeId)
+			pubKeyBytes, err := util.DecodeHex(hop.NodeId)
 			if err != nil {
 				return nil, err
 			}

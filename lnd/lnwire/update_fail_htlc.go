@@ -2,6 +2,8 @@ package lnwire
 
 import (
 	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // OpaqueReason is an opaque encrypted byte slice that encodes the exact
@@ -36,7 +38,7 @@ var _ Message = (*UpdateFailHTLC)(nil)
 // io.Reader observing the specified protocol version.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFailHTLC) Decode(r io.Reader, pver uint32) error {
+func (c *UpdateFailHTLC) Decode(r io.Reader, pver uint32) er.R {
 	return ReadElements(r,
 		&c.ChanID,
 		&c.ID,
@@ -48,7 +50,7 @@ func (c *UpdateFailHTLC) Decode(r io.Reader, pver uint32) error {
 // the protocol version specified.
 //
 // This is part of the lnwire.Message interface.
-func (c *UpdateFailHTLC) Encode(w io.Writer, pver uint32) error {
+func (c *UpdateFailHTLC) Encode(w io.Writer, pver uint32) er.R {
 	return WriteElements(w,
 		c.ChanID,
 		c.ID,

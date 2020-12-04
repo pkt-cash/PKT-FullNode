@@ -88,7 +88,7 @@ func TestChainArbitratorRepublishCloses(t *testing.T) {
 			EpochChan: make(chan *chainntnfs.BlockEpoch),
 			ConfChan:  make(chan *chainntnfs.TxConfirmation),
 		},
-		PublishTx: func(tx *wire.MsgTx, _ string) error {
+		PublishTx: func(tx *wire.MsgTx, _ string) er.R {
 			published[tx.TxHash()]++
 			return nil
 		},
@@ -184,7 +184,7 @@ func TestResolveContract(t *testing.T) {
 			EpochChan: make(chan *chainntnfs.BlockEpoch),
 			ConfChan:  make(chan *chainntnfs.TxConfirmation),
 		},
-		PublishTx: func(tx *wire.MsgTx, _ string) error {
+		PublishTx: func(tx *wire.MsgTx, _ string) er.R {
 			return nil
 		},
 		Clock: clock.NewDefaultClock(),

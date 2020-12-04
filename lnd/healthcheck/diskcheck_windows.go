@@ -1,10 +1,13 @@
 package healthcheck
 
-import "golang.org/x/sys/windows"
+import (
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"golang.org/x/sys/windows"
+)
 
 // AvailableDiskSpaceRatio returns ratio of available disk space to total
 // capacity for windows.
-func AvailableDiskSpaceRatio(path string) (float64, error) {
+func AvailableDiskSpaceRatio(path string) (float64, er.R) {
 	var free, total, avail uint64
 
 	pathPtr, err := windows.UTF16PtrFromString(path)
@@ -18,7 +21,7 @@ func AvailableDiskSpaceRatio(path string) (float64, error) {
 
 // AvailableDiskSpace returns the available disk space in bytes of the given
 // file system for windows.
-func AvailableDiskSpace(path string) (uint64, error) {
+func AvailableDiskSpace(path string) (uint64, er.R) {
 	var free, total, avail uint64
 
 	pathPtr, err := windows.UTF16PtrFromString(path)

@@ -32,20 +32,20 @@ func NewRead(readBufferPool *ReadBuffer, numWorkers int,
 }
 
 // Start safely spins up the Read pool.
-func (r *Read) Start() error {
+func (r *Read) Start() er.R {
 	return r.workerPool.Start()
 }
 
 // Stop safely shuts down the Read pool.
-func (r *Read) Stop() error {
+func (r *Read) Stop() er.R {
 	return r.workerPool.Stop()
 }
 
 // Submit accepts a function closure that provides access to the fresh
 // buffer.Read object. The function's execution will be allocated to one of the
 // underlying Worker pool's goroutines.
-func (r *Read) Submit(inner func(*buffer.Read) error) error {
-	return r.workerPool.Submit(func(s WorkerState) error {
+func (r *Read) Submit(inner func(*buffer.Read) error) er.R {
+	return r.workerPool.Submit(func(s WorkerState) er.R {
 		state := s.(*readWorkerState)
 		return inner(state.readBuf)
 	})

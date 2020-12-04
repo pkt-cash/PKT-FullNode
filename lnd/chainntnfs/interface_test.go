@@ -1395,7 +1395,7 @@ func testCatchUpClientOnMissedBlocks(miner *rpctest.Harness,
 
 	// This function is used by UnsafeStart to ensure all notifications
 	// are fully drained before clients register for notifications.
-	generateBlocks := func() error {
+	generateBlocks := func() er.R {
 		_, err = miner.Node.Generate(numBlocks)
 		return err
 	}
@@ -1487,7 +1487,7 @@ func testCatchUpOnMissedBlocks(miner *rpctest.Harness,
 
 	// This function is used by UnsafeStart to ensure all notifications
 	// are fully drained before clients register for notifications.
-	generateBlocks := func() error {
+	generateBlocks := func() er.R {
 		_, err = miner.Node.Generate(numBlocks)
 		return err
 	}
@@ -1921,7 +1921,7 @@ func TestInterfaces(t *testing.T) {
 
 		var (
 			cleanUp      func()
-			newNotifier  func() (chainntnfs.TestChainNotifier, error)
+			newNotifier  func() (chainntnfs.TestChainNotifier, er.R)
 			notifierType = notifierDriver.NotifierType
 		)
 
@@ -1931,7 +1931,7 @@ func TestInterfaces(t *testing.T) {
 			bitcoindConn, cleanUp = chainntnfs.NewBitcoindBackend(
 				t, p2pAddr, true,
 			)
-			newNotifier = func() (chainntnfs.TestChainNotifier, error) {
+			newNotifier = func() (chainntnfs.TestChainNotifier, er.R) {
 				return bitcoindnotify.New(
 					bitcoindConn, chainntnfs.NetParams,
 					hintCache, hintCache,
@@ -1939,7 +1939,7 @@ func TestInterfaces(t *testing.T) {
 			}
 
 		case "btcd":
-			newNotifier = func() (chainntnfs.TestChainNotifier, error) {
+			newNotifier = func() (chainntnfs.TestChainNotifier, er.R) {
 				return btcdnotify.New(
 					&rpcConfig, chainntnfs.NetParams,
 					hintCache, hintCache,
@@ -1951,7 +1951,7 @@ func TestInterfaces(t *testing.T) {
 			spvNode, cleanUp = chainntnfs.NewNeutrinoBackend(
 				t, p2pAddr,
 			)
-			newNotifier = func() (chainntnfs.TestChainNotifier, error) {
+			newNotifier = func() (chainntnfs.TestChainNotifier, er.R) {
 				return neutrinonotify.New(
 					spvNode, hintCache, hintCache,
 				), nil
