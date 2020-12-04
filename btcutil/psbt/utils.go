@@ -359,26 +359,26 @@ func VerifyInputPrevOutpointsEqual(ins1, ins2 []*wire.TxIn) error {
 // transaction and that the wire input/output lengths match the partial input/
 // output lengths. A caller also can specify if they expect any inputs and/or
 // outputs to be contained in the packet.
-func VerifyInputOutputLen(packet *Packet, needInputs, needOutputs bool) error {
+func VerifyInputOutputLen(packet *Packet, needInputs, needOutputs bool) er.R {
 	if packet == nil || packet.UnsignedTx == nil {
-		return fmt.Errorf("PSBT packet cannot be nil")
+		return er.Errorf("PSBT packet cannot be nil")
 	}
 
 	if len(packet.UnsignedTx.TxIn) != len(packet.Inputs) {
-		return fmt.Errorf("invalid PSBT, wire inputs don't match " +
+		return er.Errorf("invalid PSBT, wire inputs don't match " +
 			"partial inputs")
 	}
 	if len(packet.UnsignedTx.TxOut) != len(packet.Outputs) {
-		return fmt.Errorf("invalid PSBT, wire outputs don't match " +
+		return er.Errorf("invalid PSBT, wire outputs don't match " +
 			"partial outputs")
 	}
 
 	if needInputs && len(packet.UnsignedTx.TxIn) == 0 {
-		return fmt.Errorf("PSBT packet must contain at least one " +
+		return er.Errorf("PSBT packet must contain at least one " +
 			"input")
 	}
 	if needOutputs && len(packet.UnsignedTx.TxOut) == 0 {
-		return fmt.Errorf("PSBT packet must contain at least one " +
+		return er.Errorf("PSBT packet must contain at least one " +
 			"output")
 	}
 

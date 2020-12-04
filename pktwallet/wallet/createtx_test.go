@@ -24,6 +24,14 @@ import (
 	"github.com/pkt-cash/pktd/wire"
 )
 
+var (
+	testBlockHash, _ = chainhash.NewHashFromStr(
+		"00000000000000017188b968a371bab95aa43522665353b646e41865abae" +
+			"02a4",
+	)
+	testBlockHeight int32 = 276425
+)
+
 // TestTxToOutput checks that no new address is added to he database if we
 // request a dry run of the txToOutputs call. It also makes sure a subsequent
 // non-dry run call produces a similar transaction to the dry-run.
@@ -167,12 +175,12 @@ func TestTxToOutputsDryRun(t *testing.T) {
 
 	// The two dry-run TXs should be invalid, since they don't have
 	// signatures.
-	err = validateMsgTx(dryRunTx.Tx)
+	err = validateMsgTx1(dryRunTx.Tx)
 	if err == nil {
 		t.Fatalf("Expected tx to be invalid")
 	}
 
-	err = validateMsgTx(dryRunTx2.Tx)
+	err = validateMsgTx1(dryRunTx2.Tx)
 	if err == nil {
 		t.Fatalf("Expected tx to be invalid")
 	}
@@ -195,7 +203,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 		t.Fatalf("expected 1 addresses, found %v", len(addresses))
 	}
 
-	err = validateMsgTx(tx.Tx)
+	err = validateMsgTx1(tx.Tx)
 	if err != nil {
 		t.Fatalf("Expected tx to be valid: %v", err)
 	}
@@ -209,5 +217,45 @@ func TestTxToOutputsDryRun(t *testing.T) {
 	if !bytes.Equal(change2.PkScript, change3.PkScript) {
 		t.Fatalf("dry-run using different change address " +
 			"than wet run")
+	}
+}
+
+// addUtxo add the given transaction to the wallet's database marked as a
+// confirmed UTXO .
+func addUtxo(t *testing.T, w *Wallet, incomingTx *wire.MsgTx) {
+	var b bytes.Buffer
+	if err := incomingTx.Serialize(&b); err != nil {
+		t.Fatalf("unable to serialize tx: %v", err)
+	}
+	txBytes := b.Bytes()
+
+	rec, err := wtxmgr.NewTxRecord(txBytes, time.Now())
+	if err != nil {
+		t.Fatalf("unable to create tx record: %v", err)
+	}
+
+	// The block meta will be inserted to tell the wallet this is a
+	// confirmed transaction.
+	block := &wtxmgr.BlockMeta{
+		Block: wtxmgr.Block{
+			Hash:   *testBlockHash,
+			Height: testBlockHeight,
+		},
+		Time: time.Unix(1387737310, 0),
+	}
+
+	if err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		err = w.TxStore.InsertTx(ns, rec, block)
+		if err != nil {
+			return err
+		}
+		err = w.TxStore.AddCredit(ns, rec, block, 0, false)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("failed inserting tx: %v", err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"os"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -1448,4 +1449,9 @@ func TestWitnessForNonWitnessUtxo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to extract funding TX: %v", err)
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

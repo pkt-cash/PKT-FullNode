@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -21,7 +22,7 @@ import (
 // The function should only be used if the caller is creating the transaction or
 // is otherwise 100% positive mutating will not cause adverse affects due to
 // other dependencies.
-func InPlaceSort(packet *Packet) error {
+func InPlaceSort(packet *Packet) er.R {
 	// To make sure we don't run into any nil pointers or array index
 	// violations during sorting, do a very basic sanity check first.
 	err := VerifyInputOutputLen(packet, false, false)
