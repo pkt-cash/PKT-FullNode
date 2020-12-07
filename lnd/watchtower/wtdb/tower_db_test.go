@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
@@ -44,30 +45,31 @@ func newTowerDBHarness(t *testing.T, init dbInit) (*towerDBHarness, func()) {
 	return h, cleanup
 }
 
+func (h *towerDBHarness) checkErr(err er.R, expErr *er.ErrorCode) {
+	if expErr == nil && err == nil {
+	} else if expErr == nil || !expErr.Is(err) {
+		h.t.Fatalf("expected error: %v, got : %v", expErr, err)
+	}
+}
+
 // insertSession attempts to isnert the passed session and asserts that the
 // error returned matches expErr.
-func (h *towerDBHarness) insertSession(s *wtdb.SessionInfo, expErr error) {
+func (h *towerDBHarness) insertSession(s *wtdb.SessionInfo, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	err := h.db.InsertSessionInfo(s)
-	if err != expErr {
-		h.t.Fatalf("expected insert session error: %v, got : %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 }
 
 // getSession retrieves the session identified by id, asserting that the call
 // returns expErr. If successful, the found session is returned.
 func (h *towerDBHarness) getSession(id *wtdb.SessionID,
-	expErr error) *wtdb.SessionInfo {
+	expErr *er.ErrorCode) *wtdb.SessionInfo {
 
 	h.t.Helper()
 
 	session, err := h.db.GetSessionInfo(id)
-	if err != expErr {
-		h.t.Fatalf("expected get session error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	return session
 }
@@ -76,29 +78,23 @@ func (h *towerDBHarness) getSession(id *wtdb.SessionID,
 // error returned matches expErr. If successful, the session's last applied
 // value is returned.
 func (h *towerDBHarness) insertUpdate(s *wtdb.SessionStateUpdate,
-	expErr error) uint16 {
+	expErr *er.ErrorCode) uint16 {
 
 	h.t.Helper()
 
 	lastApplied, err := h.db.InsertStateUpdate(s)
-	if err != expErr {
-		h.t.Fatalf("expected insert update error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	return lastApplied
 }
 
 // deleteSession attempts to delete the session identified by id and asserts
 // that the error returned from DeleteSession matches the expected error.
-func (h *towerDBHarness) deleteSession(id wtdb.SessionID, expErr error) {
+func (h *towerDBHarness) deleteSession(id wtdb.SessionID, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	err := h.db.DeleteSession(id)
-	if err != expErr {
-		h.t.Fatalf("expected deletion error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 }
 
 // queryMatches queries that database for the passed breach hint, returning all
@@ -375,9 +371,9 @@ func testDeleteSession(h *towerDBHarness) {
 
 type stateUpdateTest struct {
 	session    *wtdb.SessionInfo
-	sessionErr error
+	sessionErr *er.ErrorCode
 	updates    []*wtdb.SessionStateUpdate
-	updateErrs []error
+	updateErrs []*er.ErrorCode
 }
 
 func runStateUpdateTest(test stateUpdateTest) func(*towerDBHarness) {
@@ -445,7 +441,7 @@ var stateUpdateNoSession = stateUpdateTest{
 	updates: []*wtdb.SessionStateUpdate{
 		updateFromInt(id(0), 1, 0),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		wtdb.ErrSessionNotFound,
 	},
 }
@@ -468,7 +464,7 @@ var stateUpdateExhaustSession = stateUpdateTest{
 		updateFromInt(id(0), 3, 0),
 		updateFromInt(id(0), 4, 0),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		nil, nil, nil, wtdb.ErrSessionConsumed,
 	},
 }
@@ -491,7 +487,7 @@ var stateUpdateSeqNumEqualLastApplied = stateUpdateTest{
 		updateFromInt(id(0), 3, 2),
 		updateFromInt(id(0), 3, 3),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		nil, nil, nil, wtdb.ErrSeqNumAlreadyApplied,
 	},
 }
@@ -513,7 +509,7 @@ var stateUpdateSeqNumLTLastApplied = stateUpdateTest{
 		updateFromInt(id(0), 2, 1),
 		updateFromInt(id(0), 1, 2),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		nil, nil, wtdb.ErrSeqNumAlreadyApplied,
 	},
 }
@@ -533,7 +529,7 @@ var stateUpdateSeqNumZeroInvalid = stateUpdateTest{
 	updates: []*wtdb.SessionStateUpdate{
 		updateFromInt(id(0), 0, 0),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		wtdb.ErrSeqNumAlreadyApplied,
 	},
 }
@@ -553,7 +549,7 @@ var stateUpdateSkipSeqNum = stateUpdateTest{
 	updates: []*wtdb.SessionStateUpdate{
 		updateFromInt(id(0), 2, 0),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		wtdb.ErrUpdateOutOfOrder,
 	},
 }
@@ -575,7 +571,7 @@ var stateUpdateRevertSeqNum = stateUpdateTest{
 		updateFromInt(id(0), 2, 0),
 		updateFromInt(id(0), 1, 0),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		nil, nil, wtdb.ErrUpdateOutOfOrder,
 	},
 }
@@ -598,7 +594,7 @@ var stateUpdateRevertLastApplied = stateUpdateTest{
 		updateFromInt(id(0), 3, 2),
 		updateFromInt(id(0), 4, 1),
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		nil, nil, nil, wtdb.ErrLastAppliedReversion,
 	},
 }
@@ -623,7 +619,7 @@ var stateUpdateInvalidBlobSize = stateUpdateTest{
 			EncryptedBlob: []byte{0x01, 0x02, 0x03}, // too $hort
 		},
 	},
-	updateErrs: []error{
+	updateErrs: []*er.ErrorCode{
 		wtdb.ErrInvalidBlobSize,
 	},
 }
@@ -636,10 +632,10 @@ func TestTowerDB(t *testing.T) {
 		{
 			name: "fresh boltdb",
 			init: func(t *testing.T) (watchtower.DB, func()) {
-				path, err := ioutil.TempDir("", "towerdb")
-				if err != nil {
+				path, errr := ioutil.TempDir("", "towerdb")
+				if errr != nil {
 					t.Fatalf("unable to make temp dir: %v",
-						err)
+						errr)
 				}
 
 				db, err := wtdb.OpenTowerDB(path)
@@ -659,10 +655,10 @@ func TestTowerDB(t *testing.T) {
 		{
 			name: "reopened boltdb",
 			init: func(t *testing.T) (watchtower.DB, func()) {
-				path, err := ioutil.TempDir("", "towerdb")
-				if err != nil {
+				path, errr := ioutil.TempDir("", "towerdb")
+				if errr != nil {
 					t.Fatalf("unable to make temp dir: %v",
-						err)
+						errr)
 				}
 
 				db, err := wtdb.OpenTowerDB(path)

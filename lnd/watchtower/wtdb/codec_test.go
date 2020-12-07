@@ -28,12 +28,12 @@ func randPubKey() (*btcec.PublicKey, er.R) {
 func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [4]byte
 	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	addrIP := net.IP(ip[:])
@@ -45,12 +45,12 @@ func randTCP4Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 	var ip [16]byte
 	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	addrIP := net.IP(ip[:])
@@ -62,12 +62,12 @@ func randTCP6Addr(r *rand.Rand) (*net.TCPAddr, er.R) {
 func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V2DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	onionService := tor.Base32Encoding.EncodeToString(serviceID[:])
@@ -80,12 +80,12 @@ func randV2OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 func randV3OnionAddr(r *rand.Rand) (*tor.OnionAddr, er.R) {
 	var serviceID [tor.V3DecodedLen]byte
 	if _, err := r.Read(serviceID[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	var port [2]byte
 	if _, err := r.Read(port[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	onionService := tor.Base32Encoding.EncodeToString(serviceID[:])

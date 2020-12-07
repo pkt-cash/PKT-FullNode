@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
@@ -39,14 +40,18 @@ func newClientDBHarness(t *testing.T, init clientDBInit) (*clientDBHarness, func
 	return h, cleanup
 }
 
-func (h *clientDBHarness) insertSession(session *wtdb.ClientSession, expErr error) {
+func (h *clientDBHarness) checkErr(err er.R, expErr *er.ErrorCode) {
+	if expErr == nil && err == nil {
+	} else if expErr == nil || !expErr.Is(err) {
+		h.t.Fatalf("expected error: %v, got : %v", expErr, err)
+	}
+}
+
+func (h *clientDBHarness) insertSession(session *wtdb.ClientSession, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	err := h.db.CreateClientSession(session)
-	if err != expErr {
-		h.t.Fatalf("expected create client session error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 }
 
 func (h *clientDBHarness) listSessions(id *wtdb.TowerID) map[wtdb.SessionID]*wtdb.ClientSession {
@@ -60,14 +65,11 @@ func (h *clientDBHarness) listSessions(id *wtdb.TowerID) map[wtdb.SessionID]*wtd
 	return sessions
 }
 
-func (h *clientDBHarness) nextKeyIndex(id wtdb.TowerID, expErr error) uint32 {
+func (h *clientDBHarness) nextKeyIndex(id wtdb.TowerID, expErr *er.ErrorCode) uint32 {
 	h.t.Helper()
 
 	index, err := h.db.NextSessionKeyIndex(id)
-	if err != expErr {
-		h.t.Fatalf("expected next session key index error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	if index == 0 {
 		h.t.Fatalf("next key index should never be 0")
@@ -77,14 +79,12 @@ func (h *clientDBHarness) nextKeyIndex(id wtdb.TowerID, expErr error) uint32 {
 }
 
 func (h *clientDBHarness) createTower(lnAddr *lnwire.NetAddress,
-	expErr error) *wtdb.Tower {
+	expErr *er.ErrorCode) *wtdb.Tower {
 
 	h.t.Helper()
 
 	tower, err := h.db.CreateTower(lnAddr)
-	if err != expErr {
-		h.t.Fatalf("expected create tower error: %v, got: %v", expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	if tower.ID == 0 {
 		h.t.Fatalf("tower id should never be 0")
@@ -102,13 +102,12 @@ func (h *clientDBHarness) createTower(lnAddr *lnwire.NetAddress,
 }
 
 func (h *clientDBHarness) removeTower(pubKey *btcec.PublicKey, addr net.Addr,
-	hasSessions bool, expErr error) {
+	hasSessions bool, expErr *er.ErrorCode) {
 
 	h.t.Helper()
 
-	if err := h.db.RemoveTower(pubKey, addr); err != expErr {
-		h.t.Fatalf("expected remove tower error: %v, got %v", expErr, err)
-	}
+	err := h.db.RemoveTower(pubKey, addr)
+	h.checkErr(err, expErr)
 	if expErr != nil {
 		return
 	}
@@ -150,24 +149,20 @@ func (h *clientDBHarness) removeTower(pubKey *btcec.PublicKey, addr net.Addr,
 	}
 }
 
-func (h *clientDBHarness) loadTower(pubKey *btcec.PublicKey, expErr error) *wtdb.Tower {
+func (h *clientDBHarness) loadTower(pubKey *btcec.PublicKey, expErr *er.ErrorCode) *wtdb.Tower {
 	h.t.Helper()
 
 	tower, err := h.db.LoadTower(pubKey)
-	if err != expErr {
-		h.t.Fatalf("expected load tower error: %v, got: %v", expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	return tower
 }
 
-func (h *clientDBHarness) loadTowerByID(id wtdb.TowerID, expErr error) *wtdb.Tower {
+func (h *clientDBHarness) loadTowerByID(id wtdb.TowerID, expErr *er.ErrorCode) *wtdb.Tower {
 	h.t.Helper()
 
 	tower, err := h.db.LoadTowerByID(id)
-	if err != expErr {
-		h.t.Fatalf("expected load tower error: %v, got: %v", expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	return tower
 }
@@ -184,41 +179,32 @@ func (h *clientDBHarness) fetchChanSummaries() map[lnwire.ChannelID]wtdb.ClientC
 }
 
 func (h *clientDBHarness) registerChan(chanID lnwire.ChannelID,
-	sweepPkScript []byte, expErr error) {
+	sweepPkScript []byte, expErr *er.ErrorCode) {
 
 	h.t.Helper()
 
 	err := h.db.RegisterChannel(chanID, sweepPkScript)
-	if err != expErr {
-		h.t.Fatalf("expected register channel error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 }
 
 func (h *clientDBHarness) commitUpdate(id *wtdb.SessionID,
-	update *wtdb.CommittedUpdate, expErr error) uint16 {
+	update *wtdb.CommittedUpdate, expErr *er.ErrorCode) uint16 {
 
 	h.t.Helper()
 
 	lastApplied, err := h.db.CommitUpdate(id, update)
-	if err != expErr {
-		h.t.Fatalf("expected commit update error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 
 	return lastApplied
 }
 
 func (h *clientDBHarness) ackUpdate(id *wtdb.SessionID, seqNum uint16,
-	lastApplied uint16, expErr error) {
+	lastApplied uint16, expErr *er.ErrorCode) {
 
 	h.t.Helper()
 
 	err := h.db.AckUpdate(id, seqNum, lastApplied)
-	if err != expErr {
-		h.t.Fatalf("expected commit update error: %v, got: %v",
-			expErr, err)
-	}
+	h.checkErr(err, expErr)
 }
 
 // testCreateClientSession asserts various conditions regarding the creation of
@@ -360,7 +346,7 @@ func testCreateTower(h *clientDBHarness) {
 		h.t.Fatalf("loaded tower mismatch, want: %v, got: %v",
 			tower, tower2)
 	}
-	tower2 = h.loadTower(pk, err)
+	tower2 = h.loadTower(pk, nil)
 	if !reflect.DeepEqual(tower, tower2) {
 		h.t.Fatalf("loaded tower mismatch, want: %v, got: %v",
 			tower, tower2)
@@ -754,10 +740,10 @@ func TestClientDB(t *testing.T) {
 		{
 			name: "fresh clientdb",
 			init: func(t *testing.T) (wtclient.DB, func()) {
-				path, err := ioutil.TempDir("", "clientdb")
-				if err != nil {
+				path, errr := ioutil.TempDir("", "clientdb")
+				if errr != nil {
 					t.Fatalf("unable to make temp dir: %v",
-						err)
+						errr)
 				}
 
 				db, err := wtdb.OpenClientDB(path)
@@ -777,10 +763,10 @@ func TestClientDB(t *testing.T) {
 		{
 			name: "reopened clientdb",
 			init: func(t *testing.T) (wtclient.DB, func()) {
-				path, err := ioutil.TempDir("", "clientdb")
-				if err != nil {
+				path, errr := ioutil.TempDir("", "clientdb")
+				if errr != nil {
 					t.Fatalf("unable to make temp dir: %v",
-						err)
+						errr)
 				}
 
 				db, err := wtdb.OpenClientDB(path)
