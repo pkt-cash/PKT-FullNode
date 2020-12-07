@@ -676,7 +676,7 @@ func testAdditionalErrors(tc *testContext) bool {
 
 // TestInterface performs all interfaces tests for this database driver.
 func TestInterface(t Tester, dbType, dbPath string) {
-	db, err := walletdb.Create(dbType, dbPath)
+	db, err := walletdb.Create(dbType, dbPath, true)
 	if err != nil {
 		t.Errorf("Failed to create test database (%s) %v", dbType, err)
 		return

@@ -43,7 +43,7 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 			"temporary directory: %s", errr)
 	}
 
-	db, err := walletdb.Create("bdb", tempDir+"/weks.db")
+	db, err := walletdb.Create("bdb", tempDir+"/weks.db", true)
 	if err != nil {
 		os.RemoveAll(tempDir)
 		return nil, nil, nil, nil, er.Errorf("Error opening DB: %s",

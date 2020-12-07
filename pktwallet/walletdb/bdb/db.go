@@ -389,7 +389,7 @@ func fileExists(name string) bool {
 
 // openDB opens the database at the provided path.  walletdb.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, create bool) (walletdb.DB, er.R) {
+func openDB(dbPath string, create, noFreeListSync bool) (walletdb.DB, er.R) {
 	if !create && !fileExists(dbPath) {
 		return nil, walletdb.ErrDbDoesNotExist.Default()
 	}

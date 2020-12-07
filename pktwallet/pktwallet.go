@@ -191,7 +191,7 @@ func rpcClientConnectLoop(legacyRPCServer *legacyrpc.Server, loader *wallet.Load
 			)
 			netDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
 			spvdb, err = walletdb.Create("bdb",
-				filepath.Join(netDir, "neutrino.db"))
+				filepath.Join(netDir, "neutrino.db"), false)
 			defer spvdb.Close()
 			if err != nil {
 				log.Errorf("Unable to create Neutrino DB: %s", err)

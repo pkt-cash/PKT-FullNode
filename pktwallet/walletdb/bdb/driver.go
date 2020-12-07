@@ -34,24 +34,14 @@ func parseArgs(funcName string, args ...interface{}) (string, er.R) {
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(args ...interface{}) (walletdb.DB, er.R) {
-	dbPath, err := parseArgs("Open", args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return openDB(dbPath, false)
+func openDBDriver(dbPath string, noFreeListSync bool) (walletdb.DB, er.R) {
+	return openDB(dbPath, false, noFreeListSync)
 }
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(args ...interface{}) (walletdb.DB, er.R) {
-	dbPath, err := parseArgs("Create", args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return openDB(dbPath, true)
+func createDBDriver(dbPath string, noFreeListSync bool) (walletdb.DB, er.R) {
+	return openDB(dbPath, true, noFreeListSync)
 }
 
 func init() {

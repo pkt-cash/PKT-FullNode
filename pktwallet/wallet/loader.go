@@ -140,7 +140,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase []byte,
 	if err != nil {
 		return nil, err
 	}
-	db, err := walletdb.Create("bdb", dbPath)
+	db, err := walletdb.Create("bdb", dbPath, false)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	// Open the database using the boltdb backend.
 	dbPath := WalletDbPath(l.dbDirPath, l.walletName)
-	db, err := walletdb.Open("bdb", dbPath)
+	db, err := walletdb.Open("bdb", dbPath, false)
 	if err != nil {
 		log.Errorf("Failed to open database: %v", err)
 		return nil, err

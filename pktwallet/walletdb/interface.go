@@ -301,12 +301,12 @@ type Driver struct {
 	// Create is the function that will be invoked with all user-specified
 	// arguments to create the database.  This function must return
 	// ErrDbExists if the database already exists.
-	Create func(args ...interface{}) (DB, er.R)
+	Create func(path string, noFreeListSync bool) (DB, er.R)
 
 	// Open is the function that will be invoked with all user-specified
 	// arguments to open the database.  This function must return
 	// ErrDbDoesNotExist if the database has not already been created.
-	Open func(args ...interface{}) (DB, er.R)
+	Open func(path string, noFreeListSync bool) (DB, er.R)
 }
 
 // driverList holds all of the registered database backends.
@@ -339,13 +339,13 @@ func SupportedDrivers() []string {
 // database driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Create(dbType string, args ...interface{}) (DB, er.R) {
+func Create(dbType, path string, noFreeListSync bool) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType.Default()
 	}
 
-	return drv.Create(args...)
+	return drv.Create(path, noFreeListSync)
 }
 
 // Open opens an existing database for the specified type.  The arguments are
@@ -353,11 +353,11 @@ func Create(dbType string, args ...interface{}) (DB, er.R) {
 // driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Open(dbType string, args ...interface{}) (DB, er.R) {
+func Open(dbType, path string, noFreeListSync bool) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType.Default()
 	}
 
-	return drv.Open(args...)
+	return drv.Open(path, noFreeListSync)
 }
