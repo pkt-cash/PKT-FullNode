@@ -3,8 +3,9 @@ package btcwallet
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/pktwallet/chain"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/pktwallet/chain"
 )
 
 const (

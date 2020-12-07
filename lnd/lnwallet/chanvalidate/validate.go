@@ -2,7 +2,6 @@ package chanvalidate
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -15,8 +14,8 @@ var (
 	Err = er.NewErrorType("lnd.chanvalidate")
 	// ErrInvalidOutPoint is returned when the ChanLocator is unable to
 	// find the target outpoint.
-	ErrInvalidOutPoint = Err.CodeWithDetail("ErrInvalidOutPoint", "output meant to create channel cannot "+
-		"be found")
+	ErrInvalidOutPoint = Err.CodeWithDetail("ErrInvalidOutPoint",
+		"output meant to create channel cannot be found")
 
 	// ErrWrongPkScript is returned when the alleged funding transaction is
 	// found to have an incorrect pkSript.
@@ -27,23 +26,12 @@ var (
 	// output has the wrong size (channel capacity).
 	ErrInvalidSize = Err.CodeWithDetail("ErrInvalidSize",
 		"channel has wrong size")
+
+	// ErrScriptValidateError is returned when Script VM validation fails for an
+	// alleged channel output.
+	ErrScriptValidateError = Err.CodeWithDetail("ErrScriptValidateError",
+		"script validation failed")
 )
-
-// ErrScriptValidateError is returned when Script VM validation fails for an
-// alleged channel output.
-type ErrScriptValidateError struct {
-	err error
-}
-
-// Error returns a human readable string describing the error.
-func (e *ErrScriptValidateError) Error() string {
-	return fmt.Sprintf("script validation failed: %v", e.err)
-}
-
-// Unwrap returns the underlying wrapped VM execution failure error.
-func (e *ErrScriptValidateError) Unwrap() er.R {
-	return e.err
-}
 
 // ChanLocator abstracts away obtaining the output that created the channel, as
 // well as validating its existence given the funding transaction.  We need
@@ -202,7 +190,7 @@ func Validate(ctx *Context) (*wire.OutPoint, er.R) {
 	// the channel is definitely invalid.
 	err = vm.Execute()
 	if err != nil {
-		return nil, &ErrScriptValidateError{err: err}
+		return nil, ErrScriptValidateError.New("", err)
 	}
 
 	return chanPoint, nil

@@ -92,7 +92,7 @@ func (c *commitSweepResolver) waitForHeight(waitHeight uint32) er.R {
 		select {
 		case newBlock, ok := <-blockEpochs.Epochs:
 			if !ok {
-				return errResolverShuttingDown
+				return errResolverShuttingDown.Default()
 			}
 			height := newBlock.Height
 			if height >= int32(waitHeight) {
@@ -100,7 +100,7 @@ func (c *commitSweepResolver) waitForHeight(waitHeight uint32) er.R {
 			}
 
 		case <-c.quit:
-			return errResolverShuttingDown
+			return errResolverShuttingDown.Default()
 		}
 	}
 }
@@ -130,7 +130,7 @@ func (c *commitSweepResolver) getCommitTxConfHeight() (uint32, er.R) {
 		return txConfirmation.BlockHeight, nil
 
 	case <-c.quit:
-		return 0, errResolverShuttingDown
+		return 0, errResolverShuttingDown.Default()
 	}
 }
 
@@ -246,8 +246,8 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 	outcome := channeldb.ResolverOutcomeClaimed
 	select {
 	case sweepResult := <-resultChan:
-		switch sweepResult.Err {
-		case sweep.ErrRemoteSpend:
+		switch {
+		case sweep.ErrRemoteSpend.Is(sweepResult.Err):
 			// If the remote party was able to sweep this output
 			// it's likely what we sent was actually a revoked
 			// commitment. Report the error and continue to wrap up
@@ -255,7 +255,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 			c.log.Warnf("local commitment output was swept by "+
 				"remote party via %v", sweepResult.Tx.TxHash())
 			outcome = channeldb.ResolverOutcomeUnclaimed
-		case nil:
+		case sweepResult.Err == nil:
 			// No errors, therefore continue processing.
 			c.log.Infof("local commitment output fully resolved by "+
 				"sweep tx: %v", sweepResult.Tx.TxHash())
@@ -270,7 +270,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 		sweepTxID = sweepResult.Tx.TxHash()
 
 	case <-c.quit:
-		return nil, errResolverShuttingDown
+		return nil, errResolverShuttingDown.Default()
 	}
 
 	// Funds have been swept and balance is no longer in limbo.

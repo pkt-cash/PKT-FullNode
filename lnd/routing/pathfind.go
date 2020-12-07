@@ -425,7 +425,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	// we have for the target node from our graph.
 	features := r.DestFeatures
 	if features == nil {
-		var err error
+		var err er.R
 		features, err = g.graph.fetchNodeFeatures(target)
 		if err != nil {
 			return nil, err
@@ -437,14 +437,14 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	err := feature.ValidateRequired(features)
 	if err != nil {
 		log.Warnf("Pathfinding destination node features: %v", err)
-		return nil, errUnknownRequiredFeature
+		return nil, er.E(errUnknownRequiredFeature)
 	}
 
 	// Ensure that all transitive dependencies are set.
 	err = feature.ValidateDeps(features)
 	if err != nil {
 		log.Warnf("Pathfinding destination node features: %v", err)
-		return nil, errMissingDependentFeature
+		return nil, er.E(errMissingDependentFeature)
 	}
 
 	// Now that we know the feature vector is well formed, we'll proceed in
@@ -456,7 +456,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	if len(r.DestCustomRecords) > 0 &&
 		!features.HasFeature(lnwire.TLVOnionPayloadOptional) {
 
-		return nil, errNoTlvPayload
+		return nil, er.E(errNoTlvPayload)
 	}
 
 	// If the caller has a payment address to attach, check that our
@@ -464,7 +464,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	if r.PaymentAddr != nil &&
 		!features.HasFeature(lnwire.PaymentAddrOptional) {
 
-		return nil, errNoPaymentAddr
+		return nil, er.E(errNoPaymentAddr)
 	}
 
 	// Set up outgoing channel map for quicker access.
@@ -491,13 +491,13 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// If the total outgoing balance isn't sufficient, it will be
 		// impossible to complete the payment.
 		if total < amt {
-			return nil, errInsufficientBalance
+			return nil, er.E(errInsufficientBalance)
 		}
 
 		// If there is only not enough capacity on a single route, it
 		// may still be possible to complete the payment by splitting.
 		if max < amt {
-			return nil, errNoPathFound
+			return nil, er.E(errNoPathFound)
 		}
 	}
 
@@ -757,7 +757,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 
 	// getGraphFeatures returns (cached) node features from the graph.
 	getGraphFeatures := func(node route.Vertex) (*lnwire.FeatureVector,
-		error) {
+		er.R) {
 
 		// Check cache for features of the fromNode.
 		fromFeatures, ok := featureCache[node]
@@ -881,7 +881,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		currentNodeWithDist, ok := distance[currentNode]
 		if !ok {
 			// If the node doesnt have a next hop it means we didn't find a path.
-			return nil, errNoPathFound
+			return nil, er.E(errNoPathFound)
 		}
 
 		// Add the next hop to the list of path edges.

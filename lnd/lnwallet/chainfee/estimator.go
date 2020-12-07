@@ -337,8 +337,8 @@ func (b *BitcoindEstimator) Start() er.R {
 	info := struct {
 		RelayFee float64 `json:"relayfee"`
 	}{}
-	if err := json.Unmarshal(resp, &info); err != nil {
-		return err
+	if errr := json.Unmarshal(resp, &info); errr != nil {
+		return er.E(errr)
 	}
 
 	relayFee, err := btcutil.NewAmount(info.RelayFee)
@@ -406,15 +406,15 @@ func (b *BitcoindEstimator) RelayFeePerKW() SatPerKWeight {
 func (b *BitcoindEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, er.R) {
 	// First, we'll send an "estimatesmartfee" command as a raw request,
 	// since it isn't supported by btcd but is available in bitcoind.
-	target, err := json.Marshal(uint64(confTarget))
-	if err != nil {
-		return 0, err
+	target, errr := json.Marshal(uint64(confTarget))
+	if errr != nil {
+		return 0, er.E(errr)
 	}
 
 	// The mode must be either ECONOMICAL or CONSERVATIVE.
-	mode, err := json.Marshal(b.feeMode)
-	if err != nil {
-		return 0, err
+	mode, errr := json.Marshal(b.feeMode)
+	if errr != nil {
+		return 0, er.E(errr)
 	}
 
 	resp, err := b.bitcoindConn.RawRequest(
@@ -428,9 +428,9 @@ func (b *BitcoindEstimator) fetchEstimate(confTarget uint32) (SatPerKWeight, er.
 	feeEstimate := struct {
 		FeeRate float64 `json:"feerate"`
 	}{}
-	err = json.Unmarshal(resp, &feeEstimate)
-	if err != nil {
-		return 0, err
+	errr = json.Unmarshal(resp, &feeEstimate)
+	if errr != nil {
+		return 0, er.E(errr)
 	}
 
 	// Next, we'll convert the returned value to satoshis, as it's currently
@@ -511,8 +511,8 @@ func (s SparseConfFeeSource) ParseResponse(r io.Reader) (map[uint32]uint32, er.R
 		FeeByBlockTarget: make(map[uint32]uint32),
 	}
 	jsonReader := json.NewDecoder(r)
-	if err := jsonReader.Decode(&resp); err != nil {
-		return nil, err
+	if errr := jsonReader.Decode(&resp); errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return resp.FeeByBlockTarget, nil
@@ -605,7 +605,8 @@ func (w *WebAPIEstimator) Start() er.R {
 		return nil
 	}
 
-	var err error
+	// TODO(cjd): Nothing is returned
+	var err er.R
 	w.started.Do(func() {
 		log.Infof("Starting web API fee estimator")
 
@@ -704,10 +705,10 @@ func (w *WebAPIEstimator) updateFeeEstimates() {
 	// With the client created, we'll query the API source to fetch the URL
 	// that we should use to query for the fee estimation.
 	targetURL := w.apiSource.GenQueryURL()
-	resp, err := netClient.Get(targetURL)
-	if err != nil {
+	resp, errr := netClient.Get(targetURL)
+	if errr != nil {
 		log.Errorf("unable to query web api for fee response: %v",
-			err)
+			errr)
 		return
 	}
 	defer resp.Body.Close()

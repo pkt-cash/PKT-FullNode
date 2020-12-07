@@ -88,7 +88,7 @@ func TestWitnessCacheSha256Deletion(t *testing.T) {
 		t.Fatalf("unable to delete witness: %v", err)
 	}
 	_, err = wCache.LookupSha256Witness(hash1)
-	if err != ErrNoWitnesses {
+	if !ErrNoWitnesses.Is(err) {
 		t.Fatalf("expected ErrNoWitnesses instead got: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestWitnessCacheSha256Deletion(t *testing.T) {
 		t.Fatalf("unable to delete witness class: %v", err)
 	}
 	_, err = wCache.LookupSha256Witness(hash2)
-	if err != ErrNoWitnesses {
+	if !ErrNoWitnesses.Is(err) {
 		t.Fatalf("expected ErrNoWitnesses instead got: %v", err)
 	}
 }
@@ -120,7 +120,7 @@ func TestWitnessCacheUnknownWitness(t *testing.T) {
 	// We'll attempt to add a new, undefined witness type to the database.
 	// We should get an error.
 	err = wCache.legacyAddWitnesses(234, key[:])
-	if err != ErrUnknownWitnessType {
+	if !ErrUnknownWitnessType.Is(err) {
 		t.Fatalf("expected ErrUnknownWitnessType, got %v", err)
 	}
 }

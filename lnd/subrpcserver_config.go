@@ -1,11 +1,10 @@
 package lnd
 
 import (
-	"fmt"
 	"reflect"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -27,6 +26,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/sweep"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
+	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // subRPCServerConfigs is special sub-config in the main configuration that

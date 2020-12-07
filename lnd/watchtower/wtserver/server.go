@@ -309,9 +309,9 @@ func (f *connFailure) Error() string {
 func (s *Server) readMessage(peer Peer) (wtwire.Message, er.R) {
 	// Set a read timeout to ensure we drop the client if not sent in a
 	// timely manner.
-	err := peer.SetReadDeadline(time.Now().Add(s.cfg.ReadTimeout))
-	if err != nil {
-		err = er.Errorf("unable to set read deadline: %v", err)
+	errr := peer.SetReadDeadline(time.Now().Add(s.cfg.ReadTimeout))
+	if errr != nil {
+		err := er.Errorf("unable to set read deadline: %v", errr)
 		return nil, err
 	}
 
@@ -346,16 +346,16 @@ func (s *Server) sendMessage(peer Peer, msg wtwire.Message) er.R {
 		return err
 	}
 
-	err = peer.SetWriteDeadline(time.Now().Add(s.cfg.WriteTimeout))
-	if err != nil {
-		err = er.Errorf("unable to set write deadline: %v", err)
+	errr := peer.SetWriteDeadline(time.Now().Add(s.cfg.WriteTimeout))
+	if errr != nil {
+		err = er.Errorf("unable to set write deadline: %v", errr)
 		return err
 	}
 
 	logMessage(peer, msg, false)
 
-	_, err = peer.Write(b.Bytes())
-	return err
+	_, errr = peer.Write(b.Bytes())
+	return er.E(errr)
 }
 
 // addPeer stores a client in the server's client map. An error is returned if a

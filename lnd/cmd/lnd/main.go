@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/signal"
 )
@@ -14,7 +15,8 @@ func main() {
 	// function will also set up logging properly.
 	loadedConfig, err := lnd.LoadConfig()
 	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+		errr := er.Wrapped(err)
+		if e, ok := errr.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			// Print error if not due to help request.
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

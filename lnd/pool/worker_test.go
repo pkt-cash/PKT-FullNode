@@ -189,7 +189,7 @@ func submitPartialBlockingGeneric(t *testing.T, p interface{}, nWorkers int) {
 	pullNothing(t, errChan)
 }
 
-func pullNothing(t *testing.T, errChan chan error) {
+func pullNothing(t *testing.T, errChan chan er.R) {
 	t.Helper()
 
 	select {
@@ -201,7 +201,7 @@ func pullNothing(t *testing.T, errChan chan error) {
 	}
 }
 
-func pullParllel(t *testing.T, n int, errChan chan error) {
+func pullParllel(t *testing.T, n int, errChan chan er.R) {
 	t.Helper()
 
 	for i := 0; i < n; i++ {
@@ -217,7 +217,7 @@ func pullParllel(t *testing.T, n int, errChan chan error) {
 	}
 }
 
-func pullSequntial(t *testing.T, n int, errChan chan error, semChan chan struct{}) {
+func pullSequntial(t *testing.T, n int, errChan chan er.R, semChan chan struct{}) {
 	t.Helper()
 
 	for i := 0; i < n; i++ {
@@ -244,7 +244,7 @@ func pullSequntial(t *testing.T, n int, errChan chan error, semChan chan struct{
 func startGeneric(t *testing.T, p interface{}) {
 	t.Helper()
 
-	var err error
+	var err er.R
 	switch pp := p.(type) {
 	case *pool.Write:
 		err = pp.Start()
@@ -264,7 +264,7 @@ func startGeneric(t *testing.T, p interface{}) {
 func stopGeneric(t *testing.T, p interface{}) {
 	t.Helper()
 
-	var err error
+	var err er.R
 	switch pp := p.(type) {
 	case *pool.Write:
 		err = pp.Stop()
@@ -282,7 +282,7 @@ func stopGeneric(t *testing.T, p interface{}) {
 }
 
 func submitGeneric(p interface{}, sem <-chan struct{}) er.R {
-	var err error
+	var err er.R
 	switch pp := p.(type) {
 	case *pool.Write:
 		err = pp.Submit(func(buf *bytes.Buffer) er.R {
@@ -310,12 +310,12 @@ func submitGeneric(p interface{}, sem <-chan struct{}) er.R {
 			}
 
 			// Write the random bytes the buffer.
-			_, err = buf.Write(b)
+			_, errr := buf.Write(b)
 
 			// Wait until this task is signaled to exit.
 			<-sem
 
-			return err
+			return er.E(errr)
 		})
 
 	case *pool.Read:

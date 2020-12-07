@@ -516,8 +516,8 @@ func (i *InvoiceRegistry) deliverSingleBacklogEvents(
 
 	// It is possible that the invoice does not exist yet, but the client is
 	// already watching it in anticipation.
-	if err == channeldb.ErrInvoiceNotFound ||
-		err == channeldb.ErrNoInvoicesCreated {
+	if channeldb.ErrInvoiceNotFound.Is(err) ||
+		channeldb.ErrNoInvoicesCreated.Is(err) {
 
 		return nil
 	}
@@ -579,7 +579,7 @@ func (i *InvoiceRegistry) AddInvoice(invoice *channeldb.Invoice,
 //
 // TODO(roasbeef): ignore if settled?
 func (i *InvoiceRegistry) LookupInvoice(rHash lntypes.Hash) (channeldb.Invoice,
-	error) {
+	er.R) {
 
 	// We'll check the database to see if there's an existing matching
 	// invoice.
@@ -765,7 +765,7 @@ func (i *InvoiceRegistry) processKeySend(ctx invoiceUpdateCtx) er.R {
 	// Insert invoice into database. Ignore duplicates, because this
 	// may be a replay.
 	_, err = i.AddInvoice(invoice, ctx.hash)
-	if err != nil && err != channeldb.ErrDuplicateInvoice {
+	if err != nil && !channeldb.ErrDuplicateInvoice.Is(err) {
 		return err
 	}
 
@@ -888,8 +888,8 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 			return updateDesc, nil
 		},
 	)
-	switch err {
-	case channeldb.ErrInvoiceNotFound:
+	switch {
+	case channeldb.ErrInvoiceNotFound.Is(err):
 		// If the invoice was not found, return a failure resolution
 		// with an invoice not found result.
 		return NewFailResolution(
@@ -897,10 +897,10 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 			ResultInvoiceNotFound,
 		), nil
 
-	case nil:
+	case err == nil:
 
 	default:
-		ctx.log(err.Error())
+		ctx.log(err.String())
 		return nil, err
 	}
 
@@ -1100,7 +1100,7 @@ func (i *InvoiceRegistry) cancelInvoiceImpl(payHash lntypes.Hash,
 
 	// Implement idempotency by returning success if the invoice was already
 	// canceled.
-	if err == channeldb.ErrInvoiceAlreadyCanceled {
+	if channeldb.ErrInvoiceAlreadyCanceled.Is(err) {
 		log.Debugf("Invoice%v: already canceled", ref)
 		return nil
 	}

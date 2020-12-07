@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"encoding/hex"
 	"sync/atomic"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
@@ -170,7 +170,7 @@ func (w *WalletController) LabelTransaction(_ chainhash.Hash, _ string,
 
 // SubscribeTransactions currently does nothing.
 func (w *WalletController) SubscribeTransactions() (lnwallet.TransactionSubscription,
-	error) {
+	er.R) {
 
 	return nil, nil
 }

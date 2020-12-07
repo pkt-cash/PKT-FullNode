@@ -5,14 +5,15 @@ import (
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // CommitmentType is an enum indicating the commitment type we should use for
@@ -473,7 +474,7 @@ func (r *ChannelReservation) OurContribution() *ChannelContribution {
 // will generate a signature to the counterparty's version of the commitment
 // transaction.
 func (r *ChannelReservation) ProcessContribution(theirContribution *ChannelContribution) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	r.wallet.msgChan <- &addContributionMsg{
 		pendingFundingID: r.reservationID,
@@ -502,7 +503,7 @@ func (r *ChannelReservation) IsCannedShim() bool {
 // construct the funding transaction. This method can be called once the PSBT is
 // finalized and the signed transaction is available.
 func (r *ChannelReservation) ProcessPsbt() er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	r.wallet.msgChan <- &continueContributionMsg{
 		pendingFundingID: r.reservationID,
@@ -527,7 +528,7 @@ func (r *ChannelReservation) RemoteCanceled() {
 // taken other than recording the initiator's contribution to the single funder
 // channel.
 func (r *ChannelReservation) ProcessSingleContribution(theirContribution *ChannelContribution) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	r.wallet.msgChan <- &addSingleContributionMsg{
 		pendingFundingID: r.reservationID,
@@ -583,7 +584,7 @@ func (r *ChannelReservation) CompleteReservation(fundingInputScripts []*input.Sc
 	commitmentSig input.Signature) (*channeldb.OpenChannel, er.R) {
 
 	// TODO(roasbeef): add flag for watch or not?
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	completeChan := make(chan *channeldb.OpenChannel, 1)
 
 	r.wallet.msgChan <- &addCounterPartySigsMsg{
@@ -609,7 +610,7 @@ func (r *ChannelReservation) CompleteReservation(fundingInputScripts []*input.Sc
 func (r *ChannelReservation) CompleteReservationSingle(fundingPoint *wire.OutPoint,
 	commitSig input.Signature) (*channeldb.OpenChannel, er.R) {
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	completeChan := make(chan *channeldb.OpenChannel, 1)
 
 	r.wallet.msgChan <- &addSingleFunderSigsMsg{
@@ -683,7 +684,7 @@ func (r *ChannelReservation) Capacity() btcutil.Amount {
 // channel are returned to the free pool, allowing subsequent reservations to
 // utilize the now freed resources.
 func (r *ChannelReservation) Cancel() er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	r.wallet.msgChan <- &fundingReserveCancelMsg{
 		pendingFundingID: r.reservationID,
 		err:              errChan,

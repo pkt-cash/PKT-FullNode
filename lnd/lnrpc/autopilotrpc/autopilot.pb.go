@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = er.Errorf
+var _ = fmt.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -37,10 +37,10 @@ func (*StatusRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{0}
 }
 
-func (m *StatusRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *StatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StatusRequest.Unmarshal(m, b)
 }
-func (m *StatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *StatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StatusRequest.Marshal(b, m, deterministic)
 }
 func (m *StatusRequest) XXX_Merge(src proto.Message) {
@@ -70,10 +70,10 @@ func (*StatusResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{1}
 }
 
-func (m *StatusResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *StatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StatusResponse.Unmarshal(m, b)
 }
-func (m *StatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *StatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StatusResponse.Marshal(b, m, deterministic)
 }
 func (m *StatusResponse) XXX_Merge(src proto.Message) {
@@ -110,10 +110,10 @@ func (*ModifyStatusRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{2}
 }
 
-func (m *ModifyStatusRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ModifyStatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ModifyStatusRequest.Unmarshal(m, b)
 }
-func (m *ModifyStatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ModifyStatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ModifyStatusRequest.Marshal(b, m, deterministic)
 }
 func (m *ModifyStatusRequest) XXX_Merge(src proto.Message) {
@@ -148,10 +148,10 @@ func (*ModifyStatusResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{3}
 }
 
-func (m *ModifyStatusResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ModifyStatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ModifyStatusResponse.Unmarshal(m, b)
 }
-func (m *ModifyStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ModifyStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ModifyStatusResponse.Marshal(b, m, deterministic)
 }
 func (m *ModifyStatusResponse) XXX_Merge(src proto.Message) {
@@ -182,10 +182,10 @@ func (*QueryScoresRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{4}
 }
 
-func (m *QueryScoresRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *QueryScoresRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryScoresRequest.Unmarshal(m, b)
 }
-func (m *QueryScoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *QueryScoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryScoresRequest.Marshal(b, m, deterministic)
 }
 func (m *QueryScoresRequest) XXX_Merge(src proto.Message) {
@@ -228,10 +228,10 @@ func (*QueryScoresResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{5}
 }
 
-func (m *QueryScoresResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *QueryScoresResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryScoresResponse.Unmarshal(m, b)
 }
-func (m *QueryScoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *QueryScoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryScoresResponse.Marshal(b, m, deterministic)
 }
 func (m *QueryScoresResponse) XXX_Merge(src proto.Message) {
@@ -268,10 +268,10 @@ func (*QueryScoresResponse_HeuristicResult) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{5, 0}
 }
 
-func (m *QueryScoresResponse_HeuristicResult) XXX_Unmarshal(b []byte) er.R {
+func (m *QueryScoresResponse_HeuristicResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryScoresResponse_HeuristicResult.Unmarshal(m, b)
 }
-func (m *QueryScoresResponse_HeuristicResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *QueryScoresResponse_HeuristicResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryScoresResponse_HeuristicResult.Marshal(b, m, deterministic)
 }
 func (m *QueryScoresResponse_HeuristicResult) XXX_Merge(src proto.Message) {
@@ -319,10 +319,10 @@ func (*SetScoresRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{6}
 }
 
-func (m *SetScoresRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SetScoresRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SetScoresRequest.Unmarshal(m, b)
 }
-func (m *SetScoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SetScoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SetScoresRequest.Marshal(b, m, deterministic)
 }
 func (m *SetScoresRequest) XXX_Merge(src proto.Message) {
@@ -364,10 +364,10 @@ func (*SetScoresResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0b9dc347a92e084, []int{7}
 }
 
-func (m *SetScoresResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *SetScoresResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SetScoresResponse.Unmarshal(m, b)
 }
-func (m *SetScoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SetScoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SetScoresResponse.Marshal(b, m, deterministic)
 }
 func (m *SetScoresResponse) XXX_Merge(src proto.Message) {
@@ -446,20 +446,20 @@ const _ = grpc.SupportPackageIsVersion4
 type AutopilotClient interface {
 	//
 	//Status returns whether the daemon's autopilot agent is active.
-	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, er.R)
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	//
 	//ModifyStatus is used to modify the status of the autopilot agent, like
 	//enabling or disabling it.
-	ModifyStatus(ctx context.Context, in *ModifyStatusRequest, opts ...grpc.CallOption) (*ModifyStatusResponse, er.R)
+	ModifyStatus(ctx context.Context, in *ModifyStatusRequest, opts ...grpc.CallOption) (*ModifyStatusResponse, error)
 	//
 	//QueryScores queries all available autopilot heuristics, in addition to any
 	//active combination of these heruristics, for the scores they would give to
 	//the given nodes.
-	QueryScores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, er.R)
+	QueryScores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, error)
 	//
 	//SetScores attempts to set the scores used by the running autopilot agent,
 	//if the external scoring heuristic is enabled.
-	SetScores(ctx context.Context, in *SetScoresRequest, opts ...grpc.CallOption) (*SetScoresResponse, er.R)
+	SetScores(ctx context.Context, in *SetScoresRequest, opts ...grpc.CallOption) (*SetScoresResponse, error)
 }
 
 type autopilotClient struct {
@@ -470,7 +470,7 @@ func NewAutopilotClient(cc *grpc.ClientConn) AutopilotClient {
 	return &autopilotClient{cc}
 }
 
-func (c *autopilotClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, er.R) {
+func (c *autopilotClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/autopilotrpc.Autopilot/Status", in, out, opts...)
 	if err != nil {
@@ -479,7 +479,7 @@ func (c *autopilotClient) Status(ctx context.Context, in *StatusRequest, opts ..
 	return out, nil
 }
 
-func (c *autopilotClient) ModifyStatus(ctx context.Context, in *ModifyStatusRequest, opts ...grpc.CallOption) (*ModifyStatusResponse, er.R) {
+func (c *autopilotClient) ModifyStatus(ctx context.Context, in *ModifyStatusRequest, opts ...grpc.CallOption) (*ModifyStatusResponse, error) {
 	out := new(ModifyStatusResponse)
 	err := c.cc.Invoke(ctx, "/autopilotrpc.Autopilot/ModifyStatus", in, out, opts...)
 	if err != nil {
@@ -488,7 +488,7 @@ func (c *autopilotClient) ModifyStatus(ctx context.Context, in *ModifyStatusRequ
 	return out, nil
 }
 
-func (c *autopilotClient) QueryScores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, er.R) {
+func (c *autopilotClient) QueryScores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, error) {
 	out := new(QueryScoresResponse)
 	err := c.cc.Invoke(ctx, "/autopilotrpc.Autopilot/QueryScores", in, out, opts...)
 	if err != nil {
@@ -497,7 +497,7 @@ func (c *autopilotClient) QueryScores(ctx context.Context, in *QueryScoresReques
 	return out, nil
 }
 
-func (c *autopilotClient) SetScores(ctx context.Context, in *SetScoresRequest, opts ...grpc.CallOption) (*SetScoresResponse, er.R) {
+func (c *autopilotClient) SetScores(ctx context.Context, in *SetScoresRequest, opts ...grpc.CallOption) (*SetScoresResponse, error) {
 	out := new(SetScoresResponse)
 	err := c.cc.Invoke(ctx, "/autopilotrpc.Autopilot/SetScores", in, out, opts...)
 	if err != nil {
@@ -510,36 +510,36 @@ func (c *autopilotClient) SetScores(ctx context.Context, in *SetScoresRequest, o
 type AutopilotServer interface {
 	//
 	//Status returns whether the daemon's autopilot agent is active.
-	Status(context.Context, *StatusRequest) (*StatusResponse, er.R)
+	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	//
 	//ModifyStatus is used to modify the status of the autopilot agent, like
 	//enabling or disabling it.
-	ModifyStatus(context.Context, *ModifyStatusRequest) (*ModifyStatusResponse, er.R)
+	ModifyStatus(context.Context, *ModifyStatusRequest) (*ModifyStatusResponse, error)
 	//
 	//QueryScores queries all available autopilot heuristics, in addition to any
 	//active combination of these heruristics, for the scores they would give to
 	//the given nodes.
-	QueryScores(context.Context, *QueryScoresRequest) (*QueryScoresResponse, er.R)
+	QueryScores(context.Context, *QueryScoresRequest) (*QueryScoresResponse, error)
 	//
 	//SetScores attempts to set the scores used by the running autopilot agent,
 	//if the external scoring heuristic is enabled.
-	SetScores(context.Context, *SetScoresRequest) (*SetScoresResponse, er.R)
+	SetScores(context.Context, *SetScoresRequest) (*SetScoresResponse, error)
 }
 
 // UnimplementedAutopilotServer can be embedded to have forward compatible implementations.
 type UnimplementedAutopilotServer struct {
 }
 
-func (*UnimplementedAutopilotServer) Status(ctx context.Context, req *StatusRequest) (*StatusResponse, er.R) {
+func (*UnimplementedAutopilotServer) Status(ctx context.Context, req *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
 }
-func (*UnimplementedAutopilotServer) ModifyStatus(ctx context.Context, req *ModifyStatusRequest) (*ModifyStatusResponse, er.R) {
+func (*UnimplementedAutopilotServer) ModifyStatus(ctx context.Context, req *ModifyStatusRequest) (*ModifyStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ModifyStatus not implemented")
 }
-func (*UnimplementedAutopilotServer) QueryScores(ctx context.Context, req *QueryScoresRequest) (*QueryScoresResponse, er.R) {
+func (*UnimplementedAutopilotServer) QueryScores(ctx context.Context, req *QueryScoresRequest) (*QueryScoresResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryScores not implemented")
 }
-func (*UnimplementedAutopilotServer) SetScores(ctx context.Context, req *SetScoresRequest) (*SetScoresResponse, er.R) {
+func (*UnimplementedAutopilotServer) SetScores(ctx context.Context, req *SetScoresRequest) (*SetScoresResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetScores not implemented")
 }
 
@@ -547,7 +547,7 @@ func RegisterAutopilotServer(s *grpc.Server, srv AutopilotServer) {
 	s.RegisterService(&_Autopilot_serviceDesc, srv)
 }
 
-func _Autopilot_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Autopilot_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -559,13 +559,13 @@ func _Autopilot_Status_Handler(srv interface{}, ctx context.Context, dec func(in
 		Server:     srv,
 		FullMethod: "/autopilotrpc.Autopilot/Status",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutopilotServer).Status(ctx, req.(*StatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autopilot_ModifyStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Autopilot_ModifyStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ModifyStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -577,13 +577,13 @@ func _Autopilot_ModifyStatus_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/autopilotrpc.Autopilot/ModifyStatus",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutopilotServer).ModifyStatus(ctx, req.(*ModifyStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autopilot_QueryScores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Autopilot_QueryScores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryScoresRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -595,13 +595,13 @@ func _Autopilot_QueryScores_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/autopilotrpc.Autopilot/QueryScores",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutopilotServer).QueryScores(ctx, req.(*QueryScoresRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autopilot_SetScores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Autopilot_SetScores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetScoresRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -613,7 +613,7 @@ func _Autopilot_SetScores_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/autopilotrpc.Autopilot/SetScores",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutopilotServer).SetScores(ctx, req.(*SetScoresRequest))
 	}
 	return interceptor(ctx, in, info, handler)

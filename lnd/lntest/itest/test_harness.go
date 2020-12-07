@@ -12,14 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/rpcclient"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/pkt-cash/pktd/rpcclient"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -174,7 +175,7 @@ func waitForNTxsInMempool(miner *rpcclient.Client, n int,
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
-	var err error
+	var err er.R
 	var mempool []*chainhash.Hash
 	for {
 		select {
@@ -203,7 +204,7 @@ func mineBlocks(t *harnessTest, net *lntest.NetworkHarness,
 	// If we expect transactions to be included in the blocks we'll mine,
 	// we wait here until they are seen in the miner's mempool.
 	var txids []*chainhash.Hash
-	var err error
+	var err er.R
 	if numTxs > 0 {
 		txids, err = waitForNTxsInMempool(
 			net.Miner.Node, numTxs, minerMempoolTimeout,
@@ -255,12 +256,12 @@ func assertWalletUnspent(t *harnessTest, node *lntest.HarnessNode, out *lnrpc.Ou
 	err := wait.NoError(func() er.R {
 		ctxt, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		unspent, err := node.ListUnspent(ctxt, &lnrpc.ListUnspentRequest{})
-		if err != nil {
-			return err
+		unspent, errr := node.ListUnspent(ctxt, &lnrpc.ListUnspentRequest{})
+		if errr != nil {
+			return er.E(errr)
 		}
 
-		err = er.New("tx with wanted txhash never found")
+		var err er.R
 		for _, utxo := range unspent.Utxos {
 			if !bytes.Equal(utxo.Outpoint.TxidBytes, out.TxidBytes) {
 				continue
@@ -272,6 +273,10 @@ func assertWalletUnspent(t *harnessTest, node *lntest.HarnessNode, out *lnrpc.Ou
 			}
 
 			return nil
+		}
+
+		if err == nil {
+			err = er.New("tx with wanted txhash never found")
 		}
 
 		return err

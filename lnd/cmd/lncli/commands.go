@@ -42,7 +42,7 @@ const (
 func printJSON(resp interface{}) {
 	b, err := json.Marshal(resp)
 	if err != nil {
-		fatal(err)
+		fatal(er.E(err))
 	}
 
 	var out bytes.Buffer
@@ -69,10 +69,10 @@ func printRespJSON(resp proto.Message) {
 
 // actionDecorator is used to add additional information and error handling
 // to command actions.
-func actionDecorator(f func(*cli.Context) error) func(*cli.Context) er.R {
+func actionDecorator(f func(*cli.Context) er.R) func(*cli.Context) er.R {
 	return func(c *cli.Context) er.R {
 		if err := f(c); err != nil {
-			s, ok := status.FromError(err)
+			s, ok := status.FromError(er.Wrapped(err))
 
 			// If it's a command for the UnlockerService (like
 			// 'create' or 'unlock') but the wallet is already
@@ -142,7 +142,7 @@ func newAddress(ctx *cli.Context) er.R {
 		Type: addrType,
 	})
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(addr)
@@ -176,7 +176,7 @@ func estimateFees(ctx *cli.Context) er.R {
 
 	jsonMap := ctx.Args().First()
 	if err := json.Unmarshal([]byte(jsonMap), &amountToAddr); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	ctxb := context.Background()
@@ -188,7 +188,7 @@ func estimateFees(ctx *cli.Context) er.R {
 		TargetConf:   int32(ctx.Int64("conf_target")),
 	})
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -316,7 +316,7 @@ func sendCoins(ctx *cli.Context) er.R {
 	}
 	txid, err := client.SendCoins(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(txid)
@@ -423,7 +423,7 @@ func listUnspent(ctx *cli.Context) er.R {
 	}
 	resp, err := client.ListUnspent(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Parse the response into the final json object that will be printed
@@ -485,7 +485,7 @@ func sendMany(ctx *cli.Context) er.R {
 
 	jsonMap := ctx.Args().First()
 	if err := json.Unmarshal([]byte(jsonMap), &amountToAddr); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if ctx.IsSet("conf_target") && ctx.IsSet("sat_per_byte") {
@@ -507,7 +507,7 @@ func sendMany(ctx *cli.Context) er.R {
 		SpendUnconfirmed: minConfs == 0,
 	})
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(txid)
@@ -569,7 +569,7 @@ func connectPeer(ctx *cli.Context) er.R {
 
 	lnid, err := client.ConnectPeer(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(lnid)
@@ -612,7 +612,7 @@ func disconnectPeer(ctx *cli.Context) er.R {
 
 	lnid, err := client.DisconnectPeer(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(lnid)
@@ -753,7 +753,7 @@ func executeChannelClose(client lnrpc.LightningClient, req *lnrpc.CloseChannelRe
 
 	stream, err := client.CloseChannel(context.Background(), req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	for {
@@ -761,7 +761,7 @@ func executeChannelClose(client lnrpc.LightningClient, req *lnrpc.CloseChannelRe
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		switch update := resp.Update.(type) {
@@ -949,10 +949,10 @@ func closeAllChannels(ctx *cli.Context) er.R {
 					"format txid:index"
 				return
 			}
-			index, err := strconv.ParseUint(s[1], 10, 32)
-			if err != nil {
+			index, errr := strconv.ParseUint(s[1], 10, 32)
+			if errr != nil {
 				res.FailErr = fmt.Sprintf("unable to parse "+
-					"channel point output index: %v", err)
+					"channel point output index: %v", errr)
 				return
 			}
 
@@ -969,7 +969,7 @@ func closeAllChannels(ctx *cli.Context) er.R {
 			}
 
 			txidChan := make(chan string, 1)
-			err = executeChannelClose(client, req, txidChan, false)
+			err := executeChannelClose(client, req, txidChan, false)
 			if err != nil {
 				res.FailErr = fmt.Sprintf("unable to close "+
 					"channel: %v", err)
@@ -1064,9 +1064,9 @@ func abandonChannel(ctx *cli.Context) er.R {
 		ChannelPoint: channelPoint,
 	}
 
-	resp, err := client.AbandonChannel(ctxb, req)
-	if err != nil {
-		return err
+	resp, errr := client.AbandonChannel(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -1135,7 +1135,7 @@ func listPeers(ctx *cli.Context) er.R {
 	}
 	resp, err := client.ListPeers(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1157,7 +1157,7 @@ func walletBalance(ctx *cli.Context) er.R {
 	req := &lnrpc.WalletBalanceRequest{}
 	resp, err := client.WalletBalance(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1180,7 +1180,7 @@ func channelBalance(ctx *cli.Context) er.R {
 	req := &lnrpc.ChannelBalanceRequest{}
 	resp, err := client.ChannelBalance(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1201,7 +1201,7 @@ func getInfo(ctx *cli.Context) er.R {
 	req := &lnrpc.GetInfoRequest{}
 	resp, err := client.GetInfo(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1222,7 +1222,7 @@ func getRecoveryInfo(ctx *cli.Context) er.R {
 	req := &lnrpc.GetRecoveryInfoRequest{}
 	resp, err := client.GetRecoveryInfo(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1244,7 +1244,7 @@ func pendingChannels(ctx *cli.Context) er.R {
 	req := &lnrpc.PendingChannelsRequest{}
 	resp, err := client.PendingChannels(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1312,7 +1312,7 @@ func listChannels(ctx *cli.Context) er.R {
 
 	resp, err := client.ListChannels(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1374,7 +1374,7 @@ func closedChannels(ctx *cli.Context) er.R {
 
 	resp, err := client.ClosedChannels(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1409,7 +1409,7 @@ func describeGraph(ctx *cli.Context) er.R {
 
 	graph, err := client.DescribeGraph(context.Background(), req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(graph)
@@ -1434,7 +1434,7 @@ func getNodeMetrics(ctx *cli.Context) er.R {
 
 	nodeMetrics, err := client.GetNodeMetrics(context.Background(), req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(nodeMetrics)
@@ -1499,7 +1499,7 @@ func listPayments(ctx *cli.Context) er.R {
 
 	payments, err := client.ListPayments(context.Background(), req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(payments)
@@ -1550,7 +1550,7 @@ func getChanInfo(ctx *cli.Context) er.R {
 
 	chanInfo, err := client.GetChanInfo(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(chanInfo)
@@ -1602,7 +1602,7 @@ func getNodeInfo(ctx *cli.Context) er.R {
 
 	nodeInfo, err := client.GetNodeInfo(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(nodeInfo)
@@ -1662,7 +1662,8 @@ func queryRoutes(ctx *cli.Context) er.R {
 	var (
 		dest string
 		amt  int64
-		err  error
+		err  er.R
+		errr error
 	)
 
 	args := ctx.Args()
@@ -1681,9 +1682,9 @@ func queryRoutes(ctx *cli.Context) er.R {
 	case ctx.IsSet("amt"):
 		amt = ctx.Int64("amt")
 	case args.Present():
-		amt, err = strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
-			return er.Errorf("unable to decode amt argument: %v", err)
+		amt, errr = strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
+			return er.Errorf("unable to decode amt argument: %v", errr)
 		}
 	default:
 		return er.Errorf("amt argument missing")
@@ -1704,9 +1705,9 @@ func queryRoutes(ctx *cli.Context) er.R {
 		OutgoingChanId:    ctx.Uint64("outgoing_chanid"),
 	}
 
-	route, err := client.QueryRoutes(ctxb, req)
-	if err != nil {
-		return err
+	route, errr := client.QueryRoutes(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(route)
@@ -1764,7 +1765,7 @@ func getNetworkInfo(ctx *cli.Context) er.R {
 
 	netInfo, err := client.GetNetworkInfo(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(netInfo)
@@ -1802,7 +1803,7 @@ func debugLevel(ctx *cli.Context) er.R {
 
 	resp, err := client.DebugLevel(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1859,7 +1860,7 @@ func listChainTxns(ctx *cli.Context) er.R {
 
 	resp, err := client.GetTransactions(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1882,7 +1883,7 @@ func stopDaemon(ctx *cli.Context) er.R {
 
 	_, err := client.StopDaemon(ctxb, &lnrpc.StopRequest{})
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -1925,7 +1926,7 @@ func signMessage(ctx *cli.Context) er.R {
 
 	resp, err := client.SignMessage(ctxb, &lnrpc.SignMessageRequest{Msg: msg})
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -1990,7 +1991,7 @@ func verifyMessage(ctx *cli.Context) er.R {
 	req := &lnrpc.VerifyMessageRequest{Msg: msg, Signature: sig}
 	resp, err := client.VerifyMessage(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -2015,7 +2016,7 @@ func feeReport(ctx *cli.Context) er.R {
 	req := &lnrpc.FeeReportRequest{}
 	resp, err := client.FeeReport(ctxb, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(resp)
@@ -2082,9 +2083,9 @@ func parseChanPoint(s string) (*lnrpc.ChannelPoint, er.R) {
 			"txid:index")
 	}
 
-	index, err := strconv.ParseInt(split[1], 10, 32)
-	if err != nil {
-		return nil, er.Errorf("unable to decode output index: %v", err)
+	index, errr := strconv.ParseInt(split[1], 10, 32)
+	if errr != nil {
+		return nil, er.Errorf("unable to decode output index: %v", errr)
 	}
 
 	txid, err := chainhash.NewHashFromStr(split[0])
@@ -2109,7 +2110,8 @@ func updateChannelPolicy(ctx *cli.Context) er.R {
 		baseFee       int64
 		feeRate       float64
 		timeLockDelta int64
-		err           error
+		err           er.R
+		errr          error
 	)
 	args := ctx.Args()
 
@@ -2117,9 +2119,9 @@ func updateChannelPolicy(ctx *cli.Context) er.R {
 	case ctx.IsSet("base_fee_msat"):
 		baseFee = ctx.Int64("base_fee_msat")
 	case args.Present():
-		baseFee, err = strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
-			return er.Errorf("unable to decode base_fee_msat: %v", err)
+		baseFee, errr = strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
+			return er.Errorf("unable to decode base_fee_msat: %v", errr)
 		}
 		args = args.Tail()
 	default:
@@ -2130,9 +2132,9 @@ func updateChannelPolicy(ctx *cli.Context) er.R {
 	case ctx.IsSet("fee_rate"):
 		feeRate = ctx.Float64("fee_rate")
 	case args.Present():
-		feeRate, err = strconv.ParseFloat(args.First(), 64)
-		if err != nil {
-			return er.Errorf("unable to decode fee_rate: %v", err)
+		feeRate, errr = strconv.ParseFloat(args.First(), 64)
+		if errr != nil {
+			return er.Errorf("unable to decode fee_rate: %v", errr)
 		}
 
 		args = args.Tail()
@@ -2144,10 +2146,10 @@ func updateChannelPolicy(ctx *cli.Context) er.R {
 	case ctx.IsSet("time_lock_delta"):
 		timeLockDelta = ctx.Int64("time_lock_delta")
 	case args.Present():
-		timeLockDelta, err = strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
+		timeLockDelta, errr = strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
 			return er.Errorf("unable to decode time_lock_delta: %v",
-				err)
+				errr)
 		}
 
 		args = args.Tail()
@@ -2196,9 +2198,9 @@ func updateChannelPolicy(ctx *cli.Context) er.R {
 		}
 	}
 
-	resp, err := client.UpdateChannelPolicy(ctxb, req)
-	if err != nil {
-		return err
+	resp, errr := client.UpdateChannelPolicy(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -2259,7 +2261,7 @@ func forwardingHistory(ctx *cli.Context) er.R {
 	var (
 		startTime, endTime     uint64
 		indexOffset, maxEvents uint32
-		err                    error
+		err                    er.R
 	)
 	args := ctx.Args()
 	now := time.Now()
@@ -2321,9 +2323,9 @@ func forwardingHistory(ctx *cli.Context) er.R {
 		IndexOffset:  indexOffset,
 		NumMaxEvents: maxEvents,
 	}
-	resp, err := client.ForwardingHistory(ctxb, req)
-	if err != nil {
-		return err
+	resp, errr := client.ForwardingHistory(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -2417,13 +2419,13 @@ func exportChanBackup(ctx *cli.Context) er.R {
 			return err
 		}
 
-		chanBackup, err := client.ExportChannelBackup(
+		chanBackup, errr := client.ExportChannelBackup(
 			ctxb, &lnrpc.ExportChannelBackupRequest{
 				ChanPoint: chanPointRPC,
 			},
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		txid, err := chainhash.NewHash(
@@ -2456,15 +2458,15 @@ func exportChanBackup(ctx *cli.Context) er.R {
 		ctxb, &lnrpc.ChanBackupExportRequest{},
 	)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if ctx.IsSet("output_file") {
-		return ioutil.WriteFile(
+		return er.E(ioutil.WriteFile(
 			ctx.String("output_file"),
 			chanBackup.MultiChanBackup.MultiChanBackup,
 			0666,
-		)
+		))
 	}
 
 	// TODO(roasbeef): support for export | restore ?
@@ -2555,9 +2557,9 @@ func verifyChanBackup(ctx *cli.Context) er.R {
 		}
 	}
 
-	resp, err := client.VerifyChanBackup(ctxb, &verifyReq)
-	if err != nil {
-		return err
+	resp, errr := client.VerifyChanBackup(ctxb, &verifyReq)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -2612,7 +2614,8 @@ var restoreChanBackupCommand = cli.Command{
 
 // errMissingChanBackup is an error returned when we attempt to parse a channel
 // backup from a CLI command and it is missing.
-var errMissingChanBackup = er.New("missing channel backup")
+var errMissingChanBackup = er.GenericErrorType.CodeWithDetail("errMissingChanBackup",
+	"missing channel backup")
 
 func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, er.R) {
 	switch {
@@ -2666,7 +2669,7 @@ func parseChanBackups(ctx *cli.Context) (*lnrpc.RestoreChanBackupRequest, er.R) 
 		}, nil
 
 	default:
-		return nil, errMissingChanBackup
+		return nil, errMissingChanBackup.Default()
 	}
 }
 
@@ -2690,9 +2693,9 @@ func restoreChanBackup(ctx *cli.Context) er.R {
 
 	req.Backup = backups.Backup
 
-	_, err = client.RestoreChannelBackups(ctxb, &req)
-	if err != nil {
-		return er.Errorf("unable to restore chan backups: %v", err)
+	_, errr := client.RestoreChannelBackups(ctxb, &req)
+	if errr != nil {
+		return er.Errorf("unable to restore chan backups: %v", errr)
 	}
 
 	return nil

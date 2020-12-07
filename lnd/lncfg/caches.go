@@ -1,6 +1,6 @@
 package lncfg
 
-import "fmt"
+import "github.com/pkt-cash/pktd/btcutil/er"
 
 const (
 	// MinRejectCacheSize is a floor on the maximum capacity allowed for

@@ -3,6 +3,7 @@ package wtpolicy_test
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 )
@@ -10,7 +11,7 @@ import (
 var validationTests = []struct {
 	name   string
 	policy wtpolicy.Policy
-	expErr error
+	expErr *er.ErrorCode
 }{
 	{
 		name: "fail no maxupdates",
@@ -84,7 +85,8 @@ func TestPolicyValidate(t *testing.T) {
 		test := validationTests[i]
 		t.Run(test.name, func(t *testing.T) {
 			err := test.policy.Validate()
-			if err != test.expErr {
+			if err == nil && test.expErr == nil {
+			} else if test.expErr == nil || !test.expErr.Is(err) {
 				t.Fatalf("validation error mismatch, "+
 					"want: %v, got: %v", test.expErr, err)
 			}

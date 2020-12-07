@@ -2,8 +2,8 @@ package shachain
 
 import (
 	"crypto/sha256"
-	"errors"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 

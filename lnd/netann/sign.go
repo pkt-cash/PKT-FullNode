@@ -1,9 +1,8 @@
 package netann
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -16,7 +15,7 @@ func SignAnnouncement(signer lnwallet.MessageSigner, pubKey *btcec.PublicKey,
 
 	var (
 		data []byte
-		err  error
+		err  er.R
 	)
 
 	switch m := msg.(type) {

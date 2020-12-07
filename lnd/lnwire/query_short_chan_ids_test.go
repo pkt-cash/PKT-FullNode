@@ -3,6 +3,8 @@ package lnwire
 import (
 	"bytes"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 type unsortedSidTest struct {
@@ -67,7 +69,8 @@ func TestQueryShortChanIDsUnsorted(t *testing.T) {
 
 			var req2 QueryShortChanIDs
 			err = req2.Decode(bytes.NewReader(b.Bytes()), 0)
-			if _, ok := err.(ErrUnsortedSIDs); !ok {
+			errr := er.Wrapped(err)
+			if _, ok := errr.(ErrUnsortedSIDs); !ok {
 				t.Fatalf("expected ErrUnsortedSIDs, got: %T",
 					err)
 			}

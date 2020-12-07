@@ -7,6 +7,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
 
@@ -24,7 +26,7 @@ var (
 // initializes a root key storage for that DB.
 func newTestStore(t *testing.T) (string, func(), *macaroons.RootKeyStorage) {
 	tempDir, err := ioutil.TempDir("", "macaroonstore-")
-	util.RequireNoErr(t, err)
+	require.NoError(t, err)
 
 	cleanup, store := openTestStore(t, tempDir)
 	cleanup2 := func() {
@@ -64,47 +66,47 @@ func TestStore(t *testing.T) {
 	tempDir, cleanup, store := newTestStore(t)
 	defer cleanup()
 
-	_, _, err := store.RootKey(context.TODO())
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	_, _, errr := store.RootKey(context.TODO())
+	require.True(t, macaroons.ErrStoreLocked.Is(er.E(errr)))
 
-	_, err = store.Get(context.TODO(), nil)
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	_, errr = store.Get(context.TODO(), nil)
+	require.True(t, macaroons.ErrStoreLocked.Is(er.E(errr)))
 
 	pw := []byte("weks")
-	err = store.CreateUnlock(&pw)
+	err := store.CreateUnlock(&pw)
 	util.RequireNoErr(t, err)
 
 	// Check ErrContextRootKeyID is returned when no root key ID found in
 	// context.
-	_, _, err = store.RootKey(context.TODO())
-	require.Equal(t, macaroons.ErrContextRootKeyID, err)
+	_, _, errr = store.RootKey(context.TODO())
+	require.True(t, macaroons.ErrContextRootKeyID.Is(er.E(errr)))
 
 	// Check ErrMissingRootKeyID is returned when empty root key ID is used.
 	emptyKeyID := make([]byte, 0)
 	badCtx := macaroons.ContextWithRootKeyID(context.TODO(), emptyKeyID)
-	_, _, err = store.RootKey(badCtx)
-	require.Equal(t, macaroons.ErrMissingRootKeyID, err)
+	_, _, errr = store.RootKey(badCtx)
+	require.True(t, macaroons.ErrMissingRootKeyID.Is(er.E(errr)))
 
 	// Create a context with illegal root key ID value.
 	encryptedKeyID := []byte("enckey")
 	badCtx = macaroons.ContextWithRootKeyID(context.TODO(), encryptedKeyID)
-	_, _, err = store.RootKey(badCtx)
-	require.Equal(t, macaroons.ErrKeyValueForbidden, err)
+	_, _, errr = store.RootKey(badCtx)
+	require.True(t, macaroons.ErrKeyValueForbidden.Is(er.E(errr)))
 
 	// Create a context with root key ID value.
-	key, id, err := store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	key, id, errr := store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 
 	rootID := id
 	require.Equal(t, macaroons.DefaultRootKeyID, rootID)
 
-	key2, err := store.Get(defaultRootKeyIDContext, id)
-	util.RequireNoErr(t, err)
+	key2, errr := store.Get(defaultRootKeyIDContext, id)
+	require.NoError(t, errr)
 	require.Equal(t, key, key2)
 
 	badpw := []byte("badweks")
 	err = store.CreateUnlock(&badpw)
-	require.Equal(t, macaroons.ErrAlreadyUnlocked, err)
+	require.True(t, macaroons.ErrAlreadyUnlocked.Is(err))
 
 	_ = store.Close()
 
@@ -119,21 +121,21 @@ func TestStore(t *testing.T) {
 	err = store.CreateUnlock(nil)
 	require.Equal(t, macaroons.ErrPasswordRequired, err)
 
-	_, _, err = store.RootKey(defaultRootKeyIDContext)
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	_, _, errr = store.RootKey(defaultRootKeyIDContext)
+	require.True(t, macaroons.ErrStoreLocked.Is(er.E(errr)))
 
-	_, err = store.Get(defaultRootKeyIDContext, nil)
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	_, errr = store.Get(defaultRootKeyIDContext, nil)
+	require.True(t, macaroons.ErrStoreLocked.Is(er.E(errr)))
 
 	err = store.CreateUnlock(&pw)
 	util.RequireNoErr(t, err)
 
-	key, err = store.Get(defaultRootKeyIDContext, rootID)
-	util.RequireNoErr(t, err)
+	key, errr = store.Get(defaultRootKeyIDContext, rootID)
+	require.NoError(t, errr)
 	require.Equal(t, key, key2)
 
-	key, id, err = store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	key, id, errr = store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 	require.Equal(t, key, key2)
 	require.Equal(t, rootID, id)
 }
@@ -152,8 +154,8 @@ func TestStoreGenerateNewRootKey(t *testing.T) {
 	pw := []byte("weks")
 	err = store.CreateUnlock(&pw)
 	util.RequireNoErr(t, err)
-	oldRootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	oldRootKey, _, errr := store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 
 	// Replace the root key with a new random key.
 	err = store.GenerateNewRootKey()
@@ -162,8 +164,8 @@ func TestStoreGenerateNewRootKey(t *testing.T) {
 	// Finally, read the root key from the DB and compare it to the one
 	// we got returned earlier. This makes sure that the encryption/
 	// decryption of the key in the DB worked as expected too.
-	newRootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	newRootKey, _, errr := store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 	require.NotEqual(t, oldRootKey, newRootKey)
 }
 
@@ -182,8 +184,8 @@ func TestStoreChangePassword(t *testing.T) {
 	pw := []byte("weks")
 	err = store.CreateUnlock(&pw)
 	util.RequireNoErr(t, err)
-	rootKey, _, err := store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	rootKey, _, errr := store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 
 	// Both passwords must be set.
 	err = store.ChangePassword(nil, nil)
@@ -216,7 +218,7 @@ func TestStoreChangePassword(t *testing.T) {
 
 	// Finally read the root key from the DB using the new password and
 	// make sure the root key stayed the same.
-	rootKeyDb, _, err := store.RootKey(defaultRootKeyIDContext)
-	util.RequireNoErr(t, err)
+	rootKeyDb, _, errr := store.RootKey(defaultRootKeyIDContext)
+	require.NoError(t, errr)
 	require.Equal(t, rootKey, rootKeyDb)
 }

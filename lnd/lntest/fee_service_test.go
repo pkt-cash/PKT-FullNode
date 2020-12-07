@@ -30,8 +30,8 @@ func TestFeeService(t *testing.T) {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	util.RequireNoErr(t, err)
+	body, errr := ioutil.ReadAll(resp.Body)
+	require.NoError(t, errr)
 
 	require.Equal(
 		t, "{\"fee_by_block_target\":{\"2\":20000}}", string(body),

@@ -10,7 +10,7 @@ var (
 
 	// ErrTowerCandidatesExhausted signals that a TowerCandidateIterator has
 	// cycled through all available candidates.
-	ErrTowerCandidatesExhausted = er.New("exhausted all tower " +
+	ErrTowerCandidatesExhausted = Err.CodeWithDetail("ErrTowerCandidatesExhausted", "exhausted all tower "+
 		"candidates")
 
 	// ErrPermanentTowerFailure signals that the tower has reported that it

@@ -26,22 +26,22 @@ type MessageConn interface {
 	LocalAddr() net.Addr
 
 	// Read reads bytes from the connection.
-	Read([]byte) (int, er.R)
+	Read([]byte) (int, error)
 
 	// Write writes bytes to the connection.
-	Write([]byte) (int, er.R)
+	Write([]byte) (int, error)
 
 	// SetDeadline sets the deadline for the connection.
-	SetDeadline(time.Time) er.R
+	SetDeadline(time.Time) error
 
 	// SetReadDeadline sets the read deadline.
-	SetReadDeadline(time.Time) er.R
+	SetReadDeadline(time.Time) error
 
 	// SetWriteDeadline sets the write deadline.
-	SetWriteDeadline(time.Time) er.R
+	SetWriteDeadline(time.Time) error
 
 	// Close closes the connection.
-	Close() er.R
+	Close() error
 
 	// Flush attempts a flush.
 	Flush() (int, er.R)

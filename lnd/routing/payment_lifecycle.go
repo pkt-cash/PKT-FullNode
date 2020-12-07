@@ -82,7 +82,7 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, er.R) {
 	shardHandler := &shardHandler{
 		router:      p.router,
 		paymentHash: p.paymentHash,
-		shardErrors: make(chan error),
+		shardErrors: make(chan er.R),
 		quit:        make(chan struct{}),
 	}
 
@@ -156,7 +156,7 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, er.R) {
 			}
 
 			// Payment failed.
-			return [32]byte{}, nil, *payment.FailureReason
+			return [32]byte{}, nil, er.E(*payment.FailureReason)
 
 		// If we either reached a terminal error condition (but had
 		// active shards still) or there is no remaining value to send,
@@ -210,7 +210,8 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, er.R) {
 			log.Warnf("Failed to find route for payment %v: %v",
 				p.paymentHash, err)
 
-			routeErr, ok := err.(noRouteError)
+			errr := er.Wrapped(err)
+			routeErr, ok := errr.(noRouteError)
 			if !ok {
 				return [32]byte{}, nil, err
 			}
@@ -287,7 +288,7 @@ type shardHandler struct {
 	// inspected by calling waitForShard or checkShards, and the channel
 	// doesn't need to be initiated if the caller is using the sync
 	// collectResult directly.
-	shardErrors chan error
+	shardErrors chan er.R
 
 	// quit is closed to signal the sub goroutines of the payment lifecycle
 	// to stop.
@@ -344,7 +345,7 @@ type launchOutcome struct {
 	// to send the shard, and we successfully updated the control tower to
 	// reflect this error. This can be errors like not enough local
 	// balance for the given route etc.
-	err error
+	err er.R
 
 	// attempt is the attempt structure as recorded in the database.
 	attempt *channeldb.HTLCAttempt
@@ -406,7 +407,7 @@ type shardResult struct {
 	attempt *channeldb.HTLCAttempt
 
 	// err indicates that the shard failed.
-	err error
+	err er.R
 }
 
 // collectResultAsync launches a goroutine that will wait for the result of the
@@ -420,8 +421,8 @@ func (p *shardHandler) collectResultAsync(attempt *channeldb.HTLCAttemptInfo) {
 		// Block until the result is available.
 		result, err := p.collectResult(attempt)
 		if err != nil {
-			if err != ErrRouterShuttingDown &&
-				err != htlcswitch.ErrSwitchExiting {
+			if !ErrRouterShuttingDown.Is(err) &&
+				!htlcswitch.ErrSwitchExiting.Is(err) {
 
 				log.Errorf("Error collecting result for "+
 					"shard %v for payment %v: %v",
@@ -491,7 +492,7 @@ func (p *shardHandler) collectResult(attempt *channeldb.HTLCAttemptInfo) (
 	// checkpointed and forwarded by the switch before a restart. In this
 	// case we can safely send a new payment attempt, and wait for its
 	// result to be available.
-	case err == htlcswitch.ErrPaymentIDNotFound:
+	case htlcswitch.ErrPaymentIDNotFound.Is(err):
 		log.Debugf("Payment ID %v for hash %v not found in "+
 			"the Switch, retrying.", attempt.AttemptID,
 			p.paymentHash)
@@ -674,7 +675,7 @@ func (p *shardHandler) sendPaymentAttempt(
 // considered a terminal error. Terminal errors will be recorded with the
 // control tower.
 func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
-	sendErr error) er.R {
+	sendErr er.R) er.R {
 
 	reason := p.router.processSendError(
 		attempt.AttemptID, &attempt.Route, sendErr,
@@ -696,7 +697,7 @@ func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
 
 // failAttempt calls control tower to fail the current payment attempt.
 func (p *shardHandler) failAttempt(attempt *channeldb.HTLCAttemptInfo,
-	sendError error) (*channeldb.HTLCAttempt, er.R) {
+	sendError er.R) (*channeldb.HTLCAttempt, er.R) {
 
 	log.Warnf("Attempt %v for payment %v failed: %v", attempt.AttemptID,
 		p.paymentHash, sendError)
@@ -714,22 +715,23 @@ func (p *shardHandler) failAttempt(attempt *channeldb.HTLCAttemptInfo,
 
 // marshallError marshall an error as received from the switch to a structure
 // that is suitable for database storage.
-func marshallError(sendError error, time time.Time) *channeldb.HTLCFailInfo {
+func marshallError(sendError er.R, time time.Time) *channeldb.HTLCFailInfo {
 	response := &channeldb.HTLCFailInfo{
 		FailTime: time,
 	}
 
-	switch sendError {
+	switch {
 
-	case htlcswitch.ErrPaymentIDNotFound:
+	case htlcswitch.ErrPaymentIDNotFound.Is(sendError):
 		response.Reason = channeldb.HTLCFailInternal
 		return response
 
-	case htlcswitch.ErrUnreadableFailureMessage:
+	case htlcswitch.ErrUnreadableFailureMessage.Is(sendError):
 		response.Reason = channeldb.HTLCFailUnreadable
 		return response
 	}
 
+	// TODO(cjd): This line is wrong, check if the compiler catches it
 	rtErr, ok := sendError.(htlcswitch.ClearTextError)
 	if !ok {
 		response.Reason = channeldb.HTLCFailInternal

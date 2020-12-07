@@ -83,7 +83,7 @@ func NewService(dir, location string, statelessInit bool,
 	// Ensure that the path to the directory exists.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 	}
 
@@ -176,12 +176,12 @@ func (svc *Service) UnaryServerInterceptor(
 
 	return func(ctx context.Context, req interface{},
 		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler) (interface{}, er.R) {
+		handler grpc.UnaryHandler) (interface{}, error) {
 
 		uriPermissions, ok := permissionMap[info.FullMethod]
 		if !ok {
-			return nil, er.Errorf("%s: unknown permissions "+
-				"required for method", info.FullMethod)
+			return nil, er.Wrapped(er.Errorf("%s: unknown permissions "+
+				"required for method", info.FullMethod))
 		}
 
 		// Find out if there is an external validator registered for
@@ -196,7 +196,7 @@ func (svc *Service) UnaryServerInterceptor(
 			ctx, uriPermissions, info.FullMethod,
 		)
 		if err != nil {
-			return nil, err
+			return nil, er.Wrapped(err)
 		}
 
 		return handler(ctx, req)
@@ -209,12 +209,12 @@ func (svc *Service) StreamServerInterceptor(
 	permissionMap map[string][]bakery.Op) grpc.StreamServerInterceptor {
 
 	return func(srv interface{}, ss grpc.ServerStream,
-		info *grpc.StreamServerInfo, handler grpc.StreamHandler) er.R {
+		info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 
 		uriPermissions, ok := permissionMap[info.FullMethod]
 		if !ok {
-			return er.Errorf("%s: unknown permissions required "+
-				"for method", info.FullMethod)
+			return er.Wrapped(er.Errorf("%s: unknown permissions required "+
+				"for method", info.FullMethod))
 		}
 
 		// Find out if there is an external validator registered for
@@ -229,7 +229,7 @@ func (svc *Service) StreamServerInterceptor(
 			ss.Context(), uriPermissions, info.FullMethod,
 		)
 		if err != nil {
-			return err
+			return er.Wrapped(err)
 		}
 
 		return handler(srv, ss)
@@ -261,30 +261,30 @@ func (svc *Service) ValidateMacaroon(ctx context.Context,
 		return err
 	}
 	mac := &macaroon.Macaroon{}
-	err = mac.UnmarshalBinary(macBytes)
-	if err != nil {
-		return err
+	errr := mac.UnmarshalBinary(macBytes)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Check the method being called against the permitted operation, the
 	// expiration time and IP address and return the result.
 	authChecker := svc.Checker.Auth(macaroon.Slice{mac})
-	_, err = authChecker.Allow(ctx, requiredPermissions...)
+	_, errr = authChecker.Allow(ctx, requiredPermissions...)
 
 	// If the macaroon contains broad permissions and checks out, we're
 	// done.
-	if err == nil {
+	if errr == nil {
 		return nil
 	}
 
 	// To also allow the special permission of "uri:<FullMethod>" to be a
 	// valid permission, we need to check it manually in case there is no
 	// broader scope permission defined.
-	_, err = authChecker.Allow(ctx, bakery.Op{
+	_, errr = authChecker.Allow(ctx, bakery.Op{
 		Entity: PermissionEntityCustomURI,
 		Action: fullMethod,
 	})
-	return err
+	return er.E(errr)
 }
 
 // Close closes the database that underlies the RootKeyStore and zeroes the
@@ -319,7 +319,8 @@ func (svc *Service) NewMacaroon(
 	// // Pass the root key ID to context.
 	ctx = ContextWithRootKeyID(ctx, rootKeyID)
 
-	return svc.Oven.NewMacaroon(ctx, bakery.LatestVersion, nil, ops...)
+	m, e := svc.Oven.NewMacaroon(ctx, bakery.LatestVersion, nil, ops...)
+	return m, er.E(e)
 }
 
 // ListMacaroonIDs returns all the root key ID values except the value of

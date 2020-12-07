@@ -440,10 +440,9 @@ func (r *Route) ToSphinxPath() (*sphinx.PaymentPath, er.R) {
 				hopData.NextAddress[:], nextHop,
 			)
 
-			var errr error
-			payload, errr = sphinx.NewHopPayload(&hopData, nil)
-			if errr != nil {
-				return nil, errr
+			payload, err = sphinx.NewHopPayload(&hopData, nil)
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			// For non-legacy payloads, we'll need to pack the

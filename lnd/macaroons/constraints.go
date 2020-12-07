@@ -43,7 +43,7 @@ func TimeoutConstraint(seconds int64) func(*macaroon.Macaroon) er.R {
 		macaroonTimeout := time.Duration(seconds)
 		requestTimeout := time.Now().Add(time.Second * macaroonTimeout)
 		caveat := checkers.TimeBeforeCaveat(requestTimeout)
-		return mac.AddFirstPartyCaveat([]byte(caveat.Condition))
+		return er.E(mac.AddFirstPartyCaveat([]byte(caveat.Condition)))
 	}
 }
 
@@ -59,7 +59,7 @@ func IPLockConstraint(ipAddr string) func(*macaroon.Macaroon) er.R {
 			}
 			caveat := checkers.Condition("ipaddr",
 				macaroonIPAddr.String())
-			return mac.AddFirstPartyCaveat([]byte(caveat))
+			return er.E(mac.AddFirstPartyCaveat([]byte(caveat)))
 		}
 		return nil
 	}
@@ -68,21 +68,21 @@ func IPLockConstraint(ipAddr string) func(*macaroon.Macaroon) er.R {
 // IPLockChecker accepts client IP from the validation context and compares it
 // with IP locked in the macaroon. It is of the `Checker` type.
 func IPLockChecker() (string, checkers.Func) {
-	return "ipaddr", func(ctx context.Context, cond, arg string) er.R {
+	return "ipaddr", func(ctx context.Context, cond, arg string) error {
 		// Get peer info and extract IP address from it for macaroon
 		// check.
 		pr, ok := peer.FromContext(ctx)
 		if !ok {
-			return er.Errorf("unable to get peer info from context")
+			return er.Native(er.Errorf("unable to get peer info from context"))
 		}
 		peerAddr, _, err := net.SplitHostPort(pr.Addr.String())
 		if err != nil {
-			return er.Errorf("unable to parse peer address")
+			return er.Native(er.Errorf("unable to parse peer address"))
 		}
 
 		if !net.ParseIP(arg).Equal(net.ParseIP(peerAddr)) {
 			msg := "macaroon locked to different IP address"
-			return er.Errorf(msg)
+			return er.Native(er.Errorf(msg))
 		}
 		return nil
 	}

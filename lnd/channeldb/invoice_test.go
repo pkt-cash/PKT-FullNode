@@ -181,7 +181,7 @@ func testInvoiceWorkflow(t *testing.T, test invWorkflowTest) {
 	// identical to the one created above.
 	dbInvoice, err := db.LookupInvoice(ref)
 	if !test.queryPayAddr && !test.queryPayHash {
-		if err != ErrInvoiceNotFound {
+		if !ErrInvoiceNotFound.Is(err) {
 			t.Fatalf("invoice should not exist: %v", err)
 		}
 		return
@@ -232,7 +232,7 @@ func testInvoiceWorkflow(t *testing.T, test invWorkflowTest) {
 
 	// Attempt to insert generated above again, this should fail as
 	// duplicates are rejected by the processing logic.
-	if _, err := db.AddInvoice(fakeInvoice, payHash); err != ErrDuplicateInvoice {
+	if _, err := db.AddInvoice(fakeInvoice, payHash); !ErrDuplicateInvoice.Is(err) {
 		t.Fatalf("invoice insertion should fail due to duplication, "+
 			"instead %v", err)
 	}
@@ -242,7 +242,7 @@ func testInvoiceWorkflow(t *testing.T, test invWorkflowTest) {
 	var fakeHash [32]byte
 	fakeRef := InvoiceRefByHash(fakeHash)
 	_, err = db.LookupInvoice(fakeRef)
-	if err != ErrInvoiceNotFound {
+	if !ErrInvoiceNotFound.Is(err) {
 		t.Fatalf("lookup should have failed, instead %v", err)
 	}
 
@@ -739,7 +739,7 @@ func TestDuplicateSettleInvoice(t *testing.T) {
 	// If we try to settle the invoice again, then we should get the very
 	// same invoice back, but with an error this time.
 	dbInvoice, err = db.UpdateInvoice(ref, getUpdateInvoice(amt))
-	if err != ErrInvoiceAlreadySettled {
+	if !ErrInvoiceAlreadySettled.Is(err) {
 		t.Fatalf("expected ErrInvoiceAlreadySettled")
 	}
 

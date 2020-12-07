@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
@@ -29,7 +30,8 @@ func TestReplyChannelRangeUnsorted(t *testing.T) {
 
 			var req2 ReplyChannelRange
 			err = req2.Decode(bytes.NewReader(b.Bytes()), 0)
-			if _, ok := err.(ErrUnsortedSIDs); !ok {
+			errr := er.Wrapped(err)
+			if _, ok := errr.(ErrUnsortedSIDs); !ok {
 				t.Fatalf("expected ErrUnsortedSIDs, got: %T",
 					err)
 			}

@@ -6,8 +6,11 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
-	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+)
+
+var (
+	ErrUnknownEncrypterType = Err.Code("ErrUnknownEncrypterType")
 )
 
 // ClearTextError is an interface which is implemented by errors that occur
@@ -142,15 +145,6 @@ type ErrorDecrypter interface {
 	// lnwire.FailureMessage is returned along with the source of the
 	// error.
 	DecryptError(lnwire.OpaqueReason) (*ForwardingError, er.R)
-}
-
-// UnknownEncrypterType is an error message used to signal that an unexpected
-// EncrypterType was encountered during decoding.
-type UnknownEncrypterType hop.EncrypterType
-
-// Error returns a formatted error indicating the invalid EncrypterType.
-func (e UnknownEncrypterType) Error() string {
-	return fmt.Sprintf("unknown error encrypter type: %d", e)
 }
 
 // OnionErrorDecrypter is the interface that provides onion level error

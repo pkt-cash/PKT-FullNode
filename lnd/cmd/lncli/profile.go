@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	errNoProfileFile = er.New("no profile file found")
+	errNoProfileFile = er.GenericErrorType.CodeWithDetail("errNoProfileFile",
+		"no profile file found")
 )
 
 // profileEntry is a struct that represents all settings for one specific
@@ -51,8 +52,7 @@ func (e *profileEntry) cert() (*x509.CertPool, er.R) {
 // exists, these global options might be read from a predefined profile. If no
 // profile exists, the global options from the command line are returned as an
 // ephemeral profile entry.
-func getGlobalOptions(ctx *cli.Context, skipMacaroons bool) (*profileEntry,
-	error) {
+func getGlobalOptions(ctx *cli.Context, skipMacaroons bool) (*profileEntry, er.R) {
 
 	var profileName string
 
@@ -62,11 +62,11 @@ func getGlobalOptions(ctx *cli.Context, skipMacaroons bool) (*profileEntry,
 	switch {
 	// The legacy case where no profile file exists and the user also didn't
 	// request to use one. We only consider the global options here.
-	case err == errNoProfileFile && !ctx.GlobalIsSet("profile"):
+	case errNoProfileFile.Is(err) && !ctx.GlobalIsSet("profile"):
 		return profileFromContext(ctx, false, skipMacaroons)
 
 	// The file doesn't exist but the user specified an explicit profile.
-	case err == errNoProfileFile && ctx.GlobalIsSet("profile"):
+	case errNoProfileFile.Is(err) && ctx.GlobalIsSet("profile"):
 		return nil, er.Errorf("profile file %s does not exist",
 			defaultProfileFile)
 
@@ -149,14 +149,14 @@ func profileFromContext(ctx *cli.Context, store, skipMacaroons bool) (
 	}
 
 	// Now load and possibly encrypt the macaroon file.
-	macBytes, err := ioutil.ReadFile(macPath)
-	if err != nil {
+	macBytes, errr := ioutil.ReadFile(macPath)
+	if errr != nil {
 		return nil, er.Errorf("unable to read macaroon path (check "+
-			"the network setting!): %v", err)
+			"the network setting!): %v", errr)
 	}
 	mac := &macaroon.Macaroon{}
-	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return nil, er.Errorf("unable to decode macaroon: %v", err)
+	if errr = mac.UnmarshalBinary(macBytes); errr != nil {
+		return nil, er.Errorf("unable to decode macaroon: %v", errr)
 	}
 
 	var pw []byte
@@ -201,16 +201,16 @@ func profileFromContext(ctx *cli.Context, store, skipMacaroons bool) (
 // the profile file struct.
 func loadProfileFile(file string) (*profileFile, er.R) {
 	if !lnrpc.FileExists(file) {
-		return nil, errNoProfileFile
+		return nil, errNoProfileFile.Default()
 	}
 
-	content, err := ioutil.ReadFile(file)
-	if err != nil {
+	content, errr := ioutil.ReadFile(file)
+	if errr != nil {
 		return nil, er.Errorf("could not load profile file %s: %v",
-			file, err)
+			file, errr)
 	}
 	f := &profileFile{}
-	err = f.unmarshalJSON(content)
+	err := f.unmarshalJSON(content)
 	if err != nil {
 		return nil, er.Errorf("could not unmarshal profile file %s: "+
 			"%v", file, err)
@@ -225,7 +225,7 @@ func saveProfileFile(file string, f *profileFile) er.R {
 	if err != nil {
 		return er.Errorf("could not marshal profile: %v", err)
 	}
-	return ioutil.WriteFile(file, content, 0644)
+	return er.E(ioutil.WriteFile(file, content, 0644))
 }
 
 // profileFile is a struct that represents the whole content of a profile file.
@@ -237,7 +237,7 @@ type profileFile struct {
 // unmarshalJSON tries to parse the given JSON and unmarshal it into the
 // receiving instance.
 func (f *profileFile) unmarshalJSON(content []byte) er.R {
-	return json.Unmarshal(content, f)
+	return er.E(json.Unmarshal(content, f))
 }
 
 // marshalJSON serializes the receiving instance to formatted/indented JSON.

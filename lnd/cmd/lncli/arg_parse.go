@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // reTimeRange matches systemd.time-like short negative timeranges, e.g. "-200s".
@@ -27,14 +29,15 @@ func parseTime(s string, base time.Time) (uint64, er.R) {
 	if reTimeRange.MatchString(s) {
 		last := len(s) - 1
 
-		d, err := strconv.ParseInt(s[1:last], 10, 64)
-		if err != nil {
-			return uint64(0), err
+		d, errr := strconv.ParseInt(s[1:last], 10, 64)
+		if errr != nil {
+			return uint64(0), er.E(errr)
 		}
 
 		mul := secondsPer[string(s[last])]
 		return uint64(base.Unix() - d*mul), nil
 	}
 
-	return strconv.ParseUint(s, 10, 64)
+	i, e := strconv.ParseUint(s, 10, 64)
+	return i, er.E(e)
 }

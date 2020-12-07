@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.discovery")
 	// ErrGossiperShuttingDown is an error that is returned if the gossiper
 	// is in the process of being shut down.
 	ErrGossiperShuttingDown = Err.CodeWithDetail("ErrGossiperShuttingDown", "gossiper is shutting down")
@@ -81,7 +82,7 @@ type networkMsg struct {
 
 	isRemote bool
 
-	err chan error
+	err chan er.R
 }
 
 // chanPolicyUpdateRequest is a request that is sent to the server when a caller
@@ -90,7 +91,7 @@ type networkMsg struct {
 // updates committed to the lower layer.
 type chanPolicyUpdateRequest struct {
 	edgesToUpdate []EdgeWithInfo
-	errChan       chan error
+	errChan       chan er.R
 }
 
 // Config defines the configuration for the service. ALL elements within the
@@ -368,7 +369,7 @@ type EdgeWithInfo struct {
 func (d *AuthenticatedGossiper) PropagateChanPolicyUpdate(
 	edgesToUpdate []EdgeWithInfo) er.R {
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	policyUpdate := &chanPolicyUpdateRequest{
 		edgesToUpdate: edgesToUpdate,
 		errChan:       errChan,
@@ -386,7 +387,7 @@ func (d *AuthenticatedGossiper) PropagateChanPolicyUpdate(
 // Start spawns network messages handler goroutine and registers on new block
 // notifications in order to properly handle the premature announcements.
 func (d *AuthenticatedGossiper) Start() er.R {
-	var err error
+	var err er.R
 	d.started.Do(func() {
 		err = d.start()
 	})
@@ -457,7 +458,7 @@ func (d *AuthenticatedGossiper) stop() {
 func (d *AuthenticatedGossiper) ProcessRemoteAnnouncement(msg lnwire.Message,
 	peer lnpeer.Peer) chan er.R {
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	// For messages in the known set of channel series queries, we'll
 	// dispatch the message directly to the GossipSyncer, and skip the main
@@ -473,7 +474,7 @@ func (d *AuthenticatedGossiper) ProcessRemoteAnnouncement(msg lnwire.Message,
 			log.Warnf("Gossip syncer for peer=%x not found",
 				peer.PubKey())
 
-			errChan <- ErrGossipSyncerNotFound
+			errChan <- ErrGossipSyncerNotFound.Default()
 			return errChan
 		}
 
@@ -492,7 +493,7 @@ func (d *AuthenticatedGossiper) ProcessRemoteAnnouncement(msg lnwire.Message,
 			log.Warnf("Gossip syncer for peer=%x not found",
 				peer.PubKey())
 
-			errChan <- ErrGossipSyncerNotFound
+			errChan <- ErrGossipSyncerNotFound.Default()
 			return errChan
 		}
 
@@ -526,7 +527,7 @@ func (d *AuthenticatedGossiper) ProcessRemoteAnnouncement(msg lnwire.Message,
 	case <-peer.QuitSignal():
 		return nil
 	case <-d.quit:
-		nMsg.err <- ErrGossiperShuttingDown
+		nMsg.err <- ErrGossiperShuttingDown.Default()
 	}
 
 	return nMsg.err
@@ -550,13 +551,13 @@ func (d *AuthenticatedGossiper) ProcessLocalAnnouncement(msg lnwire.Message,
 		optionalMsgFields: optionalMsgFields,
 		isRemote:          false,
 		source:            source,
-		err:               make(chan error, 1),
+		err:               make(chan er.R, 1),
 	}
 
 	select {
 	case d.networkMsgs <- nMsg:
 	case <-d.quit:
-		nMsg.err <- ErrGossiperShuttingDown
+		nMsg.err <- ErrGossiperShuttingDown.Default()
 	}
 
 	return nMsg.err
@@ -978,7 +979,7 @@ func (d *AuthenticatedGossiper) networkHandler() {
 					announcement.msg,
 				)
 				if err != nil {
-					if err != routing.ErrVBarrierShuttingDown {
+					if !routing.ErrVBarrierShuttingDown.Is(err) {
 						log.Warnf("unexpected error "+
 							"during validation "+
 							"barrier shutdown: %v",
@@ -1227,7 +1228,7 @@ func (d *AuthenticatedGossiper) retransmitStaleAnns(now time.Time) er.R {
 
 		return nil
 	})
-	if err != nil && err != channeldb.ErrGraphNoEdgesFound {
+	if err != nil && !channeldb.ErrGraphNoEdgesFound.Is(err) {
 		return er.Errorf("unable to retrieve outgoing channels: %v",
 			err)
 	}
@@ -1567,7 +1568,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 			err := er.Errorf("ignoring ChannelAnnouncement from "+
 				"chain=%v, gossiper on chain=%v", msg.ChainHash,
 				d.cfg.ChainHash)
-			log.Errorf(err.Error())
+			log.Errorf(err.String())
 
 			d.rejectMtx.Lock()
 			d.recentRejects[msg.ShortChannelID.ToUint64()] = struct{}{}
@@ -1755,7 +1756,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 					select {
 					case d.networkMsgs <- nMsg:
 					case <-d.quit:
-						nMsg.err <- ErrGossiperShuttingDown
+						nMsg.err <- ErrGossiperShuttingDown.Default()
 					}
 
 				// We don't expect any other message type than
@@ -1792,7 +1793,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 			err := er.Errorf("ignoring ChannelUpdate from "+
 				"chain=%v, gossiper on chain=%v", msg.ChainHash,
 				d.cfg.ChainHash)
-			log.Errorf(err.Error())
+			log.Errorf(err.String())
 
 			d.rejectMtx.Lock()
 			d.recentRejects[msg.ShortChannelID.ToUint64()] = struct{}{}
@@ -1847,12 +1848,12 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 		d.channelMtx.Lock(msg.ShortChannelID.ToUint64())
 		defer d.channelMtx.Unlock(msg.ShortChannelID.ToUint64())
 		chanInfo, _, _, err := d.cfg.Router.GetChannelByID(msg.ShortChannelID)
-		switch err {
+		switch {
 		// No error, break.
-		case nil:
+		case err == nil:
 			break
 
-		case channeldb.ErrZombieEdge:
+		case channeldb.ErrZombieEdge.Is(err):
 			// Since we've deemed the update as not stale above,
 			// before marking it live, we'll make sure it has been
 			// signed by the correct party. The least-significant
@@ -1896,11 +1897,11 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 			// This is needed to ensure the edge exists in the graph
 			// before applying the update.
 			fallthrough
-		case channeldb.ErrGraphNotFound:
+		case channeldb.ErrGraphNotFound.Is(err):
 			fallthrough
-		case channeldb.ErrGraphNoEdgesFound:
+		case channeldb.ErrGraphNoEdgesFound.Is(err):
 			fallthrough
-		case channeldb.ErrEdgeNotFound:
+		case channeldb.ErrEdgeNotFound.Is(err):
 			// If the edge corresponding to this ChannelUpdate was
 			// not found in the graph, this might be a channel in
 			// the process of being opened, and we haven't processed
@@ -2207,7 +2208,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 		oppositeProof, err := d.cfg.WaitingProofStore.Get(
 			proof.OppositeKey(),
 		)
-		if err != nil && err != channeldb.ErrWaitingProofNotFound {
+		if err != nil && !channeldb.ErrWaitingProofNotFound.Is(err) {
 			err := er.Errorf("unable to get "+
 				"the opposite proof for short_chan_id=%v: %v",
 				shortChanID, err)
@@ -2216,7 +2217,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 			return nil
 		}
 
-		if err == channeldb.ErrWaitingProofNotFound {
+		if channeldb.ErrWaitingProofNotFound.Is(err) {
 			err := d.cfg.WaitingProofStore.Add(proof)
 			if err != nil {
 				err := er.Errorf("unable to store "+
@@ -2394,7 +2395,7 @@ func (d *AuthenticatedGossiper) isMsgStale(msg lnwire.Message) bool {
 		// If the channel cannot be found, it is most likely a leftover
 		// message for a channel that was closed, so we can consider it
 		// stale.
-		if err == channeldb.ErrEdgeNotFound {
+		if channeldb.ErrEdgeNotFound.Is(err) {
 			return true
 		}
 		if err != nil {
@@ -2414,7 +2415,7 @@ func (d *AuthenticatedGossiper) isMsgStale(msg lnwire.Message) bool {
 		// If the channel cannot be found, it is most likely a leftover
 		// message for a channel that was closed, so we can consider it
 		// stale.
-		if err == channeldb.ErrEdgeNotFound {
+		if channeldb.ErrEdgeNotFound.Is(err) {
 			return true
 		}
 		if err != nil {

@@ -1,6 +1,10 @@
 package wtwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // CreateSessionCode is an error code returned by a watchtower in response to a
 // CreateSession message. The code directs the client in interpreting the payload

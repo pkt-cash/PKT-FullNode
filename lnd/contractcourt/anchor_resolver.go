@@ -1,16 +1,16 @@
 package contractcourt
 
 import (
-	"errors"
 	"io"
 	"sync"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // anchorResolver is a resolver that will attempt to sweep our anchor output.
@@ -124,10 +124,10 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 
 	select {
 	case sweepRes := <-resultChan:
-		switch sweepRes.Err {
+		switch {
 
 		// Anchor was swept successfully.
-		case nil:
+		case sweepRes.Err == nil:
 			sweepTxID := sweepRes.Tx.TxHash()
 
 			spendTx = &sweepTxID
@@ -135,7 +135,7 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 
 		// Anchor was swept by someone else. This is possible after the
 		// 16 block csv lock.
-		case sweep.ErrRemoteSpend:
+		case sweep.ErrRemoteSpend.Is(sweepRes.Err):
 			c.log.Warnf("our anchor spent by someone else")
 			outcome = channeldb.ResolverOutcomeUnclaimed
 
@@ -146,7 +146,7 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 		// increases exponentially.
 		//
 		// We consider the anchor as being lost.
-		case sweep.ErrTooManyAttempts:
+		case sweep.ErrTooManyAttempts.Is(sweepRes.Err):
 			c.log.Warnf("anchor sweep abandoned")
 			outcome = channeldb.ResolverOutcomeUnclaimed
 
@@ -158,7 +158,7 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 		}
 
 	case <-c.quit:
-		return nil, errResolverShuttingDown
+		return nil, errResolverShuttingDown.Default()
 	}
 
 	// Update report to reflect that funds are no longer in limbo.

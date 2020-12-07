@@ -2,10 +2,10 @@ package netann
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -138,7 +138,7 @@ func ChannelUpdateFromEdge(info *channeldb.ChannelEdgeInfo,
 
 	update := UnsignedChannelUpdateFromEdge(info, policy)
 
-	var err error
+	var err er.R
 	update.Signature, err = lnwire.NewSigFromRawSignature(policy.SigBytes)
 	if err != nil {
 		return nil, err

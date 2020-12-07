@@ -4,9 +4,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // Config houses the Lookout's required resources to properly fulfill it's duty,

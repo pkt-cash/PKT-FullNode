@@ -66,7 +66,7 @@ func NewStream(records ...Record) (*Stream, er.R) {
 func MustNewStream(records ...Record) *Stream {
 	stream, err := NewStream(records...)
 	if err != nil {
-		panic(err.Error())
+		panic(err.String())
 	}
 	return stream
 }
@@ -167,7 +167,7 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, er.R) {
 
 		// We'll silence an EOF when zero bytes remain, meaning the
 		// stream was cleanly encoded.
-		case err == io.EOF:
+		case er.Wrapped(err) == io.EOF:
 			return parsedTypes, nil
 
 		// Other unexpected errors.
@@ -192,8 +192,8 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, er.R) {
 
 		// We'll convert any EOFs to ErrUnexpectedEOF, since this
 		// results in an invalid record.
-		case err == io.EOF:
-			return nil, io.ErrUnexpectedEOF.Default()
+		case er.Wrapped(err) == io.EOF:
+			return nil, er.E(io.ErrUnexpectedEOF)
 
 		// Other unexpected errors.
 		case err != nil:
@@ -224,8 +224,8 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, er.R) {
 
 			// We'll convert any EOFs to ErrUnexpectedEOF, since this
 			// results in an invalid record.
-			case err == io.EOF:
-				return nil, io.ErrUnexpectedEOF.Default()
+			case er.Wrapped(err) == io.EOF:
+				return nil, er.E(io.ErrUnexpectedEOF)
 
 			// Other unexpected errors.
 			case err != nil:
@@ -256,11 +256,11 @@ func (s *Stream) decode(r io.Reader, parsedTypes TypeMap) (TypeMap, er.R) {
 			// We'll convert any EOFs to ErrUnexpectedEOF, since this
 			// results in an invalid record.
 			case err == io.EOF:
-				return nil, io.ErrUnexpectedEOF.Default()
+				return nil, er.E(io.ErrUnexpectedEOF)
 
 			// Other unexpected errors.
 			case err != nil:
-				return nil, err
+				return nil, er.E(err)
 			}
 
 			if parsedTypes != nil {

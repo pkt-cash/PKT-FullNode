@@ -141,7 +141,7 @@ func ReadElement(r io.Reader, element interface{}) er.R {
 	case *uint8:
 		var b [1]uint8
 		if _, err := r.Read(b[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 		*e = b[0]
 

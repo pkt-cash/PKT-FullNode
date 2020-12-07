@@ -1,18 +1,18 @@
 package lnd
 
 import (
-	"errors"
 	"fmt"
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // validateAtplConfig is a helper method that makes sure the passed
@@ -20,7 +20,7 @@ import (
 // makes sense. In case the config is valid, it will return a list of
 // WeightedHeuristics that can be combined for use with the autopilot agent.
 func validateAtplCfg(cfg *lncfg.AutoPilot) ([]*autopilot.WeightedHeuristic,
-	error) {
+	er.R) {
 
 	var (
 		heuristicsStr string

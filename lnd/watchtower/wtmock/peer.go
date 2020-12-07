@@ -1,11 +1,11 @@
 package wtmock
 
 import (
-	"fmt"
 	"net"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 )
 
@@ -87,19 +87,19 @@ func (p *MockPeer) Write(b []byte) (n int, err error) {
 	case p.OutgoingMsgs <- bb:
 		return len(b), nil
 	case <-p.writeDeadline:
-		return 0, er.Errorf("write timeout expired")
+		return 0, er.Native(er.Errorf("write timeout expired"))
 	case <-p.RemoteQuit:
-		return 0, er.Errorf("remote closed connected")
+		return 0, er.Native(er.Errorf("remote closed connected"))
 	case <-p.Quit:
-		return 0, er.Errorf("connection closed")
+		return 0, er.Native(er.Errorf("connection closed"))
 	}
 }
 
 // Close tearsdown the connection, and fails any pending reads or writes.
-func (p *MockPeer) Close() er.R {
+func (p *MockPeer) Close() error {
 	select {
 	case <-p.Quit:
-		return er.Errorf("connection already closed")
+		return er.Native(er.Errorf("connection already closed"))
 	default:
 		close(p.Quit)
 		return nil
@@ -124,7 +124,7 @@ func (p *MockPeer) ReadNextMessage() ([]byte, er.R) {
 
 // SetWriteDeadline initializes a timer that will cause any pending writes to
 // fail at time t. If t is zero, the deadline is infinite.
-func (p *MockPeer) SetWriteDeadline(t time.Time) er.R {
+func (p *MockPeer) SetWriteDeadline(t time.Time) error {
 	if t.IsZero() {
 		p.writeDeadline = nil
 		return nil
@@ -138,7 +138,7 @@ func (p *MockPeer) SetWriteDeadline(t time.Time) er.R {
 
 // SetReadDeadline initializes a timer that will cause any pending reads to fail
 // at time t. If t is zero, the deadline is infinite.
-func (p *MockPeer) SetReadDeadline(t time.Time) er.R {
+func (p *MockPeer) SetReadDeadline(t time.Time) error {
 	if t.IsZero() {
 		p.readDeadline = nil
 		return nil
@@ -166,12 +166,12 @@ func (p *MockPeer) LocalAddr() net.Addr {
 }
 
 // Read is not implemented.
-func (p *MockPeer) Read(dst []byte) (int, er.R) {
+func (p *MockPeer) Read(dst []byte) (int, error) {
 	panic("not implemented")
 }
 
 // SetDeadline is not implemented.
-func (p *MockPeer) SetDeadline(t time.Time) er.R {
+func (p *MockPeer) SetDeadline(t time.Time) error {
 	panic("not implemented")
 }
 

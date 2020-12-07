@@ -63,7 +63,7 @@ type VerifyJob struct {
 // original validation job. This error message allows us to craft more detailed
 // errors at upper layers.
 type HtlcIndexErr struct {
-	error
+	er.R
 
 	*VerifyJob
 }
@@ -110,7 +110,7 @@ type SignJobResp struct {
 	// Err is the error that occurred when executing the specified
 	// signature job. In the case that no error occurred, this value will
 	// be nil.
-	Err error
+	Err er.R
 }
 
 // TODO(roasbeef); fix description
@@ -225,7 +225,7 @@ func (s *SigPool) poolWorker() {
 			if err != nil {
 				select {
 				case verifyMsg.ErrResp <- &HtlcIndexErr{
-					error:     err,
+					R:         err,
 					VerifyJob: &verifyMsg,
 				}:
 					continue
@@ -243,7 +243,7 @@ func (s *SigPool) poolWorker() {
 
 				select {
 				case verifyMsg.ErrResp <- &HtlcIndexErr{
-					error:     err,
+					R:         err,
 					VerifyJob: &verifyMsg,
 				}:
 				case <-verifyMsg.Cancel:

@@ -102,7 +102,7 @@ func TestAddresses(t *testing.T) {
 func testAddress(t *testing.T, test addressTest) {
 	addr := []string{test.address}
 	normalized, err := NormalizeAddresses(
-		addr, defaultTestPort, net.ResolveTCPAddr,
+		addr, defaultTestPort, ResolveTCPAddr,
 	)
 	if err != nil {
 		t.Fatalf("unable to normalize address %s: %v",
@@ -122,7 +122,7 @@ func testAddress(t *testing.T, test addressTest) {
 func testInvalidAddress(t *testing.T, invalidAddr string) {
 	addr := []string{invalidAddr}
 	_, err := NormalizeAddresses(
-		addr, defaultTestPort, net.ResolveTCPAddr,
+		addr, defaultTestPort, ResolveTCPAddr,
 	)
 	if err == nil {
 		t.Fatalf("expected error when parsing %v", invalidAddr)
@@ -199,7 +199,7 @@ func TestLNAddresses(t *testing.T) {
 func testLNAddress(t *testing.T, test lnAddressCase) {
 	// Parse the LNAddress using the default port and TCP resolver.
 	lnAddr, err := ParseLNAddressString(
-		test.lnAddress, defaultTestPort, net.ResolveTCPAddr,
+		test.lnAddress, defaultTestPort, ResolveTCPAddr,
 	)
 	if err != nil {
 		t.Fatalf("unable to parse ln address: %v", err)
@@ -221,7 +221,7 @@ func testLNAddress(t *testing.T, test lnAddressCase) {
 // in an error when parsed with ParseLNAddressString.
 func testInvalidLNAddress(t *testing.T, invalidAddr string) {
 	_, err := ParseLNAddressString(
-		invalidAddr, defaultTestPort, net.ResolveTCPAddr,
+		invalidAddr, defaultTestPort, ResolveTCPAddr,
 	)
 	if err == nil {
 		t.Fatalf("expected error when parsing invalid lnaddress: %v",

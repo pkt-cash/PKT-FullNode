@@ -308,7 +308,7 @@ func parseAddr(address string, netCfg tor.Net) (net.Addr, er.R) {
 		host = h
 		portNum, err := strconv.Atoi(p)
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 		port = portNum
 	}
@@ -347,7 +347,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	torController *tor.Controller) (*server, er.R) {
 
 	var (
-		err           error
+		err           er.R
 		nodeKeyECDH   = keychain.NewPubKeyECDH(*nodeKeyDesc, cc.KeyRing)
 		nodeKeySigner = keychain.NewPubKeyDigestSigner(
 			*nodeKeyDesc, cc.KeyRing,
@@ -929,7 +929,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			breachRet *lnwallet.BreachRetribution) er.R {
 			event := &ContractBreachEvent{
 				ChanPoint:         chanPoint,
-				ProcessACK:        make(chan error, 1),
+				ProcessACK:        make(chan er.R, 1),
 				BreachRetribution: breachRet,
 			}
 
@@ -984,7 +984,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 	var chanIDSeed [32]byte
 	if _, err := rand.Read(chanIDSeed[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	s.fundingMgr, err = newFundingManager(fundingConfig{
@@ -1369,7 +1369,7 @@ func (s *server) Started() bool {
 // goroutines.
 // NOTE: This function is safe for concurrent access.
 func (s *server) Start() er.R {
-	var startErr error
+	var startErr er.R
 	s.start.Do(func() {
 		if s.torController != nil {
 			if err := s.createNewHiddenService(); err != nil {
@@ -2044,7 +2044,7 @@ func (s *server) peerBootstrapper(numTargetPeers uint32,
 				go func(a *lnwire.NetAddress) {
 					// TODO(roasbeef): can do AS, subnet,
 					// country diversity, etc
-					errChan := make(chan error, 1)
+					errChan := make(chan er.R, 1)
 					s.connectToPeer(
 						a, errChan,
 						s.cfg.ConnectionTimeout,
@@ -2149,7 +2149,7 @@ func (s *server) initialPeerBootstrap(ignore map[autopilot.NodeID]struct{},
 			go func(addr *lnwire.NetAddress) {
 				defer wg.Done()
 
-				errChan := make(chan error, 1)
+				errChan := make(chan er.R, 1)
 				go s.connectToPeer(
 					addr, errChan, s.cfg.ConnectionTimeout,
 				)
@@ -2298,7 +2298,7 @@ func (s *server) establishPersistentConnections() er.R {
 	// attempt to connect to based on our set of previous connections. Set
 	// the reconnection port to the default peer port.
 	linkNodes, err := s.remoteChanDB.FetchAllLinkNodes()
-	if err != nil && err != channeldb.ErrLinkNodesNotFound {
+	if err != nil && !channeldb.ErrLinkNodesNotFound.Is(err) {
 		return err
 	}
 	for _, node := range linkNodes {
@@ -2400,7 +2400,7 @@ func (s *server) establishPersistentConnections() er.R {
 		nodeAddrsMap[pubStr] = n
 		return nil
 	})
-	if err != nil && err != channeldb.ErrGraphNoEdgesFound {
+	if err != nil && !channeldb.ErrGraphNoEdgesFound.Is(err) {
 		return err
 	}
 
@@ -2758,14 +2758,14 @@ func (s *server) InboundPeerConnected(conn net.Conn) {
 	// default case as we expect these to be the only error values returned
 	// from findPeerByPubStr.
 	connectedPeer, err := s.findPeerByPubStr(pubStr)
-	switch err {
-	case ErrPeerNotConnected:
+	switch {
+	case ErrPeerNotConnected.Is(err):
 		// We were unable to locate an existing connection with the
 		// target peer, proceed to connect.
 		s.cancelConnReqs(pubStr, nil)
 		s.peerConnected(conn, nil, true)
 
-	case nil:
+	case nil == err:
 		// We already have a connection with the incoming peer. If the
 		// connection we've already established should be kept and is
 		// not of the same type of the new connection (inbound), then
@@ -2870,13 +2870,13 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 	// as we expect these to be the only error values returned from
 	// findPeerByPubStr.
 	connectedPeer, err := s.findPeerByPubStr(pubStr)
-	switch err {
-	case ErrPeerNotConnected:
+	switch {
+	case ErrPeerNotConnected.Is(err):
 		// We were unable to locate an existing connection with the
 		// target peer, proceed to connect.
 		s.peerConnected(conn, connReq, false)
 
-	case nil:
+	case nil == err:
 		// We already have a connection with the incoming peer. If the
 		// connection we've already established should be kept and is
 		// not of the same type of the new connection (outbound), then
@@ -2992,7 +2992,7 @@ func (s *server) peerConnected(conn net.Conn, connReq *connmgr.ConnReq,
 	pkStr := string(peerAddr.IdentityKey.SerializeCompressed())
 	errBuffer, ok := s.peerErrors[pkStr]
 	if !ok {
-		var err error
+		var err er.R
 		errBuffer, err = queue.NewCircularBuffer(peer.ErrorBufferSize)
 		if err != nil {
 			srvrLog.Errorf("unable to create peer %v", err)
@@ -3085,7 +3085,7 @@ func (s *server) addPeer(p *peer.Brontide) {
 
 	// Ignore new peers if we're shutting down.
 	if s.Stopped() {
-		p.Disconnect(ErrServerShuttingDown)
+		p.Disconnect(ErrServerShuttingDown.Default())
 		return
 	}
 
@@ -3214,7 +3214,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 	//
 	// TODO(roasbeef): instead add a PurgeInterfaceLinks function?
 	links, err := s.htlcSwitch.GetLinksByInterface(p.PubKey())
-	if err != nil && err != htlcswitch.ErrNoLinksFound {
+	if err != nil && !htlcswitch.ErrNoLinksFound.Is(err) {
 		srvrLog.Errorf("Unable to get channel links for %v: %v", p, err)
 	}
 
@@ -3280,7 +3280,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 				p.SetAddress(advertisedAddr)
 
 			// The peer doesn't have an advertised address.
-			case err == errNoAdvertisedAddr:
+			case errNoAdvertisedAddr.Is(err):
 				// Fall back to the existing peer address if
 				// we're not accepting connections over Tor.
 				if s.torController == nil {
@@ -3454,7 +3454,7 @@ type openChanReq struct {
 	pendingChanID [32]byte
 
 	updates chan *lnrpc.OpenStatusUpdate
-	err     chan error
+	err     chan er.R
 }
 
 // ConnectToPeer requests that the server connect to a Lightning Network peer
@@ -3477,7 +3477,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 	peer, err := s.findPeerByPubStr(targetPub)
 	if err == nil {
 		s.mu.Unlock()
-		return &errPeerAlreadyConnected{peer: peer}
+		return er.E(&errPeerAlreadyConnected{peer: peer})
 	}
 
 	// Peer was not found, continue to pursue connection with peer.
@@ -3524,7 +3524,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 	// connect to the target peer. If the we can't make the connection, or
 	// the crypto negotiation breaks down, then return an error to the
 	// caller.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	s.connectToPeer(addr, errChan, timeout)
 
 	select {
@@ -3539,7 +3539,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 // notify the caller if the connection attempt has failed. Otherwise, it will be
 // closed.
 func (s *server) connectToPeer(addr *lnwire.NetAddress,
-	errChan chan<- error, timeout time.Duration) {
+	errChan chan<- er.R, timeout time.Duration) {
 
 	conn, err := brontide.Dial(
 		s.identityECDH, addr, timeout, s.cfg.net.Dial,
@@ -3573,7 +3573,7 @@ func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) er.R {
 	// exit in an error as we can't disconnect from a peer that we're not
 	// currently connected to.
 	peer, err := s.findPeerByPubStr(pubStr)
-	if err == ErrPeerNotConnected {
+	if ErrPeerNotConnected.Is(err) {
 		return er.Errorf("peer %x is not connected", pubBytes)
 	}
 
@@ -3601,13 +3601,13 @@ func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) er.R {
 //
 // NOTE: This function is safe for concurrent access.
 func (s *server) OpenChannel(
-	req *openChanReq) (chan *lnrpc.OpenStatusUpdate, chan error) {
+	req *openChanReq) (chan *lnrpc.OpenStatusUpdate, chan er.R) {
 
 	// The updateChan will have a buffer of 2, since we expect a ChanPending
 	// + a ChanOpen update, and we want to make sure the funding process is
 	// not blocked if the caller is not reading the updates.
 	req.updates = make(chan *lnrpc.OpenStatusUpdate, 2)
-	req.err = make(chan error, 1)
+	req.err = make(chan er.R, 1)
 
 	// First attempt to locate the target peer to open a channel with, if
 	// we're unable to locate the peer then this request will fail.
@@ -3630,7 +3630,7 @@ func (s *server) OpenChannel(
 		req.err <- er.Errorf("peer %x disconnected", pubKeyBytes)
 		return req.updates, req.err
 	case <-s.quit:
-		req.err <- ErrServerShuttingDown
+		req.err <- ErrServerShuttingDown.Default()
 		return req.updates, req.err
 	}
 
@@ -3720,7 +3720,8 @@ func computeNextBackoff(currBackoff, maxBackoff time.Duration) time.Duration {
 
 // errNoAdvertisedAddr is an error returned when we attempt to retrieve the
 // advertised address of a node, but they don't have one.
-var errNoAdvertisedAddr = er.New("no advertised address found")
+var errNoAdvertisedAddr = Err.CodeWithDetail("errNoAdvertisedAddr",
+	"no advertised address found")
 
 // fetchNodeAdvertisedAddr attempts to fetch an advertised address of a node.
 func (s *server) fetchNodeAdvertisedAddr(pub *btcec.PublicKey) (net.Addr, er.R) {
@@ -3735,7 +3736,7 @@ func (s *server) fetchNodeAdvertisedAddr(pub *btcec.PublicKey) (net.Addr, er.R) 
 	}
 
 	if len(node.Addresses) == 0 {
-		return nil, errNoAdvertisedAddr
+		return nil, errNoAdvertisedAddr.Default()
 	}
 
 	return node.Addresses[0], nil

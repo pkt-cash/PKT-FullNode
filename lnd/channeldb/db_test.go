@@ -13,6 +13,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
@@ -27,9 +28,9 @@ func TestOpenWithCreate(t *testing.T) {
 
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 	defer os.RemoveAll(tempDirName)
 
@@ -73,9 +74,9 @@ func TestWipe(t *testing.T) {
 
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 	defer os.RemoveAll(tempDirName)
 
@@ -98,12 +99,12 @@ func TestWipe(t *testing.T) {
 	}
 	// Check correct errors are returned
 	_, err = cdb.FetchAllOpenChannels()
-	if err != ErrNoActiveChannels {
+	if !ErrNoActiveChannels.Is(err) {
 		t.Fatalf("fetching open channels: expected '%v' instead got '%v'",
 			ErrNoActiveChannels, err)
 	}
 	_, err = cdb.FetchClosedChannels(false)
-	if err != ErrNoClosedChannels {
+	if !ErrNoClosedChannels.Is(err) {
 		t.Fatalf("fetching closed channels: expected '%v' instead got '%v'",
 			ErrNoClosedChannels, err)
 	}
@@ -177,7 +178,7 @@ func TestFetchClosedChannelForID(t *testing.T) {
 	state.FundingOutpoint.Index++
 	cid := lnwire.NewChanIDFromOutPoint(&state.FundingOutpoint)
 	_, err = cdb.FetchClosedChannelForID(cid)
-	if err != ErrClosedChannelNotFound {
+	if ErrClosedChannelNotFound.Is(err) {
 		t.Fatalf("expected ErrClosedChannelNotFound, instead got: %v", err)
 	}
 }
@@ -287,14 +288,14 @@ func TestFetchChannel(t *testing.T) {
 func genRandomChannelShell() (*ChannelShell, er.R) {
 	var testPriv [32]byte
 	if _, err := rand.Read(testPriv[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), testPriv[:])
 
 	var chanPoint wire.OutPoint
 	if _, err := rand.Read(chanPoint.Hash[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	pub.Curve = nil
@@ -305,7 +306,7 @@ func genRandomChannelShell() (*ChannelShell, er.R) {
 
 	var shaChainPriv [32]byte
 	if _, err := rand.Read(testPriv[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	revRoot, err := chainhash.NewHash(shaChainPriv[:])
 	if err != nil {
@@ -392,15 +393,15 @@ func TestRestoreChannelShells(t *testing.T) {
 	// of this restored channel.
 	channel := nodeChans[0]
 	err = channel.UpdateCommitment(nil, nil)
-	if err != ErrNoRestoredChannelMutation {
+	if !ErrNoRestoredChannelMutation.Is(err) {
 		t.Fatalf("able to mutate restored channel")
 	}
 	err = channel.AppendRemoteCommitChain(nil)
-	if err != ErrNoRestoredChannelMutation {
+	if !ErrNoRestoredChannelMutation.Is(err) {
 		t.Fatalf("able to mutate restored channel")
 	}
 	err = channel.AdvanceCommitChainTail(nil, nil)
-	if err != ErrNoRestoredChannelMutation {
+	if !ErrNoRestoredChannelMutation.Is(err) {
 		t.Fatalf("able to mutate restored channel")
 	}
 
@@ -474,7 +475,7 @@ func TestAbandonChannel(t *testing.T) {
 	// At this point, the channel should no longer be found in the set of
 	// open channels.
 	_, err = cdb.FetchChannel(chanState.FundingOutpoint)
-	if err != ErrChannelNotFound {
+	if !ErrChannelNotFound.Is(err) {
 		t.Fatalf("channel should not have been found: %v", err)
 	}
 
@@ -700,7 +701,7 @@ func TestFetchHistoricalChannel(t *testing.T) {
 	// First, try to lookup a channel when the bucket does not
 	// exist.
 	_, err = cdb.FetchHistoricalChannel(&channel.FundingOutpoint)
-	if err != ErrNoHistoricalBucket {
+	if !ErrNoHistoricalBucket.Is(err) {
 		t.Fatalf("expected no bucket, got: %v", err)
 	}
 
@@ -734,7 +735,7 @@ func TestFetchHistoricalChannel(t *testing.T) {
 		Index: channel.FundingOutpoint.Index + 1,
 	}
 	_, err = cdb.FetchHistoricalChannel(badOutpoint)
-	if err != ErrChannelNotFound {
+	if !ErrChannelNotFound.Is(err) {
 		t.Fatalf("expected chan not found, got: %v", err)
 	}
 

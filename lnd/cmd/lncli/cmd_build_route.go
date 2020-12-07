@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strings"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -83,7 +82,7 @@ func buildRoute(ctx *cli.Context) er.R {
 	rpcCtx := context.Background()
 	route, err := client.BuildRoute(rpcCtx, req)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	printRespJSON(route)

@@ -162,8 +162,8 @@ type paymentSession struct {
 
 // newPaymentSession instantiates a new payment session.
 func newPaymentSession(p *LightningPayment,
-	getBandwidthHints func() (map[uint64]lnwire.MilliSatoshi, error),
-	getRoutingGraph func() (routingGraph, func(), error),
+	getBandwidthHints func() (map[uint64]lnwire.MilliSatoshi, er.R),
+	getRoutingGraph func() (routingGraph, func(), er.R),
 	missionControl MissionController, pathFindingConfig PathFindingConfig) (
 	*paymentSession, er.R) {
 
@@ -200,7 +200,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 	activeShards, height uint32) (*route.Route, er.R) {
 
 	if p.empty {
-		return nil, errEmptyPaySession
+		return nil, er.E(errEmptyPaySession)
 	}
 
 	// Add BlockPadding to the finalCltvDelta so that the receiving node
@@ -268,15 +268,16 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 		// Close routing graph.
 		cleanup()
 
+		errr := er.Wrapped(err)
 		switch {
-		case err == errNoPathFound:
+		case errr == errNoPathFound:
 			// Don't split if this is a legacy payment without mpp
 			// record.
 			if p.payment.PaymentAddr == nil {
 				p.log.Debugf("not splitting because payment " +
 					"address is unspecified")
 
-				return nil, errNoPathFound
+				return nil, er.E(errNoPathFound)
 			}
 
 			// No splitting if this is the last shard.
@@ -286,7 +287,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 					"limit %v has been reached",
 					p.payment.MaxParts)
 
-				return nil, errNoPathFound
+				return nil, er.E(errNoPathFound)
 			}
 
 			// This is where the magic happens. If we can't find a
@@ -299,7 +300,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 					"shard amount %v has been reached",
 					p.minShardAmt)
 
-				return nil, errNoPathFound
+				return nil, er.E(errNoPathFound)
 			}
 
 			// Go pathfinding.
@@ -309,7 +310,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 		// splitting. It won't be possible to create a complete set in
 		// any case, but the sent out partial payments would be held by
 		// the receiver until the mpp timeout.
-		case err == errInsufficientBalance:
+		case errr == errInsufficientBalance:
 			p.log.Debug("not splitting because local balance " +
 				"is insufficient")
 

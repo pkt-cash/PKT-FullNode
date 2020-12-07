@@ -877,7 +877,7 @@ func TestMaxInvoiceLength(t *testing.T) {
 
 	tests := []struct {
 		encodedInvoice string
-		expectedError  error
+		expectedError  *er.ErrorCode
 	}{
 		{
 			// Valid since it is less than maxInvoiceLength.
@@ -894,7 +894,8 @@ func TestMaxInvoiceLength(t *testing.T) {
 
 	for i, test := range tests {
 		_, err := Decode(test.encodedInvoice, net)
-		if err != test.expectedError {
+		if test.expectedError == nil && err == nil {
+		} else if test.expectedError == nil || !test.expectedError.Is(err) {
 			t.Errorf("Expected test %d to have error: %v, instead have: %v",
 				i, test.expectedError, err)
 			return

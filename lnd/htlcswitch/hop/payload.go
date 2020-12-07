@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -143,11 +144,11 @@ func NewPayloadFromReader(r io.Reader) (*Payload, er.R) {
 	// Check for violation of the rules for mandatory fields.
 	violatingType := getMinRequiredViolation(parsedTypes)
 	if violatingType != nil {
-		return nil, ErrInvalidPayload{
+		return nil, er.E(ErrInvalidPayload{
 			Type:      *violatingType,
 			Violation: RequiredViolation,
 			FinalHop:  nextHop == Exit,
-		}
+		})
 	}
 
 	// If no MPP field was parsed, set the MPP field on the resulting
@@ -208,37 +209,37 @@ func ValidateParsedPayloadTypes(parsedTypes tlv.TypeMap,
 
 	// All hops must include an amount to forward.
 	case !hasAmt:
-		return ErrInvalidPayload{
+		return er.E(ErrInvalidPayload{
 			Type:      record.AmtOnionType,
 			Violation: OmittedViolation,
 			FinalHop:  isFinalHop,
-		}
+		})
 
 	// All hops must include a cltv expiry.
 	case !hasLockTime:
-		return ErrInvalidPayload{
+		return er.E(ErrInvalidPayload{
 			Type:      record.LockTimeOnionType,
 			Violation: OmittedViolation,
 			FinalHop:  isFinalHop,
-		}
+		})
 
 	// The exit hop should omit the next hop id. If nextHop != Exit, the
 	// sender must have included a record, so we don't need to test for its
 	// inclusion at intermediate hops directly.
 	case isFinalHop && hasNextHop:
-		return ErrInvalidPayload{
+		return er.E(ErrInvalidPayload{
 			Type:      record.NextHopOnionType,
 			Violation: IncludedViolation,
 			FinalHop:  true,
-		}
+		})
 
 	// Intermediate nodes should never receive MPP fields.
 	case !isFinalHop && hasMPP:
-		return ErrInvalidPayload{
+		return er.E(ErrInvalidPayload{
 			Type:      record.MPPOnionType,
 			Violation: IncludedViolation,
 			FinalHop:  isFinalHop,
-		}
+		})
 	}
 
 	return nil

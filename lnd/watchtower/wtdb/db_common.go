@@ -59,7 +59,7 @@ func createDBIfNotExist(dbPath, name string) (kvdb.Backend, bool, er.R) {
 		// Ensure all parent directories are initialized.
 		err := os.MkdirAll(dbPath, 0700)
 		if err != nil {
-			return nil, false, err
+			return nil, false, er.E(err)
 		}
 	}
 

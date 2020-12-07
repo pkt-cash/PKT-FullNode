@@ -3,7 +3,6 @@ package routing
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -98,7 +97,7 @@ func (b *missionControlStore) fetchAll() ([]*paymentResult, er.R) {
 		return resultBucket.ForEach(func(k, v []byte) er.R {
 			result, err := deserializeResult(k, v)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			results = append(results, result)

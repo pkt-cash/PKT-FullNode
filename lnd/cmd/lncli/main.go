@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -42,7 +43,7 @@ var (
 	maxMsgRecvSize = grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200)
 )
 
-func fatal(err error) {
+func fatal(err er.R) {
 	fmt.Fprintf(os.Stderr, "[lncli] %v\n", err)
 	os.Exit(1)
 }
@@ -167,9 +168,9 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 	opts = append(opts, grpc.WithContextDialer(genericDialer))
 	opts = append(opts, grpc.WithDefaultCallOptions(maxMsgRecvSize))
 
-	conn, err := grpc.Dial(profile.RPCServer, opts...)
-	if err != nil {
-		fatal(er.Errorf("unable to connect to RPC server: %v", err))
+	conn, errr := grpc.Dial(profile.RPCServer, opts...)
+	if errr != nil {
+		fatal(er.Errorf("unable to connect to RPC server: %v", errr))
 	}
 
 	return conn
@@ -362,7 +363,7 @@ func main() {
 	app.Commands = append(app.Commands, wtclientCommands()...)
 
 	if err := app.Run(os.Args); err != nil {
-		fatal(err)
+		fatal(er.E(err))
 	}
 }
 
@@ -376,5 +377,5 @@ func readPassword(text string) ([]byte, er.R) {
 	// doesn't like it either.
 	pw, err := terminal.ReadPassword(int(syscall.Stdin)) // nolint:unconvert
 	fmt.Println()
-	return pw, err
+	return pw, er.E(err)
 }

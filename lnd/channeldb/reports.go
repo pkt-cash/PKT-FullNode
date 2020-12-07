@@ -236,14 +236,14 @@ func (d DB) FetchChannelReports(chainHash chainhash.Hash,
 			r := bytes.NewReader(v)
 			report, err := deserializeReport(r)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			// Once we have read our values out, set the outpoint
 			// on the report using the key.
 			r = bytes.NewReader(k)
 			if err := ReadElement(r, &report.OutPoint); err != nil {
-				return er.E(err)
+				return err
 			}
 
 			reports = append(reports, report)

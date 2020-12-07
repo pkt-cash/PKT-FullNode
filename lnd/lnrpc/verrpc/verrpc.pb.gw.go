@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = descriptor.ForMessage
 
-func request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, client VersionerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, client VersionerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq VersionRequest
 	var metadata runtime.ServerMetadata
 
@@ -40,7 +40,7 @@ func request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
-func local_request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, server VersionerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, server VersionerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq VersionRequest
 	var metadata runtime.ServerMetadata
 
@@ -52,7 +52,7 @@ func local_request_Versioner_GetVersion_0(ctx context.Context, marshaler runtime
 // RegisterVersionerHandlerServer registers the http handlers for service Versioner to "mux".
 // UnaryRPC     :call VersionerServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterVersionerHandlerServer(ctx context.Context, mux *runtime.ServeMux, server VersionerServer) er.R {
+func RegisterVersionerHandlerServer(ctx context.Context, mux *runtime.ServeMux, server VersionerServer) error {
 
 	mux.Handle("GET", pattern_Versioner_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -104,7 +104,7 @@ func RegisterVersionerHandlerFromEndpoint(ctx context.Context, mux *runtime.Serv
 
 // RegisterVersionerHandler registers the http handlers for service Versioner to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterVersionerHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
+func RegisterVersionerHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterVersionerHandlerClient(ctx, mux, NewVersionerClient(conn))
 }
 
@@ -113,7 +113,7 @@ func RegisterVersionerHandler(ctx context.Context, mux *runtime.ServeMux, conn *
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "VersionerClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "VersionerClient" to call the correct interceptors.
-func RegisterVersionerHandlerClient(ctx context.Context, mux *runtime.ServeMux, client VersionerClient) er.R {
+func RegisterVersionerHandlerClient(ctx context.Context, mux *runtime.ServeMux, client VersionerClient) error {
 
 	mux.Handle("GET", pattern_Versioner_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())

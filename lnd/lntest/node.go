@@ -17,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
@@ -351,7 +350,7 @@ func newNode(cfg NodeConfig) (*HarnessNode, er.R) {
 		var err error
 		cfg.BaseDir, err = ioutil.TempDir("", "lndtest-node")
 		if err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 	}
 	cfg.DataDir = filepath.Join(cfg.BaseDir, "data")
@@ -395,7 +394,7 @@ func newNode(cfg NodeConfig) (*HarnessNode, er.R) {
 // copied to a file specified as logFilename.
 func NewMiner(logDir, logFilename string, netParams *chaincfg.Params,
 	handler *rpcclient.NotificationHandlers) (*rpctest.Harness,
-	func() error, er.R) {
+	func() er.R, er.R) {
 
 	args := []string{
 		"--rejectnonstd",
@@ -430,9 +429,9 @@ func NewMiner(logDir, logFilename string, netParams *chaincfg.Params,
 			return er.Errorf("unable to copy file: %v", err)
 		}
 
-		if err = os.RemoveAll(logDir); err != nil {
+		if errr := os.RemoveAll(logDir); errr != nil {
 			return er.Errorf(
-				"cannot remove dir %s: %v", logDir, err,
+				"cannot remove dir %s: %v", logDir, errr,
 			)
 		}
 		return nil
@@ -494,7 +493,7 @@ func (hn *HarnessNode) InvoiceMacPath() string {
 //
 // This may not clean up properly if an error is returned, so the caller should
 // call shutdown() regardless of the return value.
-func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
+func (hn *HarnessNode) start(lndBinary string, lndError chan<- er.R) er.R {
 	hn.quit = make(chan struct{})
 
 	args := hn.Cfg.genArgs()
@@ -555,10 +554,10 @@ func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
 		}
 
 		// Create file if not exists, otherwise append.
-		file, err := os.OpenFile(fileName,
+		file, errr := os.OpenFile(fileName,
 			os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			return err
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Pass node's stderr to both errb and the file.
@@ -573,8 +572,8 @@ func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
 		hn.logFile = file
 	}
 
-	if err := hn.cmd.Start(); err != nil {
-		return err
+	if errr := hn.cmd.Start(); errr != nil {
+		return er.E(errr)
 	}
 
 	// Launch a new goroutine which that bubbles up any potential fatal
@@ -586,7 +585,7 @@ func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
 
 		err := hn.cmd.Wait()
 		if err != nil {
-			lndError <- errors.Errorf("%v\n%v\n", err, errb.String())
+			lndError <- er.Errorf("%v\n%v\n", err, errb.String())
 		}
 
 		// Signal any onlookers that this process has exited.
@@ -629,7 +628,7 @@ func (hn *HarnessNode) start(lndBinary string, lndError chan<- error) er.R {
 func (hn *HarnessNode) initClientWhenReady() er.R {
 	var (
 		conn    *grpc.ClientConn
-		connErr error
+		connErr er.R
 	)
 	if err := wait.NoError(func() er.R {
 		conn, connErr = hn.ConnectRPC(true)
@@ -651,21 +650,22 @@ func (hn *HarnessNode) Init(ctx context.Context,
 
 	ctxt, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
-	response, err := hn.InitWallet(ctxt, initReq)
-	if err != nil {
-		return nil, err
+	response, errr := hn.InitWallet(ctxt, initReq)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Wait for the wallet to finish unlocking, such that we can connect to
 	// it via a macaroon-authenticated rpc connection.
 	var conn *grpc.ClientConn
-	if err = wait.Predicate(func() bool {
+	if err := wait.Predicate(func() bool {
 		// If the node has been initialized stateless, we need to pass
 		// the macaroon to the client.
+		var err er.R
 		if initReq.StatelessInit {
 			adminMac := &macaroon.Macaroon{}
-			err := adminMac.UnmarshalBinary(response.AdminMacaroon)
-			if err != nil {
+			errr := adminMac.UnmarshalBinary(response.AdminMacaroon)
+			if errr != nil {
 				return false
 			}
 			conn, err = hn.ConnectRPCWithMacaroon(adminMac)
@@ -690,25 +690,26 @@ func (hn *HarnessNode) Init(ctx context.Context,
 // LightningClient and subscribes the HarnessNode to topology changes.
 func (hn *HarnessNode) InitChangePassword(ctx context.Context,
 	chngPwReq *lnrpc.ChangePasswordRequest) (*lnrpc.ChangePasswordResponse,
-	error) {
+	er.R) {
 
 	ctxt, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
-	response, err := hn.ChangePassword(ctxt, chngPwReq)
-	if err != nil {
-		return nil, err
+	response, errr := hn.ChangePassword(ctxt, chngPwReq)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// Wait for the wallet to finish unlocking, such that we can connect to
 	// it via a macaroon-authenticated rpc connection.
 	var conn *grpc.ClientConn
-	if err = wait.Predicate(func() bool {
+	if err := wait.Predicate(func() bool {
 		// If the node has been initialized stateless, we need to pass
 		// the macaroon to the client.
+		var err er.R
 		if chngPwReq.StatelessInit {
 			adminMac := &macaroon.Macaroon{}
-			err := adminMac.UnmarshalBinary(response.AdminMacaroon)
-			if err != nil {
+			errr := adminMac.UnmarshalBinary(response.AdminMacaroon)
+			if errr != nil {
 				return false
 			}
 			conn, err = hn.ConnectRPCWithMacaroon(adminMac)
@@ -738,7 +739,7 @@ func (hn *HarnessNode) Unlock(ctx context.Context,
 	// Otherwise, we'll need to unlock the node before it's able to start
 	// up properly.
 	if _, err := hn.UnlockWallet(ctxt, unlockReq); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Now that the wallet has been unlocked, we'll wait for the RPC client
@@ -777,19 +778,19 @@ func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) er.R {
 	err = wait.NoError(func() er.R {
 		req := &lnrpc.GraphTopologySubscription{}
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		topologyClient, err := hn.SubscribeChannelGraph(ctx, req)
-		if err != nil {
-			return err
+		topologyClient, errr := hn.SubscribeChannelGraph(ctx, req)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// We'll wait to receive an error back within a one second
 		// timeout. This is needed since creating the client's stream is
 		// independent of the graph subscription being created. The
 		// stream is closed from the server's side upon an error.
-		errChan := make(chan error, 1)
+		errChan := make(chan er.R, 1)
 		go func() {
 			if _, err := topologyClient.Recv(); err != nil {
-				errChan <- err
+				errChan <- er.E(err)
 			}
 		}()
 
@@ -818,9 +819,9 @@ func (hn *HarnessNode) initLightningClient(conn *grpc.ClientConn) er.R {
 func (hn *HarnessNode) FetchNodeInfo() er.R {
 	// Obtain the lnid of this node for quick identification purposes.
 	ctxb := context.Background()
-	info, err := hn.GetInfo(ctxb, &lnrpc.GetInfoRequest{})
-	if err != nil {
-		return err
+	info, errr := hn.GetInfo(ctxb, &lnrpc.GetInfoRequest{})
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	hn.PubKeyStr = info.IdentityPubkey
@@ -841,8 +842,8 @@ func (hn *HarnessNode) AddToLog(line string) er.R {
 	if hn.logFile == nil {
 		return nil
 	}
-	if _, err := hn.logFile.WriteString(line); err != nil {
-		return err
+	if _, errr := hn.logFile.WriteString(line); errr != nil {
+		return er.E(errr)
 	}
 	return nil
 }
@@ -851,15 +852,15 @@ func (hn *HarnessNode) AddToLog(line string) er.R {
 func (hn *HarnessNode) writePidFile() er.R {
 	filePath := filepath.Join(hn.Cfg.BaseDir, fmt.Sprintf("%v.pid", hn.NodeID))
 
-	pid, err := os.Create(filePath)
-	if err != nil {
-		return err
+	pid, errr := os.Create(filePath)
+	if errr != nil {
+		return er.E(errr)
 	}
 	defer pid.Close()
 
-	_, err = fmt.Fprintf(pid, "%v\n", hn.cmd.Process.Pid)
-	if err != nil {
-		return err
+	_, errr = fmt.Fprintf(pid, "%v\n", hn.cmd.Process.Pid)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	hn.pidFile = filePath
@@ -907,7 +908,7 @@ func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
 		tlsCreds, err = credentials.NewClientTLSFromFile(
 			hn.Cfg.TLSCertPath, "",
 		)
-		return err
+		return er.E(err)
 	}, DefaultTimeout)
 	if err != nil {
 		return nil, er.Errorf("error reading TLS cert: %v", err)
@@ -922,12 +923,14 @@ func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
 	defer cancel()
 
 	if mac == nil {
-		return grpc.DialContext(ctx, hn.Cfg.RPCAddr(), opts...)
+		c, e := grpc.DialContext(ctx, hn.Cfg.RPCAddr(), opts...)
+		return c, er.E(e)
 	}
 	macCred := macaroons.NewMacaroonCredential(mac)
 	opts = append(opts, grpc.WithPerRPCCredentials(macCred))
 
-	return grpc.DialContext(ctx, hn.Cfg.RPCAddr(), opts...)
+	c, e := grpc.DialContext(ctx, hn.Cfg.RPCAddr(), opts...)
+	return c, er.E(e)
 }
 
 // ConnectRPC uses the TLS certificate and admin macaroon files written by the
@@ -956,7 +959,7 @@ func (hn *HarnessNode) SetExtraArgs(extraArgs []string) {
 
 // cleanup cleans up all the temporary files created by the node's process.
 func (hn *HarnessNode) cleanup() er.R {
-	return os.RemoveAll(hn.Cfg.BaseDir)
+	return er.E(os.RemoveAll(hn.Cfg.BaseDir))
 }
 
 // Stop attempts to stop the active lnd process.
@@ -1055,7 +1058,7 @@ func getChanPointFundingTxid(chanPoint *lnrpc.ChannelPoint) ([]byte, er.R) {
 // closed or opened within the network. In order to dispatch these
 // notifications, the GraphTopologySubscription client exposed as part of the
 // gRPC interface is used.
-func (hn *HarnessNode) lightningNetworkWatcher(subscribed chan error) {
+func (hn *HarnessNode) lightningNetworkWatcher(subscribed chan er.R) {
 	defer hn.wg.Done()
 
 	graphUpdates := make(chan *lnrpc.GraphTopologyUpdate)
@@ -1268,7 +1271,7 @@ func (hn *HarnessNode) WaitForNetworkChannelClose(ctx context.Context,
 // elapsed. In the case that the chain isn't synced before the timeout is up,
 // then this function will return an error.
 func (hn *HarnessNode) WaitForBlockchainSync(ctx context.Context) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	retryDelay := time.Millisecond * 100
 
 	go func() {
@@ -1283,7 +1286,7 @@ func (hn *HarnessNode) WaitForBlockchainSync(ctx context.Context) er.R {
 			getInfoReq := &lnrpc.GetInfoRequest{}
 			getInfoResp, err := hn.GetInfo(ctx, getInfoReq)
 			if err != nil {
-				errChan <- err
+				errChan <- er.E(err)
 				return
 			}
 			if getInfoResp.SyncedToChain {

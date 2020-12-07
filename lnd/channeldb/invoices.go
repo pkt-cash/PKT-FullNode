@@ -732,7 +732,7 @@ func fetchInvoiceNumByRef(invoiceIndex, payAddrIndex kvdb.RBucket,
 // closure is passed which is used to reset/initialize partial results and also
 // to signal if the kvdb.View transaction has been retried.
 func (d *DB) ScanInvoices(
-	scanFunc func(lntypes.Hash, *Invoice) error, reset func()) er.R {
+	scanFunc func(lntypes.Hash, *Invoice) er.R, reset func()) er.R {
 
 	return kvdb.View(d, func(tx kvdb.RTx) er.R {
 		invoices := tx.ReadBucket(invoiceBucket)
@@ -768,7 +768,7 @@ func (d *DB) ScanInvoices(
 			var paymentHash lntypes.Hash
 			copy(paymentHash[:], k)
 
-			return er.E(scanFunc(paymentHash, &invoice))
+			return scanFunc(paymentHash, &invoice)
 		})
 	}, reset)
 }
@@ -1096,18 +1096,18 @@ func putInvoice(invoices, invoiceIndex, payAddrIndex, addIndex kvdb.RwBucket,
 // would modify the on disk format, make a copy of the original code and store
 // it with the migration.
 func serializeInvoice(w io.Writer, i *Invoice) er.R {
-	creationDateBytes, err := i.CreationDate.MarshalBinary()
-	if err != nil {
-		return err
+	creationDateBytes, errr := i.CreationDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
-	settleDateBytes, err := i.SettleDate.MarshalBinary()
-	if err != nil {
-		return err
+	settleDateBytes, errr := i.SettleDate.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	var fb bytes.Buffer
-	err = i.Terms.Features.EncodeBase256(&fb)
+	err := i.Terms.Features.EncodeBase256(&fb)
 	if err != nil {
 		return err
 	}
@@ -1320,14 +1320,14 @@ func deserializeInvoice(r io.Reader) (Invoice, er.R) {
 		i.HodlInvoice = true
 	}
 
-	err = i.CreationDate.UnmarshalBinary(creationDateBytes)
-	if err != nil {
-		return i, err
+	errr := i.CreationDate.UnmarshalBinary(creationDateBytes)
+	if errr != nil {
+		return i, er.E(errr)
 	}
 
-	err = i.SettleDate.UnmarshalBinary(settleDateBytes)
-	if err != nil {
-		return i, err
+	errr = i.SettleDate.UnmarshalBinary(settleDateBytes)
+	if errr != nil {
+		return i, er.E(errr)
 	}
 
 	rawFeatures := lnwire.NewRawFeatureVector()
@@ -1355,7 +1355,7 @@ func deserializeHtlcs(r io.Reader) (map[CircuitKey]*InvoiceHTLC, er.R) {
 		// Read the length of the tlv stream for this htlc.
 		var streamLen int64
 		if err := util.ReadBin(r, byteOrder, &streamLen); err != nil {
-			if err == io.EOF {
+			if er.EOF.Is(err) {
 				break
 			}
 

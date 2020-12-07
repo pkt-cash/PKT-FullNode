@@ -1,6 +1,6 @@
 package lncfg
 
-import "fmt"
+import "github.com/pkt-cash/pktd/btcutil/er"
 
 const (
 	// DefaultReadWorkers is the default maximum number of concurrent

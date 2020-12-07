@@ -1,7 +1,6 @@
 package chainview
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 

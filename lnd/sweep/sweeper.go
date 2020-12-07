@@ -1122,7 +1122,7 @@ func (s *UtxoSweeper) getInputLists(cluster inputCluster,
 	// form input sets.
 	var allSets []inputSet
 	if len(retryInputs) > 0 {
-		var err error
+		var err er.R
 		allSets, err = generateInputPartitionings(
 			append(retryInputs, newInputs...), s.relayFeeRate,
 			cluster.sweepFeeRate, s.cfg.MaxInputsPerTx,
@@ -1196,7 +1196,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 	err = s.cfg.Wallet.PublishTransaction(tx, "")
 
 	// In case of an unexpected error, don't try to recover.
-	if err != nil && err != lnwallet.ErrDoubleSpend {
+	if err != nil && !lnwallet.ErrDoubleSpend.Is(err) {
 		return er.Errorf("publish tx: %v", err)
 	}
 

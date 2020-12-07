@@ -5,16 +5,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chancloser"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -154,7 +155,7 @@ func TestPeerChannelClosureAcceptFeeInitiator(t *testing.T) {
 
 	// We make Alice send a shutdown request.
 	updateChan := make(chan interface{}, 1)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	closeCommand := &htlcswitch.ChanClose{
 		CloseType:      htlcswitch.CloseRegular,
 		ChanPoint:      bobChan.ChannelPoint(),
@@ -470,7 +471,7 @@ func TestPeerChannelClosureFeeNegotiationsInitiator(t *testing.T) {
 
 	// We make the initiator send a shutdown request.
 	updateChan := make(chan interface{}, 1)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	closeCommand := &htlcswitch.ChanClose{
 		CloseType:      htlcswitch.CloseRegular,
 		ChanPoint:      bobChan.ChannelPoint(),
@@ -668,7 +669,7 @@ func TestChooseDeliveryScript(t *testing.T) {
 		userScript     lnwire.DeliveryAddress
 		shutdownScript lnwire.DeliveryAddress
 		expectedScript lnwire.DeliveryAddress
-		expectedError  error
+		expectedError  *er.ErrorCode
 	}{
 		{
 			name:           "Neither set",
@@ -714,7 +715,8 @@ func TestChooseDeliveryScript(t *testing.T) {
 			script, err := chooseDeliveryScript(
 				test.shutdownScript, test.userScript,
 			)
-			if err != test.expectedError {
+			if err == nil && test.expectedError == nil {
+			} else if test.expectedError == nil || !test.expectedError.Is(err) {
 				t.Fatalf("Expected: %v, got: %v", test.expectedError, err)
 			}
 
@@ -753,7 +755,7 @@ func TestCustomShutdownScript(t *testing.T) {
 		expectedScript lnwire.DeliveryAddress
 
 		// expectedError is the error we expect, if any.
-		expectedError error
+		expectedError *er.ErrorCode
 	}{
 		{
 			name:            "User set script",
@@ -807,7 +809,7 @@ func TestCustomShutdownScript(t *testing.T) {
 			// Request initiator to cooperatively close the channel, with
 			// a specified delivery address.
 			updateChan := make(chan interface{}, 1)
-			errChan := make(chan error, 1)
+			errChan := make(chan er.R, 1)
 			chanPoint := bobChan.ChannelPoint()
 			closeCommand := htlcswitch.ChanClose{
 				CloseType:      htlcswitch.CloseRegular,
@@ -830,7 +832,8 @@ func TestCustomShutdownScript(t *testing.T) {
 				t.Fatalf("did not receive shutdown message")
 			case err := <-errChan:
 				// Fail if we do not expect an error.
-				if err != test.expectedError {
+				if err == nil && test.expectedError == nil {
+				} else if test.expectedError == nil || !test.expectedError.Is(err) {
 					t.Fatalf("error closing channel: %v", err)
 				}
 

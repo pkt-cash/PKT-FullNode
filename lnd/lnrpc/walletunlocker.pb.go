@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = er.Errorf
+var _ = fmt.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -47,10 +47,10 @@ func (*GenSeedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{0}
 }
 
-func (m *GenSeedRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *GenSeedRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GenSeedRequest.Unmarshal(m, b)
 }
-func (m *GenSeedRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GenSeedRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GenSeedRequest.Marshal(b, m, deterministic)
 }
 func (m *GenSeedRequest) XXX_Merge(src proto.Message) {
@@ -103,10 +103,10 @@ func (*GenSeedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{1}
 }
 
-func (m *GenSeedResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *GenSeedResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GenSeedResponse.Unmarshal(m, b)
 }
-func (m *GenSeedResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GenSeedResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GenSeedResponse.Marshal(b, m, deterministic)
 }
 func (m *GenSeedResponse) XXX_Merge(src proto.Message) {
@@ -185,10 +185,10 @@ func (*InitWalletRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{2}
 }
 
-func (m *InitWalletRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *InitWalletRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InitWalletRequest.Unmarshal(m, b)
 }
-func (m *InitWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *InitWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_InitWalletRequest.Marshal(b, m, deterministic)
 }
 func (m *InitWalletRequest) XXX_Merge(src proto.Message) {
@@ -265,10 +265,10 @@ func (*InitWalletResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{3}
 }
 
-func (m *InitWalletResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *InitWalletResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InitWalletResponse.Unmarshal(m, b)
 }
-func (m *InitWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *InitWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_InitWalletResponse.Marshal(b, m, deterministic)
 }
 func (m *InitWalletResponse) XXX_Merge(src proto.Message) {
@@ -327,10 +327,10 @@ func (*UnlockWalletRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{4}
 }
 
-func (m *UnlockWalletRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *UnlockWalletRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnlockWalletRequest.Unmarshal(m, b)
 }
-func (m *UnlockWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *UnlockWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UnlockWalletRequest.Marshal(b, m, deterministic)
 }
 func (m *UnlockWalletRequest) XXX_Merge(src proto.Message) {
@@ -386,10 +386,10 @@ func (*UnlockWalletResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{5}
 }
 
-func (m *UnlockWalletResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *UnlockWalletResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnlockWalletResponse.Unmarshal(m, b)
 }
-func (m *UnlockWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *UnlockWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UnlockWalletResponse.Marshal(b, m, deterministic)
 }
 func (m *UnlockWalletResponse) XXX_Merge(src proto.Message) {
@@ -436,10 +436,10 @@ func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{6}
 }
 
-func (m *ChangePasswordRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChangePasswordRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChangePasswordRequest.Unmarshal(m, b)
 }
-func (m *ChangePasswordRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChangePasswordRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChangePasswordRequest.Marshal(b, m, deterministic)
 }
 func (m *ChangePasswordRequest) XXX_Merge(src proto.Message) {
@@ -503,10 +503,10 @@ func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_76e3ed10ed53e4fd, []int{7}
 }
 
-func (m *ChangePasswordResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ChangePasswordResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChangePasswordResponse.Unmarshal(m, b)
 }
-func (m *ChangePasswordResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChangePasswordResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChangePasswordResponse.Marshal(b, m, deterministic)
 }
 func (m *ChangePasswordResponse) XXX_Merge(src proto.Message) {
@@ -604,7 +604,7 @@ type WalletUnlockerClient interface {
 	//Once the cipherseed is obtained and verified by the user, the InitWallet
 	//method should be used to commit the newly generated seed, and create the
 	//wallet.
-	GenSeed(ctx context.Context, in *GenSeedRequest, opts ...grpc.CallOption) (*GenSeedResponse, er.R)
+	GenSeed(ctx context.Context, in *GenSeedRequest, opts ...grpc.CallOption) (*GenSeedResponse, error)
 	//
 	//InitWallet is used when lnd is starting up for the first time to fully
 	//initialize the daemon and its internal wallet. At the very least a wallet
@@ -618,15 +618,15 @@ type WalletUnlockerClient interface {
 	//Alternatively, this can be used along with the GenSeed RPC to obtain a
 	//seed, then present it to the user. Once it has been verified by the user,
 	//the seed can be fed into this RPC in order to commit the new wallet.
-	InitWallet(ctx context.Context, in *InitWalletRequest, opts ...grpc.CallOption) (*InitWalletResponse, er.R)
+	InitWallet(ctx context.Context, in *InitWalletRequest, opts ...grpc.CallOption) (*InitWalletResponse, error)
 	// lncli: `unlock`
 	//UnlockWallet is used at startup of lnd to provide a password to unlock
 	//the wallet database.
-	UnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, er.R)
+	UnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, error)
 	// lncli: `changepassword`
 	//ChangePassword changes the password of the encrypted wallet. This will
 	//automatically unlock the wallet database if successful.
-	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, er.R)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 }
 
 type walletUnlockerClient struct {
@@ -637,7 +637,7 @@ func NewWalletUnlockerClient(cc *grpc.ClientConn) WalletUnlockerClient {
 	return &walletUnlockerClient{cc}
 }
 
-func (c *walletUnlockerClient) GenSeed(ctx context.Context, in *GenSeedRequest, opts ...grpc.CallOption) (*GenSeedResponse, er.R) {
+func (c *walletUnlockerClient) GenSeed(ctx context.Context, in *GenSeedRequest, opts ...grpc.CallOption) (*GenSeedResponse, error) {
 	out := new(GenSeedResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.WalletUnlocker/GenSeed", in, out, opts...)
 	if err != nil {
@@ -646,7 +646,7 @@ func (c *walletUnlockerClient) GenSeed(ctx context.Context, in *GenSeedRequest, 
 	return out, nil
 }
 
-func (c *walletUnlockerClient) InitWallet(ctx context.Context, in *InitWalletRequest, opts ...grpc.CallOption) (*InitWalletResponse, er.R) {
+func (c *walletUnlockerClient) InitWallet(ctx context.Context, in *InitWalletRequest, opts ...grpc.CallOption) (*InitWalletResponse, error) {
 	out := new(InitWalletResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.WalletUnlocker/InitWallet", in, out, opts...)
 	if err != nil {
@@ -655,7 +655,7 @@ func (c *walletUnlockerClient) InitWallet(ctx context.Context, in *InitWalletReq
 	return out, nil
 }
 
-func (c *walletUnlockerClient) UnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, er.R) {
+func (c *walletUnlockerClient) UnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, error) {
 	out := new(UnlockWalletResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.WalletUnlocker/UnlockWallet", in, out, opts...)
 	if err != nil {
@@ -664,7 +664,7 @@ func (c *walletUnlockerClient) UnlockWallet(ctx context.Context, in *UnlockWalle
 	return out, nil
 }
 
-func (c *walletUnlockerClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, er.R) {
+func (c *walletUnlockerClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error) {
 	out := new(ChangePasswordResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.WalletUnlocker/ChangePassword", in, out, opts...)
 	if err != nil {
@@ -684,7 +684,7 @@ type WalletUnlockerServer interface {
 	//Once the cipherseed is obtained and verified by the user, the InitWallet
 	//method should be used to commit the newly generated seed, and create the
 	//wallet.
-	GenSeed(context.Context, *GenSeedRequest) (*GenSeedResponse, er.R)
+	GenSeed(context.Context, *GenSeedRequest) (*GenSeedResponse, error)
 	//
 	//InitWallet is used when lnd is starting up for the first time to fully
 	//initialize the daemon and its internal wallet. At the very least a wallet
@@ -698,31 +698,31 @@ type WalletUnlockerServer interface {
 	//Alternatively, this can be used along with the GenSeed RPC to obtain a
 	//seed, then present it to the user. Once it has been verified by the user,
 	//the seed can be fed into this RPC in order to commit the new wallet.
-	InitWallet(context.Context, *InitWalletRequest) (*InitWalletResponse, er.R)
+	InitWallet(context.Context, *InitWalletRequest) (*InitWalletResponse, error)
 	// lncli: `unlock`
 	//UnlockWallet is used at startup of lnd to provide a password to unlock
 	//the wallet database.
-	UnlockWallet(context.Context, *UnlockWalletRequest) (*UnlockWalletResponse, er.R)
+	UnlockWallet(context.Context, *UnlockWalletRequest) (*UnlockWalletResponse, error)
 	// lncli: `changepassword`
 	//ChangePassword changes the password of the encrypted wallet. This will
 	//automatically unlock the wallet database if successful.
-	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, er.R)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 }
 
 // UnimplementedWalletUnlockerServer can be embedded to have forward compatible implementations.
 type UnimplementedWalletUnlockerServer struct {
 }
 
-func (*UnimplementedWalletUnlockerServer) GenSeed(ctx context.Context, req *GenSeedRequest) (*GenSeedResponse, er.R) {
+func (*UnimplementedWalletUnlockerServer) GenSeed(ctx context.Context, req *GenSeedRequest) (*GenSeedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenSeed not implemented")
 }
-func (*UnimplementedWalletUnlockerServer) InitWallet(ctx context.Context, req *InitWalletRequest) (*InitWalletResponse, er.R) {
+func (*UnimplementedWalletUnlockerServer) InitWallet(ctx context.Context, req *InitWalletRequest) (*InitWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitWallet not implemented")
 }
-func (*UnimplementedWalletUnlockerServer) UnlockWallet(ctx context.Context, req *UnlockWalletRequest) (*UnlockWalletResponse, er.R) {
+func (*UnimplementedWalletUnlockerServer) UnlockWallet(ctx context.Context, req *UnlockWalletRequest) (*UnlockWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnlockWallet not implemented")
 }
-func (*UnimplementedWalletUnlockerServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, er.R) {
+func (*UnimplementedWalletUnlockerServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 
@@ -730,7 +730,7 @@ func RegisterWalletUnlockerServer(s *grpc.Server, srv WalletUnlockerServer) {
 	s.RegisterService(&_WalletUnlocker_serviceDesc, srv)
 }
 
-func _WalletUnlocker_GenSeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletUnlocker_GenSeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GenSeedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -742,13 +742,13 @@ func _WalletUnlocker_GenSeed_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.WalletUnlocker/GenSeed",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletUnlockerServer).GenSeed(ctx, req.(*GenSeedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletUnlocker_InitWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletUnlocker_InitWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InitWalletRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -760,13 +760,13 @@ func _WalletUnlocker_InitWallet_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.WalletUnlocker/InitWallet",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletUnlockerServer).InitWallet(ctx, req.(*InitWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletUnlocker_UnlockWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletUnlocker_UnlockWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UnlockWalletRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -778,13 +778,13 @@ func _WalletUnlocker_UnlockWallet_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/lnrpc.WalletUnlocker/UnlockWallet",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletUnlockerServer).UnlockWallet(ctx, req.(*UnlockWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WalletUnlocker_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _WalletUnlocker_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangePasswordRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -796,7 +796,7 @@ func _WalletUnlocker_ChangePassword_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/lnrpc.WalletUnlocker/ChangePassword",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletUnlockerServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
 	}
 	return interceptor(ctx, in, info, handler)

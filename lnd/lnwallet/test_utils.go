@@ -201,9 +201,9 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 		return nil, nil, nil, err
 	}
 	bobPreimageProducer := shachain.NewRevocationProducer(*bobRoot)
-	bobFirstRevoke, errr := bobPreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	bobFirstRevoke, err := bobPreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	bobCommitPoint := input.ComputeCommitmentPoint(bobFirstRevoke[:])
 
@@ -212,44 +212,44 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 		return nil, nil, nil, err
 	}
 	alicePreimageProducer := shachain.NewRevocationProducer(*aliceRoot)
-	aliceFirstRevoke, errr := alicePreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	aliceFirstRevoke, err := alicePreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, errr := CreateCommitmentTxns(
+	aliceCommitTx, bobCommitTx, err := CreateCommitmentTxns(
 		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
 		bobCommitPoint, *fundingTxIn, chanType,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	alicePath, errr := ioutil.TempDir("", "alicedb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbAlice, errr := channeldb.Open(alicePath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbAlice, err := channeldb.Open(alicePath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	bobPath, errr := ioutil.TempDir("", "bobdb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbBob, errr := channeldb.Open(bobPath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbBob, err := channeldb.Open(bobPath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	estimator := chainfee.NewStaticEstimator(6000, 0)
-	feePerKw, errr := estimator.EstimateFeePerKW(1)
-	if errr != nil {
-		return nil, nil, nil, errr
+	feePerKw, err := estimator.EstimateFeePerKW(1)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	commitFee := calcStaticFee(chanType, 0)
 	var anchorAmt btcutil.Amount
@@ -332,36 +332,36 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 	// TODO(roasbeef): make mock version of pre-image store
 
 	alicePool := NewSigPool(1, aliceSigner)
-	channelAlice, errr := NewLightningChannel(
+	channelAlice, err := NewLightningChannel(
 		aliceSigner, aliceChannelState, alicePool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	alicePool.Start()
 
 	obfuscator := createStateHintObfuscator(aliceChannelState)
 
 	bobPool := NewSigPool(1, bobSigner)
-	channelBob, errr := NewLightningChannel(
+	channelBob, err := NewLightningChannel(
 		bobSigner, bobChannelState, bobPool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	bobPool.Start()
 
-	errr = SetStateNumHint(
+	err = SetStateNumHint(
 		aliceCommitTx, 0, obfuscator,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	errr = SetStateNumHint(
+	err = SetStateNumHint(
 		bobCommitTx, 0, obfuscator,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	addr := &net.TCPAddr{
@@ -391,9 +391,9 @@ func CreateTestChannels(chanType channeldb.ChannelType) (
 
 	// Now that the channel are open, simulate the start of a session by
 	// having Alice and Bob extend their revocation windows to each other.
-	errr = initRevocationWindows(channelAlice, channelBob)
-	if errr != nil {
-		return nil, nil, nil, errr
+	err = initRevocationWindows(channelAlice, channelBob)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	return channelAlice, channelBob, cleanUpFunc, nil

@@ -4,11 +4,11 @@ package lntest
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/rpcclient"
@@ -73,7 +73,7 @@ func (b BtcdBackendConfig) Name() string {
 // that node. miner should be set to the P2P address of the miner to connect
 // to.
 func NewBackend(miner string, netParams *chaincfg.Params) (
-	*BtcdBackendConfig, func() error, er.R) {
+	*BtcdBackendConfig, func() er.R, er.R) {
 
 	baseLogDir := fmt.Sprintf(logDirPattern, GetLogDir())
 	args := []string{
@@ -106,7 +106,7 @@ func NewBackend(miner string, netParams *chaincfg.Params) (
 	cleanUp := func() er.R {
 		var errStr string
 		if err := chainBackend.TearDown(); err != nil {
-			errStr += err.Error() + "\n"
+			errStr += err.String() + "\n"
 		}
 
 		// After shutting down the chain backend, we'll make a copy of
@@ -119,9 +119,9 @@ func NewBackend(miner string, netParams *chaincfg.Params) (
 		if err != nil {
 			errStr += fmt.Sprintf("unable to copy file: %v\n", err)
 		}
-		if err = os.RemoveAll(baseLogDir); err != nil {
+		if errr := os.RemoveAll(baseLogDir); errr != nil {
 			errStr += fmt.Sprintf(
-				"cannot remove dir %s: %v\n", baseLogDir, err,
+				"cannot remove dir %s: %v\n", baseLogDir, errr,
 			)
 		}
 		if errStr != "" {

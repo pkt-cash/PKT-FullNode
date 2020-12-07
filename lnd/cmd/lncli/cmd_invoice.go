@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
 	"strconv"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/urfave/cli"
 )
@@ -72,7 +72,8 @@ func addInvoice(ctx *cli.Context) er.R {
 		preimage []byte
 		descHash []byte
 		amt      int64
-		err      error
+		err      er.R
+		errr     error
 	)
 
 	client, cleanUp := getClient(ctx)
@@ -84,10 +85,10 @@ func addInvoice(ctx *cli.Context) er.R {
 	case ctx.IsSet("amt"):
 		amt = ctx.Int64("amt")
 	case args.Present():
-		amt, err = strconv.ParseInt(args.First(), 10, 64)
+		amt, errr = strconv.ParseInt(args.First(), 10, 64)
 		args = args.Tail()
-		if err != nil {
-			return er.Errorf("unable to decode amt argument: %v", err)
+		if errr != nil {
+			return er.Errorf("unable to decode amt argument: %v", errr)
 		}
 	}
 
@@ -117,9 +118,9 @@ func addInvoice(ctx *cli.Context) er.R {
 		Private:         ctx.Bool("private"),
 	}
 
-	resp, err := client.AddInvoice(context.Background(), invoice)
-	if err != nil {
-		return err
+	resp, errr := client.AddInvoice(context.Background(), invoice)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -148,7 +149,7 @@ func lookupInvoice(ctx *cli.Context) er.R {
 
 	var (
 		rHash []byte
-		err   error
+		err   er.R
 	)
 
 	switch {
@@ -168,9 +169,9 @@ func lookupInvoice(ctx *cli.Context) er.R {
 		RHash: rHash,
 	}
 
-	invoice, err := client.LookupInvoice(context.Background(), req)
-	if err != nil {
-		return err
+	invoice, errr := client.LookupInvoice(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(invoice)
@@ -235,9 +236,9 @@ func listInvoices(ctx *cli.Context) er.R {
 		Reversed:       !ctx.Bool("paginate-forwards"),
 	}
 
-	invoices, err := client.ListInvoices(context.Background(), req)
-	if err != nil {
-		return err
+	invoices, errr := client.ListInvoices(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(invoices)
@@ -276,11 +277,11 @@ func decodePayReq(ctx *cli.Context) er.R {
 		return er.Errorf("pay_req argument missing")
 	}
 
-	resp, err := client.DecodePayReq(ctxb, &lnrpc.PayReqString{
+	resp, errr := client.DecodePayReq(ctxb, &lnrpc.PayReqString{
 		PayReq: payreq,
 	})
-	if err != nil {
-		return err
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)

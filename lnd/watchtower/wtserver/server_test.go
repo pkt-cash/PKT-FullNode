@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtmock"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 var (
@@ -707,7 +708,7 @@ func TestServerDeleteSession(t *testing.T) {
 		case shouldHave && err != nil:
 			t.Fatalf("expected server to have session %s, got: %v",
 				id, err)
-		case !shouldHave && err != wtdb.ErrSessionNotFound:
+		case !shouldHave && !wtdb.ErrSessionNotFound.Is(err):
 			t.Fatalf("expected ErrSessionNotFound for session %s, "+
 				"got: %v", id, err)
 		}
@@ -852,7 +853,7 @@ func recvReply(t *testing.T, name string, peer *wtmock.MockPeer,
 
 	var (
 		msg wtwire.Message
-		err error
+		err er.R
 	)
 
 	select {

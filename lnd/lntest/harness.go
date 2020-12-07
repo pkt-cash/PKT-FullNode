@@ -67,7 +67,7 @@ type NetworkHarness struct {
 
 	// Channel for transmitting stderr output from failed lightning node
 	// to main process.
-	lndErrorChan chan error
+	lndErrorChan chan er.R
 
 	// feeService is a web service that provides external fee estimates to
 	// lnd.
@@ -90,7 +90,7 @@ func NewNetworkHarness(r *rpctest.Harness, b BackendConfig, lndBinary string,
 	n := NetworkHarness{
 		activeNodes:  make(map[int]*HarnessNode),
 		nodesByPub:   make(map[string]*HarnessNode),
-		lndErrorChan: make(chan error),
+		lndErrorChan: make(chan er.R),
 		netParams:    r.ActiveNet,
 		Miner:        r,
 		BackendCfg:   b,
@@ -149,7 +149,7 @@ func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) er.R {
 	// Start the initial seeder nodes within the test network, then connect
 	// their respective RPC clients.
 	var wg sync.WaitGroup
-	errChan := make(chan error, 2)
+	errChan := make(chan er.R, 2)
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
@@ -185,9 +185,9 @@ func (n *NetworkHarness) SetUp(testCase string, lndArgs []string) er.R {
 	clients := []lnrpc.LightningClient{n.Alice, n.Bob}
 	for _, client := range clients {
 		for i := 0; i < 10; i++ {
-			resp, err := client.NewAddress(ctxb, addrReq)
-			if err != nil {
-				return err
+			resp, errr := client.NewAddress(ctxb, addrReq)
+			if errr != nil {
+				return er.E(errr)
 			}
 			addr, err := btcutil.DecodeAddress(resp.Address, n.netParams)
 			if err != nil {
@@ -230,13 +230,13 @@ out:
 	for {
 		select {
 		case <-balanceTicker.C:
-			aliceResp, err := n.Alice.WalletBalance(ctxb, balReq)
-			if err != nil {
-				return err
+			aliceResp, errr := n.Alice.WalletBalance(ctxb, balReq)
+			if errr != nil {
+				return er.E(errr)
 			}
-			bobResp, err := n.Bob.WalletBalance(ctxb, balReq)
-			if err != nil {
-				return err
+			bobResp, errr := n.Bob.WalletBalance(ctxb, balReq)
+			if errr != nil {
+				return er.E(errr)
 			}
 
 			if aliceResp.ConfirmedBalance == expectedBalance &&
@@ -283,7 +283,7 @@ func (n *NetworkHarness) NewNode(name string, extraArgs []string) (*HarnessNode,
 // initialized harness node.
 func (n *NetworkHarness) NewNodeWithSeed(name string, extraArgs []string,
 	password []byte, statelessInit bool) (*HarnessNode, []string, []byte,
-	error) {
+	er.R) {
 
 	node, err := n.newNode(name, extraArgs, true, password)
 	if err != nil {
@@ -300,9 +300,9 @@ func (n *NetworkHarness) NewNodeWithSeed(name string, extraArgs []string,
 	}
 
 	ctxt, _ := context.WithTimeout(ctxb, timeout)
-	genSeedResp, err := node.GenSeed(ctxt, genSeedReq)
-	if err != nil {
-		return nil, nil, nil, err
+	genSeedResp, errr := node.GenSeed(ctxt, genSeedReq)
+	if errr != nil {
+		return nil, nil, nil, er.E(errr)
 	}
 
 	// With the seed created, construct the init request to the node,
@@ -428,7 +428,7 @@ func (n *NetworkHarness) connect(ctx context.Context,
 tryconnect:
 	if _, err := a.ConnectPeer(ctx, req); err != nil {
 		// If the chain backend is still syncing, retry.
-		if strings.Contains(err.Error(), lnd.ErrServerNotActive.Error()) ||
+		if strings.Contains(err.Error(), lnd.ErrServerNotActive.Detail) ||
 			strings.Contains(err.Error(), "i/o timeout") {
 
 			select {
@@ -439,7 +439,7 @@ tryconnect:
 					"finish syncing")
 			}
 		}
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -458,9 +458,9 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 
 	tryConnect := func(a, b *HarnessNode) er.R {
 		ctxt, _ := context.WithTimeout(ctx, 15*time.Second)
-		bInfo, err := b.GetInfo(ctxt, &lnrpc.GetInfoRequest{})
-		if err != nil {
-			return err
+		bInfo, errr := b.GetInfo(ctxt, &lnrpc.GetInfoRequest{})
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		req := &lnrpc.ConnectPeerRequest{
@@ -470,8 +470,8 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 			},
 		}
 
-		var predErr error
-		err = wait.Predicate(func() bool {
+		var predErr er.R
+		err := wait.Predicate(func() bool {
 			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
@@ -486,7 +486,7 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 			// If the two are already connected, we return early
 			// with no error.
 			case strings.Contains(
-				err.Error(), "already connected to peer",
+				err.String(), "already connected to peer",
 			):
 				predErr = nil
 				return true
@@ -562,9 +562,9 @@ func (n *NetworkHarness) EnsureConnected(ctx context.Context, a, b *HarnessNode)
 // NOTE: This function may block for up to 15-seconds as it will not return
 // until the new connection is detected as being known to both nodes.
 func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er.R {
-	bobInfo, err := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-	if err != nil {
-		return err
+	bobInfo, errr := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	req := &lnrpc.ConnectPeerRequest{
@@ -578,7 +578,7 @@ func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er
 		return err
 	}
 
-	err = wait.Predicate(func() bool {
+	err := wait.Predicate(func() bool {
 		// If node B is seen in the ListPeers response from node A,
 		// then we can exit early as the connection has been fully
 		// established.
@@ -605,17 +605,17 @@ func (n *NetworkHarness) ConnectNodes(ctx context.Context, a, b *HarnessNode) er
 // DisconnectNodes disconnects node a from node b by sending RPC message
 // from a node to b node
 func (n *NetworkHarness) DisconnectNodes(ctx context.Context, a, b *HarnessNode) er.R {
-	bobInfo, err := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-	if err != nil {
-		return err
+	bobInfo, errr := b.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	req := &lnrpc.DisconnectPeerRequest{
 		PubKey: bobInfo.IdentityPubkey,
 	}
 
-	if _, err := a.DisconnectPeer(ctx, req); err != nil {
-		return err
+	if _, errr := a.DisconnectPeer(ctx, req); errr != nil {
+		return er.E(errr)
 	}
 
 	return nil
@@ -633,7 +633,7 @@ func (n *NetworkHarness) DisconnectNodes(ctx context.Context, a, b *HarnessNode)
 // crashes, etc. Additionally, each time the node is restarted, the caller can
 // pass a set of SCBs to pass in via the Unlock method allowing them to restore
 // channels during restart.
-func (n *NetworkHarness) RestartNode(node *HarnessNode, callback func() error,
+func (n *NetworkHarness) RestartNode(node *HarnessNode, callback func() er.R,
 	chanBackups ...*lnrpc.ChanBackupSnapshot) er.R {
 
 	err := n.RestartNodeNoUnlock(node, callback)
@@ -666,7 +666,7 @@ func (n *NetworkHarness) RestartNode(node *HarnessNode, callback func() error,
 // the callback parameter is non-nil, then the function will be executed after
 // the node shuts down, but *before* the process has been started up again.
 func (n *NetworkHarness) RestartNodeNoUnlock(node *HarnessNode,
-	callback func() error) er.R {
+	callback func() er.R) er.R {
 
 	if err := node.stop(); err != nil {
 		return err
@@ -683,7 +683,7 @@ func (n *NetworkHarness) RestartNodeNoUnlock(node *HarnessNode,
 
 // SuspendNode stops the given node and returns a callback that can be used to
 // start it again.
-func (n *NetworkHarness) SuspendNode(node *HarnessNode) (func() error, er.R) {
+func (n *NetworkHarness) SuspendNode(node *HarnessNode) (func() er.R, er.R) {
 	if err := node.stop(); err != nil {
 		return nil, err
 	}
@@ -796,7 +796,7 @@ func (n *NetworkHarness) WaitForTxInMempool(ctx context.Context,
 				"in mempool: %v", txid, len(mempool), mempool)
 
 		case <-ticker.C:
-			var err error
+			var err er.R
 			mempool, err = n.Miner.Node.GetRawMempool()
 			if err != nil {
 				return err
@@ -878,10 +878,10 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 		FundingShim:        p.FundingShim,
 	}
 
-	respStream, err := srcNode.OpenChannel(ctx, openReq)
-	if err != nil {
+	respStream, errr := srcNode.OpenChannel(ctx, openReq)
+	if errr != nil {
 		return nil, er.Errorf("unable to open channel between "+
-			"alice and bob: %v", err)
+			"alice and bob: %v", errr)
 	}
 
 	chanOpen := make(chan struct{})
@@ -890,9 +890,9 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 		// Consume the "channel pending" update. This waits until the node
 		// notifies us that the final message in the channel funding workflow
 		// has been sent to the remote node.
-		resp, err := respStream.Recv()
-		if err != nil {
-			errChan <- err
+		resp, errr := respStream.Recv()
+		if errr != nil {
+			errChan <- er.E(errr)
 			return
 		}
 		if _, ok := resp.Update.(*lnrpc.OpenStatusUpdate_ChanPending); !ok {
@@ -907,7 +907,7 @@ func (n *NetworkHarness) OpenChannel(ctx context.Context,
 	select {
 	case <-ctx.Done():
 		return nil, er.Errorf("timeout reached before chan pending "+
-			"update sent: %v", err)
+			"update sent: %v", errr)
 	case err := <-errChan:
 		return nil, err
 	case <-chanOpen:
@@ -950,9 +950,9 @@ func (n *NetworkHarness) OpenPendingChannel(ctx context.Context,
 		// Consume the "channel pending" update. This waits until the node
 		// notifies us that the final message in the channel funding workflow
 		// has been sent to the remote node.
-		resp, err := respStream.Recv()
-		if err != nil {
-			errChan <- err
+		resp, errr := respStream.Recv()
+		if errr != nil {
+			errChan <- er.E(errr)
 			return
 		}
 		pendingResp, ok := resp.Update.(*lnrpc.OpenStatusUpdate_ChanPending)
@@ -1046,9 +1046,9 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		// not.
 		filterChannel := func(node *HarnessNode,
 			op wire.OutPoint) (*lnrpc.Channel, er.R) {
-			listResp, err := node.ListChannels(ctx, listReq)
-			if err != nil {
-				return nil, err
+			listResp, errr := node.ListChannels(ctx, listReq)
+			if errr != nil {
+				return nil, er.E(errr)
 			}
 
 			for _, c := range listResp.Channels {
@@ -1099,9 +1099,9 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		ChannelPoint: cp,
 		Force:        force,
 	}
-	closeRespStream, err := lnNode.CloseChannel(ctx, closeReq)
-	if err != nil {
-		return nil, nil, er.Errorf("unable to close channel: %v", err)
+	closeRespStream, errr := lnNode.CloseChannel(ctx, closeReq)
+	if errr != nil {
+		return nil, nil, er.Errorf("unable to close channel: %v", errr)
 	}
 
 	errChan := make(chan er.R)
@@ -1110,10 +1110,10 @@ func (n *NetworkHarness) CloseChannel(ctx context.Context,
 		// Consume the "channel close" update in order to wait for the closing
 		// transaction to be broadcast, then wait for the closing tx to be seen
 		// within the network.
-		closeResp, err := closeRespStream.Recv()
-		if err != nil {
+		closeResp, errr := closeRespStream.Recv()
+		if errr != nil {
 			errChan <- er.Errorf("unable to recv() from close "+
-				"stream: %v", err)
+				"stream: %v", errr)
 			return
 		}
 		pendingClose, ok := closeResp.Update.(*lnrpc.CloseStatusUpdate_ClosePending)
@@ -1157,9 +1157,9 @@ func (n *NetworkHarness) WaitForChannelClose(ctx context.Context,
 	errChan := make(chan er.R)
 	updateChan := make(chan *lnrpc.CloseStatusUpdate_ChanClose)
 	go func() {
-		closeResp, err := closeChanStream.Recv()
-		if err != nil {
-			errChan <- err
+		closeResp, errr := closeChanStream.Recv()
+		if errr != nil {
+			errChan <- er.E(errr)
 			return
 		}
 
@@ -1234,9 +1234,9 @@ func (n *NetworkHarness) AssertChannelExists(ctx context.Context,
 func (n *NetworkHarness) DumpLogs(node *HarnessNode) (string, er.R) {
 	logFile := fmt.Sprintf("%v/simnet/lnd.log", node.Cfg.LogDir)
 
-	buf, err := ioutil.ReadFile(logFile)
-	if err != nil {
-		return "", err
+	buf, errr := ioutil.ReadFile(logFile)
+	if errr != nil {
+		return "", er.E(errr)
 	}
 
 	return string(buf), nil
@@ -1285,9 +1285,9 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 	confirmed bool) er.R {
 
 	balReq := &lnrpc.WalletBalanceRequest{}
-	initialBalance, err := target.WalletBalance(ctx, balReq)
-	if err != nil {
-		return err
+	initialBalance, errr := target.WalletBalance(ctx, balReq)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// First, obtain an address from the target lightning node, preferring
@@ -1296,9 +1296,9 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 	addrReq := &lnrpc.NewAddressRequest{
 		Type: addrType,
 	}
-	resp, err := target.NewAddress(ctx, addrReq)
-	if err != nil {
-		return err
+	resp, errr := target.NewAddress(ctx, addrReq)
+	if errr != nil {
+		return er.E(errr)
 	}
 	addr, err := btcutil.DecodeAddress(resp.Address, n.netParams)
 	if err != nil {
@@ -1334,9 +1334,9 @@ func (n *NetworkHarness) sendCoins(ctx context.Context, amt btcutil.Amount,
 		}
 
 		req := &lnrpc.ListUnspentRequest{}
-		resp, err := target.ListUnspent(ctx, req)
-		if err != nil {
-			return err
+		resp, errr := target.ListUnspent(ctx, req)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// When using this method, there should only ever be on
@@ -1386,23 +1386,23 @@ func (n *NetworkHarness) SetFeeEstimate(fee chainfee.SatPerKWeight) {
 
 // CopyFile copies the file src to dest.
 func CopyFile(dest, src string) er.R {
-	s, err := os.Open(src)
-	if err != nil {
-		return err
+	s, errr := os.Open(src)
+	if errr != nil {
+		return er.E(errr)
 	}
 	defer s.Close()
 
-	d, err := os.Create(dest)
-	if err != nil {
-		return err
+	d, errr := os.Create(dest)
+	if errr != nil {
+		return er.E(errr)
 	}
 
-	if _, err := io.Copy(d, s); err != nil {
+	if _, errr := io.Copy(d, s); errr != nil {
 		d.Close()
-		return err
+		return er.E(errr)
 	}
 
-	return d.Close()
+	return er.E(d.Close())
 }
 
 // FileExists returns true if the file at path exists.
@@ -1417,27 +1417,27 @@ func FileExists(path string) bool {
 // CopyAll copies all files and directories from srcDir to dstDir recursively.
 // Note that this function does not support links.
 func CopyAll(dstDir, srcDir string) er.R {
-	entries, err := ioutil.ReadDir(srcDir)
-	if err != nil {
-		return err
+	entries, errr := ioutil.ReadDir(srcDir)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	for _, entry := range entries {
 		srcPath := filepath.Join(srcDir, entry.Name())
 		dstPath := filepath.Join(dstDir, entry.Name())
 
-		info, err := os.Stat(srcPath)
-		if err != nil {
-			return err
+		info, errr := os.Stat(srcPath)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		if info.IsDir() {
-			err := os.Mkdir(dstPath, info.Mode())
-			if err != nil && !os.IsExist(err) {
-				return err
+			errr := os.Mkdir(dstPath, info.Mode())
+			if errr != nil && !os.IsExist(errr) {
+				return er.E(errr)
 			}
 
-			err = CopyAll(dstPath, srcPath)
+			err := CopyAll(dstPath, srcPath)
 			if err != nil {
 				return err
 			}

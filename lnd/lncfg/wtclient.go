@@ -1,6 +1,10 @@
 package lncfg
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // WtClient holds the configuration options for the daemon's watchtower client.
 type WtClient struct {

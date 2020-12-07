@@ -101,13 +101,15 @@ func parseNetwork(addr net.Addr) string {
 
 // ListenOnAddress creates a listener that listens on the given address.
 func ListenOnAddress(addr net.Addr) (net.Listener, er.R) {
-	return net.Listen(parseNetwork(addr), addr.String())
+	l, e := net.Listen(parseNetwork(addr), addr.String())
+	return l, er.E(e)
 }
 
 // TLSListenOnAddress creates a TLS listener that listens on the given address.
 func TLSListenOnAddress(addr net.Addr,
 	config *tls.Config) (net.Listener, er.R) {
-	return tls.Listen(parseNetwork(addr), addr.String(), config)
+	l, e := tls.Listen(parseNetwork(addr), addr.String(), config)
+	return l, er.E(e)
 }
 
 // IsLoopback returns true if an address describes a loopback interface.
@@ -184,7 +186,8 @@ func ParseAddressString(strAddress string, defaultPort string,
 	// UDP only connections for anything we do in lnd.
 	switch parsedNetwork {
 	case "unix", "unixpacket":
-		return net.ResolveUnixAddr(parsedNetwork, parsedAddr)
+		a, e := net.ResolveUnixAddr(parsedNetwork, parsedAddr)
+		return a, er.E(e)
 
 	case "tcp", "tcp4", "tcp6":
 		return tcpResolver(
@@ -207,7 +210,7 @@ func ParseAddressString(strAddress string, defaultPort string,
 		if tor.IsOnionHost(rawHost) {
 			portNum, err := strconv.Atoi(rawPort)
 			if err != nil {
-				return nil, err
+				return nil, er.E(err)
 			}
 
 			return &tor.OnionAddr{
@@ -220,7 +223,8 @@ func ParseAddressString(strAddress string, defaultPort string,
 		// resolver is unable to resolve local addresses, so we'll use
 		// the system resolver instead.
 		if rawHost == "" || IsLoopback(rawHost) {
-			return net.ResolveTCPAddr("tcp", addrWithPort)
+			a, e := net.ResolveTCPAddr("tcp", addrWithPort)
+			return a, er.E(e)
 		}
 
 		return tcpResolver("tcp", addrWithPort)
@@ -314,17 +318,21 @@ func verifyPort(address string, defaultPort string) string {
 	return address
 }
 
+func ResolveTCPAddr(n, a string) (*net.TCPAddr, er.R) {
+	addr, e := net.ResolveTCPAddr(n, a)
+	return addr, er.E(e)
+}
+
 // ClientAddressDialer creates a gRPC dialer that can also dial unix socket
 // addresses instead of just TCP addresses.
-func ClientAddressDialer(defaultPort string) func(context.Context,
-	string) (net.Conn, er.R) {
+func ClientAddressDialer(defaultPort string) func(context.Context, string) (net.Conn, error) {
 
-	return func(ctx context.Context, addr string) (net.Conn, er.R) {
+	return func(ctx context.Context, addr string) (net.Conn, error) {
 		parsedAddr, err := ParseAddressString(
-			addr, defaultPort, net.ResolveTCPAddr,
+			addr, defaultPort, ResolveTCPAddr,
 		)
 		if err != nil {
-			return nil, err
+			return nil, er.Native(err)
 		}
 
 		d := net.Dialer{}

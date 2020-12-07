@@ -148,10 +148,10 @@ func (p *OnionProcessor) DecodeHopIterator(r io.Reader, rHash []byte,
 
 	onionPkt := &sphinx.OnionPacket{}
 	if err := onionPkt.Decode(r); err != nil {
-		switch err {
-		case sphinx.ErrInvalidOnionVersion:
+		switch {
+		case sphinx.ErrInvalidOnionVersion.Is(err):
 			return nil, lnwire.CodeInvalidOnionVersion
-		case sphinx.ErrInvalidOnionKey:
+		case sphinx.ErrInvalidOnionKey.Is(err):
 			return nil, lnwire.CodeInvalidOnionKey
 		default:
 			log.Errorf("unable to decode onion packet: %v", err)
@@ -168,12 +168,12 @@ func (p *OnionProcessor) DecodeHopIterator(r io.Reader, rHash []byte,
 		onionPkt, rHash, incomingCltv,
 	)
 	if err != nil {
-		switch err {
-		case sphinx.ErrInvalidOnionVersion:
+		switch {
+		case sphinx.ErrInvalidOnionVersion.Is(err):
 			return nil, lnwire.CodeInvalidOnionVersion
-		case sphinx.ErrInvalidOnionHMAC:
+		case sphinx.ErrInvalidOnionHMAC.Is(err):
 			return nil, lnwire.CodeInvalidOnionHmac
-		case sphinx.ErrInvalidOnionKey:
+		case sphinx.ErrInvalidOnionKey.Is(err):
 			return nil, lnwire.CodeInvalidOnionKey
 		default:
 			log.Errorf("unable to process onion packet: %v", err)
@@ -256,15 +256,15 @@ func (p *OnionProcessor) DecodeHopIterators(id []byte,
 		resp := &resps[i]
 
 		err := onionPkt.Decode(req.OnionReader)
-		switch err {
-		case nil:
+		switch {
+		case nil == err:
 			// success
 
-		case sphinx.ErrInvalidOnionVersion:
+		case sphinx.ErrInvalidOnionVersion.Is(err):
 			resp.FailCode = lnwire.CodeInvalidOnionVersion
 			continue
 
-		case sphinx.ErrInvalidOnionKey:
+		case sphinx.ErrInvalidOnionKey.Is(err):
 			resp.FailCode = lnwire.CodeInvalidOnionKey
 			continue
 
@@ -277,19 +277,19 @@ func (p *OnionProcessor) DecodeHopIterators(id []byte,
 		err = tx.ProcessOnionPacket(
 			uint16(i), onionPkt, req.RHash, req.IncomingCltv,
 		)
-		switch err {
-		case nil:
+		switch {
+		case err == nil:
 			// success
 
-		case sphinx.ErrInvalidOnionVersion:
+		case sphinx.ErrInvalidOnionVersion.Is(err):
 			resp.FailCode = lnwire.CodeInvalidOnionVersion
 			continue
 
-		case sphinx.ErrInvalidOnionHMAC:
+		case sphinx.ErrInvalidOnionHMAC.Is(err):
 			resp.FailCode = lnwire.CodeInvalidOnionHmac
 			continue
 
-		case sphinx.ErrInvalidOnionKey:
+		case sphinx.ErrInvalidOnionKey.Is(err):
 			resp.FailCode = lnwire.CodeInvalidOnionKey
 			continue
 
@@ -373,12 +373,12 @@ func (p *OnionProcessor) ExtractErrorEncrypter(ephemeralKey *btcec.PublicKey) (
 		p.router, ephemeralKey,
 	)
 	if err != nil {
-		switch err {
-		case sphinx.ErrInvalidOnionVersion:
+		switch {
+		case sphinx.ErrInvalidOnionVersion.Is(err):
 			return nil, lnwire.CodeInvalidOnionVersion
-		case sphinx.ErrInvalidOnionHMAC:
+		case sphinx.ErrInvalidOnionHMAC.Is(err):
 			return nil, lnwire.CodeInvalidOnionHmac
-		case sphinx.ErrInvalidOnionKey:
+		case sphinx.ErrInvalidOnionKey.Is(err):
 			return nil, lnwire.CodeInvalidOnionKey
 		default:
 			log.Errorf("unable to process onion packet: %v", err)

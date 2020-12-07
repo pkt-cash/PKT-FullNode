@@ -2,10 +2,10 @@ package invoicesrpc
 
 import (
 	"encoding/hex"
-	"errors"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -32,7 +32,6 @@ func decodePayReq(invoice *channeldb.Invoice,
 		}, nil
 	}
 
-	var err error
 	decoded, err := zpay32.Decode(paymentRequest, activeNetParams)
 	if err != nil {
 		return nil, er.Errorf("unable to decode payment "+

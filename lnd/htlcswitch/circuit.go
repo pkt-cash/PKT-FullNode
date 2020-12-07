@@ -207,7 +207,7 @@ func (c *PaymentCircuit) Decode(r io.Reader) er.R {
 		c.ErrorEncrypter = NewMockObfuscator()
 
 	default:
-		return UnknownEncrypterType(encrypterType)
+		return ErrUnknownEncrypterType.Default()
 	}
 
 	return c.ErrorEncrypter.Decode(r)

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 )

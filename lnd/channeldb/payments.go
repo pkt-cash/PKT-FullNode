@@ -119,7 +119,7 @@ var (
 
 	// ErrNoDuplicateNestedBucket is returned if we do not find duplicate
 	// payments in their own sub-bucket.
-	ErrNoDuplicateNestedBucket = er.New("nested duplicate bucket not " +
+	ErrNoDuplicateNestedBucket = Err.CodeWithDetail("ErrNoDuplicateNestedBucket", "nested duplicate bucket not "+
 		"found")
 )
 
@@ -387,7 +387,7 @@ func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, er.R) {
 			htlcBucket,
 		)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 		attemptInfo.AttemptID = aid
 
@@ -398,13 +398,13 @@ func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, er.R) {
 		// Settle info might be nil.
 		htlc.Settle, err = fetchHtlcSettleInfo(htlcBucket)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Failure info might be nil.
 		htlc.Failure, err = fetchHtlcFailInfo(htlcBucket)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		htlcs = append(htlcs, htlc)
@@ -422,7 +422,7 @@ func fetchHtlcAttempts(bucket kvdb.RBucket) ([]HTLCAttempt, er.R) {
 func fetchHtlcAttemptInfo(bucket kvdb.RBucket) (*HTLCAttemptInfo, er.R) {
 	b := bucket.Get(htlcAttemptInfoKey)
 	if b == nil {
-		return nil, errNoAttemptInfo
+		return nil, errNoAttemptInfo.Default()
 	}
 
 	r := bytes.NewReader(b)
@@ -531,8 +531,7 @@ func (db *DB) QueryPayments(query PaymentsQuery) (PaymentsResponse, er.R) {
 		// and hash provided and adds them to our list of payments if
 		// they meet the criteria of our query. It returns the number
 		// of payments that were added.
-		accumulatePayments := func(sequenceKey, hash []byte) (bool,
-			error) {
+		accumulatePayments := func(sequenceKey, hash []byte) (bool, er.R) {
 
 			r := bytes.NewReader(hash)
 			paymentHash, err := deserializePaymentIndex(r)
@@ -641,12 +640,12 @@ func fetchPaymentWithSequenceNumber(tx kvdb.RTx, paymentHash lntypes.Hash,
 		subBucket := dup.NestedReadBucket(k)
 		if subBucket == nil {
 			// We one bucket for each duplicate to be found.
-			return er.E(ErrNoDuplicateNestedBucket)
+			return ErrNoDuplicateNestedBucket.Default()
 		}
 
 		seqBytes := subBucket.Get(duplicatePaymentSequenceKey)
 		if seqBytes == nil {
-			return er.E(err)
+			return err
 		}
 
 		// If this duplicate payment is not the sequence number we are
@@ -657,7 +656,7 @@ func fetchPaymentWithSequenceNumber(tx kvdb.RTx, paymentHash lntypes.Hash,
 
 		duplicatePayment, err = fetchDuplicatePayment(subBucket)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		return nil
@@ -706,7 +705,7 @@ func (db *DB) DeletePayments() er.R {
 			// the payment information, so we return early.
 			paymentStatus, err := fetchPaymentStatus(bucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			// If the status is InFlight, we cannot safely delete
@@ -722,7 +721,7 @@ func (db *DB) DeletePayments() er.R {
 			// payment, including duplicates.
 			seqNrs, err := fetchSequenceNumbers(bucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			deleteIndexes = append(deleteIndexes, seqNrs...)

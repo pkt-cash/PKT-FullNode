@@ -3,6 +3,7 @@ package mock
 import (
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"

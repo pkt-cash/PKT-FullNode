@@ -195,7 +195,7 @@ type newTowerMsg struct {
 	// the caller when handling their request.
 	//
 	// NOTE: This channel must be buffered.
-	errChan chan error
+	errChan chan er.R
 }
 
 // staleTowerMsg is an internal message we'll use within the TowerClient to
@@ -214,7 +214,7 @@ type staleTowerMsg struct {
 	// the caller when handling their request.
 	//
 	// NOTE: This channel must be buffered.
-	errChan chan error
+	errChan chan er.R
 }
 
 // TowerClient is a concrete implementation of the Client interface, offering a
@@ -419,7 +419,7 @@ func (c *TowerClient) buildHighestCommitHeights() {
 // Start initializes the watchtower client by loading or negotiating an active
 // session and then begins processing backup tasks from the request pipeline.
 func (c *TowerClient) Start() er.R {
-	var err error
+	var err er.R
 	c.started.Do(func() {
 		log.Infof("Starting watchtower client")
 
@@ -914,9 +914,9 @@ func (c *TowerClient) dial(localKey keychain.SingleKeyECDH,
 func (c *TowerClient) readMessage(peer wtserver.Peer) (wtwire.Message, er.R) {
 	// Set a read timeout to ensure we drop the connection if nothing is
 	// received in a timely manner.
-	err := peer.SetReadDeadline(time.Now().Add(c.cfg.ReadTimeout))
-	if err != nil {
-		err = er.Errorf("unable to set read deadline: %v", err)
+	errr := peer.SetReadDeadline(time.Now().Add(c.cfg.ReadTimeout))
+	if errr != nil {
+		err := er.Errorf("unable to set read deadline: %v", errr)
 		log.Errorf("Unable to read msg: %v", err)
 		return nil, err
 	}
@@ -958,7 +958,7 @@ func (c *TowerClient) sendMessage(peer wtserver.Peer, msg wtwire.Message) er.R {
 
 	// Set the write deadline for the connection, ensuring we drop the
 	// connection if nothing is sent in a timely manner.
-	err = peer.SetWriteDeadline(time.Now().Add(c.cfg.WriteTimeout))
+	errr := peer.SetWriteDeadline(time.Now().Add(c.cfg.WriteTimeout))
 	if err != nil {
 		err = er.Errorf("unable to set write deadline: %v", err)
 		log.Errorf("Unable to send msg: %v", err)
@@ -968,11 +968,12 @@ func (c *TowerClient) sendMessage(peer wtserver.Peer, msg wtwire.Message) er.R {
 	logMessage(peer, msg, false)
 
 	// Write out the full message to the remote peer.
-	_, err = peer.Write(b.Bytes())
-	if err != nil {
-		log.Errorf("Unable to send msg: %v", err)
+	_, errr = peer.Write(b.Bytes())
+	if errr != nil {
+		log.Errorf("Unable to send msg: %v", errr)
+		return er.E(errr)
 	}
-	return err
+	return nil
 }
 
 // newSessionQueue creates a sessionQueue from a ClientSession loaded from the
@@ -1027,7 +1028,7 @@ func (c *TowerClient) initActiveQueue(s *wtdb.ClientSession) *sessionQueue {
 // included will be considered when dialing it for session negotiations and
 // backups.
 func (c *TowerClient) AddTower(addr *lnwire.NetAddress) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	select {
 	case c.newTowers <- &newTowerMsg{
@@ -1083,7 +1084,7 @@ func (c *TowerClient) handleNewTower(msg *newTowerMsg) er.R {
 // again. If an address is provided, then this call only serves as a way of
 // removing the address from the watchtower instead.
 func (c *TowerClient) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	select {
 	case c.staleTowers <- &staleTowerMsg{

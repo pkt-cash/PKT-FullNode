@@ -3,6 +3,7 @@ package er
 import (
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"regexp"
 	"runtime/debug"
@@ -15,12 +16,16 @@ import (
 // which don't make sense having their own error type
 var GenericErrorType = NewErrorType("er.GenericErrorType")
 
+var ErrUnexpectedEOF = GenericErrorType.CodeWithDefault("ErrUnexpectedEOF", io.ErrUnexpectedEOF)
+var EOF = GenericErrorType.CodeWithDefault("EOF", io.EOF)
+
 // ErrorCode is a code for identifying a particular type of fault.
 // Error codes can have a numeric code identifier or they can not.
 type ErrorCode struct {
-	Detail string
-	Number int
-	Type   *ErrorType
+	Detail         string
+	Number         int
+	Type           *ErrorType
+	defaultWrapped error
 }
 
 type typedErr struct {
@@ -144,11 +149,21 @@ func (e *ErrorType) newErrorCode(
 }
 
 func (c *ErrorCode) Default() R {
-	return c.new("", nil, captureStack())
+	if c.defaultWrapped != nil {
+		return c.new("", ee(c.defaultWrapped), nil)
+	} else {
+		return c.new("", nil, captureStack())
+	}
 }
 
 func (e *ErrorType) Code(info string) *ErrorCode {
 	return e.newErrorCode(0, false, info, "")
+}
+
+func (e *ErrorType) CodeWithDefault(info string, defaultError error) *ErrorCode {
+	ec := e.newErrorCode(0, false, info, "")
+	ec.defaultWrapped = defaultError
+	return ec
 }
 
 func (e *ErrorType) CodeWithDetail(info string, detail string) *ErrorCode {
@@ -351,6 +366,13 @@ func Errorf(format string, a ...interface{}) R {
 	}
 }
 
+func ee(e error) R {
+	return err{
+		e:      e,
+		bstack: captureStack(),
+	}
+}
+
 func E(e error) R {
 	if e == nil {
 		return nil
@@ -361,9 +383,14 @@ func E(e error) R {
 	if en, ok := e.(typedErrAsNative); ok {
 		return en.e
 	}
-	return err{
-		e:      e,
-		bstack: captureStack(),
+	switch e {
+	// We must capture the inner error so that er.Wrapped() does the right thing
+	case io.ErrUnexpectedEOF:
+		return ErrUnexpectedEOF.Default()
+	case io.EOF:
+		return EOF.Default()
+	default:
+		return ee(e)
 	}
 }
 

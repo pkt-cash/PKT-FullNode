@@ -7,13 +7,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TopologyClient represents an intent to receive notifications from the
@@ -342,7 +342,7 @@ func addToTopologyChange(graph *channeldb.ChannelGraph, update *TopologyChange,
 		// being connected.
 		edgeInfo, _, _, err := graph.FetchChannelEdgesByID(m.ChannelID)
 		if err != nil {
-			return errors.Errorf("unable fetch channel edge: %v",
+			return er.Errorf("unable fetch channel edge: %v",
 				err)
 		}
 

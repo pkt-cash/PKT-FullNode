@@ -249,10 +249,10 @@ func newLogScope(chain chainhash.Hash, op wire.OutPoint) (*logScope, er.R) {
 	b := bytes.NewBuffer(l[0:0])
 
 	if _, err := b.Write(chain[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if _, err := b.Write(op.Hash[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if err := util.WriteBin(b, endian, op.Index); err != nil {
@@ -292,24 +292,24 @@ var (
 var (
 	// errScopeBucketNoExist is returned when we can't find the proper
 	// bucket for an arbitrator's scope.
-	errScopeBucketNoExist = er.Errorf("scope bucket not found")
+	errScopeBucketNoExist = Err.CodeWithDetail("errScopeBucketNoExist", "scope bucket not found")
 
 	// errNoContracts is returned when no contracts are found within the
 	// log.
-	errNoContracts = er.Errorf("no stored contracts")
+	errNoContracts = Err.CodeWithDetail("errNoContracts", "no stored contracts")
 
 	// errNoResolutions is returned when the log doesn't contain any active
 	// chain resolutions.
-	errNoResolutions = er.Errorf("no contract resolutions exist")
+	errNoResolutions = Err.CodeWithDetail("errNoResolutions", "no contract resolutions exist")
 
 	// errNoActions is retuned when the log doesn't contain any stored
 	// chain actions.
-	errNoActions = er.Errorf("no chain actions exist")
+	errNoActions = Err.CodeWithDetail("errNoActions", "no chain actions exist")
 
 	// errNoCommitSet is return when the log doesn't contained a CommitSet.
 	// This can happen if the channel hasn't closed yet, or a client is
 	// running an older version that didn't yet write this state.
-	errNoCommitSet = er.Errorf("no commit set exists")
+	errNoCommitSet = Err.CodeWithDetail("errNoCommitSet", "no commit set exists")
 )
 
 // boltArbitratorLog is an implementation of the ArbitratorLog interface backed
@@ -346,12 +346,12 @@ var _ ArbitratorLog = (*boltArbitratorLog)(nil)
 func fetchContractReadBucket(tx kvdb.RTx, scopeKey []byte) (kvdb.RBucket, er.R) {
 	scopeBucket := tx.ReadBucket(scopeKey)
 	if scopeBucket == nil {
-		return nil, errScopeBucketNoExist
+		return nil, errScopeBucketNoExist.Default()
 	}
 
 	contractBucket := scopeBucket.NestedReadBucket(contractsBucketKey)
 	if contractBucket == nil {
-		return nil, errNoContracts
+		return nil, errNoContracts.Default()
 	}
 
 	return contractBucket, nil
@@ -404,7 +404,7 @@ func (b *boltArbitratorLog) writeResolver(contractBucket kvdb.RwBucket,
 		rType = resolverUnilateralSweep
 	}
 	if _, err := buf.Write([]byte{byte(rType)}); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// With the type of the resolver written, we can then write out the raw
@@ -424,7 +424,7 @@ func (b *boltArbitratorLog) writeResolver(contractBucket kvdb.RwBucket,
 func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 	var (
 		s   ArbitratorState
-		err error
+		err er.R
 	)
 
 	if tx != nil {
@@ -438,7 +438,7 @@ func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 		})
 	}
 
-	if err != nil && err != errScopeBucketNoExist {
+	if err != nil && !errScopeBucketNoExist.Is(err) {
 		return s, err
 	}
 
@@ -448,7 +448,7 @@ func (b *boltArbitratorLog) CurrentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 func (b *boltArbitratorLog) currentState(tx kvdb.RTx) (ArbitratorState, er.R) {
 	scopeBucket := tx.ReadBucket(b.scopeKey[:])
 	if scopeBucket == nil {
-		return 0, errScopeBucketNoExist
+		return 0, errScopeBucketNoExist.Default()
 	}
 
 	stateBytes := scopeBucket.Get(stateKey)
@@ -536,7 +536,7 @@ func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, er.R
 			}
 
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			contracts = append(contracts, res)
@@ -545,7 +545,7 @@ func (b *boltArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver, er.R
 	}, func() {
 		contracts = nil
 	})
-	if err != nil && err != errScopeBucketNoExist && err != errNoContracts {
+	if err != nil && !errScopeBucketNoExist.Is(err) && !errNoContracts.Is(err) {
 		return nil, err
 	}
 
@@ -638,7 +638,7 @@ func (b *boltArbitratorLog) LogContractResolutions(c *ContractResolutions) er.R 
 		var b bytes.Buffer
 
 		if _, err := b.Write(c.CommitHash[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// First, we'll write out the commit output's resolution.
@@ -712,12 +712,12 @@ func (b *boltArbitratorLog) FetchContractResolutions() (*ContractResolutions, er
 	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		scopeBucket := tx.ReadBucket(b.scopeKey[:])
 		if scopeBucket == nil {
-			return errScopeBucketNoExist
+			return errScopeBucketNoExist.Default()
 		}
 
 		resolutionBytes := scopeBucket.Get(resolutionsKey)
 		if resolutionBytes == nil {
-			return errNoResolutions
+			return errNoResolutions.Default()
 		}
 
 		resReader := bytes.NewReader(resolutionBytes)
@@ -813,12 +813,12 @@ func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, er.R) {
 	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
 		scopeBucket := tx.ReadBucket(b.scopeKey[:])
 		if scopeBucket == nil {
-			return errScopeBucketNoExist
+			return errScopeBucketNoExist.Default()
 		}
 
 		actionsBucket := scopeBucket.NestedReadBucket(actionsBucketKey)
 		if actionsBucket == nil {
-			return errNoActions
+			return errNoActions.Default()
 		}
 
 		return actionsBucket.ForEach(func(action, htlcBytes []byte) er.R {
@@ -831,7 +831,7 @@ func (b *boltArbitratorLog) FetchChainActions() (ChainActionMap, er.R) {
 			htlcReader := bytes.NewReader(htlcBytes)
 			htlcs, err := channeldb.DeserializeHtlcs(htlcReader)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			actionsMap[chainAction] = htlcs
@@ -881,7 +881,7 @@ func (b *boltArbitratorLog) FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, er
 
 	var c *CommitSet
 	err := kvdb.View(b.db, func(tx kvdb.RTx) er.R {
-		var err error
+		var err er.R
 		c, err = b.fetchConfirmedCommitSet(tx)
 		return err
 	}, func() {
@@ -894,17 +894,16 @@ func (b *boltArbitratorLog) FetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, er
 	return c, nil
 }
 
-func (b *boltArbitratorLog) fetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet,
-	error) {
+func (b *boltArbitratorLog) fetchConfirmedCommitSet(tx kvdb.RTx) (*CommitSet, er.R) {
 
 	scopeBucket := tx.ReadBucket(b.scopeKey[:])
 	if scopeBucket == nil {
-		return nil, errScopeBucketNoExist
+		return nil, errScopeBucketNoExist.Default()
 	}
 
 	commitSetBytes := scopeBucket.Get(commitSetKey)
 	if commitSetBytes == nil {
-		return nil, errNoCommitSet
+		return nil, errNoCommitSet.Default()
 	}
 
 	return decodeCommitSet(bytes.NewReader(commitSetBytes))

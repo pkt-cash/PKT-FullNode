@@ -35,11 +35,11 @@ type Peer interface {
 	// read a message sent by the server. In practice, the connection is
 	// buffered, so the client must read enough from the connection to
 	// support the server adding another reply.
-	SetWriteDeadline(time.Time) er.R
+	SetWriteDeadline(time.Time) error
 
 	// SetReadDeadline specifies the time by which the client must send
 	// another message.
-	SetReadDeadline(time.Time) er.R
+	SetReadDeadline(time.Time) error
 
 	// RemotePub returns the client's public key.
 	RemotePub() *btcec.PublicKey

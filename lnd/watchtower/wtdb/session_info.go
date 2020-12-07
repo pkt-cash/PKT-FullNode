@@ -19,22 +19,22 @@ var (
 
 	// ErrUpdateOutOfOrder is returned when the sequence number is not equal
 	// to the server's LastApplied+1.
-	ErrUpdateOutOfOrder = er.New("update sequence number is not " +
+	ErrUpdateOutOfOrder = Err.CodeWithDetail("ErrUpdateOutOfOrder", "update sequence number is not "+
 		"sequential")
 
 	// ErrLastAppliedReversion is returned when the client echos a
 	// last-applied value that is less than it claimed in a prior update.
-	ErrLastAppliedReversion = er.New("update last applied must be " +
+	ErrLastAppliedReversion = Err.CodeWithDetail("ErrLastAppliedReversion", "update last applied must be "+
 		"non-decreasing")
 
 	// ErrSeqNumAlreadyApplied is returned when the client sends a sequence
 	// number for which they already claim to have an ACK.
-	ErrSeqNumAlreadyApplied = er.New("update sequence number has " +
+	ErrSeqNumAlreadyApplied = Err.CodeWithDetail("ErrSeqNumAlreadyApplied", "update sequence number has "+
 		"already been applied")
 
 	// ErrSessionConsumed is returned if the client tries to send a sequence
 	// number larger than the session's max number of updates.
-	ErrSessionConsumed = er.New("all session updates have been " +
+	ErrSessionConsumed = Err.CodeWithDetail("ErrSessionConsumed", "all session updates have been "+
 		"consumed")
 )
 

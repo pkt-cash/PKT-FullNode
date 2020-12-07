@@ -102,14 +102,14 @@ var profileAddCommand = cli.Command{
 
 func profileAdd(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "add")
+		return er.E(cli.ShowCommandHelp(ctx, "add"))
 	}
 
 	// Load the default profile file or create a new one if it doesn't exist
 	// yet.
 	f, err := loadProfileFile(defaultProfileFile)
 	switch {
-	case err == errNoProfileFile:
+	case errNoProfileFile.Is(err):
 		f = &profileFile{}
 		_ = os.MkdirAll(path.Dir(defaultProfileFile), 0700)
 
@@ -176,7 +176,7 @@ var profileRemoveCommand = cli.Command{
 
 func profileRemove(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "remove")
+		return er.E(cli.ShowCommandHelp(ctx, "remove"))
 	}
 
 	// Load the default profile file.
@@ -251,7 +251,7 @@ var profileSetDefaultCommand = cli.Command{
 
 func profileSetDefault(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "setdefault")
+		return er.E(cli.ShowCommandHelp(ctx, "setdefault"))
 	}
 
 	// Load the default profile file.
@@ -349,7 +349,7 @@ var profileAddMacaroonCommand = cli.Command{
 
 func profileAddMacaroon(ctx *cli.Context) er.R {
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "addmacaroon")
+		return er.E(cli.ShowCommandHelp(ctx, "addmacaroon"))
 	}
 
 	// Load the default profile file or create a new one if it doesn't exist
@@ -420,13 +420,13 @@ func profileAddMacaroon(ctx *cli.Context) er.R {
 
 	// Now load and possibly encrypt the macaroon file.
 	macPath := lncfg.CleanAndExpandPath(ctx.GlobalString("macaroonpath"))
-	macBytes, err := ioutil.ReadFile(macPath)
-	if err != nil {
-		return er.Errorf("unable to read macaroon path: %v", err)
+	macBytes, errr := ioutil.ReadFile(macPath)
+	if errr != nil {
+		return er.Errorf("unable to read macaroon path: %v", errr)
 	}
 	mac := &macaroon.Macaroon{}
-	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return er.Errorf("unable to decode macaroon: %v", err)
+	if errr = mac.UnmarshalBinary(macBytes); errr != nil {
+		return er.Errorf("unable to decode macaroon: %v", errr)
 	}
 	macEntry := &macaroonEntry{
 		Name: macName,

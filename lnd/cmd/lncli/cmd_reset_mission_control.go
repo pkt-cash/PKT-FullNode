@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 
 	"github.com/urfave/cli"
@@ -23,6 +24,6 @@ func resetMissionControl(ctx *cli.Context) er.R {
 
 	req := &routerrpc.ResetMissionControlRequest{}
 	rpcCtx := context.Background()
-	_, err := client.ResetMissionControl(rpcCtx, req)
-	return err
+	_, errr := client.ResetMissionControl(rpcCtx, req)
+	return er.E(errr)
 }

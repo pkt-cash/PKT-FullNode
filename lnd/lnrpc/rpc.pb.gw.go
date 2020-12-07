@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = descriptor.ForMessage
 
-func request_Lightning_WalletBalance_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_WalletBalance_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq WalletBalanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -40,7 +40,7 @@ func request_Lightning_WalletBalance_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_Lightning_WalletBalance_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_WalletBalance_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq WalletBalanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -49,7 +49,7 @@ func local_request_Lightning_WalletBalance_0(ctx context.Context, marshaler runt
 
 }
 
-func request_Lightning_ChannelBalance_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ChannelBalance_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChannelBalanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -58,7 +58,7 @@ func request_Lightning_ChannelBalance_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_ChannelBalance_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ChannelBalance_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChannelBalanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -71,7 +71,7 @@ var (
 	filter_Lightning_GetTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_GetTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetTransactionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -87,7 +87,7 @@ func request_Lightning_GetTransactions_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_GetTransactions_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetTransactions_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetTransactionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -104,7 +104,7 @@ var (
 	filter_Lightning_EstimateFee_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq EstimateFeeRequest
 	var metadata runtime.ServerMetadata
 
@@ -120,7 +120,7 @@ func request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq EstimateFeeRequest
 	var metadata runtime.ServerMetadata
 
@@ -133,7 +133,7 @@ func local_request_Lightning_EstimateFee_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_Lightning_SendCoins_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_SendCoins_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendCoinsRequest
 	var metadata runtime.ServerMetadata
 
@@ -150,7 +150,7 @@ func request_Lightning_SendCoins_0(ctx context.Context, marshaler runtime.Marsha
 
 }
 
-func local_request_Lightning_SendCoins_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_SendCoins_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendCoinsRequest
 	var metadata runtime.ServerMetadata
 
@@ -171,7 +171,7 @@ var (
 	filter_Lightning_ListUnspent_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ListUnspent_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListUnspent_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListUnspentRequest
 	var metadata runtime.ServerMetadata
 
@@ -187,7 +187,7 @@ func request_Lightning_ListUnspent_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_ListUnspent_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListUnspent_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListUnspentRequest
 	var metadata runtime.ServerMetadata
 
@@ -204,7 +204,7 @@ var (
 	filter_Lightning_SubscribeTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_SubscribeTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeTransactionsClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribeTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeTransactionsClient, runtime.ServerMetadata, error) {
 	var protoReq GetTransactionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -228,7 +228,7 @@ func request_Lightning_SubscribeTransactions_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_SendMany_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_SendMany_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendManyRequest
 	var metadata runtime.ServerMetadata
 
@@ -245,7 +245,7 @@ func request_Lightning_SendMany_0(ctx context.Context, marshaler runtime.Marshal
 
 }
 
-func local_request_Lightning_SendMany_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_SendMany_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendManyRequest
 	var metadata runtime.ServerMetadata
 
@@ -266,7 +266,7 @@ var (
 	filter_Lightning_NewAddress_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NewAddressRequest
 	var metadata runtime.ServerMetadata
 
@@ -282,7 +282,7 @@ func request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
-func local_request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NewAddressRequest
 	var metadata runtime.ServerMetadata
 
@@ -295,7 +295,7 @@ func local_request_Lightning_NewAddress_0(ctx context.Context, marshaler runtime
 
 }
 
-func request_Lightning_SignMessage_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_SignMessage_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SignMessageRequest
 	var metadata runtime.ServerMetadata
 
@@ -312,7 +312,7 @@ func request_Lightning_SignMessage_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_SignMessage_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_SignMessage_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SignMessageRequest
 	var metadata runtime.ServerMetadata
 
@@ -329,7 +329,7 @@ func local_request_Lightning_SignMessage_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq VerifyMessageRequest
 	var metadata runtime.ServerMetadata
 
@@ -346,7 +346,7 @@ func request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq VerifyMessageRequest
 	var metadata runtime.ServerMetadata
 
@@ -363,7 +363,7 @@ func local_request_Lightning_VerifyMessage_0(ctx context.Context, marshaler runt
 
 }
 
-func request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ConnectPeerRequest
 	var metadata runtime.ServerMetadata
 
@@ -380,7 +380,7 @@ func request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ConnectPeerRequest
 	var metadata runtime.ServerMetadata
 
@@ -397,7 +397,7 @@ func local_request_Lightning_ConnectPeer_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_Lightning_DisconnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DisconnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DisconnectPeerRequest
 	var metadata runtime.ServerMetadata
 
@@ -424,7 +424,7 @@ func request_Lightning_DisconnectPeer_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_DisconnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DisconnectPeer_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DisconnectPeerRequest
 	var metadata runtime.ServerMetadata
 
@@ -455,7 +455,7 @@ var (
 	filter_Lightning_ListPeers_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPeersRequest
 	var metadata runtime.ServerMetadata
 
@@ -471,7 +471,7 @@ func request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.Marsha
 
 }
 
-func local_request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPeersRequest
 	var metadata runtime.ServerMetadata
 
@@ -484,7 +484,7 @@ func local_request_Lightning_ListPeers_0(ctx context.Context, marshaler runtime.
 
 }
 
-func request_Lightning_SubscribePeerEvents_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribePeerEventsClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribePeerEvents_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribePeerEventsClient, runtime.ServerMetadata, error) {
 	var protoReq PeerEventSubscription
 	var metadata runtime.ServerMetadata
 
@@ -501,7 +501,7 @@ func request_Lightning_SubscribePeerEvents_0(ctx context.Context, marshaler runt
 
 }
 
-func request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -510,7 +510,7 @@ func request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Marshale
 
 }
 
-func local_request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -519,7 +519,7 @@ func local_request_Lightning_GetInfo_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetRecoveryInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -528,7 +528,7 @@ func request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetRecoveryInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -537,7 +537,7 @@ func local_request_Lightning_GetRecoveryInfo_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_PendingChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_PendingChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PendingChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -546,7 +546,7 @@ func request_Lightning_PendingChannels_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_PendingChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_PendingChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PendingChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -559,7 +559,7 @@ var (
 	filter_Lightning_ListChannels_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ListChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -575,7 +575,7 @@ func request_Lightning_ListChannels_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Lightning_ListChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -588,7 +588,7 @@ func local_request_Lightning_ListChannels_0(ctx context.Context, marshaler runti
 
 }
 
-func request_Lightning_SubscribeChannelEvents_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelEventsClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribeChannelEvents_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelEventsClient, runtime.ServerMetadata, error) {
 	var protoReq ChannelEventSubscription
 	var metadata runtime.ServerMetadata
 
@@ -609,7 +609,7 @@ var (
 	filter_Lightning_ClosedChannels_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ClosedChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ClosedChannels_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ClosedChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -625,7 +625,7 @@ func request_Lightning_ClosedChannels_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_ClosedChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ClosedChannels_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ClosedChannelsRequest
 	var metadata runtime.ServerMetadata
 
@@ -638,7 +638,7 @@ func local_request_Lightning_ClosedChannels_0(ctx context.Context, marshaler run
 
 }
 
-func request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq OpenChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -655,7 +655,7 @@ func request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq OpenChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -672,7 +672,7 @@ func local_request_Lightning_OpenChannelSync_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_OpenChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_OpenChannelClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_OpenChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_OpenChannelClient, runtime.ServerMetadata, error) {
 	var protoReq OpenChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -697,7 +697,7 @@ func request_Lightning_OpenChannel_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func request_Lightning_FundingStateStep_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_FundingStateStep_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq FundingTransitionMsg
 	var metadata runtime.ServerMetadata
 
@@ -714,7 +714,7 @@ func request_Lightning_FundingStateStep_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_Lightning_FundingStateStep_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_FundingStateStep_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq FundingTransitionMsg
 	var metadata runtime.ServerMetadata
 
@@ -735,7 +735,7 @@ var (
 	filter_Lightning_CloseChannel_0 = &utilities.DoubleArray{Encoding: map[string]int{"channel_point": 0, "funding_txid_str": 1, "output_index": 2}, Base: []int{1, 1, 1, 2, 0, 0}, Check: []int{0, 1, 2, 2, 3, 4}}
 )
 
-func request_Lightning_CloseChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_CloseChannelClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_CloseChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_CloseChannelClient, runtime.ServerMetadata, error) {
 	var protoReq CloseChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -792,7 +792,7 @@ var (
 	filter_Lightning_AbandonChannel_0 = &utilities.DoubleArray{Encoding: map[string]int{"channel_point": 0, "funding_txid_str": 1, "output_index": 2}, Base: []int{1, 1, 1, 2, 0, 0}, Check: []int{0, 1, 2, 2, 3, 4}}
 )
 
-func request_Lightning_AbandonChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_AbandonChannel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AbandonChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -837,7 +837,7 @@ func request_Lightning_AbandonChannel_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_AbandonChannel_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_AbandonChannel_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AbandonChannelRequest
 	var metadata runtime.ServerMetadata
 
@@ -879,7 +879,7 @@ func local_request_Lightning_AbandonChannel_0(ctx context.Context, marshaler run
 
 }
 
-func request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendRequest
 	var metadata runtime.ServerMetadata
 
@@ -896,7 +896,7 @@ func request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendRequest
 	var metadata runtime.ServerMetadata
 
@@ -913,7 +913,7 @@ func local_request_Lightning_SendPaymentSync_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendToRouteRequest
 	var metadata runtime.ServerMetadata
 
@@ -930,7 +930,7 @@ func request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SendToRouteRequest
 	var metadata runtime.ServerMetadata
 
@@ -947,7 +947,7 @@ func local_request_Lightning_SendToRouteSync_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_AddInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_AddInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq Invoice
 	var metadata runtime.ServerMetadata
 
@@ -964,7 +964,7 @@ func request_Lightning_AddInvoice_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
-func local_request_Lightning_AddInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_AddInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq Invoice
 	var metadata runtime.ServerMetadata
 
@@ -985,7 +985,7 @@ var (
 	filter_Lightning_ListInvoices_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ListInvoices_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListInvoices_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListInvoiceRequest
 	var metadata runtime.ServerMetadata
 
@@ -1001,7 +1001,7 @@ func request_Lightning_ListInvoices_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Lightning_ListInvoices_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListInvoices_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListInvoiceRequest
 	var metadata runtime.ServerMetadata
 
@@ -1018,7 +1018,7 @@ var (
 	filter_Lightning_LookupInvoice_0 = &utilities.DoubleArray{Encoding: map[string]int{"r_hash_str": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_Lightning_LookupInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_LookupInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PaymentHash
 	var metadata runtime.ServerMetadata
 
@@ -1052,7 +1052,7 @@ func request_Lightning_LookupInvoice_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_Lightning_LookupInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_LookupInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PaymentHash
 	var metadata runtime.ServerMetadata
 
@@ -1087,7 +1087,7 @@ var (
 	filter_Lightning_SubscribeInvoices_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_SubscribeInvoices_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeInvoicesClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribeInvoices_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeInvoicesClient, runtime.ServerMetadata, error) {
 	var protoReq InvoiceSubscription
 	var metadata runtime.ServerMetadata
 
@@ -1111,7 +1111,7 @@ func request_Lightning_SubscribeInvoices_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_Lightning_DecodePayReq_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DecodePayReq_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PayReqString
 	var metadata runtime.ServerMetadata
 
@@ -1138,7 +1138,7 @@ func request_Lightning_DecodePayReq_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Lightning_DecodePayReq_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DecodePayReq_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PayReqString
 	var metadata runtime.ServerMetadata
 
@@ -1169,7 +1169,7 @@ var (
 	filter_Lightning_ListPayments_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_ListPayments_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListPayments_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPaymentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1185,7 +1185,7 @@ func request_Lightning_ListPayments_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Lightning_ListPayments_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListPayments_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPaymentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1198,7 +1198,7 @@ func local_request_Lightning_ListPayments_0(ctx context.Context, marshaler runti
 
 }
 
-func request_Lightning_DeleteAllPayments_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DeleteAllPayments_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteAllPaymentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1207,7 +1207,7 @@ func request_Lightning_DeleteAllPayments_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_Lightning_DeleteAllPayments_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DeleteAllPayments_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteAllPaymentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1220,7 +1220,7 @@ var (
 	filter_Lightning_DescribeGraph_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_DescribeGraph_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DescribeGraph_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChannelGraphRequest
 	var metadata runtime.ServerMetadata
 
@@ -1236,7 +1236,7 @@ func request_Lightning_DescribeGraph_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_Lightning_DescribeGraph_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DescribeGraph_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChannelGraphRequest
 	var metadata runtime.ServerMetadata
 
@@ -1253,7 +1253,7 @@ var (
 	filter_Lightning_GetNodeMetrics_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NodeMetricsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1269,7 +1269,7 @@ func request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NodeMetricsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1282,7 +1282,7 @@ func local_request_Lightning_GetNodeMetrics_0(ctx context.Context, marshaler run
 
 }
 
-func request_Lightning_GetChanInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetChanInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1309,7 +1309,7 @@ func request_Lightning_GetChanInfo_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_GetChanInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetChanInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1340,7 +1340,7 @@ var (
 	filter_Lightning_GetNodeInfo_0 = &utilities.DoubleArray{Encoding: map[string]int{"pub_key": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_Lightning_GetNodeInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetNodeInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NodeInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1374,7 +1374,7 @@ func request_Lightning_GetNodeInfo_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_GetNodeInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetNodeInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NodeInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1409,7 +1409,7 @@ var (
 	filter_Lightning_QueryRoutes_0 = &utilities.DoubleArray{Encoding: map[string]int{"pub_key": 0, "amt": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 )
 
-func request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq QueryRoutesRequest
 	var metadata runtime.ServerMetadata
 
@@ -1454,7 +1454,7 @@ func request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func local_request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq QueryRoutesRequest
 	var metadata runtime.ServerMetadata
 
@@ -1496,7 +1496,7 @@ func local_request_Lightning_QueryRoutes_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NetworkInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1505,7 +1505,7 @@ func request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq NetworkInfoRequest
 	var metadata runtime.ServerMetadata
 
@@ -1514,7 +1514,7 @@ func local_request_Lightning_GetNetworkInfo_0(ctx context.Context, marshaler run
 
 }
 
-func request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq StopRequest
 	var metadata runtime.ServerMetadata
 
@@ -1531,7 +1531,7 @@ func request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
-func local_request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq StopRequest
 	var metadata runtime.ServerMetadata
 
@@ -1548,7 +1548,7 @@ func local_request_Lightning_StopDaemon_0(ctx context.Context, marshaler runtime
 
 }
 
-func request_Lightning_SubscribeChannelGraph_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelGraphClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribeChannelGraph_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelGraphClient, runtime.ServerMetadata, error) {
 	var protoReq GraphTopologySubscription
 	var metadata runtime.ServerMetadata
 
@@ -1565,7 +1565,7 @@ func request_Lightning_SubscribeChannelGraph_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DebugLevelRequest
 	var metadata runtime.ServerMetadata
 
@@ -1582,7 +1582,7 @@ func request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
-func local_request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DebugLevelRequest
 	var metadata runtime.ServerMetadata
 
@@ -1599,7 +1599,7 @@ func local_request_Lightning_DebugLevel_0(ctx context.Context, marshaler runtime
 
 }
 
-func request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq FeeReportRequest
 	var metadata runtime.ServerMetadata
 
@@ -1608,7 +1608,7 @@ func request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.Marsha
 
 }
 
-func local_request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq FeeReportRequest
 	var metadata runtime.ServerMetadata
 
@@ -1617,7 +1617,7 @@ func local_request_Lightning_FeeReport_0(ctx context.Context, marshaler runtime.
 
 }
 
-func request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PolicyUpdateRequest
 	var metadata runtime.ServerMetadata
 
@@ -1634,7 +1634,7 @@ func request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq PolicyUpdateRequest
 	var metadata runtime.ServerMetadata
 
@@ -1651,7 +1651,7 @@ func local_request_Lightning_UpdateChannelPolicy_0(ctx context.Context, marshale
 
 }
 
-func request_Lightning_ForwardingHistory_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ForwardingHistory_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ForwardingHistoryRequest
 	var metadata runtime.ServerMetadata
 
@@ -1668,7 +1668,7 @@ func request_Lightning_ForwardingHistory_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_Lightning_ForwardingHistory_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ForwardingHistory_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ForwardingHistoryRequest
 	var metadata runtime.ServerMetadata
 
@@ -1689,7 +1689,7 @@ var (
 	filter_Lightning_ExportChannelBackup_0 = &utilities.DoubleArray{Encoding: map[string]int{"chan_point": 0, "funding_txid_str": 1, "output_index": 2}, Base: []int{1, 1, 1, 2, 0, 0}, Check: []int{0, 1, 2, 2, 3, 4}}
 )
 
-func request_Lightning_ExportChannelBackup_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ExportChannelBackup_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ExportChannelBackupRequest
 	var metadata runtime.ServerMetadata
 
@@ -1734,7 +1734,7 @@ func request_Lightning_ExportChannelBackup_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_Lightning_ExportChannelBackup_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ExportChannelBackup_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ExportChannelBackupRequest
 	var metadata runtime.ServerMetadata
 
@@ -1776,7 +1776,7 @@ func local_request_Lightning_ExportChannelBackup_0(ctx context.Context, marshale
 
 }
 
-func request_Lightning_ExportAllChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ExportAllChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanBackupExportRequest
 	var metadata runtime.ServerMetadata
 
@@ -1785,7 +1785,7 @@ func request_Lightning_ExportAllChannelBackups_0(ctx context.Context, marshaler 
 
 }
 
-func local_request_Lightning_ExportAllChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ExportAllChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanBackupExportRequest
 	var metadata runtime.ServerMetadata
 
@@ -1794,7 +1794,7 @@ func local_request_Lightning_ExportAllChannelBackups_0(ctx context.Context, mars
 
 }
 
-func request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanBackupSnapshot
 	var metadata runtime.ServerMetadata
 
@@ -1811,7 +1811,7 @@ func request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChanBackupSnapshot
 	var metadata runtime.ServerMetadata
 
@@ -1828,7 +1828,7 @@ func local_request_Lightning_VerifyChanBackup_0(ctx context.Context, marshaler r
 
 }
 
-func request_Lightning_RestoreChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_RestoreChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq RestoreChanBackupRequest
 	var metadata runtime.ServerMetadata
 
@@ -1845,7 +1845,7 @@ func request_Lightning_RestoreChannelBackups_0(ctx context.Context, marshaler ru
 
 }
 
-func local_request_Lightning_RestoreChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_RestoreChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq RestoreChanBackupRequest
 	var metadata runtime.ServerMetadata
 
@@ -1862,7 +1862,7 @@ func local_request_Lightning_RestoreChannelBackups_0(ctx context.Context, marsha
 
 }
 
-func request_Lightning_SubscribeChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelBackupsClient, runtime.ServerMetadata, er.R) {
+func request_Lightning_SubscribeChannelBackups_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (Lightning_SubscribeChannelBackupsClient, runtime.ServerMetadata, error) {
 	var protoReq ChannelBackupSubscription
 	var metadata runtime.ServerMetadata
 
@@ -1879,7 +1879,7 @@ func request_Lightning_SubscribeChannelBackups_0(ctx context.Context, marshaler 
 
 }
 
-func request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq BakeMacaroonRequest
 	var metadata runtime.ServerMetadata
 
@@ -1896,7 +1896,7 @@ func request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq BakeMacaroonRequest
 	var metadata runtime.ServerMetadata
 
@@ -1913,7 +1913,7 @@ func local_request_Lightning_BakeMacaroon_0(ctx context.Context, marshaler runti
 
 }
 
-func request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListMacaroonIDsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1922,7 +1922,7 @@ func request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListMacaroonIDsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1931,7 +1931,7 @@ func local_request_Lightning_ListMacaroonIDs_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteMacaroonIDRequest
 	var metadata runtime.ServerMetadata
 
@@ -1958,7 +1958,7 @@ func request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteMacaroonIDRequest
 	var metadata runtime.ServerMetadata
 
@@ -1985,7 +1985,7 @@ func local_request_Lightning_DeleteMacaroonID_0(ctx context.Context, marshaler r
 
 }
 
-func request_Lightning_ListPermissions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Lightning_ListPermissions_0(ctx context.Context, marshaler runtime.Marshaler, client LightningClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPermissionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1994,7 +1994,7 @@ func request_Lightning_ListPermissions_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_Lightning_ListPermissions_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Lightning_ListPermissions_0(ctx context.Context, marshaler runtime.Marshaler, server LightningServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListPermissionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -2006,7 +2006,7 @@ func local_request_Lightning_ListPermissions_0(ctx context.Context, marshaler ru
 // RegisterLightningHandlerServer registers the http handlers for service Lightning to "mux".
 // UnaryRPC     :call LightningServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterLightningHandlerServer(ctx context.Context, mux *runtime.ServeMux, server LightningServer) er.R {
+func RegisterLightningHandlerServer(ctx context.Context, mux *runtime.ServeMux, server LightningServer) error {
 
 	mux.Handle("GET", pattern_Lightning_WalletBalance_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -3054,7 +3054,7 @@ func RegisterLightningHandlerFromEndpoint(ctx context.Context, mux *runtime.Serv
 
 // RegisterLightningHandler registers the http handlers for service Lightning to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterLightningHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
+func RegisterLightningHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterLightningHandlerClient(ctx, mux, NewLightningClient(conn))
 }
 
@@ -3063,7 +3063,7 @@ func RegisterLightningHandler(ctx context.Context, mux *runtime.ServeMux, conn *
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "LightningClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "LightningClient" to call the correct interceptors.
-func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, client LightningClient) er.R {
+func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, client LightningClient) error {
 
 	mux.Handle("GET", pattern_Lightning_WalletBalance_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -3201,7 +3201,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribeTransactions_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribeTransactions_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3361,7 +3361,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribePeerEvents_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribePeerEvents_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3461,7 +3461,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribeChannelEvents_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribeChannelEvents_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3521,7 +3521,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_OpenChannel_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_OpenChannel_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3561,7 +3561,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_CloseChannel_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_CloseChannel_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3701,7 +3701,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribeInvoices_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribeInvoices_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3921,7 +3921,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribeChannelGraph_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribeChannelGraph_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -4101,7 +4101,7 @@ func RegisterLightningHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Lightning_SubscribeChannelBackups_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Lightning_SubscribeChannelBackups_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 

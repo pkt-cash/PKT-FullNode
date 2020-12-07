@@ -95,7 +95,7 @@ func (d *DecayedLog) Start() er.R {
 	}
 
 	// Open the boltdb for use.
-	var err error
+	var err er.R
 	d.db, err = kvdb.GetBoltBackend(d.cfg)
 	if err != nil {
 		return er.Errorf("could not open boltdb: %v", err)

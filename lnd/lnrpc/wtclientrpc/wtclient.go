@@ -58,7 +58,8 @@ var (
 
 	// ErrWtclientNotActive signals that RPC calls cannot be processed
 	// because the watchtower client is not active.
-	ErrWtclientNotActive = er.GenericErrorType.CodeWithDetail("ErrWtclientNotActive", "watchtower client not active")
+	ErrWtclientNotActive = er.GenericErrorType.CodeWithDetail("ErrWtclientNotActive",
+		"watchtower client not active")
 )
 
 // WatchtowerClient is the RPC server we'll use to interact with the backing
@@ -133,7 +134,7 @@ func (c *WatchtowerClient) RegisterWithRestServer(ctx context.Context,
 	// all our methods are routed properly.
 	err := RegisterWatchtowerClientHandlerFromEndpoint(ctx, mux, dest, opts)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	return nil
@@ -153,22 +154,22 @@ func (c *WatchtowerClient) isActive() er.R {
 // included will be considered when dialing it for session negotiations and
 // backups.
 func (c *WatchtowerClient) AddTower(ctx context.Context,
-	req *AddTowerRequest) (*AddTowerResponse, er.R) {
+	req *AddTowerRequest) (*AddTowerResponse, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	pubKey, err := btcec.ParsePubKey(req.Pubkey, btcec.S256())
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 	addr, errr := lncfg.ParseAddressString(
 		req.Address, strconv.Itoa(watchtower.DefaultPeerPort),
 		c.cfg.Resolver,
 	)
 	if errr != nil {
-		return nil, er.Errorf("invalid address %v: %v", req.Address, errr)
+		return nil, er.Native(er.Errorf("invalid address %v: %v", req.Address, errr))
 	}
 
 	towerAddr := &lnwire.NetAddress{
@@ -176,7 +177,7 @@ func (c *WatchtowerClient) AddTower(ctx context.Context,
 		Address:     addr,
 	}
 	if err := c.cfg.Client.AddTower(towerAddr); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	return &AddTowerResponse{}, nil
@@ -187,32 +188,31 @@ func (c *WatchtowerClient) AddTower(ctx context.Context,
 // again. If an address is provided, then this RPC only serves as a way of
 // removing the address from the watchtower instead.
 func (c *WatchtowerClient) RemoveTower(ctx context.Context,
-	req *RemoveTowerRequest) (*RemoveTowerResponse, er.R) {
+	req *RemoveTowerRequest) (*RemoveTowerResponse, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	pubKey, err := btcec.ParsePubKey(req.Pubkey, btcec.S256())
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	var addr net.Addr
 	if req.Address != "" {
-		var errr error
-		addr, errr = lncfg.ParseAddressString(
+		addr, err = lncfg.ParseAddressString(
 			req.Address, strconv.Itoa(watchtower.DefaultPeerPort),
 			c.cfg.Resolver,
 		)
-		if errr != nil {
-			return nil, er.Errorf("unable to parse tower "+
-				"address %v: %v", req.Address, errr)
+		if err != nil {
+			return nil, er.Native(er.Errorf("unable to parse tower "+
+				"address %v: %v", req.Address, err))
 		}
 	}
 
 	if err := c.cfg.Client.RemoveTower(pubKey, addr); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	return &RemoveTowerResponse{}, nil
@@ -220,15 +220,15 @@ func (c *WatchtowerClient) RemoveTower(ctx context.Context,
 
 // ListTowers returns the list of watchtowers registered with the client.
 func (c *WatchtowerClient) ListTowers(ctx context.Context,
-	req *ListTowersRequest) (*ListTowersResponse, er.R) {
+	req *ListTowersRequest) (*ListTowersResponse, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	towers, err := c.cfg.Client.RegisteredTowers()
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	rpcTowers := make([]*Tower, 0, len(towers))
@@ -242,20 +242,20 @@ func (c *WatchtowerClient) ListTowers(ctx context.Context,
 
 // GetTowerInfo retrieves information for a registered watchtower.
 func (c *WatchtowerClient) GetTowerInfo(ctx context.Context,
-	req *GetTowerInfoRequest) (*Tower, er.R) {
+	req *GetTowerInfoRequest) (*Tower, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	pubKey, err := btcec.ParsePubKey(req.Pubkey, btcec.S256())
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
-	tower, errr := c.cfg.Client.LookupTower(pubKey)
-	if errr != nil {
-		return nil, errr
+	tower, err := c.cfg.Client.LookupTower(pubKey)
+	if err != nil {
+		return nil, er.Native(err)
 	}
 
 	return marshallTower(tower, req.IncludeSessions), nil
@@ -263,10 +263,10 @@ func (c *WatchtowerClient) GetTowerInfo(ctx context.Context,
 
 // Stats returns the in-memory statistics of the client since startup.
 func (c *WatchtowerClient) Stats(ctx context.Context,
-	req *StatsRequest) (*StatsResponse, er.R) {
+	req *StatsRequest) (*StatsResponse, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	stats := c.cfg.Client.Stats()
@@ -281,10 +281,10 @@ func (c *WatchtowerClient) Stats(ctx context.Context,
 
 // Policy returns the active watchtower client policy configuration.
 func (c *WatchtowerClient) Policy(ctx context.Context,
-	req *PolicyRequest) (*PolicyResponse, er.R) {
+	req *PolicyRequest) (*PolicyResponse, error) {
 
 	if err := c.isActive(); err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	policy := c.cfg.Client.Policy()

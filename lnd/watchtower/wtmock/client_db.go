@@ -93,7 +93,7 @@ func (m *ClientDB) RemoveTower(pubKey *btcec.PublicKey, addr net.Addr) er.R {
 	defer m.mu.Unlock()
 
 	tower, err := m.loadTower(pubKey)
-	if err == wtdb.ErrTowerNotFound {
+	if wtdb.ErrTowerNotFound.Is(err) {
 		return nil
 	}
 	if err != nil {
@@ -293,7 +293,7 @@ func (m *ClientDB) CommitUpdate(id *wtdb.SessionID,
 	// Fail if session doesn't exist.
 	session, ok := m.activeSessions[*id]
 	if !ok {
-		return 0, wtdb.ErrClientSessionNotFound
+		return 0, wtdb.ErrClientSessionNotFound.Default()
 	}
 
 	// Check if an update has already been committed for this state.
@@ -306,13 +306,13 @@ func (m *ClientDB) CommitUpdate(id *wtdb.SessionID,
 			}
 
 			// Otherwise, fail since the breach hint doesn't match.
-			return 0, wtdb.ErrUpdateAlreadyCommitted
+			return 0, wtdb.ErrUpdateAlreadyCommitted.Default()
 		}
 	}
 
 	// Sequence number must increment.
 	if update.SeqNum != session.SeqNum+1 {
-		return 0, wtdb.ErrCommitUnorderedUpdate
+		return 0, wtdb.ErrCommitUnorderedUpdate.Default()
 	}
 
 	// Save the update and increment the sequence number.

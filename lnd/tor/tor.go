@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pkt-cash/pktd/connmgr"
 	"github.com/miekg/dns"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/connmgr"
 	"golang.org/x/net/proxy"
 )
 
@@ -92,7 +93,7 @@ func dial(address, socksAddr string, streamIsolation bool,
 	if streamIsolation {
 		var b [16]byte
 		if _, err := rand.Read(b[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		auth = &proxy.Auth{
@@ -105,10 +106,11 @@ func dial(address, socksAddr string, streamIsolation bool,
 	proxyDialer := &net.Dialer{Timeout: timeout}
 	dialer, err := proxy.SOCKS5("tcp", socksAddr, auth, proxyDialer)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
-	return dialer.Dial("tcp", address)
+	a, e := dialer.Dial("tcp", address)
+	return a, er.E(e)
 }
 
 // LookupHost performs DNS resolution on a given host via Tor's native resolver.
@@ -147,11 +149,11 @@ func LookupSRV(service, proto, name, socksAddr,
 
 	// Send the request to the DNS server and read its response.
 	if err := dnsConn.WriteMsg(msg); err != nil {
-		return "", nil, err
+		return "", nil, er.E(err)
 	}
-	resp, err := dnsConn.ReadMsg()
-	if err != nil {
-		return "", nil, err
+	resp, errr := dnsConn.ReadMsg()
+	if errr != nil {
+		return "", nil, er.E(errr)
 	}
 
 	// We'll fail if we were unable to query the DNS server for our record.
@@ -179,9 +181,9 @@ func LookupSRV(service, proto, name, socksAddr,
 // standard system resolver provided in the `net` package.
 func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, er.R) {
 	// Split host:port since the lookup function does not take a port.
-	host, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return nil, err
+	host, port, errr := net.SplitHostPort(address)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	ip, err := LookupHost(host, socksAddr)
@@ -189,9 +191,9 @@ func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, er.R) {
 		return nil, err
 	}
 
-	p, err := strconv.Atoi(port)
-	if err != nil {
-		return nil, err
+	p, errr := strconv.Atoi(port)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return &net.TCPAddr{
@@ -202,14 +204,14 @@ func ResolveTCPAddr(address, socksAddr string) (*net.TCPAddr, er.R) {
 
 // ParseAddr parses an address from its string format to a net.Addr.
 func ParseAddr(address, socksAddr string) (net.Addr, er.R) {
-	host, portStr, err := net.SplitHostPort(address)
-	if err != nil {
-		return nil, err
+	host, portStr, errr := net.SplitHostPort(address)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		return nil, err
+	port, errr := strconv.Atoi(portStr)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	if IsOnionHost(host) {

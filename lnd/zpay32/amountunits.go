@@ -1,16 +1,16 @@
 package zpay32
 
 import (
-	"fmt"
 	"strconv"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
 var (
 	// toMSat is a map from a unit to a function that converts an amount
 	// of that unit to millisatoshis.
-	toMSat = map[byte]func(uint64) (lnwire.MilliSatoshi, error){
+	toMSat = map[byte]func(uint64) (lnwire.MilliSatoshi, er.R){
 		'm': mBtcToMSat,
 		'u': uBtcToMSat,
 		'n': nBtcToMSat,
@@ -19,7 +19,7 @@ var (
 
 	// fromMSat is a map from a unit to a function that converts an amount
 	// in millisatoshis to an amount of that unit.
-	fromMSat = map[byte]func(lnwire.MilliSatoshi) (uint64, error){
+	fromMSat = map[byte]func(lnwire.MilliSatoshi) (uint64, er.R){
 		'm': mSatToMBtc,
 		'u': mSatToUBtc,
 		'n': mSatToNBtc,
@@ -99,7 +99,7 @@ func decodeAmount(amount string) (lnwire.MilliSatoshi, er.R) {
 	if digit >= 0 && digit <= 9 {
 		btc, err := strconv.ParseUint(amount, 10, 64)
 		if err != nil {
-			return 0, err
+			return 0, er.E(err)
 		}
 		return lnwire.MilliSatoshi(btc) * mSatPerBtc, nil
 	}
@@ -118,7 +118,7 @@ func decodeAmount(amount string) (lnwire.MilliSatoshi, er.R) {
 
 	am, err := strconv.ParseUint(num, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, er.E(err)
 	}
 
 	return conv(am)

@@ -3,6 +3,7 @@ package pool
 import (
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/buffer"
 )
 
@@ -44,7 +45,7 @@ func (r *Read) Stop() er.R {
 // Submit accepts a function closure that provides access to the fresh
 // buffer.Read object. The function's execution will be allocated to one of the
 // underlying Worker pool's goroutines.
-func (r *Read) Submit(inner func(*buffer.Read) error) er.R {
+func (r *Read) Submit(inner func(*buffer.Read) er.R) er.R {
 	return r.workerPool.Submit(func(s WorkerState) er.R {
 		state := s.(*readWorkerState)
 		return inner(state.readBuf)

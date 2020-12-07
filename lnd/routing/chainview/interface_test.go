@@ -767,9 +767,9 @@ var interfaceImpls = []struct {
 	{
 		name: "p2p_neutrino",
 		chainViewInit: func(_ rpcclient.ConnConfig, p2pAddr string) (func(), FilteredChainView, er.R) {
-			spvDir, err := ioutil.TempDir("", "neutrino")
-			if err != nil {
-				return nil, nil, err
+			spvDir, errr := ioutil.TempDir("", "neutrino")
+			if errr != nil {
+				return nil, nil, er.E(errr)
 			}
 
 			dbName := filepath.Join(spvDir, "neutrino.db")

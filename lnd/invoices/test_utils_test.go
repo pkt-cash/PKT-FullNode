@@ -3,7 +3,6 @@ package invoices
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
@@ -114,9 +115,9 @@ var (
 func newTestChannelDB(clock clock.Clock) (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.

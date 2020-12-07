@@ -155,7 +155,7 @@ var (
 
 	// ErrSyncTransitionTimeout is an error returned when we've timed out
 	// attempting to perform a sync transition.
-	ErrSyncTransitionTimeout = er.New("timed out attempting to " +
+	ErrSyncTransitionTimeout = Err.CodeWithDetail("ErrSyncTransitionTimeout", "timed out attempting to "+
 		"transition sync type")
 
 	// zeroTimestamp is the timestamp we'll use when we want to indicate to
@@ -166,7 +166,7 @@ var (
 // syncTransitionReq encapsulates a request for a gossip syncer sync transition.
 type syncTransitionReq struct {
 	newSyncType SyncerType
-	errChan     chan error
+	errChan     chan er.R
 }
 
 // historicalSyncReq encapsulates a request for a gossip syncer to perform a
@@ -584,7 +584,7 @@ func (g *GossipSyncer) replyHandler() {
 			case ErrGossipSyncerExiting.Is(err):
 				return
 
-			case err == lnpeer.ErrPeerExiting:
+			case lnpeer.ErrPeerExiting.Is(err):
 				return
 
 			case err != nil:
@@ -1136,7 +1136,7 @@ func (g *GossipSyncer) ApplyGossipFilter(filter *lnwire.GossipTimestampRange) er
 			case ErrGossipSyncerExiting.Is(err):
 				return
 
-			case err == lnpeer.ErrPeerExiting:
+			case lnpeer.ErrPeerExiting.Is(err):
 				return
 
 			case err != nil:
@@ -1170,7 +1170,7 @@ func (g *GossipSyncer) FilterGossipMsgs(msgs ...msgWithSenders) {
 	// TODO(roasbeef): need to ensure that peer still online...send msg to
 	// gossiper on peer termination to signal peer disconnect?
 
-	var err error
+	var err er.R
 
 	// Before we filter out the messages, we'll construct an index over the
 	// set of channel announcements and channel updates. This will allow us
@@ -1324,7 +1324,7 @@ func (g *GossipSyncer) ResetSyncedSignal() chan struct{} {
 // NOTE: This can only be done once the gossip syncer has reached its final
 // chansSynced state.
 func (g *GossipSyncer) ProcessSyncTransition(newSyncType SyncerType) er.R {
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	select {
 	case g.syncTransitionReqs <- &syncTransitionReq{
 		newSyncType: newSyncType,

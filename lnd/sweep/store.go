@@ -39,7 +39,8 @@ var (
 
 	byteOrder = binary.BigEndian
 
-	errNoTxHashesBucket = er.New("tx hashes bucket does not exist")
+	errNoTxHashesBucket = Err.CodeWithDetail("errNoTxHashesBucket",
+		"tx hashes bucket does not exist")
 )
 
 // SweeperStore stores published txes.
@@ -111,11 +112,11 @@ func migrateTxHashes(tx kvdb.RwTx, txHashesBucket kvdb.RwBucket,
 	// Compose chain bucket key.
 	var b bytes.Buffer
 	if _, err := b.Write(utxnChainPrefix); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	if _, err := b.Write(chainHash[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	// Get chain bucket if exists.
@@ -177,7 +178,7 @@ func (s *sweeperStore) NotifyPublishTx(sweepTx *wire.MsgTx) er.R {
 
 		txHashesBucket := tx.ReadWriteBucket(txHashesBucketKey)
 		if txHashesBucket == nil {
-			return errNoTxHashesBucket
+			return errNoTxHashesBucket.Default()
 		}
 
 		var b bytes.Buffer
@@ -236,7 +237,7 @@ func (s *sweeperStore) IsOurTx(hash chainhash.Hash) (bool, er.R) {
 	err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		txHashesBucket := tx.ReadBucket(txHashesBucketKey)
 		if txHashesBucket == nil {
-			return errNoTxHashesBucket
+			return errNoTxHashesBucket.Default()
 		}
 
 		ours = txHashesBucket.Get(hash[:]) != nil
@@ -259,7 +260,7 @@ func (s *sweeperStore) ListSweeps() ([]chainhash.Hash, er.R) {
 	if err := kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		txHashesBucket := tx.ReadBucket(txHashesBucketKey)
 		if txHashesBucket == nil {
-			return errNoTxHashesBucket
+			return errNoTxHashesBucket.Default()
 		}
 
 		return txHashesBucket.ForEach(func(resKey, _ []byte) er.R {

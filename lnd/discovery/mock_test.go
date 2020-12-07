@@ -1,15 +1,15 @@
 package discovery
 
 import (
-	"errors"
 	"net"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // mockPeer implements the lnpeer.Peer interface and is used to test the

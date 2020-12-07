@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
 	"github.com/stretchr/testify/require"
@@ -34,9 +35,9 @@ var (
 // DB file is returned, because the service will open the file
 // and read the store on its own.
 func setupTestRootKeyStorage(t *testing.T) string {
-	tempDir, err := ioutil.TempDir("", "macaroonstore-")
-	if err != nil {
-		t.Fatalf("Error creating temp dir: %v", err)
+	tempDir, errr := ioutil.TempDir("", "macaroonstore-")
+	if errr != nil {
+		t.Fatalf("Error creating temp dir: %v", errr)
 	}
 	db, err := kvdb.Create(
 		kvdb.BoltBackendName, path.Join(tempDir, "macaroons.db"), true,
@@ -80,7 +81,7 @@ func TestNewService(t *testing.T) {
 
 	// Third, check if the created service can bake macaroons.
 	_, err = service.NewMacaroon(context.TODO(), nil, testOperation)
-	if err != macaroons.ErrMissingRootKeyID {
+	if !macaroons.ErrMissingRootKeyID.Is(err) {
 		t.Fatalf("Received %v instead of ErrMissingRootKeyID", err)
 	}
 
@@ -138,9 +139,9 @@ func TestValidateMacaroon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating macaroon from service: %v", err)
 	}
-	macaroonBinary, err := macaroon.M().MarshalBinary()
-	if err != nil {
-		t.Fatalf("Error serializing macaroon: %v", err)
+	macaroonBinary, errr := macaroon.M().MarshalBinary()
+	if errr != nil {
+		t.Fatalf("Error serializing macaroon: %v", errr)
 	}
 
 	// Because the macaroons are always passed in a context, we need to

@@ -102,7 +102,7 @@ func (d *DB) ReadFlapCount(pubkey route.Vertex) (*FlapCount, er.R) {
 		}
 
 		var (
-			err error
+			err er.R
 			r   = bytes.NewReader(flapBytes)
 		)
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/buffer"
 )
 
@@ -47,7 +48,7 @@ func (w *Write) Stop() er.R {
 // Submit accepts a function closure that provides access to a fresh
 // bytes.Buffer backed by a buffer.Write object. The function's execution will
 // be allocated to one of the underlying Worker pool's goroutines.
-func (w *Write) Submit(inner func(*bytes.Buffer) error) er.R {
+func (w *Write) Submit(inner func(*bytes.Buffer) er.R) er.R {
 	return w.workerPool.Submit(func(s WorkerState) er.R {
 		state := s.(*writeWorkerState)
 		return inner(state.buf)

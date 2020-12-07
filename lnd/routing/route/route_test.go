@@ -2,10 +2,10 @@ package route
 
 import (
 	"bytes"
-	"encoding/hex"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
 )
@@ -32,7 +32,7 @@ func TestRouteTotalFees(t *testing.T) {
 	// Make sure empty route won't be allowed in the constructor.
 	amt := lnwire.MilliSatoshi(1000)
 	_, err := NewRouteFromHops(amt, 100, Vertex{}, []*Hop{})
-	if err != ErrNoRouteHopsProvided {
+	if !ErrNoRouteHopsProvided.Is(err) {
 		t.Fatalf("expected ErrNoRouteHopsProvided, got %v", err)
 	}
 
@@ -105,7 +105,7 @@ func TestMPPHop(t *testing.T) {
 	// failure.
 	var b bytes.Buffer
 	err := hop.PackHopPayload(&b, 2)
-	if err != ErrIntermediateMPPHop {
+	if !ErrIntermediateMPPHop.Is(err) {
 		t.Fatalf("expected err: %v, got: %v",
 			ErrIntermediateMPPHop, err)
 	}
@@ -135,7 +135,7 @@ func TestAMPHop(t *testing.T) {
 	// should result in a failure.
 	var b bytes.Buffer
 	err := hop.PackHopPayload(&b, 2)
-	if err != ErrAMPMissingMPP {
+	if !ErrAMPMissingMPP.Is(err) {
 		t.Fatalf("expected err: %v, got: %v",
 			ErrAMPMissingMPP, err)
 	}
@@ -144,7 +144,7 @@ func TestAMPHop(t *testing.T) {
 	// in a failure.
 	b.Reset()
 	err = hop.PackHopPayload(&b, 0)
-	if err != ErrAMPMissingMPP {
+	if !ErrAMPMissingMPP.Is(err) {
 		t.Fatalf("expected err: %v, got: %v",
 			ErrAMPMissingMPP, err)
 	}

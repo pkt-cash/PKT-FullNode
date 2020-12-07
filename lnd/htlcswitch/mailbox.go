@@ -652,7 +652,7 @@ func (m *memoryMailBox) FailAdd(pkt *htlcPacket) {
 	} else {
 		// If the packet is part of a forward, (identified by a non-nil
 		// obfuscator) we need to encrypt the error back to the source.
-		var err error
+		var err er.R
 		reason, err = pkt.obfuscator.EncryptFirstHop(failure)
 		if err != nil {
 			log.Errorf("Unable to obfuscate error: %v", err)

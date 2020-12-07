@@ -48,7 +48,7 @@ func (c *Conf) Apply(cfg *Config,
 
 		// Normalize the raw listening addresses so that they can be
 		// used by the brontide listener.
-		var err error
+		var err er.R
 		cfg.ListenAddrs, err = normalizer(
 			c.RawListeners, strconv.Itoa(DefaultPeerPort),
 			cfg.Net.ResolveTCPAddr,
@@ -66,7 +66,7 @@ func (c *Conf) Apply(cfg *Config,
 			return nil, ErrNoNetwork.Default()
 		}
 
-		var err error
+		var err er.R
 		cfg.ExternalIPs, err = normalizer(
 			c.RawExternalIPs, strconv.Itoa(DefaultPeerPort),
 			cfg.Net.ResolveTCPAddr,

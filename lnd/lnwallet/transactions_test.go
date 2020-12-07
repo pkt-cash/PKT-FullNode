@@ -81,7 +81,7 @@ func newTestContext(t *testing.T) (tc *testContext) {
 	tc.localDelayedPaymentBasepointSecret = priv("3333333333333333333333333333333333333333333333333333333333333333")
 	tc.localFundingPrivkey = priv("30ff4956bbdd3222d44cc5e8a1261dab1e07957bdac5ae88fe3261ef321f3749")
 
-	var err error
+	var err er.R
 	tc.localPerCommitSecret, err = lntypes.MakeHashFromStr("1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100")
 	util.RequireNoErr(t, err)
 
@@ -185,11 +185,11 @@ func TestCommitmentAndHTLCTransactions(t *testing.T) {
 
 		var testCases []testCase
 
-		jsonText, err := ioutil.ReadFile(set.jsonFile)
-		util.RequireNoErr(t, err)
+		jsonText, errr := ioutil.ReadFile(set.jsonFile)
+		require.NoError(t, errr)
 
-		err = json.Unmarshal(jsonText, &testCases)
-		util.RequireNoErr(t, err)
+		errr = json.Unmarshal(jsonText, &testCases)
+		require.NoError(t, errr)
 
 		t.Run(set.name, func(t *testing.T) {
 			for _, test := range testCases {
@@ -862,14 +862,14 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 	)
 
 	// Create temporary databases.
-	remotePath, err := ioutil.TempDir("", "remotedb")
-	util.RequireNoErr(t, err)
+	remotePath, errr := ioutil.TempDir("", "remotedb")
+	require.NoError(t, errr)
 
 	dbRemote, err := channeldb.Open(remotePath)
 	util.RequireNoErr(t, err)
 
-	localPath, err := ioutil.TempDir("", "localdb")
-	util.RequireNoErr(t, err)
+	localPath, errr := ioutil.TempDir("", "localdb")
+	require.NoError(t, errr)
 
 	dbLocal, err := channeldb.Open(localPath)
 	util.RequireNoErr(t, err)

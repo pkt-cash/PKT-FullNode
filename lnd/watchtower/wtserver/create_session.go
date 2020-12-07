@@ -1,11 +1,12 @@
 package wtserver
 
 import (
-	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/txscript"
 )
 
 // handleCreateSession processes a CreateSession message from the peer, and returns
@@ -37,7 +38,7 @@ func (s *Server) handleCreateSession(peer Peer, id *wtdb.SessionID,
 		)
 
 	// Some other database error occurred, return a temporary failure.
-	case err != wtdb.ErrSessionNotFound:
+	case !wtdb.ErrSessionNotFound.Is(err):
 		log.Errorf("unable to load session info for %s", id)
 		return s.replyCreateSession(
 			peer, id, wtwire.CodeTemporaryFailure, 0, nil,
@@ -136,10 +137,10 @@ func (s *Server) replyCreateSession(peer Peer, id *wtdb.SessionID,
 	code wtwire.ErrorCode, lastApplied uint16, data []byte) er.R {
 
 	if s.cfg.NoAckCreateSession {
-		return &connFailure{
+		return er.E(&connFailure{
 			ID:   *id,
 			Code: code,
-		}
+		})
 	}
 
 	msg := &wtwire.CreateSessionReply{
@@ -160,8 +161,8 @@ func (s *Server) replyCreateSession(peer Peer, id *wtdb.SessionID,
 
 	// Otherwise the request failed, return a connection failure to
 	// disconnect the client.
-	return &connFailure{
+	return er.E(&connFailure{
 		ID:   *id,
 		Code: code,
-	}
+	})
 }

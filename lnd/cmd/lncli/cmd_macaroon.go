@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
@@ -80,7 +82,7 @@ func bakeMacaroon(ctx *cli.Context) er.R {
 
 	// Show command help if no arguments.
 	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "bakemacaroon")
+		return er.E(cli.ShowCommandHelp(ctx, "bakemacaroon"))
 	}
 	args := ctx.Args()
 
@@ -90,7 +92,7 @@ func bakeMacaroon(ctx *cli.Context) er.R {
 		ipAddress         net.IP
 		rootKeyID         uint64
 		parsedPermissions []*lnrpc.MacaroonPermission
-		err               error
+		err               er.R
 	)
 
 	if ctx.String("save_to") != "" {
@@ -151,9 +153,9 @@ func bakeMacaroon(ctx *cli.Context) er.R {
 		Permissions: parsedPermissions,
 		RootKeyId:   rootKeyID,
 	}
-	resp, err := client.BakeMacaroon(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.BakeMacaroon(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Now we should have gotten a valid macaroon. Unmarshal it so we can
@@ -163,8 +165,8 @@ func bakeMacaroon(ctx *cli.Context) er.R {
 		return err
 	}
 	unmarshalMac := &macaroon.Macaroon{}
-	if err = unmarshalMac.UnmarshalBinary(macBytes); err != nil {
-		return err
+	if errr := unmarshalMac.UnmarshalBinary(macBytes); errr != nil {
+		return er.E(errr)
 	}
 
 	// Now apply the desired constraints to the macaroon. This will always
@@ -187,18 +189,18 @@ func bakeMacaroon(ctx *cli.Context) er.R {
 	if err != nil {
 		return err
 	}
-	macBytes, err = constrainedMac.MarshalBinary()
-	if err != nil {
-		return err
+	macBytes, errr = constrainedMac.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	// Now we can output the result. We either write it binary serialized to
 	// a file or write to the standard output using hex encoding.
 	switch {
 	case savePath != "":
-		err = ioutil.WriteFile(savePath, macBytes, 0644)
+		err := ioutil.WriteFile(savePath, macBytes, 0644)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		fmt.Printf("Macaroon saved to %s\n", savePath)
 
@@ -221,9 +223,9 @@ func listMacaroonIDs(ctx *cli.Context) er.R {
 	defer cleanUp()
 
 	req := &lnrpc.ListMacaroonIDsRequest{}
-	resp, err := client.ListMacaroonIDs(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.ListMacaroonIDs(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -255,14 +257,14 @@ func deleteMacaroonID(ctx *cli.Context) er.R {
 
 	// Validate args length. Only one argument is allowed.
 	if ctx.NArg() != 1 {
-		return cli.ShowCommandHelp(ctx, "deletemacaroonid")
+		return er.E(cli.ShowCommandHelp(ctx, "deletemacaroonid"))
 	}
 
 	rootKeyIDString := ctx.Args().First()
 
 	// Convert string into uint64.
-	rootKeyID, err := strconv.ParseUint(rootKeyIDString, 10, 64)
-	if err != nil {
+	rootKeyID, errr := strconv.ParseUint(rootKeyIDString, 10, 64)
+	if errr != nil {
 		return er.Errorf("root key ID must be a positive integer")
 	}
 
@@ -277,9 +279,9 @@ func deleteMacaroonID(ctx *cli.Context) er.R {
 	req := &lnrpc.DeleteMacaroonIDRequest{
 		RootKeyId: rootKeyID,
 	}
-	resp, err := client.DeleteMacaroonID(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.DeleteMacaroonID(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -299,9 +301,9 @@ func listPermissions(ctx *cli.Context) er.R {
 	defer cleanUp()
 
 	request := &lnrpc.ListPermissionsRequest{}
-	response, err := client.ListPermissions(context.Background(), request)
-	if err != nil {
-		return err
+	response, errr := client.ListPermissions(context.Background(), request)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(response)
@@ -340,12 +342,12 @@ var printMacaroonCommand = cli.Command{
 func printMacaroon(ctx *cli.Context) er.R {
 	// Show command help if no arguments or flags are set.
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "printmacaroon")
+		return er.E(cli.ShowCommandHelp(ctx, "printmacaroon"))
 	}
 
 	var (
 		macBytes []byte
-		err      error
+		err      er.R
 		args     = ctx.Args()
 	)
 	switch {
@@ -353,10 +355,11 @@ func printMacaroon(ctx *cli.Context) er.R {
 		macPath := lncfg.CleanAndExpandPath(ctx.String("macaroon_file"))
 
 		// Load the specified macaroon file.
-		macBytes, err = ioutil.ReadFile(macPath)
-		if err != nil {
+		var errr error
+		macBytes, errr = ioutil.ReadFile(macPath)
+		if errr != nil {
 			return er.Errorf("unable to read macaroon path %v: %v",
-				macPath, err)
+				macPath, errr)
 		}
 
 	case args.Present():
@@ -372,7 +375,7 @@ func printMacaroon(ctx *cli.Context) er.R {
 
 	// Decode the macaroon and its protobuf encoded internal identifier.
 	mac := &macaroon.Macaroon{}
-	if err = mac.UnmarshalBinary(macBytes); err != nil {
+	if err := mac.UnmarshalBinary(macBytes); err != nil {
 		return er.Errorf("unable to decode macaroon: %v", err)
 	}
 	rawID := mac.Id()
@@ -381,9 +384,9 @@ func printMacaroon(ctx *cli.Context) er.R {
 	}
 	decodedID := &lnrpc.MacaroonId{}
 	idProto := rawID[1:]
-	err = proto.Unmarshal(idProto, decodedID)
-	if err != nil {
-		return er.Errorf("unable to decode macaroon version: %v", err)
+	errr := proto.Unmarshal(idProto, decodedID)
+	if errr != nil {
+		return er.Errorf("unable to decode macaroon version: %v", errr)
 	}
 
 	// Prepare everything to be printed in a more human readable format.

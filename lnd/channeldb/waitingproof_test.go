@@ -43,7 +43,7 @@ func TestWaitingProofStore(t *testing.T) {
 		t.Fatal("wrong proof retrieved")
 	}
 
-	if _, err := store.Get(proof1.OppositeKey()); err != ErrWaitingProofNotFound {
+	if _, err := store.Get(proof1.OppositeKey()); !ErrWaitingProofNotFound.Is(err) {
 		t.Fatalf("proof shouldn't be found: %v", err)
 	}
 

@@ -49,7 +49,7 @@ func (e *macaroonEntry) loadMacaroon(
 
 	var (
 		macBytes []byte
-		err      error
+		err      er.R
 	)
 
 	// Either decrypt or simply decode the macaroon data.
@@ -93,9 +93,9 @@ func (e *macaroonEntry) loadMacaroon(
 // not, the macaroon is stored as plain text.
 func (e *macaroonEntry) storeMacaroon(mac *macaroon.Macaroon, pw []byte) er.R {
 	// First of all, make sure we can serialize the macaroon.
-	macBytes, err := mac.MarshalBinary()
-	if err != nil {
-		return er.Errorf("unable to marshal macaroon: %v", err)
+	macBytes, errr := mac.MarshalBinary()
+	if errr != nil {
+		return er.Errorf("unable to marshal macaroon: %v", errr)
 	}
 
 	if len(pw) == 0 {
@@ -129,20 +129,20 @@ func (e *macaroonEntry) storeMacaroon(mac *macaroon.Macaroon, pw []byte) er.R {
 // encryption key and the password.
 func decryptMacaroon(keyB64, dataB64 string, pw []byte) ([]byte, er.R) {
 	// Base64 decode both the marshalled encryption key and macaroon data.
-	keyData, err := base64.StdEncoding.DecodeString(keyB64)
-	if err != nil {
+	keyData, errr := base64.StdEncoding.DecodeString(keyB64)
+	if errr != nil {
 		return nil, er.Errorf("could not base64 decode encryption "+
-			"key: %v", err)
+			"key: %v", errr)
 	}
-	encryptedMac, err := base64.StdEncoding.DecodeString(dataB64)
-	if err != nil {
+	encryptedMac, errr := base64.StdEncoding.DecodeString(dataB64)
+	if errr != nil {
 		return nil, er.Errorf("could not base64 decode macaroon "+
-			"data: %v", err)
+			"data: %v", errr)
 	}
 
 	// Unmarshal the encryption key and ask the user for the password.
 	key := &snacl.SecretKey{}
-	err = key.Unmarshal(keyData)
+	err := key.Unmarshal(keyData)
 	if err != nil {
 		return nil, er.Errorf("could not unmarshal encryption key: %v",
 			err)

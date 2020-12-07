@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
-	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
@@ -37,7 +38,7 @@ var (
 
 func init() {
 	// Generate a fresh key for our sphinx router.
-	var err error
+	var err er.R
 	sphinxPrivKey, err = btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		panic(err)
@@ -225,7 +226,7 @@ func TestCircuitMapPersistence(t *testing.T) {
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		chan2      = lnwire.NewShortChanIDFromInt(2)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -661,7 +662,7 @@ func TestCircuitMapCommitCircuits(t *testing.T) {
 	var (
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -757,7 +758,7 @@ func TestCircuitMapOpenCircuits(t *testing.T) {
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		chan2      = lnwire.NewShortChanIDFromInt(2)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -810,7 +811,7 @@ func TestCircuitMapOpenCircuits(t *testing.T) {
 	// Open the circuit for a second time, which should fail due to a
 	// duplicate keystone
 	err = circuitMap.OpenCircuits(keystone)
-	if err != htlcswitch.ErrDuplicateKeystone {
+	if !htlcswitch.ErrDuplicateKeystone.Is(err) {
 		t.Fatalf("failed to open circuits: %v", err)
 	}
 
@@ -851,7 +852,7 @@ func TestCircuitMapOpenCircuits(t *testing.T) {
 	// Try to open the circuit again, we expect this to fail since the open
 	// circuit was restored.
 	err = circuitMap.OpenCircuits(keystone)
-	if err != htlcswitch.ErrDuplicateKeystone {
+	if !htlcswitch.ErrDuplicateKeystone.Is(err) {
 		t.Fatalf("failed to open circuits: %v", err)
 	}
 
@@ -963,7 +964,7 @@ func TestCircuitMapTrimOpenCircuits(t *testing.T) {
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		chan2      = lnwire.NewShortChanIDFromInt(2)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -1112,7 +1113,7 @@ func TestCircuitMapCloseOpenCircuits(t *testing.T) {
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		chan2      = lnwire.NewShortChanIDFromInt(2)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -1159,7 +1160,7 @@ func TestCircuitMapCloseOpenCircuits(t *testing.T) {
 	// Open the circuit for a second time, which should fail due to a
 	// duplicate keystone
 	err = circuitMap.OpenCircuits(keystone)
-	if err != htlcswitch.ErrDuplicateKeystone {
+	if !htlcswitch.ErrDuplicateKeystone.Is(err) {
 		t.Fatalf("failed to open circuits: %v", err)
 	}
 
@@ -1171,7 +1172,7 @@ func TestCircuitMapCloseOpenCircuits(t *testing.T) {
 
 	// Closing the circuit a second time should result in a failure.
 	_, err = circuitMap.FailCircuit(circuit.Incoming)
-	if err != htlcswitch.ErrCircuitClosing {
+	if !htlcswitch.ErrCircuitClosing.Is(err) {
 		t.Fatalf("unable to close unopened circuit")
 	}
 
@@ -1191,7 +1192,7 @@ func TestCircuitMapCloseOpenCircuits(t *testing.T) {
 
 	// Closing the circuit a second time should result in a failure.
 	_, err = circuitMap.FailCircuit(circuit.Incoming)
-	if err != htlcswitch.ErrCircuitClosing {
+	if !htlcswitch.ErrCircuitClosing.Is(err) {
 		t.Fatalf("unable to close unopened circuit")
 	}
 }
@@ -1205,7 +1206,7 @@ func TestCircuitMapCloseUnopenedCircuit(t *testing.T) {
 	var (
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -1233,7 +1234,7 @@ func TestCircuitMapCloseUnopenedCircuit(t *testing.T) {
 
 	// Closing the circuit a second time should result in a failure.
 	_, err = circuitMap.FailCircuit(circuit.Incoming)
-	if err != htlcswitch.ErrCircuitClosing {
+	if !htlcswitch.ErrCircuitClosing.Is(err) {
 		t.Fatalf("unable to close unopened circuit")
 	}
 
@@ -1249,7 +1250,7 @@ func TestCircuitMapCloseUnopenedCircuit(t *testing.T) {
 
 	// Closing the circuit a second time should result in a failure.
 	_, err = circuitMap.FailCircuit(circuit.Incoming)
-	if err != htlcswitch.ErrCircuitClosing {
+	if !htlcswitch.ErrCircuitClosing.Is(err) {
 		t.Fatalf("unable to close unopened circuit")
 	}
 }
@@ -1262,7 +1263,7 @@ func TestCircuitMapDeleteUnopenedCircuit(t *testing.T) {
 	var (
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)
@@ -1321,7 +1322,7 @@ func TestCircuitMapDeleteOpenCircuit(t *testing.T) {
 		chan1      = lnwire.NewShortChanIDFromInt(1)
 		chan2      = lnwire.NewShortChanIDFromInt(2)
 		circuitMap htlcswitch.CircuitMap
-		err        error
+		err        er.R
 	)
 
 	cfg, circuitMap := newCircuitMap(t)

@@ -1,10 +1,10 @@
 package contractcourt
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 )
@@ -82,7 +82,7 @@ func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, er.R) {
 	// sweep the pre-image from the output.
 	case commitSpend, ok := <-spendNtfn.Spend:
 		if !ok {
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 
 		// TODO(roasbeef): Checkpoint?
@@ -109,7 +109,7 @@ func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, er.R) {
 		// HTLC expiration.
 		case newBlock, ok := <-blockEpochs.Epochs:
 			if !ok {
-				return nil, errResolverShuttingDown
+				return nil, errResolverShuttingDown.Default()
 			}
 
 			// If the current height is >= expiry-1, then a timeout
@@ -138,7 +138,7 @@ func (h *htlcOutgoingContestResolver) Resolve() (ContractResolver, er.R) {
 		// revealed on-chain.
 		case commitSpend, ok := <-spendNtfn.Spend:
 			if !ok {
-				return nil, errResolverShuttingDown
+				return nil, errResolverShuttingDown.Default()
 			}
 
 			// The only way this output can be spent by the remote

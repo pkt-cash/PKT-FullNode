@@ -12,9 +12,9 @@ import (
 func TestOnionFile(t *testing.T) {
 	t.Parallel()
 
-	tempDir, err := ioutil.TempDir("", "onion_store")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDir, errr := ioutil.TempDir("", "onion_store")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 
 	privateKey := []byte("hide_me_plz")
@@ -23,7 +23,7 @@ func TestOnionFile(t *testing.T) {
 	// Create a new file-based onion store. A private key should not exist
 	// yet.
 	onionFile := NewOnionFile(privateKeyPath, 0600)
-	if _, err := onionFile.PrivateKey(V2); err != ErrNoPrivateKey {
+	if _, err := onionFile.PrivateKey(V2); !ErrNoPrivateKey.Is(err) {
 		t.Fatalf("expected ErrNoPrivateKey, got \"%v\"", err)
 	}
 
@@ -45,7 +45,7 @@ func TestOnionFile(t *testing.T) {
 	if err := onionFile.DeletePrivateKey(V2); err != nil {
 		t.Fatalf("unable to delete private key: %v", err)
 	}
-	if _, err := onionFile.PrivateKey(V2); err != ErrNoPrivateKey {
+	if _, err := onionFile.PrivateKey(V2); ErrNoPrivateKey.Is(err) {
 		t.Fatal("found deleted private key")
 	}
 }

@@ -1,6 +1,9 @@
 package routing
 
-import "github.com/go-errors/errors"
+import (
+	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // errorCode is used to represent the various errors that can occur within this
 // package.
@@ -36,11 +39,11 @@ var _ error = (*routerError)(nil)
 
 // newErrf creates a routerError by the given error formatted description and
 // its corresponding error code.
-func newErrf(code errorCode, format string, a ...interface{}) *routerError {
-	return &routerError{
+func newErrf(code errorCode, format string, a ...interface{}) er.R {
+	return er.E(&routerError{
 		code: code,
 		err:  errors.Errorf(format, a...),
-	}
+	})
 }
 
 // IsError is a helper function which is needed to have ability to check that

@@ -21,7 +21,8 @@ import (
 var (
 	// ErrUnlockTimeout signals that we did not get the expected unlock
 	// message before the timeout occurred.
-	ErrUnlockTimeout = er.GenericErrorType.CodeWithDetail("ErrUnlockTimeout", "got no unlock message before timeout")
+	ErrUnlockTimeout = er.GenericErrorType.CodeWithDetail("ErrUnlockTimeout",
+		"got no unlock message before timeout")
 )
 
 // ChannelsToRecover wraps any set of packed (serialized+encrypted) channel
@@ -130,6 +131,8 @@ type UnlockerService struct {
 	macaroonFiles []string
 }
 
+var _ lnrpc.WalletUnlockerServer = (*UnlockerService)(nil)
+
 // New creates and returns a new UnlockerService.
 func New(chainDir string, params *chaincfg.Params, noFreelistSync bool,
 	macaroonFiles []string) *UnlockerService {
@@ -147,6 +150,12 @@ func New(chainDir string, params *chaincfg.Params, noFreelistSync bool,
 	}
 }
 
+func (u *UnlockerService) GenSeed(_ context.Context,
+	in *lnrpc.GenSeedRequest) (*lnrpc.GenSeedResponse, error) {
+	res, err := u.GenSeed0(nil, in)
+	return res, er.Native(err)
+}
+
 // GenSeed is the first method that should be used to instantiate a new lnd
 // instance. This method allows a caller to generate a new aezeed cipher seed
 // given an optional passphrase. If provided, the passphrase will be necessary
@@ -155,7 +164,7 @@ func New(chainDir string, params *chaincfg.Params, noFreelistSync bool,
 // Once the cipherseed is obtained and verified by the user, the InitWallet
 // method should be used to commit the newly generated seed, and create the
 // wallet.
-func (u *UnlockerService) GenSeed(_ context.Context,
+func (u *UnlockerService) GenSeed0(_ context.Context,
 	in *lnrpc.GenSeedRequest) (*lnrpc.GenSeedResponse, er.R) {
 
 	// Before we start, we'll ensure that the wallet hasn't already created
@@ -188,7 +197,7 @@ func (u *UnlockerService) GenSeed(_ context.Context,
 	// to generate the seed.
 	default:
 		if _, err := rand.Read(entropy[:]); err != nil {
-			return nil, err
+			return nil, er.E(err)
 		}
 	}
 
@@ -259,6 +268,12 @@ func extractChanBackups(chanBackups *lnrpc.ChanBackupSnapshot) *ChannelsToRecove
 	return &backups
 }
 
+func (u *UnlockerService) InitWallet(ctx context.Context,
+	in *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, error) {
+	res, err := u.InitWallet0(ctx, in)
+	return res, er.Native(err)
+}
+
 // InitWallet is used when lnd is starting up for the first time to fully
 // initialize the daemon and its internal wallet. At the very least a wallet
 // password must be provided. This will be used to encrypt sensitive material
@@ -271,7 +286,7 @@ func extractChanBackups(chanBackups *lnrpc.ChanBackupSnapshot) *ChannelsToRecove
 // Alternatively, this can be used along with the GenSeed RPC to obtain a
 // seed, then present it to the user. Once it has been verified by the user,
 // the seed can be fed into this RPC in order to commit the new wallet.
-func (u *UnlockerService) InitWallet(ctx context.Context,
+func (u *UnlockerService) InitWallet0(ctx context.Context,
 	in *lnrpc.InitWalletRequest) (*lnrpc.InitWalletResponse, er.R) {
 
 	// Make sure the password meets our constraints.
@@ -356,10 +371,16 @@ func (u *UnlockerService) InitWallet(ctx context.Context,
 	}
 }
 
+func (u *UnlockerService) UnlockWallet(ctx context.Context,
+	in *lnrpc.UnlockWalletRequest) (*lnrpc.UnlockWalletResponse, error) {
+	res, err := u.UnlockWallet0(ctx, in)
+	return res, er.Native(err)
+}
+
 // UnlockWallet sends the password provided by the incoming UnlockWalletRequest
 // over the UnlockMsgs channel in case it successfully decrypts an existing
 // wallet found in the chain's wallet database directory.
-func (u *UnlockerService) UnlockWallet(ctx context.Context,
+func (u *UnlockerService) UnlockWallet0(ctx context.Context,
 	in *lnrpc.UnlockWalletRequest) (*lnrpc.UnlockWalletResponse, er.R) {
 
 	password := in.WalletPassword
@@ -427,10 +448,16 @@ func (u *UnlockerService) UnlockWallet(ctx context.Context,
 	}
 }
 
+func (u *UnlockerService) ChangePassword(ctx context.Context,
+	in *lnrpc.ChangePasswordRequest) (*lnrpc.ChangePasswordResponse, error) {
+	res, err := u.ChangePassword0(ctx, in)
+	return res, er.Native(err)
+}
+
 // ChangePassword changes the password of the wallet and sends the new password
 // across the UnlockPasswords channel to automatically unlock the wallet if
 // successful.
-func (u *UnlockerService) ChangePassword(ctx context.Context,
+func (u *UnlockerService) ChangePassword0(ctx context.Context,
 	in *lnrpc.ChangePasswordRequest) (*lnrpc.ChangePasswordResponse, er.R) {
 
 	netDir := btcwallet.NetworkDir(u.chainDir, u.netParams)

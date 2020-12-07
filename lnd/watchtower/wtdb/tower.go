@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 

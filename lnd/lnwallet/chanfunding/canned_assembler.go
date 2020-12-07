@@ -1,13 +1,12 @@
 package chanfunding
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // ShimIntent is an intent created by the CannedAssembler which represents a

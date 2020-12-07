@@ -15,7 +15,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = er.Errorf
+var _ = fmt.Errorf
 var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
@@ -788,10 +788,10 @@ func (*Utxo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{0}
 }
 
-func (m *Utxo) XXX_Unmarshal(b []byte) er.R {
+func (m *Utxo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Utxo.Unmarshal(m, b)
 }
-func (m *Utxo) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Utxo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Utxo.Marshal(b, m, deterministic)
 }
 func (m *Utxo) XXX_Merge(src proto.Message) {
@@ -881,10 +881,10 @@ func (*Transaction) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{1}
 }
 
-func (m *Transaction) XXX_Unmarshal(b []byte) er.R {
+func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
 }
-func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
 }
 func (m *Transaction) XXX_Merge(src proto.Message) {
@@ -993,10 +993,10 @@ func (*GetTransactionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{2}
 }
 
-func (m *GetTransactionsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *GetTransactionsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionsRequest.Unmarshal(m, b)
 }
-func (m *GetTransactionsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GetTransactionsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetTransactionsRequest.Marshal(b, m, deterministic)
 }
 func (m *GetTransactionsRequest) XXX_Merge(src proto.Message) {
@@ -1040,10 +1040,10 @@ func (*TransactionDetails) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{3}
 }
 
-func (m *TransactionDetails) XXX_Unmarshal(b []byte) er.R {
+func (m *TransactionDetails) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionDetails.Unmarshal(m, b)
 }
-func (m *TransactionDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *TransactionDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TransactionDetails.Marshal(b, m, deterministic)
 }
 func (m *TransactionDetails) XXX_Merge(src proto.Message) {
@@ -1083,10 +1083,10 @@ func (*FeeLimit) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{4}
 }
 
-func (m *FeeLimit) XXX_Unmarshal(b []byte) er.R {
+func (m *FeeLimit) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FeeLimit.Unmarshal(m, b)
 }
-func (m *FeeLimit) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FeeLimit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FeeLimit.Marshal(b, m, deterministic)
 }
 func (m *FeeLimit) XXX_Merge(src proto.Message) {
@@ -1242,10 +1242,10 @@ func (*SendRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{5}
 }
 
-func (m *SendRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SendRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendRequest.Unmarshal(m, b)
 }
-func (m *SendRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendRequest.Marshal(b, m, deterministic)
 }
 func (m *SendRequest) XXX_Merge(src proto.Message) {
@@ -1384,10 +1384,10 @@ func (*SendResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{6}
 }
 
-func (m *SendResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *SendResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendResponse.Unmarshal(m, b)
 }
-func (m *SendResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendResponse.Marshal(b, m, deterministic)
 }
 func (m *SendResponse) XXX_Merge(src proto.Message) {
@@ -1453,10 +1453,10 @@ func (*SendToRouteRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{7}
 }
 
-func (m *SendToRouteRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SendToRouteRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendToRouteRequest.Unmarshal(m, b)
 }
-func (m *SendToRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendToRouteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendToRouteRequest.Marshal(b, m, deterministic)
 }
 func (m *SendToRouteRequest) XXX_Merge(src proto.Message) {
@@ -1539,10 +1539,10 @@ func (*ChannelAcceptRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{8}
 }
 
-func (m *ChannelAcceptRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelAcceptRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelAcceptRequest.Unmarshal(m, b)
 }
-func (m *ChannelAcceptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelAcceptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelAcceptRequest.Marshal(b, m, deterministic)
 }
 func (m *ChannelAcceptRequest) XXX_Merge(src proto.Message) {
@@ -1701,10 +1701,10 @@ func (*ChannelAcceptResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{9}
 }
 
-func (m *ChannelAcceptResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelAcceptResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelAcceptResponse.Unmarshal(m, b)
 }
-func (m *ChannelAcceptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelAcceptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelAcceptResponse.Marshal(b, m, deterministic)
 }
 func (m *ChannelAcceptResponse) XXX_Merge(src proto.Message) {
@@ -1735,7 +1735,7 @@ func (m *ChannelAcceptResponse) GetPendingChanId() []byte {
 
 func (m *ChannelAcceptResponse) GetError() string {
 	if m != nil {
-		return m.Error.Default()
+		return m.Error
 	}
 	return ""
 }
@@ -1808,10 +1808,10 @@ func (*ChannelPoint) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{10}
 }
 
-func (m *ChannelPoint) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelPoint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelPoint.Unmarshal(m, b)
 }
-func (m *ChannelPoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelPoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelPoint.Marshal(b, m, deterministic)
 }
 func (m *ChannelPoint) XXX_Merge(src proto.Message) {
@@ -1897,10 +1897,10 @@ func (*OutPoint) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{11}
 }
 
-func (m *OutPoint) XXX_Unmarshal(b []byte) er.R {
+func (m *OutPoint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OutPoint.Unmarshal(m, b)
 }
-func (m *OutPoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *OutPoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OutPoint.Marshal(b, m, deterministic)
 }
 func (m *OutPoint) XXX_Merge(src proto.Message) {
@@ -1954,10 +1954,10 @@ func (*LightningAddress) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{12}
 }
 
-func (m *LightningAddress) XXX_Unmarshal(b []byte) er.R {
+func (m *LightningAddress) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LightningAddress.Unmarshal(m, b)
 }
-func (m *LightningAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *LightningAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LightningAddress.Marshal(b, m, deterministic)
 }
 func (m *LightningAddress) XXX_Merge(src proto.Message) {
@@ -2004,10 +2004,10 @@ func (*EstimateFeeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{13}
 }
 
-func (m *EstimateFeeRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *EstimateFeeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EstimateFeeRequest.Unmarshal(m, b)
 }
-func (m *EstimateFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *EstimateFeeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_EstimateFeeRequest.Marshal(b, m, deterministic)
 }
 func (m *EstimateFeeRequest) XXX_Merge(src proto.Message) {
@@ -2053,10 +2053,10 @@ func (*EstimateFeeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{14}
 }
 
-func (m *EstimateFeeResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *EstimateFeeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EstimateFeeResponse.Unmarshal(m, b)
 }
-func (m *EstimateFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *EstimateFeeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_EstimateFeeResponse.Marshal(b, m, deterministic)
 }
 func (m *EstimateFeeResponse) XXX_Merge(src proto.Message) {
@@ -2113,10 +2113,10 @@ func (*SendManyRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{15}
 }
 
-func (m *SendManyRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SendManyRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendManyRequest.Unmarshal(m, b)
 }
-func (m *SendManyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendManyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendManyRequest.Marshal(b, m, deterministic)
 }
 func (m *SendManyRequest) XXX_Merge(src proto.Message) {
@@ -2188,10 +2188,10 @@ func (*SendManyResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{16}
 }
 
-func (m *SendManyResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *SendManyResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendManyResponse.Unmarshal(m, b)
 }
-func (m *SendManyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendManyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendManyResponse.Marshal(b, m, deterministic)
 }
 func (m *SendManyResponse) XXX_Merge(src proto.Message) {
@@ -2248,10 +2248,10 @@ func (*SendCoinsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{17}
 }
 
-func (m *SendCoinsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SendCoinsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendCoinsRequest.Unmarshal(m, b)
 }
-func (m *SendCoinsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendCoinsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendCoinsRequest.Marshal(b, m, deterministic)
 }
 func (m *SendCoinsRequest) XXX_Merge(src proto.Message) {
@@ -2337,10 +2337,10 @@ func (*SendCoinsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{18}
 }
 
-func (m *SendCoinsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *SendCoinsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendCoinsResponse.Unmarshal(m, b)
 }
-func (m *SendCoinsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SendCoinsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendCoinsResponse.Marshal(b, m, deterministic)
 }
 func (m *SendCoinsResponse) XXX_Merge(src proto.Message) {
@@ -2379,10 +2379,10 @@ func (*ListUnspentRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{19}
 }
 
-func (m *ListUnspentRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListUnspentRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListUnspentRequest.Unmarshal(m, b)
 }
-func (m *ListUnspentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListUnspentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListUnspentRequest.Marshal(b, m, deterministic)
 }
 func (m *ListUnspentRequest) XXX_Merge(src proto.Message) {
@@ -2426,10 +2426,10 @@ func (*ListUnspentResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{20}
 }
 
-func (m *ListUnspentResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListUnspentResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListUnspentResponse.Unmarshal(m, b)
 }
-func (m *ListUnspentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListUnspentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListUnspentResponse.Marshal(b, m, deterministic)
 }
 func (m *ListUnspentResponse) XXX_Merge(src proto.Message) {
@@ -2466,10 +2466,10 @@ func (*NewAddressRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{21}
 }
 
-func (m *NewAddressRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *NewAddressRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NewAddressRequest.Unmarshal(m, b)
 }
-func (m *NewAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NewAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NewAddressRequest.Marshal(b, m, deterministic)
 }
 func (m *NewAddressRequest) XXX_Merge(src proto.Message) {
@@ -2506,10 +2506,10 @@ func (*NewAddressResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{22}
 }
 
-func (m *NewAddressResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *NewAddressResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NewAddressResponse.Unmarshal(m, b)
 }
-func (m *NewAddressResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NewAddressResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NewAddressResponse.Marshal(b, m, deterministic)
 }
 func (m *NewAddressResponse) XXX_Merge(src proto.Message) {
@@ -2548,10 +2548,10 @@ func (*SignMessageRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{23}
 }
 
-func (m *SignMessageRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *SignMessageRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignMessageRequest.Unmarshal(m, b)
 }
-func (m *SignMessageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SignMessageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignMessageRequest.Marshal(b, m, deterministic)
 }
 func (m *SignMessageRequest) XXX_Merge(src proto.Message) {
@@ -2588,10 +2588,10 @@ func (*SignMessageResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{24}
 }
 
-func (m *SignMessageResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *SignMessageResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignMessageResponse.Unmarshal(m, b)
 }
-func (m *SignMessageResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *SignMessageResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignMessageResponse.Marshal(b, m, deterministic)
 }
 func (m *SignMessageResponse) XXX_Merge(src proto.Message) {
@@ -2632,10 +2632,10 @@ func (*VerifyMessageRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{25}
 }
 
-func (m *VerifyMessageRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *VerifyMessageRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VerifyMessageRequest.Unmarshal(m, b)
 }
-func (m *VerifyMessageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *VerifyMessageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VerifyMessageRequest.Marshal(b, m, deterministic)
 }
 func (m *VerifyMessageRequest) XXX_Merge(src proto.Message) {
@@ -2681,10 +2681,10 @@ func (*VerifyMessageResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{26}
 }
 
-func (m *VerifyMessageResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *VerifyMessageResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VerifyMessageResponse.Unmarshal(m, b)
 }
-func (m *VerifyMessageResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *VerifyMessageResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VerifyMessageResponse.Marshal(b, m, deterministic)
 }
 func (m *VerifyMessageResponse) XXX_Merge(src proto.Message) {
@@ -2735,10 +2735,10 @@ func (*ConnectPeerRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{27}
 }
 
-func (m *ConnectPeerRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ConnectPeerRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConnectPeerRequest.Unmarshal(m, b)
 }
-func (m *ConnectPeerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ConnectPeerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConnectPeerRequest.Marshal(b, m, deterministic)
 }
 func (m *ConnectPeerRequest) XXX_Merge(src proto.Message) {
@@ -2787,10 +2787,10 @@ func (*ConnectPeerResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{28}
 }
 
-func (m *ConnectPeerResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ConnectPeerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConnectPeerResponse.Unmarshal(m, b)
 }
-func (m *ConnectPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ConnectPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConnectPeerResponse.Marshal(b, m, deterministic)
 }
 func (m *ConnectPeerResponse) XXX_Merge(src proto.Message) {
@@ -2820,10 +2820,10 @@ func (*DisconnectPeerRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{29}
 }
 
-func (m *DisconnectPeerRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *DisconnectPeerRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisconnectPeerRequest.Unmarshal(m, b)
 }
-func (m *DisconnectPeerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DisconnectPeerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisconnectPeerRequest.Marshal(b, m, deterministic)
 }
 func (m *DisconnectPeerRequest) XXX_Merge(src proto.Message) {
@@ -2858,10 +2858,10 @@ func (*DisconnectPeerResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{30}
 }
 
-func (m *DisconnectPeerResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *DisconnectPeerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisconnectPeerResponse.Unmarshal(m, b)
 }
-func (m *DisconnectPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DisconnectPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisconnectPeerResponse.Marshal(b, m, deterministic)
 }
 func (m *DisconnectPeerResponse) XXX_Merge(src proto.Message) {
@@ -2905,10 +2905,10 @@ func (*HTLC) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{31}
 }
 
-func (m *HTLC) XXX_Unmarshal(b []byte) er.R {
+func (m *HTLC) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HTLC.Unmarshal(m, b)
 }
-func (m *HTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *HTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_HTLC.Marshal(b, m, deterministic)
 }
 func (m *HTLC) XXX_Merge(src proto.Message) {
@@ -3000,10 +3000,10 @@ func (*ChannelConstraints) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{32}
 }
 
-func (m *ChannelConstraints) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelConstraints) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelConstraints.Unmarshal(m, b)
 }
-func (m *ChannelConstraints) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelConstraints) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelConstraints.Marshal(b, m, deterministic)
 }
 func (m *ChannelConstraints) XXX_Merge(src proto.Message) {
@@ -3179,10 +3179,10 @@ func (*Channel) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{33}
 }
 
-func (m *Channel) XXX_Unmarshal(b []byte) er.R {
+func (m *Channel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Channel.Unmarshal(m, b)
 }
-func (m *Channel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Channel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Channel.Marshal(b, m, deterministic)
 }
 func (m *Channel) XXX_Merge(src proto.Message) {
@@ -3432,10 +3432,10 @@ func (*ListChannelsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{34}
 }
 
-func (m *ListChannelsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListChannelsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListChannelsRequest.Unmarshal(m, b)
 }
-func (m *ListChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListChannelsRequest.Marshal(b, m, deterministic)
 }
 func (m *ListChannelsRequest) XXX_Merge(src proto.Message) {
@@ -3500,10 +3500,10 @@ func (*ListChannelsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{35}
 }
 
-func (m *ListChannelsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListChannelsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListChannelsResponse.Unmarshal(m, b)
 }
-func (m *ListChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListChannelsResponse.Marshal(b, m, deterministic)
 }
 func (m *ListChannelsResponse) XXX_Merge(src proto.Message) {
@@ -3571,10 +3571,10 @@ func (*ChannelCloseSummary) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{36}
 }
 
-func (m *ChannelCloseSummary) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelCloseSummary) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelCloseSummary.Unmarshal(m, b)
 }
-func (m *ChannelCloseSummary) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelCloseSummary) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelCloseSummary.Marshal(b, m, deterministic)
 }
 func (m *ChannelCloseSummary) XXX_Merge(src proto.Message) {
@@ -3704,10 +3704,10 @@ func (*Resolution) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{37}
 }
 
-func (m *Resolution) XXX_Unmarshal(b []byte) er.R {
+func (m *Resolution) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Resolution.Unmarshal(m, b)
 }
-func (m *Resolution) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Resolution) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Resolution.Marshal(b, m, deterministic)
 }
 func (m *Resolution) XXX_Merge(src proto.Message) {
@@ -3776,10 +3776,10 @@ func (*ClosedChannelsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{38}
 }
 
-func (m *ClosedChannelsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ClosedChannelsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ClosedChannelsRequest.Unmarshal(m, b)
 }
-func (m *ClosedChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ClosedChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ClosedChannelsRequest.Marshal(b, m, deterministic)
 }
 func (m *ClosedChannelsRequest) XXX_Merge(src proto.Message) {
@@ -3850,10 +3850,10 @@ func (*ClosedChannelsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{39}
 }
 
-func (m *ClosedChannelsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ClosedChannelsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ClosedChannelsResponse.Unmarshal(m, b)
 }
-func (m *ClosedChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ClosedChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ClosedChannelsResponse.Marshal(b, m, deterministic)
 }
 func (m *ClosedChannelsResponse) XXX_Merge(src proto.Message) {
@@ -3925,10 +3925,10 @@ func (*Peer) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{40}
 }
 
-func (m *Peer) XXX_Unmarshal(b []byte) er.R {
+func (m *Peer) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Peer.Unmarshal(m, b)
 }
-func (m *Peer) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Peer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Peer.Marshal(b, m, deterministic)
 }
 func (m *Peer) XXX_Merge(src proto.Message) {
@@ -4015,7 +4015,7 @@ func (m *Peer) GetFeatures() map[uint32]*Feature {
 
 func (m *Peer) GetErrors() []*TimestampedError {
 	if m != nil {
-		return m.Errors.Default()
+		return m.Errors
 	}
 	return nil
 }
@@ -4051,10 +4051,10 @@ func (*TimestampedError) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{41}
 }
 
-func (m *TimestampedError) XXX_Unmarshal(b []byte) er.R {
+func (m *TimestampedError) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TimestampedError.Unmarshal(m, b)
 }
-func (m *TimestampedError) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *TimestampedError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TimestampedError.Marshal(b, m, deterministic)
 }
 func (m *TimestampedError) XXX_Merge(src proto.Message) {
@@ -4078,7 +4078,7 @@ func (m *TimestampedError) GetTimestamp() uint64 {
 
 func (m *TimestampedError) GetError() string {
 	if m != nil {
-		return m.Error.Default()
+		return m.Error
 	}
 	return ""
 }
@@ -4101,10 +4101,10 @@ func (*ListPeersRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{42}
 }
 
-func (m *ListPeersRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPeersRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPeersRequest.Unmarshal(m, b)
 }
-func (m *ListPeersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPeersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPeersRequest.Marshal(b, m, deterministic)
 }
 func (m *ListPeersRequest) XXX_Merge(src proto.Message) {
@@ -4141,10 +4141,10 @@ func (*ListPeersResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{43}
 }
 
-func (m *ListPeersResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPeersResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPeersResponse.Unmarshal(m, b)
 }
-func (m *ListPeersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPeersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPeersResponse.Marshal(b, m, deterministic)
 }
 func (m *ListPeersResponse) XXX_Merge(src proto.Message) {
@@ -4179,10 +4179,10 @@ func (*PeerEventSubscription) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{44}
 }
 
-func (m *PeerEventSubscription) XXX_Unmarshal(b []byte) er.R {
+func (m *PeerEventSubscription) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerEventSubscription.Unmarshal(m, b)
 }
-func (m *PeerEventSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PeerEventSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerEventSubscription.Marshal(b, m, deterministic)
 }
 func (m *PeerEventSubscription) XXX_Merge(src proto.Message) {
@@ -4213,10 +4213,10 @@ func (*PeerEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{45}
 }
 
-func (m *PeerEvent) XXX_Unmarshal(b []byte) er.R {
+func (m *PeerEvent) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerEvent.Unmarshal(m, b)
 }
-func (m *PeerEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PeerEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerEvent.Marshal(b, m, deterministic)
 }
 func (m *PeerEvent) XXX_Merge(src proto.Message) {
@@ -4258,10 +4258,10 @@ func (*GetInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{46}
 }
 
-func (m *GetInfoRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *GetInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetInfoRequest.Unmarshal(m, b)
 }
-func (m *GetInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GetInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *GetInfoRequest) XXX_Merge(src proto.Message) {
@@ -4329,10 +4329,10 @@ func (*GetInfoResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{47}
 }
 
-func (m *GetInfoResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *GetInfoResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetInfoResponse.Unmarshal(m, b)
 }
-func (m *GetInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GetInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetInfoResponse.Marshal(b, m, deterministic)
 }
 func (m *GetInfoResponse) XXX_Merge(src proto.Message) {
@@ -4487,10 +4487,10 @@ func (*GetRecoveryInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{48}
 }
 
-func (m *GetRecoveryInfoRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *GetRecoveryInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetRecoveryInfoRequest.Unmarshal(m, b)
 }
-func (m *GetRecoveryInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GetRecoveryInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetRecoveryInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *GetRecoveryInfoRequest) XXX_Merge(src proto.Message) {
@@ -4524,10 +4524,10 @@ func (*GetRecoveryInfoResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{49}
 }
 
-func (m *GetRecoveryInfoResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *GetRecoveryInfoResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetRecoveryInfoResponse.Unmarshal(m, b)
 }
-func (m *GetRecoveryInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GetRecoveryInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetRecoveryInfoResponse.Marshal(b, m, deterministic)
 }
 func (m *GetRecoveryInfoResponse) XXX_Merge(src proto.Message) {
@@ -4580,10 +4580,10 @@ func (*Chain) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{50}
 }
 
-func (m *Chain) XXX_Unmarshal(b []byte) er.R {
+func (m *Chain) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Chain.Unmarshal(m, b)
 }
-func (m *Chain) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Chain) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Chain.Marshal(b, m, deterministic)
 }
 func (m *Chain) XXX_Merge(src proto.Message) {
@@ -4628,10 +4628,10 @@ func (*ConfirmationUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{51}
 }
 
-func (m *ConfirmationUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ConfirmationUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmationUpdate.Unmarshal(m, b)
 }
-func (m *ConfirmationUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ConfirmationUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConfirmationUpdate.Marshal(b, m, deterministic)
 }
 func (m *ConfirmationUpdate) XXX_Merge(src proto.Message) {
@@ -4681,10 +4681,10 @@ func (*ChannelOpenUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{52}
 }
 
-func (m *ChannelOpenUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelOpenUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelOpenUpdate.Unmarshal(m, b)
 }
-func (m *ChannelOpenUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelOpenUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelOpenUpdate.Marshal(b, m, deterministic)
 }
 func (m *ChannelOpenUpdate) XXX_Merge(src proto.Message) {
@@ -4721,10 +4721,10 @@ func (*ChannelCloseUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{53}
 }
 
-func (m *ChannelCloseUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelCloseUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelCloseUpdate.Unmarshal(m, b)
 }
-func (m *ChannelCloseUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelCloseUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelCloseUpdate.Marshal(b, m, deterministic)
 }
 func (m *ChannelCloseUpdate) XXX_Merge(src proto.Message) {
@@ -4786,10 +4786,10 @@ func (*CloseChannelRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{54}
 }
 
-func (m *CloseChannelRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *CloseChannelRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CloseChannelRequest.Unmarshal(m, b)
 }
-func (m *CloseChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *CloseChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CloseChannelRequest.Marshal(b, m, deterministic)
 }
 func (m *CloseChannelRequest) XXX_Merge(src proto.Message) {
@@ -4856,10 +4856,10 @@ func (*CloseStatusUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{55}
 }
 
-func (m *CloseStatusUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *CloseStatusUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CloseStatusUpdate.Unmarshal(m, b)
 }
-func (m *CloseStatusUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *CloseStatusUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CloseStatusUpdate.Marshal(b, m, deterministic)
 }
 func (m *CloseStatusUpdate) XXX_Merge(src proto.Message) {
@@ -4934,10 +4934,10 @@ func (*PendingUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{56}
 }
 
-func (m *PendingUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingUpdate.Unmarshal(m, b)
 }
-func (m *PendingUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingUpdate.Marshal(b, m, deterministic)
 }
 func (m *PendingUpdate) XXX_Merge(src proto.Message) {
@@ -4993,10 +4993,10 @@ func (*ReadyForPsbtFunding) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{57}
 }
 
-func (m *ReadyForPsbtFunding) XXX_Unmarshal(b []byte) er.R {
+func (m *ReadyForPsbtFunding) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReadyForPsbtFunding.Unmarshal(m, b)
 }
-func (m *ReadyForPsbtFunding) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ReadyForPsbtFunding) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReadyForPsbtFunding.Marshal(b, m, deterministic)
 }
 func (m *ReadyForPsbtFunding) XXX_Merge(src proto.Message) {
@@ -5108,10 +5108,10 @@ func (*OpenChannelRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{58}
 }
 
-func (m *OpenChannelRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *OpenChannelRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OpenChannelRequest.Unmarshal(m, b)
 }
-func (m *OpenChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *OpenChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OpenChannelRequest.Marshal(b, m, deterministic)
 }
 func (m *OpenChannelRequest) XXX_Merge(src proto.Message) {
@@ -5261,10 +5261,10 @@ func (*OpenStatusUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{59}
 }
 
-func (m *OpenStatusUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *OpenStatusUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OpenStatusUpdate.Unmarshal(m, b)
 }
-func (m *OpenStatusUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *OpenStatusUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OpenStatusUpdate.Marshal(b, m, deterministic)
 }
 func (m *OpenStatusUpdate) XXX_Merge(src proto.Message) {
@@ -5362,10 +5362,10 @@ func (*KeyLocator) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{60}
 }
 
-func (m *KeyLocator) XXX_Unmarshal(b []byte) er.R {
+func (m *KeyLocator) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeyLocator.Unmarshal(m, b)
 }
-func (m *KeyLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *KeyLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_KeyLocator.Marshal(b, m, deterministic)
 }
 func (m *KeyLocator) XXX_Merge(src proto.Message) {
@@ -5413,10 +5413,10 @@ func (*KeyDescriptor) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{61}
 }
 
-func (m *KeyDescriptor) XXX_Unmarshal(b []byte) er.R {
+func (m *KeyDescriptor) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeyDescriptor.Unmarshal(m, b)
 }
-func (m *KeyDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *KeyDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_KeyDescriptor.Marshal(b, m, deterministic)
 }
 func (m *KeyDescriptor) XXX_Merge(src proto.Message) {
@@ -5481,10 +5481,10 @@ func (*ChanPointShim) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{62}
 }
 
-func (m *ChanPointShim) XXX_Unmarshal(b []byte) er.R {
+func (m *ChanPointShim) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChanPointShim.Unmarshal(m, b)
 }
-func (m *ChanPointShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChanPointShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChanPointShim.Marshal(b, m, deterministic)
 }
 func (m *ChanPointShim) XXX_Merge(src proto.Message) {
@@ -5571,10 +5571,10 @@ func (*PsbtShim) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{63}
 }
 
-func (m *PsbtShim) XXX_Unmarshal(b []byte) er.R {
+func (m *PsbtShim) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PsbtShim.Unmarshal(m, b)
 }
-func (m *PsbtShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PsbtShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PsbtShim.Marshal(b, m, deterministic)
 }
 func (m *PsbtShim) XXX_Merge(src proto.Message) {
@@ -5627,10 +5627,10 @@ func (*FundingShim) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{64}
 }
 
-func (m *FundingShim) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingShim) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingShim.Unmarshal(m, b)
 }
-func (m *FundingShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingShim) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingShim.Marshal(b, m, deterministic)
 }
 func (m *FundingShim) XXX_Merge(src proto.Message) {
@@ -5705,10 +5705,10 @@ func (*FundingShimCancel) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{65}
 }
 
-func (m *FundingShimCancel) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingShimCancel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingShimCancel.Unmarshal(m, b)
 }
-func (m *FundingShimCancel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingShimCancel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingShimCancel.Marshal(b, m, deterministic)
 }
 func (m *FundingShimCancel) XXX_Merge(src proto.Message) {
@@ -5750,10 +5750,10 @@ func (*FundingPsbtVerify) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{66}
 }
 
-func (m *FundingPsbtVerify) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingPsbtVerify) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingPsbtVerify.Unmarshal(m, b)
 }
-func (m *FundingPsbtVerify) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingPsbtVerify) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingPsbtVerify.Marshal(b, m, deterministic)
 }
 func (m *FundingPsbtVerify) XXX_Merge(src proto.Message) {
@@ -5807,10 +5807,10 @@ func (*FundingPsbtFinalize) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{67}
 }
 
-func (m *FundingPsbtFinalize) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingPsbtFinalize) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingPsbtFinalize.Unmarshal(m, b)
 }
-func (m *FundingPsbtFinalize) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingPsbtFinalize) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingPsbtFinalize.Marshal(b, m, deterministic)
 }
 func (m *FundingPsbtFinalize) XXX_Merge(src proto.Message) {
@@ -5865,10 +5865,10 @@ func (*FundingTransitionMsg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{68}
 }
 
-func (m *FundingTransitionMsg) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingTransitionMsg) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingTransitionMsg.Unmarshal(m, b)
 }
-func (m *FundingTransitionMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingTransitionMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingTransitionMsg.Marshal(b, m, deterministic)
 }
 func (m *FundingTransitionMsg) XXX_Merge(src proto.Message) {
@@ -5969,10 +5969,10 @@ func (*FundingStateStepResp) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{69}
 }
 
-func (m *FundingStateStepResp) XXX_Unmarshal(b []byte) er.R {
+func (m *FundingStateStepResp) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FundingStateStepResp.Unmarshal(m, b)
 }
-func (m *FundingStateStepResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FundingStateStepResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FundingStateStepResp.Marshal(b, m, deterministic)
 }
 func (m *FundingStateStepResp) XXX_Merge(src proto.Message) {
@@ -6015,10 +6015,10 @@ func (*PendingHTLC) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{70}
 }
 
-func (m *PendingHTLC) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingHTLC) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingHTLC.Unmarshal(m, b)
 }
-func (m *PendingHTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingHTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingHTLC.Marshal(b, m, deterministic)
 }
 func (m *PendingHTLC) XXX_Merge(src proto.Message) {
@@ -6088,10 +6088,10 @@ func (*PendingChannelsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{71}
 }
 
-func (m *PendingChannelsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsRequest.Unmarshal(m, b)
 }
-func (m *PendingChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsRequest.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsRequest) XXX_Merge(src proto.Message) {
@@ -6132,10 +6132,10 @@ func (*PendingChannelsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{72}
 }
 
-func (m *PendingChannelsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse) XXX_Merge(src proto.Message) {
@@ -6217,10 +6217,10 @@ func (*PendingChannelsResponse_PendingChannel) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 0}
 }
 
-func (m *PendingChannelsResponse_PendingChannel) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_PendingChannel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_PendingChannel.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_PendingChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_PendingChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_PendingChannel.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_PendingChannel) XXX_Merge(src proto.Message) {
@@ -6333,10 +6333,10 @@ func (*PendingChannelsResponse_PendingOpenChannel) Descriptor() ([]byte, []int) 
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 1}
 }
 
-func (m *PendingChannelsResponse_PendingOpenChannel) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_PendingOpenChannel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_PendingOpenChannel.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_PendingOpenChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_PendingOpenChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_PendingOpenChannel.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_PendingOpenChannel) XXX_Merge(src proto.Message) {
@@ -6411,10 +6411,10 @@ func (*PendingChannelsResponse_WaitingCloseChannel) Descriptor() ([]byte, []int)
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 2}
 }
 
-func (m *PendingChannelsResponse_WaitingCloseChannel) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_WaitingCloseChannel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_WaitingCloseChannel.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_WaitingCloseChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_WaitingCloseChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_WaitingCloseChannel.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_WaitingCloseChannel) XXX_Merge(src proto.Message) {
@@ -6481,10 +6481,10 @@ func (*PendingChannelsResponse_Commitments) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 3}
 }
 
-func (m *PendingChannelsResponse_Commitments) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_Commitments) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_Commitments.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_Commitments) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_Commitments) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_Commitments.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_Commitments) XXX_Merge(src proto.Message) {
@@ -6558,10 +6558,10 @@ func (*PendingChannelsResponse_ClosedChannel) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 4}
 }
 
-func (m *PendingChannelsResponse_ClosedChannel) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_ClosedChannel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_ClosedChannel.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_ClosedChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_ClosedChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_ClosedChannel.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_ClosedChannel) XXX_Merge(src proto.Message) {
@@ -6624,10 +6624,10 @@ func (*PendingChannelsResponse_ForceClosedChannel) Descriptor() ([]byte, []int) 
 	return fileDescriptor_77a6da22d6a3feb1, []int{72, 5}
 }
 
-func (m *PendingChannelsResponse_ForceClosedChannel) XXX_Unmarshal(b []byte) er.R {
+func (m *PendingChannelsResponse_ForceClosedChannel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PendingChannelsResponse_ForceClosedChannel.Unmarshal(m, b)
 }
-func (m *PendingChannelsResponse_ForceClosedChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PendingChannelsResponse_ForceClosedChannel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PendingChannelsResponse_ForceClosedChannel.Marshal(b, m, deterministic)
 }
 func (m *PendingChannelsResponse_ForceClosedChannel) XXX_Merge(src proto.Message) {
@@ -6711,10 +6711,10 @@ func (*ChannelEventSubscription) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{73}
 }
 
-func (m *ChannelEventSubscription) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelEventSubscription) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelEventSubscription.Unmarshal(m, b)
 }
-func (m *ChannelEventSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelEventSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelEventSubscription.Marshal(b, m, deterministic)
 }
 func (m *ChannelEventSubscription) XXX_Merge(src proto.Message) {
@@ -6750,10 +6750,10 @@ func (*ChannelEventUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{74}
 }
 
-func (m *ChannelEventUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelEventUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelEventUpdate.Unmarshal(m, b)
 }
-func (m *ChannelEventUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelEventUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelEventUpdate.Marshal(b, m, deterministic)
 }
 func (m *ChannelEventUpdate) XXX_Merge(src proto.Message) {
@@ -6875,10 +6875,10 @@ func (*WalletBalanceRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{75}
 }
 
-func (m *WalletBalanceRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *WalletBalanceRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_WalletBalanceRequest.Unmarshal(m, b)
 }
-func (m *WalletBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *WalletBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_WalletBalanceRequest.Marshal(b, m, deterministic)
 }
 func (m *WalletBalanceRequest) XXX_Merge(src proto.Message) {
@@ -6912,10 +6912,10 @@ func (*WalletBalanceResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{76}
 }
 
-func (m *WalletBalanceResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *WalletBalanceResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_WalletBalanceResponse.Unmarshal(m, b)
 }
-func (m *WalletBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *WalletBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_WalletBalanceResponse.Marshal(b, m, deterministic)
 }
 func (m *WalletBalanceResponse) XXX_Merge(src proto.Message) {
@@ -6968,10 +6968,10 @@ func (*Amount) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{77}
 }
 
-func (m *Amount) XXX_Unmarshal(b []byte) er.R {
+func (m *Amount) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Amount.Unmarshal(m, b)
 }
-func (m *Amount) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Amount) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Amount.Marshal(b, m, deterministic)
 }
 func (m *Amount) XXX_Merge(src proto.Message) {
@@ -7013,10 +7013,10 @@ func (*ChannelBalanceRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{78}
 }
 
-func (m *ChannelBalanceRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelBalanceRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelBalanceRequest.Unmarshal(m, b)
 }
-func (m *ChannelBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelBalanceRequest.Marshal(b, m, deterministic)
 }
 func (m *ChannelBalanceRequest) XXX_Merge(src proto.Message) {
@@ -7060,10 +7060,10 @@ func (*ChannelBalanceResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{79}
 }
 
-func (m *ChannelBalanceResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelBalanceResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelBalanceResponse.Unmarshal(m, b)
 }
-func (m *ChannelBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelBalanceResponse.Marshal(b, m, deterministic)
 }
 func (m *ChannelBalanceResponse) XXX_Merge(src proto.Message) {
@@ -7222,10 +7222,10 @@ func (*QueryRoutesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{80}
 }
 
-func (m *QueryRoutesRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *QueryRoutesRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryRoutesRequest.Unmarshal(m, b)
 }
-func (m *QueryRoutesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *QueryRoutesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryRoutesRequest.Marshal(b, m, deterministic)
 }
 func (m *QueryRoutesRequest) XXX_Merge(src proto.Message) {
@@ -7374,10 +7374,10 @@ func (*NodePair) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{81}
 }
 
-func (m *NodePair) XXX_Unmarshal(b []byte) er.R {
+func (m *NodePair) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodePair.Unmarshal(m, b)
 }
-func (m *NodePair) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodePair) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodePair.Marshal(b, m, deterministic)
 }
 func (m *NodePair) XXX_Merge(src proto.Message) {
@@ -7427,10 +7427,10 @@ func (*EdgeLocator) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{82}
 }
 
-func (m *EdgeLocator) XXX_Unmarshal(b []byte) er.R {
+func (m *EdgeLocator) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EdgeLocator.Unmarshal(m, b)
 }
-func (m *EdgeLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *EdgeLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_EdgeLocator.Marshal(b, m, deterministic)
 }
 func (m *EdgeLocator) XXX_Merge(src proto.Message) {
@@ -7480,10 +7480,10 @@ func (*QueryRoutesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{83}
 }
 
-func (m *QueryRoutesResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *QueryRoutesResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryRoutesResponse.Unmarshal(m, b)
 }
-func (m *QueryRoutesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *QueryRoutesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryRoutesResponse.Marshal(b, m, deterministic)
 }
 func (m *QueryRoutesResponse) XXX_Merge(src proto.Message) {
@@ -7556,10 +7556,10 @@ func (*Hop) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{84}
 }
 
-func (m *Hop) XXX_Unmarshal(b []byte) er.R {
+func (m *Hop) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Hop.Unmarshal(m, b)
 }
-func (m *Hop) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Hop) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Hop.Marshal(b, m, deterministic)
 }
 func (m *Hop) XXX_Merge(src proto.Message) {
@@ -7678,10 +7678,10 @@ func (*MPPRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{85}
 }
 
-func (m *MPPRecord) XXX_Unmarshal(b []byte) er.R {
+func (m *MPPRecord) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MPPRecord.Unmarshal(m, b)
 }
-func (m *MPPRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *MPPRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MPPRecord.Marshal(b, m, deterministic)
 }
 func (m *MPPRecord) XXX_Merge(src proto.Message) {
@@ -7756,10 +7756,10 @@ func (*Route) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{86}
 }
 
-func (m *Route) XXX_Unmarshal(b []byte) er.R {
+func (m *Route) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Route.Unmarshal(m, b)
 }
-func (m *Route) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Route) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Route.Marshal(b, m, deterministic)
 }
 func (m *Route) XXX_Merge(src proto.Message) {
@@ -7835,10 +7835,10 @@ func (*NodeInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{87}
 }
 
-func (m *NodeInfoRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeInfoRequest.Unmarshal(m, b)
 }
-func (m *NodeInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *NodeInfoRequest) XXX_Merge(src proto.Message) {
@@ -7892,10 +7892,10 @@ func (*NodeInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{88}
 }
 
-func (m *NodeInfo) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeInfo.Unmarshal(m, b)
 }
-func (m *NodeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeInfo.Marshal(b, m, deterministic)
 }
 func (m *NodeInfo) XXX_Merge(src proto.Message) {
@@ -7962,10 +7962,10 @@ func (*LightningNode) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{89}
 }
 
-func (m *LightningNode) XXX_Unmarshal(b []byte) er.R {
+func (m *LightningNode) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LightningNode.Unmarshal(m, b)
 }
-func (m *LightningNode) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *LightningNode) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LightningNode.Marshal(b, m, deterministic)
 }
 func (m *LightningNode) XXX_Merge(src proto.Message) {
@@ -8037,10 +8037,10 @@ func (*NodeAddress) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{90}
 }
 
-func (m *NodeAddress) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeAddress) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeAddress.Unmarshal(m, b)
 }
-func (m *NodeAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeAddress.Marshal(b, m, deterministic)
 }
 func (m *NodeAddress) XXX_Merge(src proto.Message) {
@@ -8089,10 +8089,10 @@ func (*RoutingPolicy) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{91}
 }
 
-func (m *RoutingPolicy) XXX_Unmarshal(b []byte) er.R {
+func (m *RoutingPolicy) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RoutingPolicy.Unmarshal(m, b)
 }
-func (m *RoutingPolicy) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *RoutingPolicy) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RoutingPolicy.Marshal(b, m, deterministic)
 }
 func (m *RoutingPolicy) XXX_Merge(src proto.Message) {
@@ -8187,10 +8187,10 @@ func (*ChannelEdge) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{92}
 }
 
-func (m *ChannelEdge) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelEdge) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelEdge.Unmarshal(m, b)
 }
-func (m *ChannelEdge) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelEdge) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelEdge.Marshal(b, m, deterministic)
 }
 func (m *ChannelEdge) XXX_Merge(src proto.Message) {
@@ -8280,10 +8280,10 @@ func (*ChannelGraphRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{93}
 }
 
-func (m *ChannelGraphRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelGraphRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelGraphRequest.Unmarshal(m, b)
 }
-func (m *ChannelGraphRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelGraphRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelGraphRequest.Marshal(b, m, deterministic)
 }
 func (m *ChannelGraphRequest) XXX_Merge(src proto.Message) {
@@ -8323,10 +8323,10 @@ func (*ChannelGraph) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{94}
 }
 
-func (m *ChannelGraph) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelGraph) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelGraph.Unmarshal(m, b)
 }
-func (m *ChannelGraph) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelGraph) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelGraph.Marshal(b, m, deterministic)
 }
 func (m *ChannelGraph) XXX_Merge(src proto.Message) {
@@ -8370,10 +8370,10 @@ func (*NodeMetricsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{95}
 }
 
-func (m *NodeMetricsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeMetricsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeMetricsRequest.Unmarshal(m, b)
 }
-func (m *NodeMetricsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeMetricsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeMetricsRequest.Marshal(b, m, deterministic)
 }
 func (m *NodeMetricsRequest) XXX_Merge(src proto.Message) {
@@ -8415,10 +8415,10 @@ func (*NodeMetricsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{96}
 }
 
-func (m *NodeMetricsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeMetricsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeMetricsResponse.Unmarshal(m, b)
 }
-func (m *NodeMetricsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeMetricsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeMetricsResponse.Marshal(b, m, deterministic)
 }
 func (m *NodeMetricsResponse) XXX_Merge(src proto.Message) {
@@ -8457,10 +8457,10 @@ func (*FloatMetric) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{97}
 }
 
-func (m *FloatMetric) XXX_Unmarshal(b []byte) er.R {
+func (m *FloatMetric) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FloatMetric.Unmarshal(m, b)
 }
-func (m *FloatMetric) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FloatMetric) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FloatMetric.Marshal(b, m, deterministic)
 }
 func (m *FloatMetric) XXX_Merge(src proto.Message) {
@@ -8507,10 +8507,10 @@ func (*ChanInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{98}
 }
 
-func (m *ChanInfoRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChanInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChanInfoRequest.Unmarshal(m, b)
 }
-func (m *ChanInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChanInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChanInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *ChanInfoRequest) XXX_Merge(src proto.Message) {
@@ -8545,10 +8545,10 @@ func (*NetworkInfoRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{99}
 }
 
-func (m *NetworkInfoRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *NetworkInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NetworkInfoRequest.Unmarshal(m, b)
 }
-func (m *NetworkInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NetworkInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NetworkInfoRequest.Marshal(b, m, deterministic)
 }
 func (m *NetworkInfoRequest) XXX_Merge(src proto.Message) {
@@ -8588,10 +8588,10 @@ func (*NetworkInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{100}
 }
 
-func (m *NetworkInfo) XXX_Unmarshal(b []byte) er.R {
+func (m *NetworkInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NetworkInfo.Unmarshal(m, b)
 }
-func (m *NetworkInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NetworkInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NetworkInfo.Marshal(b, m, deterministic)
 }
 func (m *NetworkInfo) XXX_Merge(src proto.Message) {
@@ -8696,10 +8696,10 @@ func (*StopRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{101}
 }
 
-func (m *StopRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *StopRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StopRequest.Unmarshal(m, b)
 }
-func (m *StopRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *StopRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StopRequest.Marshal(b, m, deterministic)
 }
 func (m *StopRequest) XXX_Merge(src proto.Message) {
@@ -8727,10 +8727,10 @@ func (*StopResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{102}
 }
 
-func (m *StopResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *StopResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StopResponse.Unmarshal(m, b)
 }
-func (m *StopResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *StopResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StopResponse.Marshal(b, m, deterministic)
 }
 func (m *StopResponse) XXX_Merge(src proto.Message) {
@@ -8758,10 +8758,10 @@ func (*GraphTopologySubscription) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{103}
 }
 
-func (m *GraphTopologySubscription) XXX_Unmarshal(b []byte) er.R {
+func (m *GraphTopologySubscription) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GraphTopologySubscription.Unmarshal(m, b)
 }
-func (m *GraphTopologySubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GraphTopologySubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GraphTopologySubscription.Marshal(b, m, deterministic)
 }
 func (m *GraphTopologySubscription) XXX_Merge(src proto.Message) {
@@ -8792,10 +8792,10 @@ func (*GraphTopologyUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{104}
 }
 
-func (m *GraphTopologyUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *GraphTopologyUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GraphTopologyUpdate.Unmarshal(m, b)
 }
-func (m *GraphTopologyUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *GraphTopologyUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GraphTopologyUpdate.Marshal(b, m, deterministic)
 }
 func (m *GraphTopologyUpdate) XXX_Merge(src proto.Message) {
@@ -8849,10 +8849,10 @@ func (*NodeUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{105}
 }
 
-func (m *NodeUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *NodeUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeUpdate.Unmarshal(m, b)
 }
-func (m *NodeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *NodeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NodeUpdate.Marshal(b, m, deterministic)
 }
 func (m *NodeUpdate) XXX_Merge(src proto.Message) {
@@ -8925,10 +8925,10 @@ func (*ChannelEdgeUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{106}
 }
 
-func (m *ChannelEdgeUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelEdgeUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelEdgeUpdate.Unmarshal(m, b)
 }
-func (m *ChannelEdgeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelEdgeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelEdgeUpdate.Marshal(b, m, deterministic)
 }
 func (m *ChannelEdgeUpdate) XXX_Merge(src proto.Message) {
@@ -9006,10 +9006,10 @@ func (*ClosedChannelUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{107}
 }
 
-func (m *ClosedChannelUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ClosedChannelUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ClosedChannelUpdate.Unmarshal(m, b)
 }
-func (m *ClosedChannelUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ClosedChannelUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ClosedChannelUpdate.Marshal(b, m, deterministic)
 }
 func (m *ClosedChannelUpdate) XXX_Merge(src proto.Message) {
@@ -9077,10 +9077,10 @@ func (*HopHint) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{108}
 }
 
-func (m *HopHint) XXX_Unmarshal(b []byte) er.R {
+func (m *HopHint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HopHint.Unmarshal(m, b)
 }
-func (m *HopHint) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *HopHint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_HopHint.Marshal(b, m, deterministic)
 }
 func (m *HopHint) XXX_Merge(src proto.Message) {
@@ -9147,10 +9147,10 @@ func (*RouteHint) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{109}
 }
 
-func (m *RouteHint) XXX_Unmarshal(b []byte) er.R {
+func (m *RouteHint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RouteHint.Unmarshal(m, b)
 }
-func (m *RouteHint) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *RouteHint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RouteHint.Marshal(b, m, deterministic)
 }
 func (m *RouteHint) XXX_Merge(src proto.Message) {
@@ -9280,10 +9280,10 @@ func (*Invoice) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{110}
 }
 
-func (m *Invoice) XXX_Unmarshal(b []byte) er.R {
+func (m *Invoice) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Invoice.Unmarshal(m, b)
 }
-func (m *Invoice) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Invoice) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Invoice.Marshal(b, m, deterministic)
 }
 func (m *Invoice) XXX_Merge(src proto.Message) {
@@ -9502,10 +9502,10 @@ func (*InvoiceHTLC) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{111}
 }
 
-func (m *InvoiceHTLC) XXX_Unmarshal(b []byte) er.R {
+func (m *InvoiceHTLC) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InvoiceHTLC.Unmarshal(m, b)
 }
-func (m *InvoiceHTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *InvoiceHTLC) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_InvoiceHTLC.Marshal(b, m, deterministic)
 }
 func (m *InvoiceHTLC) XXX_Merge(src proto.Message) {
@@ -9615,10 +9615,10 @@ func (*AddInvoiceResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{112}
 }
 
-func (m *AddInvoiceResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *AddInvoiceResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddInvoiceResponse.Unmarshal(m, b)
 }
-func (m *AddInvoiceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *AddInvoiceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AddInvoiceResponse.Marshal(b, m, deterministic)
 }
 func (m *AddInvoiceResponse) XXX_Merge(src proto.Message) {
@@ -9677,10 +9677,10 @@ func (*PaymentHash) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{113}
 }
 
-func (m *PaymentHash) XXX_Unmarshal(b []byte) er.R {
+func (m *PaymentHash) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentHash.Unmarshal(m, b)
 }
-func (m *PaymentHash) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PaymentHash) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PaymentHash.Marshal(b, m, deterministic)
 }
 func (m *PaymentHash) XXX_Merge(src proto.Message) {
@@ -9737,10 +9737,10 @@ func (*ListInvoiceRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{114}
 }
 
-func (m *ListInvoiceRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListInvoiceRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListInvoiceRequest.Unmarshal(m, b)
 }
-func (m *ListInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListInvoiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListInvoiceRequest.Marshal(b, m, deterministic)
 }
 func (m *ListInvoiceRequest) XXX_Merge(src proto.Message) {
@@ -9808,10 +9808,10 @@ func (*ListInvoiceResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{115}
 }
 
-func (m *ListInvoiceResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListInvoiceResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListInvoiceResponse.Unmarshal(m, b)
 }
-func (m *ListInvoiceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListInvoiceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListInvoiceResponse.Marshal(b, m, deterministic)
 }
 func (m *ListInvoiceResponse) XXX_Merge(src proto.Message) {
@@ -9872,10 +9872,10 @@ func (*InvoiceSubscription) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{116}
 }
 
-func (m *InvoiceSubscription) XXX_Unmarshal(b []byte) er.R {
+func (m *InvoiceSubscription) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InvoiceSubscription.Unmarshal(m, b)
 }
-func (m *InvoiceSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *InvoiceSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_InvoiceSubscription.Marshal(b, m, deterministic)
 }
 func (m *InvoiceSubscription) XXX_Merge(src proto.Message) {
@@ -9949,10 +9949,10 @@ func (*Payment) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{117}
 }
 
-func (m *Payment) XXX_Unmarshal(b []byte) er.R {
+func (m *Payment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Payment.Unmarshal(m, b)
 }
-func (m *Payment) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Payment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Payment.Marshal(b, m, deterministic)
 }
 func (m *Payment) XXX_Merge(src proto.Message) {
@@ -10102,10 +10102,10 @@ func (*HTLCAttempt) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{118}
 }
 
-func (m *HTLCAttempt) XXX_Unmarshal(b []byte) er.R {
+func (m *HTLCAttempt) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HTLCAttempt.Unmarshal(m, b)
 }
-func (m *HTLCAttempt) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *HTLCAttempt) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_HTLCAttempt.Marshal(b, m, deterministic)
 }
 func (m *HTLCAttempt) XXX_Merge(src proto.Message) {
@@ -10195,10 +10195,10 @@ func (*ListPaymentsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{119}
 }
 
-func (m *ListPaymentsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPaymentsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPaymentsRequest.Unmarshal(m, b)
 }
-func (m *ListPaymentsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPaymentsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPaymentsRequest.Marshal(b, m, deterministic)
 }
 func (m *ListPaymentsRequest) XXX_Merge(src proto.Message) {
@@ -10264,10 +10264,10 @@ func (*ListPaymentsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{120}
 }
 
-func (m *ListPaymentsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPaymentsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPaymentsResponse.Unmarshal(m, b)
 }
-func (m *ListPaymentsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPaymentsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPaymentsResponse.Marshal(b, m, deterministic)
 }
 func (m *ListPaymentsResponse) XXX_Merge(src proto.Message) {
@@ -10316,10 +10316,10 @@ func (*DeleteAllPaymentsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{121}
 }
 
-func (m *DeleteAllPaymentsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *DeleteAllPaymentsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteAllPaymentsRequest.Unmarshal(m, b)
 }
-func (m *DeleteAllPaymentsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DeleteAllPaymentsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DeleteAllPaymentsRequest.Marshal(b, m, deterministic)
 }
 func (m *DeleteAllPaymentsRequest) XXX_Merge(src proto.Message) {
@@ -10347,10 +10347,10 @@ func (*DeleteAllPaymentsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{122}
 }
 
-func (m *DeleteAllPaymentsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *DeleteAllPaymentsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteAllPaymentsResponse.Unmarshal(m, b)
 }
-func (m *DeleteAllPaymentsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DeleteAllPaymentsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DeleteAllPaymentsResponse.Marshal(b, m, deterministic)
 }
 func (m *DeleteAllPaymentsResponse) XXX_Merge(src proto.Message) {
@@ -10380,10 +10380,10 @@ func (*AbandonChannelRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{123}
 }
 
-func (m *AbandonChannelRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *AbandonChannelRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AbandonChannelRequest.Unmarshal(m, b)
 }
-func (m *AbandonChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *AbandonChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AbandonChannelRequest.Marshal(b, m, deterministic)
 }
 func (m *AbandonChannelRequest) XXX_Merge(src proto.Message) {
@@ -10425,10 +10425,10 @@ func (*AbandonChannelResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{124}
 }
 
-func (m *AbandonChannelResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *AbandonChannelResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AbandonChannelResponse.Unmarshal(m, b)
 }
-func (m *AbandonChannelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *AbandonChannelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AbandonChannelResponse.Marshal(b, m, deterministic)
 }
 func (m *AbandonChannelResponse) XXX_Merge(src proto.Message) {
@@ -10458,10 +10458,10 @@ func (*DebugLevelRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{125}
 }
 
-func (m *DebugLevelRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *DebugLevelRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DebugLevelRequest.Unmarshal(m, b)
 }
-func (m *DebugLevelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DebugLevelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DebugLevelRequest.Marshal(b, m, deterministic)
 }
 func (m *DebugLevelRequest) XXX_Merge(src proto.Message) {
@@ -10504,10 +10504,10 @@ func (*DebugLevelResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{126}
 }
 
-func (m *DebugLevelResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *DebugLevelResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DebugLevelResponse.Unmarshal(m, b)
 }
-func (m *DebugLevelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DebugLevelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DebugLevelResponse.Marshal(b, m, deterministic)
 }
 func (m *DebugLevelResponse) XXX_Merge(src proto.Message) {
@@ -10544,10 +10544,10 @@ func (*PayReqString) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{127}
 }
 
-func (m *PayReqString) XXX_Unmarshal(b []byte) er.R {
+func (m *PayReqString) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PayReqString.Unmarshal(m, b)
 }
-func (m *PayReqString) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PayReqString) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PayReqString.Marshal(b, m, deterministic)
 }
 func (m *PayReqString) XXX_Merge(src proto.Message) {
@@ -10595,10 +10595,10 @@ func (*PayReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{128}
 }
 
-func (m *PayReq) XXX_Unmarshal(b []byte) er.R {
+func (m *PayReq) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PayReq.Unmarshal(m, b)
 }
-func (m *PayReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PayReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PayReq.Marshal(b, m, deterministic)
 }
 func (m *PayReq) XXX_Merge(src proto.Message) {
@@ -10720,10 +10720,10 @@ func (*Feature) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{129}
 }
 
-func (m *Feature) XXX_Unmarshal(b []byte) er.R {
+func (m *Feature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Feature.Unmarshal(m, b)
 }
-func (m *Feature) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Feature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Feature.Marshal(b, m, deterministic)
 }
 func (m *Feature) XXX_Merge(src proto.Message) {
@@ -10772,10 +10772,10 @@ func (*FeeReportRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{130}
 }
 
-func (m *FeeReportRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *FeeReportRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FeeReportRequest.Unmarshal(m, b)
 }
-func (m *FeeReportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FeeReportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FeeReportRequest.Marshal(b, m, deterministic)
 }
 func (m *FeeReportRequest) XXX_Merge(src proto.Message) {
@@ -10815,10 +10815,10 @@ func (*ChannelFeeReport) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{131}
 }
 
-func (m *ChannelFeeReport) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelFeeReport) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelFeeReport.Unmarshal(m, b)
 }
-func (m *ChannelFeeReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelFeeReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelFeeReport.Marshal(b, m, deterministic)
 }
 func (m *ChannelFeeReport) XXX_Merge(src proto.Message) {
@@ -10893,10 +10893,10 @@ func (*FeeReportResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{132}
 }
 
-func (m *FeeReportResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *FeeReportResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FeeReportResponse.Unmarshal(m, b)
 }
-func (m *FeeReportResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *FeeReportResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FeeReportResponse.Marshal(b, m, deterministic)
 }
 func (m *FeeReportResponse) XXX_Merge(src proto.Message) {
@@ -10971,10 +10971,10 @@ func (*PolicyUpdateRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{133}
 }
 
-func (m *PolicyUpdateRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *PolicyUpdateRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PolicyUpdateRequest.Unmarshal(m, b)
 }
-func (m *PolicyUpdateRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PolicyUpdateRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PolicyUpdateRequest.Marshal(b, m, deterministic)
 }
 func (m *PolicyUpdateRequest) XXX_Merge(src proto.Message) {
@@ -11089,10 +11089,10 @@ func (*PolicyUpdateResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{134}
 }
 
-func (m *PolicyUpdateResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *PolicyUpdateResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PolicyUpdateResponse.Unmarshal(m, b)
 }
-func (m *PolicyUpdateResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *PolicyUpdateResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PolicyUpdateResponse.Marshal(b, m, deterministic)
 }
 func (m *PolicyUpdateResponse) XXX_Merge(src proto.Message) {
@@ -11134,10 +11134,10 @@ func (*ForwardingHistoryRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{135}
 }
 
-func (m *ForwardingHistoryRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ForwardingHistoryRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ForwardingHistoryRequest.Unmarshal(m, b)
 }
-func (m *ForwardingHistoryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ForwardingHistoryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ForwardingHistoryRequest.Marshal(b, m, deterministic)
 }
 func (m *ForwardingHistoryRequest) XXX_Merge(src proto.Message) {
@@ -11217,10 +11217,10 @@ func (*ForwardingEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{136}
 }
 
-func (m *ForwardingEvent) XXX_Unmarshal(b []byte) er.R {
+func (m *ForwardingEvent) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ForwardingEvent.Unmarshal(m, b)
 }
-func (m *ForwardingEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ForwardingEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ForwardingEvent.Marshal(b, m, deterministic)
 }
 func (m *ForwardingEvent) XXX_Merge(src proto.Message) {
@@ -11317,10 +11317,10 @@ func (*ForwardingHistoryResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{137}
 }
 
-func (m *ForwardingHistoryResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ForwardingHistoryResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ForwardingHistoryResponse.Unmarshal(m, b)
 }
-func (m *ForwardingHistoryResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ForwardingHistoryResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ForwardingHistoryResponse.Marshal(b, m, deterministic)
 }
 func (m *ForwardingHistoryResponse) XXX_Merge(src proto.Message) {
@@ -11364,10 +11364,10 @@ func (*ExportChannelBackupRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{138}
 }
 
-func (m *ExportChannelBackupRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ExportChannelBackupRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExportChannelBackupRequest.Unmarshal(m, b)
 }
-func (m *ExportChannelBackupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ExportChannelBackupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ExportChannelBackupRequest.Marshal(b, m, deterministic)
 }
 func (m *ExportChannelBackupRequest) XXX_Merge(src proto.Message) {
@@ -11411,10 +11411,10 @@ func (*ChannelBackup) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{139}
 }
 
-func (m *ChannelBackup) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelBackup) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelBackup.Unmarshal(m, b)
 }
-func (m *ChannelBackup) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelBackup) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelBackup.Marshal(b, m, deterministic)
 }
 func (m *ChannelBackup) XXX_Merge(src proto.Message) {
@@ -11465,10 +11465,10 @@ func (*MultiChanBackup) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{140}
 }
 
-func (m *MultiChanBackup) XXX_Unmarshal(b []byte) er.R {
+func (m *MultiChanBackup) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MultiChanBackup.Unmarshal(m, b)
 }
-func (m *MultiChanBackup) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *MultiChanBackup) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MultiChanBackup.Marshal(b, m, deterministic)
 }
 func (m *MultiChanBackup) XXX_Merge(src proto.Message) {
@@ -11510,10 +11510,10 @@ func (*ChanBackupExportRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{141}
 }
 
-func (m *ChanBackupExportRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ChanBackupExportRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChanBackupExportRequest.Unmarshal(m, b)
 }
-func (m *ChanBackupExportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChanBackupExportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChanBackupExportRequest.Marshal(b, m, deterministic)
 }
 func (m *ChanBackupExportRequest) XXX_Merge(src proto.Message) {
@@ -11549,10 +11549,10 @@ func (*ChanBackupSnapshot) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{142}
 }
 
-func (m *ChanBackupSnapshot) XXX_Unmarshal(b []byte) er.R {
+func (m *ChanBackupSnapshot) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChanBackupSnapshot.Unmarshal(m, b)
 }
-func (m *ChanBackupSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChanBackupSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChanBackupSnapshot.Marshal(b, m, deterministic)
 }
 func (m *ChanBackupSnapshot) XXX_Merge(src proto.Message) {
@@ -11597,10 +11597,10 @@ func (*ChannelBackups) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{143}
 }
 
-func (m *ChannelBackups) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelBackups) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelBackups.Unmarshal(m, b)
 }
-func (m *ChannelBackups) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelBackups) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelBackups.Marshal(b, m, deterministic)
 }
 func (m *ChannelBackups) XXX_Merge(src proto.Message) {
@@ -11639,10 +11639,10 @@ func (*RestoreChanBackupRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{144}
 }
 
-func (m *RestoreChanBackupRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *RestoreChanBackupRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RestoreChanBackupRequest.Unmarshal(m, b)
 }
-func (m *RestoreChanBackupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *RestoreChanBackupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RestoreChanBackupRequest.Marshal(b, m, deterministic)
 }
 func (m *RestoreChanBackupRequest) XXX_Merge(src proto.Message) {
@@ -11715,10 +11715,10 @@ func (*RestoreBackupResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{145}
 }
 
-func (m *RestoreBackupResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *RestoreBackupResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RestoreBackupResponse.Unmarshal(m, b)
 }
-func (m *RestoreBackupResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *RestoreBackupResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RestoreBackupResponse.Marshal(b, m, deterministic)
 }
 func (m *RestoreBackupResponse) XXX_Merge(src proto.Message) {
@@ -11746,10 +11746,10 @@ func (*ChannelBackupSubscription) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{146}
 }
 
-func (m *ChannelBackupSubscription) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelBackupSubscription) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelBackupSubscription.Unmarshal(m, b)
 }
-func (m *ChannelBackupSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelBackupSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelBackupSubscription.Marshal(b, m, deterministic)
 }
 func (m *ChannelBackupSubscription) XXX_Merge(src proto.Message) {
@@ -11777,10 +11777,10 @@ func (*VerifyChanBackupResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{147}
 }
 
-func (m *VerifyChanBackupResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *VerifyChanBackupResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VerifyChanBackupResponse.Unmarshal(m, b)
 }
-func (m *VerifyChanBackupResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *VerifyChanBackupResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VerifyChanBackupResponse.Marshal(b, m, deterministic)
 }
 func (m *VerifyChanBackupResponse) XXX_Merge(src proto.Message) {
@@ -11812,10 +11812,10 @@ func (*MacaroonPermission) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{148}
 }
 
-func (m *MacaroonPermission) XXX_Unmarshal(b []byte) er.R {
+func (m *MacaroonPermission) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MacaroonPermission.Unmarshal(m, b)
 }
-func (m *MacaroonPermission) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *MacaroonPermission) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MacaroonPermission.Marshal(b, m, deterministic)
 }
 func (m *MacaroonPermission) XXX_Merge(src proto.Message) {
@@ -11861,10 +11861,10 @@ func (*BakeMacaroonRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{149}
 }
 
-func (m *BakeMacaroonRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *BakeMacaroonRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BakeMacaroonRequest.Unmarshal(m, b)
 }
-func (m *BakeMacaroonRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *BakeMacaroonRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BakeMacaroonRequest.Marshal(b, m, deterministic)
 }
 func (m *BakeMacaroonRequest) XXX_Merge(src proto.Message) {
@@ -11908,10 +11908,10 @@ func (*BakeMacaroonResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{150}
 }
 
-func (m *BakeMacaroonResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *BakeMacaroonResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BakeMacaroonResponse.Unmarshal(m, b)
 }
-func (m *BakeMacaroonResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *BakeMacaroonResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BakeMacaroonResponse.Marshal(b, m, deterministic)
 }
 func (m *BakeMacaroonResponse) XXX_Merge(src proto.Message) {
@@ -11946,10 +11946,10 @@ func (*ListMacaroonIDsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{151}
 }
 
-func (m *ListMacaroonIDsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListMacaroonIDsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListMacaroonIDsRequest.Unmarshal(m, b)
 }
-func (m *ListMacaroonIDsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListMacaroonIDsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListMacaroonIDsRequest.Marshal(b, m, deterministic)
 }
 func (m *ListMacaroonIDsRequest) XXX_Merge(src proto.Message) {
@@ -11979,10 +11979,10 @@ func (*ListMacaroonIDsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{152}
 }
 
-func (m *ListMacaroonIDsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListMacaroonIDsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListMacaroonIDsResponse.Unmarshal(m, b)
 }
-func (m *ListMacaroonIDsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListMacaroonIDsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListMacaroonIDsResponse.Marshal(b, m, deterministic)
 }
 func (m *ListMacaroonIDsResponse) XXX_Merge(src proto.Message) {
@@ -12019,10 +12019,10 @@ func (*DeleteMacaroonIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{153}
 }
 
-func (m *DeleteMacaroonIDRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *DeleteMacaroonIDRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteMacaroonIDRequest.Unmarshal(m, b)
 }
-func (m *DeleteMacaroonIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DeleteMacaroonIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DeleteMacaroonIDRequest.Marshal(b, m, deterministic)
 }
 func (m *DeleteMacaroonIDRequest) XXX_Merge(src proto.Message) {
@@ -12059,10 +12059,10 @@ func (*DeleteMacaroonIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{154}
 }
 
-func (m *DeleteMacaroonIDResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *DeleteMacaroonIDResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteMacaroonIDResponse.Unmarshal(m, b)
 }
-func (m *DeleteMacaroonIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *DeleteMacaroonIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DeleteMacaroonIDResponse.Marshal(b, m, deterministic)
 }
 func (m *DeleteMacaroonIDResponse) XXX_Merge(src proto.Message) {
@@ -12099,10 +12099,10 @@ func (*MacaroonPermissionList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{155}
 }
 
-func (m *MacaroonPermissionList) XXX_Unmarshal(b []byte) er.R {
+func (m *MacaroonPermissionList) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MacaroonPermissionList.Unmarshal(m, b)
 }
-func (m *MacaroonPermissionList) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *MacaroonPermissionList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MacaroonPermissionList.Marshal(b, m, deterministic)
 }
 func (m *MacaroonPermissionList) XXX_Merge(src proto.Message) {
@@ -12137,10 +12137,10 @@ func (*ListPermissionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{156}
 }
 
-func (m *ListPermissionsRequest) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPermissionsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPermissionsRequest.Unmarshal(m, b)
 }
-func (m *ListPermissionsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPermissionsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPermissionsRequest.Marshal(b, m, deterministic)
 }
 func (m *ListPermissionsRequest) XXX_Merge(src proto.Message) {
@@ -12172,10 +12172,10 @@ func (*ListPermissionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{157}
 }
 
-func (m *ListPermissionsResponse) XXX_Unmarshal(b []byte) er.R {
+func (m *ListPermissionsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListPermissionsResponse.Unmarshal(m, b)
 }
-func (m *ListPermissionsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ListPermissionsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListPermissionsResponse.Marshal(b, m, deterministic)
 }
 func (m *ListPermissionsResponse) XXX_Merge(src proto.Message) {
@@ -12228,10 +12228,10 @@ func (*Failure) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{158}
 }
 
-func (m *Failure) XXX_Unmarshal(b []byte) er.R {
+func (m *Failure) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Failure.Unmarshal(m, b)
 }
-func (m *Failure) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Failure) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Failure.Marshal(b, m, deterministic)
 }
 func (m *Failure) XXX_Merge(src proto.Message) {
@@ -12372,10 +12372,10 @@ func (*ChannelUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{159}
 }
 
-func (m *ChannelUpdate) XXX_Unmarshal(b []byte) er.R {
+func (m *ChannelUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChannelUpdate.Unmarshal(m, b)
 }
-func (m *ChannelUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *ChannelUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ChannelUpdate.Marshal(b, m, deterministic)
 }
 func (m *ChannelUpdate) XXX_Merge(src proto.Message) {
@@ -12490,10 +12490,10 @@ func (*MacaroonId) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{160}
 }
 
-func (m *MacaroonId) XXX_Unmarshal(b []byte) er.R {
+func (m *MacaroonId) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MacaroonId.Unmarshal(m, b)
 }
-func (m *MacaroonId) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *MacaroonId) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MacaroonId.Marshal(b, m, deterministic)
 }
 func (m *MacaroonId) XXX_Merge(src proto.Message) {
@@ -12544,10 +12544,10 @@ func (*Op) Descriptor() ([]byte, []int) {
 	return fileDescriptor_77a6da22d6a3feb1, []int{161}
 }
 
-func (m *Op) XXX_Unmarshal(b []byte) er.R {
+func (m *Op) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Op.Unmarshal(m, b)
 }
-func (m *Op) XXX_Marshal(b []byte, deterministic bool) ([]byte, er.R) {
+func (m *Op) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Op.Marshal(b, m, deterministic)
 }
 func (m *Op) XXX_Merge(src proto.Message) {
@@ -13570,16 +13570,16 @@ type LightningClient interface {
 	//WalletBalance returns total unspent outputs(confirmed and unconfirmed), all
 	//confirmed unspent outputs and all unconfirmed unspent outputs under control
 	//of the wallet.
-	WalletBalance(ctx context.Context, in *WalletBalanceRequest, opts ...grpc.CallOption) (*WalletBalanceResponse, er.R)
+	WalletBalance(ctx context.Context, in *WalletBalanceRequest, opts ...grpc.CallOption) (*WalletBalanceResponse, error)
 	// lncli: `channelbalance`
 	//ChannelBalance returns a report on the total funds across all open channels,
 	//categorized in local/remote, pending local/remote and unsettled local/remote
 	//balances.
-	ChannelBalance(ctx context.Context, in *ChannelBalanceRequest, opts ...grpc.CallOption) (*ChannelBalanceResponse, er.R)
+	ChannelBalance(ctx context.Context, in *ChannelBalanceRequest, opts ...grpc.CallOption) (*ChannelBalanceResponse, error)
 	// lncli: `listchaintxns`
 	//GetTransactions returns a list describing all the known transactions
 	//relevant to the wallet.
-	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*TransactionDetails, er.R)
+	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*TransactionDetails, error)
 	// lncli: `estimatefee`
 	//EstimateFee asks the chain backend to estimate the fee rate and total fees
 	//for a transaction that pays to multiple specified outputs.
@@ -13588,99 +13588,99 @@ type LightningClient interface {
 	//`&AddrToAmount[<address>]=<amount_to_send>` to the URL. Unfortunately this
 	//map type doesn't appear in the REST API documentation because of a bug in
 	//the grpc-gateway library.
-	EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, er.R)
+	EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, error)
 	// lncli: `sendcoins`
 	//SendCoins executes a request to send coins to a particular address. Unlike
 	//SendMany, this RPC call only allows creating a single output at a time. If
 	//neither target_conf, or sat_per_byte are set, then the internal wallet will
 	//consult its fee model to determine a fee for the default confirmation
 	//target.
-	SendCoins(ctx context.Context, in *SendCoinsRequest, opts ...grpc.CallOption) (*SendCoinsResponse, er.R)
+	SendCoins(ctx context.Context, in *SendCoinsRequest, opts ...grpc.CallOption) (*SendCoinsResponse, error)
 	// lncli: `listunspent`
 	//Deprecated, use walletrpc.ListUnspent instead.
 	//
 	//ListUnspent returns a list of all utxos spendable by the wallet with a
 	//number of confirmations between the specified minimum and maximum.
-	ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, er.R)
+	ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, error)
 	//
 	//SubscribeTransactions creates a uni-directional stream from the server to
 	//the client in which any newly discovered transactions relevant to the
 	//wallet are sent over.
-	SubscribeTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (Lightning_SubscribeTransactionsClient, er.R)
+	SubscribeTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (Lightning_SubscribeTransactionsClient, error)
 	// lncli: `sendmany`
 	//SendMany handles a request for a transaction that creates multiple specified
 	//outputs in parallel. If neither target_conf, or sat_per_byte are set, then
 	//the internal wallet will consult its fee model to determine a fee for the
 	//default confirmation target.
-	SendMany(ctx context.Context, in *SendManyRequest, opts ...grpc.CallOption) (*SendManyResponse, er.R)
+	SendMany(ctx context.Context, in *SendManyRequest, opts ...grpc.CallOption) (*SendManyResponse, error)
 	// lncli: `newaddress`
 	//NewAddress creates a new address under control of the local wallet.
-	NewAddress(ctx context.Context, in *NewAddressRequest, opts ...grpc.CallOption) (*NewAddressResponse, er.R)
+	NewAddress(ctx context.Context, in *NewAddressRequest, opts ...grpc.CallOption) (*NewAddressResponse, error)
 	// lncli: `signmessage`
 	//SignMessage signs a message with this node's private key. The returned
 	//signature string is `zbase32` encoded and pubkey recoverable, meaning that
 	//only the message digest and signature are needed for verification.
-	SignMessage(ctx context.Context, in *SignMessageRequest, opts ...grpc.CallOption) (*SignMessageResponse, er.R)
+	SignMessage(ctx context.Context, in *SignMessageRequest, opts ...grpc.CallOption) (*SignMessageResponse, error)
 	// lncli: `verifymessage`
 	//VerifyMessage verifies a signature over a msg. The signature must be
 	//zbase32 encoded and signed by an active node in the resident node's
 	//channel database. In addition to returning the validity of the signature,
 	//VerifyMessage also returns the recovered pubkey from the signature.
-	VerifyMessage(ctx context.Context, in *VerifyMessageRequest, opts ...grpc.CallOption) (*VerifyMessageResponse, er.R)
+	VerifyMessage(ctx context.Context, in *VerifyMessageRequest, opts ...grpc.CallOption) (*VerifyMessageResponse, error)
 	// lncli: `connect`
 	//ConnectPeer attempts to establish a connection to a remote peer. This is at
 	//the networking level, and is used for communication between nodes. This is
 	//distinct from establishing a channel with a peer.
-	ConnectPeer(ctx context.Context, in *ConnectPeerRequest, opts ...grpc.CallOption) (*ConnectPeerResponse, er.R)
+	ConnectPeer(ctx context.Context, in *ConnectPeerRequest, opts ...grpc.CallOption) (*ConnectPeerResponse, error)
 	// lncli: `disconnect`
 	//DisconnectPeer attempts to disconnect one peer from another identified by a
 	//given pubKey. In the case that we currently have a pending or active channel
 	//with the target peer, then this action will be not be allowed.
-	DisconnectPeer(ctx context.Context, in *DisconnectPeerRequest, opts ...grpc.CallOption) (*DisconnectPeerResponse, er.R)
+	DisconnectPeer(ctx context.Context, in *DisconnectPeerRequest, opts ...grpc.CallOption) (*DisconnectPeerResponse, error)
 	// lncli: `listpeers`
 	//ListPeers returns a verbose listing of all currently active peers.
-	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, er.R)
+	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error)
 	//
 	//SubscribePeerEvents creates a uni-directional stream from the server to
 	//the client in which any events relevant to the state of peers are sent
 	//over. Events include peers going online and offline.
-	SubscribePeerEvents(ctx context.Context, in *PeerEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribePeerEventsClient, er.R)
+	SubscribePeerEvents(ctx context.Context, in *PeerEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribePeerEventsClient, error)
 	// lncli: `getinfo`
 	//GetInfo returns general information concerning the lightning node including
 	//it's identity pubkey, alias, the chains it is connected to, and information
 	//concerning the number of open+pending channels.
-	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, er.R)
+	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
 	//* lncli: `getrecoveryinfo`
 	//GetRecoveryInfo returns information concerning the recovery mode including
 	//whether it's in a recovery mode, whether the recovery is finished, and the
 	//progress made so far.
-	GetRecoveryInfo(ctx context.Context, in *GetRecoveryInfoRequest, opts ...grpc.CallOption) (*GetRecoveryInfoResponse, er.R)
+	GetRecoveryInfo(ctx context.Context, in *GetRecoveryInfoRequest, opts ...grpc.CallOption) (*GetRecoveryInfoResponse, error)
 	// lncli: `pendingchannels`
 	//PendingChannels returns a list of all the channels that are currently
 	//considered "pending". A channel is pending if it has finished the funding
 	//workflow and is waiting for confirmations for the funding txn, or is in the
 	//process of closure, either initiated cooperatively or non-cooperatively.
-	PendingChannels(ctx context.Context, in *PendingChannelsRequest, opts ...grpc.CallOption) (*PendingChannelsResponse, er.R)
+	PendingChannels(ctx context.Context, in *PendingChannelsRequest, opts ...grpc.CallOption) (*PendingChannelsResponse, error)
 	// lncli: `listchannels`
 	//ListChannels returns a description of all the open channels that this node
 	//is a participant in.
-	ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, er.R)
+	ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, error)
 	//
 	//SubscribeChannelEvents creates a uni-directional stream from the server to
 	//the client in which any updates relevant to the state of the channels are
 	//sent over. Events include new active channels, inactive channels, and closed
 	//channels.
-	SubscribeChannelEvents(ctx context.Context, in *ChannelEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelEventsClient, er.R)
+	SubscribeChannelEvents(ctx context.Context, in *ChannelEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelEventsClient, error)
 	// lncli: `closedchannels`
 	//ClosedChannels returns a description of all the closed channels that
 	//this node was a participant in.
-	ClosedChannels(ctx context.Context, in *ClosedChannelsRequest, opts ...grpc.CallOption) (*ClosedChannelsResponse, er.R)
+	ClosedChannels(ctx context.Context, in *ClosedChannelsRequest, opts ...grpc.CallOption) (*ClosedChannelsResponse, error)
 	//
 	//OpenChannelSync is a synchronous version of the OpenChannel RPC call. This
 	//call is meant to be consumed by clients to the REST proxy. As with all
 	//other sync calls, all byte slices are intended to be populated as hex
 	//encoded strings.
-	OpenChannelSync(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*ChannelPoint, er.R)
+	OpenChannelSync(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*ChannelPoint, error)
 	// lncli: `openchannel`
 	//OpenChannel attempts to open a singly funded channel specified in the
 	//request to a remote peer. Users are able to specify a target number of
@@ -13690,7 +13690,7 @@ type LightningClient interface {
 	//the pending channel ID of the in-progress channel. Depending on the
 	//arguments specified in the OpenChannelRequest, this pending channel ID can
 	//then be used to manually progress the channel funding flow.
-	OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (Lightning_OpenChannelClient, er.R)
+	OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (Lightning_OpenChannelClient, error)
 	//
 	//FundingStateStep is an advanced funding related call that allows the caller
 	//to either execute some preparatory steps for a funding workflow, or
@@ -13700,14 +13700,14 @@ type LightningClient interface {
 	//pending channel ID, for which we need to use specific parameters.
 	//Alternatively, this can be used to interactively drive PSBT signing for
 	//funding for partially complete funding transactions.
-	FundingStateStep(ctx context.Context, in *FundingTransitionMsg, opts ...grpc.CallOption) (*FundingStateStepResp, er.R)
+	FundingStateStep(ctx context.Context, in *FundingTransitionMsg, opts ...grpc.CallOption) (*FundingStateStepResp, error)
 	//
 	//ChannelAcceptor dispatches a bi-directional streaming RPC in which
 	//OpenChannel requests are sent to the client and the client responds with
 	//a boolean that tells LND whether or not to accept the channel. This allows
 	//node operators to specify their own criteria for accepting inbound channels
 	//through a single persistent connection.
-	ChannelAcceptor(ctx context.Context, opts ...grpc.CallOption) (Lightning_ChannelAcceptorClient, er.R)
+	ChannelAcceptor(ctx context.Context, opts ...grpc.CallOption) (Lightning_ChannelAcceptorClient, error)
 	// lncli: `closechannel`
 	//CloseChannel attempts to close an active channel identified by its channel
 	//outpoint (ChannelPoint). The actions of this method can additionally be
@@ -13716,7 +13716,7 @@ type LightningClient interface {
 	//then the user can specify either a target number of blocks until the
 	//closure transaction is confirmed, or a manual fee rate. If neither are
 	//specified, then a default lax, block confirmation target is used.
-	CloseChannel(ctx context.Context, in *CloseChannelRequest, opts ...grpc.CallOption) (Lightning_CloseChannelClient, er.R)
+	CloseChannel(ctx context.Context, in *CloseChannelRequest, opts ...grpc.CallOption) (Lightning_CloseChannelClient, error)
 	// lncli: `abandonchannel`
 	//AbandonChannel removes all channel state from the database except for a
 	//close summary. This method can be used to get rid of permanently unusable
@@ -13724,36 +13724,36 @@ type LightningClient interface {
 	//used to remove externally funded channels where the funding transaction was
 	//never broadcast. Only available for non-externally funded channels in dev
 	//build.
-	AbandonChannel(ctx context.Context, in *AbandonChannelRequest, opts ...grpc.CallOption) (*AbandonChannelResponse, er.R)
+	AbandonChannel(ctx context.Context, in *AbandonChannelRequest, opts ...grpc.CallOption) (*AbandonChannelResponse, error)
 	// lncli: `sendpayment`
 	//Deprecated, use routerrpc.SendPaymentV2. SendPayment dispatches a
 	//bi-directional streaming RPC for sending payments through the Lightning
 	//Network. A single RPC invocation creates a persistent bi-directional
 	//stream allowing clients to rapidly send payments through the Lightning
 	//Network with a single persistent connection.
-	SendPayment(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendPaymentClient, er.R)
+	SendPayment(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendPaymentClient, error)
 	//
 	//SendPaymentSync is the synchronous non-streaming version of SendPayment.
 	//This RPC is intended to be consumed by clients of the REST proxy.
 	//Additionally, this RPC expects the destination's public key and the payment
 	//hash (if any) to be encoded as hex strings.
-	SendPaymentSync(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, er.R)
+	SendPaymentSync(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
 	// lncli: `sendtoroute`
 	//Deprecated, use routerrpc.SendToRouteV2. SendToRoute is a bi-directional
 	//streaming RPC for sending payment through the Lightning Network. This
 	//method differs from SendPayment in that it allows users to specify a full
 	//route manually. This can be used for things like rebalancing, and atomic
 	//swaps.
-	SendToRoute(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendToRouteClient, er.R)
+	SendToRoute(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendToRouteClient, error)
 	//
 	//SendToRouteSync is a synchronous version of SendToRoute. It Will block
 	//until the payment either fails or succeeds.
-	SendToRouteSync(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendResponse, er.R)
+	SendToRouteSync(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendResponse, error)
 	// lncli: `addinvoice`
 	//AddInvoice attempts to add a new invoice to the invoice database. Any
 	//duplicated invoices are rejected, therefore all invoices *must* have a
 	//unique payment preimage.
-	AddInvoice(ctx context.Context, in *Invoice, opts ...grpc.CallOption) (*AddInvoiceResponse, er.R)
+	AddInvoice(ctx context.Context, in *Invoice, opts ...grpc.CallOption) (*AddInvoiceResponse, error)
 	// lncli: `listinvoices`
 	//ListInvoices returns a list of all the invoices currently stored within the
 	//database. Any active debug invoices are ignored. It has full support for
@@ -13762,12 +13762,12 @@ type LightningClient interface {
 	//last_index_offset fields included in the response as the index_offset of the
 	//next request. By default, the first 100 invoices created will be returned.
 	//Backwards pagination is also supported through the Reversed flag.
-	ListInvoices(ctx context.Context, in *ListInvoiceRequest, opts ...grpc.CallOption) (*ListInvoiceResponse, er.R)
+	ListInvoices(ctx context.Context, in *ListInvoiceRequest, opts ...grpc.CallOption) (*ListInvoiceResponse, error)
 	// lncli: `lookupinvoice`
 	//LookupInvoice attempts to look up an invoice according to its payment hash.
 	//The passed payment hash *must* be exactly 32 bytes, if not, an error is
 	//returned.
-	LookupInvoice(ctx context.Context, in *PaymentHash, opts ...grpc.CallOption) (*Invoice, er.R)
+	LookupInvoice(ctx context.Context, in *PaymentHash, opts ...grpc.CallOption) (*Invoice, error)
 	//
 	//SubscribeInvoices returns a uni-directional stream (server -> client) for
 	//notifying the client of newly added/settled invoices. The caller can
@@ -13778,18 +13778,18 @@ type LightningClient interface {
 	//invoices with a settle_index greater than the specified value. One or both
 	//of these fields can be set. If no fields are set, then we'll only send out
 	//the latest add/settle events.
-	SubscribeInvoices(ctx context.Context, in *InvoiceSubscription, opts ...grpc.CallOption) (Lightning_SubscribeInvoicesClient, er.R)
+	SubscribeInvoices(ctx context.Context, in *InvoiceSubscription, opts ...grpc.CallOption) (Lightning_SubscribeInvoicesClient, error)
 	// lncli: `decodepayreq`
 	//DecodePayReq takes an encoded payment request string and attempts to decode
 	//it, returning a full description of the conditions encoded within the
 	//payment request.
-	DecodePayReq(ctx context.Context, in *PayReqString, opts ...grpc.CallOption) (*PayReq, er.R)
+	DecodePayReq(ctx context.Context, in *PayReqString, opts ...grpc.CallOption) (*PayReq, error)
 	// lncli: `listpayments`
 	//ListPayments returns a list of all outgoing payments.
-	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, er.R)
+	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 	//
 	//DeleteAllPayments deletes all outgoing payments from DB.
-	DeleteAllPayments(ctx context.Context, in *DeleteAllPaymentsRequest, opts ...grpc.CallOption) (*DeleteAllPaymentsResponse, er.R)
+	DeleteAllPayments(ctx context.Context, in *DeleteAllPaymentsRequest, opts ...grpc.CallOption) (*DeleteAllPaymentsResponse, error)
 	// lncli: `describegraph`
 	//DescribeGraph returns a description of the latest graph state from the
 	//point of view of the node. The graph information is partitioned into two
@@ -13797,21 +13797,21 @@ type LightningClient interface {
 	//vertexes themselves. As this is a directed graph, the edges also contain
 	//the node directional specific routing policy which includes: the time lock
 	//delta, fee information, etc.
-	DescribeGraph(ctx context.Context, in *ChannelGraphRequest, opts ...grpc.CallOption) (*ChannelGraph, er.R)
+	DescribeGraph(ctx context.Context, in *ChannelGraphRequest, opts ...grpc.CallOption) (*ChannelGraph, error)
 	// lncli: `getnodemetrics`
 	//GetNodeMetrics returns node metrics calculated from the graph. Currently
 	//the only supported metric is betweenness centrality of individual nodes.
-	GetNodeMetrics(ctx context.Context, in *NodeMetricsRequest, opts ...grpc.CallOption) (*NodeMetricsResponse, er.R)
+	GetNodeMetrics(ctx context.Context, in *NodeMetricsRequest, opts ...grpc.CallOption) (*NodeMetricsResponse, error)
 	// lncli: `getchaninfo`
 	//GetChanInfo returns the latest authenticated network announcement for the
 	//given channel identified by its channel ID: an 8-byte integer which
 	//uniquely identifies the location of transaction's funding output within the
 	//blockchain.
-	GetChanInfo(ctx context.Context, in *ChanInfoRequest, opts ...grpc.CallOption) (*ChannelEdge, er.R)
+	GetChanInfo(ctx context.Context, in *ChanInfoRequest, opts ...grpc.CallOption) (*ChannelEdge, error)
 	// lncli: `getnodeinfo`
 	//GetNodeInfo returns the latest advertised, aggregated, and authenticated
 	//channel information for the specified node identified by its public key.
-	GetNodeInfo(ctx context.Context, in *NodeInfoRequest, opts ...grpc.CallOption) (*NodeInfo, er.R)
+	GetNodeInfo(ctx context.Context, in *NodeInfoRequest, opts ...grpc.CallOption) (*NodeInfo, error)
 	// lncli: `queryroutes`
 	//QueryRoutes attempts to query the daemon's Channel Router for a possible
 	//route to a target destination capable of carrying a specific amount of
@@ -13823,15 +13823,15 @@ type LightningClient interface {
 	//`&dest_custom_records[<record_number>]=<record_data_base64_url_encoded>`
 	//to the URL. Unfortunately this map type doesn't appear in the REST API
 	//documentation because of a bug in the grpc-gateway library.
-	QueryRoutes(ctx context.Context, in *QueryRoutesRequest, opts ...grpc.CallOption) (*QueryRoutesResponse, er.R)
+	QueryRoutes(ctx context.Context, in *QueryRoutesRequest, opts ...grpc.CallOption) (*QueryRoutesResponse, error)
 	// lncli: `getnetworkinfo`
 	//GetNetworkInfo returns some basic stats about the known channel graph from
 	//the point of view of the node.
-	GetNetworkInfo(ctx context.Context, in *NetworkInfoRequest, opts ...grpc.CallOption) (*NetworkInfo, er.R)
+	GetNetworkInfo(ctx context.Context, in *NetworkInfoRequest, opts ...grpc.CallOption) (*NetworkInfo, error)
 	// lncli: `stop`
 	//StopDaemon will send a shutdown request to the interrupt handler, triggering
 	//a graceful shutdown of the daemon.
-	StopDaemon(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, er.R)
+	StopDaemon(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
 	//
 	//SubscribeChannelGraph launches a streaming RPC that allows the caller to
 	//receive notifications upon any changes to the channel graph topology from
@@ -13839,21 +13839,21 @@ type LightningClient interface {
 	//nodes coming online, nodes updating their authenticated attributes, new
 	//channels being advertised, updates in the routing policy for a directional
 	//channel edge, and when channels are closed on-chain.
-	SubscribeChannelGraph(ctx context.Context, in *GraphTopologySubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelGraphClient, er.R)
+	SubscribeChannelGraph(ctx context.Context, in *GraphTopologySubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelGraphClient, error)
 	// lncli: `debuglevel`
 	//DebugLevel allows a caller to programmatically set the logging verbosity of
 	//lnd. The logging can be targeted according to a coarse daemon-wide logging
 	//level, or in a granular fashion to specify the logging for a target
 	//sub-system.
-	DebugLevel(ctx context.Context, in *DebugLevelRequest, opts ...grpc.CallOption) (*DebugLevelResponse, er.R)
+	DebugLevel(ctx context.Context, in *DebugLevelRequest, opts ...grpc.CallOption) (*DebugLevelResponse, error)
 	// lncli: `feereport`
 	//FeeReport allows the caller to obtain a report detailing the current fee
 	//schedule enforced by the node globally for each channel.
-	FeeReport(ctx context.Context, in *FeeReportRequest, opts ...grpc.CallOption) (*FeeReportResponse, er.R)
+	FeeReport(ctx context.Context, in *FeeReportRequest, opts ...grpc.CallOption) (*FeeReportResponse, error)
 	// lncli: `updatechanpolicy`
 	//UpdateChannelPolicy allows the caller to update the fee schedule and
 	//channel policies for all channels globally, or a particular channel.
-	UpdateChannelPolicy(ctx context.Context, in *PolicyUpdateRequest, opts ...grpc.CallOption) (*PolicyUpdateResponse, er.R)
+	UpdateChannelPolicy(ctx context.Context, in *PolicyUpdateRequest, opts ...grpc.CallOption) (*PolicyUpdateResponse, error)
 	// lncli: `fwdinghistory`
 	//ForwardingHistory allows the caller to query the htlcswitch for a record of
 	//all HTLCs forwarded within the target time range, and integer offset
@@ -13865,7 +13865,7 @@ type LightningClient interface {
 	//As a result each message can only contain 50k entries. Each response has
 	//the index offset of the last entry. The index offset can be provided to the
 	//request to allow the caller to skip a series of records.
-	ForwardingHistory(ctx context.Context, in *ForwardingHistoryRequest, opts ...grpc.CallOption) (*ForwardingHistoryResponse, er.R)
+	ForwardingHistory(ctx context.Context, in *ForwardingHistoryRequest, opts ...grpc.CallOption) (*ForwardingHistoryResponse, error)
 	// lncli: `exportchanbackup`
 	//ExportChannelBackup attempts to return an encrypted static channel backup
 	//for the target channel identified by it channel point. The backup is
@@ -13873,25 +13873,25 @@ type LightningClient interface {
 	//returned backup can either be restored using the RestoreChannelBackup
 	//method once lnd is running, or via the InitWallet and UnlockWallet methods
 	//from the WalletUnlocker service.
-	ExportChannelBackup(ctx context.Context, in *ExportChannelBackupRequest, opts ...grpc.CallOption) (*ChannelBackup, er.R)
+	ExportChannelBackup(ctx context.Context, in *ExportChannelBackupRequest, opts ...grpc.CallOption) (*ChannelBackup, error)
 	//
 	//ExportAllChannelBackups returns static channel backups for all existing
 	//channels known to lnd. A set of regular singular static channel backups for
 	//each channel are returned. Additionally, a multi-channel backup is returned
 	//as well, which contains a single encrypted blob containing the backups of
 	//each channel.
-	ExportAllChannelBackups(ctx context.Context, in *ChanBackupExportRequest, opts ...grpc.CallOption) (*ChanBackupSnapshot, er.R)
+	ExportAllChannelBackups(ctx context.Context, in *ChanBackupExportRequest, opts ...grpc.CallOption) (*ChanBackupSnapshot, error)
 	//
 	//VerifyChanBackup allows a caller to verify the integrity of a channel backup
 	//snapshot. This method will accept either a packed Single or a packed Multi.
 	//Specifying both will result in an error.
-	VerifyChanBackup(ctx context.Context, in *ChanBackupSnapshot, opts ...grpc.CallOption) (*VerifyChanBackupResponse, er.R)
+	VerifyChanBackup(ctx context.Context, in *ChanBackupSnapshot, opts ...grpc.CallOption) (*VerifyChanBackupResponse, error)
 	// lncli: `restorechanbackup`
 	//RestoreChannelBackups accepts a set of singular channel backups, or a
 	//single encrypted multi-chan backup and attempts to recover any funds
 	//remaining within the channel. If we are able to unpack the backup, then the
 	//new channel will be shown under listchannels, as well as pending channels.
-	RestoreChannelBackups(ctx context.Context, in *RestoreChanBackupRequest, opts ...grpc.CallOption) (*RestoreBackupResponse, er.R)
+	RestoreChannelBackups(ctx context.Context, in *RestoreChanBackupRequest, opts ...grpc.CallOption) (*RestoreBackupResponse, error)
 	//
 	//SubscribeChannelBackups allows a client to sub-subscribe to the most up to
 	//date information concerning the state of all channel backups. Each time a
@@ -13900,23 +13900,23 @@ type LightningClient interface {
 	//channel is closed, we send a new update, which contains new new chan back
 	//ups, but the updated set of encrypted multi-chan backups with the closed
 	//channel(s) removed.
-	SubscribeChannelBackups(ctx context.Context, in *ChannelBackupSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelBackupsClient, er.R)
+	SubscribeChannelBackups(ctx context.Context, in *ChannelBackupSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelBackupsClient, error)
 	// lncli: `bakemacaroon`
 	//BakeMacaroon allows the creation of a new macaroon with custom read and
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
-	BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, er.R)
+	BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, error)
 	// lncli: `listmacaroonids`
 	//ListMacaroonIDs returns all root key IDs that are in use.
-	ListMacaroonIDs(ctx context.Context, in *ListMacaroonIDsRequest, opts ...grpc.CallOption) (*ListMacaroonIDsResponse, er.R)
+	ListMacaroonIDs(ctx context.Context, in *ListMacaroonIDsRequest, opts ...grpc.CallOption) (*ListMacaroonIDsResponse, error)
 	// lncli: `deletemacaroonid`
 	//DeleteMacaroonID deletes the specified macaroon ID and invalidates all
 	//macaroons derived from that ID.
-	DeleteMacaroonID(ctx context.Context, in *DeleteMacaroonIDRequest, opts ...grpc.CallOption) (*DeleteMacaroonIDResponse, er.R)
+	DeleteMacaroonID(ctx context.Context, in *DeleteMacaroonIDRequest, opts ...grpc.CallOption) (*DeleteMacaroonIDResponse, error)
 	// lncli: `listpermissions`
 	//ListPermissions lists all RPC method URIs and their required macaroon
 	//permissions to access them.
-	ListPermissions(ctx context.Context, in *ListPermissionsRequest, opts ...grpc.CallOption) (*ListPermissionsResponse, er.R)
+	ListPermissions(ctx context.Context, in *ListPermissionsRequest, opts ...grpc.CallOption) (*ListPermissionsResponse, error)
 }
 
 type lightningClient struct {
@@ -13927,7 +13927,7 @@ func NewLightningClient(cc *grpc.ClientConn) LightningClient {
 	return &lightningClient{cc}
 }
 
-func (c *lightningClient) WalletBalance(ctx context.Context, in *WalletBalanceRequest, opts ...grpc.CallOption) (*WalletBalanceResponse, er.R) {
+func (c *lightningClient) WalletBalance(ctx context.Context, in *WalletBalanceRequest, opts ...grpc.CallOption) (*WalletBalanceResponse, error) {
 	out := new(WalletBalanceResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/WalletBalance", in, out, opts...)
 	if err != nil {
@@ -13936,7 +13936,7 @@ func (c *lightningClient) WalletBalance(ctx context.Context, in *WalletBalanceRe
 	return out, nil
 }
 
-func (c *lightningClient) ChannelBalance(ctx context.Context, in *ChannelBalanceRequest, opts ...grpc.CallOption) (*ChannelBalanceResponse, er.R) {
+func (c *lightningClient) ChannelBalance(ctx context.Context, in *ChannelBalanceRequest, opts ...grpc.CallOption) (*ChannelBalanceResponse, error) {
 	out := new(ChannelBalanceResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ChannelBalance", in, out, opts...)
 	if err != nil {
@@ -13945,7 +13945,7 @@ func (c *lightningClient) ChannelBalance(ctx context.Context, in *ChannelBalance
 	return out, nil
 }
 
-func (c *lightningClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*TransactionDetails, er.R) {
+func (c *lightningClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*TransactionDetails, error) {
 	out := new(TransactionDetails)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetTransactions", in, out, opts...)
 	if err != nil {
@@ -13954,7 +13954,7 @@ func (c *lightningClient) GetTransactions(ctx context.Context, in *GetTransactio
 	return out, nil
 }
 
-func (c *lightningClient) EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, er.R) {
+func (c *lightningClient) EstimateFee(ctx context.Context, in *EstimateFeeRequest, opts ...grpc.CallOption) (*EstimateFeeResponse, error) {
 	out := new(EstimateFeeResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/EstimateFee", in, out, opts...)
 	if err != nil {
@@ -13963,7 +13963,7 @@ func (c *lightningClient) EstimateFee(ctx context.Context, in *EstimateFeeReques
 	return out, nil
 }
 
-func (c *lightningClient) SendCoins(ctx context.Context, in *SendCoinsRequest, opts ...grpc.CallOption) (*SendCoinsResponse, er.R) {
+func (c *lightningClient) SendCoins(ctx context.Context, in *SendCoinsRequest, opts ...grpc.CallOption) (*SendCoinsResponse, error) {
 	out := new(SendCoinsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SendCoins", in, out, opts...)
 	if err != nil {
@@ -13972,7 +13972,7 @@ func (c *lightningClient) SendCoins(ctx context.Context, in *SendCoinsRequest, o
 	return out, nil
 }
 
-func (c *lightningClient) ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, er.R) {
+func (c *lightningClient) ListUnspent(ctx context.Context, in *ListUnspentRequest, opts ...grpc.CallOption) (*ListUnspentResponse, error) {
 	out := new(ListUnspentResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListUnspent", in, out, opts...)
 	if err != nil {
@@ -13981,7 +13981,7 @@ func (c *lightningClient) ListUnspent(ctx context.Context, in *ListUnspentReques
 	return out, nil
 }
 
-func (c *lightningClient) SubscribeTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (Lightning_SubscribeTransactionsClient, er.R) {
+func (c *lightningClient) SubscribeTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (Lightning_SubscribeTransactionsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[0], "/lnrpc.Lightning/SubscribeTransactions", opts...)
 	if err != nil {
 		return nil, err
@@ -13997,7 +13997,7 @@ func (c *lightningClient) SubscribeTransactions(ctx context.Context, in *GetTran
 }
 
 type Lightning_SubscribeTransactionsClient interface {
-	Recv() (*Transaction, er.R)
+	Recv() (*Transaction, error)
 	grpc.ClientStream
 }
 
@@ -14005,7 +14005,7 @@ type lightningSubscribeTransactionsClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribeTransactionsClient) Recv() (*Transaction, er.R) {
+func (x *lightningSubscribeTransactionsClient) Recv() (*Transaction, error) {
 	m := new(Transaction)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14013,7 +14013,7 @@ func (x *lightningSubscribeTransactionsClient) Recv() (*Transaction, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) SendMany(ctx context.Context, in *SendManyRequest, opts ...grpc.CallOption) (*SendManyResponse, er.R) {
+func (c *lightningClient) SendMany(ctx context.Context, in *SendManyRequest, opts ...grpc.CallOption) (*SendManyResponse, error) {
 	out := new(SendManyResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SendMany", in, out, opts...)
 	if err != nil {
@@ -14022,7 +14022,7 @@ func (c *lightningClient) SendMany(ctx context.Context, in *SendManyRequest, opt
 	return out, nil
 }
 
-func (c *lightningClient) NewAddress(ctx context.Context, in *NewAddressRequest, opts ...grpc.CallOption) (*NewAddressResponse, er.R) {
+func (c *lightningClient) NewAddress(ctx context.Context, in *NewAddressRequest, opts ...grpc.CallOption) (*NewAddressResponse, error) {
 	out := new(NewAddressResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/NewAddress", in, out, opts...)
 	if err != nil {
@@ -14031,7 +14031,7 @@ func (c *lightningClient) NewAddress(ctx context.Context, in *NewAddressRequest,
 	return out, nil
 }
 
-func (c *lightningClient) SignMessage(ctx context.Context, in *SignMessageRequest, opts ...grpc.CallOption) (*SignMessageResponse, er.R) {
+func (c *lightningClient) SignMessage(ctx context.Context, in *SignMessageRequest, opts ...grpc.CallOption) (*SignMessageResponse, error) {
 	out := new(SignMessageResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SignMessage", in, out, opts...)
 	if err != nil {
@@ -14040,7 +14040,7 @@ func (c *lightningClient) SignMessage(ctx context.Context, in *SignMessageReques
 	return out, nil
 }
 
-func (c *lightningClient) VerifyMessage(ctx context.Context, in *VerifyMessageRequest, opts ...grpc.CallOption) (*VerifyMessageResponse, er.R) {
+func (c *lightningClient) VerifyMessage(ctx context.Context, in *VerifyMessageRequest, opts ...grpc.CallOption) (*VerifyMessageResponse, error) {
 	out := new(VerifyMessageResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/VerifyMessage", in, out, opts...)
 	if err != nil {
@@ -14049,7 +14049,7 @@ func (c *lightningClient) VerifyMessage(ctx context.Context, in *VerifyMessageRe
 	return out, nil
 }
 
-func (c *lightningClient) ConnectPeer(ctx context.Context, in *ConnectPeerRequest, opts ...grpc.CallOption) (*ConnectPeerResponse, er.R) {
+func (c *lightningClient) ConnectPeer(ctx context.Context, in *ConnectPeerRequest, opts ...grpc.CallOption) (*ConnectPeerResponse, error) {
 	out := new(ConnectPeerResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ConnectPeer", in, out, opts...)
 	if err != nil {
@@ -14058,7 +14058,7 @@ func (c *lightningClient) ConnectPeer(ctx context.Context, in *ConnectPeerReques
 	return out, nil
 }
 
-func (c *lightningClient) DisconnectPeer(ctx context.Context, in *DisconnectPeerRequest, opts ...grpc.CallOption) (*DisconnectPeerResponse, er.R) {
+func (c *lightningClient) DisconnectPeer(ctx context.Context, in *DisconnectPeerRequest, opts ...grpc.CallOption) (*DisconnectPeerResponse, error) {
 	out := new(DisconnectPeerResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DisconnectPeer", in, out, opts...)
 	if err != nil {
@@ -14067,7 +14067,7 @@ func (c *lightningClient) DisconnectPeer(ctx context.Context, in *DisconnectPeer
 	return out, nil
 }
 
-func (c *lightningClient) ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, er.R) {
+func (c *lightningClient) ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error) {
 	out := new(ListPeersResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListPeers", in, out, opts...)
 	if err != nil {
@@ -14076,7 +14076,7 @@ func (c *lightningClient) ListPeers(ctx context.Context, in *ListPeersRequest, o
 	return out, nil
 }
 
-func (c *lightningClient) SubscribePeerEvents(ctx context.Context, in *PeerEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribePeerEventsClient, er.R) {
+func (c *lightningClient) SubscribePeerEvents(ctx context.Context, in *PeerEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribePeerEventsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[1], "/lnrpc.Lightning/SubscribePeerEvents", opts...)
 	if err != nil {
 		return nil, err
@@ -14092,7 +14092,7 @@ func (c *lightningClient) SubscribePeerEvents(ctx context.Context, in *PeerEvent
 }
 
 type Lightning_SubscribePeerEventsClient interface {
-	Recv() (*PeerEvent, er.R)
+	Recv() (*PeerEvent, error)
 	grpc.ClientStream
 }
 
@@ -14100,7 +14100,7 @@ type lightningSubscribePeerEventsClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribePeerEventsClient) Recv() (*PeerEvent, er.R) {
+func (x *lightningSubscribePeerEventsClient) Recv() (*PeerEvent, error) {
 	m := new(PeerEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14108,7 +14108,7 @@ func (x *lightningSubscribePeerEventsClient) Recv() (*PeerEvent, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, er.R) {
+func (c *lightningClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
 	out := new(GetInfoResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetInfo", in, out, opts...)
 	if err != nil {
@@ -14117,7 +14117,7 @@ func (c *lightningClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts 
 	return out, nil
 }
 
-func (c *lightningClient) GetRecoveryInfo(ctx context.Context, in *GetRecoveryInfoRequest, opts ...grpc.CallOption) (*GetRecoveryInfoResponse, er.R) {
+func (c *lightningClient) GetRecoveryInfo(ctx context.Context, in *GetRecoveryInfoRequest, opts ...grpc.CallOption) (*GetRecoveryInfoResponse, error) {
 	out := new(GetRecoveryInfoResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetRecoveryInfo", in, out, opts...)
 	if err != nil {
@@ -14126,7 +14126,7 @@ func (c *lightningClient) GetRecoveryInfo(ctx context.Context, in *GetRecoveryIn
 	return out, nil
 }
 
-func (c *lightningClient) PendingChannels(ctx context.Context, in *PendingChannelsRequest, opts ...grpc.CallOption) (*PendingChannelsResponse, er.R) {
+func (c *lightningClient) PendingChannels(ctx context.Context, in *PendingChannelsRequest, opts ...grpc.CallOption) (*PendingChannelsResponse, error) {
 	out := new(PendingChannelsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/PendingChannels", in, out, opts...)
 	if err != nil {
@@ -14135,7 +14135,7 @@ func (c *lightningClient) PendingChannels(ctx context.Context, in *PendingChanne
 	return out, nil
 }
 
-func (c *lightningClient) ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, er.R) {
+func (c *lightningClient) ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, error) {
 	out := new(ListChannelsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListChannels", in, out, opts...)
 	if err != nil {
@@ -14144,7 +14144,7 @@ func (c *lightningClient) ListChannels(ctx context.Context, in *ListChannelsRequ
 	return out, nil
 }
 
-func (c *lightningClient) SubscribeChannelEvents(ctx context.Context, in *ChannelEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelEventsClient, er.R) {
+func (c *lightningClient) SubscribeChannelEvents(ctx context.Context, in *ChannelEventSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelEventsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[2], "/lnrpc.Lightning/SubscribeChannelEvents", opts...)
 	if err != nil {
 		return nil, err
@@ -14160,7 +14160,7 @@ func (c *lightningClient) SubscribeChannelEvents(ctx context.Context, in *Channe
 }
 
 type Lightning_SubscribeChannelEventsClient interface {
-	Recv() (*ChannelEventUpdate, er.R)
+	Recv() (*ChannelEventUpdate, error)
 	grpc.ClientStream
 }
 
@@ -14168,7 +14168,7 @@ type lightningSubscribeChannelEventsClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribeChannelEventsClient) Recv() (*ChannelEventUpdate, er.R) {
+func (x *lightningSubscribeChannelEventsClient) Recv() (*ChannelEventUpdate, error) {
 	m := new(ChannelEventUpdate)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14176,7 +14176,7 @@ func (x *lightningSubscribeChannelEventsClient) Recv() (*ChannelEventUpdate, er.
 	return m, nil
 }
 
-func (c *lightningClient) ClosedChannels(ctx context.Context, in *ClosedChannelsRequest, opts ...grpc.CallOption) (*ClosedChannelsResponse, er.R) {
+func (c *lightningClient) ClosedChannels(ctx context.Context, in *ClosedChannelsRequest, opts ...grpc.CallOption) (*ClosedChannelsResponse, error) {
 	out := new(ClosedChannelsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ClosedChannels", in, out, opts...)
 	if err != nil {
@@ -14185,7 +14185,7 @@ func (c *lightningClient) ClosedChannels(ctx context.Context, in *ClosedChannels
 	return out, nil
 }
 
-func (c *lightningClient) OpenChannelSync(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*ChannelPoint, er.R) {
+func (c *lightningClient) OpenChannelSync(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*ChannelPoint, error) {
 	out := new(ChannelPoint)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/OpenChannelSync", in, out, opts...)
 	if err != nil {
@@ -14194,7 +14194,7 @@ func (c *lightningClient) OpenChannelSync(ctx context.Context, in *OpenChannelRe
 	return out, nil
 }
 
-func (c *lightningClient) OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (Lightning_OpenChannelClient, er.R) {
+func (c *lightningClient) OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (Lightning_OpenChannelClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[3], "/lnrpc.Lightning/OpenChannel", opts...)
 	if err != nil {
 		return nil, err
@@ -14210,7 +14210,7 @@ func (c *lightningClient) OpenChannel(ctx context.Context, in *OpenChannelReques
 }
 
 type Lightning_OpenChannelClient interface {
-	Recv() (*OpenStatusUpdate, er.R)
+	Recv() (*OpenStatusUpdate, error)
 	grpc.ClientStream
 }
 
@@ -14218,7 +14218,7 @@ type lightningOpenChannelClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningOpenChannelClient) Recv() (*OpenStatusUpdate, er.R) {
+func (x *lightningOpenChannelClient) Recv() (*OpenStatusUpdate, error) {
 	m := new(OpenStatusUpdate)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14226,7 +14226,7 @@ func (x *lightningOpenChannelClient) Recv() (*OpenStatusUpdate, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) FundingStateStep(ctx context.Context, in *FundingTransitionMsg, opts ...grpc.CallOption) (*FundingStateStepResp, er.R) {
+func (c *lightningClient) FundingStateStep(ctx context.Context, in *FundingTransitionMsg, opts ...grpc.CallOption) (*FundingStateStepResp, error) {
 	out := new(FundingStateStepResp)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/FundingStateStep", in, out, opts...)
 	if err != nil {
@@ -14235,7 +14235,7 @@ func (c *lightningClient) FundingStateStep(ctx context.Context, in *FundingTrans
 	return out, nil
 }
 
-func (c *lightningClient) ChannelAcceptor(ctx context.Context, opts ...grpc.CallOption) (Lightning_ChannelAcceptorClient, er.R) {
+func (c *lightningClient) ChannelAcceptor(ctx context.Context, opts ...grpc.CallOption) (Lightning_ChannelAcceptorClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[4], "/lnrpc.Lightning/ChannelAcceptor", opts...)
 	if err != nil {
 		return nil, err
@@ -14245,8 +14245,8 @@ func (c *lightningClient) ChannelAcceptor(ctx context.Context, opts ...grpc.Call
 }
 
 type Lightning_ChannelAcceptorClient interface {
-	Send(*ChannelAcceptResponse) er.R
-	Recv() (*ChannelAcceptRequest, er.R)
+	Send(*ChannelAcceptResponse) error
+	Recv() (*ChannelAcceptRequest, error)
 	grpc.ClientStream
 }
 
@@ -14254,11 +14254,11 @@ type lightningChannelAcceptorClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningChannelAcceptorClient) Send(m *ChannelAcceptResponse) er.R {
+func (x *lightningChannelAcceptorClient) Send(m *ChannelAcceptResponse) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *lightningChannelAcceptorClient) Recv() (*ChannelAcceptRequest, er.R) {
+func (x *lightningChannelAcceptorClient) Recv() (*ChannelAcceptRequest, error) {
 	m := new(ChannelAcceptRequest)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14266,7 +14266,7 @@ func (x *lightningChannelAcceptorClient) Recv() (*ChannelAcceptRequest, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) CloseChannel(ctx context.Context, in *CloseChannelRequest, opts ...grpc.CallOption) (Lightning_CloseChannelClient, er.R) {
+func (c *lightningClient) CloseChannel(ctx context.Context, in *CloseChannelRequest, opts ...grpc.CallOption) (Lightning_CloseChannelClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[5], "/lnrpc.Lightning/CloseChannel", opts...)
 	if err != nil {
 		return nil, err
@@ -14282,7 +14282,7 @@ func (c *lightningClient) CloseChannel(ctx context.Context, in *CloseChannelRequ
 }
 
 type Lightning_CloseChannelClient interface {
-	Recv() (*CloseStatusUpdate, er.R)
+	Recv() (*CloseStatusUpdate, error)
 	grpc.ClientStream
 }
 
@@ -14290,7 +14290,7 @@ type lightningCloseChannelClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningCloseChannelClient) Recv() (*CloseStatusUpdate, er.R) {
+func (x *lightningCloseChannelClient) Recv() (*CloseStatusUpdate, error) {
 	m := new(CloseStatusUpdate)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14298,7 +14298,7 @@ func (x *lightningCloseChannelClient) Recv() (*CloseStatusUpdate, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) AbandonChannel(ctx context.Context, in *AbandonChannelRequest, opts ...grpc.CallOption) (*AbandonChannelResponse, er.R) {
+func (c *lightningClient) AbandonChannel(ctx context.Context, in *AbandonChannelRequest, opts ...grpc.CallOption) (*AbandonChannelResponse, error) {
 	out := new(AbandonChannelResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/AbandonChannel", in, out, opts...)
 	if err != nil {
@@ -14308,7 +14308,7 @@ func (c *lightningClient) AbandonChannel(ctx context.Context, in *AbandonChannel
 }
 
 // Deprecated: Do not use.
-func (c *lightningClient) SendPayment(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendPaymentClient, er.R) {
+func (c *lightningClient) SendPayment(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendPaymentClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[6], "/lnrpc.Lightning/SendPayment", opts...)
 	if err != nil {
 		return nil, err
@@ -14318,8 +14318,8 @@ func (c *lightningClient) SendPayment(ctx context.Context, opts ...grpc.CallOpti
 }
 
 type Lightning_SendPaymentClient interface {
-	Send(*SendRequest) er.R
-	Recv() (*SendResponse, er.R)
+	Send(*SendRequest) error
+	Recv() (*SendResponse, error)
 	grpc.ClientStream
 }
 
@@ -14327,11 +14327,11 @@ type lightningSendPaymentClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSendPaymentClient) Send(m *SendRequest) er.R {
+func (x *lightningSendPaymentClient) Send(m *SendRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *lightningSendPaymentClient) Recv() (*SendResponse, er.R) {
+func (x *lightningSendPaymentClient) Recv() (*SendResponse, error) {
 	m := new(SendResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14339,7 +14339,7 @@ func (x *lightningSendPaymentClient) Recv() (*SendResponse, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) SendPaymentSync(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, er.R) {
+func (c *lightningClient) SendPaymentSync(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error) {
 	out := new(SendResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SendPaymentSync", in, out, opts...)
 	if err != nil {
@@ -14349,7 +14349,7 @@ func (c *lightningClient) SendPaymentSync(ctx context.Context, in *SendRequest, 
 }
 
 // Deprecated: Do not use.
-func (c *lightningClient) SendToRoute(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendToRouteClient, er.R) {
+func (c *lightningClient) SendToRoute(ctx context.Context, opts ...grpc.CallOption) (Lightning_SendToRouteClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[7], "/lnrpc.Lightning/SendToRoute", opts...)
 	if err != nil {
 		return nil, err
@@ -14359,8 +14359,8 @@ func (c *lightningClient) SendToRoute(ctx context.Context, opts ...grpc.CallOpti
 }
 
 type Lightning_SendToRouteClient interface {
-	Send(*SendToRouteRequest) er.R
-	Recv() (*SendResponse, er.R)
+	Send(*SendToRouteRequest) error
+	Recv() (*SendResponse, error)
 	grpc.ClientStream
 }
 
@@ -14368,11 +14368,11 @@ type lightningSendToRouteClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSendToRouteClient) Send(m *SendToRouteRequest) er.R {
+func (x *lightningSendToRouteClient) Send(m *SendToRouteRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *lightningSendToRouteClient) Recv() (*SendResponse, er.R) {
+func (x *lightningSendToRouteClient) Recv() (*SendResponse, error) {
 	m := new(SendResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14380,7 +14380,7 @@ func (x *lightningSendToRouteClient) Recv() (*SendResponse, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) SendToRouteSync(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendResponse, er.R) {
+func (c *lightningClient) SendToRouteSync(ctx context.Context, in *SendToRouteRequest, opts ...grpc.CallOption) (*SendResponse, error) {
 	out := new(SendResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SendToRouteSync", in, out, opts...)
 	if err != nil {
@@ -14389,7 +14389,7 @@ func (c *lightningClient) SendToRouteSync(ctx context.Context, in *SendToRouteRe
 	return out, nil
 }
 
-func (c *lightningClient) AddInvoice(ctx context.Context, in *Invoice, opts ...grpc.CallOption) (*AddInvoiceResponse, er.R) {
+func (c *lightningClient) AddInvoice(ctx context.Context, in *Invoice, opts ...grpc.CallOption) (*AddInvoiceResponse, error) {
 	out := new(AddInvoiceResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/AddInvoice", in, out, opts...)
 	if err != nil {
@@ -14398,7 +14398,7 @@ func (c *lightningClient) AddInvoice(ctx context.Context, in *Invoice, opts ...g
 	return out, nil
 }
 
-func (c *lightningClient) ListInvoices(ctx context.Context, in *ListInvoiceRequest, opts ...grpc.CallOption) (*ListInvoiceResponse, er.R) {
+func (c *lightningClient) ListInvoices(ctx context.Context, in *ListInvoiceRequest, opts ...grpc.CallOption) (*ListInvoiceResponse, error) {
 	out := new(ListInvoiceResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListInvoices", in, out, opts...)
 	if err != nil {
@@ -14407,7 +14407,7 @@ func (c *lightningClient) ListInvoices(ctx context.Context, in *ListInvoiceReque
 	return out, nil
 }
 
-func (c *lightningClient) LookupInvoice(ctx context.Context, in *PaymentHash, opts ...grpc.CallOption) (*Invoice, er.R) {
+func (c *lightningClient) LookupInvoice(ctx context.Context, in *PaymentHash, opts ...grpc.CallOption) (*Invoice, error) {
 	out := new(Invoice)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/LookupInvoice", in, out, opts...)
 	if err != nil {
@@ -14416,7 +14416,7 @@ func (c *lightningClient) LookupInvoice(ctx context.Context, in *PaymentHash, op
 	return out, nil
 }
 
-func (c *lightningClient) SubscribeInvoices(ctx context.Context, in *InvoiceSubscription, opts ...grpc.CallOption) (Lightning_SubscribeInvoicesClient, er.R) {
+func (c *lightningClient) SubscribeInvoices(ctx context.Context, in *InvoiceSubscription, opts ...grpc.CallOption) (Lightning_SubscribeInvoicesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[8], "/lnrpc.Lightning/SubscribeInvoices", opts...)
 	if err != nil {
 		return nil, err
@@ -14432,7 +14432,7 @@ func (c *lightningClient) SubscribeInvoices(ctx context.Context, in *InvoiceSubs
 }
 
 type Lightning_SubscribeInvoicesClient interface {
-	Recv() (*Invoice, er.R)
+	Recv() (*Invoice, error)
 	grpc.ClientStream
 }
 
@@ -14440,7 +14440,7 @@ type lightningSubscribeInvoicesClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribeInvoicesClient) Recv() (*Invoice, er.R) {
+func (x *lightningSubscribeInvoicesClient) Recv() (*Invoice, error) {
 	m := new(Invoice)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14448,7 +14448,7 @@ func (x *lightningSubscribeInvoicesClient) Recv() (*Invoice, er.R) {
 	return m, nil
 }
 
-func (c *lightningClient) DecodePayReq(ctx context.Context, in *PayReqString, opts ...grpc.CallOption) (*PayReq, er.R) {
+func (c *lightningClient) DecodePayReq(ctx context.Context, in *PayReqString, opts ...grpc.CallOption) (*PayReq, error) {
 	out := new(PayReq)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DecodePayReq", in, out, opts...)
 	if err != nil {
@@ -14457,7 +14457,7 @@ func (c *lightningClient) DecodePayReq(ctx context.Context, in *PayReqString, op
 	return out, nil
 }
 
-func (c *lightningClient) ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, er.R) {
+func (c *lightningClient) ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error) {
 	out := new(ListPaymentsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListPayments", in, out, opts...)
 	if err != nil {
@@ -14466,7 +14466,7 @@ func (c *lightningClient) ListPayments(ctx context.Context, in *ListPaymentsRequ
 	return out, nil
 }
 
-func (c *lightningClient) DeleteAllPayments(ctx context.Context, in *DeleteAllPaymentsRequest, opts ...grpc.CallOption) (*DeleteAllPaymentsResponse, er.R) {
+func (c *lightningClient) DeleteAllPayments(ctx context.Context, in *DeleteAllPaymentsRequest, opts ...grpc.CallOption) (*DeleteAllPaymentsResponse, error) {
 	out := new(DeleteAllPaymentsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DeleteAllPayments", in, out, opts...)
 	if err != nil {
@@ -14475,7 +14475,7 @@ func (c *lightningClient) DeleteAllPayments(ctx context.Context, in *DeleteAllPa
 	return out, nil
 }
 
-func (c *lightningClient) DescribeGraph(ctx context.Context, in *ChannelGraphRequest, opts ...grpc.CallOption) (*ChannelGraph, er.R) {
+func (c *lightningClient) DescribeGraph(ctx context.Context, in *ChannelGraphRequest, opts ...grpc.CallOption) (*ChannelGraph, error) {
 	out := new(ChannelGraph)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DescribeGraph", in, out, opts...)
 	if err != nil {
@@ -14484,7 +14484,7 @@ func (c *lightningClient) DescribeGraph(ctx context.Context, in *ChannelGraphReq
 	return out, nil
 }
 
-func (c *lightningClient) GetNodeMetrics(ctx context.Context, in *NodeMetricsRequest, opts ...grpc.CallOption) (*NodeMetricsResponse, er.R) {
+func (c *lightningClient) GetNodeMetrics(ctx context.Context, in *NodeMetricsRequest, opts ...grpc.CallOption) (*NodeMetricsResponse, error) {
 	out := new(NodeMetricsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetNodeMetrics", in, out, opts...)
 	if err != nil {
@@ -14493,7 +14493,7 @@ func (c *lightningClient) GetNodeMetrics(ctx context.Context, in *NodeMetricsReq
 	return out, nil
 }
 
-func (c *lightningClient) GetChanInfo(ctx context.Context, in *ChanInfoRequest, opts ...grpc.CallOption) (*ChannelEdge, er.R) {
+func (c *lightningClient) GetChanInfo(ctx context.Context, in *ChanInfoRequest, opts ...grpc.CallOption) (*ChannelEdge, error) {
 	out := new(ChannelEdge)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetChanInfo", in, out, opts...)
 	if err != nil {
@@ -14502,7 +14502,7 @@ func (c *lightningClient) GetChanInfo(ctx context.Context, in *ChanInfoRequest, 
 	return out, nil
 }
 
-func (c *lightningClient) GetNodeInfo(ctx context.Context, in *NodeInfoRequest, opts ...grpc.CallOption) (*NodeInfo, er.R) {
+func (c *lightningClient) GetNodeInfo(ctx context.Context, in *NodeInfoRequest, opts ...grpc.CallOption) (*NodeInfo, error) {
 	out := new(NodeInfo)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetNodeInfo", in, out, opts...)
 	if err != nil {
@@ -14511,7 +14511,7 @@ func (c *lightningClient) GetNodeInfo(ctx context.Context, in *NodeInfoRequest, 
 	return out, nil
 }
 
-func (c *lightningClient) QueryRoutes(ctx context.Context, in *QueryRoutesRequest, opts ...grpc.CallOption) (*QueryRoutesResponse, er.R) {
+func (c *lightningClient) QueryRoutes(ctx context.Context, in *QueryRoutesRequest, opts ...grpc.CallOption) (*QueryRoutesResponse, error) {
 	out := new(QueryRoutesResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/QueryRoutes", in, out, opts...)
 	if err != nil {
@@ -14520,7 +14520,7 @@ func (c *lightningClient) QueryRoutes(ctx context.Context, in *QueryRoutesReques
 	return out, nil
 }
 
-func (c *lightningClient) GetNetworkInfo(ctx context.Context, in *NetworkInfoRequest, opts ...grpc.CallOption) (*NetworkInfo, er.R) {
+func (c *lightningClient) GetNetworkInfo(ctx context.Context, in *NetworkInfoRequest, opts ...grpc.CallOption) (*NetworkInfo, error) {
 	out := new(NetworkInfo)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetNetworkInfo", in, out, opts...)
 	if err != nil {
@@ -14529,7 +14529,7 @@ func (c *lightningClient) GetNetworkInfo(ctx context.Context, in *NetworkInfoReq
 	return out, nil
 }
 
-func (c *lightningClient) StopDaemon(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, er.R) {
+func (c *lightningClient) StopDaemon(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error) {
 	out := new(StopResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/StopDaemon", in, out, opts...)
 	if err != nil {
@@ -14538,7 +14538,7 @@ func (c *lightningClient) StopDaemon(ctx context.Context, in *StopRequest, opts 
 	return out, nil
 }
 
-func (c *lightningClient) SubscribeChannelGraph(ctx context.Context, in *GraphTopologySubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelGraphClient, er.R) {
+func (c *lightningClient) SubscribeChannelGraph(ctx context.Context, in *GraphTopologySubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelGraphClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[9], "/lnrpc.Lightning/SubscribeChannelGraph", opts...)
 	if err != nil {
 		return nil, err
@@ -14554,7 +14554,7 @@ func (c *lightningClient) SubscribeChannelGraph(ctx context.Context, in *GraphTo
 }
 
 type Lightning_SubscribeChannelGraphClient interface {
-	Recv() (*GraphTopologyUpdate, er.R)
+	Recv() (*GraphTopologyUpdate, error)
 	grpc.ClientStream
 }
 
@@ -14562,7 +14562,7 @@ type lightningSubscribeChannelGraphClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribeChannelGraphClient) Recv() (*GraphTopologyUpdate, er.R) {
+func (x *lightningSubscribeChannelGraphClient) Recv() (*GraphTopologyUpdate, error) {
 	m := new(GraphTopologyUpdate)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14570,7 +14570,7 @@ func (x *lightningSubscribeChannelGraphClient) Recv() (*GraphTopologyUpdate, er.
 	return m, nil
 }
 
-func (c *lightningClient) DebugLevel(ctx context.Context, in *DebugLevelRequest, opts ...grpc.CallOption) (*DebugLevelResponse, er.R) {
+func (c *lightningClient) DebugLevel(ctx context.Context, in *DebugLevelRequest, opts ...grpc.CallOption) (*DebugLevelResponse, error) {
 	out := new(DebugLevelResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DebugLevel", in, out, opts...)
 	if err != nil {
@@ -14579,7 +14579,7 @@ func (c *lightningClient) DebugLevel(ctx context.Context, in *DebugLevelRequest,
 	return out, nil
 }
 
-func (c *lightningClient) FeeReport(ctx context.Context, in *FeeReportRequest, opts ...grpc.CallOption) (*FeeReportResponse, er.R) {
+func (c *lightningClient) FeeReport(ctx context.Context, in *FeeReportRequest, opts ...grpc.CallOption) (*FeeReportResponse, error) {
 	out := new(FeeReportResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/FeeReport", in, out, opts...)
 	if err != nil {
@@ -14588,7 +14588,7 @@ func (c *lightningClient) FeeReport(ctx context.Context, in *FeeReportRequest, o
 	return out, nil
 }
 
-func (c *lightningClient) UpdateChannelPolicy(ctx context.Context, in *PolicyUpdateRequest, opts ...grpc.CallOption) (*PolicyUpdateResponse, er.R) {
+func (c *lightningClient) UpdateChannelPolicy(ctx context.Context, in *PolicyUpdateRequest, opts ...grpc.CallOption) (*PolicyUpdateResponse, error) {
 	out := new(PolicyUpdateResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/UpdateChannelPolicy", in, out, opts...)
 	if err != nil {
@@ -14597,7 +14597,7 @@ func (c *lightningClient) UpdateChannelPolicy(ctx context.Context, in *PolicyUpd
 	return out, nil
 }
 
-func (c *lightningClient) ForwardingHistory(ctx context.Context, in *ForwardingHistoryRequest, opts ...grpc.CallOption) (*ForwardingHistoryResponse, er.R) {
+func (c *lightningClient) ForwardingHistory(ctx context.Context, in *ForwardingHistoryRequest, opts ...grpc.CallOption) (*ForwardingHistoryResponse, error) {
 	out := new(ForwardingHistoryResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ForwardingHistory", in, out, opts...)
 	if err != nil {
@@ -14606,7 +14606,7 @@ func (c *lightningClient) ForwardingHistory(ctx context.Context, in *ForwardingH
 	return out, nil
 }
 
-func (c *lightningClient) ExportChannelBackup(ctx context.Context, in *ExportChannelBackupRequest, opts ...grpc.CallOption) (*ChannelBackup, er.R) {
+func (c *lightningClient) ExportChannelBackup(ctx context.Context, in *ExportChannelBackupRequest, opts ...grpc.CallOption) (*ChannelBackup, error) {
 	out := new(ChannelBackup)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ExportChannelBackup", in, out, opts...)
 	if err != nil {
@@ -14615,7 +14615,7 @@ func (c *lightningClient) ExportChannelBackup(ctx context.Context, in *ExportCha
 	return out, nil
 }
 
-func (c *lightningClient) ExportAllChannelBackups(ctx context.Context, in *ChanBackupExportRequest, opts ...grpc.CallOption) (*ChanBackupSnapshot, er.R) {
+func (c *lightningClient) ExportAllChannelBackups(ctx context.Context, in *ChanBackupExportRequest, opts ...grpc.CallOption) (*ChanBackupSnapshot, error) {
 	out := new(ChanBackupSnapshot)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ExportAllChannelBackups", in, out, opts...)
 	if err != nil {
@@ -14624,7 +14624,7 @@ func (c *lightningClient) ExportAllChannelBackups(ctx context.Context, in *ChanB
 	return out, nil
 }
 
-func (c *lightningClient) VerifyChanBackup(ctx context.Context, in *ChanBackupSnapshot, opts ...grpc.CallOption) (*VerifyChanBackupResponse, er.R) {
+func (c *lightningClient) VerifyChanBackup(ctx context.Context, in *ChanBackupSnapshot, opts ...grpc.CallOption) (*VerifyChanBackupResponse, error) {
 	out := new(VerifyChanBackupResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/VerifyChanBackup", in, out, opts...)
 	if err != nil {
@@ -14633,7 +14633,7 @@ func (c *lightningClient) VerifyChanBackup(ctx context.Context, in *ChanBackupSn
 	return out, nil
 }
 
-func (c *lightningClient) RestoreChannelBackups(ctx context.Context, in *RestoreChanBackupRequest, opts ...grpc.CallOption) (*RestoreBackupResponse, er.R) {
+func (c *lightningClient) RestoreChannelBackups(ctx context.Context, in *RestoreChanBackupRequest, opts ...grpc.CallOption) (*RestoreBackupResponse, error) {
 	out := new(RestoreBackupResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/RestoreChannelBackups", in, out, opts...)
 	if err != nil {
@@ -14642,7 +14642,7 @@ func (c *lightningClient) RestoreChannelBackups(ctx context.Context, in *Restore
 	return out, nil
 }
 
-func (c *lightningClient) SubscribeChannelBackups(ctx context.Context, in *ChannelBackupSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelBackupsClient, er.R) {
+func (c *lightningClient) SubscribeChannelBackups(ctx context.Context, in *ChannelBackupSubscription, opts ...grpc.CallOption) (Lightning_SubscribeChannelBackupsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Lightning_serviceDesc.Streams[10], "/lnrpc.Lightning/SubscribeChannelBackups", opts...)
 	if err != nil {
 		return nil, err
@@ -14658,7 +14658,7 @@ func (c *lightningClient) SubscribeChannelBackups(ctx context.Context, in *Chann
 }
 
 type Lightning_SubscribeChannelBackupsClient interface {
-	Recv() (*ChanBackupSnapshot, er.R)
+	Recv() (*ChanBackupSnapshot, error)
 	grpc.ClientStream
 }
 
@@ -14666,7 +14666,7 @@ type lightningSubscribeChannelBackupsClient struct {
 	grpc.ClientStream
 }
 
-func (x *lightningSubscribeChannelBackupsClient) Recv() (*ChanBackupSnapshot, er.R) {
+func (x *lightningSubscribeChannelBackupsClient) Recv() (*ChanBackupSnapshot, error) {
 	m := new(ChanBackupSnapshot)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -14674,7 +14674,7 @@ func (x *lightningSubscribeChannelBackupsClient) Recv() (*ChanBackupSnapshot, er
 	return m, nil
 }
 
-func (c *lightningClient) BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, er.R) {
+func (c *lightningClient) BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, error) {
 	out := new(BakeMacaroonResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/BakeMacaroon", in, out, opts...)
 	if err != nil {
@@ -14683,7 +14683,7 @@ func (c *lightningClient) BakeMacaroon(ctx context.Context, in *BakeMacaroonRequ
 	return out, nil
 }
 
-func (c *lightningClient) ListMacaroonIDs(ctx context.Context, in *ListMacaroonIDsRequest, opts ...grpc.CallOption) (*ListMacaroonIDsResponse, er.R) {
+func (c *lightningClient) ListMacaroonIDs(ctx context.Context, in *ListMacaroonIDsRequest, opts ...grpc.CallOption) (*ListMacaroonIDsResponse, error) {
 	out := new(ListMacaroonIDsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListMacaroonIDs", in, out, opts...)
 	if err != nil {
@@ -14692,7 +14692,7 @@ func (c *lightningClient) ListMacaroonIDs(ctx context.Context, in *ListMacaroonI
 	return out, nil
 }
 
-func (c *lightningClient) DeleteMacaroonID(ctx context.Context, in *DeleteMacaroonIDRequest, opts ...grpc.CallOption) (*DeleteMacaroonIDResponse, er.R) {
+func (c *lightningClient) DeleteMacaroonID(ctx context.Context, in *DeleteMacaroonIDRequest, opts ...grpc.CallOption) (*DeleteMacaroonIDResponse, error) {
 	out := new(DeleteMacaroonIDResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DeleteMacaroonID", in, out, opts...)
 	if err != nil {
@@ -14701,7 +14701,7 @@ func (c *lightningClient) DeleteMacaroonID(ctx context.Context, in *DeleteMacaro
 	return out, nil
 }
 
-func (c *lightningClient) ListPermissions(ctx context.Context, in *ListPermissionsRequest, opts ...grpc.CallOption) (*ListPermissionsResponse, er.R) {
+func (c *lightningClient) ListPermissions(ctx context.Context, in *ListPermissionsRequest, opts ...grpc.CallOption) (*ListPermissionsResponse, error) {
 	out := new(ListPermissionsResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListPermissions", in, out, opts...)
 	if err != nil {
@@ -14716,16 +14716,16 @@ type LightningServer interface {
 	//WalletBalance returns total unspent outputs(confirmed and unconfirmed), all
 	//confirmed unspent outputs and all unconfirmed unspent outputs under control
 	//of the wallet.
-	WalletBalance(context.Context, *WalletBalanceRequest) (*WalletBalanceResponse, er.R)
+	WalletBalance(context.Context, *WalletBalanceRequest) (*WalletBalanceResponse, error)
 	// lncli: `channelbalance`
 	//ChannelBalance returns a report on the total funds across all open channels,
 	//categorized in local/remote, pending local/remote and unsettled local/remote
 	//balances.
-	ChannelBalance(context.Context, *ChannelBalanceRequest) (*ChannelBalanceResponse, er.R)
+	ChannelBalance(context.Context, *ChannelBalanceRequest) (*ChannelBalanceResponse, error)
 	// lncli: `listchaintxns`
 	//GetTransactions returns a list describing all the known transactions
 	//relevant to the wallet.
-	GetTransactions(context.Context, *GetTransactionsRequest) (*TransactionDetails, er.R)
+	GetTransactions(context.Context, *GetTransactionsRequest) (*TransactionDetails, error)
 	// lncli: `estimatefee`
 	//EstimateFee asks the chain backend to estimate the fee rate and total fees
 	//for a transaction that pays to multiple specified outputs.
@@ -14734,99 +14734,99 @@ type LightningServer interface {
 	//`&AddrToAmount[<address>]=<amount_to_send>` to the URL. Unfortunately this
 	//map type doesn't appear in the REST API documentation because of a bug in
 	//the grpc-gateway library.
-	EstimateFee(context.Context, *EstimateFeeRequest) (*EstimateFeeResponse, er.R)
+	EstimateFee(context.Context, *EstimateFeeRequest) (*EstimateFeeResponse, error)
 	// lncli: `sendcoins`
 	//SendCoins executes a request to send coins to a particular address. Unlike
 	//SendMany, this RPC call only allows creating a single output at a time. If
 	//neither target_conf, or sat_per_byte are set, then the internal wallet will
 	//consult its fee model to determine a fee for the default confirmation
 	//target.
-	SendCoins(context.Context, *SendCoinsRequest) (*SendCoinsResponse, er.R)
+	SendCoins(context.Context, *SendCoinsRequest) (*SendCoinsResponse, error)
 	// lncli: `listunspent`
 	//Deprecated, use walletrpc.ListUnspent instead.
 	//
 	//ListUnspent returns a list of all utxos spendable by the wallet with a
 	//number of confirmations between the specified minimum and maximum.
-	ListUnspent(context.Context, *ListUnspentRequest) (*ListUnspentResponse, er.R)
+	ListUnspent(context.Context, *ListUnspentRequest) (*ListUnspentResponse, error)
 	//
 	//SubscribeTransactions creates a uni-directional stream from the server to
 	//the client in which any newly discovered transactions relevant to the
 	//wallet are sent over.
-	SubscribeTransactions(*GetTransactionsRequest, Lightning_SubscribeTransactionsServer) er.R
+	SubscribeTransactions(*GetTransactionsRequest, Lightning_SubscribeTransactionsServer) error
 	// lncli: `sendmany`
 	//SendMany handles a request for a transaction that creates multiple specified
 	//outputs in parallel. If neither target_conf, or sat_per_byte are set, then
 	//the internal wallet will consult its fee model to determine a fee for the
 	//default confirmation target.
-	SendMany(context.Context, *SendManyRequest) (*SendManyResponse, er.R)
+	SendMany(context.Context, *SendManyRequest) (*SendManyResponse, error)
 	// lncli: `newaddress`
 	//NewAddress creates a new address under control of the local wallet.
-	NewAddress(context.Context, *NewAddressRequest) (*NewAddressResponse, er.R)
+	NewAddress(context.Context, *NewAddressRequest) (*NewAddressResponse, error)
 	// lncli: `signmessage`
 	//SignMessage signs a message with this node's private key. The returned
 	//signature string is `zbase32` encoded and pubkey recoverable, meaning that
 	//only the message digest and signature are needed for verification.
-	SignMessage(context.Context, *SignMessageRequest) (*SignMessageResponse, er.R)
+	SignMessage(context.Context, *SignMessageRequest) (*SignMessageResponse, error)
 	// lncli: `verifymessage`
 	//VerifyMessage verifies a signature over a msg. The signature must be
 	//zbase32 encoded and signed by an active node in the resident node's
 	//channel database. In addition to returning the validity of the signature,
 	//VerifyMessage also returns the recovered pubkey from the signature.
-	VerifyMessage(context.Context, *VerifyMessageRequest) (*VerifyMessageResponse, er.R)
+	VerifyMessage(context.Context, *VerifyMessageRequest) (*VerifyMessageResponse, error)
 	// lncli: `connect`
 	//ConnectPeer attempts to establish a connection to a remote peer. This is at
 	//the networking level, and is used for communication between nodes. This is
 	//distinct from establishing a channel with a peer.
-	ConnectPeer(context.Context, *ConnectPeerRequest) (*ConnectPeerResponse, er.R)
+	ConnectPeer(context.Context, *ConnectPeerRequest) (*ConnectPeerResponse, error)
 	// lncli: `disconnect`
 	//DisconnectPeer attempts to disconnect one peer from another identified by a
 	//given pubKey. In the case that we currently have a pending or active channel
 	//with the target peer, then this action will be not be allowed.
-	DisconnectPeer(context.Context, *DisconnectPeerRequest) (*DisconnectPeerResponse, er.R)
+	DisconnectPeer(context.Context, *DisconnectPeerRequest) (*DisconnectPeerResponse, error)
 	// lncli: `listpeers`
 	//ListPeers returns a verbose listing of all currently active peers.
-	ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, er.R)
+	ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, error)
 	//
 	//SubscribePeerEvents creates a uni-directional stream from the server to
 	//the client in which any events relevant to the state of peers are sent
 	//over. Events include peers going online and offline.
-	SubscribePeerEvents(*PeerEventSubscription, Lightning_SubscribePeerEventsServer) er.R
+	SubscribePeerEvents(*PeerEventSubscription, Lightning_SubscribePeerEventsServer) error
 	// lncli: `getinfo`
 	//GetInfo returns general information concerning the lightning node including
 	//it's identity pubkey, alias, the chains it is connected to, and information
 	//concerning the number of open+pending channels.
-	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, er.R)
+	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
 	//* lncli: `getrecoveryinfo`
 	//GetRecoveryInfo returns information concerning the recovery mode including
 	//whether it's in a recovery mode, whether the recovery is finished, and the
 	//progress made so far.
-	GetRecoveryInfo(context.Context, *GetRecoveryInfoRequest) (*GetRecoveryInfoResponse, er.R)
+	GetRecoveryInfo(context.Context, *GetRecoveryInfoRequest) (*GetRecoveryInfoResponse, error)
 	// lncli: `pendingchannels`
 	//PendingChannels returns a list of all the channels that are currently
 	//considered "pending". A channel is pending if it has finished the funding
 	//workflow and is waiting for confirmations for the funding txn, or is in the
 	//process of closure, either initiated cooperatively or non-cooperatively.
-	PendingChannels(context.Context, *PendingChannelsRequest) (*PendingChannelsResponse, er.R)
+	PendingChannels(context.Context, *PendingChannelsRequest) (*PendingChannelsResponse, error)
 	// lncli: `listchannels`
 	//ListChannels returns a description of all the open channels that this node
 	//is a participant in.
-	ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, er.R)
+	ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, error)
 	//
 	//SubscribeChannelEvents creates a uni-directional stream from the server to
 	//the client in which any updates relevant to the state of the channels are
 	//sent over. Events include new active channels, inactive channels, and closed
 	//channels.
-	SubscribeChannelEvents(*ChannelEventSubscription, Lightning_SubscribeChannelEventsServer) er.R
+	SubscribeChannelEvents(*ChannelEventSubscription, Lightning_SubscribeChannelEventsServer) error
 	// lncli: `closedchannels`
 	//ClosedChannels returns a description of all the closed channels that
 	//this node was a participant in.
-	ClosedChannels(context.Context, *ClosedChannelsRequest) (*ClosedChannelsResponse, er.R)
+	ClosedChannels(context.Context, *ClosedChannelsRequest) (*ClosedChannelsResponse, error)
 	//
 	//OpenChannelSync is a synchronous version of the OpenChannel RPC call. This
 	//call is meant to be consumed by clients to the REST proxy. As with all
 	//other sync calls, all byte slices are intended to be populated as hex
 	//encoded strings.
-	OpenChannelSync(context.Context, *OpenChannelRequest) (*ChannelPoint, er.R)
+	OpenChannelSync(context.Context, *OpenChannelRequest) (*ChannelPoint, error)
 	// lncli: `openchannel`
 	//OpenChannel attempts to open a singly funded channel specified in the
 	//request to a remote peer. Users are able to specify a target number of
@@ -14836,7 +14836,7 @@ type LightningServer interface {
 	//the pending channel ID of the in-progress channel. Depending on the
 	//arguments specified in the OpenChannelRequest, this pending channel ID can
 	//then be used to manually progress the channel funding flow.
-	OpenChannel(*OpenChannelRequest, Lightning_OpenChannelServer) er.R
+	OpenChannel(*OpenChannelRequest, Lightning_OpenChannelServer) error
 	//
 	//FundingStateStep is an advanced funding related call that allows the caller
 	//to either execute some preparatory steps for a funding workflow, or
@@ -14846,14 +14846,14 @@ type LightningServer interface {
 	//pending channel ID, for which we need to use specific parameters.
 	//Alternatively, this can be used to interactively drive PSBT signing for
 	//funding for partially complete funding transactions.
-	FundingStateStep(context.Context, *FundingTransitionMsg) (*FundingStateStepResp, er.R)
+	FundingStateStep(context.Context, *FundingTransitionMsg) (*FundingStateStepResp, error)
 	//
 	//ChannelAcceptor dispatches a bi-directional streaming RPC in which
 	//OpenChannel requests are sent to the client and the client responds with
 	//a boolean that tells LND whether or not to accept the channel. This allows
 	//node operators to specify their own criteria for accepting inbound channels
 	//through a single persistent connection.
-	ChannelAcceptor(Lightning_ChannelAcceptorServer) er.R
+	ChannelAcceptor(Lightning_ChannelAcceptorServer) error
 	// lncli: `closechannel`
 	//CloseChannel attempts to close an active channel identified by its channel
 	//outpoint (ChannelPoint). The actions of this method can additionally be
@@ -14862,7 +14862,7 @@ type LightningServer interface {
 	//then the user can specify either a target number of blocks until the
 	//closure transaction is confirmed, or a manual fee rate. If neither are
 	//specified, then a default lax, block confirmation target is used.
-	CloseChannel(*CloseChannelRequest, Lightning_CloseChannelServer) er.R
+	CloseChannel(*CloseChannelRequest, Lightning_CloseChannelServer) error
 	// lncli: `abandonchannel`
 	//AbandonChannel removes all channel state from the database except for a
 	//close summary. This method can be used to get rid of permanently unusable
@@ -14870,36 +14870,36 @@ type LightningServer interface {
 	//used to remove externally funded channels where the funding transaction was
 	//never broadcast. Only available for non-externally funded channels in dev
 	//build.
-	AbandonChannel(context.Context, *AbandonChannelRequest) (*AbandonChannelResponse, er.R)
+	AbandonChannel(context.Context, *AbandonChannelRequest) (*AbandonChannelResponse, error)
 	// lncli: `sendpayment`
 	//Deprecated, use routerrpc.SendPaymentV2. SendPayment dispatches a
 	//bi-directional streaming RPC for sending payments through the Lightning
 	//Network. A single RPC invocation creates a persistent bi-directional
 	//stream allowing clients to rapidly send payments through the Lightning
 	//Network with a single persistent connection.
-	SendPayment(Lightning_SendPaymentServer) er.R
+	SendPayment(Lightning_SendPaymentServer) error
 	//
 	//SendPaymentSync is the synchronous non-streaming version of SendPayment.
 	//This RPC is intended to be consumed by clients of the REST proxy.
 	//Additionally, this RPC expects the destination's public key and the payment
 	//hash (if any) to be encoded as hex strings.
-	SendPaymentSync(context.Context, *SendRequest) (*SendResponse, er.R)
+	SendPaymentSync(context.Context, *SendRequest) (*SendResponse, error)
 	// lncli: `sendtoroute`
 	//Deprecated, use routerrpc.SendToRouteV2. SendToRoute is a bi-directional
 	//streaming RPC for sending payment through the Lightning Network. This
 	//method differs from SendPayment in that it allows users to specify a full
 	//route manually. This can be used for things like rebalancing, and atomic
 	//swaps.
-	SendToRoute(Lightning_SendToRouteServer) er.R
+	SendToRoute(Lightning_SendToRouteServer) error
 	//
 	//SendToRouteSync is a synchronous version of SendToRoute. It Will block
 	//until the payment either fails or succeeds.
-	SendToRouteSync(context.Context, *SendToRouteRequest) (*SendResponse, er.R)
+	SendToRouteSync(context.Context, *SendToRouteRequest) (*SendResponse, error)
 	// lncli: `addinvoice`
 	//AddInvoice attempts to add a new invoice to the invoice database. Any
 	//duplicated invoices are rejected, therefore all invoices *must* have a
 	//unique payment preimage.
-	AddInvoice(context.Context, *Invoice) (*AddInvoiceResponse, er.R)
+	AddInvoice(context.Context, *Invoice) (*AddInvoiceResponse, error)
 	// lncli: `listinvoices`
 	//ListInvoices returns a list of all the invoices currently stored within the
 	//database. Any active debug invoices are ignored. It has full support for
@@ -14908,12 +14908,12 @@ type LightningServer interface {
 	//last_index_offset fields included in the response as the index_offset of the
 	//next request. By default, the first 100 invoices created will be returned.
 	//Backwards pagination is also supported through the Reversed flag.
-	ListInvoices(context.Context, *ListInvoiceRequest) (*ListInvoiceResponse, er.R)
+	ListInvoices(context.Context, *ListInvoiceRequest) (*ListInvoiceResponse, error)
 	// lncli: `lookupinvoice`
 	//LookupInvoice attempts to look up an invoice according to its payment hash.
 	//The passed payment hash *must* be exactly 32 bytes, if not, an error is
 	//returned.
-	LookupInvoice(context.Context, *PaymentHash) (*Invoice, er.R)
+	LookupInvoice(context.Context, *PaymentHash) (*Invoice, error)
 	//
 	//SubscribeInvoices returns a uni-directional stream (server -> client) for
 	//notifying the client of newly added/settled invoices. The caller can
@@ -14924,18 +14924,18 @@ type LightningServer interface {
 	//invoices with a settle_index greater than the specified value. One or both
 	//of these fields can be set. If no fields are set, then we'll only send out
 	//the latest add/settle events.
-	SubscribeInvoices(*InvoiceSubscription, Lightning_SubscribeInvoicesServer) er.R
+	SubscribeInvoices(*InvoiceSubscription, Lightning_SubscribeInvoicesServer) error
 	// lncli: `decodepayreq`
 	//DecodePayReq takes an encoded payment request string and attempts to decode
 	//it, returning a full description of the conditions encoded within the
 	//payment request.
-	DecodePayReq(context.Context, *PayReqString) (*PayReq, er.R)
+	DecodePayReq(context.Context, *PayReqString) (*PayReq, error)
 	// lncli: `listpayments`
 	//ListPayments returns a list of all outgoing payments.
-	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, er.R)
+	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	//
 	//DeleteAllPayments deletes all outgoing payments from DB.
-	DeleteAllPayments(context.Context, *DeleteAllPaymentsRequest) (*DeleteAllPaymentsResponse, er.R)
+	DeleteAllPayments(context.Context, *DeleteAllPaymentsRequest) (*DeleteAllPaymentsResponse, error)
 	// lncli: `describegraph`
 	//DescribeGraph returns a description of the latest graph state from the
 	//point of view of the node. The graph information is partitioned into two
@@ -14943,21 +14943,21 @@ type LightningServer interface {
 	//vertexes themselves. As this is a directed graph, the edges also contain
 	//the node directional specific routing policy which includes: the time lock
 	//delta, fee information, etc.
-	DescribeGraph(context.Context, *ChannelGraphRequest) (*ChannelGraph, er.R)
+	DescribeGraph(context.Context, *ChannelGraphRequest) (*ChannelGraph, error)
 	// lncli: `getnodemetrics`
 	//GetNodeMetrics returns node metrics calculated from the graph. Currently
 	//the only supported metric is betweenness centrality of individual nodes.
-	GetNodeMetrics(context.Context, *NodeMetricsRequest) (*NodeMetricsResponse, er.R)
+	GetNodeMetrics(context.Context, *NodeMetricsRequest) (*NodeMetricsResponse, error)
 	// lncli: `getchaninfo`
 	//GetChanInfo returns the latest authenticated network announcement for the
 	//given channel identified by its channel ID: an 8-byte integer which
 	//uniquely identifies the location of transaction's funding output within the
 	//blockchain.
-	GetChanInfo(context.Context, *ChanInfoRequest) (*ChannelEdge, er.R)
+	GetChanInfo(context.Context, *ChanInfoRequest) (*ChannelEdge, error)
 	// lncli: `getnodeinfo`
 	//GetNodeInfo returns the latest advertised, aggregated, and authenticated
 	//channel information for the specified node identified by its public key.
-	GetNodeInfo(context.Context, *NodeInfoRequest) (*NodeInfo, er.R)
+	GetNodeInfo(context.Context, *NodeInfoRequest) (*NodeInfo, error)
 	// lncli: `queryroutes`
 	//QueryRoutes attempts to query the daemon's Channel Router for a possible
 	//route to a target destination capable of carrying a specific amount of
@@ -14969,15 +14969,15 @@ type LightningServer interface {
 	//`&dest_custom_records[<record_number>]=<record_data_base64_url_encoded>`
 	//to the URL. Unfortunately this map type doesn't appear in the REST API
 	//documentation because of a bug in the grpc-gateway library.
-	QueryRoutes(context.Context, *QueryRoutesRequest) (*QueryRoutesResponse, er.R)
+	QueryRoutes(context.Context, *QueryRoutesRequest) (*QueryRoutesResponse, error)
 	// lncli: `getnetworkinfo`
 	//GetNetworkInfo returns some basic stats about the known channel graph from
 	//the point of view of the node.
-	GetNetworkInfo(context.Context, *NetworkInfoRequest) (*NetworkInfo, er.R)
+	GetNetworkInfo(context.Context, *NetworkInfoRequest) (*NetworkInfo, error)
 	// lncli: `stop`
 	//StopDaemon will send a shutdown request to the interrupt handler, triggering
 	//a graceful shutdown of the daemon.
-	StopDaemon(context.Context, *StopRequest) (*StopResponse, er.R)
+	StopDaemon(context.Context, *StopRequest) (*StopResponse, error)
 	//
 	//SubscribeChannelGraph launches a streaming RPC that allows the caller to
 	//receive notifications upon any changes to the channel graph topology from
@@ -14985,21 +14985,21 @@ type LightningServer interface {
 	//nodes coming online, nodes updating their authenticated attributes, new
 	//channels being advertised, updates in the routing policy for a directional
 	//channel edge, and when channels are closed on-chain.
-	SubscribeChannelGraph(*GraphTopologySubscription, Lightning_SubscribeChannelGraphServer) er.R
+	SubscribeChannelGraph(*GraphTopologySubscription, Lightning_SubscribeChannelGraphServer) error
 	// lncli: `debuglevel`
 	//DebugLevel allows a caller to programmatically set the logging verbosity of
 	//lnd. The logging can be targeted according to a coarse daemon-wide logging
 	//level, or in a granular fashion to specify the logging for a target
 	//sub-system.
-	DebugLevel(context.Context, *DebugLevelRequest) (*DebugLevelResponse, er.R)
+	DebugLevel(context.Context, *DebugLevelRequest) (*DebugLevelResponse, error)
 	// lncli: `feereport`
 	//FeeReport allows the caller to obtain a report detailing the current fee
 	//schedule enforced by the node globally for each channel.
-	FeeReport(context.Context, *FeeReportRequest) (*FeeReportResponse, er.R)
+	FeeReport(context.Context, *FeeReportRequest) (*FeeReportResponse, error)
 	// lncli: `updatechanpolicy`
 	//UpdateChannelPolicy allows the caller to update the fee schedule and
 	//channel policies for all channels globally, or a particular channel.
-	UpdateChannelPolicy(context.Context, *PolicyUpdateRequest) (*PolicyUpdateResponse, er.R)
+	UpdateChannelPolicy(context.Context, *PolicyUpdateRequest) (*PolicyUpdateResponse, error)
 	// lncli: `fwdinghistory`
 	//ForwardingHistory allows the caller to query the htlcswitch for a record of
 	//all HTLCs forwarded within the target time range, and integer offset
@@ -15011,7 +15011,7 @@ type LightningServer interface {
 	//As a result each message can only contain 50k entries. Each response has
 	//the index offset of the last entry. The index offset can be provided to the
 	//request to allow the caller to skip a series of records.
-	ForwardingHistory(context.Context, *ForwardingHistoryRequest) (*ForwardingHistoryResponse, er.R)
+	ForwardingHistory(context.Context, *ForwardingHistoryRequest) (*ForwardingHistoryResponse, error)
 	// lncli: `exportchanbackup`
 	//ExportChannelBackup attempts to return an encrypted static channel backup
 	//for the target channel identified by it channel point. The backup is
@@ -15019,25 +15019,25 @@ type LightningServer interface {
 	//returned backup can either be restored using the RestoreChannelBackup
 	//method once lnd is running, or via the InitWallet and UnlockWallet methods
 	//from the WalletUnlocker service.
-	ExportChannelBackup(context.Context, *ExportChannelBackupRequest) (*ChannelBackup, er.R)
+	ExportChannelBackup(context.Context, *ExportChannelBackupRequest) (*ChannelBackup, error)
 	//
 	//ExportAllChannelBackups returns static channel backups for all existing
 	//channels known to lnd. A set of regular singular static channel backups for
 	//each channel are returned. Additionally, a multi-channel backup is returned
 	//as well, which contains a single encrypted blob containing the backups of
 	//each channel.
-	ExportAllChannelBackups(context.Context, *ChanBackupExportRequest) (*ChanBackupSnapshot, er.R)
+	ExportAllChannelBackups(context.Context, *ChanBackupExportRequest) (*ChanBackupSnapshot, error)
 	//
 	//VerifyChanBackup allows a caller to verify the integrity of a channel backup
 	//snapshot. This method will accept either a packed Single or a packed Multi.
 	//Specifying both will result in an error.
-	VerifyChanBackup(context.Context, *ChanBackupSnapshot) (*VerifyChanBackupResponse, er.R)
+	VerifyChanBackup(context.Context, *ChanBackupSnapshot) (*VerifyChanBackupResponse, error)
 	// lncli: `restorechanbackup`
 	//RestoreChannelBackups accepts a set of singular channel backups, or a
 	//single encrypted multi-chan backup and attempts to recover any funds
 	//remaining within the channel. If we are able to unpack the backup, then the
 	//new channel will be shown under listchannels, as well as pending channels.
-	RestoreChannelBackups(context.Context, *RestoreChanBackupRequest) (*RestoreBackupResponse, er.R)
+	RestoreChannelBackups(context.Context, *RestoreChanBackupRequest) (*RestoreBackupResponse, error)
 	//
 	//SubscribeChannelBackups allows a client to sub-subscribe to the most up to
 	//date information concerning the state of all channel backups. Each time a
@@ -15046,204 +15046,204 @@ type LightningServer interface {
 	//channel is closed, we send a new update, which contains new new chan back
 	//ups, but the updated set of encrypted multi-chan backups with the closed
 	//channel(s) removed.
-	SubscribeChannelBackups(*ChannelBackupSubscription, Lightning_SubscribeChannelBackupsServer) er.R
+	SubscribeChannelBackups(*ChannelBackupSubscription, Lightning_SubscribeChannelBackupsServer) error
 	// lncli: `bakemacaroon`
 	//BakeMacaroon allows the creation of a new macaroon with custom read and
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
-	BakeMacaroon(context.Context, *BakeMacaroonRequest) (*BakeMacaroonResponse, er.R)
+	BakeMacaroon(context.Context, *BakeMacaroonRequest) (*BakeMacaroonResponse, error)
 	// lncli: `listmacaroonids`
 	//ListMacaroonIDs returns all root key IDs that are in use.
-	ListMacaroonIDs(context.Context, *ListMacaroonIDsRequest) (*ListMacaroonIDsResponse, er.R)
+	ListMacaroonIDs(context.Context, *ListMacaroonIDsRequest) (*ListMacaroonIDsResponse, error)
 	// lncli: `deletemacaroonid`
 	//DeleteMacaroonID deletes the specified macaroon ID and invalidates all
 	//macaroons derived from that ID.
-	DeleteMacaroonID(context.Context, *DeleteMacaroonIDRequest) (*DeleteMacaroonIDResponse, er.R)
+	DeleteMacaroonID(context.Context, *DeleteMacaroonIDRequest) (*DeleteMacaroonIDResponse, error)
 	// lncli: `listpermissions`
 	//ListPermissions lists all RPC method URIs and their required macaroon
 	//permissions to access them.
-	ListPermissions(context.Context, *ListPermissionsRequest) (*ListPermissionsResponse, er.R)
+	ListPermissions(context.Context, *ListPermissionsRequest) (*ListPermissionsResponse, error)
 }
 
 // UnimplementedLightningServer can be embedded to have forward compatible implementations.
 type UnimplementedLightningServer struct {
 }
 
-func (*UnimplementedLightningServer) WalletBalance(ctx context.Context, req *WalletBalanceRequest) (*WalletBalanceResponse, er.R) {
+func (*UnimplementedLightningServer) WalletBalance(ctx context.Context, req *WalletBalanceRequest) (*WalletBalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WalletBalance not implemented")
 }
-func (*UnimplementedLightningServer) ChannelBalance(ctx context.Context, req *ChannelBalanceRequest) (*ChannelBalanceResponse, er.R) {
+func (*UnimplementedLightningServer) ChannelBalance(ctx context.Context, req *ChannelBalanceRequest) (*ChannelBalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChannelBalance not implemented")
 }
-func (*UnimplementedLightningServer) GetTransactions(ctx context.Context, req *GetTransactionsRequest) (*TransactionDetails, er.R) {
+func (*UnimplementedLightningServer) GetTransactions(ctx context.Context, req *GetTransactionsRequest) (*TransactionDetails, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransactions not implemented")
 }
-func (*UnimplementedLightningServer) EstimateFee(ctx context.Context, req *EstimateFeeRequest) (*EstimateFeeResponse, er.R) {
+func (*UnimplementedLightningServer) EstimateFee(ctx context.Context, req *EstimateFeeRequest) (*EstimateFeeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EstimateFee not implemented")
 }
-func (*UnimplementedLightningServer) SendCoins(ctx context.Context, req *SendCoinsRequest) (*SendCoinsResponse, er.R) {
+func (*UnimplementedLightningServer) SendCoins(ctx context.Context, req *SendCoinsRequest) (*SendCoinsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendCoins not implemented")
 }
-func (*UnimplementedLightningServer) ListUnspent(ctx context.Context, req *ListUnspentRequest) (*ListUnspentResponse, er.R) {
+func (*UnimplementedLightningServer) ListUnspent(ctx context.Context, req *ListUnspentRequest) (*ListUnspentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListUnspent not implemented")
 }
-func (*UnimplementedLightningServer) SubscribeTransactions(req *GetTransactionsRequest, srv Lightning_SubscribeTransactionsServer) er.R {
+func (*UnimplementedLightningServer) SubscribeTransactions(req *GetTransactionsRequest, srv Lightning_SubscribeTransactionsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeTransactions not implemented")
 }
-func (*UnimplementedLightningServer) SendMany(ctx context.Context, req *SendManyRequest) (*SendManyResponse, er.R) {
+func (*UnimplementedLightningServer) SendMany(ctx context.Context, req *SendManyRequest) (*SendManyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendMany not implemented")
 }
-func (*UnimplementedLightningServer) NewAddress(ctx context.Context, req *NewAddressRequest) (*NewAddressResponse, er.R) {
+func (*UnimplementedLightningServer) NewAddress(ctx context.Context, req *NewAddressRequest) (*NewAddressResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewAddress not implemented")
 }
-func (*UnimplementedLightningServer) SignMessage(ctx context.Context, req *SignMessageRequest) (*SignMessageResponse, er.R) {
+func (*UnimplementedLightningServer) SignMessage(ctx context.Context, req *SignMessageRequest) (*SignMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignMessage not implemented")
 }
-func (*UnimplementedLightningServer) VerifyMessage(ctx context.Context, req *VerifyMessageRequest) (*VerifyMessageResponse, er.R) {
+func (*UnimplementedLightningServer) VerifyMessage(ctx context.Context, req *VerifyMessageRequest) (*VerifyMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyMessage not implemented")
 }
-func (*UnimplementedLightningServer) ConnectPeer(ctx context.Context, req *ConnectPeerRequest) (*ConnectPeerResponse, er.R) {
+func (*UnimplementedLightningServer) ConnectPeer(ctx context.Context, req *ConnectPeerRequest) (*ConnectPeerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConnectPeer not implemented")
 }
-func (*UnimplementedLightningServer) DisconnectPeer(ctx context.Context, req *DisconnectPeerRequest) (*DisconnectPeerResponse, er.R) {
+func (*UnimplementedLightningServer) DisconnectPeer(ctx context.Context, req *DisconnectPeerRequest) (*DisconnectPeerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DisconnectPeer not implemented")
 }
-func (*UnimplementedLightningServer) ListPeers(ctx context.Context, req *ListPeersRequest) (*ListPeersResponse, er.R) {
+func (*UnimplementedLightningServer) ListPeers(ctx context.Context, req *ListPeersRequest) (*ListPeersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
 }
-func (*UnimplementedLightningServer) SubscribePeerEvents(req *PeerEventSubscription, srv Lightning_SubscribePeerEventsServer) er.R {
+func (*UnimplementedLightningServer) SubscribePeerEvents(req *PeerEventSubscription, srv Lightning_SubscribePeerEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribePeerEvents not implemented")
 }
-func (*UnimplementedLightningServer) GetInfo(ctx context.Context, req *GetInfoRequest) (*GetInfoResponse, er.R) {
+func (*UnimplementedLightningServer) GetInfo(ctx context.Context, req *GetInfoRequest) (*GetInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
 }
-func (*UnimplementedLightningServer) GetRecoveryInfo(ctx context.Context, req *GetRecoveryInfoRequest) (*GetRecoveryInfoResponse, er.R) {
+func (*UnimplementedLightningServer) GetRecoveryInfo(ctx context.Context, req *GetRecoveryInfoRequest) (*GetRecoveryInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecoveryInfo not implemented")
 }
-func (*UnimplementedLightningServer) PendingChannels(ctx context.Context, req *PendingChannelsRequest) (*PendingChannelsResponse, er.R) {
+func (*UnimplementedLightningServer) PendingChannels(ctx context.Context, req *PendingChannelsRequest) (*PendingChannelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PendingChannels not implemented")
 }
-func (*UnimplementedLightningServer) ListChannels(ctx context.Context, req *ListChannelsRequest) (*ListChannelsResponse, er.R) {
+func (*UnimplementedLightningServer) ListChannels(ctx context.Context, req *ListChannelsRequest) (*ListChannelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListChannels not implemented")
 }
-func (*UnimplementedLightningServer) SubscribeChannelEvents(req *ChannelEventSubscription, srv Lightning_SubscribeChannelEventsServer) er.R {
+func (*UnimplementedLightningServer) SubscribeChannelEvents(req *ChannelEventSubscription, srv Lightning_SubscribeChannelEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeChannelEvents not implemented")
 }
-func (*UnimplementedLightningServer) ClosedChannels(ctx context.Context, req *ClosedChannelsRequest) (*ClosedChannelsResponse, er.R) {
+func (*UnimplementedLightningServer) ClosedChannels(ctx context.Context, req *ClosedChannelsRequest) (*ClosedChannelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClosedChannels not implemented")
 }
-func (*UnimplementedLightningServer) OpenChannelSync(ctx context.Context, req *OpenChannelRequest) (*ChannelPoint, er.R) {
+func (*UnimplementedLightningServer) OpenChannelSync(ctx context.Context, req *OpenChannelRequest) (*ChannelPoint, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenChannelSync not implemented")
 }
-func (*UnimplementedLightningServer) OpenChannel(req *OpenChannelRequest, srv Lightning_OpenChannelServer) er.R {
+func (*UnimplementedLightningServer) OpenChannel(req *OpenChannelRequest, srv Lightning_OpenChannelServer) error {
 	return status.Errorf(codes.Unimplemented, "method OpenChannel not implemented")
 }
-func (*UnimplementedLightningServer) FundingStateStep(ctx context.Context, req *FundingTransitionMsg) (*FundingStateStepResp, er.R) {
+func (*UnimplementedLightningServer) FundingStateStep(ctx context.Context, req *FundingTransitionMsg) (*FundingStateStepResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FundingStateStep not implemented")
 }
-func (*UnimplementedLightningServer) ChannelAcceptor(srv Lightning_ChannelAcceptorServer) er.R {
+func (*UnimplementedLightningServer) ChannelAcceptor(srv Lightning_ChannelAcceptorServer) error {
 	return status.Errorf(codes.Unimplemented, "method ChannelAcceptor not implemented")
 }
-func (*UnimplementedLightningServer) CloseChannel(req *CloseChannelRequest, srv Lightning_CloseChannelServer) er.R {
+func (*UnimplementedLightningServer) CloseChannel(req *CloseChannelRequest, srv Lightning_CloseChannelServer) error {
 	return status.Errorf(codes.Unimplemented, "method CloseChannel not implemented")
 }
-func (*UnimplementedLightningServer) AbandonChannel(ctx context.Context, req *AbandonChannelRequest) (*AbandonChannelResponse, er.R) {
+func (*UnimplementedLightningServer) AbandonChannel(ctx context.Context, req *AbandonChannelRequest) (*AbandonChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AbandonChannel not implemented")
 }
-func (*UnimplementedLightningServer) SendPayment(srv Lightning_SendPaymentServer) er.R {
+func (*UnimplementedLightningServer) SendPayment(srv Lightning_SendPaymentServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendPayment not implemented")
 }
-func (*UnimplementedLightningServer) SendPaymentSync(ctx context.Context, req *SendRequest) (*SendResponse, er.R) {
+func (*UnimplementedLightningServer) SendPaymentSync(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendPaymentSync not implemented")
 }
-func (*UnimplementedLightningServer) SendToRoute(srv Lightning_SendToRouteServer) er.R {
+func (*UnimplementedLightningServer) SendToRoute(srv Lightning_SendToRouteServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendToRoute not implemented")
 }
-func (*UnimplementedLightningServer) SendToRouteSync(ctx context.Context, req *SendToRouteRequest) (*SendResponse, er.R) {
+func (*UnimplementedLightningServer) SendToRouteSync(ctx context.Context, req *SendToRouteRequest) (*SendResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendToRouteSync not implemented")
 }
-func (*UnimplementedLightningServer) AddInvoice(ctx context.Context, req *Invoice) (*AddInvoiceResponse, er.R) {
+func (*UnimplementedLightningServer) AddInvoice(ctx context.Context, req *Invoice) (*AddInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddInvoice not implemented")
 }
-func (*UnimplementedLightningServer) ListInvoices(ctx context.Context, req *ListInvoiceRequest) (*ListInvoiceResponse, er.R) {
+func (*UnimplementedLightningServer) ListInvoices(ctx context.Context, req *ListInvoiceRequest) (*ListInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListInvoices not implemented")
 }
-func (*UnimplementedLightningServer) LookupInvoice(ctx context.Context, req *PaymentHash) (*Invoice, er.R) {
+func (*UnimplementedLightningServer) LookupInvoice(ctx context.Context, req *PaymentHash) (*Invoice, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupInvoice not implemented")
 }
-func (*UnimplementedLightningServer) SubscribeInvoices(req *InvoiceSubscription, srv Lightning_SubscribeInvoicesServer) er.R {
+func (*UnimplementedLightningServer) SubscribeInvoices(req *InvoiceSubscription, srv Lightning_SubscribeInvoicesServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeInvoices not implemented")
 }
-func (*UnimplementedLightningServer) DecodePayReq(ctx context.Context, req *PayReqString) (*PayReq, er.R) {
+func (*UnimplementedLightningServer) DecodePayReq(ctx context.Context, req *PayReqString) (*PayReq, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DecodePayReq not implemented")
 }
-func (*UnimplementedLightningServer) ListPayments(ctx context.Context, req *ListPaymentsRequest) (*ListPaymentsResponse, er.R) {
+func (*UnimplementedLightningServer) ListPayments(ctx context.Context, req *ListPaymentsRequest) (*ListPaymentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPayments not implemented")
 }
-func (*UnimplementedLightningServer) DeleteAllPayments(ctx context.Context, req *DeleteAllPaymentsRequest) (*DeleteAllPaymentsResponse, er.R) {
+func (*UnimplementedLightningServer) DeleteAllPayments(ctx context.Context, req *DeleteAllPaymentsRequest) (*DeleteAllPaymentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllPayments not implemented")
 }
-func (*UnimplementedLightningServer) DescribeGraph(ctx context.Context, req *ChannelGraphRequest) (*ChannelGraph, er.R) {
+func (*UnimplementedLightningServer) DescribeGraph(ctx context.Context, req *ChannelGraphRequest) (*ChannelGraph, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DescribeGraph not implemented")
 }
-func (*UnimplementedLightningServer) GetNodeMetrics(ctx context.Context, req *NodeMetricsRequest) (*NodeMetricsResponse, er.R) {
+func (*UnimplementedLightningServer) GetNodeMetrics(ctx context.Context, req *NodeMetricsRequest) (*NodeMetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNodeMetrics not implemented")
 }
-func (*UnimplementedLightningServer) GetChanInfo(ctx context.Context, req *ChanInfoRequest) (*ChannelEdge, er.R) {
+func (*UnimplementedLightningServer) GetChanInfo(ctx context.Context, req *ChanInfoRequest) (*ChannelEdge, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChanInfo not implemented")
 }
-func (*UnimplementedLightningServer) GetNodeInfo(ctx context.Context, req *NodeInfoRequest) (*NodeInfo, er.R) {
+func (*UnimplementedLightningServer) GetNodeInfo(ctx context.Context, req *NodeInfoRequest) (*NodeInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNodeInfo not implemented")
 }
-func (*UnimplementedLightningServer) QueryRoutes(ctx context.Context, req *QueryRoutesRequest) (*QueryRoutesResponse, er.R) {
+func (*UnimplementedLightningServer) QueryRoutes(ctx context.Context, req *QueryRoutesRequest) (*QueryRoutesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryRoutes not implemented")
 }
-func (*UnimplementedLightningServer) GetNetworkInfo(ctx context.Context, req *NetworkInfoRequest) (*NetworkInfo, er.R) {
+func (*UnimplementedLightningServer) GetNetworkInfo(ctx context.Context, req *NetworkInfoRequest) (*NetworkInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNetworkInfo not implemented")
 }
-func (*UnimplementedLightningServer) StopDaemon(ctx context.Context, req *StopRequest) (*StopResponse, er.R) {
+func (*UnimplementedLightningServer) StopDaemon(ctx context.Context, req *StopRequest) (*StopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StopDaemon not implemented")
 }
-func (*UnimplementedLightningServer) SubscribeChannelGraph(req *GraphTopologySubscription, srv Lightning_SubscribeChannelGraphServer) er.R {
+func (*UnimplementedLightningServer) SubscribeChannelGraph(req *GraphTopologySubscription, srv Lightning_SubscribeChannelGraphServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeChannelGraph not implemented")
 }
-func (*UnimplementedLightningServer) DebugLevel(ctx context.Context, req *DebugLevelRequest) (*DebugLevelResponse, er.R) {
+func (*UnimplementedLightningServer) DebugLevel(ctx context.Context, req *DebugLevelRequest) (*DebugLevelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DebugLevel not implemented")
 }
-func (*UnimplementedLightningServer) FeeReport(ctx context.Context, req *FeeReportRequest) (*FeeReportResponse, er.R) {
+func (*UnimplementedLightningServer) FeeReport(ctx context.Context, req *FeeReportRequest) (*FeeReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FeeReport not implemented")
 }
-func (*UnimplementedLightningServer) UpdateChannelPolicy(ctx context.Context, req *PolicyUpdateRequest) (*PolicyUpdateResponse, er.R) {
+func (*UnimplementedLightningServer) UpdateChannelPolicy(ctx context.Context, req *PolicyUpdateRequest) (*PolicyUpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateChannelPolicy not implemented")
 }
-func (*UnimplementedLightningServer) ForwardingHistory(ctx context.Context, req *ForwardingHistoryRequest) (*ForwardingHistoryResponse, er.R) {
+func (*UnimplementedLightningServer) ForwardingHistory(ctx context.Context, req *ForwardingHistoryRequest) (*ForwardingHistoryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardingHistory not implemented")
 }
-func (*UnimplementedLightningServer) ExportChannelBackup(ctx context.Context, req *ExportChannelBackupRequest) (*ChannelBackup, er.R) {
+func (*UnimplementedLightningServer) ExportChannelBackup(ctx context.Context, req *ExportChannelBackupRequest) (*ChannelBackup, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExportChannelBackup not implemented")
 }
-func (*UnimplementedLightningServer) ExportAllChannelBackups(ctx context.Context, req *ChanBackupExportRequest) (*ChanBackupSnapshot, er.R) {
+func (*UnimplementedLightningServer) ExportAllChannelBackups(ctx context.Context, req *ChanBackupExportRequest) (*ChanBackupSnapshot, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExportAllChannelBackups not implemented")
 }
-func (*UnimplementedLightningServer) VerifyChanBackup(ctx context.Context, req *ChanBackupSnapshot) (*VerifyChanBackupResponse, er.R) {
+func (*UnimplementedLightningServer) VerifyChanBackup(ctx context.Context, req *ChanBackupSnapshot) (*VerifyChanBackupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyChanBackup not implemented")
 }
-func (*UnimplementedLightningServer) RestoreChannelBackups(ctx context.Context, req *RestoreChanBackupRequest) (*RestoreBackupResponse, er.R) {
+func (*UnimplementedLightningServer) RestoreChannelBackups(ctx context.Context, req *RestoreChanBackupRequest) (*RestoreBackupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RestoreChannelBackups not implemented")
 }
-func (*UnimplementedLightningServer) SubscribeChannelBackups(req *ChannelBackupSubscription, srv Lightning_SubscribeChannelBackupsServer) er.R {
+func (*UnimplementedLightningServer) SubscribeChannelBackups(req *ChannelBackupSubscription, srv Lightning_SubscribeChannelBackupsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeChannelBackups not implemented")
 }
-func (*UnimplementedLightningServer) BakeMacaroon(ctx context.Context, req *BakeMacaroonRequest) (*BakeMacaroonResponse, er.R) {
+func (*UnimplementedLightningServer) BakeMacaroon(ctx context.Context, req *BakeMacaroonRequest) (*BakeMacaroonResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BakeMacaroon not implemented")
 }
-func (*UnimplementedLightningServer) ListMacaroonIDs(ctx context.Context, req *ListMacaroonIDsRequest) (*ListMacaroonIDsResponse, er.R) {
+func (*UnimplementedLightningServer) ListMacaroonIDs(ctx context.Context, req *ListMacaroonIDsRequest) (*ListMacaroonIDsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListMacaroonIDs not implemented")
 }
-func (*UnimplementedLightningServer) DeleteMacaroonID(ctx context.Context, req *DeleteMacaroonIDRequest) (*DeleteMacaroonIDResponse, er.R) {
+func (*UnimplementedLightningServer) DeleteMacaroonID(ctx context.Context, req *DeleteMacaroonIDRequest) (*DeleteMacaroonIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteMacaroonID not implemented")
 }
-func (*UnimplementedLightningServer) ListPermissions(ctx context.Context, req *ListPermissionsRequest) (*ListPermissionsResponse, er.R) {
+func (*UnimplementedLightningServer) ListPermissions(ctx context.Context, req *ListPermissionsRequest) (*ListPermissionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPermissions not implemented")
 }
 
@@ -15251,7 +15251,7 @@ func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
 	s.RegisterService(&_Lightning_serviceDesc, srv)
 }
 
-func _Lightning_WalletBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_WalletBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WalletBalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15263,13 +15263,13 @@ func _Lightning_WalletBalance_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/WalletBalance",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).WalletBalance(ctx, req.(*WalletBalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ChannelBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ChannelBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChannelBalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15281,13 +15281,13 @@ func _Lightning_ChannelBalance_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ChannelBalance",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ChannelBalance(ctx, req.(*ChannelBalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15299,13 +15299,13 @@ func _Lightning_GetTransactions_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetTransactions",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetTransactions(ctx, req.(*GetTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_EstimateFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_EstimateFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EstimateFeeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15317,13 +15317,13 @@ func _Lightning_EstimateFee_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/EstimateFee",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).EstimateFee(ctx, req.(*EstimateFeeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SendCoins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_SendCoins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendCoinsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15335,13 +15335,13 @@ func _Lightning_SendCoins_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/SendCoins",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).SendCoins(ctx, req.(*SendCoinsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListUnspent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListUnspent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListUnspentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15353,13 +15353,13 @@ func _Lightning_ListUnspent_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListUnspent",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListUnspent(ctx, req.(*ListUnspentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribeTransactions_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribeTransactions_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(GetTransactionsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15368,7 +15368,7 @@ func _Lightning_SubscribeTransactions_Handler(srv interface{}, stream grpc.Serve
 }
 
 type Lightning_SubscribeTransactionsServer interface {
-	Send(*Transaction) er.R
+	Send(*Transaction) error
 	grpc.ServerStream
 }
 
@@ -15376,11 +15376,11 @@ type lightningSubscribeTransactionsServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribeTransactionsServer) Send(m *Transaction) er.R {
+func (x *lightningSubscribeTransactionsServer) Send(m *Transaction) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_SendMany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_SendMany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendManyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15392,13 +15392,13 @@ func _Lightning_SendMany_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/SendMany",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).SendMany(ctx, req.(*SendManyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_NewAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_NewAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NewAddressRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15410,13 +15410,13 @@ func _Lightning_NewAddress_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/NewAddress",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).NewAddress(ctx, req.(*NewAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SignMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_SignMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SignMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15428,13 +15428,13 @@ func _Lightning_SignMessage_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/SignMessage",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).SignMessage(ctx, req.(*SignMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(VerifyMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15446,13 +15446,13 @@ func _Lightning_VerifyMessage_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/VerifyMessage",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).VerifyMessage(ctx, req.(*VerifyMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ConnectPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ConnectPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConnectPeerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15464,13 +15464,13 @@ func _Lightning_ConnectPeer_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ConnectPeer",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ConnectPeer(ctx, req.(*ConnectPeerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_DisconnectPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DisconnectPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DisconnectPeerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15482,13 +15482,13 @@ func _Lightning_DisconnectPeer_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DisconnectPeer",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DisconnectPeer(ctx, req.(*DisconnectPeerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListPeersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15500,13 +15500,13 @@ func _Lightning_ListPeers_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListPeers",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListPeers(ctx, req.(*ListPeersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribePeerEvents_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribePeerEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(PeerEventSubscription)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15515,7 +15515,7 @@ func _Lightning_SubscribePeerEvents_Handler(srv interface{}, stream grpc.ServerS
 }
 
 type Lightning_SubscribePeerEventsServer interface {
-	Send(*PeerEvent) er.R
+	Send(*PeerEvent) error
 	grpc.ServerStream
 }
 
@@ -15523,11 +15523,11 @@ type lightningSubscribePeerEventsServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribePeerEventsServer) Send(m *PeerEvent) er.R {
+func (x *lightningSubscribePeerEventsServer) Send(m *PeerEvent) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15539,13 +15539,13 @@ func _Lightning_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetInfo(ctx, req.(*GetInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetRecoveryInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetRecoveryInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRecoveryInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15557,13 +15557,13 @@ func _Lightning_GetRecoveryInfo_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetRecoveryInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetRecoveryInfo(ctx, req.(*GetRecoveryInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_PendingChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_PendingChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PendingChannelsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15575,13 +15575,13 @@ func _Lightning_PendingChannels_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/PendingChannels",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).PendingChannels(ctx, req.(*PendingChannelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListChannelsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15593,13 +15593,13 @@ func _Lightning_ListChannels_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListChannels",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListChannels(ctx, req.(*ListChannelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribeChannelEvents_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribeChannelEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ChannelEventSubscription)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15608,7 +15608,7 @@ func _Lightning_SubscribeChannelEvents_Handler(srv interface{}, stream grpc.Serv
 }
 
 type Lightning_SubscribeChannelEventsServer interface {
-	Send(*ChannelEventUpdate) er.R
+	Send(*ChannelEventUpdate) error
 	grpc.ServerStream
 }
 
@@ -15616,11 +15616,11 @@ type lightningSubscribeChannelEventsServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribeChannelEventsServer) Send(m *ChannelEventUpdate) er.R {
+func (x *lightningSubscribeChannelEventsServer) Send(m *ChannelEventUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_ClosedChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ClosedChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ClosedChannelsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15632,13 +15632,13 @@ func _Lightning_ClosedChannels_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ClosedChannels",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ClosedChannels(ctx, req.(*ClosedChannelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_OpenChannelSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_OpenChannelSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OpenChannelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15650,13 +15650,13 @@ func _Lightning_OpenChannelSync_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/OpenChannelSync",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).OpenChannelSync(ctx, req.(*OpenChannelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_OpenChannel_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_OpenChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(OpenChannelRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15665,7 +15665,7 @@ func _Lightning_OpenChannel_Handler(srv interface{}, stream grpc.ServerStream) e
 }
 
 type Lightning_OpenChannelServer interface {
-	Send(*OpenStatusUpdate) er.R
+	Send(*OpenStatusUpdate) error
 	grpc.ServerStream
 }
 
@@ -15673,11 +15673,11 @@ type lightningOpenChannelServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningOpenChannelServer) Send(m *OpenStatusUpdate) er.R {
+func (x *lightningOpenChannelServer) Send(m *OpenStatusUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_FundingStateStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_FundingStateStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FundingTransitionMsg)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15689,19 +15689,19 @@ func _Lightning_FundingStateStep_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/FundingStateStep",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).FundingStateStep(ctx, req.(*FundingTransitionMsg))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ChannelAcceptor_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_ChannelAcceptor_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(LightningServer).ChannelAcceptor(&lightningChannelAcceptorServer{stream})
 }
 
 type Lightning_ChannelAcceptorServer interface {
-	Send(*ChannelAcceptRequest) er.R
-	Recv() (*ChannelAcceptResponse, er.R)
+	Send(*ChannelAcceptRequest) error
+	Recv() (*ChannelAcceptResponse, error)
 	grpc.ServerStream
 }
 
@@ -15709,11 +15709,11 @@ type lightningChannelAcceptorServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningChannelAcceptorServer) Send(m *ChannelAcceptRequest) er.R {
+func (x *lightningChannelAcceptorServer) Send(m *ChannelAcceptRequest) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *lightningChannelAcceptorServer) Recv() (*ChannelAcceptResponse, er.R) {
+func (x *lightningChannelAcceptorServer) Recv() (*ChannelAcceptResponse, error) {
 	m := new(ChannelAcceptResponse)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -15721,7 +15721,7 @@ func (x *lightningChannelAcceptorServer) Recv() (*ChannelAcceptResponse, er.R) {
 	return m, nil
 }
 
-func _Lightning_CloseChannel_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_CloseChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(CloseChannelRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15730,7 +15730,7 @@ func _Lightning_CloseChannel_Handler(srv interface{}, stream grpc.ServerStream) 
 }
 
 type Lightning_CloseChannelServer interface {
-	Send(*CloseStatusUpdate) er.R
+	Send(*CloseStatusUpdate) error
 	grpc.ServerStream
 }
 
@@ -15738,11 +15738,11 @@ type lightningCloseChannelServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningCloseChannelServer) Send(m *CloseStatusUpdate) er.R {
+func (x *lightningCloseChannelServer) Send(m *CloseStatusUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_AbandonChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_AbandonChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AbandonChannelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15754,19 +15754,19 @@ func _Lightning_AbandonChannel_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/AbandonChannel",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).AbandonChannel(ctx, req.(*AbandonChannelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SendPayment_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SendPayment_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(LightningServer).SendPayment(&lightningSendPaymentServer{stream})
 }
 
 type Lightning_SendPaymentServer interface {
-	Send(*SendResponse) er.R
-	Recv() (*SendRequest, er.R)
+	Send(*SendResponse) error
+	Recv() (*SendRequest, error)
 	grpc.ServerStream
 }
 
@@ -15774,11 +15774,11 @@ type lightningSendPaymentServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSendPaymentServer) Send(m *SendResponse) er.R {
+func (x *lightningSendPaymentServer) Send(m *SendResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *lightningSendPaymentServer) Recv() (*SendRequest, er.R) {
+func (x *lightningSendPaymentServer) Recv() (*SendRequest, error) {
 	m := new(SendRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -15786,7 +15786,7 @@ func (x *lightningSendPaymentServer) Recv() (*SendRequest, er.R) {
 	return m, nil
 }
 
-func _Lightning_SendPaymentSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_SendPaymentSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15798,19 +15798,19 @@ func _Lightning_SendPaymentSync_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/SendPaymentSync",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).SendPaymentSync(ctx, req.(*SendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SendToRoute_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SendToRoute_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(LightningServer).SendToRoute(&lightningSendToRouteServer{stream})
 }
 
 type Lightning_SendToRouteServer interface {
-	Send(*SendResponse) er.R
-	Recv() (*SendToRouteRequest, er.R)
+	Send(*SendResponse) error
+	Recv() (*SendToRouteRequest, error)
 	grpc.ServerStream
 }
 
@@ -15818,11 +15818,11 @@ type lightningSendToRouteServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSendToRouteServer) Send(m *SendResponse) er.R {
+func (x *lightningSendToRouteServer) Send(m *SendResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *lightningSendToRouteServer) Recv() (*SendToRouteRequest, er.R) {
+func (x *lightningSendToRouteServer) Recv() (*SendToRouteRequest, error) {
 	m := new(SendToRouteRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -15830,7 +15830,7 @@ func (x *lightningSendToRouteServer) Recv() (*SendToRouteRequest, er.R) {
 	return m, nil
 }
 
-func _Lightning_SendToRouteSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_SendToRouteSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendToRouteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15842,13 +15842,13 @@ func _Lightning_SendToRouteSync_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/SendToRouteSync",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).SendToRouteSync(ctx, req.(*SendToRouteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_AddInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_AddInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Invoice)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15860,13 +15860,13 @@ func _Lightning_AddInvoice_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/AddInvoice",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).AddInvoice(ctx, req.(*Invoice))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListInvoices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListInvoices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListInvoiceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15878,13 +15878,13 @@ func _Lightning_ListInvoices_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListInvoices",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListInvoices(ctx, req.(*ListInvoiceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_LookupInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_LookupInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PaymentHash)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15896,13 +15896,13 @@ func _Lightning_LookupInvoice_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/LookupInvoice",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).LookupInvoice(ctx, req.(*PaymentHash))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribeInvoices_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribeInvoices_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(InvoiceSubscription)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -15911,7 +15911,7 @@ func _Lightning_SubscribeInvoices_Handler(srv interface{}, stream grpc.ServerStr
 }
 
 type Lightning_SubscribeInvoicesServer interface {
-	Send(*Invoice) er.R
+	Send(*Invoice) error
 	grpc.ServerStream
 }
 
@@ -15919,11 +15919,11 @@ type lightningSubscribeInvoicesServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribeInvoicesServer) Send(m *Invoice) er.R {
+func (x *lightningSubscribeInvoicesServer) Send(m *Invoice) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_DecodePayReq_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DecodePayReq_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PayReqString)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15935,13 +15935,13 @@ func _Lightning_DecodePayReq_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DecodePayReq",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DecodePayReq(ctx, req.(*PayReqString))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListPaymentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15953,13 +15953,13 @@ func _Lightning_ListPayments_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListPayments",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListPayments(ctx, req.(*ListPaymentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_DeleteAllPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DeleteAllPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteAllPaymentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15971,13 +15971,13 @@ func _Lightning_DeleteAllPayments_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DeleteAllPayments",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DeleteAllPayments(ctx, req.(*DeleteAllPaymentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_DescribeGraph_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DescribeGraph_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChannelGraphRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -15989,13 +15989,13 @@ func _Lightning_DescribeGraph_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DescribeGraph",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DescribeGraph(ctx, req.(*ChannelGraphRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetNodeMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetNodeMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NodeMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16007,13 +16007,13 @@ func _Lightning_GetNodeMetrics_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetNodeMetrics",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetNodeMetrics(ctx, req.(*NodeMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetChanInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetChanInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChanInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16025,13 +16025,13 @@ func _Lightning_GetChanInfo_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetChanInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetChanInfo(ctx, req.(*ChanInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetNodeInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetNodeInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NodeInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16043,13 +16043,13 @@ func _Lightning_GetNodeInfo_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetNodeInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetNodeInfo(ctx, req.(*NodeInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_QueryRoutes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_QueryRoutes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryRoutesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16061,13 +16061,13 @@ func _Lightning_QueryRoutes_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/QueryRoutes",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).QueryRoutes(ctx, req.(*QueryRoutesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_GetNetworkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_GetNetworkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NetworkInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16079,13 +16079,13 @@ func _Lightning_GetNetworkInfo_Handler(srv interface{}, ctx context.Context, dec
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/GetNetworkInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).GetNetworkInfo(ctx, req.(*NetworkInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_StopDaemon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_StopDaemon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StopRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16097,13 +16097,13 @@ func _Lightning_StopDaemon_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/StopDaemon",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).StopDaemon(ctx, req.(*StopRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribeChannelGraph_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribeChannelGraph_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(GraphTopologySubscription)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -16112,7 +16112,7 @@ func _Lightning_SubscribeChannelGraph_Handler(srv interface{}, stream grpc.Serve
 }
 
 type Lightning_SubscribeChannelGraphServer interface {
-	Send(*GraphTopologyUpdate) er.R
+	Send(*GraphTopologyUpdate) error
 	grpc.ServerStream
 }
 
@@ -16120,11 +16120,11 @@ type lightningSubscribeChannelGraphServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribeChannelGraphServer) Send(m *GraphTopologyUpdate) er.R {
+func (x *lightningSubscribeChannelGraphServer) Send(m *GraphTopologyUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_DebugLevel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DebugLevel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DebugLevelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16136,13 +16136,13 @@ func _Lightning_DebugLevel_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DebugLevel",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DebugLevel(ctx, req.(*DebugLevelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_FeeReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_FeeReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FeeReportRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16154,13 +16154,13 @@ func _Lightning_FeeReport_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/FeeReport",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).FeeReport(ctx, req.(*FeeReportRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_UpdateChannelPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_UpdateChannelPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PolicyUpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16172,13 +16172,13 @@ func _Lightning_UpdateChannelPolicy_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/UpdateChannelPolicy",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).UpdateChannelPolicy(ctx, req.(*PolicyUpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ForwardingHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ForwardingHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ForwardingHistoryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16190,13 +16190,13 @@ func _Lightning_ForwardingHistory_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ForwardingHistory",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ForwardingHistory(ctx, req.(*ForwardingHistoryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ExportChannelBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ExportChannelBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ExportChannelBackupRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16208,13 +16208,13 @@ func _Lightning_ExportChannelBackup_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ExportChannelBackup",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ExportChannelBackup(ctx, req.(*ExportChannelBackupRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ExportAllChannelBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ExportAllChannelBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChanBackupExportRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16226,13 +16226,13 @@ func _Lightning_ExportAllChannelBackups_Handler(srv interface{}, ctx context.Con
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ExportAllChannelBackups",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ExportAllChannelBackups(ctx, req.(*ChanBackupExportRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_VerifyChanBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_VerifyChanBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChanBackupSnapshot)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16244,13 +16244,13 @@ func _Lightning_VerifyChanBackup_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/VerifyChanBackup",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).VerifyChanBackup(ctx, req.(*ChanBackupSnapshot))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_RestoreChannelBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_RestoreChannelBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RestoreChanBackupRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16262,13 +16262,13 @@ func _Lightning_RestoreChannelBackups_Handler(srv interface{}, ctx context.Conte
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/RestoreChannelBackups",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).RestoreChannelBackups(ctx, req.(*RestoreChanBackupRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_SubscribeChannelBackups_Handler(srv interface{}, stream grpc.ServerStream) er.R {
+func _Lightning_SubscribeChannelBackups_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ChannelBackupSubscription)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -16277,7 +16277,7 @@ func _Lightning_SubscribeChannelBackups_Handler(srv interface{}, stream grpc.Ser
 }
 
 type Lightning_SubscribeChannelBackupsServer interface {
-	Send(*ChanBackupSnapshot) er.R
+	Send(*ChanBackupSnapshot) error
 	grpc.ServerStream
 }
 
@@ -16285,11 +16285,11 @@ type lightningSubscribeChannelBackupsServer struct {
 	grpc.ServerStream
 }
 
-func (x *lightningSubscribeChannelBackupsServer) Send(m *ChanBackupSnapshot) er.R {
+func (x *lightningSubscribeChannelBackupsServer) Send(m *ChanBackupSnapshot) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Lightning_BakeMacaroon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_BakeMacaroon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BakeMacaroonRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16301,13 +16301,13 @@ func _Lightning_BakeMacaroon_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/BakeMacaroon",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).BakeMacaroon(ctx, req.(*BakeMacaroonRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListMacaroonIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListMacaroonIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListMacaroonIDsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16319,13 +16319,13 @@ func _Lightning_ListMacaroonIDs_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListMacaroonIDs",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListMacaroonIDs(ctx, req.(*ListMacaroonIDsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_DeleteMacaroonID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_DeleteMacaroonID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteMacaroonIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16337,13 +16337,13 @@ func _Lightning_DeleteMacaroonID_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/DeleteMacaroonID",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).DeleteMacaroonID(ctx, req.(*DeleteMacaroonIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_ListPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, er.R) {
+func _Lightning_ListPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListPermissionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -16355,7 +16355,7 @@ func _Lightning_ListPermissions_Handler(srv interface{}, ctx context.Context, de
 		Server:     srv,
 		FullMethod: "/lnrpc.Lightning/ListPermissions",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, er.R) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListPermissions(ctx, req.(*ListPermissionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)

@@ -41,7 +41,8 @@ var (
 
 	// errBrarShuttingDown is an error returned if the breacharbiter has
 	// been signalled to exit.
-	errBrarShuttingDown = er.New("breacharbiter shutting down")
+	errBrarShuttingDown = Err.CodeWithDetail("errBrarShuttingDown",
+		"breacharbiter shutting down")
 )
 
 // ContractBreachEvent is an event the breachArbiter will receive in case a
@@ -376,7 +377,7 @@ func (b *breachArbiter) waitForSpendEvent(breachInfo *retributionInfo,
 				// to avoid entering an infinite loop.
 				select {
 				case <-b.quit:
-					return errBrarShuttingDown
+					return errBrarShuttingDown.Default()
 				default:
 					continue
 				}
@@ -488,7 +489,7 @@ func (b *breachArbiter) waitForSpendEvent(breachInfo *retributionInfo,
 		breachInfo.breachedOutputs = inputs[:nextIndex]
 
 	case <-b.quit:
-		return errBrarShuttingDown
+		return errBrarShuttingDown.Default()
 	}
 
 	return nil
@@ -574,7 +575,7 @@ justiceTxBroadcast:
 	if err != nil {
 		brarLog.Errorf("Unable to broadcast justice tx: %v", err)
 
-		if err == lnwallet.ErrDoubleSpend {
+		if lnwallet.ErrDoubleSpend.Is(err) {
 			// Broadcasting the transaction failed because of a
 			// conflict either in the mempool or in chain. We'll
 			// now create spend subscriptions for all HTLC outputs
@@ -587,7 +588,7 @@ justiceTxBroadcast:
 
 			err := b.waitForSpendEvent(breachInfo, spendNtfns)
 			if err != nil {
-				if err != errBrarShuttingDown {
+				if !errBrarShuttingDown.Is(err) {
 					brarLog.Errorf("error waiting for "+
 						"spend event: %v", err)
 				}

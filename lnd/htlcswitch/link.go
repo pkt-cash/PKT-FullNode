@@ -292,7 +292,7 @@ type ChannelLinkConfig struct {
 // prevent the link from blocking.
 type localUpdateAddMsg struct {
 	pkt *htlcPacket
-	err chan error
+	err chan er.R
 }
 
 // channelLink is the service which drives a channel's commitment update
@@ -427,7 +427,7 @@ var _ ChannelLink = (*channelLink)(nil)
 // NOTE: Part of the ChannelLink interface.
 func (l *channelLink) Start() er.R {
 	if !atomic.CompareAndSwapInt32(&l.started, 0, 1) {
-		err := errors.Errorf("channel link(%v): already started", l)
+		err := er.Errorf("channel link(%v): already started", l)
 		l.log.Warn("already started")
 		return err
 	}
@@ -923,8 +923,9 @@ func (l *channelLink) htlcManager() {
 		if err != nil {
 			l.log.Warnf("error when syncing channel states: %v", err)
 
+			errr := er.Wrapped(err)
 			errDataLoss, localDataLoss :=
-				err.(*lnwallet.ErrCommitSyncLocalDataLoss)
+				errr.(*lnwallet.ErrCommitSyncLocalDataLoss)
 
 			switch {
 			case ErrLinkShuttingDown.Is(err):
@@ -935,19 +936,19 @@ func (l *channelLink) htlcManager() {
 			// We failed syncing the commit chains, probably
 			// because the remote has lost state. We should force
 			// close the channel.
-			case err == lnwallet.ErrCommitSyncRemoteDataLoss:
+			case lnwallet.ErrCommitSyncRemoteDataLoss.Is(err):
 				fallthrough
 
 			// The remote sent us an invalid last commit secret, we
 			// should force close the channel.
 			// TODO(halseth): and permanently ban the peer?
-			case err == lnwallet.ErrInvalidLastCommitSecret:
+			case lnwallet.ErrInvalidLastCommitSecret.Is(err):
 				fallthrough
 
 			// The remote sent us a commit point different from
 			// what they sent us before.
 			// TODO(halseth): ban peer?
-			case err == lnwallet.ErrInvalidLocalUnrevokedCommitPoint:
+			case lnwallet.ErrInvalidLocalUnrevokedCommitPoint.Is(err):
 				// We'll fail the link and tell the peer to
 				// force close the channel. Note that the
 				// database state is not updated here, but will
@@ -985,7 +986,7 @@ func (l *channelLink) htlcManager() {
 			// force close.
 			// TODO(halseth): can we safely force close in any
 			// cases where this error is returned?
-			case err == lnwallet.ErrCannotSyncCommitChains:
+			case lnwallet.ErrCannotSyncCommitChains.Is(err):
 				if err := l.channel.MarkBorked(); err != nil {
 					l.log.Errorf("unable to mark channel "+
 						"borked: %v", err)
@@ -1160,7 +1161,7 @@ func (l *channelLink) htlcManager() {
 			if err != nil {
 				l.fail(LinkFailureError{code: ErrInternalError},
 					fmt.Sprintf("process hodl queue: %v",
-						err.Error()),
+						err.String()),
 				)
 				return
 			}
@@ -1328,10 +1329,10 @@ func (l *channelLink) handleDownstreamUpdateAdd(pkt *htlcPacket) er.R {
 		// unacknowledged.
 		l.mailBox.FailAdd(pkt)
 
-		return NewDetailedLinkError(
+		return er.E(NewDetailedLinkError(
 			lnwire.NewTemporaryChannelFailure(nil),
 			OutgoingFailureDownstreamHtlcAdd,
-		)
+		))
 	}
 
 	l.log.Tracef("received downstream htlc: payment_hash=%x, "+
@@ -1412,7 +1413,8 @@ func (l *channelLink) handleDownstreamPkt(pkt *htlcPacket) {
 			// cleaned up by a prior response. We'll thus try to
 			// clean up any lingering state to ensure we don't
 			// continue reforwarding.
-			if _, ok := err.(lnwallet.ErrUnknownHtlcIndex); ok {
+			errr := er.Wrapped(err)
+			if _, ok := errr.(lnwallet.ErrUnknownHtlcIndex); ok {
 				l.cleanupSpuriousResponse(pkt)
 			}
 
@@ -1477,7 +1479,8 @@ func (l *channelLink) handleDownstreamPkt(pkt *htlcPacket) {
 			// by a prior response. We'll thus try to clean up any
 			// lingering state to ensure we don't continue
 			// reforwarding.
-			if _, ok := err.(lnwallet.ErrUnknownHtlcIndex); ok {
+			errr := er.Wrapped(err)
+			if _, ok := errr.(lnwallet.ErrUnknownHtlcIndex); ok {
 				l.cleanupSpuriousResponse(pkt)
 			}
 
@@ -1755,11 +1758,12 @@ func (l *channelLink) handleUpstreamMsg(msg lnwire.Message) {
 			// it's an InvalidCommitSigError, then we'll send a
 			// direct error.
 			var sendData []byte
-			switch err.(type) {
+			errr := er.Wrapped(err)
+			switch errr.(type) {
 			case *lnwallet.InvalidCommitSigError:
-				sendData = []byte(err.Error())
+				sendData = []byte(err.String())
 			case *lnwallet.InvalidHtlcSigError:
-				sendData = []byte(err.Error())
+				sendData = []byte(err.String())
 			}
 			l.fail(
 				LinkFailureError{
@@ -2016,7 +2020,7 @@ func (l *channelLink) updateCommitTx() er.R {
 	}
 
 	theirCommitSig, htlcSigs, pendingHTLCs, err := l.channel.SignNextCommitment()
-	if err == lnwallet.ErrNoWindow {
+	if lnwallet.ErrNoWindow.Is(err) {
 		l.cfg.PendingCommitTicker.Resume()
 
 		l.log.Tracef("revocation window exhausted, unable to send: "+
@@ -2393,7 +2397,7 @@ func (l *channelLink) HandleLocalAddPacket(pkt *htlcPacket) er.R {
 	l.log.Tracef("received switch packet outkey=%v", pkt.outKey())
 
 	// Create a buffered result channel to prevent the link from blocking.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	select {
 	case l.localUpdateAdd <- &localUpdateAddMsg{
@@ -2673,7 +2677,7 @@ func (l *channelLink) processRemoteAdds(fwdPkg *channeldb.FwdPkg,
 			// should send an error back to the caller so the HTLC
 			// can be canceled.
 			var failedType uint64
-			if e, ok := err.(hop.ErrInvalidPayload); ok {
+			if e, ok := er.Wrapped(err).(hop.ErrInvalidPayload); ok {
 				failedType = uint64(e.Type)
 			}
 
@@ -2702,7 +2706,7 @@ func (l *channelLink) processRemoteAdds(fwdPkg *channeldb.FwdPkg,
 			)
 			if err != nil {
 				l.fail(LinkFailureError{code: ErrInternalError},
-					err.Error(),
+					err.String(),
 				)
 
 				return

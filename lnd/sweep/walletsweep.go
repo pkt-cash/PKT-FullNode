@@ -117,7 +117,7 @@ type CoinSelectionLocker interface {
 	// proceeding while the closure is executing. This can be seen as the
 	// ability to execute a function closure under an exclusive coin
 	// selection lock.
-	WithCoinSelectLock(func() error) er.R
+	WithCoinSelectLock(func() er.R) er.R
 }
 
 // OutpointLocker allows a caller to lock/unlock an outpoint. When locked, the

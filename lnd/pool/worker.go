@@ -78,7 +78,7 @@ type (
 	// encountered during the task's execution.
 	request struct {
 		fn      func(WorkerState) er.R
-		errChan chan error
+		errChan chan er.R
 	}
 )
 
@@ -114,10 +114,10 @@ func (w *Worker) Stop() er.R {
 // Submit accepts a function closure to the worker pool. The returned error will
 // be either the result of the closure's execution or an ErrWorkerPoolExiting if
 // a shutdown is requested.
-func (w *Worker) Submit(fn func(WorkerState) error) er.R {
+func (w *Worker) Submit(fn func(WorkerState) er.R) er.R {
 	req := &request{
 		fn:      fn,
-		errChan: make(chan error, 1),
+		errChan: make(chan er.R, 1),
 	}
 
 	select {

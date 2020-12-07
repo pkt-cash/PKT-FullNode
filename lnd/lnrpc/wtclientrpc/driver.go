@@ -1,9 +1,9 @@
 package wtclientrpc
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 )
 

@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/walletrpc"
@@ -168,7 +168,7 @@ func bumpFee(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 {
-		return cli.ShowCommandHelp(ctx, "bumpfee")
+		return er.E(cli.ShowCommandHelp(ctx, "bumpfee"))
 	}
 
 	// Validate and parse the relevant arguments/flags.
@@ -225,7 +225,7 @@ func bumpCloseFee(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 {
-		return cli.ShowCommandHelp(ctx, "bumpclosefee")
+		return er.E(cli.ShowCommandHelp(ctx, "bumpclosefee"))
 	}
 
 	// Validate the channel point.
@@ -383,7 +383,7 @@ func labelTransaction(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 2 {
-		return cli.ShowCommandHelp(ctx, "labeltx")
+		return er.E(cli.ShowCommandHelp(ctx, "labeltx"))
 	}
 
 	// Get the transaction id and check that it is a valid hash.
@@ -497,7 +497,7 @@ func fundPsbt(ctx *cli.Context) er.R {
 	// Display the command's help message if there aren't any flags
 	// specified.
 	if ctx.NumFlags() == 0 {
-		return cli.ShowCommandHelp(ctx, "fund")
+		return er.E(cli.ShowCommandHelp(ctx, "fund"))
 	}
 
 	req := &walletrpc.FundPsbtRequest{}
@@ -655,7 +655,7 @@ func finalizePsbt(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 && ctx.NumFlags() != 1 {
-		return cli.ShowCommandHelp(ctx, "finalize")
+		return er.E(cli.ShowCommandHelp(ctx, "finalize"))
 	}
 
 	var (
@@ -720,7 +720,7 @@ func releaseOutput(ctx *cli.Context) er.R {
 	// Display the command's help message if we do not have the expected
 	// number of arguments/flags.
 	if ctx.NArg() != 1 && ctx.NumFlags() != 1 {
-		return cli.ShowCommandHelp(ctx, "releaseoutput")
+		return er.E(cli.ShowCommandHelp(ctx, "releaseoutput"))
 	}
 
 	var (

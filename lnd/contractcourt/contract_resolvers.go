@@ -120,5 +120,6 @@ func (r *contractResolverKit) initLogger(resolver ContractResolver) {
 var (
 	// errResolverShuttingDown is returned when the resolver stops
 	// progressing because it received the quit signal.
-	errResolverShuttingDown = er.New("resolver shutting down")
+	errResolverShuttingDown = er.GenericErrorType.CodeWithDetail("errResolverShuttingDown",
+		"resolver shutting down")
 )

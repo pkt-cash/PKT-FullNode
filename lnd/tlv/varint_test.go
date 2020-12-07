@@ -2,10 +2,10 @@ package tlv_test
 
 import (
 	"bytes"
-	"io"
 	"math"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/tlv"
 )
 
@@ -13,7 +13,7 @@ type varIntTest struct {
 	Name   string
 	Value  uint64
 	Bytes  []byte
-	ExpErr error
+	ExpErr *er.ErrorCode
 }
 
 var writeVarIntTests = []varIntTest{
@@ -145,22 +145,22 @@ var readVarIntTests = []varIntTest{
 	{
 		Name:   "two byte short read",
 		Bytes:  []byte{0xfd, 0x00},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 	{
 		Name:   "four byte short read",
 		Bytes:  []byte{0xfe, 0xff, 0xff},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 	{
 		Name:   "eight byte short read",
 		Bytes:  []byte{0xff, 0xff, 0xff, 0xff, 0xff},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 	{
 		Name:   "one byte no read",
 		Bytes:  []byte{},
-		ExpErr: io.EOF,
+		ExpErr: er.EOF,
 	},
 	// The following cases are the reason for needing to make a custom
 	// version of the varint for the tlv package. For the varint encodings
@@ -173,17 +173,17 @@ var readVarIntTests = []varIntTest{
 	{
 		Name:   "two byte no read",
 		Bytes:  []byte{0xfd},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 	{
 		Name:   "four byte no read",
 		Bytes:  []byte{0xfe},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 	{
 		Name:   "eight byte no read",
 		Bytes:  []byte{0xff},
-		ExpErr: io.ErrUnexpectedEOF,
+		ExpErr: er.ErrUnexpectedEOF,
 	},
 }
 
@@ -201,7 +201,8 @@ func testReadVarInt(t *testing.T, test varIntTest) {
 	var buf [8]byte
 	r := bytes.NewReader(test.Bytes)
 	val, err := tlv.ReadVarInt(r, &buf)
-	if err != nil && err != test.ExpErr {
+	if test.ExpErr == nil && err == nil {
+	} else if test.ExpErr == nil || !test.ExpErr.Is(err) {
 		t.Fatalf("expected decoding error: %v, got: %v",
 			test.ExpErr, err)
 	}

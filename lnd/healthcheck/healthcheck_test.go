@@ -5,26 +5,27 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/ticker"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	errNonNil = er.New("non-nil test error")
+	errNonNil = er.GenericErrorType.CodeWithDetail("errNonNil", "non-nil test error")
 	timeout   = time.Second
 	testTime  = time.Unix(1, 2)
 )
 
 type mockedCheck struct {
 	t       *testing.T
-	errChan chan error
+	errChan chan er.R
 }
 
 // newMockCheck creates a new mock.
 func newMockCheck(t *testing.T) *mockedCheck {
 	return &mockedCheck{
 		t:       t,
-		errChan: make(chan error),
+		errChan: make(chan er.R),
 	}
 }
 
@@ -35,7 +36,7 @@ func (m *mockedCheck) call() chan er.R {
 
 // sendError sends an error into our mock's error channel, mocking the sending
 // of a response from our check function.
-func (m *mockedCheck) sendError(err error) {
+func (m *mockedCheck) sendError(err er.R) {
 	select {
 	case m.errChan <- err:
 	case <-time.After(timeout):
@@ -88,14 +89,14 @@ func TestMonitor(t *testing.T) {
 	// by a nil error. This tests our retry logic, because we allow 2
 	// retries, so should recover without needing to shutdown.
 	tick()
-	mock.sendError(errNonNil)
+	mock.sendError(errNonNil.Default())
 	mock.sendError(nil)
 
 	// Finally, we tick our timer once more, and send two non-nil errors
 	// into our error channel. This mocks our check function failing twice.
 	tick()
-	mock.sendError(errNonNil)
-	mock.sendError(errNonNil)
+	mock.sendError(errNonNil.Default())
+	mock.sendError(errNonNil.Default())
 
 	// Since we have failed within our allowed number of retries, we now
 	// expect a call to our shutdown function.
@@ -119,7 +120,7 @@ func TestRetryCheck(t *testing.T) {
 		// list indicates the number of times we expect our check to
 		// be called, because our test will fail if we do not consume
 		// every error.
-		errors []error
+		errors []er.R
 
 		// attempts is the number of times we call a check before
 		// failing.
@@ -135,28 +136,28 @@ func TestRetryCheck(t *testing.T) {
 	}{
 		{
 			name:             "first call succeeds",
-			errors:           []error{nil},
+			errors:           []er.R{nil},
 			attempts:         2,
 			timeout:          time.Hour,
 			expectedShutdown: false,
 		},
 		{
 			name:             "first call fails",
-			errors:           []error{errNonNil},
+			errors:           []er.R{errNonNil.Default()},
 			attempts:         1,
 			timeout:          time.Hour,
 			expectedShutdown: true,
 		},
 		{
 			name:             "fail then recover",
-			errors:           []error{errNonNil, nil},
+			errors:           []er.R{errNonNil.Default(), nil},
 			attempts:         2,
 			timeout:          time.Hour,
 			expectedShutdown: false,
 		},
 		{
 			name:             "always fail",
-			errors:           []error{errNonNil, errNonNil},
+			errors:           []er.R{errNonNil.Default(), errNonNil.Default()},
 			attempts:         2,
 			timeout:          time.Hour,
 			expectedShutdown: true,

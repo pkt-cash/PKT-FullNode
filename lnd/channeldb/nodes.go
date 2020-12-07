@@ -230,7 +230,7 @@ func (db *DB) fetchAllLinkNodes(tx kvdb.RTx) ([]*LinkNode, er.R) {
 		nodeReader := bytes.NewReader(v)
 		linkNode, err := deserializeLinkNode(nodeReader)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		linkNodes = append(linkNodes, linkNode)
@@ -279,7 +279,7 @@ func serializeLinkNode(w io.Writer, l *LinkNode) er.R {
 
 func deserializeLinkNode(r io.Reader) (*LinkNode, er.R) {
 	var (
-		err error
+		err er.R
 		buf [8]byte
 	)
 

@@ -63,12 +63,12 @@ var (
 	// ErrChainNotifierServerShuttingDown is an error returned when we are
 	// waiting for a notification to arrive but the chain notifier server
 	// has been shut down.
-	ErrChainNotifierServerShuttingDown = er.New("chain notifier RPC " +
+	ErrChainNotifierServerShuttingDown = Err.CodeWithDetail("ErrChainNotifierServerShuttingDown", "chain notifier RPC "+
 		"subserver shutting down")
 
 	// ErrChainNotifierServerNotActive indicates that the chain notifier hasn't
 	// finished the startup process.
-	ErrChainNotifierServerNotActive = er.New("chain notifier RPC is " +
+	ErrChainNotifierServerNotActive = Err.CodeWithDetail("ErrChainNotifierServerNotActive", "chain notifier RPC is "+
 		"still in the process of starting")
 )
 

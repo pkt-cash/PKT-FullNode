@@ -49,12 +49,14 @@ type ClearNet struct{}
 func (r *ClearNet) Dial(
 	network, address string, timeout time.Duration) (net.Conn, er.R) {
 
-	return net.DialTimeout(network, address, timeout)
+	c, e := net.DialTimeout(network, address, timeout)
+	return c, er.E(e)
 }
 
 // LookupHost for regular network uses the net.LookupHost function
 func (r *ClearNet) LookupHost(host string) ([]string, er.R) {
-	return net.LookupHost(host)
+	c, e := net.LookupHost(host)
+	return c, er.E(e)
 }
 
 // LookupSRV for regular network uses net.LookupSRV function
@@ -65,12 +67,14 @@ func (r *ClearNet) LookupSRV(service, proto, name string,
 	ctxt, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	return net.DefaultResolver.LookupSRV(ctxt, service, proto, name)
+	s, c, e := net.DefaultResolver.LookupSRV(ctxt, service, proto, name)
+	return s, c, er.E(e)
 }
 
 // ResolveTCPAddr for regular network uses net.ResolveTCPAddr function
 func (r *ClearNet) ResolveTCPAddr(network, address string) (*net.TCPAddr, er.R) {
-	return net.ResolveTCPAddr(network, address)
+	c, e := net.ResolveTCPAddr(network, address)
+	return c, er.E(e)
 }
 
 // ProxyNet is an implementation of the Net interface that defines behaviour

@@ -35,7 +35,7 @@ var (
 	filter_WalletUnlocker_GenSeed_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GenSeedRequest
 	var metadata runtime.ServerMetadata
 
@@ -51,7 +51,7 @@ func request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GenSeedRequest
 	var metadata runtime.ServerMetadata
 
@@ -64,7 +64,7 @@ func local_request_WalletUnlocker_GenSeed_0(ctx context.Context, marshaler runti
 
 }
 
-func request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq InitWalletRequest
 	var metadata runtime.ServerMetadata
 
@@ -81,7 +81,7 @@ func request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq InitWalletRequest
 	var metadata runtime.ServerMetadata
 
@@ -98,7 +98,7 @@ func local_request_WalletUnlocker_InitWallet_0(ctx context.Context, marshaler ru
 
 }
 
-func request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UnlockWalletRequest
 	var metadata runtime.ServerMetadata
 
@@ -115,7 +115,7 @@ func request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UnlockWalletRequest
 	var metadata runtime.ServerMetadata
 
@@ -132,7 +132,7 @@ func local_request_WalletUnlocker_UnlockWallet_0(ctx context.Context, marshaler 
 
 }
 
-func request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, client WalletUnlockerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChangePasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -149,7 +149,7 @@ func request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, server WalletUnlockerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChangePasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -169,7 +169,7 @@ func local_request_WalletUnlocker_ChangePassword_0(ctx context.Context, marshale
 // RegisterWalletUnlockerHandlerServer registers the http handlers for service WalletUnlocker to "mux".
 // UnaryRPC     :call WalletUnlockerServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterWalletUnlockerHandlerServer(ctx context.Context, mux *runtime.ServeMux, server WalletUnlockerServer) er.R {
+func RegisterWalletUnlockerHandlerServer(ctx context.Context, mux *runtime.ServeMux, server WalletUnlockerServer) error {
 
 	mux.Handle("GET", pattern_WalletUnlocker_GenSeed_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -281,7 +281,7 @@ func RegisterWalletUnlockerHandlerFromEndpoint(ctx context.Context, mux *runtime
 
 // RegisterWalletUnlockerHandler registers the http handlers for service WalletUnlocker to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterWalletUnlockerHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
+func RegisterWalletUnlockerHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterWalletUnlockerHandlerClient(ctx, mux, NewWalletUnlockerClient(conn))
 }
 
@@ -290,7 +290,7 @@ func RegisterWalletUnlockerHandler(ctx context.Context, mux *runtime.ServeMux, c
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "WalletUnlockerClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "WalletUnlockerClient" to call the correct interceptors.
-func RegisterWalletUnlockerHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WalletUnlockerClient) er.R {
+func RegisterWalletUnlockerHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WalletUnlockerClient) error {
 
 	mux.Handle("GET", pattern_WalletUnlocker_GenSeed_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())

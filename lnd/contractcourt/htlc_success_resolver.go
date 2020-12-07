@@ -134,7 +134,7 @@ func (h *htlcSuccessResolver) Resolve() (ContractResolver, er.R) {
 			// implementation is complete.
 			//
 			// TODO: Use time-based sweeper and result chan.
-			var err error
+			var err er.R
 			h.sweepTx, err = h.Sweeper.CreateSweepTx(
 				[]input.Input{&inp},
 				sweep.FeePreference{
@@ -186,11 +186,11 @@ func (h *htlcSuccessResolver) Resolve() (ContractResolver, er.R) {
 		select {
 		case _, ok := <-confNtfn.Confirmed:
 			if !ok {
-				return nil, errResolverShuttingDown
+				return nil, errResolverShuttingDown.Default()
 			}
 
 		case <-h.quit:
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 
 		// Once the transaction has received a sufficient number of
@@ -260,12 +260,12 @@ func (h *htlcSuccessResolver) Resolve() (ContractResolver, er.R) {
 	select {
 	case spend, ok := <-spendNtfn.Spend:
 		if !ok {
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 		spendTxid = spend.SpenderTxHash
 
 	case <-h.quit:
-		return nil, errResolverShuttingDown
+		return nil, errResolverShuttingDown.Default()
 	}
 
 	h.resolved = true

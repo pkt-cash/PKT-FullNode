@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -141,7 +140,7 @@ func generateRandomBytes(n int) ([]byte, er.R) {
 	_, err := crand.Read(b)
 	// Note that Err == nil only if we read len(b) bytes.
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return b, nil
@@ -268,9 +267,9 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		return nil, nil, nil, err
 	}
 
-	alicePath, err := ioutil.TempDir("", "alicedb")
-	if err != nil {
-		return nil, nil, nil, err
+	alicePath, errr := ioutil.TempDir("", "alicedb")
+	if errr != nil {
+		return nil, nil, nil, er.E(errr)
 	}
 
 	dbAlice, err := channeldb.Open(alicePath)
@@ -278,9 +277,9 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		return nil, nil, nil, err
 	}
 
-	bobPath, err := ioutil.TempDir("", "bobdb")
-	if err != nil {
-		return nil, nil, nil, err
+	bobPath, errr := ioutil.TempDir("", "bobdb")
+	if errr != nil {
+		return nil, nil, nil, er.E(errr)
 	}
 
 	dbBob, err := channeldb.Open(bobPath)
@@ -421,11 +420,10 @@ func createTestChannel(alicePrivKey, bobPrivKey []byte,
 		switch {
 		case err == nil:
 		case kvdb.ErrDatabaseNotOpen.Is(err):
-			var errr error
-			dbAlice, errr = channeldb.Open(dbAlice.Path())
-			if errr != nil {
+			dbAlice, err = channeldb.Open(dbAlice.Path())
+			if err != nil {
 				return nil, er.Errorf("unable to reopen alice "+
-					"db: %v", errr)
+					"db: %v", err)
 			}
 
 			aliceStoredChannels, err = dbAlice.FetchOpenChannels(aliceKeyPub)
@@ -718,7 +716,7 @@ func generateHops(payAmt lnwire.MilliSatoshi, startingHeight uint32,
 
 type paymentResponse struct {
 	rhash lntypes.Hash
-	err   chan error
+	err   chan er.R
 }
 
 func (r *paymentResponse) Wait(d time.Duration) (lntypes.Hash, er.R) {
@@ -727,7 +725,7 @@ func (r *paymentResponse) Wait(d time.Duration) (lntypes.Hash, er.R) {
 
 // waitForPaymentResult waits for either an error to be received on c or a
 // timeout.
-func waitForPaymentResult(c chan error, d time.Duration) er.R {
+func waitForPaymentResult(c chan er.R, d time.Duration) er.R {
 	select {
 	case err := <-c:
 		close(c)
@@ -739,7 +737,7 @@ func waitForPaymentResult(c chan error, d time.Duration) er.R {
 
 // waitForPayFuncResult executes the given function and waits for a result with
 // a timeout.
-func waitForPayFuncResult(payFunc func() error, d time.Duration) er.R {
+func waitForPayFuncResult(payFunc func() er.R, d time.Duration) er.R {
 	errChan := make(chan er.R)
 	go func() {
 		errChan <- payFunc()
@@ -761,7 +759,7 @@ func makePayment(sendingPeer, receivingPeer lnpeer.Peer,
 	invoiceAmt, htlcAmt lnwire.MilliSatoshi,
 	timelock uint32) *paymentResponse {
 
-	paymentErr := make(chan error, 1)
+	paymentErr := make(chan er.R, 1)
 	var rhash lntypes.Hash
 
 	invoice, payFunc, err := preparePayment(sendingPeer, receivingPeer,
@@ -793,7 +791,7 @@ func makePayment(sendingPeer, receivingPeer lnpeer.Peer,
 func preparePayment(sendingPeer, receivingPeer lnpeer.Peer,
 	firstHop lnwire.ShortChannelID, hops []*hop.Payload,
 	invoiceAmt, htlcAmt lnwire.MilliSatoshi,
-	timelock uint32) (*channeldb.Invoice, func() error, er.R) {
+	timelock uint32) (*channeldb.Invoice, func() er.R, er.R) {
 
 	sender := sendingPeer.(*mockServer)
 	receiver := receivingPeer.(*mockServer)
@@ -900,7 +898,7 @@ type clusterChannels struct {
 // createClusterChannels creates lightning channels which are needed for
 // network cluster to be initialized.
 func createClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
-	*clusterChannels, func(), func() (*clusterChannels, error), er.R) {
+	*clusterChannels, func(), func() (*clusterChannels, er.R), er.R) {
 
 	_, _, firstChanID, secondChanID := genIDs()
 
@@ -909,7 +907,7 @@ func createClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
 		createTestChannel(alicePrivKey, bobPrivKey, aliceToBob,
 			aliceToBob, 0, 0, firstChanID)
 	if err != nil {
-		return nil, nil, nil, errors.Errorf("unable to create "+
+		return nil, nil, nil, er.Errorf("unable to create "+
 			"alice<->bob channel: %v", err)
 	}
 
@@ -918,7 +916,7 @@ func createClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
 			bobToCarol, 0, 0, secondChanID)
 	if err != nil {
 		cleanAliceBob()
-		return nil, nil, nil, errors.Errorf("unable to create "+
+		return nil, nil, nil, er.Errorf("unable to create "+
 			"bob<->carol channel: %v", err)
 	}
 
@@ -1106,7 +1104,7 @@ func createTwoClusterChannels(aliceToBob, bobToCarol btcutil.Amount) (
 		createTestChannel(alicePrivKey, bobPrivKey, aliceToBob,
 			aliceToBob, 0, 0, firstChanID)
 	if err != nil {
-		return nil, nil, nil, errors.Errorf("unable to create "+
+		return nil, nil, nil, er.Errorf("unable to create "+
 			"alice<->bob channel: %v", err)
 	}
 
@@ -1326,7 +1324,7 @@ func (n *twoHopNetwork) makeHoldPayment(sendingPeer, receivingPeer lnpeer.Peer,
 	invoiceAmt, htlcAmt lnwire.MilliSatoshi,
 	timelock uint32, preimage lntypes.Preimage) chan er.R {
 
-	paymentErr := make(chan error, 1)
+	paymentErr := make(chan er.R, 1)
 
 	sender := sendingPeer.(*mockServer)
 	receiver := receivingPeer.(*mockServer)

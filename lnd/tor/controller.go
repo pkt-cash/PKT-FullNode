@@ -5,14 +5,15 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/textproto"
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 const (
@@ -138,21 +139,21 @@ func (c *Controller) Stop() er.R {
 		return nil
 	}
 
-	return c.conn.Close()
+	return er.E(c.conn.Close())
 }
 
 // sendCommand sends a command to the Tor server and returns its response, as a
 // single space-delimited string, and code.
 func (c *Controller) sendCommand(command string) (int, string, er.R) {
 	if err := c.conn.Writer.PrintfLine(command); err != nil {
-		return 0, "", err
+		return 0, "", er.E(err)
 	}
 
 	// We'll use ReadResponse as it has built-in support for multi-line
 	// text protocol responses.
 	code, reply, err := c.conn.Reader.ReadResponse(success)
 	if err != nil {
-		return code, reply, err
+		return code, reply, er.E(err)
 	}
 
 	return code, reply, nil
@@ -353,7 +354,7 @@ func (c *Controller) getAuthCookie(info protocolInfo) ([]byte, er.R) {
 	// Read the cookie from the file and ensure it has the correct length.
 	cookie, err := ioutil.ReadFile(cookieFilePath)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if len(cookie) != cookieLen {
@@ -392,7 +393,7 @@ func supportsV3(version string) er.R {
 	// Ensure that each part of the version string corresponds to a number.
 	for _, part := range parts {
 		if _, err := strconv.Atoi(part); err != nil {
-			return err
+			return er.E(err)
 		}
 	}
 

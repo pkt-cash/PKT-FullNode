@@ -27,7 +27,7 @@ var (
 	// ErrCorruptedMessageStore indicates that the on-disk bucketing
 	// structure has altered since the gossip message store instance was
 	// initialized.
-	ErrCorruptedMessageStore = er.New("gossip message store has been " +
+	ErrCorruptedMessageStore = Err.CodeWithDetail("ErrCorruptedMessageStore", "gossip message store has been "+
 		"corrupted")
 )
 
@@ -88,7 +88,7 @@ func msgShortChanID(msg lnwire.Message) (lnwire.ShortChannelID, er.R) {
 	case *lnwire.ChannelUpdate:
 		shortChanID = msg.ShortChannelID
 	default:
-		return shortChanID, ErrUnsupportedMessage
+		return shortChanID, ErrUnsupportedMessage.Default()
 	}
 
 	return shortChanID, nil
@@ -213,11 +213,11 @@ func (s *MessageStore) Messages() (map[[33]byte][]lnwire.Message, er.R) {
 			// out any which are not currently supported by the
 			// store.
 			msg, err := readMessage(v)
-			if err == ErrUnsupportedMessage {
+			if ErrUnsupportedMessage.Is(err) {
 				return nil
 			}
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			msgs[pubKey] = append(msgs[pubKey], msg)
@@ -252,7 +252,7 @@ func (s *MessageStore) MessagesForPeer(
 			// out any which are not currently supported by the
 			// store.
 			msg, err := readMessage(v)
-			if err == ErrUnsupportedMessage {
+			if ErrUnsupportedMessage.Is(err) {
 				continue
 			}
 			if err != nil {

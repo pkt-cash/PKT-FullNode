@@ -3,7 +3,9 @@ package lntypes
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 )
 
 // PreimageSize of array used to store preimagees.

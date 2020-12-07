@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/txscript"
@@ -22,7 +23,7 @@ import (
 // doesn't match the expectation, it executes the script step-by-step and
 // prints debug information to stdout.
 func assertEngineExecution(t *testing.T, testNum int, valid bool,
-	newEngine func() (*txscript.Engine, error)) {
+	newEngine func() (*txscript.Engine, er.R)) {
 	t.Helper()
 
 	// Get a new VM to execute.
@@ -146,7 +147,7 @@ func TestTweakKeyDerivation(t *testing.T) {
 // allows constructing table-driven tests. In the case of an error while
 // constructing the witness, the test fails fatally.
 func makeWitnessTestCase(t *testing.T,
-	f func() (wire.TxWitness, error)) func() wire.TxWitness {
+	f func() (wire.TxWitness, er.R)) func() wire.TxWitness {
 
 	return func() wire.TxWitness {
 		witness, err := f()
@@ -638,17 +639,16 @@ func TestHTLCReceiverSpendValidation(t *testing.T) {
 	genCommitTx := func(confirmed bool) {
 		// Generate the raw HTLC redemption scripts, and its p2wsh
 		// counterpart.
-		var errr error
-		htlcWitnessScript, errr = ReceiverHTLCScript(
+		htlcWitnessScript, err = ReceiverHTLCScript(
 			cltvTimeout, aliceLocalKey, bobLocalKey, revocationKey,
 			paymentHash[:], confirmed,
 		)
-		if errr != nil {
-			t.Fatalf("unable to create htlc sender script: %v", errr)
+		if err != nil {
+			t.Fatalf("unable to create htlc sender script: %v", err)
 		}
-		htlcPkScript, errr = WitnessScriptHash(htlcWitnessScript)
-		if errr != nil {
-			t.Fatalf("unable to create p2wsh htlc script: %v", errr)
+		htlcPkScript, err = WitnessScriptHash(htlcWitnessScript)
+		if err != nil {
+			t.Fatalf("unable to create p2wsh htlc script: %v", err)
 		}
 
 		// This will be Bob's commitment transaction. In this scenario Alice is

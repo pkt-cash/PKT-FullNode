@@ -102,11 +102,11 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, er.R) {
 	select {
 	case newBlock, ok := <-blockEpochs.Epochs:
 		if !ok {
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 		currentHeight = newBlock.Height
 	case <-h.quit:
-		return nil, errResolverShuttingDown
+		return nil, errResolverShuttingDown.Default()
 	}
 
 	// We'll first check if this HTLC has been timed out, if so, we can
@@ -322,7 +322,7 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, er.R) {
 
 		case newBlock, ok := <-blockEpochs.Epochs:
 			if !ok {
-				return nil, errResolverShuttingDown
+				return nil, errResolverShuttingDown.Default()
 			}
 
 			// If this new height expires the HTLC, then this means
@@ -345,7 +345,7 @@ func (h *htlcIncomingContestResolver) Resolve() (ContractResolver, er.R) {
 			}
 
 		case <-h.quit:
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 	}
 }

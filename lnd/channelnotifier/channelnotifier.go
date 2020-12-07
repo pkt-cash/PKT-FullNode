@@ -3,9 +3,10 @@ package channelnotifier
 import (
 	"sync"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // ChannelNotifier is a subsystem which all active, inactive, and closed channel
@@ -77,7 +78,7 @@ func New(chanDB *channeldb.DB) *ChannelNotifier {
 
 // Start starts the ChannelNotifier and all goroutines it needs to carry out its task.
 func (c *ChannelNotifier) Start() er.R {
-	var err error
+	var err er.R
 	c.started.Do(func() {
 		log.Trace("ChannelNotifier starting")
 		err = c.ntfnServer.Start()

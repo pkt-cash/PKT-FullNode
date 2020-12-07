@@ -77,7 +77,7 @@ var (
 // error from request handler.
 type plexPacket struct {
 	pkt *htlcPacket
-	err chan error
+	err chan er.R
 }
 
 // ChannelCloseType is an enum which signals the type of channel closure the
@@ -118,7 +118,7 @@ type ChanClose struct {
 	Updates chan interface{}
 
 	// Err is used by request creator to receive request execution error.
-	Err chan error
+	Err chan er.R
 }
 
 // Config defines the configuration for the service. ALL elements within the
@@ -373,7 +373,7 @@ func (s *Switch) GetPaymentResult(paymentID uint64, paymentHash lntypes.Hash,
 
 	var (
 		nChan  <-chan *networkResult
-		err    error
+		err    er.R
 		outKey = CircuitKey{
 			ChanID: hop.Source,
 			HtlcID: paymentID,
@@ -500,7 +500,7 @@ func (s *Switch) SendHTLC(firstHop lnwire.ShortChannelID, paymentID uint64,
 			false,
 		)
 
-		return linkErr
+		return er.E(linkErr)
 	}
 
 	return link.HandleLocalAddPacket(packet)
@@ -562,7 +562,7 @@ func (s *Switch) ForwardPackets(linkQuit chan struct{},
 	var (
 		// fwdChan is a buffered channel used to receive err msgs from
 		// the htlcPlex when forwarding this batch.
-		fwdChan = make(chan error, len(packets))
+		fwdChan = make(chan er.R, len(packets))
 
 		// numSent keeps a running count of how many packets are
 		// forwarded to the switch, which determines how many responses
@@ -689,7 +689,7 @@ func (s *Switch) ForwardPackets(linkQuit chan struct{},
 }
 
 // logFwdErrs logs any errors received on `fwdChan`
-func (s *Switch) logFwdErrs(num *int, wg *sync.WaitGroup, fwdChan chan error) {
+func (s *Switch) logFwdErrs(num *int, wg *sync.WaitGroup, fwdChan chan er.R) {
 	defer s.wg.Done()
 
 	// Wait here until the outer function has finished persisting
@@ -718,7 +718,7 @@ func (s *Switch) logFwdErrs(num *int, wg *sync.WaitGroup, fwdChan chan error) {
 // provided so that the send can be canceled if either the link or the switch
 // receive a shutdown requuest. This method does not wait for a response from
 // the htlcForwarder before returning.
-func (s *Switch) routeAsync(packet *htlcPacket, errChan chan error,
+func (s *Switch) routeAsync(packet *htlcPacket, errChan chan er.R,
 	linkQuit chan struct{}) er.R {
 
 	command := &plexPacket{
@@ -917,11 +917,11 @@ func (s *Switch) parseFailedPayment(deobfuscator ErrorDecrypter,
 				linkError.FailureDetail.FailureString(),
 				paymentHash, paymentID, err)
 
-			return linkError
+			return er.E(linkError)
 		}
 
 		// If we successfully decoded the failure reason, return it.
-		return NewLinkError(failureMsg)
+		return er.E(NewLinkError(failureMsg))
 
 	// A payment had to be timed out on chain before it got past
 	// the first hop. In this case, we'll report a permanent
@@ -937,7 +937,7 @@ func (s *Switch) parseFailedPayment(deobfuscator ErrorDecrypter,
 			linkError.FailureDetail.FailureString(),
 			paymentHash, paymentID)
 
-		return linkError
+		return er.E(linkError)
 
 	// A regular multi-hop payment error that we'll need to
 	// decrypt.
@@ -953,7 +953,7 @@ func (s *Switch) parseFailedPayment(deobfuscator ErrorDecrypter,
 			return ErrUnreadableFailureMessage.Default()
 		}
 
-		return failure
+		return er.E(failure)
 	}
 }
 
@@ -1119,7 +1119,7 @@ func (s *Switch) handlePacketForward(packet *htlcPacket) er.R {
 			// If this is a resolution message, then we'll need to
 			// encrypt it as it's actually internally sourced.
 			case packet.isResolution:
-				var err error
+				var err er.R
 				// TODO(roasbeef): don't need to pass actually?
 				failure := &lnwire.FailPermanentChannelFailure{}
 				fail.Reason, err = circuit.ErrorEncrypter.EncryptFirstHop(
@@ -1277,7 +1277,7 @@ func (s *Switch) failAddPacket(packet *htlcPacket, failure *LinkError) er.R {
 		return err
 	}
 
-	return failure
+	return er.E(failure)
 }
 
 // closeCircuit accepts a settle or fail htlc and the associated htlc packet and
@@ -1290,23 +1290,23 @@ func (s *Switch) closeCircuit(pkt *htlcPacket) (*PaymentCircuit, er.R) {
 	// makes it through the switch.
 	if pkt.hasSource {
 		circuit, err := s.circuits.FailCircuit(pkt.inKey())
-		switch err {
+		switch {
 
 		// Circuit successfully closed.
-		case nil:
+		case err == nil:
 			return circuit, nil
 
 		// Circuit was previously closed, but has not been deleted.
 		// We'll just drop this response until the circuit has been
 		// fully removed.
-		case ErrCircuitClosing:
+		case ErrCircuitClosing.Is(err):
 			return nil, err
 
 		// Failed to close circuit because it does not exist. This is
 		// likely because the circuit was already successfully closed.
 		// Since this packet failed locally, there is no forwarding
 		// package entry to acknowledge.
-		case ErrUnknownCircuit:
+		case ErrUnknownCircuit.Is(err):
 			return nil, err
 
 		// Unexpected error.
@@ -1318,10 +1318,10 @@ func (s *Switch) closeCircuit(pkt *htlcPacket) (*PaymentCircuit, er.R) {
 	// Otherwise, this is packet was received from the remote party.  Use
 	// circuit map to find the incoming link to receive the settle/fail.
 	circuit, err := s.circuits.CloseCircuit(pkt.outKey())
-	switch err {
+	switch {
 
 	// Open circuit successfully closed.
-	case nil:
+	case err == nil:
 		pkt.incomingChanID = circuit.Incoming.ChanID
 		pkt.incomingHTLCID = circuit.Incoming.HtlcID
 		pkt.circuit = circuit
@@ -1341,12 +1341,12 @@ func (s *Switch) closeCircuit(pkt *htlcPacket) (*PaymentCircuit, er.R) {
 
 	// Circuit was previously closed, but has not been deleted. We'll just
 	// drop this response until the circuit has been removed.
-	case ErrCircuitClosing:
+	case ErrCircuitClosing.Is(err):
 		return nil, err
 
 	// Failed to close circuit because it does not exist. This is likely
 	// because the circuit was already successfully closed.
-	case ErrUnknownCircuit:
+	case ErrUnknownCircuit.Is(err):
 		if pkt.destRef != nil {
 			// Add this SettleFailRef to the set of pending settle/fail entries
 			// awaiting acknowledgement.
@@ -1397,7 +1397,7 @@ func (s *Switch) teardownCircuit(pkt *htlcPacket) er.R {
 		pktType = "FAIL"
 	default:
 		err := er.Errorf("cannot tear down packet of type: %T", htlc)
-		log.Errorf(err.Error())
+		log.Errorf(err.String())
 		return err
 	}
 
@@ -1448,11 +1448,11 @@ func (s *Switch) teardownCircuit(pkt *htlcPacket) er.R {
 // optional parameter which sets a user specified script to close out to.
 func (s *Switch) CloseLink(chanPoint *wire.OutPoint,
 	closeType ChannelCloseType, targetFeePerKw chainfee.SatPerKWeight,
-	deliveryScript lnwire.DeliveryAddress) (chan interface{}, chan error) {
+	deliveryScript lnwire.DeliveryAddress) (chan interface{}, chan er.R) {
 
 	// TODO(roasbeef) abstract out the close updates.
 	updateChan := make(chan interface{}, 2)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 
 	command := &ChanClose{
 		CloseType:      closeType,
@@ -1468,7 +1468,7 @@ func (s *Switch) CloseLink(chanPoint *wire.OutPoint,
 		return updateChan, errChan
 
 	case <-s.quit:
-		errChan <- ErrSwitchExiting
+		errChan <- ErrSwitchExiting.Default()
 		close(updateChan)
 		return updateChan, errChan
 	}
@@ -1828,7 +1828,7 @@ func (s *Switch) loadChannelFwdPkgs(source lnwire.ShortChannelID) ([]*channeldb.
 
 	var fwdPkgs []*channeldb.FwdPkg
 	if err := kvdb.View(s.cfg.DB, func(tx kvdb.RTx) er.R {
-		var err error
+		var err er.R
 		fwdPkgs, err = s.cfg.SwitchPackager.LoadChannelFwdPkgs(
 			tx, source,
 		)

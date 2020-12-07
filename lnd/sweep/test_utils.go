@@ -1,14 +1,14 @@
 package sweep
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 var (
@@ -110,7 +110,7 @@ func (m *MockNotifier) sendSpend(channel chan *chainntnfs.SpendDetail,
 // RegisterConfirmationsNtfn registers for tx confirm notifications.
 func (m *MockNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	_ []byte, numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent,
-	error) {
+	er.R) {
 
 	return &chainntnfs.ConfirmationEvent{
 		Confirmed: m.getConfChannel(txid),

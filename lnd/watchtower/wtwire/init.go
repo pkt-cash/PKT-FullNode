@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/feature"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -84,7 +85,7 @@ func (msg *Init) CheckRemoteInit(remoteInit *Init,
 
 	// Check that the remote peer is on the same chain.
 	if msg.ChainHash != remoteInit.ChainHash {
-		return NewErrUnknownChainHash(remoteInit.ChainHash)
+		return er.E(NewErrUnknownChainHash(remoteInit.ChainHash))
 	}
 
 	remoteConnFeatures := lnwire.NewFeatureVector(

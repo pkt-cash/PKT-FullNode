@@ -138,9 +138,9 @@ type mockServer struct {
 var _ lnpeer.Peer = (*mockServer)(nil)
 
 func initDB() (*channeldb.DB, er.R) {
-	tempPath, err := ioutil.TempDir("", "switchdb")
-	if err != nil {
-		return nil, err
+	tempPath, errr := ioutil.TempDir("", "switchdb")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	db, err := channeldb.Open(tempPath)
@@ -152,7 +152,7 @@ func initDB() (*channeldb.DB, er.R) {
 }
 
 func initSwitchWithDB(startingHeight uint32, db *channeldb.DB) (*Switch, er.R) {
-	var err error
+	var err er.R
 
 	if db == nil {
 		db, err = initDB()
@@ -499,7 +499,7 @@ func (p *mockIteratorDecoder) DecodeHopIterators(id []byte,
 func decodeFwdInfo(r io.Reader, f *hop.ForwardingInfo) er.R {
 	var net [1]byte
 	if _, err := r.Read(net[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	f.Network = hop.Network(net[0])
 
@@ -760,9 +760,9 @@ var _ ChannelLink = (*mockChannelLink)(nil)
 func newDB() (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.
@@ -883,12 +883,12 @@ func (m *mockCircuitMap) CommitCircuits(
 }
 
 func (m *mockCircuitMap) CloseCircuit(outKey CircuitKey) (*PaymentCircuit,
-	error) {
+	er.R) {
 	return nil, nil
 }
 
 func (m *mockCircuitMap) FailCircuit(inKey CircuitKey) (*PaymentCircuit,
-	error) {
+	er.R) {
 	return nil, nil
 }
 
@@ -915,7 +915,7 @@ func (m *mockCircuitMap) NumOpen() int {
 type mockOnionErrorDecryptor struct {
 	sourceIdx int
 	message   []byte
-	err       error
+	err       er.R
 }
 
 func (m *mockOnionErrorDecryptor) DecryptError(encryptedData []byte) (

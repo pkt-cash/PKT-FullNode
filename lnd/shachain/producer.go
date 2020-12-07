@@ -88,5 +88,5 @@ func (p *RevocationProducer) AtIndex(v uint64) (*chainhash.Hash, er.R) {
 // NOTE: Part of the Producer interface.
 func (p *RevocationProducer) Encode(w io.Writer) er.R {
 	_, err := util.Write(w, p.root.hash[:])
-	return er.E(err)
+	return err
 }

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/tlv"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
@@ -114,7 +115,7 @@ func BenchmarkEncodeCreateSessionTLV(t *testing.B) {
 	t.ReportAllocs()
 	t.ResetTimer()
 
-	var err error
+	var err er.R
 	for i := 0; i < t.N; i++ {
 		err = m.Encode(ioutil.Discard)
 	}
@@ -146,7 +147,7 @@ func BenchmarkDecodeCreateSessionTLV(t *testing.B) {
 	m := NewCreateSessionTLV()
 
 	var b bytes.Buffer
-	var err error
+	var err er.R
 	m.Encode(&b)
 	r := bytes.NewReader(b.Bytes())
 

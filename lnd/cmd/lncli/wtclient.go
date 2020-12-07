@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
-	"errors"
-	"fmt"
 	"strings"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/wtclientrpc"
 	"github.com/urfave/cli"
 )
@@ -54,7 +53,7 @@ func addTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 0 {
-		return cli.ShowCommandHelp(ctx, "add")
+		return er.E(cli.ShowCommandHelp(ctx, "add"))
 	}
 
 	parts := strings.Split(ctx.Args().First(), "@")
@@ -74,9 +73,9 @@ func addTower(ctx *cli.Context) er.R {
 		Pubkey:  pubKey,
 		Address: address,
 	}
-	resp, err := client.AddTower(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.AddTower(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -99,7 +98,7 @@ func removeTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 0 {
-		return cli.ShowCommandHelp(ctx, "remove")
+		return er.E(cli.ShowCommandHelp(ctx, "remove"))
 	}
 
 	// The command can have only one argument, but it can be interpreted in
@@ -130,9 +129,9 @@ func removeTower(ctx *cli.Context) er.R {
 		Pubkey:  pubKey,
 		Address: address,
 	}
-	resp, err := client.RemoveTower(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.RemoveTower(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -156,7 +155,7 @@ func listTowers(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 1 {
-		return cli.ShowCommandHelp(ctx, "towers")
+		return er.E(cli.ShowCommandHelp(ctx, "towers"))
 	}
 
 	client, cleanUp := getWtclient(ctx)
@@ -165,9 +164,9 @@ func listTowers(ctx *cli.Context) er.R {
 	req := &wtclientrpc.ListTowersRequest{
 		IncludeSessions: ctx.Bool("include_sessions"),
 	}
-	resp, err := client.ListTowers(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.ListTowers(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -193,7 +192,7 @@ func getTower(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() != 1 || ctx.NumFlags() > 1 {
-		return cli.ShowCommandHelp(ctx, "tower")
+		return er.E(cli.ShowCommandHelp(ctx, "tower"))
 	}
 
 	// The command only has one argument, which we expect to be the
@@ -211,9 +210,9 @@ func getTower(ctx *cli.Context) er.R {
 		Pubkey:          pubKey,
 		IncludeSessions: ctx.Bool("include_sessions"),
 	}
-	resp, err := client.GetTowerInfo(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.GetTowerInfo(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -230,16 +229,16 @@ func stats(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 0 {
-		return cli.ShowCommandHelp(ctx, "stats")
+		return er.E(cli.ShowCommandHelp(ctx, "stats"))
 	}
 
 	client, cleanUp := getWtclient(ctx)
 	defer cleanUp()
 
 	req := &wtclientrpc.StatsRequest{}
-	resp, err := client.Stats(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.Stats(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)
@@ -256,16 +255,16 @@ func policy(ctx *cli.Context) er.R {
 	// Display the command's help message if the number of arguments/flags
 	// is not what we expect.
 	if ctx.NArg() > 0 || ctx.NumFlags() > 0 {
-		return cli.ShowCommandHelp(ctx, "policy")
+		return er.E(cli.ShowCommandHelp(ctx, "policy"))
 	}
 
 	client, cleanUp := getWtclient(ctx)
 	defer cleanUp()
 
 	req := &wtclientrpc.PolicyRequest{}
-	resp, err := client.Policy(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.Policy(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)

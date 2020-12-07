@@ -3,6 +3,8 @@ package queue
 import (
 	"reflect"
 	"testing"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // TestNewCircularBuffer tests the size parameter check when creating a circular
@@ -11,7 +13,7 @@ func TestNewCircularBuffer(t *testing.T) {
 	tests := []struct {
 		name          string
 		size          int
-		expectedError error
+		expectedError *er.ErrorCode
 	}{
 		{
 			name:          "zero size",
@@ -35,7 +37,8 @@ func TestNewCircularBuffer(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			_, err := NewCircularBuffer(test.size)
-			if err != test.expectedError {
+			if err == nil && test.expectedError == nil {
+			} else if test.expectedError == nil || !test.expectedError.Is(err) {
 				t.Fatalf("expected: %v, got: %v",
 					test.expectedError, err)
 			}

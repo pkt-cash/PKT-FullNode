@@ -69,7 +69,7 @@ func (s *Server) handleStateUpdate(peer Peer, id *wtdb.SessionID,
 	var (
 		lastApplied uint16
 		failCode    wtwire.ErrorCode
-		err         error
+		err         er.R
 	)
 
 	sessionUpdate := wtdb.SessionStateUpdate{
@@ -90,23 +90,23 @@ func (s *Server) handleStateUpdate(peer Peer, id *wtdb.SessionID,
 
 	// Return a permanent failure if a client tries to send an update for
 	// which we have no session.
-	case err == wtdb.ErrSessionNotFound:
+	case wtdb.ErrSessionNotFound.Is(err):
 		failCode = wtwire.CodePermanentFailure
 
-	case err == wtdb.ErrSeqNumAlreadyApplied:
+	case wtdb.ErrSeqNumAlreadyApplied.Is(err):
 		failCode = wtwire.CodePermanentFailure
 
 		// TODO(conner): remove session state for protocol
 		// violation. Could also double as clean up method for
 		// session-related state.
 
-	case err == wtdb.ErrLastAppliedReversion:
+	case wtdb.ErrLastAppliedReversion.Is(err):
 		failCode = wtwire.StateUpdateCodeClientBehind
 
-	case err == wtdb.ErrSessionConsumed:
+	case wtdb.ErrSessionConsumed.Is(err):
 		failCode = wtwire.StateUpdateCodeMaxUpdatesExceeded
 
-	case err == wtdb.ErrUpdateOutOfOrder:
+	case wtdb.ErrUpdateOutOfOrder.Is(err):
 		failCode = wtwire.StateUpdateCodeSeqNumOutOfOrder
 
 	default:
@@ -114,10 +114,10 @@ func (s *Server) handleStateUpdate(peer Peer, id *wtdb.SessionID,
 	}
 
 	if s.cfg.NoAckUpdates {
-		return &connFailure{
+		return er.E(&connFailure{
 			ID:   *id,
 			Code: failCode,
-		}
+		})
 	}
 
 	return s.replyStateUpdate(
@@ -149,8 +149,8 @@ func (s *Server) replyStateUpdate(peer Peer, id *wtdb.SessionID,
 
 	// Otherwise the request failed, return a connection failure to
 	// disconnect the client.
-	return &connFailure{
+	return er.E(&connFailure{
 		ID:   *id,
 		Code: code,
-	}
+	})
 }

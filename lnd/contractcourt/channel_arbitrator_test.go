@@ -66,7 +66,7 @@ func (b *mockArbitratorLog) CommitState(s ArbitratorState) er.R {
 }
 
 func (b *mockArbitratorLog) FetchUnresolvedContracts() ([]ContractResolver,
-	error) {
+	er.R) {
 
 	b.Lock()
 	v := make([]ContractResolver, len(b.resolvers))

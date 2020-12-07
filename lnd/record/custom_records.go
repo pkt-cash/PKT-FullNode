@@ -1,6 +1,6 @@
 package record
 
-import "fmt"
+import "github.com/pkt-cash/pktd/btcutil/er"
 
 const (
 	// CustomTypeStart is the start of the custom tlv type range as defined

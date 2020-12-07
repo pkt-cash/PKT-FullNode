@@ -27,7 +27,7 @@ var (
 
 	// ErrSequencerCorrupted signals that the persistence engine was not
 	// initialized, or has been corrupted since startup.
-	ErrSequencerCorrupted = er.New(
+	ErrSequencerCorrupted = Err.CodeWithDetail("ErrSequencerCorrupted",
 		"sequencer database has been corrupted")
 )
 

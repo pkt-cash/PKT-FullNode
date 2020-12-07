@@ -2,8 +2,8 @@ package lncfg
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -72,7 +72,7 @@ func (db *DB) GetBackends(ctx context.Context, dbPath string,
 
 	var (
 		localDB, remoteDB kvdb.Backend
-		err               error
+		err               er.R
 	)
 
 	if db.Backend == EtcdBackend {

@@ -14,7 +14,7 @@ type routingGraph interface {
 	// forEachNodeChannel calls the callback for every channel of the given node.
 	forEachNodeChannel(nodePub route.Vertex,
 		cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-			*channeldb.ChannelEdgePolicy) error) er.R
+			*channeldb.ChannelEdgePolicy) er.R) er.R
 
 	// sourceNode returns the source node of the graph.
 	sourceNode() route.Vertex
@@ -61,7 +61,7 @@ func (g *dbRoutingTx) close() er.R {
 // NOTE: Part of the routingGraph interface.
 func (g *dbRoutingTx) forEachNodeChannel(nodePub route.Vertex,
 	cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-		*channeldb.ChannelEdgePolicy) error) er.R {
+		*channeldb.ChannelEdgePolicy) er.R) er.R {
 
 	txCb := func(_ kvdb.RTx, info *channeldb.ChannelEdgeInfo,
 		p1, p2 *channeldb.ChannelEdgePolicy) er.R {
@@ -87,15 +87,15 @@ func (g *dbRoutingTx) fetchNodeFeatures(nodePub route.Vertex) (
 	*lnwire.FeatureVector, er.R) {
 
 	targetNode, err := g.graph.FetchLightningNode(g.tx, nodePub)
-	switch err {
+	switch {
 
 	// If the node exists and has features, return them directly.
-	case nil:
+	case err == nil:
 		return targetNode.Features, nil
 
 	// If we couldn't find a node announcement, populate a blank feature
 	// vector.
-	case channeldb.ErrGraphNodeNotFound:
+	case channeldb.ErrGraphNodeNotFound.Is(err):
 		return lnwire.EmptyFeatureVector(), nil
 
 	// Otherwise bubble the error up.

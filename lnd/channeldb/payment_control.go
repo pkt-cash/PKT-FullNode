@@ -47,13 +47,13 @@ var (
 
 	// ErrValueMismatch is returned if we try to register a non-MPP attempt
 	// with an amount that doesn't match the payment amount.
-	ErrValueMismatch = er.New("attempted value doesn't match payment" +
-		"amount")
+	ErrValueMismatch = Err.CodeWithDetail("ErrValueMismatch",
+		"attempted value doesn't match payment amount")
 
 	// ErrValueExceedsAmt is returned if we try to register an attempt that
 	// would take the total sent amount above the payment amount.
-	ErrValueExceedsAmt = er.New("attempted value exceeds payment" +
-		"amount")
+	ErrValueExceedsAmt = Err.CodeWithDetail("ErrValueExceedsAmt",
+		"attempted value exceeds payment amount")
 
 	// ErrNonMPPayment is returned if we try to register an MPP attempt for
 	// a payment that already has a non-MPP attempt regitered.
@@ -72,12 +72,12 @@ var (
 	ErrMPPTotalAmountMismatch = Err.CodeWithDetail("ErrMPPTotalAmountMismatch", "mp payment total amount mismatch")
 
 	// errNoAttemptInfo is returned when no attempt info is stored yet.
-	errNoAttemptInfo = er.New("unable to find attempt info for " +
+	errNoAttemptInfo = Err.CodeWithDetail("errNoAttemptInfo", "unable to find attempt info for "+
 		"inflight payment")
 
 	// errNoSequenceNrIndex is returned when an attempt to lookup a payment
 	// index is made for a sequence number that is not indexed.
-	errNoSequenceNrIndex = er.New("payment sequence number index " +
+	errNoSequenceNrIndex = Err.CodeWithDetail("errNoSequenceNrIndex", "payment sequence number index "+
 		"does not exist")
 )
 
@@ -106,7 +106,7 @@ func (p *PaymentControl) InitPayment(paymentHash lntypes.Hash,
 	}
 	infoBytes := b.Bytes()
 
-	var updateErr error
+	var updateErr er.R
 	err := kvdb.Batch(p.db.Backend, func(tx kvdb.RwTx) er.R {
 		// Reset the update error, to avoid carrying over an error
 		// from a previous execution of the batched db transaction.
@@ -135,17 +135,17 @@ func (p *PaymentControl) InitPayment(paymentHash lntypes.Hash,
 		// We already have an InFlight payment on the network. We will
 		// disallow any new payments.
 		case StatusInFlight:
-			updateErr = ErrPaymentInFlight
+			updateErr = ErrPaymentInFlight.Default()
 			return nil
 
 		// We've already succeeded a payment to this payment hash,
 		// forbid the switch from sending another.
 		case StatusSucceeded:
-			updateErr = ErrAlreadyPaid
+			updateErr = ErrAlreadyPaid.Default()
 			return nil
 
 		default:
-			updateErr = ErrUnknownPaymentStatus
+			updateErr = ErrUnknownPaymentStatus.Default()
 			return nil
 		}
 
@@ -481,7 +481,7 @@ func (p *PaymentControl) Fail(paymentHash lntypes.Hash,
 	reason FailureReason) (*MPPayment, er.R) {
 
 	var (
-		updateErr error
+		updateErr er.R
 		payment   *MPPayment
 	)
 	err := kvdb.Batch(p.db.Backend, func(tx kvdb.RwTx) er.R {
@@ -491,8 +491,8 @@ func (p *PaymentControl) Fail(paymentHash lntypes.Hash,
 		payment = nil
 
 		bucket, err := fetchPaymentBucketUpdate(tx, paymentHash)
-		if err == ErrPaymentNotInitiated {
-			updateErr = ErrPaymentNotInitiated
+		if ErrPaymentNotInitiated.Is(err) {
+			updateErr = ErrPaymentNotInitiated.Default()
 			return nil
 		} else if err != nil {
 			return err
@@ -508,7 +508,7 @@ func (p *PaymentControl) Fail(paymentHash lntypes.Hash,
 		}
 
 		if paymentStatus == StatusUnknown {
-			updateErr = ErrPaymentNotInitiated
+			updateErr = ErrPaymentNotInitiated.Default()
 			return nil
 		}
 
@@ -698,7 +698,7 @@ func (p *PaymentControl) FetchInFlightPayments() ([]*InFlightPayment, er.R) {
 			// If the status is not InFlight, we can return early.
 			paymentStatus, err := fetchPaymentStatus(bucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			if paymentStatus != StatusInFlight {
@@ -710,7 +710,7 @@ func (p *PaymentControl) FetchInFlightPayments() ([]*InFlightPayment, er.R) {
 			// Get the CreationInfo.
 			inFlight.Info, err = fetchCreationInfo(bucket)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			inFlights = append(inFlights, inFlight)

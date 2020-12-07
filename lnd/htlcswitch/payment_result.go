@@ -38,7 +38,7 @@ type PaymentResult struct {
 	// Error is non-nil in case a HTLC send failed, and the HTLC is now
 	// irrevocably canceled. If the payment failed during forwarding, this
 	// error will be a *ForwardingError.
-	Error error
+	Error er.R
 }
 
 // networkResult is the raw result received from the network after a payment
@@ -71,7 +71,7 @@ func serializeNetworkResult(w io.Writer, n *networkResult) er.R {
 // deserializeNetworkResult deserializes the networkResult.
 func deserializeNetworkResult(r io.Reader) (*networkResult, er.R) {
 	var (
-		err error
+		err er.R
 	)
 
 	n := &networkResult{}
@@ -181,7 +181,7 @@ func (store *networkResultStore) subscribeResult(paymentID uint64) (
 	)
 
 	err := kvdb.View(store.db, func(tx kvdb.RTx) er.R {
-		var err error
+		var err er.R
 		result, err = fetchResult(tx, paymentID)
 		switch {
 
@@ -229,7 +229,7 @@ func (store *networkResultStore) getResult(pid uint64) (
 
 	var result *networkResult
 	err := kvdb.View(store.db, func(tx kvdb.RTx) er.R {
-		var err error
+		var err er.R
 		result, err = fetchResult(tx, pid)
 		return err
 	}, func() {

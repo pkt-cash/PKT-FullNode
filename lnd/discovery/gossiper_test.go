@@ -171,12 +171,12 @@ func (r *mockGraphSource) AddProof(chanID lnwire.ShortChannelID,
 	return nil
 }
 
-func (r *mockGraphSource) ForEachNode(func(node *channeldb.LightningNode) error) er.R {
+func (r *mockGraphSource) ForEachNode(func(node *channeldb.LightningNode) er.R) er.R {
 	return nil
 }
 
 func (r *mockGraphSource) ForAllOutgoingChannels(cb func(i *channeldb.ChannelEdgeInfo,
-	c *channeldb.ChannelEdgePolicy) error) er.R {
+	c *channeldb.ChannelEdgePolicy) er.R) er.R {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -205,7 +205,7 @@ func (r *mockGraphSource) ForAllOutgoingChannels(cb func(i *channeldb.ChannelEdg
 }
 
 func (r *mockGraphSource) ForEachChannel(func(chanInfo *channeldb.ChannelEdgeInfo,
-	e1, e2 *channeldb.ChannelEdgePolicy) error) er.R {
+	e1, e2 *channeldb.ChannelEdgePolicy) er.R) er.R {
 	return nil
 }
 

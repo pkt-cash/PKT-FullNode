@@ -1,12 +1,12 @@
 package lookout
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type MockBackend struct {

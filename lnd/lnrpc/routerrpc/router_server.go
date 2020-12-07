@@ -166,14 +166,14 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, er.R) {
 		if err != nil {
 			return nil, nil, err
 		}
-		routerMacBytes, err := routerMac.M().MarshalBinary()
-		if err != nil {
-			return nil, nil, err
+		routerMacBytes, errr := routerMac.M().MarshalBinary()
+		if errr != nil {
+			return nil, nil, er.E(errr)
 		}
-		err = ioutil.WriteFile(macFilePath, routerMacBytes, 0644)
-		if err != nil {
+		errr = ioutil.WriteFile(macFilePath, routerMacBytes, 0644)
+		if errr != nil {
 			_ = os.Remove(macFilePath)
-			return nil, nil, err
+			return nil, nil, er.E(errr)
 		}
 	}
 
@@ -242,11 +242,11 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 
 	// We make sure that we register it with the main REST server to ensure
 	// all our methods are routed properly.
-	err := RegisterRouterHandlerFromEndpoint(ctx, mux, dest, opts)
-	if err != nil {
+	errr := RegisterRouterHandlerFromEndpoint(ctx, mux, dest, opts)
+	if errr != nil {
 		log.Errorf("Could not register Router REST server "+
-			"with root REST server: %v", err)
-		return err
+			"with root REST server: %v", errr)
+		return er.E(errr)
 	}
 
 	log.Debugf("Router REST server successfully registered with " +
@@ -260,31 +260,31 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 // PaymentRequest, then an error will be returned. Otherwise, the payment
 // pre-image, along with the final route will be returned.
 func (s *Server) SendPaymentV2(req *SendPaymentRequest,
-	stream Router_SendPaymentV2Server) er.R {
+	stream Router_SendPaymentV2Server) error {
 
 	payment, err := s.cfg.RouterBackend.extractIntentFromSendRequest(req)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 
 	err = s.cfg.Router.SendPaymentAsync(payment)
 	if err != nil {
 		// Transform user errors to grpc code.
-		if err == channeldb.ErrPaymentInFlight ||
-			err == channeldb.ErrAlreadyPaid {
+		if channeldb.ErrPaymentInFlight.Is(err) ||
+			channeldb.ErrAlreadyPaid.Is(err) {
 
 			log.Debugf("SendPayment async result for hash %x: %v",
 				payment.PaymentHash, err)
 
 			return status.Error(
-				codes.AlreadyExists, err.Error(),
+				codes.AlreadyExists, err.String(),
 			)
 		}
 
 		log.Errorf("SendPayment async error for hash %x: %v",
 			payment.PaymentHash, err)
 
-		return err
+		return er.Native(err)
 	}
 
 	return s.trackPayment(payment.PaymentHash, stream, req.NoInflightUpdates)
@@ -293,10 +293,10 @@ func (s *Server) SendPaymentV2(req *SendPaymentRequest,
 // EstimateRouteFee allows callers to obtain a lower bound w.r.t how much it
 // may cost to send an HTLC to the target end destination.
 func (s *Server) EstimateRouteFee(ctx context.Context,
-	req *RouteFeeRequest) (*RouteFeeResponse, er.R) {
+	req *RouteFeeRequest) (*RouteFeeResponse, error) {
 
 	if len(req.Dest) != 33 {
-		return nil, er.New("invalid length destination key")
+		return nil, er.Native(er.New("invalid length destination key"))
 	}
 	var destNode route.Vertex
 	copy(destNode[:], req.Dest)
@@ -324,7 +324,7 @@ func (s *Server) EstimateRouteFee(ctx context.Context,
 		}, nil, nil, s.cfg.RouterBackend.DefaultFinalCltvDelta,
 	)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	return &RouteFeeResponse{
@@ -336,20 +336,20 @@ func (s *Server) EstimateRouteFee(ctx context.Context,
 // SendToRouteV2 sends a payment through a predefined route. The response of this
 // call contains structured error information.
 func (s *Server) SendToRouteV2(ctx context.Context,
-	req *SendToRouteRequest) (*lnrpc.HTLCAttempt, er.R) {
+	req *SendToRouteRequest) (*lnrpc.HTLCAttempt, error) {
 
 	if req.Route == nil {
-		return nil, er.Errorf("unable to send, no routes provided")
+		return nil, er.Native(er.Errorf("unable to send, no routes provided"))
 	}
 
 	route, err := s.cfg.RouterBackend.UnmarshallRoute(req.Route)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	hash, err := lntypes.MakeHash(req.PaymentHash)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	// Pass route to the router. This call returns the full htlc attempt
@@ -364,29 +364,29 @@ func (s *Server) SendToRouteV2(ctx context.Context,
 			*attempt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, er.Native(err)
 		}
 		return rpcAttempt, nil
 	}
 
 	// Transform user errors to grpc code.
-	if err == channeldb.ErrPaymentInFlight ||
-		err == channeldb.ErrAlreadyPaid {
+	if channeldb.ErrPaymentInFlight.Is(err) ||
+		channeldb.ErrAlreadyPaid.Is(err) {
 
-		return nil, status.Error(codes.AlreadyExists, err.Error())
+		return nil, status.Error(codes.AlreadyExists, err.String())
 	}
 
-	return nil, err
+	return nil, er.Native(err)
 }
 
 // ResetMissionControl clears all mission control state and starts with a clean
 // slate.
 func (s *Server) ResetMissionControl(ctx context.Context,
-	req *ResetMissionControlRequest) (*ResetMissionControlResponse, er.R) {
+	req *ResetMissionControlRequest) (*ResetMissionControlResponse, error) {
 
 	err := s.cfg.RouterBackend.MissionControl.ResetHistory()
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	return &ResetMissionControlResponse{}, nil
@@ -395,7 +395,7 @@ func (s *Server) ResetMissionControl(ctx context.Context,
 // QueryMissionControl exposes the internal mission control state to callers. It
 // is a development feature.
 func (s *Server) QueryMissionControl(ctx context.Context,
-	req *QueryMissionControlRequest) (*QueryMissionControlResponse, er.R) {
+	req *QueryMissionControlRequest) (*QueryMissionControlResponse, error) {
 
 	snapshot := s.cfg.RouterBackend.MissionControl.GetHistorySnapshot()
 
@@ -443,16 +443,16 @@ func toRPCPairData(data *routing.TimedPairResult) *PairData {
 // QueryProbability returns the current success probability estimate for a
 // given node pair and amount.
 func (s *Server) QueryProbability(ctx context.Context,
-	req *QueryProbabilityRequest) (*QueryProbabilityResponse, er.R) {
+	req *QueryProbabilityRequest) (*QueryProbabilityResponse, error) {
 
 	fromNode, err := route.NewVertexFromBytes(req.FromNode)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	toNode, err := route.NewVertexFromBytes(req.ToNode)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	amt := lnwire.MilliSatoshi(req.AmtMsat)
@@ -470,11 +470,11 @@ func (s *Server) QueryProbability(ctx context.Context,
 // TrackPaymentV2 returns a stream of payment state updates. The stream is
 // closed when the payment completes.
 func (s *Server) TrackPaymentV2(request *TrackPaymentRequest,
-	stream Router_TrackPaymentV2Server) er.R {
+	stream Router_TrackPaymentV2Server) error {
 
 	paymentHash, err := lntypes.MakeHash(request.PaymentHash)
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 
 	log.Debugf("TrackPayment called for payment %v", paymentHash)
@@ -484,7 +484,7 @@ func (s *Server) TrackPaymentV2(request *TrackPaymentRequest,
 
 // trackPayment writes payment status updates to the provided stream.
 func (s *Server) trackPayment(paymentHash lntypes.Hash,
-	stream Router_TrackPaymentV2Server, noInflightUpdates bool) er.R {
+	stream Router_TrackPaymentV2Server, noInflightUpdates bool) error {
 
 	router := s.cfg.RouterBackend
 
@@ -493,10 +493,10 @@ func (s *Server) trackPayment(paymentHash lntypes.Hash,
 		paymentHash,
 	)
 	switch {
-	case err == channeldb.ErrPaymentNotInitiated:
-		return status.Error(codes.NotFound, err.Error())
+	case channeldb.ErrPaymentNotInitiated.Is(err):
+		return status.Error(codes.NotFound, err.String())
 	case err != nil:
-		return err
+		return er.Native(err)
 	}
 	defer subscription.Close()
 
@@ -520,17 +520,17 @@ func (s *Server) trackPayment(paymentHash lntypes.Hash,
 
 			rpcPayment, err := router.MarshallPayment(result)
 			if err != nil {
-				return err
+				return er.Native(err)
 			}
 
 			// Send event to the client.
-			err = stream.Send(rpcPayment)
-			if err != nil {
-				return err
+			errr := stream.Send(rpcPayment)
+			if errr != nil {
+				return errr
 			}
 
 		case <-s.quit:
-			return errServerShuttingDown.Default()
+			return er.Native(errServerShuttingDown.Default())
 
 		case <-stream.Context().Done():
 			log.Debugf("Payment status stream %v canceled", paymentHash)
@@ -541,14 +541,14 @@ func (s *Server) trackPayment(paymentHash lntypes.Hash,
 
 // BuildRoute builds a route from a list of hop addresses.
 func (s *Server) BuildRoute(ctx context.Context,
-	req *BuildRouteRequest) (*BuildRouteResponse, er.R) {
+	req *BuildRouteRequest) (*BuildRouteResponse, error) {
 
 	// Unmarshall hop list.
 	hops := make([]route.Vertex, len(req.HopPubkeys))
 	for i, pubkeyBytes := range req.HopPubkeys {
 		pubkey, err := route.NewVertexFromBytes(pubkeyBytes)
 		if err != nil {
-			return nil, err
+			return nil, er.Native(err)
 		}
 		hops[i] = pubkey
 	}
@@ -570,12 +570,12 @@ func (s *Server) BuildRoute(ctx context.Context,
 		amt, hops, outgoingChan, req.FinalCltvDelta,
 	)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	rpcRoute, err := s.cfg.RouterBackend.MarshallRoute(route)
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	routeResp := &BuildRouteResponse{
@@ -588,11 +588,11 @@ func (s *Server) BuildRoute(ctx context.Context,
 // SubscribeHtlcEvents creates a uni-directional stream from the server to
 // the client which delivers a stream of htlc events.
 func (s *Server) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest,
-	stream Router_SubscribeHtlcEventsServer) er.R {
+	stream Router_SubscribeHtlcEventsServer) error {
 
 	htlcClient, err := s.cfg.RouterBackend.SubscribeHtlcEvents()
 	if err != nil {
-		return err
+		return er.Native(err)
 	}
 	defer htlcClient.Cancel()
 
@@ -601,7 +601,7 @@ func (s *Server) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest,
 		case event := <-htlcClient.Updates():
 			rpcEvent, err := rpcHtlcEvent(event)
 			if err != nil {
-				return err
+				return er.Native(err)
 			}
 
 			if err := stream.Send(rpcEvent); err != nil {
@@ -615,11 +615,11 @@ func (s *Server) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest,
 
 		// If the subscribe client terminates, exit with an error.
 		case <-htlcClient.Quit():
-			return er.New("htlc event subscription terminated")
+			return er.Native(er.New("htlc event subscription terminated"))
 
 		// If the server has been signalled to shut down, exit.
 		case <-s.quit:
-			return errServerShuttingDown
+			return er.Native(errServerShuttingDown.Default())
 		}
 	}
 }
@@ -632,13 +632,13 @@ func (s *Server) SubscribeHtlcEvents(req *SubscribeHtlcEventsRequest,
 // 3. Delivers to the caller every √√ and detect his answer.
 // It uses a local implementation of holdForwardsStore to keep all the hold
 // forwards and find them when manual resolution is later needed.
-func (s *Server) HtlcInterceptor(stream Router_HtlcInterceptorServer) er.R {
+func (s *Server) HtlcInterceptor(stream Router_HtlcInterceptorServer) error {
 	// We ensure there is only one interceptor at a time.
 	if !atomic.CompareAndSwapInt32(&s.forwardInterceptorActive, 0, 1) {
-		return ErrInterceptorAlreadyExists.Default()
+		return er.Native(ErrInterceptorAlreadyExists.Default())
 	}
 	defer atomic.CompareAndSwapInt32(&s.forwardInterceptorActive, 1, 0)
 
 	// run the forward interceptor.
-	return newForwardInterceptor(s, stream).run()
+	return er.Native(newForwardInterceptor(s, stream).run())
 }

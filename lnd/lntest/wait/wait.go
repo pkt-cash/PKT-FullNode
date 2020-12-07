@@ -1,8 +1,9 @@
 package wait
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // Predicate is a helper test function that will wait for a timeout period of
@@ -32,8 +33,8 @@ func Predicate(pred func() bool, timeout time.Duration) er.R {
 // NoError is a wrapper around Predicate that waits for the passed method f to
 // execute without error, and returns the last error encountered if this doesn't
 // happen within the timeout.
-func NoError(f func() error, timeout time.Duration) er.R {
-	var predErr error
+func NoError(f func() er.R, timeout time.Duration) er.R {
+	var predErr er.R
 	pred := func() bool {
 		if err := f(); err != nil {
 			predErr = err
@@ -80,8 +81,8 @@ func Invariant(statement func() bool, timeout time.Duration) er.R {
 // InvariantNoError is a wrapper around Invariant that waits out the duration
 // specified by timeout. It fails if the predicate ever returns an error during
 // that time.
-func InvariantNoError(f func() error, timeout time.Duration) er.R {
-	var predErr error
+func InvariantNoError(f func() er.R, timeout time.Duration) er.R {
+	var predErr er.R
 	pred := func() bool {
 		if err := f(); err != nil {
 			predErr = err

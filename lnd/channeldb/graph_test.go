@@ -129,7 +129,7 @@ func TestNodeInsertionAndDeletion(t *testing.T) {
 	// Finally, attempt to fetch the node again. This should fail as the
 	// node should have been deleted from the database.
 	_, err = graph.FetchLightningNode(nil, testPub)
-	if err != ErrGraphNodeNotFound {
+	if !ErrGraphNodeNotFound.Is(err) {
 		t.Fatalf("fetch after delete should fail!")
 	}
 }
@@ -193,7 +193,7 @@ func TestPartialNode(t *testing.T) {
 	// Finally, attempt to fetch the node again. This should fail as the
 	// node should have been deleted from the database.
 	_, err = graph.FetchLightningNode(nil, testPub)
-	if err != ErrGraphNodeNotFound {
+	if !ErrGraphNodeNotFound.Is(err) {
 		t.Fatalf("fetch after delete should fail!")
 	}
 }
@@ -247,7 +247,7 @@ func TestAliasLookup(t *testing.T) {
 		t.Fatalf("unable to generate pubkey: %v", err)
 	}
 	_, err = graph.LookupAlias(nodePub)
-	if err != ErrNodeAliasNotFound {
+	if !ErrNodeAliasNotFound.Is(err) {
 		t.Fatalf("alias lookup should fail for non-existent pubkey")
 	}
 }
@@ -272,7 +272,7 @@ func TestSourceNode(t *testing.T) {
 
 	// Attempt to fetch the source node, this should return an error as the
 	// source node hasn't yet been set.
-	if _, err := graph.SourceNode(); err != ErrSourceNodeNotSet {
+	if _, err := graph.SourceNode(); !ErrSourceNodeNotSet.Is(err) {
 		t.Fatalf("source node shouldn't be set in new graph")
 	}
 
@@ -385,7 +385,7 @@ func TestEdgeInsertionDeletion(t *testing.T) {
 	// Finally, attempt to delete a (now) non-existent edge within the
 	// database, this should result in an error.
 	err = graph.DeleteChannelEdges(chanID)
-	if err != ErrEdgeNotFound {
+	if !ErrEdgeNotFound.Is(err) {
 		t.Fatalf("deleting a non-existent edge should fail!")
 	}
 }
@@ -748,7 +748,7 @@ func TestEdgeInfoUpdates(t *testing.T) {
 
 	// Make sure inserting the policy at this point, before the edge info
 	// is added, will fail.
-	if err := graph.UpdateEdgePolicy(edge1); err != ErrEdgeNotFound {
+	if err := graph.UpdateEdgePolicy(edge1); !ErrEdgeNotFound.Is(err) {
 		t.Fatalf("expected ErrEdgeNotFound, got: %v", err)
 	}
 
@@ -2851,7 +2851,7 @@ func TestEdgePolicyMissingMaxHtcl(t *testing.T) {
 		}
 
 		_, err = deserializeChanEdgePolicy(r, nodes)
-		if err != ErrEdgePolicyOptionalFieldNotFound {
+		if !ErrEdgePolicyOptionalFieldNotFound.Is(err) {
 			t.Fatalf("expected "+
 				"ErrEdgePolicyOptionalFieldNotFound, got %v",
 				err)

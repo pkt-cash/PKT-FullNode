@@ -10,8 +10,8 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/gorilla/websocket"
+	"github.com/pkt-cash/pktd/pktlog"
 	"golang.org/x/net/context"
 )
 
@@ -289,7 +289,7 @@ type responseForwardingWriter struct {
 // Write writes the given bytes to the internal pipe.
 //
 // NOTE: This is part of the http.ResponseWriter interface.
-func (w *responseForwardingWriter) Write(b []byte) (int, er.R) {
+func (w *responseForwardingWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 

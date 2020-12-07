@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/tlv"
 )
 
@@ -53,7 +54,7 @@ func TestWrongEncodingType(t *testing.T) {
 	)
 	for _, encoder := range encoders {
 		err := encoder(&b, &value, &buf)
-		if _, ok := err.(tlv.ErrTypeForEncoding); !ok {
+		if _, ok := er.Wrapped(err).(tlv.ErrTypeForEncoding); !ok {
 			t.Fatalf("expected error of type ErrTypeForEncoding, "+
 				"got %T", err)
 		}
@@ -85,7 +86,7 @@ func TestWrongDecodingType(t *testing.T) {
 	)
 	for _, decoder := range decoders {
 		err := decoder(&b, &value, &buf, 0)
-		if _, ok := err.(tlv.ErrTypeForDecoding); !ok {
+		if _, ok := er.Wrapped(err).(tlv.ErrTypeForDecoding); !ok {
 			t.Fatalf("expected error of type ErrTypeForDecoding, "+
 				"got %T", err)
 		}

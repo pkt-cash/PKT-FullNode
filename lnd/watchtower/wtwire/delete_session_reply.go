@@ -1,6 +1,10 @@
 package wtwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // DeleteSessionCode is an error code returned by a watchtower in response to a
 // DeleteSession message.

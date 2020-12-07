@@ -24,6 +24,7 @@ import (
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/lnd"
@@ -143,7 +144,7 @@ func openChannelStream(ctx context.Context, t *harnessTest,
 	// the node is starting up.
 	var chanOpenUpdate lnrpc.Lightning_OpenChannelClient
 	err := wait.NoError(func() er.R {
-		var err error
+		var err er.R
 		chanOpenUpdate, err = net.OpenChannel(ctx, alice, bob, p)
 		return err
 	}, defaultTimeout)

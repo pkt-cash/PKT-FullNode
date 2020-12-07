@@ -2,13 +2,12 @@ package routing
 
 import (
 	"bytes"
-	"fmt"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -114,7 +113,7 @@ func ValidateNodeAnn(a *lnwire.NodeAnnouncement) er.R {
 			return err
 		}
 
-		return errors.Errorf("signature on NodeAnnouncement(%x) is "+
+		return er.Errorf("signature on NodeAnnouncement(%x) is "+
 			"invalid: %x", nodeKey.SerializeCompressed(),
 			msgBuf.Bytes())
 	}
@@ -168,7 +167,7 @@ func validateOptionalFields(capacity btcutil.Amount,
 	if msg.MessageFlags.HasMaxHtlc() {
 		maxHtlc := msg.HtlcMaximumMsat
 		if maxHtlc == 0 || maxHtlc < msg.HtlcMinimumMsat {
-			return errors.Errorf("invalid max htlc for channel "+
+			return er.Errorf("invalid max htlc for channel "+
 				"update %v", spew.Sdump(msg))
 		}
 
@@ -177,7 +176,7 @@ func validateOptionalFields(capacity btcutil.Amount,
 		// capacity.
 		capacityMsat := lnwire.NewMSatFromSatoshis(capacity)
 		if capacityMsat != 0 && maxHtlc > capacityMsat {
-			return errors.Errorf("max_htlc(%v) for channel "+
+			return er.Errorf("max_htlc(%v) for channel "+
 				"update greater than capacity(%v)", maxHtlc,
 				capacityMsat)
 		}

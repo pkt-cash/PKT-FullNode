@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 type mockSparseConfFeeSource struct {
@@ -128,9 +129,9 @@ func TestSparseConfFeeSource(t *testing.T) {
 		3: 54321,
 	}
 	testJSON := map[string]map[uint32]uint32{"fee_by_block_target": testFees}
-	jsonResp, err := json.Marshal(testJSON)
-	if err != nil {
-		t.Fatalf("unable to marshal JSON API response: %v", err)
+	jsonResp, errr := json.Marshal(testJSON)
+	if errr != nil {
+		t.Fatalf("unable to marshal JSON API response: %v", errr)
 	}
 	reader := bytes.NewReader(jsonResp)
 
@@ -146,9 +147,9 @@ func TestSparseConfFeeSource(t *testing.T) {
 	// Test parsing an improperly formatted JSON API response.
 	badFees := map[string]uint32{"hi": 12345, "hello": 42, "satoshi": 54321}
 	badJSON := map[string]map[string]uint32{"fee_by_block_target": badFees}
-	jsonResp, err = json.Marshal(badJSON)
-	if err != nil {
-		t.Fatalf("unable to marshal JSON API response: %v", err)
+	jsonResp, errr = json.Marshal(badJSON)
+	if errr != nil {
+		t.Fatalf("unable to marshal JSON API response: %v", errr)
 	}
 	reader = bytes.NewReader(jsonResp)
 
@@ -197,7 +198,7 @@ func TestWebAPIFeeEstimator(t *testing.T) {
 	// Test that requesting a fee when no fees have been cached fails.
 	_, err := estimator.EstimateFeePerKW(5)
 	if err == nil ||
-		!strings.Contains(err.Error(), "web API does not include") {
+		!strings.Contains(err.String(), "web API does not include") {
 
 		t.Fatalf("expected fee estimation to fail, instead got: %v", err)
 	}
@@ -213,7 +214,7 @@ func TestWebAPIFeeEstimator(t *testing.T) {
 			est, err := estimator.EstimateFeePerKW(tc.target)
 			if tc.err != "" {
 				if err == nil ||
-					!strings.Contains(err.Error(), tc.err) {
+					!strings.Contains(err.String(), tc.err) {
 
 					t.Fatalf("expected fee estimation to "+
 						"fail, instead got: %v", err)

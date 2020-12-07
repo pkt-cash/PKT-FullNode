@@ -211,7 +211,7 @@ func deserializeHTLCSettleInfo(r io.Reader) (*HTLCSettleInfo, er.R) {
 		return nil, err
 	}
 
-	var err error
+	var err er.R
 	s.SettleTime, err = deserializeTime(r)
 	if err != nil {
 		return nil, err
@@ -247,7 +247,7 @@ func serializeHTLCFailInfo(w io.Writer, f *HTLCFailInfo) er.R {
 // the wire failure.
 func deserializeHTLCFailInfo(r io.Reader) (*HTLCFailInfo, er.R) {
 	f := &HTLCFailInfo{}
-	var err error
+	var err er.R
 	f.FailTime, err = deserializeTime(r)
 	if err != nil {
 		return nil, err

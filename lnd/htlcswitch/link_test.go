@@ -143,7 +143,7 @@ func createInterceptorFunc(prefix, receiver string, messages []expectedMessage,
 
 		if messageChanID == chanID {
 			if len(expectToReceive) == 0 {
-				return false, errors.Errorf("%v received "+
+				return false, er.Errorf("%v received "+
 					"unexpected message out of range: %v",
 					receiver, m.MsgType())
 			}
@@ -152,7 +152,7 @@ func createInterceptorFunc(prefix, receiver string, messages []expectedMessage,
 			expectToReceive = expectToReceive[1:]
 
 			if expectedMessage.message.MsgType() != m.MsgType() {
-				return false, errors.Errorf("%v received wrong message: \n"+
+				return false, er.Errorf("%v received wrong message: \n"+
 					"real: %v\nexpected: %v", receiver, m.MsgType(),
 					expectedMessage.message.MsgType())
 			}
@@ -434,7 +434,7 @@ func TestChannelLinkCancelFullCommitment(t *testing.T) {
 	// Create channels to buffer the preimage and error channels used in
 	// making the preliminary payments.
 	preimages := make([]lntypes.Preimage, count)
-	aliceErrChan := make(chan chan error, count)
+	aliceErrChan := make(chan chan er.R, count)
 
 	var wg sync.WaitGroup
 	for i := 0; i < count; i++ {

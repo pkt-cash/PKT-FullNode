@@ -1,10 +1,10 @@
 package clock
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,7 +66,7 @@ func TestTickSignal(t *testing.T) {
 
 	ch := make(chan time.Duration)
 	c := NewTestClockWithTickSignal(testTime, ch)
-	err := make(chan error, 1)
+	err := make(chan er.R, 1)
 
 	go func() {
 		select {
@@ -87,5 +87,5 @@ func TestTickSignal(t *testing.T) {
 
 	// Once the ticker is registered, set the time to make it fire.
 	c.SetTime(testTime.Add(time.Second))
-	assert.NoError(t, <-err)
+	assert.NoError(t, er.Native(<-err))
 }

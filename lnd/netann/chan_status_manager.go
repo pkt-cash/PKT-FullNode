@@ -13,21 +13,22 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.netann")
 	// ErrChanStatusManagerExiting signals that a shutdown of the
 	// ChanStatusManager has already been requested.
-	ErrChanStatusManagerExiting = er.GenericErrorType.CodeWithDetail("ErrChanStatusManagerExiting", "chan status manager exiting")
+	ErrChanStatusManagerExiting = Err.CodeWithDetail("ErrChanStatusManagerExiting", "chan status manager exiting")
 
 	// ErrInvalidTimeoutConstraints signals that the ChanStatusManager could
 	// not be initialized because the timeouts and sample intervals were
 	// malformed.
-	ErrInvalidTimeoutConstraints = er.New("active_timeout + " +
-		"sample_interval must be less than or equal to " +
+	ErrInvalidTimeoutConstraints = Err.CodeWithDetail("ErrInvalidTimeoutConstraints", "active_timeout + "+
+		"sample_interval must be less than or equal to "+
 		"inactive_timeout and be positive integers")
 
 	// ErrEnableInactiveChan signals that a request to enable a channel
 	// could not be completed because the channel isn't actually active at
 	// the time of the request.
-	ErrEnableInactiveChan = er.New("unable to enable channel which " +
+	ErrEnableInactiveChan = Err.CodeWithDetail("ErrEnableInactiveChan", "unable to enable channel which "+
 		"is not currently active")
 )
 
@@ -154,7 +155,7 @@ func NewChanStatusManager(cfg *ChanStatusConfig) (*ChanStatusManager, er.R) {
 
 // Start safely starts the ChanStatusManager.
 func (m *ChanStatusManager) Start() er.R {
-	var err error
+	var err er.R
 	m.started.Do(func() {
 		err = m.start()
 	})
@@ -176,7 +177,7 @@ func (m *ChanStatusManager) start() er.R {
 		// have been pruned from the channel graph but not yet from our
 		// set of channels. We'll skip it as we can't determine its
 		// initial state.
-		case err == channeldb.ErrEdgeNotFound:
+		case channeldb.ErrEdgeNotFound.Is(err):
 			log.Warnf("Unable to find channel policies for %v, "+
 				"skipping. This is typical if the channel is "+
 				"in the process of closing.", c.FundingOutpoint)
@@ -230,7 +231,7 @@ func (m *ChanStatusManager) RequestDisable(outpoint wire.OutPoint) er.R {
 // request through one of the enableRequests or disableRequests channels.
 type statusRequest struct {
 	outpoint wire.OutPoint
-	errChan  chan error
+	errChan  chan er.R
 }
 
 // submitRequest sends a request for either enabling or disabling a particular
@@ -242,7 +243,7 @@ func (m *ChanStatusManager) submitRequest(reqChan chan statusRequest,
 
 	req := statusRequest{
 		outpoint: outpoint,
-		errChan:  make(chan error, 1),
+		errChan:  make(chan er.R, 1),
 	}
 
 	select {
@@ -471,7 +472,7 @@ func (m *ChanStatusManager) disableInactiveChannels() {
 			// that the channel has been closed. Thus we remove the
 			// outpoint from the set of tracked outpoints to prevent
 			// further attempts.
-			if err == channeldb.ErrEdgeNotFound {
+			if channeldb.ErrEdgeNotFound.Is(err) {
 				log.Debugf("Removing channel(%v) from "+
 					"consideration for passive disabling",
 					outpoint)

@@ -141,7 +141,7 @@ func NewGraphBootstrapper(cg autopilot.ChannelGraph) (NetworkPeerBootstrapper, e
 	}
 
 	if _, err := rand.Read(c.hashAccumulator[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return c, nil
@@ -168,13 +168,7 @@ func (c *ChannelGraphBootstrapper) SampleNodeAddrs(numAddrs uint32,
 	// randomly sample nodes independent of the iteration of the channel
 	// graph.
 	sampleAddrs := func() ([]*lnwire.NetAddress, er.R) {
-		var (
-			a []*lnwire.NetAddress
-
-			// We'll create a special error so we can return early
-			// and abort the transaction once we find a match.
-			errFound = er.Errorf("found node")
-		)
+		var a []*lnwire.NetAddress
 
 		err := c.chanGraph.ForEachNode(func(node autopilot.Node) er.R {
 			nID := autopilot.NodeID(node.PubKey())
@@ -223,9 +217,9 @@ func (c *ChannelGraphBootstrapper) SampleNodeAddrs(numAddrs uint32,
 
 			c.tried[nID] = struct{}{}
 
-			return errFound
+			return er.LoopBreak
 		})
-		if err != nil && err != errFound {
+		if err != nil && err != er.LoopBreak {
 			return nil, err
 		}
 
@@ -347,11 +341,11 @@ func (d *DNSSeedBootstrapper) fallBackSRVLookup(soaShim string,
 	msg := new(dns.Msg)
 	msg.SetQuestion(dnsHost, dns.TypeSRV)
 	if err := dnsConn.WriteMsg(msg); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
-	resp, err := dnsConn.ReadMsg()
-	if err != nil {
-		return nil, err
+	resp, errr := dnsConn.ReadMsg()
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// If the message response code was not the success code, fail.
@@ -510,9 +504,9 @@ search:
 				addrs[0],
 				strconv.FormatUint(uint64(nodeSrv.Port), 10),
 			)
-			tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
-			if err != nil {
-				return nil, err
+			tcpAddr, errr := net.ResolveTCPAddr("tcp", addr)
+			if errr != nil {
+				return nil, er.E(errr)
 			}
 
 			// Finally, with all the information parsed, we'll

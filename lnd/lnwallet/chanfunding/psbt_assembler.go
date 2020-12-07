@@ -137,7 +137,7 @@ type PsbtIntent struct {
 	// canceled.
 	//
 	// NOTE: This channel must always be buffered.
-	PsbtReady chan error
+	PsbtReady chan er.R
 
 	// signalPsbtReady is a Once guard to make sure the PsbtReady channel is
 	// only closed exactly once.
@@ -163,7 +163,7 @@ func (i *PsbtIntent) BindKeys(localKey *keychain.KeyDescriptor,
 // address, the exact funding amount and a PSBT packet that contains exactly one
 // output that encodes the previous two parameters.
 func (i *PsbtIntent) FundingParams() (btcutil.Address, int64, *psbt.Packet,
-	error) {
+	er.R) {
 
 	if i.State != PsbtOutputKnown {
 		return nil, 0, nil, er.Errorf("invalid state, got %v "+
@@ -373,7 +373,7 @@ func (i *PsbtIntent) CompileFundingTx() (*wire.MsgTx, er.R) {
 func (i *PsbtIntent) RemoteCanceled() {
 	log.Debugf("PSBT funding intent canceled by remote, state=%v", i.State)
 	i.signalPsbtReady.Do(func() {
-		i.PsbtReady <- ErrRemoteCanceled
+		i.PsbtReady <- ErrRemoteCanceled.Default()
 		i.State = PsbtResponderCanceled
 	})
 	i.ShimIntent.Cancel()
@@ -387,7 +387,7 @@ func (i *PsbtIntent) RemoteCanceled() {
 func (i *PsbtIntent) Cancel() {
 	log.Debugf("PSBT funding intent canceled, state=%v", i.State)
 	i.signalPsbtReady.Do(func() {
-		i.PsbtReady <- ErrUserCanceled
+		i.PsbtReady <- ErrUserCanceled.Default()
 		i.State = PsbtInitiatorCanceled
 	})
 	i.ShimIntent.Cancel()
@@ -446,7 +446,7 @@ func (p *PsbtAssembler) ProvisionChannel(req *Request) (Intent, er.R) {
 		},
 		State:     PsbtShimRegistered,
 		BasePsbt:  p.basePsbt,
-		PsbtReady: make(chan error, 1),
+		PsbtReady: make(chan er.R, 1),
 		netParams: p.netParams,
 	}
 

@@ -546,14 +546,14 @@ func (q *sessionQueue) sendStateUpdate(conn wtserver.Peer,
 	lastApplied := stateUpdateReply.LastApplied
 	err = q.cfg.DB.AckUpdate(q.ID(), stateUpdate.SeqNum, lastApplied)
 	switch {
-	case err == wtdb.ErrUnallocatedLastApplied:
+	case wtdb.ErrUnallocatedLastApplied.Is(err):
 		// TODO(conner): borked watchtower
 		err = er.Errorf("unable to ack seqnum=%d: %v",
 			stateUpdate.SeqNum, err)
 		log.Errorf("SessionQueue(%v) failed to ack update: %v", q.ID(), err)
 		return err
 
-	case err == wtdb.ErrLastAppliedReversion:
+	case wtdb.ErrLastAppliedReversion.Is(err):
 		// TODO(conner): borked watchtower
 		err = er.Errorf("unable to ack seqnum=%d: %v",
 			stateUpdate.SeqNum, err)

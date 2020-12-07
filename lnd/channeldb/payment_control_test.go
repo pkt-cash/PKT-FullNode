@@ -194,7 +194,7 @@ func TestPaymentControlSwitchFail(t *testing.T) {
 	// Attempt a final payment, which should now fail since the prior
 	// payment succeed.
 	err = pControl.InitPayment(info.PaymentHash, info)
-	if err != ErrAlreadyPaid {
+	if !ErrAlreadyPaid.Is(err) {
 		t.Fatalf("unable to send htlc message: %v", err)
 	}
 }
@@ -235,7 +235,7 @@ func TestPaymentControlSwitchDoubleSend(t *testing.T) {
 	// payment hash, should result in error indicating that payment has
 	// already been sent.
 	err = pControl.InitPayment(info.PaymentHash, info)
-	if err != ErrPaymentInFlight {
+	if !ErrPaymentInFlight.Is(err) {
 		t.Fatalf("payment control wrong behaviour: " +
 			"double sending must trigger ErrPaymentInFlight error")
 	}
@@ -256,7 +256,7 @@ func TestPaymentControlSwitchDoubleSend(t *testing.T) {
 
 	// Sends base htlc message which initiate StatusInFlight.
 	err = pControl.InitPayment(info.PaymentHash, info)
-	if err != ErrPaymentInFlight {
+	if !ErrPaymentInFlight.Is(err) {
 		t.Fatalf("payment control wrong behaviour: " +
 			"double sending must trigger ErrPaymentInFlight error")
 	}
@@ -277,7 +277,7 @@ func TestPaymentControlSwitchDoubleSend(t *testing.T) {
 	assertPaymentInfo(t, pControl, info.PaymentHash, info, nil, htlc)
 
 	err = pControl.InitPayment(info.PaymentHash, info)
-	if err != ErrAlreadyPaid {
+	if !ErrAlreadyPaid.Is(err) {
 		t.Fatalf("unable to send htlc message: %v", err)
 	}
 }
@@ -308,7 +308,7 @@ func TestPaymentControlSuccessesWithoutInFlight(t *testing.T) {
 			Preimage: preimg,
 		},
 	)
-	if err != ErrPaymentNotInitiated {
+	if !ErrPaymentNotInitiated.Is(err) {
 		t.Fatalf("expected ErrPaymentNotInitiated, got %v", err)
 	}
 
@@ -336,7 +336,7 @@ func TestPaymentControlFailsWithoutInFlight(t *testing.T) {
 
 	// Calling Fail should return an error.
 	_, err = pControl.Fail(info.PaymentHash, FailureReasonNoRoute)
-	if err != ErrPaymentNotInitiated {
+	if !ErrPaymentNotInitiated.Is(err) {
 		t.Fatalf("expected ErrPaymentNotInitiated, got %v", err)
 	}
 
@@ -595,7 +595,7 @@ func TestPaymentControlMultiShard(t *testing.T) {
 		b := *attempt
 		b.AttemptID = 3
 		_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-		if err != ErrValueExceedsAmt {
+		if !ErrValueExceedsAmt.Is(err) {
 			t.Fatalf("expected ErrValueExceedsAmt, got: %v",
 				err)
 		}
@@ -688,7 +688,7 @@ func TestPaymentControlMultiShard(t *testing.T) {
 		b = *attempt
 		b.AttemptID = 3
 		_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-		if err != ErrPaymentTerminal {
+		if !ErrPaymentTerminal.Is(err) {
 			t.Fatalf("expected ErrPaymentTerminal, got: %v", err)
 		}
 
@@ -821,7 +821,7 @@ func TestPaymentControlMPPRecordValidation(t *testing.T) {
 	b.AttemptID = 1
 	b.Route.FinalHop().MPP = nil
 	_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-	if err != ErrMPPayment {
+	if !ErrMPPayment.Is(err) {
 		t.Fatalf("expected ErrMPPayment, got: %v", err)
 	}
 
@@ -830,7 +830,7 @@ func TestPaymentControlMPPRecordValidation(t *testing.T) {
 		info.Value, [32]byte{2},
 	)
 	_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-	if err != ErrMPPPaymentAddrMismatch {
+	if !ErrMPPPaymentAddrMismatch.Is(err) {
 		t.Fatalf("expected ErrMPPPaymentAddrMismatch, got: %v", err)
 	}
 
@@ -839,7 +839,7 @@ func TestPaymentControlMPPRecordValidation(t *testing.T) {
 		info.Value/2, [32]byte{1},
 	)
 	_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-	if err != ErrMPPTotalAmountMismatch {
+	if !ErrMPPTotalAmountMismatch.Is(err) {
 		t.Fatalf("expected ErrMPPTotalAmountMismatch, got: %v", err)
 	}
 
@@ -869,7 +869,7 @@ func TestPaymentControlMPPRecordValidation(t *testing.T) {
 	)
 
 	_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-	if err != ErrNonMPPayment {
+	if !ErrNonMPPayment.Is(err) {
 		t.Fatalf("expected ErrNonMPPayment, got: %v", err)
 	}
 }
@@ -982,7 +982,7 @@ func fetchPaymentIndexEntry(_ *testing.T, p *PaymentControl,
 
 		indexValue := indexBucket.Get(key)
 		if indexValue == nil {
-			return errNoSequenceNrIndex
+			return errNoSequenceNrIndex.Default()
 		}
 
 		r := bytes.NewReader(indexValue)

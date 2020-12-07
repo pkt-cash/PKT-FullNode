@@ -72,7 +72,7 @@ func NewInvoiceExpiryWatcher(clock clock.Clock) *InvoiceExpiryWatcher {
 // expects a cancellation function passed that will be use to cancel expired
 // invoices by their payment hash.
 func (ew *InvoiceExpiryWatcher) Start(
-	cancelInvoice func(lntypes.Hash, bool) error) er.R {
+	cancelInvoice func(lntypes.Hash, bool) er.R) er.R {
 
 	ew.Lock()
 	defer ew.Unlock()
@@ -170,8 +170,8 @@ func (ew *InvoiceExpiryWatcher) cancelNextExpiredInvoice() {
 		// keysend invoices creates a safety mechanism that can prevents
 		// channel force-closes.
 		err := ew.cancelInvoice(top.PaymentHash, top.Keysend)
-		if err != nil && err != channeldb.ErrInvoiceAlreadySettled &&
-			err != channeldb.ErrInvoiceAlreadyCanceled {
+		if err != nil && !channeldb.ErrInvoiceAlreadySettled.Is(err) &&
+			!channeldb.ErrInvoiceAlreadyCanceled.Is(err) {
 
 			log.Errorf("Unable to cancel invoice: %v",
 				top.PaymentHash)

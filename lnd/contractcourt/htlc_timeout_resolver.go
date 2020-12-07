@@ -296,12 +296,12 @@ func (h *htlcTimeoutResolver) Resolve() (ContractResolver, er.R) {
 		select {
 		case spendDetail, ok := <-spendNtfn.Spend:
 			if !ok {
-				return errResolverShuttingDown
+				return errResolverShuttingDown.Default()
 			}
 			spendTxID = spendDetail.SpenderTxHash
 
 		case <-h.quit:
-			return errResolverShuttingDown
+			return errResolverShuttingDown.Default()
 		}
 
 		return nil
@@ -335,12 +335,12 @@ func (h *htlcTimeoutResolver) Resolve() (ContractResolver, er.R) {
 	select {
 	case spend, ok = <-spendNtfn.Spend:
 		if !ok {
-			return nil, errResolverShuttingDown
+			return nil, errResolverShuttingDown.Default()
 		}
 		spendTxID = spend.SpenderTxHash
 
 	case <-h.quit:
-		return nil, errResolverShuttingDown
+		return nil, errResolverShuttingDown.Default()
 	}
 
 	// If the spend reveals the pre-image, then we'll enter the clean up

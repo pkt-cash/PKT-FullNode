@@ -28,7 +28,7 @@ type Manager struct {
 	// ForAllOutgoingChannels is required to iterate over all our local
 	// channels.
 	ForAllOutgoingChannels func(cb func(*channeldb.ChannelEdgeInfo,
-		*channeldb.ChannelEdgePolicy) error) er.R
+		*channeldb.ChannelEdgePolicy) er.R) er.R
 
 	// FetchChannel is used to query local channel parameters.
 	FetchChannel func(chanPoint wire.OutPoint) (*channeldb.OpenChannel,

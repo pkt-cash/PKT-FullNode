@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaroon.v2"
 )
@@ -48,8 +49,8 @@ func TestMacaroonJarEncrypted(t *testing.T) {
 	// Now decrypt it again and make sure we get the same content back.
 	mac, err := newEntry.loadMacaroon(pwCallback)
 	util.RequireNoErr(t, err)
-	macBytes, err := mac.MarshalBinary()
-	util.RequireNoErr(t, err)
+	macBytes, errr := mac.MarshalBinary()
+	util.RequireNoErr(t, er.E(errr))
 	require.Equal(t, dummyMac, macBytes)
 
 	// The encrypted data of the entry we just created shouldn't be the
@@ -60,8 +61,8 @@ func TestMacaroonJarEncrypted(t *testing.T) {
 	// matches our created entry.
 	mac, err = encryptedEntry.loadMacaroon(pwCallback)
 	util.RequireNoErr(t, err)
-	macBytes, err = mac.MarshalBinary()
-	util.RequireNoErr(t, err)
+	macBytes, errr = mac.MarshalBinary()
+	util.RequireNoErr(t, er.E(errr))
 	require.Equal(t, dummyMac, macBytes)
 }
 
@@ -79,8 +80,8 @@ func TestMacaroonJarPlaintext(t *testing.T) {
 	// Now decrypt it again and make sure we get the same content back.
 	mac, err := newEntry.loadMacaroon(noPwCallback)
 	util.RequireNoErr(t, err)
-	macBytes, err := mac.MarshalBinary()
-	util.RequireNoErr(t, err)
+	macBytes, errr := mac.MarshalBinary()
+	util.RequireNoErr(t, er.E(errr))
 	require.Equal(t, dummyMac, macBytes)
 	require.Equal(t, plaintextEntry.Data, newEntry.Data)
 
@@ -88,15 +89,15 @@ func TestMacaroonJarPlaintext(t *testing.T) {
 	// content matches our created entry.
 	mac, err = plaintextEntry.loadMacaroon(noPwCallback)
 	util.RequireNoErr(t, err)
-	macBytes, err = mac.MarshalBinary()
-	util.RequireNoErr(t, err)
+	macBytes, errr = mac.MarshalBinary()
+	util.RequireNoErr(t, er.E(errr))
 	require.Equal(t, dummyMac, macBytes)
 }
 
 func toMacaroon(t *testing.T, macData []byte) *macaroon.Macaroon {
 	mac := &macaroon.Macaroon{}
-	err := mac.UnmarshalBinary(macData)
-	util.RequireNoErr(t, err)
+	errr := mac.UnmarshalBinary(macData)
+	util.RequireNoErr(t, er.E(errr))
 
 	return mac
 }

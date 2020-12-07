@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = descriptor.ForMessage
 
-func request_Invoices_SubscribeSingleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (Invoices_SubscribeSingleInvoiceClient, runtime.ServerMetadata, er.R) {
+func request_Invoices_SubscribeSingleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (Invoices_SubscribeSingleInvoiceClient, runtime.ServerMetadata, error) {
 	var protoReq SubscribeSingleInvoiceRequest
 	var metadata runtime.ServerMetadata
 
@@ -66,7 +66,7 @@ func request_Invoices_SubscribeSingleInvoice_0(ctx context.Context, marshaler ru
 
 }
 
-func request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CancelInvoiceMsg
 	var metadata runtime.ServerMetadata
 
@@ -83,7 +83,7 @@ func request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CancelInvoiceMsg
 	var metadata runtime.ServerMetadata
 
@@ -100,7 +100,7 @@ func local_request_Invoices_CancelInvoice_0(ctx context.Context, marshaler runti
 
 }
 
-func request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AddHoldInvoiceRequest
 	var metadata runtime.ServerMetadata
 
@@ -117,7 +117,7 @@ func request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AddHoldInvoiceRequest
 	var metadata runtime.ServerMetadata
 
@@ -134,7 +134,7 @@ func local_request_Invoices_AddHoldInvoice_0(ctx context.Context, marshaler runt
 
 }
 
-func request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, client InvoicesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SettleInvoiceMsg
 	var metadata runtime.ServerMetadata
 
@@ -151,7 +151,7 @@ func request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, er.R) {
+func local_request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runtime.Marshaler, server InvoicesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq SettleInvoiceMsg
 	var metadata runtime.ServerMetadata
 
@@ -171,7 +171,7 @@ func local_request_Invoices_SettleInvoice_0(ctx context.Context, marshaler runti
 // RegisterInvoicesHandlerServer registers the http handlers for service Invoices to "mux".
 // UnaryRPC     :call InvoicesServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-func RegisterInvoicesHandlerServer(ctx context.Context, mux *runtime.ServeMux, server InvoicesServer) er.R {
+func RegisterInvoicesHandlerServer(ctx context.Context, mux *runtime.ServeMux, server InvoicesServer) error {
 
 	mux.Handle("GET", pattern_Invoices_SubscribeSingleInvoice_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
@@ -270,7 +270,7 @@ func RegisterInvoicesHandlerFromEndpoint(ctx context.Context, mux *runtime.Serve
 
 // RegisterInvoicesHandler registers the http handlers for service Invoices to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterInvoicesHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) er.R {
+func RegisterInvoicesHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterInvoicesHandlerClient(ctx, mux, NewInvoicesClient(conn))
 }
 
@@ -279,7 +279,7 @@ func RegisterInvoicesHandler(ctx context.Context, mux *runtime.ServeMux, conn *g
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "InvoicesClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "InvoicesClient" to call the correct interceptors.
-func RegisterInvoicesHandlerClient(ctx context.Context, mux *runtime.ServeMux, client InvoicesClient) er.R {
+func RegisterInvoicesHandlerClient(ctx context.Context, mux *runtime.ServeMux, client InvoicesClient) error {
 
 	mux.Handle("GET", pattern_Invoices_SubscribeSingleInvoice_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -297,7 +297,7 @@ func RegisterInvoicesHandlerClient(ctx context.Context, mux *runtime.ServeMux, c
 			return
 		}
 
-		forward_Invoices_SubscribeSingleInvoice_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, er.R) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Invoices_SubscribeSingleInvoice_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 

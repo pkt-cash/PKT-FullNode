@@ -65,11 +65,11 @@ type chanAcceptInfo struct {
 type RPCAcceptor struct {
 	// receive is a function from which we receive channel acceptance
 	// decisions. Note that this function is expected to block.
-	receive func() (*lnrpc.ChannelAcceptResponse, er.R)
+	receive func() (*lnrpc.ChannelAcceptResponse, error)
 
 	// send is a function which sends requests for channel acceptance
 	// decisions into our rpc stream.
-	send func(request *lnrpc.ChannelAcceptRequest) er.R
+	send func(request *lnrpc.ChannelAcceptRequest) error
 
 	// requests is a channel that we send requests for a acceptor response
 	// into.
@@ -151,8 +151,8 @@ func (r *RPCAcceptor) Accept(req *ChannelAcceptRequest) *ChannelAcceptResponse {
 }
 
 // NewRPCAcceptor creates and returns an instance of the RPCAcceptor.
-func NewRPCAcceptor(receive func() (*lnrpc.ChannelAcceptResponse, er.R),
-	send func(*lnrpc.ChannelAcceptRequest) er.R, timeout time.Duration,
+func NewRPCAcceptor(receive func() (*lnrpc.ChannelAcceptResponse, error),
+	send func(*lnrpc.ChannelAcceptRequest) error, timeout time.Duration,
 	params *chaincfg.Params, quit chan struct{}) *RPCAcceptor {
 
 	return &RPCAcceptor{
@@ -203,7 +203,7 @@ func (r *RPCAcceptor) receiveResponses(errChan chan er.R,
 	for {
 		resp, err := r.receive()
 		if err != nil {
-			errChan <- err
+			errChan <- er.E(err)
 			return
 		}
 
@@ -281,7 +281,7 @@ func (r *RPCAcceptor) sendAcceptRequests(errChan chan er.R,
 			}
 
 			if err := r.send(chanAcceptReq); err != nil {
-				return err
+				return er.E(err)
 			}
 
 		// Process newly received responses from our channel acceptor,

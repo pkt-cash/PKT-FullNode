@@ -35,12 +35,12 @@ func (db *TowerDB) InsertStateUpdate(update *wtdb.SessionStateUpdate) (uint16, e
 
 	info, ok := db.sessions[update.ID]
 	if !ok {
-		return 0, wtdb.ErrSessionNotFound
+		return 0, wtdb.ErrSessionNotFound.Default()
 	}
 
 	// Assert that the blob is the correct size for the session's blob type.
 	if len(update.EncryptedBlob) != blob.Size(info.Policy.BlobType) {
-		return 0, wtdb.ErrInvalidBlobSize
+		return 0, wtdb.ErrInvalidBlobSize.Default()
 	}
 
 	err := info.AcceptUpdateSequence(update.SeqNum, update.LastApplied)

@@ -1,8 +1,7 @@
 package feature
 
 import (
-	"fmt"
-
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 

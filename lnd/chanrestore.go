@@ -1,11 +1,11 @@
 package lnd
 
 import (
-	"fmt"
 	"math"
 	"net"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
@@ -275,7 +275,8 @@ func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) er.R {
 
 		// If we're already connected to this peer, then we don't
 		// consider this an error, so we'll exit here.
-		if _, ok := err.(*errPeerAlreadyConnected); ok {
+		errr := er.Wrapped(err)
+		if _, ok := errr.(*errPeerAlreadyConnected); ok {
 			return nil
 
 		} else if err != nil {

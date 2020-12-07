@@ -37,8 +37,8 @@ var (
 	// ErrUpfrontShutdownScriptMismatch is returned when a peer or end user
 	// provides a cooperative close script which does not match the upfront
 	// shutdown script previously set for that party.
-	ErrUpfrontShutdownScriptMismatch = Err.CodeWithDetail("ErrUpfrontShutdownScriptMismatch", "shutdown script does not "+
-		"match upfront shutdown script")
+	ErrUpfrontShutdownScriptMismatch = Err.CodeWithDetail("ErrUpfrontShutdownScriptMismatch",
+		"shutdown script does not match upfront shutdown script")
 )
 
 // closeState represents all the possible states the channel closer state
@@ -313,7 +313,7 @@ func (c *ChanCloser) NegotiationHeight() uint32 {
 // shutdown, so the function returns early. If an upfront script is set, we
 // check whether it matches the script provided by our peer. If they do not
 // match, we use the disconnect function provided to disconnect from the peer.
-func maybeMatchScript(disconnect func() error, upfrontScript,
+func maybeMatchScript(disconnect func() er.R, upfrontScript,
 	peerScript lnwire.DeliveryAddress) er.R {
 
 	// If no upfront shutdown script was set, return early because we do not

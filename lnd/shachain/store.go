@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -119,7 +118,7 @@ func (store *RevocationStore) LookUp(v uint64) (*chainhash.Hash, er.R) {
 		return &element.hash, nil
 	}
 
-	return nil, errors.Errorf("unable to derive hash #%v", ind)
+	return nil, er.Errorf("unable to derive hash #%v", ind)
 }
 
 // AddNextEntry attempts to store the given hash within its internal storage in

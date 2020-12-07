@@ -34,13 +34,6 @@ const (
 	msgBufferSize = 100
 )
 
-var (
-	// ErrPsbtFundingRequired is the error that is returned during the
-	// contribution handling process if the process should be paused for
-	// the construction of a PSBT outside of lnd's wallet.
-	ErrPsbtFundingRequired = Err.CodeWithDetail("ErrPsbtFundingRequired", "PSBT funding required")
-)
-
 // PsbtFundingRequired is a type that implements the error interface and
 // contains the information needed to construct a PSBT.
 type PsbtFundingRequired struct {
@@ -53,7 +46,7 @@ type PsbtFundingRequired struct {
 //
 // NOTE: This method is part of the error interface.
 func (p *PsbtFundingRequired) Error() string {
-	return ErrPsbtFundingRequired.Error()
+	return "PsbtFundingRequired(): PSBT funding required"
 }
 
 // InitFundingReserveMsg is the first message sent to initiate the workflow
@@ -135,7 +128,7 @@ type InitFundingReserveMsg struct {
 	// nil if this initial set is successful.
 	//
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 
 	// resp is channel in which a ChannelReservation with our contributions
 	// filled in will be sent across this channel in the case of a
@@ -153,7 +146,7 @@ type fundingReserveCancelMsg struct {
 	pendingFundingID uint64
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error // Buffered
+	err chan er.R // Buffered
 }
 
 // addContributionMsg represents a message executing the second phase of the
@@ -170,7 +163,7 @@ type addContributionMsg struct {
 	contribution *ChannelContribution
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 }
 
 // continueContributionMsg represents a message that signals that the
@@ -180,7 +173,7 @@ type continueContributionMsg struct {
 	pendingFundingID uint64
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 }
 
 // addSingleContributionMsg represents a message executing the second phase of
@@ -194,7 +187,7 @@ type addSingleContributionMsg struct {
 	contribution *ChannelContribution
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 }
 
 // addCounterPartySigsMsg represents the final message required to complete,
@@ -222,7 +215,7 @@ type addCounterPartySigsMsg struct {
 	completeChan chan *channeldb.OpenChannel
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 }
 
 // addSingleFunderSigsMsg represents the next-to-last message required to
@@ -247,7 +240,7 @@ type addSingleFunderSigsMsg struct {
 	completeChan chan *channeldb.OpenChannel
 
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
-	err chan error
+	err chan er.R
 }
 
 // LightningWallet is a domain specific, yet general Bitcoin wallet capable of
@@ -475,7 +468,7 @@ func (l *LightningWallet) InitChannelReservation(
 	req *InitFundingReserveMsg) (*ChannelReservation, er.R) {
 
 	req.resp = make(chan *ChannelReservation, 1)
-	req.err = make(chan error, 1)
+	req.err = make(chan er.R, 1)
 
 	select {
 	case l.msgChan <- req:
@@ -634,7 +627,7 @@ func (l *LightningWallet) handleFundingReserveRequest(req *InitFundingReserveMsg
 
 	var (
 		fundingIntent chanfunding.Intent
-		err           error
+		err           er.R
 	)
 
 	// If we've just received an inbound funding request that we have a
@@ -652,7 +645,7 @@ func (l *LightningWallet) handleFundingReserveRequest(req *InitFundingReserveMsg
 	if !ok {
 		// Coin selection is done on the basis of sat/kw, so we'll use
 		// the fee rate passed in to perform coin selection.
-		var err error
+		var err er.R
 		fundingReq := &chanfunding.Request{
 			RemoteAmt:    req.RemoteFundingAmt,
 			LocalAmt:     req.LocalFundingAmt,
@@ -789,7 +782,7 @@ func (l *LightningWallet) initOurContribution(reservation *ChannelReservation,
 	reservation.nodeAddr = nodeAddr
 	reservation.partialState.IdentityPub = nodeID
 
-	var err error
+	var err er.R
 	reservation.ourContribution.MultiSigKey, err = keyRing.DeriveNextKey(
 		keychain.KeyFamilyMultiSig,
 	)
@@ -975,7 +968,7 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 
 	var (
 		chanPoint *wire.OutPoint
-		err       error
+		err       er.R
 	)
 
 	// At this point, we can now construct our channel point. Depending on
@@ -1021,9 +1014,9 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 		)
 
 		// Exit early because we can't continue the funding flow yet.
-		req.err <- &PsbtFundingRequired{
+		req.err <- er.E(&PsbtFundingRequired{
 			Intent: fundingIntent,
-		}
+		})
 		return
 
 	case *chanfunding.FullIntent:
@@ -1662,7 +1655,7 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 // synchronized manner preventing any coin selection operations from proceeding
 // while the closure is executing. This can be seen as the ability to execute a
 // function closure under an exclusive coin selection lock.
-func (l *LightningWallet) WithCoinSelectLock(f func() error) er.R {
+func (l *LightningWallet) WithCoinSelectLock(f func() er.R) er.R {
 	l.coinSelectMtx.Lock()
 	defer l.coinSelectMtx.Unlock()
 

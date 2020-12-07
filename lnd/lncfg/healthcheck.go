@@ -1,9 +1,9 @@
 package lncfg
 
 import (
-	"errors"
-	"fmt"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 var (

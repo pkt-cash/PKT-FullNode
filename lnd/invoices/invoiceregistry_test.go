@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -208,7 +209,7 @@ func TestSettleInvoice(t *testing.T) {
 
 	// Try to cancel.
 	err = ctx.registry.CancelInvoice(testInvoicePaymentHash)
-	if err != channeldb.ErrInvoiceAlreadySettled {
+	if !channeldb.ErrInvoiceAlreadySettled.Is(err) {
 		t.Fatal("expected cancelation of a settled invoice to fail")
 	}
 
@@ -234,7 +235,7 @@ func testCancelInvoice(t *testing.T, gc bool) {
 
 	// Try to cancel the not yet existing invoice. This should fail.
 	err = ctx.registry.CancelInvoice(testInvoicePaymentHash)
-	if err != channeldb.ErrInvoiceNotFound {
+	if !channeldb.ErrInvoiceNotFound.Is(err) {
 		t.Fatalf("expected ErrInvoiceNotFound, but got %v", err)
 	}
 
@@ -547,7 +548,7 @@ func TestSettleHoldInvoice(t *testing.T) {
 
 	// Idempotency.
 	err = registry.SettleHodlInvoice(testInvoicePreimage)
-	if err != channeldb.ErrInvoiceAlreadySettled {
+	if !channeldb.ErrInvoiceAlreadySettled.Is(err) {
 		t.Fatalf("expected ErrInvoiceAlreadySettled but got %v", err)
 	}
 

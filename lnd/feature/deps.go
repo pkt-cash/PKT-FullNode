@@ -3,6 +3,7 @@ package feature
 import (
 	"fmt"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -82,7 +83,7 @@ func validateDeps(features featureSet, supported supportedFeatures) er.R {
 		// vector is invalid.
 		checked, ok := supported[bit]
 		if !ok {
-			return NewErrMissingFeatureDep(bit)
+			return er.E(NewErrMissingFeatureDep(bit))
 		}
 
 		// Alternatively, if we know that this dependency is valid, we

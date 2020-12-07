@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/bech32"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -738,7 +739,7 @@ func TestParseTaggedFields(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    []byte
-		wantErr error
+		wantErr *er.ErrorCode
 	}{
 		{
 			name: "nil data",
@@ -792,7 +793,8 @@ func TestParseTaggedFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var invoice Invoice
 			gotErr := parseTaggedFields(&invoice, tc.data, netParams)
-			if tc.wantErr != gotErr {
+			if tc.wantErr == nil && gotErr == nil {
+			} else if tc.wantErr == nil || !tc.wantErr.Is(gotErr) {
 				t.Fatalf("Unexpected error. want=%v got=%v",
 					tc.wantErr, gotErr)
 			}

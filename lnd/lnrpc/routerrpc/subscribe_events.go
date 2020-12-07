@@ -1,9 +1,9 @@
 package routerrpc
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/invoices"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -116,7 +116,7 @@ func rpcInfo(info htlcswitch.HtlcInfo) *HtlcInfo {
 func rpcFailReason(linkErr *htlcswitch.LinkError) (lnrpc.Failure_FailureCode,
 	FailureDetail, er.R) {
 
-	wireErr, err := marshallError(linkErr)
+	wireErr, err := marshallError(er.E(linkErr))
 	if err != nil {
 		return 0, 0, err
 	}

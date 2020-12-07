@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -62,9 +63,9 @@ func startup(dbPath, dbFileName string, notifier bool) (sphinx.ReplayLog,
 	// generating an ECDH secret and hashing it, simulate with random bytes.
 	// This is used as a key to retrieve the cltv value.
 	var hashedSecret sphinx.HashPrefix
-	_, err = rand.Read(hashedSecret[:])
-	if err != nil {
-		return nil, nil, nil, err
+	_, errr := rand.Read(hashedSecret[:])
+	if errr != nil {
+		return nil, nil, nil, er.E(errr)
 	}
 
 	return log, chainNotifier, &hashedSecret, nil
@@ -131,7 +132,7 @@ func TestDecayedLogGarbageCollector(t *testing.T) {
 	if err == nil {
 		t.Fatalf("CLTV was not deleted")
 	}
-	if err != sphinx.ErrLogEntryNotFound {
+	if !sphinx.ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 }
@@ -189,7 +190,7 @@ func TestDecayedLogPersistentGarbageCollector(t *testing.T) {
 
 	// Assert that hashedSecret is not in the sharedHashBucket
 	_, err = d2.Get(hashedSecret)
-	if err != sphinx.ErrLogEntryNotFound {
+	if !sphinx.ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 }
@@ -225,7 +226,7 @@ func TestDecayedLogInsertionAndDeletion(t *testing.T) {
 	if err == nil {
 		t.Fatalf("CLTV was not deleted")
 	}
-	if err != sphinx.ErrLogEntryNotFound {
+	if !sphinx.ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 }
@@ -293,7 +294,7 @@ func TestDecayedLogStartAndStop(t *testing.T) {
 	if err == nil {
 		t.Fatalf("CLTV was not deleted")
 	}
-	if err != sphinx.ErrLogEntryNotFound {
+	if !sphinx.ErrLogEntryNotFound.Is(err) {
 		t.Fatalf("Get failed - received unexpected error upon Get: %v", err)
 	}
 }

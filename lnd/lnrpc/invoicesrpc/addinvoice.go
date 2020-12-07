@@ -125,7 +125,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	case invoice.Preimage == nil && invoice.Hash == nil:
 		paymentPreimage = &lntypes.Preimage{}
 		if _, err := rand.Read(paymentPreimage[:]); err != nil {
-			return nil, nil, err
+			return nil, nil, er.E(err)
 		}
 		paymentHash = paymentPreimage.Hash()
 
@@ -314,7 +314,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// intermediaries probing the receiver.
 	var paymentAddr [32]byte
 	if _, err := rand.Read(paymentAddr[:]); err != nil {
-		return nil, nil, err
+		return nil, nil, er.E(err)
 	}
 	options = append(options, zpay32.PaymentAddr(paymentAddr))
 

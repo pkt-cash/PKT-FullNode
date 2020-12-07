@@ -2,12 +2,11 @@ package tlv_test
 
 import (
 	"bytes"
-	"errors"
 	"io"
-	"reflect"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/tlv"
 )
 
@@ -123,7 +122,7 @@ func (n *N2) Decode(r io.Reader) er.R {
 var tlvDecodingFailureTests = []struct {
 	name   string
 	bytes  []byte
-	expErr error
+	expErr er.R
 
 	// skipN2 if true, will cause the test to only be executed on N1.
 	skipN2 bool
@@ -131,42 +130,42 @@ var tlvDecodingFailureTests = []struct {
 	{
 		name:   "type truncated",
 		bytes:  []byte{0xfd},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "type truncated",
 		bytes:  []byte{0xfd, 0x01},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "not minimally encoded type",
 		bytes:  []byte{0xfd, 0x00, 0x01}, // spec has trailing 0x00
-		expErr: tlv.ErrVarIntNotCanonical,
+		expErr: tlv.ErrVarIntNotCanonical.Default(),
 	},
 	{
 		name:   "missing length",
 		bytes:  []byte{0xfd, 0x01, 0x01},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "length truncated",
 		bytes:  []byte{0x0f, 0xfd},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "length truncated",
 		bytes:  []byte{0x0f, 0xfd, 0x26},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "missing value",
 		bytes:  []byte{0x0f, 0xfd, 0x26, 0x02},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "not minimally encoded length",
 		bytes:  []byte{0x0f, 0xfd, 0x00, 0x01}, // spec has trailing 0x00
-		expErr: tlv.ErrVarIntNotCanonical,
+		expErr: tlv.ErrVarIntNotCanonical.Default(),
 	},
 	{
 		name: "value truncated",
@@ -201,7 +200,7 @@ var tlvDecodingFailureTests = []struct {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		},
-		expErr: io.ErrUnexpectedEOF,
+		expErr: er.ErrUnexpectedEOF.Default(),
 	},
 	{
 		name:   "greater than encoding length for n1's amt",
@@ -212,49 +211,49 @@ var tlvDecodingFailureTests = []struct {
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x01, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x02, 0x00, 0x01},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x03, 0x00, 0x01, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x04, 0x00, 0x01, 0x00, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x06, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "encoding for n1's amt is not minimal",
 		bytes:  []byte{0x01, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		expErr: tlv.ErrTUintNotMinimal,
+		expErr: tlv.ErrTUintNotMinimal.Default(),
 		skipN2: true,
 	},
 	{
@@ -344,7 +343,7 @@ var tlvDecodingFailureTests = []struct {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x26, 0x01,
 			0x01, 0x2a,
 		},
-		expErr: tlv.ErrStreamNotCanonical,
+		expErr: tlv.ErrStreamNotCanonical.Default(),
 		skipN2: true,
 	},
 	{
@@ -353,24 +352,24 @@ var tlvDecodingFailureTests = []struct {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x31, 0x02,
 			0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x51,
 		},
-		expErr: tlv.ErrStreamNotCanonical,
+		expErr: tlv.ErrStreamNotCanonical.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "duplicate ignored tlv type",
 		bytes:  []byte{0x1f, 0x00, 0x1f, 0x01, 0x2a},
-		expErr: tlv.ErrStreamNotCanonical,
+		expErr: tlv.ErrStreamNotCanonical.Default(),
 		skipN2: true,
 	},
 	{
 		name:   "type wraparound",
 		bytes:  []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00},
-		expErr: tlv.ErrStreamNotCanonical,
+		expErr: tlv.ErrStreamNotCanonical.Default(),
 	},
 	{
 		name:   "absurd record length",
 		bytes:  []byte{0xfd, 0x01, 0x91, 0xfe, 0xff, 0xff, 0xff, 0xff},
-		expErr: tlv.ErrRecordTooLarge,
+		expErr: tlv.ErrRecordTooLarge.Default(),
 		skipN2: true,
 	},
 }
@@ -384,7 +383,7 @@ func TestTLVDecodingFailures(t *testing.T) {
 			r := bytes.NewReader(test.bytes)
 
 			err := n1.Decode(r)
-			if !reflect.DeepEqual(err, test.expErr) {
+			if !er.FuzzyEquals(err, test.expErr) {
 				t.Fatalf("expected N1 decoding failure: %v, "+
 					"got: %v", test.expErr, err)
 			}
@@ -397,7 +396,7 @@ func TestTLVDecodingFailures(t *testing.T) {
 			r = bytes.NewReader(test.bytes)
 
 			err = n2.Decode(r)
-			if !reflect.DeepEqual(err, test.expErr) {
+			if !er.FuzzyEquals(err, test.expErr) {
 				t.Fatalf("expected N2 decoding failure: %v, "+
 					"got: %v", test.expErr, err)
 			}

@@ -20,7 +20,7 @@ var (
 
 	// ErrCircuitNotInHashIndex indicates that a particular circuit did not
 	// appear in the in-memory hash index.
-	ErrCircuitNotInHashIndex = er.New("payment circuit not found in " +
+	ErrCircuitNotInHashIndex = Err.CodeWithDetail("ErrCircuitNotInHashIndex", "payment circuit not found in "+
 		"hash index")
 
 	// ErrUnknownCircuit signals that circuit could not be removed from the
@@ -255,7 +255,7 @@ func (cm *circuitMap) restoreMemState() er.R {
 		if err := circuitBkt.ForEach(func(_, v []byte) er.R {
 			circuit, err := cm.decodeCircuit(v)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			circuit.LoadedFromDisk = true
@@ -282,10 +282,10 @@ func (cm *circuitMap) restoreMemState() er.R {
 
 			// Decode the incoming and outgoing circuit keys.
 			if err := inKey.SetBytes(v); err != nil {
-				return er.E(err)
+				return err
 			}
 			if err := outKey.SetBytes(k); err != nil {
-				return er.E(err)
+				return err
 			}
 
 			// Retrieve the pending circuit, set its keystone, then

@@ -20,12 +20,12 @@ var (
 
 	// ErrWaitingProofNotFound is returned if waiting proofs haven't been
 	// found by db.
-	ErrWaitingProofNotFound = er.New("waiting proofs haven't been " +
+	ErrWaitingProofNotFound = Err.CodeWithDetail("ErrWaitingProofNotFound", "waiting proofs haven't been "+
 		"found")
 
 	// ErrWaitingProofAlreadyExist is returned if waiting proofs haven't been
 	// found by db.
-	ErrWaitingProofAlreadyExist = er.New("waiting proof with such " +
+	ErrWaitingProofAlreadyExist = Err.CodeWithDetail("ErrWaitingProofAlreadyExist", "waiting proof with such "+
 		"key already exist")
 )
 
@@ -64,7 +64,7 @@ func (s *WaitingProofStore) Add(proof *WaitingProof) er.R {
 	defer s.mu.Unlock()
 
 	err := kvdb.Update(s.db, func(tx kvdb.RwTx) er.R {
-		var err error
+		var err er.R
 		var b bytes.Buffer
 
 		// Get or create the bucket.
@@ -124,8 +124,7 @@ func (s *WaitingProofStore) Remove(key WaitingProofKey) er.R {
 
 // ForAll iterates thought all waiting proofs and passing the waiting proof
 // in the given callback.
-func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
-	reset func()) er.R {
+func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) er.R, reset func()) er.R {
 
 	return kvdb.View(s.db, func(tx kvdb.RTx) er.R {
 		bucket := tx.ReadBucket(waitingProofsBucketKey)
@@ -143,10 +142,10 @@ func (s *WaitingProofStore) ForAll(cb func(*WaitingProof) error,
 			r := bytes.NewReader(v)
 			proof := &WaitingProof{}
 			if err := proof.Decode(r); err != nil {
-				return er.E(err)
+				return err
 			}
 
-			return er.E(cb(proof))
+			return cb(proof)
 		})
 	}, reset)
 }

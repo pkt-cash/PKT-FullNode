@@ -1,6 +1,7 @@
 package wtserver
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
 )
@@ -19,7 +20,7 @@ func (s *Server) handleDeleteSession(peer Peer, id *wtdb.SessionID) er.R {
 
 		log.Debugf("Session %s deleted", id)
 
-	case err == wtdb.ErrSessionNotFound:
+	case wtdb.ErrSessionNotFound.Is(err):
 		failCode = wtwire.DeleteSessionCodeNotFound
 
 	default:
@@ -50,8 +51,8 @@ func (s *Server) replyDeleteSession(peer Peer, id *wtdb.SessionID,
 
 	// Otherwise the request failed, return a connection failure to
 	// disconnect the client.
-	return &connFailure{
+	return er.E(&connFailure{
 		ID:   *id,
 		Code: code,
-	}
+	})
 }

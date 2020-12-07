@@ -11,12 +11,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
 	"github.com/pkt-cash/pktd/lnd/signal"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/urfave/cli"
 )
 
@@ -196,7 +198,7 @@ func openChannel(ctx *cli.Context) er.R {
 	defer cleanUp()
 
 	args := ctx.Args()
-	var err error
+	var errr error
 
 	// Show command help if no arguments provided
 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
@@ -255,7 +257,7 @@ func openChannel(ctx *cli.Context) er.R {
 		_, err := client.ConnectPeer(ctxb, req)
 		if err != nil &&
 			!strings.Contains(err.Error(), "already connected") {
-			return err
+			return er.E(err)
 		}
 	}
 
@@ -263,9 +265,9 @@ func openChannel(ctx *cli.Context) er.R {
 	case ctx.IsSet("local_amt"):
 		req.LocalFundingAmount = int64(ctx.Int("local_amt"))
 	case args.Present():
-		req.LocalFundingAmount, err = strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
-			return er.Errorf("unable to decode local amt: %v", err)
+		req.LocalFundingAmount, errr = strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
+			return er.Errorf("unable to decode local amt: %v", errr)
 		}
 		args = args.Tail()
 	default:
@@ -275,9 +277,9 @@ func openChannel(ctx *cli.Context) er.R {
 	if ctx.IsSet("push_amt") {
 		req.PushSat = int64(ctx.Int("push_amt"))
 	} else if args.Present() {
-		req.PushSat, err = strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
-			return er.Errorf("unable to decode push amt: %v", err)
+		req.PushSat, errr = strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
+			return er.Errorf("unable to decode push amt: %v", errr)
 		}
 	}
 
@@ -293,9 +295,9 @@ func openChannel(ctx *cli.Context) er.R {
 			"combination with the --psbt flag")
 	}
 
-	stream, err := client.OpenChannel(ctxb, req)
-	if err != nil {
-		return err
+	stream, errr := client.OpenChannel(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	for {
@@ -303,7 +305,7 @@ func openChannel(ctx *cli.Context) er.R {
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		switch update := resp.Update.(type) {
@@ -346,7 +348,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 		basePsbtBytes []byte
 		quit          = make(chan struct{})
 		srvMsg        = make(chan *lnrpc.OpenStatusUpdate, 1)
-		srvErr        = make(chan error, 1)
+		srvErr        = make(chan er.R, 1)
 		ctxc, cancel  = context.WithCancel(context.Background())
 	)
 	defer cancel()
@@ -362,6 +364,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 	// The RPC server will make sure it's also a valid PSBT.
 	basePsbt := ctx.String("base_psbt")
 	if basePsbt != "" {
+		var err error
 		basePsbtBytes, err = base64.StdEncoding.DecodeString(basePsbt)
 		if err != nil {
 			return er.Errorf("error parsing base PSBT: %v", err)
@@ -419,9 +422,9 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 	// daemon. If the user cancels by pressing <Ctrl+C> we need to cancel
 	// the shim. To not just kill the process on interrupt, we need to
 	// explicitly capture the signal.
-	stream, err := client.OpenChannel(ctxc, req)
-	if err != nil {
-		return er.Errorf("opening stream to server failed: %v", err)
+	stream, errr := client.OpenChannel(ctxc, req)
+	if errr != nil {
+		return er.Errorf("opening stream to server failed: %v", errr)
 	}
 
 	if err := signal.Intercept(); err != nil {
@@ -470,8 +473,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 			// has already been deleted. We don't need to try to
 			// remove it again, this would just produce another
 			// error.
-			cancelErr := chanfunding.ErrRemoteCanceled.Error()
-			if err != nil && strings.Contains(err.Error(), cancelErr) {
+			if chanfunding.ErrRemoteCanceled.Is(err) {
 				shimPending = false
 			}
 			close(quit)
@@ -507,19 +509,19 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 			// verify everything's correct before anything is
 			// signed.
 			psbtBase64, err := readLine(quit)
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				return nil
 			}
 			if err != nil {
 				return er.Errorf("reading from console "+
 					"failed: %v", err)
 			}
-			fundedPsbt, err := base64.StdEncoding.DecodeString(
+			fundedPsbt, errr := base64.StdEncoding.DecodeString(
 				strings.TrimSpace(psbtBase64),
 			)
-			if err != nil {
+			if errr != nil {
 				return er.Errorf("base64 decode failed: %v",
-					err)
+					errr)
 			}
 			verifyMsg := &lnrpc.FundingTransitionMsg{
 				Trigger: &lnrpc.FundingTransitionMsg_PsbtVerify{
@@ -541,7 +543,7 @@ func openChannelPsbt(ctx *cli.Context, client lnrpc.LightningClient,
 
 			// Read the signed PSBT and send it to lnd.
 			finalTxStr, err := readLine(quit)
-			if err == io.EOF {
+			if er.Wrapped(err) == io.EOF {
 				return nil
 			}
 			if err != nil {
@@ -654,7 +656,7 @@ func readLine(quit chan struct{}) (string, er.R) {
 	for {
 		select {
 		case <-quit:
-			return "", io.EOF
+			return "", er.E(io.EOF)
 
 		case str := <-msg:
 			return str, nil
@@ -686,8 +688,8 @@ func sendFundingState(cancelCtx context.Context, cliCtx *cli.Context,
 	client, cleanUp := getClient(cliCtx)
 	defer cleanUp()
 
-	_, err := client.FundingStateStep(cancelCtx, msg)
-	return err
+	_, errr := client.FundingStateStep(cancelCtx, msg)
+	return er.E(errr)
 }
 
 // finalizeMsgFromString creates the final message for the PsbtFinalize step
@@ -716,9 +718,9 @@ func finalizeMsgFromString(tx string,
 
 	// If the string isn't a hex encoded transaction, we assume it must be
 	// a base64 encoded PSBT packet.
-	psbtBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(tx))
-	if err != nil {
-		return nil, er.Errorf("base64 decode failed: %v", err)
+	psbtBytes, errr := base64.StdEncoding.DecodeString(strings.TrimSpace(tx))
+	if errr != nil {
+		return nil, er.Errorf("base64 decode failed: %v", errr)
 	}
 	return &lnrpc.FundingTransitionMsg_PsbtFinalize{
 		PsbtFinalize: &lnrpc.FundingPsbtFinalize{

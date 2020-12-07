@@ -5,7 +5,6 @@
 package lnd
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -20,6 +19,7 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
@@ -482,7 +482,7 @@ func LoadConfig() (*Config, er.R) {
 	// file.
 	preCfg := DefaultConfig()
 	if _, err := flags.Parse(&preCfg); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Show the version and exit if the version flag was specified.
@@ -517,7 +517,7 @@ func LoadConfig() (*Config, er.R) {
 		// immediately, otherwise we can proceed as possibly the config
 		// file doesn't exist which is OK.
 		if _, ok := err.(*flags.IniError); ok {
-			return nil, err
+			return nil, er.E(err)
 		}
 
 		configFileError = err
@@ -526,7 +526,7 @@ func LoadConfig() (*Config, er.R) {
 	// Finally, parse the remaining command line options again to ensure
 	// they take precedence.
 	if _, err := flags.Parse(&cfg); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	// Make sure everything we just loaded makes sense.
@@ -572,21 +572,24 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 
 	funcName := "loadConfig"
 	makeDirectory := func(dir string) er.R {
-		err := os.MkdirAll(dir, 0700)
-		if err != nil {
+		errr := os.MkdirAll(dir, 0700)
+		if errr != nil {
 			// Show a nicer error message if it's because a symlink
 			// is linked to a directory that does not exist
 			// (probably because it's not mounted).
-			if e, ok := err.(*os.PathError); ok && os.IsExist(err) {
+			var err er.R
+			if e, ok := errr.(*os.PathError); ok && os.IsExist(errr) {
 				link, lerr := os.Readlink(e.Path)
 				if lerr == nil {
 					str := "is symlink %s -> %s mounted?"
 					err = er.Errorf(str, e.Path, link)
 				}
+			} else {
+				err = er.E(errr)
 			}
 
 			str := "%s: Failed to create lnd directory: %v"
-			err := er.Errorf(str, funcName, err)
+			err = er.Errorf(str, funcName, err)
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return err
 		}
@@ -1121,7 +1124,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 	)
 	if err != nil {
 		str := "%s: log rotation setup failed: %v"
-		err = er.Errorf(str, funcName, err.Error())
+		err = er.Errorf(str, funcName, err.String())
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
@@ -1129,7 +1132,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 	// Parse, validate, and set debug log level(s).
 	err = build.ParseAndSetDebugLevels(cfg.DebugLevel, cfg.LogWriter)
 	if err != nil {
-		err = er.Errorf("%s: %v", funcName, err.Error())
+		err = er.Errorf("%s: %v", funcName, err.String())
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, err
@@ -1462,25 +1465,25 @@ func parseRPCParams(cConfig *lncfg.Chain, nodeConfig interface{},
 func extractBtcdRPCParams(btcdConfigPath string) (string, string, er.R) {
 	// First, we'll open up the btcd configuration file found at the target
 	// destination.
-	btcdConfigFile, err := os.Open(btcdConfigPath)
-	if err != nil {
-		return "", "", err
+	btcdConfigFile, errr := os.Open(btcdConfigPath)
+	if errr != nil {
+		return "", "", er.E(errr)
 	}
 	defer func() { _ = btcdConfigFile.Close() }()
 
 	// With the file open extract the contents of the configuration file so
 	// we can attempt to locate the RPC credentials.
-	configContents, err := ioutil.ReadAll(btcdConfigFile)
-	if err != nil {
-		return "", "", err
+	configContents, errr := ioutil.ReadAll(btcdConfigFile)
+	if errr != nil {
+		return "", "", er.E(errr)
 	}
 
 	// Attempt to locate the RPC user using a regular expression. If we
 	// don't have a match for our regular expression then we'll exit with
 	// an error.
-	rpcUserRegexp, err := regexp.Compile(`(?m)^\s*rpcuser\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", err
+	rpcUserRegexp, errr := regexp.Compile(`(?m)^\s*rpcuser\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", er.E(errr)
 	}
 	userSubmatches := rpcUserRegexp.FindSubmatch(configContents)
 	if userSubmatches == nil {
@@ -1490,9 +1493,9 @@ func extractBtcdRPCParams(btcdConfigPath string) (string, string, er.R) {
 	// Similarly, we'll use another regular expression to find the set
 	// rpcpass (if any). If we can't find the pass, then we'll exit with an
 	// error.
-	rpcPassRegexp, err := regexp.Compile(`(?m)^\s*rpcpass\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", err
+	rpcPassRegexp, errr := regexp.Compile(`(?m)^\s*rpcpass\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", er.E(errr)
 	}
 	passSubmatches := rpcPassRegexp.FindSubmatch(configContents)
 	if passSubmatches == nil {
@@ -1512,35 +1515,35 @@ func extractBitcoindRPCParams(networkName string,
 
 	// First, we'll open up the bitcoind configuration file found at the
 	// target destination.
-	bitcoindConfigFile, err := os.Open(bitcoindConfigPath)
-	if err != nil {
-		return "", "", "", "", err
+	bitcoindConfigFile, errr := os.Open(bitcoindConfigPath)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	defer func() { _ = bitcoindConfigFile.Close() }()
 
 	// With the file open extract the contents of the configuration file so
 	// we can attempt to locate the RPC credentials.
-	configContents, err := ioutil.ReadAll(bitcoindConfigFile)
-	if err != nil {
-		return "", "", "", "", err
+	configContents, errr := ioutil.ReadAll(bitcoindConfigFile)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 
 	// First, we'll look for the ZMQ hosts providing raw block and raw
 	// transaction notifications.
-	zmqBlockHostRE, err := regexp.Compile(
+	zmqBlockHostRE, errr := regexp.Compile(
 		`(?m)^\s*zmqpubrawblock\s*=\s*([^\s]+)`,
 	)
-	if err != nil {
-		return "", "", "", "", err
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	zmqBlockHostSubmatches := zmqBlockHostRE.FindSubmatch(configContents)
 	if len(zmqBlockHostSubmatches) < 2 {
 		return "", "", "", "", er.Errorf("unable to find " +
 			"zmqpubrawblock in config")
 	}
-	zmqTxHostRE, err := regexp.Compile(`(?m)^\s*zmqpubrawtx\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", "", "", err
+	zmqTxHostRE, errr := regexp.Compile(`(?m)^\s*zmqpubrawtx\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	zmqTxHostSubmatches := zmqTxHostRE.FindSubmatch(configContents)
 	if len(zmqTxHostSubmatches) < 2 {
@@ -1556,9 +1559,9 @@ func extractBitcoindRPCParams(networkName string,
 	// Next, we'll try to find an auth cookie. We need to detect the chain
 	// by seeing if one is specified in the configuration file.
 	dataDir := path.Dir(bitcoindConfigPath)
-	dataDirRE, err := regexp.Compile(`(?m)^\s*datadir\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", "", "", err
+	dataDirRE, errr := regexp.Compile(`(?m)^\s*datadir\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	dataDirSubmatches := dataDirRE.FindSubmatch(configContents)
 	if dataDirSubmatches != nil {
@@ -1587,9 +1590,9 @@ func extractBitcoindRPCParams(networkName string,
 	// We didn't find a cookie, so we attempt to locate the RPC user using
 	// a regular expression. If we  don't have a match for our regular
 	// expression then we'll exit with an error.
-	rpcUserRegexp, err := regexp.Compile(`(?m)^\s*rpcuser\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", "", "", err
+	rpcUserRegexp, errr := regexp.Compile(`(?m)^\s*rpcuser\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	userSubmatches := rpcUserRegexp.FindSubmatch(configContents)
 	if userSubmatches == nil {
@@ -1600,9 +1603,9 @@ func extractBitcoindRPCParams(networkName string,
 	// Similarly, we'll use another regular expression to find the set
 	// rpcpass (if any). If we can't find the pass, then we'll exit with an
 	// error.
-	rpcPassRegexp, err := regexp.Compile(`(?m)^\s*rpcpassword\s*=\s*([^\s]+)`)
-	if err != nil {
-		return "", "", "", "", err
+	rpcPassRegexp, errr := regexp.Compile(`(?m)^\s*rpcpassword\s*=\s*([^\s]+)`)
+	if errr != nil {
+		return "", "", "", "", er.E(errr)
 	}
 	passSubmatches := rpcPassRegexp.FindSubmatch(configContents)
 	if passSubmatches == nil {

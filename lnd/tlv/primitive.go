@@ -18,11 +18,11 @@ type ErrTypeForEncoding struct {
 
 // NewTypeForEncodingErr creates a new ErrTypeForEncoding given the incorrect
 // val and the expected type.
-func NewTypeForEncodingErr(val interface{}, expType string) ErrTypeForEncoding {
-	return ErrTypeForEncoding{
+func NewTypeForEncodingErr(val interface{}, expType string) er.R {
+	return er.E(ErrTypeForEncoding{
 		val:     val,
 		expType: expType,
-	}
+	})
 }
 
 // Error returns a human-readable description of the type mismatch.
@@ -44,14 +44,14 @@ type ErrTypeForDecoding struct {
 // NewTypeForDecodingErr creates a new ErrTypeForDecoding given the incorrect
 // val and expected type, or the mismatch in their expected lengths.
 func NewTypeForDecodingErr(val interface{}, expType string,
-	valLength, expLength uint64) ErrTypeForDecoding {
+	valLength, expLength uint64) er.R {
 
-	return ErrTypeForDecoding{
+	return er.E(ErrTypeForDecoding{
 		val:       val,
 		expType:   expType,
 		valLength: valLength,
 		expLength: expLength,
-	}
+	})
 }
 
 // Error returns a human-readable description of the type mismatch.

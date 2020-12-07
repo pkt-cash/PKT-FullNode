@@ -3,10 +3,9 @@
 package monitoring
 
 import (
-	"fmt"
-
 	"google.golang.org/grpc"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 )
 

@@ -66,7 +66,7 @@ var (
 
 	// ErrClientSessionAlreadyExists signals an attempt to reinsert a client
 	// session that has already been created.
-	ErrClientSessionAlreadyExists = er.New(
+	ErrClientSessionAlreadyExists = Err.CodeWithDetail("ErrClientSessionAlreadyExists",
 		"client session already exists",
 	)
 
@@ -96,7 +96,7 @@ var (
 
 	// ErrUnallocatedLastApplied signals that the tower tried to provide a
 	// LastApplied value greater than any allocated sequence number.
-	ErrUnallocatedLastApplied = er.New("tower echoed last appiled " +
+	ErrUnallocatedLastApplied = Err.CodeWithDetail("ErrUnallocatedLastApplied", "tower echoed last appiled "+
 		"greater than allocated seqnum")
 
 	// ErrNoReservedKeyIndex signals that a client session could not be
@@ -192,7 +192,7 @@ func (c *ClientDB) bdb() kvdb.Backend {
 func (c *ClientDB) Version() (uint32, er.R) {
 	var version uint32
 	err := kvdb.View(c.db, func(tx kvdb.RTx) er.R {
-		var err error
+		var err er.R
 		version, err = getDBVersion(tx)
 		return err
 	}, func() {
@@ -236,7 +236,7 @@ func (c *ClientDB) CreateTower(lnAddr *lnwire.NetAddress) (*Tower, er.R) {
 		if len(towerIDBytes) == 8 {
 			// The tower already exists, deserialize the existing
 			// record.
-			var err error
+			var err er.R
 			tower, err = getTower(towers, towerIDBytes)
 			if err != nil {
 				return err
@@ -402,7 +402,7 @@ func (c *ClientDB) LoadTowerByID(towerID TowerID) (*Tower, er.R) {
 			return ErrUninitializedDB.Default()
 		}
 
-		var err error
+		var err er.R
 		tower, err = getTower(towers, towerID.Bytes())
 		return err
 	}, func() {
@@ -433,7 +433,7 @@ func (c *ClientDB) LoadTower(pubKey *btcec.PublicKey) (*Tower, er.R) {
 			return ErrTowerNotFound.Default()
 		}
 
-		var err error
+		var err er.R
 		tower, err = getTower(towers, towerIDBytes)
 		return err
 	}, func() {
@@ -458,7 +458,7 @@ func (c *ClientDB) ListTowers() ([]*Tower, er.R) {
 		return towerBucket.ForEach(func(towerIDBytes, _ []byte) er.R {
 			tower, err := getTower(towerBucket, towerIDBytes)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 			towers = append(towers, tower)
 			return nil
@@ -584,7 +584,7 @@ func (c *ClientDB) ListClientSessions(id *TowerID) (map[SessionID]*ClientSession
 		if sessions == nil {
 			return ErrUninitializedDB.Default()
 		}
-		var err error
+		var err er.R
 		clientSessions, err = listClientSessions(sessions, id)
 		return err
 	}, func() {
@@ -611,7 +611,7 @@ func listClientSessions(sessions kvdb.RBucket,
 		// for each channel.
 		session, err := getClientSession(sessions, k)
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		// Filter out any sessions that don't correspond to the given
@@ -648,7 +648,7 @@ func (c *ClientDB) FetchChanSummaries() (ChannelSummaries, er.R) {
 			var summary ClientChanSummary
 			err := summary.Decode(bytes.NewReader(v))
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			summaries[chanID] = summary
@@ -996,7 +996,7 @@ func getClientSessionCommits(sessions kvdb.RBucket,
 		var committedUpdate CommittedUpdate
 		err := committedUpdate.Decode(bytes.NewReader(v))
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 		committedUpdate.SeqNum = byteOrder.Uint16(k)
 
@@ -1034,7 +1034,7 @@ func getClientSessionAcks(sessions kvdb.RBucket,
 		var backupID BackupID
 		err := backupID.Decode(bytes.NewReader(v))
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 
 		ackedUpdates[seqNum] = backupID

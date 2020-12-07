@@ -1,17 +1,16 @@
 package discovery
 
 import (
-	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 

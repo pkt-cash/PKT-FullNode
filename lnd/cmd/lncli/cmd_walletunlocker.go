@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/walletunlocker"
@@ -137,7 +138,7 @@ func create(ctx *cli.Context) er.R {
 	switch {
 	// parseChanBackups returns an errMissingBackup error (which we ignore) if
 	// the user did not request a SCB recovery.
-	case err == errMissingChanBackup:
+	case errMissingChanBackup.Is(err):
 
 	// Passed an invalid channel backup file.
 	case err != nil:
@@ -159,7 +160,7 @@ func create(ctx *cli.Context) er.R {
 			reader := bufio.NewReader(os.Stdin)
 			answer, err := reader.ReadString('\n')
 			if err != nil {
-				return err
+				return er.E(err)
 			}
 
 			answer = strings.TrimSpace(answer)
@@ -227,9 +228,9 @@ mnemonicCheck:
 			"mnemonic you want to use? (Enter y/n): ")
 
 		reader := bufio.NewReader(os.Stdin)
-		answer, err := reader.ReadString('\n')
-		if err != nil {
-			return err
+		answer, errr := reader.ReadString('\n')
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		fmt.Println()
@@ -259,9 +260,9 @@ mnemonicCheck:
 		// mnemonic.
 		fmt.Printf("Input your 24-word mnemonic separated by spaces: ")
 		reader := bufio.NewReader(os.Stdin)
-		mnemonic, err := reader.ReadString('\n')
-		if err != nil {
-			return err
+		mnemonic, errr := reader.ReadString('\n')
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// We'll trim off extra spaces, and ensure the mnemonic is all
@@ -296,9 +297,9 @@ mnemonicCheck:
 				defaultRecoveryWindow)
 
 			reader := bufio.NewReader(os.Stdin)
-			answer, err := reader.ReadString('\n')
-			if err != nil {
-				return err
+			answer, errr := reader.ReadString('\n')
+			if errr != nil {
+				return er.E(errr)
 			}
 
 			fmt.Println()
@@ -384,9 +385,9 @@ mnemonicCheck:
 		ChannelBackups:     chanBackups,
 		StatelessInit:      statelessInit,
 	}
-	response, err := client.InitWallet(ctxb, req)
-	if err != nil {
-		return err
+	response, errr := client.InitWallet(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	fmt.Println("\nlnd successfully initialized!")
@@ -404,7 +405,7 @@ mnemonicCheck:
 // true, the function may return an empty byte array if the user opts against
 // using a password.
 func capturePassword(instruction string, optional bool,
-	validate func([]byte) error) ([]byte, er.R) {
+	validate func([]byte) er.R) ([]byte, er.R) {
 
 	for {
 		password, err := readPassword(instruction)
@@ -421,7 +422,7 @@ func capturePassword(instruction string, optional bool,
 		// If the password provided is not valid, restart
 		// password capture process from the beginning.
 		if err := validate(password); err != nil {
-			fmt.Println(err.Error())
+			fmt.Println(err.String())
 			fmt.Println()
 			continue
 		}
@@ -486,8 +487,9 @@ func unlock(ctx *cli.Context) er.R {
 	defer cleanUp()
 
 	var (
-		pw  []byte
-		err error
+		pw   []byte
+		errr error
+		err  er.R
 	)
 	switch {
 	// Read the password from standard in as if it were a file. This should
@@ -496,7 +498,7 @@ func unlock(ctx *cli.Context) er.R {
 	// echoed in the console.
 	case ctx.IsSet("stdin"):
 		reader := bufio.NewReader(os.Stdin)
-		pw, err = reader.ReadBytes('\n')
+		pw, errr = reader.ReadBytes('\n')
 
 		// Remove carriage return and newline characters.
 		pw = bytes.Trim(pw, "\r\n")
@@ -510,6 +512,9 @@ func unlock(ctx *cli.Context) er.R {
 	if err != nil {
 		return err
 	}
+	if errr != nil {
+		return er.E(errr)
+	}
 
 	args := ctx.Args()
 
@@ -521,9 +526,9 @@ func unlock(ctx *cli.Context) er.R {
 	case ctx.IsSet("recovery_window"):
 		recoveryWindow = int32(ctx.Int64("recovery_window"))
 	case args.Present():
-		window, err := strconv.ParseInt(args.First(), 10, 64)
-		if err != nil {
-			return err
+		window, errr := strconv.ParseInt(args.First(), 10, 64)
+		if errr != nil {
+			return er.E(errr)
 		}
 		recoveryWindow = int32(window)
 	}
@@ -533,9 +538,9 @@ func unlock(ctx *cli.Context) er.R {
 		RecoveryWindow: recoveryWindow,
 		StatelessInit:  ctx.Bool(statelessInitFlag.Name),
 	}
-	_, err = client.UnlockWallet(ctxb, req)
-	if err != nil {
-		return err
+	_, errr = client.UnlockWallet(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	fmt.Println("\nlnd successfully unlocked!")
@@ -630,9 +635,9 @@ func changePassword(ctx *cli.Context) er.R {
 		NewMacaroonRootKey: ctx.Bool("new_mac_root_key"),
 	}
 
-	response, err := client.ChangePassword(ctxb, req)
-	if err != nil {
-		return err
+	response, errr := client.ChangePassword(ctxb, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	if statelessInit {
@@ -652,7 +657,7 @@ func storeOrPrintAdminMac(ctx *cli.Context, adminMac []byte) er.R {
 		err := ioutil.WriteFile(macSavePath, adminMac, 0644)
 		if err != nil {
 			_ = os.Remove(macSavePath)
-			return err
+			return er.E(err)
 		}
 		fmt.Printf("Admin macaroon saved to %s\n", macSavePath)
 		return nil

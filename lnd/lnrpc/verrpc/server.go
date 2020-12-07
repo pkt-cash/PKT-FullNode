@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
@@ -72,7 +73,7 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 	if err != nil {
 		log.Errorf("Could not register Versioner REST server "+
 			"with root REST server: %v", err)
-		return err
+		return er.E(err)
 	}
 
 	log.Debugf("Versioner REST server successfully registered with " +
@@ -82,7 +83,7 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 
 // GetVersion returns information about the compiled binary.
 func (s *Server) GetVersion(_ context.Context,
-	_ *VersionRequest) (*Version, er.R) {
+	_ *VersionRequest) (*Version, error) {
 
 	return &Version{
 		Commit:        build.Commit,

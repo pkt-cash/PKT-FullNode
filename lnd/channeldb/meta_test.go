@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 )
 
@@ -56,10 +56,10 @@ func applyMigration(t *testing.T, beforeMigration, afterMigration func(d *DB),
 
 	defer func() {
 		if r := recover(); r != nil {
-			if dryRun && r != ErrDryRunMigrationOK {
+			if dryRun && !ErrDryRunMigrationOK.Is(err) {
 				t.Fatalf("expected dry run migration OK")
 			}
-			err = er.New(r)
+			err = er.Errorf("%v", r)
 		}
 
 		if err == nil && shouldFail {
@@ -421,12 +421,12 @@ func TestMigrationWithoutErrors(t *testing.T) {
 func TestMigrationReversion(t *testing.T) {
 	t.Parallel()
 
-	tempDirName, err := ioutil.TempDir("", "channeldb")
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
 	defer func() {
 		os.RemoveAll(tempDirName)
 	}()
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 
 	backend, cleanup, err := kvdb.GetTestBackend(tempDirName, "cdb")
@@ -465,7 +465,7 @@ func TestMigrationReversion(t *testing.T) {
 	defer cleanup()
 
 	_, err = CreateWithBackend(backend)
-	if err != ErrDBReversion {
+	if !ErrDBReversion.Is(err) {
 		t.Fatalf("unexpected error when opening channeldb, "+
 			"want: %v, got: %v", ErrDBReversion, err)
 	}

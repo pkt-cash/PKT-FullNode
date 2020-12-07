@@ -261,7 +261,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 
 	localChanDB, remoteChanDB, cleanUp, err := initializeDatabases(ctx, cfg)
 	switch {
-	case err == channeldb.ErrDryRunMigrationOK:
+	case channeldb.ErrDryRunMigrationOK.Is(err):
 		ltndLog.Infof("%v, exiting", err)
 		return nil
 	case err != nil:
@@ -363,7 +363,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// unlocker, that will be called when it needs listeners for its GPRC
 	// server.
 	walletUnlockerListeners := func() ([]*ListenerWithSignal, func(),
-		error) {
+		er.R) {
 
 		// If we have chosen to start with a dedicated listener for the
 		// wallet unlocker, we return it directly.
@@ -427,7 +427,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		// Ignore ErrAlreadyUnlocked since it could be unlocked by the
 		// wallet unlocker.
 		err = macaroonService.CreateUnlock(&privateWalletPw)
-		if err != nil && err != macaroons.ErrAlreadyUnlocked {
+		if err != nil && !macaroons.ErrAlreadyUnlocked.Is(err) {
 			err := er.Errorf("unable to unlock macaroons: %v", err)
 			ltndLog.Error(err)
 			return err
@@ -564,7 +564,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// This is done here so that Close always executes when lndMain returns.
 	var towerClientDB *wtdb.ClientDB
 	if cfg.WtClient.Active {
-		var err error
+		var err er.R
 		towerClientDB, err = wtdb.OpenClientDB(cfg.localDatabaseDir())
 		if err != nil {
 			err := er.Errorf("unable to open watchtower client "+
@@ -835,7 +835,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 // getTLSConfig returns a TLS configuration for the gRPC server and credentials
 // and a proxy destination for the REST reverse proxy.
 func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
-	func(net.Addr) (net.Listener, error), func(), er.R) {
+	func(net.Addr) (net.Listener, er.R), func(), er.R) {
 
 	// Ensure we create TLS key and certificate if they don't exist.
 	if !fileExists(cfg.TLSCertPath) && !fileExists(cfg.TLSKeyPath) {
@@ -851,11 +851,11 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		rpcsLog.Infof("Done generating TLS certificates")
 	}
 
-	certData, parsedCert, err := cert.LoadCert(
+	certData, parsedCert, errr := cert.LoadCert(
 		cfg.TLSCertPath, cfg.TLSKeyPath,
 	)
-	if err != nil {
-		return nil, nil, nil, nil, err
+	if errr != nil {
+		return nil, nil, nil, nil, er.E(errr)
 	}
 
 	// We check whether the certifcate we have on disk match the IPs and
@@ -863,6 +863,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 	// changed from when the certificate was created, we will refresh the
 	// certificate if auto refresh is active.
 	refresh := false
+	var err er.R
 	if cfg.TLSAutoRefresh {
 		refresh, err = cert.IsOutdated(
 			parsedCert, cfg.TLSExtraIPs,
@@ -879,14 +880,14 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		ltndLog.Info("TLS certificate is expired or outdated, " +
 			"generating a new one")
 
-		err := os.Remove(cfg.TLSCertPath)
-		if err != nil {
-			return nil, nil, nil, nil, err
+		errr := os.Remove(cfg.TLSCertPath)
+		if errr != nil {
+			return nil, nil, nil, nil, er.E(errr)
 		}
 
-		err = os.Remove(cfg.TLSKeyPath)
-		if err != nil {
-			return nil, nil, nil, nil, err
+		errr = os.Remove(cfg.TLSKeyPath)
+		if errr != nil {
+			return nil, nil, nil, nil, er.E(errr)
 		}
 
 		rpcsLog.Infof("Renewing TLS certificates...")
@@ -901,19 +902,19 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		rpcsLog.Infof("Done renewing TLS certificates")
 
 		// Reload the certificate data.
-		certData, _, err = cert.LoadCert(
+		certData, _, errr = cert.LoadCert(
 			cfg.TLSCertPath, cfg.TLSKeyPath,
 		)
-		if err != nil {
-			return nil, nil, nil, nil, err
+		if errr != nil {
+			return nil, nil, nil, nil, er.E(errr)
 		}
 	}
 
 	tlsCfg := cert.TLSConfFromCert(certData)
 
-	restCreds, err := credentials.NewClientTLSFromFile(cfg.TLSCertPath, "")
-	if err != nil {
-		return nil, nil, nil, nil, err
+	restCreds, errr := credentials.NewClientTLSFromFile(cfg.TLSCertPath, "")
+	if errr != nil {
+		return nil, nil, nil, nil, er.E(errr)
 	}
 
 	// If Let's Encrypt is enabled, instantiate autocert to request/renew
@@ -958,7 +959,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		}()
 
 		getCertificate := func(h *tls.ClientHelloInfo) (
-			*tls.Certificate, er.R) {
+			*tls.Certificate, error) {
 
 			lecert, err := manager.GetCertificate(h)
 			if err != nil {
@@ -1026,7 +1027,8 @@ func bakeMacaroon(ctx context.Context, svc *macaroons.Service,
 		return nil, err
 	}
 
-	return mac.M().MarshalBinary()
+	b, e := mac.M().MarshalBinary()
+	return b, er.E(e)
 }
 
 // genMacaroons generates three macaroon files; one admin-level, one for
@@ -1043,10 +1045,10 @@ func genMacaroons(ctx context.Context, svc *macaroons.Service,
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(invoiceFile, invoiceMacBytes, 0644)
-	if err != nil {
+	errr := ioutil.WriteFile(invoiceFile, invoiceMacBytes, 0644)
+	if errr != nil {
 		_ = os.Remove(invoiceFile)
-		return err
+		return er.E(errr)
 	}
 
 	// Generate the read-only macaroon and write it to a file.
@@ -1054,9 +1056,9 @@ func genMacaroons(ctx context.Context, svc *macaroons.Service,
 	if err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(roFile, roBytes, 0644); err != nil {
+	if errr = ioutil.WriteFile(roFile, roBytes, 0644); errr != nil {
 		_ = os.Remove(roFile)
-		return err
+		return er.E(errr)
 	}
 
 	// Generate the admin macaroon and write it to a file.
@@ -1064,9 +1066,9 @@ func genMacaroons(ctx context.Context, svc *macaroons.Service,
 	if err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(admFile, admBytes, 0600); err != nil {
+	if errr = ioutil.WriteFile(admFile, admBytes, 0600); errr != nil {
 		_ = os.Remove(admFile)
-		return err
+		return er.E(errr)
 	}
 
 	return nil
@@ -1125,7 +1127,7 @@ type WalletUnlockParams struct {
 // the user to this RPC server.
 func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	serverOpts []grpc.ServerOption, restDialOpts []grpc.DialOption,
-	restProxyDest string, restListen func(net.Addr) (net.Listener, error),
+	restProxyDest string, restListen func(net.Addr) (net.Listener, er.R),
 	getListeners rpcListeners) (*WalletUnlockParams, func(), er.R) {
 
 	chainConfig := cfg.Bitcoin
@@ -1194,11 +1196,11 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 
 	mux := proxy.NewServeMux()
 
-	err = lnrpc.RegisterWalletUnlockerHandlerFromEndpoint(
+	errr := lnrpc.RegisterWalletUnlockerHandlerFromEndpoint(
 		ctx, mux, restProxyDest, restDialOpts,
 	)
-	if err != nil {
-		return nil, shutdown, err
+	if errr != nil {
+		return nil, shutdown, er.E(errr)
 	}
 
 	srv := &http.Server{Handler: allowCORS(mux, cfg.RestCORS)}
@@ -1385,7 +1387,7 @@ func initializeDatabases(ctx context.Context,
 			channeldb.OptionDryRunMigration(cfg.DryRunMigration),
 		)
 		switch {
-		case err == channeldb.ErrDryRunMigrationOK:
+		case channeldb.ErrDryRunMigrationOK.Is(err):
 			return nil, nil, nil, err
 
 		case err != nil:
@@ -1416,7 +1418,7 @@ func initializeDatabases(ctx context.Context,
 		// As we want to allow both versions to get thru the dry run
 		// migration, we'll only exit the second time here once the
 		// remote instance has had a time to migrate as well.
-		case err == channeldb.ErrDryRunMigrationOK:
+		case channeldb.ErrDryRunMigrationOK.Is(err):
 			ltndLog.Infof("Local DB dry run migration successful")
 
 		case err != nil:
@@ -1436,7 +1438,7 @@ func initializeDatabases(ctx context.Context,
 			channeldb.OptionDryRunMigration(cfg.DryRunMigration),
 		)
 		switch {
-		case err == channeldb.ErrDryRunMigrationOK:
+		case channeldb.ErrDryRunMigrationOK.Is(err):
 			return nil, nil, nil, err
 
 		case err != nil:
@@ -1477,8 +1479,8 @@ func initNeutrinoBackend(cfg *Config, chainDir string) (*neutrino.ChainService,
 	)
 
 	// Ensure that the neutrino db path exists.
-	if err := os.MkdirAll(dbPath, 0700); err != nil {
-		return nil, nil, err
+	if errr := os.MkdirAll(dbPath, 0700); errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	dbName := filepath.Join(dbPath, "neutrino.db")
@@ -1506,16 +1508,15 @@ func initNeutrinoBackend(cfg *Config, chainDir string) (*neutrino.ChainService,
 		AddPeers:     cfg.NeutrinoMode.AddPeers,
 		ConnectPeers: cfg.NeutrinoMode.ConnectPeers,
 		Dialer: func(addr net.Addr) (net.Conn, er.R) {
-			c, e := cfg.net.Dial(
+			return cfg.net.Dial(
 				addr.Network(), addr.String(),
 				cfg.ConnectionTimeout,
 			)
-			return c, er.E(e)
 		},
 		NameResolver: func(host string) ([]net.IP, er.R) {
 			addrs, err := cfg.net.LookupHost(host)
 			if err != nil {
-				return nil, er.E(err)
+				return nil, err
 			}
 
 			ips := make([]net.IP, 0, len(addrs))
@@ -1573,9 +1574,9 @@ func parseHeaderStateAssertion(state string) (*headerfs.FilterHeader, er.R) {
 			"unexpected format, expected format height:hash", state)
 	}
 
-	height, err := strconv.ParseUint(split[0], 10, 32)
-	if err != nil {
-		return nil, er.Errorf("invalid filter header height: %v", err)
+	height, errr := strconv.ParseUint(split[0], 10, 32)
+	if errr != nil {
+		return nil, er.Errorf("invalid filter header height: %v", errr)
 	}
 
 	hash, err := chainhash.NewHashFromStr(split[1])

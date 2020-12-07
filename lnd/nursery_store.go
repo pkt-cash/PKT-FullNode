@@ -128,7 +128,7 @@ type NurseryStore interface {
 	// the caller to process each key-value pair. The key will be a prefixed
 	// outpoint, and the value will be the serialized bytes for an output,
 	// whose type should be inferred from the key's prefix.
-	ForChanOutputs(*wire.OutPoint, func([]byte, []byte) error, func()) er.R
+	ForChanOutputs(*wire.OutPoint, func([]byte, []byte) er.R, func()) er.R
 
 	// ListChannels returns all channels the nursery is currently tracking.
 	ListChannels() ([]wire.OutPoint, er.R)
@@ -197,11 +197,11 @@ func prefixChainKey(sysPrefix []byte, hash *chainhash.Hash) ([]byte, er.R) {
 	// "utxn", followed by the provided chain hash.
 	var pfxChainBuffer bytes.Buffer
 	if _, err := pfxChainBuffer.Write(sysPrefix); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if _, err := pfxChainBuffer.Write(hash[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return pfxChainBuffer.Bytes(), nil
@@ -217,7 +217,7 @@ func prefixOutputKey(statePrefix []byte,
 	// followed by the outpoint.
 	var pfxOutputBuffer bytes.Buffer
 	if _, err := pfxOutputBuffer.Write(statePrefix); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	err := writeOutpoint(&pfxOutputBuffer, outpoint)
@@ -715,7 +715,7 @@ func (ns *nurseryStore) HeightsBelowOrEqual(height uint32) ([]uint32, er.R) {
 // NOTE: The callback should not modify the provided byte slices and is
 // preferably non-blocking.
 func (ns *nurseryStore) ForChanOutputs(chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error, reset func()) er.R {
+	callback func([]byte, []byte) er.R, reset func()) er.R {
 
 	return kvdb.View(ns.db, func(tx kvdb.RTx) er.R {
 		return ns.forChanOutputs(tx, chanPoint, callback)
@@ -742,7 +742,7 @@ func (ns *nurseryStore) ListChannels() ([]wire.OutPoint, er.R) {
 			var chanPoint wire.OutPoint
 			err := readOutpoint(bytes.NewReader(chanBytes), &chanPoint)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			activeChannels = append(activeChannels, chanPoint)
@@ -1185,7 +1185,7 @@ func (ns *nurseryStore) getHeightChanBucketWrite(tx kvdb.RwTx,
 // is invoked with serialized bytes retrieved for each output of interest,
 // allowing the caller to deserialize them into the appropriate type.
 func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
-	height uint32, callback func([]byte) error) er.R {
+	height uint32, callback func([]byte) er.R) er.R {
 
 	// Start by retrieving the height bucket corresponding to the provided
 	// block height.
@@ -1273,7 +1273,7 @@ func (ns *nurseryStore) forEachHeightPrefix(tx kvdb.RTx, prefix []byte,
 // corresponding to the prefixed-output key and the serialized output,
 // respectively.
 func (ns *nurseryStore) forChanOutputs(tx kvdb.RTx, chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error) er.R {
+	callback func([]byte, []byte) er.R) er.R {
 
 	chanBucket := ns.getChannelBucket(tx, chanPoint)
 	if chanBucket == nil {
@@ -1281,7 +1281,7 @@ func (ns *nurseryStore) forChanOutputs(tx kvdb.RTx, chanPoint *wire.OutPoint,
 	}
 
 	return chanBucket.ForEach(func(a, b []byte) er.R {
-		return er.E(callback(a, b))
+		return callback(a, b)
 	})
 }
 

@@ -16,7 +16,8 @@ import (
 var (
 	// ErrTweakOverdose signals a SignDescriptor is invalid because both of its
 	// SingleTweak and DoubleTweak are non-nil.
-	ErrTweakOverdose = Err.CodeWithDetail("ErrTweakOverdose", "sign descriptor should only have one tweak")
+	ErrTweakOverdose = er.GenericErrorType.CodeWithDetail("ErrTweakOverdose",
+		"sign descriptor should only have one tweak")
 )
 
 // SignDescriptor houses the necessary information required to successfully

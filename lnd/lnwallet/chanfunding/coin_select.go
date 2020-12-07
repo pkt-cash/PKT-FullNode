@@ -3,11 +3,12 @@ package chanfunding
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/txscript"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // ErrInsufficientFunds is a type matching the error interface which is
@@ -49,7 +50,7 @@ func selectInputs(amt btcutil.Amount, coins []Coin) (btcutil.Amount, []Coin, er.
 		}
 	}
 
-	return 0, nil, &ErrInsufficientFunds{amt, satSelected}
+	return 0, nil, er.E(&ErrInsufficientFunds{amt, satSelected})
 }
 
 // CoinSelect attempts to select a sufficient amount of coins, including a

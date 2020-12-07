@@ -75,7 +75,7 @@ func newReliableSender(cfg *reliableSenderCfg) *reliableSender {
 
 // Start spawns message handlers for any peers with pending messages.
 func (s *reliableSender) Start() er.R {
-	var err error
+	var err er.R
 	s.start.Do(func() {
 		err = s.resendPendingMsgs()
 	})

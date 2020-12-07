@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -53,8 +54,8 @@ type descriptorTest struct {
 	hasCommitToRemote    bool
 	commitToRemotePubKey blob.PubKey
 	commitToRemoteSig    lnwire.Sig
-	encErr               error
-	decErr               error
+	encErr               *er.ErrorCode
+	decErr               *er.ErrorCode
 }
 
 var descriptorTests = []descriptorTest{
@@ -164,17 +165,18 @@ func testBlobJusticeKitEncryptDecrypt(t *testing.T, test descriptorTest) {
 	// sized at 32 byte, as in practice we will be using the remote
 	// party's commitment txid as the key.
 	var key blob.BreachKey
-	_, err := rand.Read(key[:])
-	if err != nil {
-		t.Fatalf("unable to generate blob encryption key: %v", err)
+	_, errr := rand.Read(key[:])
+	if errr != nil {
+		t.Fatalf("unable to generate blob encryption key: %v", errr)
 	}
 
 	// Encrypt the blob plaintext using the generated key and
 	// target version for this test.
 	ctxt, err := boj.Encrypt(key)
-	if err != test.encErr {
+	if err == nil && test.encErr == nil {
+	} else if test.encErr == nil || !test.encErr.Is(err) {
 		t.Fatalf("unable to encrypt blob: %v", err)
-	} else if test.encErr != nil {
+	} else {
 		// If the test expected an encryption failure, we can
 		// continue to the next test.
 		return
@@ -192,9 +194,10 @@ func testBlobJusticeKitEncryptDecrypt(t *testing.T, test descriptorTest) {
 	// blob plaintext from the decrypted contents. We use the target
 	// decryption version specified by this test case.
 	boj2, err := blob.Decrypt(key, ctxt, test.decVersion)
-	if err != test.decErr {
-		t.Fatalf("unable to decrypt blob: %v", err)
-	} else if test.decErr != nil {
+	if err == nil && test.decErr == nil {
+	} else if test.decErr == nil || !test.decErr.Is(err) {
+		t.Fatalf("unable to encrypt blob: %v", err)
+	} else {
 		// If the test expected an decryption failure, we can
 		// continue to the next test.
 		return
@@ -313,7 +316,7 @@ func testJusticeKitRemoteWitnessConstruction(
 	// ErrNoCommitToRemoteOutput since a valid pubkey could not be parsed
 	// from CommitToRemotePubKey.
 	_, errr = justiceKit.CommitToRemoteWitnessScript()
-	util.RequireErr(t, blob.ErrNoCommitToRemoteOutput, errr)
+	util.RequireErr(t, blob.ErrNoCommitToRemoteOutput.Default(), errr)
 }
 
 // TestJusticeKitToLocalWitnessConstruction tests that a JusticeKit returns the

@@ -1,6 +1,10 @@
 package wtwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // DeleteSession is sent from the client to the tower to signal that the tower
 // can delete all session state for the session key used to authenticate the

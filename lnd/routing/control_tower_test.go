@@ -56,7 +56,7 @@ func TestControlTowerSubscribeUnknown(t *testing.T) {
 
 	// Subscription should fail when the payment is not known.
 	_, err = pControl.SubscribePayment(lntypes.Hash{1})
-	if err != channeldb.ErrPaymentNotInitiated {
+	if !channeldb.ErrPaymentNotInitiated.Is(err) {
 		t.Fatal("expected subscribe to fail for unknown payment")
 	}
 }
@@ -302,9 +302,9 @@ func testPaymentControlSubscribeFail(t *testing.T, registerAttempt bool) {
 }
 
 func initDB() (*channeldb.DB, er.R) {
-	tempPath, err := ioutil.TempDir("", "routingdb")
-	if err != nil {
-		return nil, err
+	tempPath, errr := ioutil.TempDir("", "routingdb")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	db, err := channeldb.Open(tempPath)

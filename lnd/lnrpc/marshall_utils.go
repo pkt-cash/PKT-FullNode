@@ -12,9 +12,10 @@ import (
 )
 
 var (
+	Err = er.NewErrorType("lnd.lnrpc")
 	// ErrSatMsatMutualExclusive is returned when both a sat and an msat
 	// amount are set.
-	ErrSatMsatMutualExclusive = er.New(
+	ErrSatMsatMutualExclusive = Err.CodeWithDetail("ErrSatMsatMutualExclusive",
 		"sat and msat arguments are mutually exclusive",
 	)
 )

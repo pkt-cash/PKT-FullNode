@@ -403,7 +403,7 @@ func (c *ChannelArbitrator) getStartState(tx kvdb.RTx) (*chanArbStartState,
 	// existing written chain actions. Additionally, if this channel hasn't
 	// logged any actions in the log, then this field won't be present.
 	commitSet, err := c.log.FetchConfirmedCommitSet(tx)
-	if err != nil && err != errNoCommitSet && err != errScopeBucketNoExist {
+	if err != nil && !errNoCommitSet.Is(err) && !errScopeBucketNoExist.Is(err) {
 		return nil, err
 	}
 
@@ -493,15 +493,15 @@ func (c *ChannelArbitrator) Start(state *chanArbStartState) er.R {
 		triggerHeight, trigger, state.commitSet,
 	)
 	if err != nil {
-		switch err {
+		switch {
 
 		// If we detect that we tried to fetch resolutions, but failed,
 		// this channel was marked closed in the database before
 		// resolutions successfully written. In this case there is not
 		// much we can do, so we don't return the error.
-		case errScopeBucketNoExist:
+		case errScopeBucketNoExist.Is(err):
 			fallthrough
-		case errNoResolutions:
+		case errNoResolutions.Is(err):
 			log.Warnf("ChannelArbitrator(%v): detected closed"+
 				"channel with no contract resolutions written.",
 				c.cfg.ChanPoint)
@@ -2016,7 +2016,7 @@ func (c *ChannelArbitrator) resolveContract(currentContract ContractResolver) {
 			// contract.
 			nextContract, err := currentContract.Resolve()
 			if err != nil {
-				if err == errResolverShuttingDown {
+				if errResolverShuttingDown.Is(err) {
 					return
 				}
 
@@ -2428,7 +2428,7 @@ func (c *ChannelArbitrator) channelAttendant(bestHeight int32) {
 				}
 
 				select {
-				case closeReq.errResp <- errAlreadyForceClosed:
+				case closeReq.errResp <- errAlreadyForceClosed.Default():
 				case <-c.quit:
 				}
 

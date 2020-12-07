@@ -26,7 +26,7 @@ func DiscoverUPnP(ctx context.Context) (*UPnP, er.R) {
 	// Scan the local network for a UPnP-enabled device.
 	device, err := upnp.DiscoverCtx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	u := &UPnP{
@@ -47,7 +47,7 @@ func DiscoverUPnP(ctx context.Context) (*UPnP, er.R) {
 func (u *UPnP) ExternalIP() (net.IP, er.R) {
 	ip, err := u.device.ExternalIP()
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	if isPrivateIP(net.ParseIP(ip)) {
@@ -63,7 +63,7 @@ func (u *UPnP) AddPortMapping(port uint16) er.R {
 	defer u.forwardedPortsMtx.Unlock()
 
 	if err := u.device.Forward(port, ""); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	u.forwardedPorts[port] = struct{}{}
@@ -81,7 +81,7 @@ func (u *UPnP) DeletePortMapping(port uint16) er.R {
 	}
 
 	if err := u.device.Clear(port); err != nil {
-		return err
+		return er.E(err)
 	}
 
 	delete(u.forwardedPorts, port)

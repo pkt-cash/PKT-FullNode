@@ -34,7 +34,7 @@ type ChannelAcceptRequest struct {
 type ChannelAcceptResponse struct {
 	// ChanAcceptError the error returned by the channel acceptor. If the
 	// channel was accepted, this value will be nil.
-	ChanAcceptError
+	ChanAcceptError er.R
 
 	// UpfrontShutdown is the address that we will set as our upfront
 	// shutdown address.
@@ -94,9 +94,7 @@ func NewChannelAcceptResponse(accept bool, acceptErr er.R,
 		acceptErr = errChannelRejected.Default()
 	}
 
-	resp.ChanAcceptError = ChanAcceptError{
-		R: acceptErr,
-	}
+	resp.ChanAcceptError = acceptErr
 
 	return resp
 }
@@ -104,7 +102,7 @@ func NewChannelAcceptResponse(accept bool, acceptErr er.R,
 // RejectChannel returns a boolean that indicates whether we should reject the
 // channel.
 func (c *ChannelAcceptResponse) RejectChannel() bool {
-	return c.R != nil
+	return c.ChanAcceptError != nil
 }
 
 // ChannelAcceptor is an interface that represents  a predicate on the data

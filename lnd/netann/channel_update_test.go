@@ -1,11 +1,11 @@
 package netann_test
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
@@ -15,7 +15,7 @@ import (
 )
 
 type mockSigner struct {
-	err error
+	err er.R
 }
 
 func (m *mockSigner) SignMessage(pk *btcec.PublicKey,
@@ -36,7 +36,8 @@ var (
 
 	pubKey = privKey.PubKey()
 
-	errFailedToSign = er.New("unable to sign message")
+	errFailedToSign = er.GenericErrorType.CodeWithDetail("errFailedToSign",
+		"unable to sign message")
 )
 
 type updateDisableTest struct {
@@ -45,7 +46,7 @@ type updateDisableTest struct {
 	disable      bool
 	startTime    time.Time
 	signer       lnwallet.MessageSigner
-	expErr       error
+	expErr       er.R
 }
 
 var updateDisableTests = []updateDisableTest{

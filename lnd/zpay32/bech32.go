@@ -3,6 +3,8 @@ package zpay32
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 const charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"

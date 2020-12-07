@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/wire"
 
@@ -18,7 +19,7 @@ type ChainNotifier struct {
 // that the tx confirmation will go over.
 func (c *ChainNotifier) RegisterConfirmationsNtfn(txid *chainhash.Hash,
 	pkScript []byte, numConfs, heightHint uint32) (*chainntnfs.ConfirmationEvent,
-	error) {
+	er.R) {
 
 	return &chainntnfs.ConfirmationEvent{
 		Confirmed: c.ConfChan,

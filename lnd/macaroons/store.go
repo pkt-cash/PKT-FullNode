@@ -225,12 +225,12 @@ func (r *RootKeyStorage) ChangePassword(oldPw, newPw []byte) er.R {
 }
 
 // Get implements the Get method for the bakery.RootKeyStorage interface.
-func (r *RootKeyStorage) Get(_ context.Context, id []byte) ([]byte, er.R) {
+func (r *RootKeyStorage) Get(_ context.Context, id []byte) ([]byte, error) {
 	r.encKeyMtx.RLock()
 	defer r.encKeyMtx.RUnlock()
 
 	if r.encKey == nil {
-		return nil, ErrStoreLocked.Default()
+		return nil, er.Native(ErrStoreLocked.Default())
 	}
 	var rootKey []byte
 	err := kvdb.View(r, func(tx kvdb.RTx) er.R {
@@ -256,7 +256,7 @@ func (r *RootKeyStorage) Get(_ context.Context, id []byte) ([]byte, er.R) {
 		rootKey = nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, er.Native(err)
 	}
 
 	return rootKey, nil
@@ -264,12 +264,12 @@ func (r *RootKeyStorage) Get(_ context.Context, id []byte) ([]byte, er.R) {
 
 // RootKey implements the RootKey method for the bakery.RootKeyStorage
 // interface.
-func (r *RootKeyStorage) RootKey(ctx context.Context) ([]byte, []byte, er.R) {
+func (r *RootKeyStorage) RootKey(ctx context.Context) ([]byte, []byte, error) {
 	r.encKeyMtx.RLock()
 	defer r.encKeyMtx.RUnlock()
 
 	if r.encKey == nil {
-		return nil, nil, ErrStoreLocked.Default()
+		return nil, nil, er.Native(ErrStoreLocked.Default())
 	}
 	var rootKey []byte
 
@@ -277,11 +277,11 @@ func (r *RootKeyStorage) RootKey(ctx context.Context) ([]byte, []byte, er.R) {
 	// context, an error will be returned.
 	id, err := RootKeyIDFromContext(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, er.Native(err)
 	}
 
 	if bytes.Equal(id, encryptionKeyID) {
-		return nil, nil, ErrKeyValueForbidden.Default()
+		return nil, nil, er.Native(ErrKeyValueForbidden.Default())
 	}
 
 	err = kvdb.Update(r, func(tx kvdb.RwTx) er.R {
@@ -313,7 +313,7 @@ func (r *RootKeyStorage) RootKey(ctx context.Context) ([]byte, []byte, er.R) {
 		rootKey = nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, er.Native(err)
 	}
 
 	return rootKey, id, nil

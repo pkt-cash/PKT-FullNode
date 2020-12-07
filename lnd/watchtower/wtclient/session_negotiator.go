@@ -268,7 +268,7 @@ retryWithBackoff:
 			// Only reset the iterator once we've exhausted all
 			// candidates. Doing so allows us to load balance
 			// sessions better amongst all of the tower candidates.
-			if err == ErrTowerCandidatesExhausted {
+			if ErrTowerCandidatesExhausted.Is(err) {
 				n.cfg.Candidates.Reset()
 			}
 

@@ -28,7 +28,7 @@ func DiscoverPMP(timeout time.Duration) (*PMP, er.R) {
 	// Retrieve the gateway IP address of the local network.
 	gatewayIP, err := gateway.DiscoverGateway()
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	pmp := &PMP{
@@ -49,7 +49,7 @@ func DiscoverPMP(timeout time.Duration) (*PMP, er.R) {
 func (p *PMP) ExternalIP() (net.IP, er.R) {
 	res, err := p.client.GetExternalAddress()
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	ip := net.IP(res.ExternalIPAddress[:])
@@ -67,7 +67,7 @@ func (p *PMP) AddPortMapping(port uint16) er.R {
 
 	_, err := p.client.AddPortMapping("tcp", int(port), int(port), 0)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	p.forwardedPorts[port] = struct{}{}
@@ -86,7 +86,7 @@ func (p *PMP) DeletePortMapping(port uint16) er.R {
 
 	_, err := p.client.AddPortMapping("tcp", int(port), 0, 0)
 	if err != nil {
-		return err
+		return er.E(err)
 	}
 
 	delete(p.forwardedPorts, port)

@@ -3,16 +3,17 @@ package localchans
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/discovery"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestManager tests that the local channel manager properly propagates fee
@@ -89,7 +90,7 @@ func TestManager(t *testing.T) {
 	}
 
 	forAllOutgoingChannels := func(cb func(*channeldb.ChannelEdgeInfo,
-		*channeldb.ChannelEdgePolicy) error) er.R {
+		*channeldb.ChannelEdgePolicy) er.R) er.R {
 
 		return cb(
 			&channeldb.ChannelEdgeInfo{
@@ -101,7 +102,7 @@ func TestManager(t *testing.T) {
 	}
 
 	fetchChannel := func(chanPoint wire.OutPoint) (*channeldb.OpenChannel,
-		error) {
+		er.R) {
 
 		constraints := channeldb.ChannelConstraints{
 			MaxPendingAmount: maxPendingAmount,

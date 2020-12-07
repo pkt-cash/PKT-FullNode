@@ -3,13 +3,13 @@ package input
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 	"math/big"
 
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/txscript/params"

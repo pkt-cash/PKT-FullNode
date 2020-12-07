@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -78,7 +79,7 @@ func NewHtlcNotifier(now func() time.Time) *HtlcNotifier {
 // Start starts the HtlcNotifier and all goroutines it needs to consume
 // events and provide subscriptions to clients.
 func (h *HtlcNotifier) Start() er.R {
-	var err error
+	var err er.R
 	h.started.Do(func() {
 		log.Trace("HtlcNotifier starting")
 		err = h.ntfnServer.Start()

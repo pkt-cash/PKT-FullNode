@@ -3,6 +3,7 @@ package peernotifier
 import (
 	"sync"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
 )
 
@@ -38,7 +39,7 @@ func New() *PeerNotifier {
 
 // Start starts the PeerNotifier's subscription server.
 func (p *PeerNotifier) Start() er.R {
-	var err error
+	var err er.R
 
 	p.started.Do(func() {
 		log.Info("PeerNotifier starting")

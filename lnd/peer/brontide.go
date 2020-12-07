@@ -85,7 +85,7 @@ var (
 type outgoingMsg struct {
 	priority bool
 	msg      lnwire.Message
-	errChan  chan error // MUST be buffered.
+	errChan  chan er.R // MUST be buffered.
 }
 
 // newChannelMsg packages a channeldb.OpenChannel with a channel that allows
@@ -93,7 +93,7 @@ type outgoingMsg struct {
 // completed.
 type newChannelMsg struct {
 	channel *channeldb.OpenChannel
-	err     chan error
+	err     chan er.R
 }
 
 // closeMsg is a wrapper struct around any wire messages that deal with the
@@ -119,7 +119,7 @@ type ChannelCloseUpdate struct {
 // TimestampedError is a timestamped error that is used to store the most recent
 // errors we have experienced with our peers.
 type TimestampedError struct {
-	Error     error
+	Error     er.R
 	Timestamp time.Time
 }
 
@@ -453,7 +453,7 @@ func (p *Brontide) Start() er.R {
 	// Before we launch any of the helper goroutines off the peer struct,
 	// we'll first ensure proper adherence to the p2p protocol. The init
 	// message MUST be sent before any other message.
-	readErr := make(chan error, 1)
+	readErr := make(chan er.R, 1)
 	msgChan := make(chan lnwire.Message, 1)
 	p.wg.Add(1)
 	go func() {
@@ -606,7 +606,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			p.cfg.Signer, dbChan, p.cfg.SigPool,
 		)
 		if err != nil {
-			return nil, er.E(err)
+			return nil, err
 		}
 
 		chanPoint := &dbChan.FundingOutpoint
@@ -647,8 +647,8 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 		// the database.
 		graph := p.cfg.ChannelGraph
 		info, p1, p2, err := graph.FetchChannelEdgesByOutpoint(chanPoint)
-		if err != nil && err != channeldb.ErrEdgeNotFound {
-			return nil, er.E(err)
+		if err != nil && !channeldb.ErrEdgeNotFound.Is(err) {
+			return nil, err
 		}
 
 		// We'll filter out our policy from the directional channel
@@ -708,7 +708,7 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			*chanPoint,
 		)
 		if err != nil {
-			return nil, er.E(err)
+			return nil, err
 		}
 
 		err = p.addLink(
@@ -858,7 +858,7 @@ func (p *Brontide) WaitForDisconnect(ready chan struct{}) {
 // Disconnect terminates the connection with the remote peer. Additionally, a
 // signal is sent to the server and htlcSwitch indicating the resources
 // allocated to the peer can now be cleaned up.
-func (p *Brontide) Disconnect(reason error) {
+func (p *Brontide) Disconnect(reason er.R) {
 	if !atomic.CompareAndSwapInt32(&p.disconnect, 0, 1) {
 		return
 	}
@@ -866,7 +866,7 @@ func (p *Brontide) Disconnect(reason error) {
 	err := er.Errorf("disconnecting %s, reason: %v", p, reason)
 	p.storeError(err)
 
-	peerLog.Infof(err.Error())
+	peerLog.Infof(err.String())
 
 	// Ensure that the TCP connection is properly closed before continuing.
 	p.cfg.Conn.Close()
@@ -883,9 +883,9 @@ func (p *Brontide) String() string {
 // any additional raw payload.
 func (p *Brontide) readNextMessage() (lnwire.Message, er.R) {
 	noiseConn := p.cfg.Conn
-	err := noiseConn.SetReadDeadline(time.Time{})
-	if err != nil {
-		return nil, err
+	errr := noiseConn.SetReadDeadline(time.Time{})
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	pktLen, err := noiseConn.ReadNextHeader()
@@ -907,11 +907,11 @@ func (p *Brontide) readNextMessage() (lnwire.Message, er.R) {
 		readDeadline := time.Now().Add(readMessageTimeout)
 		readErr := noiseConn.SetReadDeadline(readDeadline)
 		if readErr != nil {
-			return readErr
+			return er.E(readErr)
 		}
 
-		rawMsg, readErr = noiseConn.ReadNextBody(buf[:pktLen])
-		return readErr
+		rawMsg, err = noiseConn.ReadNextBody(buf[:pktLen])
+		return err
 	})
 	atomic.AddUint64(&p.bytesReceived, uint64(len(rawMsg)))
 	if err != nil {
@@ -1259,13 +1259,13 @@ out:
 			// unknown type or invalid alias, we continue processing
 			// as normal. We store unknown message and address
 			// types, as they may provide debugging insight.
-			switch e := err.(type) {
+			switch {
 			// If this is just a message we don't yet recognize,
 			// we'll continue processing as normal as this allows
 			// us to introduce new messages in a forwards
 			// compatible manner.
-			case *lnwire.UnknownMessage:
-				p.storeError(e)
+			case lnwire.UnknownMessage.Is(err):
+				p.storeError(err)
 				idleTimer.Reset(idleTimeout)
 				continue
 
@@ -1273,8 +1273,8 @@ out:
 			// know of, then this isn't a dire error, so we'll
 			// simply continue parsing the remainder of their
 			// messages.
-			case *lnwire.ErrUnknownAddrType:
-				p.storeError(e)
+			case lnwire.ErrUnknownAddrType.Is(err):
+				p.storeError(err)
 				idleTimer.Reset(idleTimeout)
 				continue
 
@@ -1283,7 +1283,7 @@ out:
 			// continue to read messages from the peer. We do not
 			// store this error because it is of little debugging
 			// value.
-			case *lnwire.ErrInvalidNodeAlias:
+			case lnwire.ErrInvalidNodeAlias.Is(err):
 				idleTimer.Reset(idleTimeout)
 				continue
 
@@ -1424,7 +1424,7 @@ func (p *Brontide) isActiveChannel(chanID lnwire.ChannelID) bool {
 // current timestamp. Errors are only stored if we have at least one active
 // channel with the peer to mitigate a dos vector where a peer costlessly
 // connects to us and spams us with errors.
-func (p *Brontide) storeError(err error) {
+func (p *Brontide) storeError(err er.R) {
 	var haveChannels bool
 
 	p.activeChanMtx.RLock()
@@ -1459,7 +1459,7 @@ func (p *Brontide) storeError(err error) {
 // NOTE: This method should only be called from within the readHandler.
 func (p *Brontide) handleError(msg *lnwire.Error) bool {
 	// Store the error we have received.
-	p.storeError(msg)
+	p.storeError(er.E(msg))
 
 	switch {
 
@@ -1702,9 +1702,9 @@ func (p *Brontide) writeMessage(msg lnwire.Message) er.R {
 		// Ensure the write deadline is set before we attempt to send
 		// the message.
 		writeDeadline := time.Now().Add(writeMessageTimeout)
-		err := noiseConn.SetWriteDeadline(writeDeadline)
-		if err != nil {
-			return err
+		errr := noiseConn.SetWriteDeadline(writeDeadline)
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// Flush the pending message to the wire. If an error is
@@ -1765,7 +1765,7 @@ func (p *Brontide) writeHandler() {
 		p.Disconnect(err)
 	})
 
-	var exitErr error
+	var exitErr er.R
 
 out:
 	for {
@@ -1833,7 +1833,7 @@ out:
 			}
 
 		case <-p.quit:
-			exitErr = lnpeer.ErrPeerExiting
+			exitErr = lnpeer.ErrPeerExiting.Default()
 			break out
 		}
 	}
@@ -1947,14 +1947,14 @@ func (p *Brontide) PingTime() int64 {
 // queueMsg adds the lnwire.Message to the back of the high priority send queue.
 // If the errChan is non-nil, an error is sent back if the msg failed to queue
 // or failed to write, and nil otherwise.
-func (p *Brontide) queueMsg(msg lnwire.Message, errChan chan error) {
+func (p *Brontide) queueMsg(msg lnwire.Message, errChan chan er.R) {
 	p.queue(true, msg, errChan)
 }
 
 // queueMsgLazy adds the lnwire.Message to the back of the low priority send
 // queue. If the errChan is non-nil, an error is sent back if the msg failed to
 // queue or failed to write, and nil otherwise.
-func (p *Brontide) queueMsgLazy(msg lnwire.Message, errChan chan error) {
+func (p *Brontide) queueMsgLazy(msg lnwire.Message, errChan chan er.R) {
 	p.queue(false, msg, errChan)
 }
 
@@ -1962,7 +1962,7 @@ func (p *Brontide) queueMsgLazy(msg lnwire.Message, errChan chan error) {
 // the errChan is non-nil, an error is sent back if the msg failed to queue or
 // failed to write, and nil otherwise.
 func (p *Brontide) queue(priority bool, msg lnwire.Message,
-	errChan chan error) {
+	errChan chan er.R) {
 
 	select {
 	case p.outgoingQueue <- outgoingMsg{priority, msg, errChan}:
@@ -1970,7 +1970,7 @@ func (p *Brontide) queue(priority bool, msg lnwire.Message,
 		peerLog.Tracef("Peer shutting down, could not enqueue msg: %v.",
 			spew.Sdump(msg))
 		if errChan != nil {
-			errChan <- lnpeer.ErrPeerExiting
+			errChan <- lnpeer.ErrPeerExiting.Default()
 		}
 	}
 }
@@ -2085,7 +2085,7 @@ out:
 				p.activeChanMtx.Unlock()
 				err := er.Errorf("unable to create "+
 					"LightningChannel: %v", err)
-				peerLog.Errorf(err.Error())
+				peerLog.Errorf(err.String())
 
 				newChanReq.err <- err
 				continue
@@ -2110,7 +2110,7 @@ out:
 			if err != nil {
 				err := er.Errorf("unable to subscribe to "+
 					"chain events: %v", err)
-				peerLog.Errorf(err.Error())
+				peerLog.Errorf(err.String())
 
 				newChanReq.err <- err
 				continue
@@ -2148,7 +2148,7 @@ out:
 				err := er.Errorf("can't register new channel "+
 					"link(%v) with NodeKey(%x)", chanPoint,
 					p.PubKey())
-				peerLog.Errorf(err.Error())
+				peerLog.Errorf(err.String())
 
 				newChanReq.err <- err
 				continue
@@ -2298,7 +2298,7 @@ func (p *Brontide) fetchActiveChanCloser(chanID lnwire.ChannelID) (
 		// was set, we will use it. Otherwise, we get a fresh delivery script.
 		deliveryScript := channel.LocalUpfrontShutdownScript()
 		if len(deliveryScript) == 0 {
-			var err error
+			var err er.R
 			deliveryScript, err = p.genDeliveryScript()
 			if err != nil {
 				peerLog.Errorf("unable to gen delivery script: %v", err)
@@ -2390,7 +2390,7 @@ func (p *Brontide) handleLocalCloseReq(req *htlcswitch.ChanClose) {
 	if !ok || channel == nil {
 		err := er.Errorf("unable to close channel, ChannelID(%v) is "+
 			"unknown", chanID)
-		peerLog.Errorf(err.Error())
+		peerLog.Errorf(err.String())
 		req.Err <- err
 		return
 	}
@@ -2423,7 +2423,7 @@ func (p *Brontide) handleLocalCloseReq(req *htlcswitch.ChanClose) {
 		if len(deliveryScript) == 0 {
 			deliveryScript, err = p.genDeliveryScript()
 			if err != nil {
-				peerLog.Errorf(err.Error())
+				peerLog.Errorf(err.String())
 				req.Err <- err
 				return
 			}
@@ -2433,7 +2433,7 @@ func (p *Brontide) handleLocalCloseReq(req *htlcswitch.ChanClose) {
 		// handle the close negotiation.
 		_, startingHeight, err := p.cfg.ChainIO.GetBestBlock()
 		if err != nil {
-			peerLog.Errorf(err.Error())
+			peerLog.Errorf(err.String())
 			req.Err <- err
 			return
 		}
@@ -2462,7 +2462,7 @@ func (p *Brontide) handleLocalCloseReq(req *htlcswitch.ChanClose) {
 		// party to kick things off.
 		shutdownMsg, err := chanCloser.ShutdownChan()
 		if err != nil {
-			peerLog.Errorf(err.Error())
+			peerLog.Errorf(err.String())
 			req.Err <- err
 			delete(p.activeChanCloses, chanID)
 
@@ -2587,7 +2587,7 @@ func (p *Brontide) finalizeChanClosure(chanCloser *chancloser.ChanCloser) {
 	// If any error happens during waitForChanToClose, forward it to
 	// closeReq. If this channel closure is not locally initiated, closeReq
 	// will be nil, so just ignore the error.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	if closeReq != nil {
 		errChan = closeReq.Err
 	}
@@ -2630,7 +2630,7 @@ func (p *Brontide) finalizeChanClosure(chanCloser *chancloser.ChanCloser) {
 // finally the callback will be executed. If any error is encountered within
 // the function, then it will be sent over the errChan.
 func WaitForChanToClose(bestHeight uint32, notifier chainntnfs.ChainNotifier,
-	errChan chan error, chanPoint *wire.OutPoint,
+	errChan chan er.R, chanPoint *wire.OutPoint,
 	closingTxID *chainhash.Hash, closeScript []byte, cb func()) {
 
 	peerLog.Infof("Waiting for confirmation of cooperative close of "+
@@ -2821,16 +2821,16 @@ func (p *Brontide) sendMessage(sync, priority bool, msgs ...lnwire.Message) er.R
 	// Add all incoming messages to the outgoing queue. A list of error
 	// chans is populated for each message if the caller requested a sync
 	// send.
-	var errChans []chan error
+	var errChans []chan er.R
 	if sync {
-		errChans = make([]chan error, 0, len(msgs))
+		errChans = make([]chan er.R, 0, len(msgs))
 	}
 	for _, msg := range msgs {
 		// If a sync send was requested, create an error chan to listen
 		// for an ack from the writeHandler.
-		var errChan chan error
+		var errChan chan er.R
 		if sync {
-			errChan = make(chan error, 1)
+			errChan = make(chan er.R, 1)
 			errChans = append(errChans, errChan)
 		}
 
@@ -2885,7 +2885,7 @@ func (p *Brontide) Address() net.Addr {
 func (p *Brontide) AddNewChannel(channel *channeldb.OpenChannel,
 	cancel <-chan struct{}) er.R {
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	newChanMsg := &newChannelMsg{
 		channel: channel,
 		err:     errChan,
@@ -2924,7 +2924,7 @@ func (p *Brontide) handleCloseMsg(msg *closeMsg) {
 	chanCloser, err := p.fetchActiveChanCloser(msg.cid)
 	if err != nil {
 		// If the channel is not known to us, we'll simply ignore this message.
-		if err == ErrChannelNotFound {
+		if ErrChannelNotFound.Is(err) {
 			return
 		}
 
@@ -2932,7 +2932,7 @@ func (p *Brontide) handleCloseMsg(msg *closeMsg) {
 
 		errMsg := &lnwire.Error{
 			ChanID: msg.cid,
-			Data:   lnwire.ErrorData(err.Error()),
+			Data:   lnwire.ErrorData(err.String()),
 		}
 		p.queueMsg(errMsg, nil)
 		return

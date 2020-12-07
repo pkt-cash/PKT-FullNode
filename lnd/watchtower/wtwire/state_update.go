@@ -1,6 +1,10 @@
 package wtwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // StateUpdate transmits an encrypted state update from the client to the
 // watchtower. Each state update is tied to particular session, identified by

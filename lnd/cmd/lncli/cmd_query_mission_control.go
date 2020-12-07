@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 
 	"github.com/urfave/cli"
@@ -23,9 +24,9 @@ func queryMissionControl(ctx *cli.Context) er.R {
 
 	req := &routerrpc.QueryMissionControlRequest{}
 	rpcCtx := context.Background()
-	snapshot, err := client.QueryMissionControl(rpcCtx, req)
-	if err != nil {
-		return err
+	snapshot, errr := client.QueryMissionControl(rpcCtx, req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(snapshot)

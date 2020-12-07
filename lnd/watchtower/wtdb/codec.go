@@ -25,7 +25,8 @@ func ReadElement(r io.Reader, element interface{}) er.R {
 
 	// Fail if error is not UnknownElementType.
 	default:
-		if _, ok := err.(UnknownElementType); !ok {
+		errr := er.Wrapped(err)
+		if _, ok := errr.(UnknownElementType); !ok {
 			return err
 		}
 	}
@@ -64,9 +65,9 @@ func ReadElement(r io.Reader, element interface{}) er.R {
 
 	// Type is still unknown to wtdb extensions, fail.
 	default:
-		return channeldb.NewUnknownElementType(
+		return er.E(channeldb.NewUnknownElementType(
 			"ReadElement", element,
-		)
+		))
 	}
 
 	return nil
@@ -83,7 +84,8 @@ func WriteElement(w io.Writer, element interface{}) er.R {
 
 	// Fail if error is not UnknownElementType.
 	default:
-		if _, ok := err.(UnknownElementType); !ok {
+		errr := er.Wrapped(err)
+		if _, ok := errr.(UnknownElementType); !ok {
 			return err
 		}
 	}
@@ -112,9 +114,9 @@ func WriteElement(w io.Writer, element interface{}) er.R {
 
 	// Type is still unknown to wtdb extensions, fail.
 	default:
-		return channeldb.NewUnknownElementType(
+		return er.E(channeldb.NewUnknownElementType(
 			"WriteElement", element,
-		)
+		))
 	}
 
 	return nil

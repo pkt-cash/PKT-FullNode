@@ -180,7 +180,7 @@ func newLogClosure(c func() string) logClosure {
 // request.
 func errorLogUnaryServerInterceptor(logger pktlog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler) (interface{}, er.R) {
+		handler grpc.UnaryHandler) (interface{}, error) {
 
 		resp, err := handler(ctx, req)
 		if err != nil {
@@ -197,7 +197,7 @@ func errorLogUnaryServerInterceptor(logger pktlog.Logger) grpc.UnaryServerInterc
 // RPC.
 func errorLogStreamServerInterceptor(logger pktlog.Logger) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream,
-		info *grpc.StreamServerInfo, handler grpc.StreamHandler) er.R {
+		info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 
 		err := handler(srv, ss)
 		if err != nil {

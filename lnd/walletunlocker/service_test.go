@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/aezeed"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -99,9 +100,9 @@ func openOrCreateTestMacStore(tempDir string, pw *[]byte,
 	netParams *chaincfg.Params) (*macaroons.RootKeyStorage, er.R) {
 
 	netDir := btcwallet.NetworkDir(tempDir, netParams)
-	err := os.MkdirAll(netDir, 0700)
-	if err != nil {
-		return nil, err
+	errr := os.MkdirAll(netDir, 0700)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	db, err := kvdb.Create(
 		kvdb.BoltBackendName, path.Join(netDir, macaroons.DBFilename),
@@ -122,10 +123,10 @@ func openOrCreateTestMacStore(tempDir string, pw *[]byte,
 		_ = store.Close()
 		return nil, err
 	}
-	_, _, err = store.RootKey(defaultRootKeyIDContext)
-	if err != nil {
+	_, _, errr = store.RootKey(defaultRootKeyIDContext)
+	if errr != nil {
 		_ = store.Close()
-		return nil, err
+		return nil, er.E(errr)
 	}
 
 	return store, nil
@@ -138,8 +139,8 @@ func TestGenSeed(t *testing.T) {
 
 	// First, we'll create a new test directory and unlocker service for
 	// that directory.
-	testDir, err := ioutil.TempDir("", "testcreate")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testcreate")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -174,8 +175,8 @@ func TestGenSeedGenerateEntropy(t *testing.T) {
 
 	// First, we'll create a new test directory and unlocker service for
 	// that directory.
-	testDir, err := ioutil.TempDir("", "testcreate")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testcreate")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -208,8 +209,8 @@ func TestGenSeedInvalidEntropy(t *testing.T) {
 
 	// First, we'll create a new test directory and unlocker service for
 	// that directory.
-	testDir, err := ioutil.TempDir("", "testcreate")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testcreate")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -226,9 +227,9 @@ func TestGenSeedInvalidEntropy(t *testing.T) {
 
 	// We should get an error now since the entropy source was invalid.
 	ctx := context.Background()
-	_, err = service.GenSeed(ctx, genSeedReq)
+	_, err := service.GenSeed(ctx, genSeedReq)
 	util.RequireErr(t, err)
-	require.Contains(t, err.Error(), "incorrect entropy length")
+	require.Contains(t, err.String(), "incorrect entropy length")
 }
 
 // TestInitWallet tests that the user is able to properly initialize the wallet
@@ -237,8 +238,8 @@ func TestInitWallet(t *testing.T) {
 	t.Parallel()
 
 	// testDir is empty, meaning wallet was not created from before.
-	testDir, err := ioutil.TempDir("", "testcreate")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testcreate")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -263,7 +264,7 @@ func TestInitWallet(t *testing.T) {
 		RecoveryWindow:     int32(testRecoveryWindow),
 		StatelessInit:      true,
 	}
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	go func() {
 		response, err := service.InitWallet(ctx, req)
 		if err != nil {
@@ -308,7 +309,7 @@ func TestInitWallet(t *testing.T) {
 
 	// Now calling InitWallet should fail, since a wallet already exists in
 	// the directory.
-	_, err = service.InitWallet(ctx, req)
+	_, err := service.InitWallet(ctx, req)
 	util.RequireErr(t, err)
 
 	// Similarly, if we try to do GenSeed again, we should get an error as
@@ -323,8 +324,8 @@ func TestCreateWalletInvalidEntropy(t *testing.T) {
 	t.Parallel()
 
 	// testDir is empty, meaning wallet was not created from before.
-	testDir, err := ioutil.TempDir("", "testcreate")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testcreate")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -341,7 +342,7 @@ func TestCreateWalletInvalidEntropy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = service.InitWallet(ctx, req)
+	_, err := service.InitWallet(ctx, req)
 	util.RequireErr(t, err)
 }
 
@@ -352,8 +353,8 @@ func TestUnlockWallet(t *testing.T) {
 	t.Parallel()
 
 	// testDir is empty, meaning wallet was not created from before.
-	testDir, err := ioutil.TempDir("", "testunlock")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testunlock")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -369,7 +370,7 @@ func TestUnlockWallet(t *testing.T) {
 	}
 
 	// Should fail to unlock non-existing wallet.
-	_, err = service.UnlockWallet(ctx, req)
+	_, err := service.UnlockWallet(ctx, req)
 	util.RequireErr(t, err)
 
 	// Create a wallet we can try to unlock.
@@ -383,7 +384,7 @@ func TestUnlockWallet(t *testing.T) {
 	util.RequireErr(t, err)
 
 	// With the correct password, we should be able to unlock the wallet.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	go func() {
 		// With the correct password, we should be able to unlock the
 		// wallet.
@@ -419,8 +420,8 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 	t.Parallel()
 
 	// testDir is empty, meaning wallet was not created from before.
-	testDir, err := ioutil.TempDir("", "testchangepassword")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testchangepassword")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -444,7 +445,7 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 			t.Fatalf("unable to create temp file: %v", err)
 		}
 		tempFiles = append(tempFiles, file.Name())
-		util.RequireNoErr(t, file.Close())
+		require.NoError(t, file.Close())
 	}
 
 	// Create a new UnlockerService with our temp files.
@@ -492,7 +493,7 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 	// When providing the correct wallet's current password and a new
 	// password that meets the length requirement, the password change
 	// should succeed.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	go doChangePassword(service, testDir, req, errChan)
 
 	// The new password should be sent over the channel.
@@ -527,8 +528,8 @@ func TestChangeWalletPasswordStateless(t *testing.T) {
 	t.Parallel()
 
 	// testDir is empty, meaning wallet was not created from before.
-	testDir, err := ioutil.TempDir("", "testchangepasswordstateless")
-	util.RequireNoErr(t, err)
+	testDir, errr := ioutil.TempDir("", "testchangepasswordstateless")
+	require.NoError(t, errr)
 	defer func() {
 		_ = os.RemoveAll(testDir)
 	}()
@@ -544,11 +545,11 @@ func TestChangeWalletPasswordStateless(t *testing.T) {
 
 	// Create a temp file that will act as the macaroon DB file that will
 	// be deleted by changing the password.
-	tmpFile, err := ioutil.TempFile(testDir, "")
-	util.RequireNoErr(t, err)
+	tmpFile, errr := ioutil.TempFile(testDir, "")
+	require.NoError(t, errr)
 	tempMacFile := tmpFile.Name()
-	err = tmpFile.Close()
-	util.RequireNoErr(t, err)
+	errr = tmpFile.Close()
+	require.NoError(t, errr)
 
 	// Create a file name that does not exist that will be used as a
 	// macaroon file reference. The fact that the file does not exist should
@@ -593,7 +594,7 @@ func TestChangeWalletPasswordStateless(t *testing.T) {
 	// provided in the message in UnlockMsgs. So we need to call the service
 	// async and then wait for the unlock message to arrive so we can send
 	// back a fake macaroon.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	go doChangePassword(service, testDir, req, errChan)
 
 	// Password and recovery window should be sent over the channel.
@@ -614,7 +615,7 @@ func TestChangeWalletPasswordStateless(t *testing.T) {
 }
 
 func doChangePassword(service *walletunlocker.UnlockerService, testDir string,
-	req *lnrpc.ChangePasswordRequest, errChan chan error) {
+	req *lnrpc.ChangePasswordRequest, errChan chan er.R) {
 
 	// When providing the correct wallet's current password and a
 	// new password that meets the length requirement, the password
@@ -640,9 +641,9 @@ func doChangePassword(service *walletunlocker.UnlockerService, testDir string,
 		errChan <- er.Errorf("could not create test store: %v", err)
 		return
 	}
-	_, _, err = store.RootKey(defaultRootKeyIDContext)
-	if err != nil {
-		errChan <- er.Errorf("could not get root key: %v", err)
+	_, _, errr := store.RootKey(defaultRootKeyIDContext)
+	if errr != nil {
+		errChan <- er.Errorf("could not get root key: %v", errr)
 		return
 	}
 
@@ -654,9 +655,9 @@ func doChangePassword(service *walletunlocker.UnlockerService, testDir string,
 		errChan <- er.Errorf("could not close store: %v", err)
 		return
 	}
-	err = os.RemoveAll(testDir)
-	if err != nil {
-		errChan <- err
+	errr = os.RemoveAll(testDir)
+	if errr != nil {
+		errChan <- er.E(errr)
 		return
 	}
 }

@@ -2526,7 +2526,7 @@ func TestUnknownErrorSource(t *testing.T) {
 			// of the error.
 			if firstHop.ToUint64() == 1 {
 				return [32]byte{},
-					htlcswitch.ErrUnreadableFailureMessage
+					htlcswitch.ErrUnreadableFailureMessage.Default()
 			}
 
 			// Otherwise the payment succeeds.

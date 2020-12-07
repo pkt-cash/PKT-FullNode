@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -166,7 +167,7 @@ func TestValidate(t *testing.T) {
 	testCases := []struct {
 		// expectedErr is the error we expect, this should be nil if
 		// the channel is valid.
-		expectedErr error
+		expectedErr *er.ErrorCode
 
 		// locator is how the Validate method should find the target
 		// outpoint.
@@ -247,7 +248,7 @@ func TestValidate(t *testing.T) {
 
 		// Validation failure on final commitment transaction
 		{
-			expectedErr: &ErrScriptValidateError{},
+			expectedErr: ErrScriptValidateError,
 			locator: &OutPointChanLocator{
 				ChanPoint: channelCtx.chanPoint,
 			},
@@ -299,13 +300,8 @@ func TestValidate(t *testing.T) {
 		}
 
 		chanPoint, err := Validate(ctx)
-		if err != testCase.expectedErr {
-			_, ok := testCase.expectedErr.(*ErrScriptValidateError)
-			_, scriptErr := err.(*ErrScriptValidateError)
-			if ok && scriptErr {
-				continue
-			}
-
+		if err == nil && testCase.expectedErr == nil {
+		} else if testCase.expectedErr == nil || !testCase.expectedErr.Is(err) {
 			t.Fatalf("test #%v: validation failed: expected %v, "+
 				"got %v", i, testCase.expectedErr, err)
 		}

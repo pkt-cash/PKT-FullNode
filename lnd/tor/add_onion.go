@@ -62,7 +62,7 @@ func NewOnionFile(privateKeyPath string, privateKeyPerm os.FileMode) *OnionFile 
 
 // StorePrivateKey stores the private key at its expected path.
 func (f *OnionFile) StorePrivateKey(_ OnionType, privateKey []byte) er.R {
-	return ioutil.WriteFile(f.privateKeyPath, privateKey, f.privateKeyPerm)
+	return er.E(ioutil.WriteFile(f.privateKeyPath, privateKey, f.privateKeyPerm))
 }
 
 // PrivateKey retrieves the private key from its expected path. If the file does
@@ -71,12 +71,13 @@ func (f *OnionFile) PrivateKey(_ OnionType) ([]byte, er.R) {
 	if _, err := os.Stat(f.privateKeyPath); os.IsNotExist(err) {
 		return nil, ErrNoPrivateKey.Default()
 	}
-	return ioutil.ReadFile(f.privateKeyPath)
+	i, e := ioutil.ReadFile(f.privateKeyPath)
+	return i, er.E(e)
 }
 
 // DeletePrivateKey removes the file containing the private key.
 func (f *OnionFile) DeletePrivateKey(_ OnionType) er.R {
-	return os.Remove(f.privateKeyPath)
+	return er.E(os.Remove(f.privateKeyPath))
 }
 
 // AddOnionConfig houses all of the required parameters in order to successfully
@@ -131,12 +132,12 @@ func (c *Controller) AddOnion(cfg AddOnionConfig) (*OnionAddr, er.R) {
 
 	if cfg.Store != nil {
 		privateKey, err := cfg.Store.PrivateKey(cfg.Type)
-		switch err {
+		switch {
 		// Proceed to request a new onion service.
-		case ErrNoPrivateKey:
+		case ErrNoPrivateKey.Is(err):
 
 		// Recover the onion service with the private key found.
-		case nil:
+		case err == nil:
 			keyParam = string(privateKey)
 
 		default:

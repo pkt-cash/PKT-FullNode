@@ -186,9 +186,9 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		return nil, nil, nil, err
 	}
 	bobPreimageProducer := shachain.NewRevocationProducer(*bobRoot)
-	bobFirstRevoke, errr := bobPreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	bobFirstRevoke, err := bobPreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	bobCommitPoint := input.ComputeCommitmentPoint(bobFirstRevoke[:])
 
@@ -197,44 +197,44 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		return nil, nil, nil, err
 	}
 	alicePreimageProducer := shachain.NewRevocationProducer(*aliceRoot)
-	aliceFirstRevoke, errr := alicePreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	aliceFirstRevoke, err := alicePreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, errr := lnwallet.CreateCommitmentTxns(
+	aliceCommitTx, bobCommitTx, err := lnwallet.CreateCommitmentTxns(
 		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
 		bobCommitPoint, *fundingTxIn, channeldb.SingleFunderTweaklessBit,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	alicePath, errr := ioutil.TempDir("", "alicedb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbAlice, errr := channeldb.Open(alicePath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbAlice, err := channeldb.Open(alicePath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	bobPath, errr := ioutil.TempDir("", "bobdb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbBob, errr := channeldb.Open(bobPath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbBob, err := channeldb.Open(bobPath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	estimator := chainfee.NewStaticEstimator(12500, 0)
-	feePerKw, errr := estimator.EstimateFeePerKW(1)
-	if errr != nil {
-		return nil, nil, nil, errr
+	feePerKw, err := estimator.EstimateFeePerKW(1)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// TODO(roasbeef): need to factor in commit fee?
@@ -331,20 +331,20 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 	bobSigner := &mock.SingleSigner{Privkey: bobKeyPriv}
 
 	alicePool := lnwallet.NewSigPool(1, aliceSigner)
-	channelAlice, errr := lnwallet.NewLightningChannel(
+	channelAlice, err := lnwallet.NewLightningChannel(
 		aliceSigner, aliceChannelState, alicePool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	_ = alicePool.Start()
 
 	bobPool := lnwallet.NewSigPool(1, bobSigner)
-	channelBob, errr := lnwallet.NewLightningChannel(
+	channelBob, err := lnwallet.NewLightningChannel(
 		bobSigner, bobChannelState, bobPool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	_ = bobPool.Start()
 
@@ -358,12 +358,12 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		},
 	}
 
-	_, currentHeight, errr := chainIO.GetBestBlock()
-	if errr != nil {
-		return nil, nil, nil, errr
+	_, currentHeight, err := chainIO.GetBestBlock()
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	htlcSwitch, errr := htlcswitch.New(htlcswitch.Config{
+	htlcSwitch, err := htlcswitch.New(htlcswitch.Config{
 		DB:             dbAlice,
 		SwitchPackager: channeldb.NewSwitchPackager(),
 		Notifier:       notifier,
@@ -374,18 +374,18 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		AckEventTicker: ticker.New(
 			htlcswitch.DefaultAckInterval),
 	}, uint32(currentHeight))
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	if errr = htlcSwitch.Start(); errr != nil {
-		return nil, nil, nil, errr
+	if err = htlcSwitch.Start(); err != nil {
+		return nil, nil, nil, err
 	}
 
 	nodeSignerAlice := netann.NewNodeSigner(aliceKeySigner)
 
 	const chanActiveTimeout = time.Minute
 
-	chanStatusMgr, errr := netann.NewChanStatusManager(&netann.ChanStatusConfig{
+	chanStatusMgr, err := netann.NewChanStatusManager(&netann.ChanStatusConfig{
 		ChanStatusSampleInterval: 30 * time.Second,
 		ChanEnableTimeout:        chanActiveTimeout,
 		ChanDisableTimeout:       2 * time.Minute,
@@ -396,16 +396,16 @@ func createTestPeer(notifier chainntnfs.ChainNotifier,
 		IsChannelActive:          htlcSwitch.HasActiveLink,
 		ApplyChannelUpdate:       func(*lnwire.ChannelUpdate) er.R { return nil },
 	})
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	if errr = chanStatusMgr.Start(); errr != nil {
-		return nil, nil, nil, errr
+	if err = chanStatusMgr.Start(); err != nil {
+		return nil, nil, nil, err
 	}
 
-	errBuffer, errr := queue.NewCircularBuffer(ErrorBufferSize)
-	if errr != nil {
-		return nil, nil, nil, errr
+	errBuffer, err := queue.NewCircularBuffer(ErrorBufferSize)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	var pubKey [33]byte

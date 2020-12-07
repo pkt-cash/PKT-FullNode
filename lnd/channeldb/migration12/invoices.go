@@ -255,7 +255,7 @@ func SerializeInvoice(w io.Writer, i *Invoice) er.R {
 	}
 
 	var fb bytes.Buffer
-	err = i.Terms.Features.EncodeBase256(&fb)
+	err := i.Terms.Features.EncodeBase256(&fb)
 	if err != nil {
 		return err
 	}

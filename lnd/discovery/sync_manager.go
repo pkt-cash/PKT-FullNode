@@ -562,7 +562,7 @@ func (m *SyncManager) forceHistoricalSync() *GossipSyncer {
 // NOTE: It's possible for a nil value to be returned if there are no eligible
 // candidate syncers.
 func chooseRandomSyncer(syncers map[route.Vertex]*GossipSyncer,
-	action func(*GossipSyncer) error) *GossipSyncer {
+	action func(*GossipSyncer) er.R) *GossipSyncer {
 
 	for _, s := range syncers {
 		// Only syncers in a chansSynced state are viable for sync

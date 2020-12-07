@@ -30,8 +30,8 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, er.R) {
 	case discriminant == 0xfd:
 		_, err := util.ReadFull(r, buf[:2])
 		switch {
-		case err == io.EOF:
-			return 0, io.ErrUnexpectedEOF
+		case er.Wrapped(err) == io.EOF:
+			return 0, er.E(io.ErrUnexpectedEOF)
 		case err != nil:
 			return 0, err
 		}
@@ -46,8 +46,8 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, er.R) {
 	case discriminant == 0xfe:
 		_, err := util.ReadFull(r, buf[:4])
 		switch {
-		case err == io.EOF:
-			return 0, io.ErrUnexpectedEOF
+		case er.Wrapped(err) == io.EOF:
+			return 0, er.E(io.ErrUnexpectedEOF)
 		case err != nil:
 			return 0, err
 		}
@@ -62,8 +62,8 @@ func ReadVarInt(r io.Reader, buf *[8]byte) (uint64, er.R) {
 	default:
 		_, err := util.ReadFull(r, buf[:])
 		switch {
-		case err == io.EOF:
-			return 0, io.ErrUnexpectedEOF
+		case er.EOF.Is(err):
+			return 0, er.ErrUnexpectedEOF.Default()
 		case err != nil:
 			return 0, err
 		}

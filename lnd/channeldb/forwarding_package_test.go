@@ -7,10 +7,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestPkgFilterBruteForce tests the behavior of a pkg filter up to size 1000,

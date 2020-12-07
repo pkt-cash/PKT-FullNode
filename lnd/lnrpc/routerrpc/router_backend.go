@@ -127,7 +127,7 @@ func (r *RouterBackend) QueryRoutes(ctx context.Context,
 
 	var sourcePubKey route.Vertex
 	if in.SourcePubKey != "" {
-		var err error
+		var err er.R
 		sourcePubKey, err = parsePubKey(in.SourcePubKey)
 		if err != nil {
 			return nil, err
@@ -411,8 +411,7 @@ func (r *RouterBackend) MarshallRoute(route *route.Route) (*lnrpc.Route, er.R) {
 
 // UnmarshallHopWithPubkey unmarshalls an rpc hop for which the pubkey has
 // already been extracted.
-func UnmarshallHopWithPubkey(rpcHop *lnrpc.Hop, pubkey route.Vertex) (*route.Hop,
-	error) {
+func UnmarshallHopWithPubkey(rpcHop *lnrpc.Hop, pubkey route.Vertex) (*route.Hop, er.R) {
 
 	customRecords := record.CustomSet(rpcHop.CustomRecords)
 	if err := customRecords.Validate(); err != nil {
@@ -870,7 +869,7 @@ func (r *RouterBackend) MarshalHTLCAttempt(
 			htlc.Failure.FailTime,
 		)
 
-		var err error
+		var err er.R
 		rpcAttempt.Failure, err = marshallHtlcFailure(htlc.Failure)
 		if err != nil {
 			return nil, err
@@ -884,8 +883,7 @@ func (r *RouterBackend) MarshalHTLCAttempt(
 
 // marshallHtlcFailure marshalls htlc fail info from the database to its rpc
 // representation.
-func marshallHtlcFailure(failure *channeldb.HTLCFailInfo) (*lnrpc.Failure,
-	error) {
+func marshallHtlcFailure(failure *channeldb.HTLCFailInfo) (*lnrpc.Failure, er.R) {
 
 	rpcFailure := &lnrpc.Failure{
 		FailureSourceIndex: failure.FailureSourceIndex,
@@ -931,10 +929,10 @@ func MarshalTimeNano(t time.Time) int64 {
 // Because of difficulties with using protobuf oneof constructs in some
 // languages, the decision was made here to use a single message format for all
 // failure messages with some fields left empty depending on the failure type.
-func marshallError(sendError error) (*lnrpc.Failure, er.R) {
+func marshallError(sendError er.R) (*lnrpc.Failure, er.R) {
 	response := &lnrpc.Failure{}
 
-	if sendError == htlcswitch.ErrUnreadableFailureMessage {
+	if htlcswitch.ErrUnreadableFailureMessage.Is(sendError) {
 		response.Code = lnrpc.Failure_UNREADABLE_FAILURE
 		return response, nil
 	}

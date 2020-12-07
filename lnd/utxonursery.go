@@ -604,7 +604,7 @@ func (u *utxoNursery) reloadPreschool() er.R {
 
 		// Load the close summary for this output's channel point.
 		closeSummary, err := u.cfg.FetchClosedChannel(chanPoint)
-		if err == channeldb.ErrClosedChannelNotFound {
+		if channeldb.ErrClosedChannelNotFound.Is(err) {
 			// This should never happen since the close summary
 			// should only be removed after the channel has been
 			// swept completely.
@@ -816,7 +816,7 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 
 		// In case of a remote spend, still graduate the output. There
 		// is no way to sweep it anymore.
-		if result.Err == sweep.ErrRemoteSpend {
+		if sweep.ErrRemoteSpend.Is(result.Err) {
 			utxnLog.Infof("Output %v was spend by remote party",
 				output.OutPoint())
 			break
@@ -873,7 +873,7 @@ func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) er.R
 	// confirmed before transitioning it to kindergarten.
 	label := labels.MakeLabel(labels.LabelTypeSweepTransaction, nil)
 	err := u.cfg.PublishTransaction(baby.timeoutTx, label)
-	if err != nil && err != lnwallet.ErrDoubleSpend {
+	if err != nil && !lnwallet.ErrDoubleSpend.Is(err) {
 		utxnLog.Errorf("Unable to broadcast baby tx: "+
 			"%v, %v", err, spew.Sdump(baby.timeoutTx))
 		return err
@@ -1148,7 +1148,7 @@ func (c *contractMaturityReport) AddRecoveredHtlc(kid *kidOutput) {
 // database state.
 func (u *utxoNursery) closeAndRemoveIfMature(chanPoint *wire.OutPoint) er.R {
 	isMature, err := u.cfg.Store.IsMatureChannel(chanPoint)
-	if err == ErrContractNotFound {
+	if ErrContractNotFound.Is(err) {
 		return nil
 	} else if err != nil {
 		utxnLog.Errorf("Unable to determine maturity of "+
@@ -1244,7 +1244,7 @@ func (bo *babyOutput) Encode(w io.Writer) er.R {
 func (bo *babyOutput) Decode(r io.Reader) er.R {
 	var scratch [4]byte
 	if _, err := r.Read(scratch[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	bo.expiry = byteOrder.Uint32(scratch[:])
 
@@ -1385,7 +1385,7 @@ func (k *kidOutput) Decode(r io.Reader) er.R {
 	var scratch [8]byte
 
 	if _, err := r.Read(scratch[:]); err != nil {
-		return err
+		return er.E(err)
 	}
 	k.amt = btcutil.Amount(byteOrder.Uint64(scratch[:]))
 
@@ -1403,22 +1403,22 @@ func (k *kidOutput) Decode(r io.Reader) er.R {
 	}
 
 	if _, err := r.Read(scratch[:4]); err != nil {
-		return err
+		return er.E(err)
 	}
 	k.blocksToMaturity = byteOrder.Uint32(scratch[:4])
 
 	if _, err := r.Read(scratch[:4]); err != nil {
-		return err
+		return er.E(err)
 	}
 	k.absoluteMaturity = byteOrder.Uint32(scratch[:4])
 
 	if _, err := r.Read(scratch[:4]); err != nil {
-		return err
+		return er.E(err)
 	}
 	k.confHeight = byteOrder.Uint32(scratch[:4])
 
 	if _, err := r.Read(scratch[:2]); err != nil {
-		return err
+		return er.E(err)
 	}
 	k.witnessType = input.StandardWitnessType(byteOrder.Uint16(scratch[:2]))
 
@@ -1452,7 +1452,7 @@ func readOutpoint(r io.Reader, o *wire.OutPoint) er.R {
 	copy(o.Hash[:], txid)
 
 	if _, err := r.Read(scratch); err != nil {
-		return err
+		return er.E(err)
 	}
 	o.Index = byteOrder.Uint32(scratch)
 

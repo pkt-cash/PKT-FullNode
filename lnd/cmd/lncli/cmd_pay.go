@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -17,6 +15,8 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/lightninglabs/protobuf-hex-display/jsonpb"
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -226,7 +226,7 @@ func sendPayment(ctx *cli.Context) er.R {
 	var (
 		destNode []byte
 		amount   int64
-		err      error
+		err      er.R
 	)
 
 	args := ctx.Args()
@@ -252,6 +252,7 @@ func sendPayment(ctx *cli.Context) er.R {
 	if ctx.IsSet("amt") {
 		amount = ctx.Int64("amt")
 	} else if args.Present() {
+		var err error
 		amount, err = strconv.ParseInt(args.First(), 10, 64)
 		args = args.Tail()
 		if err != nil {
@@ -274,7 +275,7 @@ func sendPayment(ctx *cli.Context) er.R {
 		}
 		var preimage lntypes.Preimage
 		if _, err := rand.Read(preimage[:]); err != nil {
-			return err
+			return er.E(err)
 		}
 
 		// Set the preimage. If the user supplied a preimage with the
@@ -311,7 +312,7 @@ func sendPayment(ctx *cli.Context) er.R {
 	case args.Present():
 		delta, err := strconv.ParseInt(args.First(), 10, 64)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		req.FinalCltvDelta = int32(delta)
 	}
@@ -353,6 +354,7 @@ func sendPaymentRequest(ctx *cli.Context,
 	req.AllowSelfPayment = ctx.Bool("allow_self_payment")
 
 	req.MaxParts = uint32(ctx.Uint(maxPartsFlag.Name))
+	var err er.R
 
 	// Parse custom data records.
 	data := ctx.String(dataFlag.Name)
@@ -365,10 +367,10 @@ func sendPaymentRequest(ctx *cli.Context,
 					"multiple equal signs in record")
 			}
 
-			recordID, err := strconv.ParseUint(kv[0], 10, 64)
-			if err != nil {
+			recordID, errr := strconv.ParseUint(kv[0], 10, 64)
+			if errr != nil {
 				return er.Errorf("invalid data format: %v",
-					err)
+					errr)
 			}
 
 			hexValue, err := util.DecodeHex(kv[1])
@@ -385,11 +387,11 @@ func sendPaymentRequest(ctx *cli.Context,
 	if req.PaymentRequest != "" {
 		// Decode payment request to find out the amount.
 		decodeReq := &lnrpc.PayReqString{PayReq: req.PaymentRequest}
-		decodeResp, err := client.DecodePayReq(
+		decodeResp, errr := client.DecodePayReq(
 			context.Background(), decodeReq,
 		)
-		if err != nil {
-			return err
+		if errr != nil {
+			return er.E(errr)
 		}
 
 		// If amount is present in the request, override the request
@@ -415,7 +417,7 @@ func sendPaymentRequest(ctx *cli.Context,
 			}
 		}
 	} else {
-		var err error
+		var err er.R
 		feeLimit, err = retrieveFeeLimit(ctx, req.Amt)
 		if err != nil {
 			return err
@@ -428,9 +430,9 @@ func sendPaymentRequest(ctx *cli.Context,
 	printJSON := ctx.Bool(jsonFlag.Name)
 	req.NoInflightUpdates = !ctx.Bool(inflightUpdatesFlag.Name) && printJSON
 
-	stream, err := routerClient.SendPaymentV2(context.Background(), req)
-	if err != nil {
-		return err
+	stream, errr := routerClient.SendPaymentV2(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	finalState, err := printLivePayment(
@@ -483,9 +485,9 @@ func trackPayment(ctx *cli.Context) er.R {
 		PaymentHash: hash,
 	}
 
-	stream, err := routerClient.TrackPaymentV2(context.Background(), req)
-	if err != nil {
-		return err
+	stream, errr := routerClient.TrackPaymentV2(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	client := lnrpc.NewLightningClient(conn)
@@ -510,9 +512,9 @@ func printLivePayment(stream routerrpc.Router_TrackPaymentV2Client,
 	first := true
 	var lastLineCount int
 	for {
-		payment, err := stream.Recv()
-		if err != nil {
-			return nil, err
+		payment, errr := stream.Recv()
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 
 		if json {
@@ -773,7 +775,7 @@ func sendToRoute(ctx *cli.Context) er.R {
 
 	var (
 		rHash []byte
-		err   error
+		err   er.R
 	)
 	switch {
 	case ctx.IsSet("payment_hash"):
@@ -811,7 +813,7 @@ func sendToRoute(ctx *cli.Context) er.R {
 	case args.Present() && args.First() == "-":
 		b, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 		if len(b) == 0 {
 			return er.Errorf("queryroutes output is empty")
@@ -825,8 +827,8 @@ func sendToRoute(ctx *cli.Context) er.R {
 	// format.
 	var route *lnrpc.Route
 	routes := &lnrpc.QueryRoutesResponse{}
-	err = jsonpb.UnmarshalString(jsonRoutes, routes)
-	if err == nil {
+	errr := jsonpb.UnmarshalString(jsonRoutes, routes)
+	if errr == nil {
 		if len(routes.Routes) == 0 {
 			return er.Errorf("no routes provided")
 		}
@@ -839,10 +841,10 @@ func sendToRoute(ctx *cli.Context) er.R {
 		route = routes.Routes[0]
 	} else {
 		routes := &routerrpc.BuildRouteResponse{}
-		err = jsonpb.UnmarshalString(jsonRoutes, routes)
-		if err != nil {
+		errr = jsonpb.UnmarshalString(jsonRoutes, routes)
+		if errr != nil {
 			return er.Errorf("unable to unmarshal json string "+
-				"from incoming array of routes: %v", err)
+				"from incoming array of routes: %v", errr)
 		}
 
 		route = routes.Route
@@ -862,9 +864,9 @@ func sendToRouteRequest(ctx *cli.Context, req *routerrpc.SendToRouteRequest) er.
 
 	client := routerrpc.NewRouterClient(conn)
 
-	resp, err := client.SendToRouteV2(context.Background(), req)
-	if err != nil {
-		return err
+	resp, errr := client.SendToRouteV2(context.Background(), req)
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	printRespJSON(resp)

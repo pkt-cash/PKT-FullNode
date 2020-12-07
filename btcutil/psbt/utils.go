@@ -7,7 +7,6 @@ package psbt
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"sort"
 
@@ -324,15 +323,15 @@ func TxOutsEqual(out1, out2 *wire.TxOut) bool {
 // VerifyOutputsEqual verifies that the two slices of transaction outputs are
 // deep equal to each other. We do the length check and manual loop to provide
 // better error messages to the user than just returning "not equal".
-func VerifyOutputsEqual(outs1, outs2 []*wire.TxOut) error {
+func VerifyOutputsEqual(outs1, outs2 []*wire.TxOut) er.R {
 	if len(outs1) != len(outs2) {
-		return fmt.Errorf("number of outputs are different")
+		return er.Errorf("number of outputs are different")
 	}
 	for idx, out := range outs1 {
 		// There is a byte slice in the output so we can't use the
 		// equality operator.
 		if !TxOutsEqual(out, outs2[idx]) {
-			return fmt.Errorf("output %d is different", idx)
+			return er.Errorf("output %d is different", idx)
 		}
 	}
 	return nil
@@ -342,13 +341,13 @@ func VerifyOutputsEqual(outs1, outs2 []*wire.TxOut) error {
 // two slices of transaction inputs are deep equal to each other. We do the
 // length check and manual loop to provide better error messages to the user
 // than just returning "not equal".
-func VerifyInputPrevOutpointsEqual(ins1, ins2 []*wire.TxIn) error {
+func VerifyInputPrevOutpointsEqual(ins1, ins2 []*wire.TxIn) er.R {
 	if len(ins1) != len(ins2) {
-		return fmt.Errorf("number of inputs are different")
+		return er.Errorf("number of inputs are different")
 	}
 	for idx, in := range ins1 {
 		if in.PreviousOutPoint != ins2[idx].PreviousOutPoint {
-			return fmt.Errorf("previous outpoint of input %d is "+
+			return er.Errorf("previous outpoint of input %d is "+
 				"different", idx)
 		}
 	}

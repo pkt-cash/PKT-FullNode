@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/watchtowerrpc"
 	"github.com/urfave/cli"
 )
@@ -38,7 +39,7 @@ var towerInfoCommand = cli.Command{
 
 func towerInfo(ctx *cli.Context) er.R {
 	if ctx.NArg() != 0 || ctx.NumFlags() > 0 {
-		return cli.ShowCommandHelp(ctx, "info")
+		return er.E(cli.ShowCommandHelp(ctx, "info"))
 	}
 
 	client, cleanup := getWatchtowerClient(ctx)

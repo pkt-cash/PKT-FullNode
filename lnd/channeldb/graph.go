@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"image/color"
 	"io"
 	"math"
@@ -3021,7 +3022,7 @@ func (c *ChannelGraph) FetchChannelEdgesByID(chanID uint64,
 
 		// If it doesn't exist, we'll quickly check our zombie index to
 		// see if we've previously marked it as so.
-		if err == ErrEdgeNotFound {
+		if ErrEdgeNotFound.Is(err) {
 			// If the zombie index doesn't exist, or the edge is not
 			// marked as a zombie within it, then we'll return the
 			// original ErrEdgeNotFound error.
@@ -3073,7 +3074,7 @@ func (c *ChannelGraph) FetchChannelEdgesByID(chanID uint64,
 		policy1 = nil
 		policy2 = nil
 	})
-	if err == ErrZombieEdge {
+	if ErrZombieEdge.Is(err) {
 		return edgeInfo, nil, nil, err
 	}
 	if err != nil {
@@ -3202,14 +3203,14 @@ func (c *ChannelGraph) ChannelView() ([]EdgePoint, er.R) {
 			var chanPoint wire.OutPoint
 			err := readOutpoint(chanPointReader, &chanPoint)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			edgeInfo, err := fetchChanEdgeInfo(
 				edgeIndex, chanID,
 			)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			pkScript, err := genMultiSigP2WSH(
@@ -3217,7 +3218,7 @@ func (c *ChannelGraph) ChannelView() ([]EdgePoint, er.R) {
 				edgeInfo.BitcoinKey2Bytes[:],
 			)
 			if err != nil {
-				return er.E(err)
+				return err
 			}
 
 			edgePoints = append(edgePoints, EdgePoint{
@@ -3415,13 +3416,13 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket, // no
 	}
 
 	if err := util.WriteBin(&b, byteOrder, node.Color.R); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(&b, byteOrder, node.Color.G); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(&b, byteOrder, node.Color.B); err != nil {
-		return er.E(err)
+		return err
 	}
 
 	if err := wire.WriteVarString(&b, 0, node.Alias); err != nil {
@@ -3456,7 +3457,8 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket, // no
 	}
 
 	if len(node.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
-		return ErrTooManyExtraOpaqueBytes(len(node.ExtraOpaqueData))
+		return ErrTooManyExtraOpaqueBytes.New(
+			fmt.Sprintf("%s", len(node.ExtraOpaqueData)), nil)
 	}
 	err = wire.WriteVarBytes(&b, 0, node.ExtraOpaqueData)
 	if err != nil {
@@ -3527,7 +3529,7 @@ func deserializeLightningNode(r io.Reader) (LightningNode, er.R) {
 	node.LastUpdate = time.Unix(unix, 0)
 
 	if _, err := util.ReadFull(r, node.PubKeyBytes[:]); err != nil {
-		return LightningNode{}, er.E(err)
+		return LightningNode{}, err
 	}
 
 	if _, err := r.Read(scratch[:2]); err != nil {
@@ -3550,13 +3552,13 @@ func deserializeLightningNode(r io.Reader) (LightningNode, er.R) {
 	// We did get a node announcement for this node, so we'll have the rest
 	// of the data available.
 	if err := util.ReadBin(r, byteOrder, &node.Color.R); err != nil {
-		return LightningNode{}, er.E(err)
+		return LightningNode{}, err
 	}
 	if err := util.ReadBin(r, byteOrder, &node.Color.G); err != nil {
-		return LightningNode{}, er.E(err)
+		return LightningNode{}, err
 	}
 	if err := util.ReadBin(r, byteOrder, &node.Color.B); err != nil {
-		return LightningNode{}, er.E(err)
+		return LightningNode{}, err
 	}
 
 	node.Alias, err = wire.ReadVarString(r, 0)
@@ -3650,7 +3652,7 @@ func putChanEdgeInfo(edgeIndex kvdb.RwBucket, edgeInfo *ChannelEdgeInfo, chanID 
 		return err
 	}
 	if err := util.WriteBin(&b, byteOrder, uint64(edgeInfo.Capacity)); err != nil {
-		return er.E(err)
+		return err
 	}
 	if _, err := b.Write(chanID[:]); err != nil {
 		return er.E(err)
@@ -3660,7 +3662,8 @@ func putChanEdgeInfo(edgeIndex kvdb.RwBucket, edgeInfo *ChannelEdgeInfo, chanID 
 	}
 
 	if len(edgeInfo.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
-		return ErrTooManyExtraOpaqueBytes(len(edgeInfo.ExtraOpaqueData))
+		return ErrTooManyExtraOpaqueBytes.New(
+			fmt.Sprintf("%s", len(edgeInfo.ExtraOpaqueData)), nil)
 	}
 	err := wire.WriteVarBytes(&b, 0, edgeInfo.ExtraOpaqueData)
 	if err != nil {
@@ -3689,16 +3692,16 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, er.R) {
 	)
 
 	if _, err := util.ReadFull(r, edgeInfo.NodeKey1Bytes[:]); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 	if _, err := util.ReadFull(r, edgeInfo.NodeKey2Bytes[:]); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 	if _, err := util.ReadFull(r, edgeInfo.BitcoinKey1Bytes[:]); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 	if _, err := util.ReadFull(r, edgeInfo.BitcoinKey2Bytes[:]); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 
 	edgeInfo.Features, err = wire.ReadVarBytes(r, 0, 900, "features")
@@ -3734,14 +3737,14 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, er.R) {
 		return ChannelEdgeInfo{}, err
 	}
 	if err := util.ReadBin(r, byteOrder, &edgeInfo.Capacity); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 	if err := util.ReadBin(r, byteOrder, &edgeInfo.ChannelID); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 
 	if _, err := util.ReadFull(r, edgeInfo.ChainHash[:]); err != nil {
-		return ChannelEdgeInfo{}, er.E(err)
+		return ChannelEdgeInfo{}, err
 	}
 
 	// We'll try and see if there are any opaque bytes left, if not, then
@@ -3962,37 +3965,37 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 	}
 
 	if err := util.WriteBin(w, byteOrder, edge.ChannelID); err != nil {
-		return er.E(err)
+		return err
 	}
 
 	var scratch [8]byte
 	updateUnix := uint64(edge.LastUpdate.Unix())
 	byteOrder.PutUint64(scratch[:], updateUnix)
 	if _, err := util.Write(w, scratch[:]); err != nil {
-		return er.E(err)
+		return err
 	}
 
 	if err := util.WriteBin(w, byteOrder, edge.MessageFlags); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(w, byteOrder, edge.ChannelFlags); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(w, byteOrder, edge.TimeLockDelta); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(w, byteOrder, uint64(edge.MinHTLC)); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(w, byteOrder, uint64(edge.FeeBaseMSat)); err != nil {
-		return er.E(err)
+		return err
 	}
 	if err := util.WriteBin(w, byteOrder, uint64(edge.FeeProportionalMillionths)); err != nil {
-		return er.E(err)
+		return err
 	}
 
 	if _, err := util.Write(w, to); err != nil {
-		return er.E(err)
+		return err
 	}
 
 	// If the max_htlc field is present, we write it. To be compatible with
@@ -4003,12 +4006,13 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 	if edge.MessageFlags.HasMaxHtlc() {
 		err := util.WriteBin(&opaqueBuf, byteOrder, uint64(edge.MaxHTLC))
 		if err != nil {
-			return er.E(err)
+			return err
 		}
 	}
 
 	if len(edge.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
-		return ErrTooManyExtraOpaqueBytes(len(edge.ExtraOpaqueData))
+		return ErrTooManyExtraOpaqueBytes.New(
+			fmt.Sprintf("%s", len(edge.ExtraOpaqueData)), nil)
 	}
 	if _, err := opaqueBuf.Write(edge.ExtraOpaqueData); err != nil {
 		return er.E(err)
@@ -4032,7 +4036,7 @@ func deserializeChanEdgePolicy(r io.Reader,
 	}
 
 	if err := util.ReadBin(r, byteOrder, &edge.ChannelID); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	var scratch [8]byte
@@ -4043,28 +4047,28 @@ func deserializeChanEdgePolicy(r io.Reader,
 	edge.LastUpdate = time.Unix(unix, 0)
 
 	if err := util.ReadBin(r, byteOrder, &edge.MessageFlags); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	if err := util.ReadBin(r, byteOrder, &edge.ChannelFlags); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	if err := util.ReadBin(r, byteOrder, &edge.TimeLockDelta); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 
 	var n uint64
 	if err := util.ReadBin(r, byteOrder, &n); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	edge.MinHTLC = lnwire.MilliSatoshi(n)
 
 	if err := util.ReadBin(r, byteOrder, &n); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	edge.FeeBaseMSat = lnwire.MilliSatoshi(n)
 
 	if err := util.ReadBin(r, byteOrder, &n); err != nil {
-		return nil, er.E(err)
+		return nil, err
 	}
 	edge.FeeProportionalMillionths = lnwire.MilliSatoshi(n)
 

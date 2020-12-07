@@ -2,6 +2,7 @@ package routing
 
 import (
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -68,7 +69,7 @@ func (m *SessionSource) NewPaymentSession(p *LightningPayment) (
 	}
 
 	getBandwidthHints := func() (map[uint64]lnwire.MilliSatoshi,
-		error) {
+		er.R) {
 
 		return generateBandwidthHints(sourceNode, m.QueryBandwidth)
 	}

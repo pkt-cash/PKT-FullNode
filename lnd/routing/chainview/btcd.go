@@ -216,7 +216,7 @@ func (b *BtcdFilteredChainView) onFilteredBlockDisconnected(height int32,
 type filterBlockReq struct {
 	blockHash *chainhash.Hash
 	resp      chan *FilteredBlock
-	err       chan error
+	err       chan er.R
 }
 
 // FilterBlock takes a block hash, and returns a FilteredBlocks which is the
@@ -229,7 +229,7 @@ func (b *BtcdFilteredChainView) FilterBlock(blockHash *chainhash.Hash) (*Filtere
 	req := &filterBlockReq{
 		blockHash: blockHash,
 		resp:      make(chan *FilteredBlock, 1),
-		err:       make(chan error, 1),
+		err:       make(chan er.R, 1),
 	}
 
 	select {

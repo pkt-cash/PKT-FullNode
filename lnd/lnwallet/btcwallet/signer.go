@@ -1,7 +1,6 @@
 package btcwallet
 
 import (
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -265,7 +264,7 @@ func (b *BtcWallet) SignMessage(pubKey *btcec.PublicKey,
 	msgDigest := chainhash.DoubleHashB(msg)
 	sign, err := privKey.Sign(msgDigest)
 	if err != nil {
-		return nil, errors.Errorf("unable sign the message: %v", err)
+		return nil, er.Errorf("unable sign the message: %v", err)
 	}
 
 	return sign, nil

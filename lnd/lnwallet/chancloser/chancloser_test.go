@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -31,7 +32,7 @@ func TestMaybeMatchScript(t *testing.T) {
 		name           string
 		shutdownScript lnwire.DeliveryAddress
 		upfrontScript  lnwire.DeliveryAddress
-		expectedErr    error
+		expectedErr    *er.ErrorCode
 	}{
 		{
 			name:           "no upfront shutdown set, script ok",
@@ -68,7 +69,8 @@ func TestMaybeMatchScript(t *testing.T) {
 				test.shutdownScript,
 			)
 
-			if err != test.expectedErr {
+			if test.expectedErr == nil && err == nil {
+			} else if test.expectedErr == nil || test.expectedErr.Is(err) {
 				t.Fatalf("Error: %v, expected error: %v", err, test.expectedErr)
 			}
 		})

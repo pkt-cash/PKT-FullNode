@@ -1,6 +1,10 @@
 package wtwire
 
-import "io"
+import (
+	"io"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+)
 
 // Error is a generic error message that can be sent to a client if a request
 // fails outside of prescribed protocol errors. Typically this would be followed

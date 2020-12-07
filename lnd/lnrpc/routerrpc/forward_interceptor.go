@@ -121,13 +121,13 @@ func (r *forwardInterceptor) onIntercept(p htlcswitch.InterceptedForward) bool {
 }
 
 func (r *forwardInterceptor) readClientResponses(
-	resolutionChan chan *ForwardHtlcInterceptResponse, errChan chan error) {
+	resolutionChan chan *ForwardHtlcInterceptResponse, errChan chan er.R) {
 
 	defer r.wg.Done()
 	for {
 		resp, err := r.stream.Recv()
 		if err != nil {
-			errChan <- err
+			errChan <- er.E(err)
 			return
 		}
 
@@ -167,7 +167,7 @@ func (r *forwardInterceptor) holdAndForwardToClient(
 		OnionBlob:               htlc.OnionBlob[:],
 	}
 
-	return r.stream.Send(interceptionRequest)
+	return er.E(r.stream.Send(interceptionRequest))
 }
 
 // resolveFromClient handles a resolution arrived from the client.
