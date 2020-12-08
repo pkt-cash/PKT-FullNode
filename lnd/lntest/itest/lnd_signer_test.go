@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/signrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
@@ -32,8 +33,8 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 		req *signrpc.SharedKeyRequest) {
 
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-		resp, err := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
-		util.RequireNoErr(t.t, err, "calling DeriveSharedKey failed")
+		resp, errr := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
+		require.NoError(t.t, errr, "calling DeriveSharedKey failed")
 
 		sharedKey, _ := privKeyECDH.ECDH(pub)
 		require.Equal(
@@ -135,10 +136,10 @@ func testDeriveSharedKey(net *lntest.NetworkHarness, t *harnessTest) {
 	// params, the expected error is returned.
 	assertErrorMatch := func(match string, req *signrpc.SharedKeyRequest) {
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-		_, err := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
-		util.RequireErr(t.t, err, "expected to have an error")
+		_, errr := net.Alice.SignerClient.DeriveSharedKey(ctxt, req)
+		require.NoError(t.t, errr, "expected to have an error")
 		require.Contains(
-			t.t, err.Error(), match, "error failed to match",
+			t.t, errr.Error(), match, "error failed to match",
 		)
 	}
 
@@ -192,9 +193,9 @@ func deriveCustomizedKey(ctx context.Context, node *lntest.HarnessNode,
 		KeyFamily: family,
 		KeyIndex:  index,
 	}
-	resp, err := node.WalletKitClient.DeriveKey(ctxt, req)
-	if err != nil {
-		return nil, er.Errorf("failed to derive key: %v", err)
+	resp, errr := node.WalletKitClient.DeriveKey(ctxt, req)
+	if errr != nil {
+		return nil, er.Errorf("failed to derive key: %v", errr)
 	}
 	pub, err := btcec.ParsePubKey(resp.RawKeyBytes, btcec.S256())
 	if err != nil {

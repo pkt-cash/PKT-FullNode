@@ -5,9 +5,11 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
+	"github.com/stretchr/testify/require"
 )
 
 // testMultiHopLocalForceCloseOnChainHtlcTimeout tests that in a multi-hop HTLC
@@ -43,7 +45,7 @@ func testMultiHopLocalForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 	// We'll now send a single HTLC across our multi-hop network.
 	carolPubKey := carol.PubKey[:]
 	payHash := makeFakePayHash(t)
-	_, err := alice.RouterClient.SendPaymentV2(
+	_, errr := alice.RouterClient.SendPaymentV2(
 		ctx, &routerrpc.SendPaymentRequest{
 			Dest:           carolPubKey,
 			Amt:            int64(htlcAmt),
@@ -53,12 +55,12 @@ func testMultiHopLocalForceCloseOnChainHtlcTimeout(net *lntest.NetworkHarness,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
 	// Once the HTLC has cleared, all channels in our mini network should
 	// have the it locked in.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() er.R {
+	err := wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash)
 	}, defaultTimeout)
 	util.RequireNoErr(t.t, err)

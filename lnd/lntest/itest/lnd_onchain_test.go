@@ -3,9 +3,9 @@ package itest
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/walletrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
@@ -39,9 +39,9 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 		Type: lnrpc.AddressType_WITNESS_PUBKEY_HASH,
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	resp, err := net.Bob.NewAddress(ctxt, addrReq)
-	if err != nil {
-		t.Fatalf("unable to get new address for bob: %v", err)
+	resp, errr := net.Bob.NewAddress(ctxt, addrReq)
+	if errr != nil {
+		t.Fatalf("unable to get new address for bob: %v", errr)
 	}
 
 	// Send the coins from Alice to Bob. We should expect a transaction to
@@ -51,8 +51,8 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 		Amount: btcutil.UnitsPerCoinI64(),
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	if _, err = net.Alice.SendCoins(ctxt, sendReq); err != nil {
-		t.Fatalf("unable to send coins to bob: %v", err)
+	if _, errr = net.Alice.SendCoins(ctxt, sendReq); errr != nil {
+		t.Fatalf("unable to send coins to bob: %v", errr)
 	}
 
 	txid, err := waitForTxInMempool(net.Miner.Node, minerMempoolTimeout)
@@ -98,9 +98,9 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 		SatPerByte: uint32(sweep.DefaultMaxFeeRate.FeePerKVByte() / 2000),
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	_, err = net.Bob.WalletKitClient.BumpFee(ctxt, bumpFeeReq)
-	if err != nil {
-		t.Fatalf("unable to bump fee: %v", err)
+	_, errr = net.Bob.WalletKitClient.BumpFee(ctxt, bumpFeeReq)
+	if errr != nil {
+		t.Fatalf("unable to bump fee: %v", errr)
 	}
 
 	// We should now expect to see two transactions within the mempool, a
@@ -114,11 +114,11 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 	// UtxoSweeper. We'll ensure it's using the fee rate specified.
 	pendingSweepsReq := &walletrpc.PendingSweepsRequest{}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	pendingSweepsResp, err := net.Bob.WalletKitClient.PendingSweeps(
+	pendingSweepsResp, errr := net.Bob.WalletKitClient.PendingSweeps(
 		ctxt, pendingSweepsReq,
 	)
-	if err != nil {
-		t.Fatalf("unable to retrieve pending sweeps: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to retrieve pending sweeps: %v", errr)
 	}
 	if len(pendingSweepsResp.PendingSweeps) != 1 {
 		t.Fatalf("expected to find %v pending sweep(s), found %v", 1,
@@ -157,6 +157,6 @@ func testCPFP(net *lntest.NetworkHarness, t *harnessTest) {
 		return nil
 	}, defaultTimeout)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 }

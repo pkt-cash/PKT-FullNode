@@ -30,11 +30,13 @@ var (
 
 	// ErrSpendHintNotFound is an error returned when a spend hint for an
 	// outpoint was not found.
-	ErrSpendHintNotFound = Err.CodeWithDetail("ErrSpendHintNotFound", "spend hint not found")
+	ErrSpendHintNotFound = Err.CodeWithDetail("ErrSpendHintNotFound",
+		"spend hint not found")
 
 	// ErrConfirmHintNotFound is an error returned when a confirm hint for a
 	// transaction was not found.
-	ErrConfirmHintNotFound = Err.CodeWithDetail("ErrConfirmHintNotFound", "confirm hint not found")
+	ErrConfirmHintNotFound = Err.CodeWithDetail("ErrConfirmHintNotFound",
+		"confirm hint not found")
 )
 
 // CacheConfig contains the HeightHintCache configuration

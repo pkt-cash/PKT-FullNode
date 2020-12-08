@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -285,7 +286,7 @@ func (o *mockOnionProcessor) ReconstructHopIterator(r io.Reader, rHash []byte) (
 
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	o.offeredOnionBlob = data
 
@@ -298,7 +299,7 @@ type incomingResolverTestContext struct {
 	resolver       *htlcIncomingContestResolver
 	notifier       *mock.ChainNotifier
 	onionProcessor *mockOnionProcessor
-	resolveErr     chan error
+	resolveErr     chan er.R
 	nextResolver   ContractResolver
 	t              *testing.T
 }
@@ -366,9 +367,9 @@ func newIncomingResolverTestContext(t *testing.T, isExit bool) *incomingResolver
 
 func (i *incomingResolverTestContext) resolve() {
 	// Start resolver.
-	i.resolveErr = make(chan error, 1)
+	i.resolveErr = make(chan er.R, 1)
 	go func() {
-		var err error
+		var err er.R
 		i.nextResolver, err = i.resolver.Resolve()
 		i.resolveErr <- err
 	}()

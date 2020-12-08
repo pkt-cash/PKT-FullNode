@@ -7,6 +7,7 @@ package lnd
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -1274,7 +1275,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 		// the wallet, then pass it back to avoid unlocking it again.
 		birthday := cipherSeed.BirthdayTime()
 		newWallet, err := loader.CreateNewWallet(
-			password, password, cipherSeed.Entropy[:], birthday, nil,
+			password, password, []byte(hex.EncodeToString(cipherSeed.Entropy[:])), birthday, nil,
 		)
 		if err != nil {
 			// Don't leave the file open in case the new wallet

@@ -101,7 +101,7 @@ func TestFetchChannelReadBucket(t *testing.T) {
 	_, err = db.FetchChannelReports(
 		testChainHash, &channelOutpoint,
 	)
-	require.Equal(t, ErrNoChainHashBucket, err)
+	require.True(t, ErrNoChainHashBucket.Is(err))
 
 	// Finally we write a report to disk and check that we can fetch it.
 	report := &ResolverReport{
@@ -132,13 +132,13 @@ func TestFetchChannelWriteBucket(t *testing.T) {
 	}
 
 	createChainHashBucket := func(reports kvdb.RwBucket) (kvdb.RwBucket,
-		error) {
+		er.R) {
 
 		return reports.CreateBucketIfNotExists(testChainHash[:])
 	}
 
 	createChannelBucket := func(chainHash kvdb.RwBucket) (kvdb.RwBucket,
-		error) {
+		er.R) {
 
 		var chanPointBuf bytes.Buffer
 		err := writeOutpoint(&chanPointBuf, &testChanPoint1)

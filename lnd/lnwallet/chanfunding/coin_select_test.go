@@ -1,11 +1,14 @@
 package chanfunding
 
 import (
-	"encoding/hex"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/wire"
@@ -164,7 +167,7 @@ func TestCoinSelect(t *testing.T) {
 				feeRate, test.outputValue, test.coins,
 			)
 			if !test.expectErr && err != nil {
-				t.Fatalf(err.Error())
+				t.Fatalf(err.String())
 			}
 
 			if test.expectErr && err == nil {
@@ -382,12 +385,12 @@ func TestCoinSelectSubtractFees(t *testing.T) {
 			if err != nil {
 				switch {
 				case test.expectErr == "":
-					t.Fatalf(err.Error())
+					t.Fatalf(err.String())
 
-				case test.expectErr != removeAmounts(err.Error()):
+				case !strings.Contains(removeAmounts(err.String()), test.expectErr):
 					t.Fatalf("expected error '%v', got '%v'",
 						test.expectErr,
-						removeAmounts(err.Error()))
+						err.String())
 
 				// If we got an expected error, there is
 				// nothing more to test.
@@ -426,4 +429,9 @@ func TestCoinSelectSubtractFees(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

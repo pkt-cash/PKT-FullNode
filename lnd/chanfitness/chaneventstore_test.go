@@ -244,7 +244,7 @@ func TestGetChanInfo(t *testing.T) {
 	// Try to get info for a channel that has not been opened yet, we
 	// expect to get an error.
 	_, err := ctx.store.GetChanInfo(channel, peer)
-	require.Equal(t, ErrChannelNotFound, err)
+	require.True(t, ErrChannelNotFound.Is(err))
 
 	// Now we send our store a notification that a channel has been opened.
 	ctx.sendChannelOpenedUpdate(pk, channel)

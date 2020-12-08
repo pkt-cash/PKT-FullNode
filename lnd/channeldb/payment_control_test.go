@@ -98,7 +98,7 @@ func TestPaymentControlSwitchFail(t *testing.T) {
 	// Lookup the payment so we can get its old sequence number before it is
 	// overwritten.
 	payment, err := pControl.FetchPayment(info.PaymentHash)
-	assert.NoError(t, err)
+	util.RequireNoErr(t, err)
 
 	// Sends the htlc again, which should succeed since the prior payment
 	// failed.
@@ -762,7 +762,7 @@ func TestPaymentControlMultiShard(t *testing.T) {
 
 		// Finally assert we cannot register more attempts.
 		_, err = pControl.RegisterAttempt(info.PaymentHash, &b)
-		if err != expRegErr {
+		if !expRegErr.Is(err) {
 			t.Fatalf("expected error %v, got: %v", expRegErr, err)
 		}
 	}
@@ -882,7 +882,7 @@ func assertPaymentStatus(t *testing.T, p *PaymentControl,
 	t.Helper()
 
 	payment, err := p.FetchPayment(hash)
-	if expStatus == StatusUnknown && err == ErrPaymentNotInitiated {
+	if expStatus == StatusUnknown && ErrPaymentNotInitiated.Is(err) {
 		return
 	}
 	if err != nil {
@@ -987,7 +987,7 @@ func fetchPaymentIndexEntry(_ *testing.T, p *PaymentControl,
 
 		r := bytes.NewReader(indexValue)
 
-		var err error
+		var err er.R
 		hash, err = deserializePaymentIndex(r)
 		return err
 	}, func() {
@@ -1018,5 +1018,5 @@ func assertPaymentIndex(t *testing.T, p *PaymentControl,
 // exist.
 func assertNoIndex(t *testing.T, p *PaymentControl, seqNr uint64) {
 	_, err := fetchPaymentIndexEntry(t, p, seqNr)
-	require.Equal(t, errNoSequenceNrIndex, err)
+	require.True(t, errNoSequenceNrIndex.Is(err))
 }

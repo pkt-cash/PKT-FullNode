@@ -731,7 +731,7 @@ func assertFlush(t *testing.T, b *Machine, w io.Writer, n int64, expN int,
 		w = NewTimeoutWriter(w, n)
 	}
 	nn, err := b.Flush(w)
-	if er.Native(err) != expErr {
+	if er.Wrapped(err) != expErr {
 		t.Fatalf("expected flush err: %v, got: %v", expErr, err)
 	}
 	if nn != expN {

@@ -3168,6 +3168,11 @@ func (w *Wallet) checkBlock() {
 	}
 	st := w.Manager.SyncedTo()
 	if st.Height >= bestHeight {
+		synced := w.ChainSynced()
+		if !synced {
+			log.Infof("Wallet frontend synced to tip [%d]", st.Height)
+			w.SetChainSynced(true)
+		}
 	} else if err := w.block(wtxmgr.Block{
 		Hash:   *bestH,
 		Height: bestHeight,

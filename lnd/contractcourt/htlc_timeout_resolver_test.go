@@ -299,7 +299,7 @@ func TestHtlcTimeoutResolver(t *testing.T) {
 		// With all the setup above complete, we can initiate the
 		// resolution process, and the bulk of our test.
 		var wg sync.WaitGroup
-		resolveErr := make(chan error, 1)
+		resolveErr := make(chan er.R, 1)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

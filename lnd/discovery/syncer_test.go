@@ -295,7 +295,7 @@ func TestGossipSyncerFilterGossipMsgsAllInMemory(t *testing.T) {
 	// Before we send off the query, we'll ensure we send the missing
 	// channel update for that final ann. It will be below the horizon, so
 	// shouldn't be sent anyway.
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
@@ -371,7 +371,7 @@ func TestGossipSyncerApplyNoHistoricalGossipFilter(t *testing.T) {
 
 	// After applying the gossip filter, the chan series should not be
 	// queried using the updated horizon.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -405,7 +405,7 @@ func TestGossipSyncerApplyNoHistoricalGossipFilter(t *testing.T) {
 	// filter.
 	err := <-errChan
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 }
 
@@ -430,7 +430,7 @@ func TestGossipSyncerApplyGossipFilter(t *testing.T) {
 
 	// Before we apply the horizon, we'll dispatch a response to the query
 	// that the syncer will issue.
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
@@ -670,7 +670,7 @@ func TestGossipSyncerReplyShortChanIDs(t *testing.T) {
 
 	// We'll then craft a reply to the upcoming query for all the matching
 	// channel announcements for a particular set of short channel ID's.
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
@@ -792,7 +792,7 @@ func TestGossipSyncerReplyChanRangeQuery(t *testing.T) {
 		},
 	}
 
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
@@ -969,7 +969,7 @@ func TestGossipSyncerReplyChanRangeQueryBlockRange(t *testing.T) {
 	// each request and return those results once all queries have been
 	// received
 	resultsCh := make(chan []filterRangeReq, 1)
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		// We will capture the values supplied to the chanSeries here
 		// and return the results once all the requests have been
@@ -1048,7 +1048,7 @@ func TestGossipSyncerReplyChanRangeQueryNoNewChans(t *testing.T) {
 
 	// We'll then launch a goroutine to reply to the query no new channels.
 	resp := []lnwire.ShortChannelID{}
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):
@@ -1273,7 +1273,7 @@ func testGossipSyncerProcessChanRangeReply(t *testing.T, legacy bool) {
 
 	// As we're about to send the final response, we'll launch a goroutine
 	// to respond back with a filtered set of chan ID's.
-	errCh := make(chan error, 1)
+	errCh := make(chan er.R, 1)
 	go func() {
 		select {
 		case <-time.After(time.Second * 15):

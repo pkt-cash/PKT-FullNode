@@ -72,9 +72,9 @@ var (
 func makeTestDB() (*channeldb.DB, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.
@@ -1155,7 +1155,7 @@ func TestSignatureAnnouncementLocalFirst(t *testing.T) {
 		func() {
 			number = 0
 		},
-	); err != nil && err != channeldb.ErrWaitingProofNotFound {
+	); err != nil && !channeldb.ErrWaitingProofNotFound.Is(err) {
 		t.Fatalf("unable to retrieve objects from store: %v", err)
 	}
 
@@ -1587,7 +1587,7 @@ out:
 		func() {
 			number = 0
 		},
-	); err != nil && err != channeldb.ErrWaitingProofNotFound {
+	); err != nil && !channeldb.ErrWaitingProofNotFound.Is(err) {
 		t.Fatalf("unable to retrieve objects from store: %v", err)
 	}
 
@@ -1774,7 +1774,7 @@ func TestSignatureAnnouncementFullProofWhenRemoteProof(t *testing.T) {
 		func() {
 			number = 0
 		},
-	); err != nil && err != channeldb.ErrWaitingProofNotFound {
+	); err != nil && !channeldb.ErrWaitingProofNotFound.Is(err) {
 		t.Fatalf("unable to retrieve objects from store: %v", err)
 	}
 
@@ -2322,7 +2322,7 @@ func TestProcessZombieEdgeNowLive(t *testing.T) {
 			ann, remotePeer,
 		)
 
-		var err error
+		var err er.R
 		select {
 		case err = <-errChan:
 		case <-time.After(time.Second):
@@ -2499,7 +2499,7 @@ func TestReceiveRemoteChannelUpdateFirst(t *testing.T) {
 	// to the map of premature ChannelUpdates. Check that nothing
 	// was added to the graph.
 	chanInfo, e1, e2, err := ctx.router.GetChannelByID(batch.chanUpdAnn1.ShortChannelID)
-	if err != channeldb.ErrEdgeNotFound {
+	if !channeldb.ErrEdgeNotFound.Is(err) {
 		t.Fatalf("Expected ErrEdgeNotFound, got: %v", err)
 	}
 	if chanInfo != nil {
@@ -2638,7 +2638,7 @@ func TestReceiveRemoteChannelUpdateFirst(t *testing.T) {
 		func() {
 			number = 0
 		},
-	); err != nil && err != channeldb.ErrWaitingProofNotFound {
+	); err != nil && !channeldb.ErrWaitingProofNotFound.Is(err) {
 		t.Fatalf("unable to retrieve objects from store: %v", err)
 	}
 
@@ -2812,7 +2812,7 @@ func assertBroadcast(t *testing.T, ctx *testCtx, num int) []lnwire.Message {
 
 // assertProcessAnnouncemnt is a helper method that checks that the result of
 // processing an announcement is successful.
-func assertProcessAnnouncement(t *testing.T, result chan error) {
+func assertProcessAnnouncement(t *testing.T, result chan er.R) {
 	t.Helper()
 
 	select {
@@ -3101,7 +3101,7 @@ func TestOptionalFieldsChannelUpdateValidation(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("did not process remote announcement")
 	}
-	if err == nil || !strings.Contains(err.Error(), "invalid max htlc") {
+	if err == nil || !strings.Contains(err.String(), "invalid max htlc") {
 		t.Fatalf("expected chan update to error, instead got %v", err)
 	}
 
@@ -3118,7 +3118,7 @@ func TestOptionalFieldsChannelUpdateValidation(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("did not process remote announcement")
 	}
-	if err == nil || !strings.Contains(err.Error(), "invalid max htlc") {
+	if err == nil || !strings.Contains(err.String(), "invalid max htlc") {
 		t.Fatalf("expected chan update to error, instead got %v", err)
 	}
 
@@ -3466,7 +3466,7 @@ func sendLocalMsg(t *testing.T, ctx *testCtx, msg lnwire.Message,
 
 	t.Helper()
 
-	var err error
+	var err er.R
 	select {
 	case err = <-ctx.gossiper.ProcessLocalAnnouncement(
 		msg, localPub, optionalMsgFields...,
@@ -3495,7 +3495,7 @@ func sendRemoteMsg(t *testing.T, ctx *testCtx, msg lnwire.Message,
 }
 
 func assertBroadcastMsg(t *testing.T, ctx *testCtx,
-	predicate func(lnwire.Message) error) {
+	predicate func(lnwire.Message) er.R) {
 
 	t.Helper()
 
@@ -3553,7 +3553,7 @@ func TestPropagateChanPolicyUpdate(t *testing.T) {
 	// remote peer will be hit, forcing it to request a notification that
 	// the remote peer is active. We'll ensure that it targets the proper
 	// pubkey, and hand it our mock peer above.
-	notifyErr := make(chan error, 1)
+	notifyErr := make(chan er.R, 1)
 	ctx.gossiper.reliableSender.cfg.NotifyWhenOnline = func(
 		targetPub [33]byte, peerChan chan<- lnpeer.Peer) {
 
@@ -3882,7 +3882,7 @@ func TestBroadcastAnnsAfterGraphSynced(t *testing.T) {
 		t.Helper()
 
 		nodePeer := &mockPeer{nodeKeyPriv1.PubKey(), nil, nil}
-		var errChan chan error
+		var errChan chan er.R
 		if isRemote {
 			errChan = ctx.gossiper.ProcessRemoteAnnouncement(
 				msg, nodePeer,

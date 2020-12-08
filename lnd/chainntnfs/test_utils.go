@@ -3,12 +3,9 @@
 package chainntnfs
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -16,11 +13,11 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/neutrino"
-	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
@@ -84,8 +81,7 @@ func WaitForMempoolTx(miner *rpctest.Harness, txid *chainhash.Hash) er.R {
 		// Check for the harness' knowledge of the txid.
 		tx, err := miner.Node.GetRawTransaction(txid)
 		if err != nil {
-			jsonErr, ok := err.(*btcjson.RPCError)
-			if ok && jsonErr.Code == btcjson.ErrRPCNoTxInfo {
+			if btcjson.ErrRPCNoTxInfo.Is(err) {
 				continue
 			}
 			return err
@@ -190,82 +186,14 @@ func NewMiner(t *testing.T, extraArgs []string, createChain bool,
 	return node, func() { node.TearDown() }
 }
 
-// NewBitcoindBackend spawns a new bitcoind node that connects to a miner at the
-// specified address. The txindex boolean can be set to determine whether the
-// backend node should maintain a transaction index. A connection to the newly
-// spawned bitcoind node is returned.
-func NewBitcoindBackend(t *testing.T, minerAddr string,
-	txindex bool) (*chain.BitcoindConn, func()) {
-
-	t.Helper()
-
-	tempBitcoindDir, err := ioutil.TempDir("", "bitcoind")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
-	}
-
-	rpcPort := rand.Intn(65536-1024) + 1024
-	zmqBlockHost := "ipc:///" + tempBitcoindDir + "/blocks.socket"
-	zmqTxHost := "ipc:///" + tempBitcoindDir + "/tx.socket"
-
-	args := []string{
-		"-connect=" + minerAddr,
-		"-datadir=" + tempBitcoindDir,
-		"-regtest",
-		"-rpcauth=weks:469e9bb14ab2360f8e226efed5ca6fd$507c670e800a952" +
-			"84294edb5773b05544b220110063096c221be9933c82d38e1",
-		fmt.Sprintf("-rpcport=%d", rpcPort),
-		"-disablewallet",
-		"-zmqpubrawblock=" + zmqBlockHost,
-		"-zmqpubrawtx=" + zmqTxHost,
-	}
-	if txindex {
-		args = append(args, "-txindex")
-	}
-
-	bitcoind := exec.Command("bitcoind", args...)
-	if err := bitcoind.Start(); err != nil {
-		os.RemoveAll(tempBitcoindDir)
-		t.Fatalf("unable to start bitcoind: %v", err)
-	}
-
-	// Wait for the bitcoind instance to start up.
-	time.Sleep(time.Second)
-
-	host := fmt.Sprintf("127.0.0.1:%d", rpcPort)
-	conn, err := chain.NewBitcoindConn(
-		NetParams, host, "weks", "weks", zmqBlockHost, zmqTxHost,
-		100*time.Millisecond,
-	)
-	if err != nil {
-		bitcoind.Process.Kill()
-		bitcoind.Wait()
-		os.RemoveAll(tempBitcoindDir)
-		t.Fatalf("unable to establish connection to bitcoind: %v", err)
-	}
-	if err := conn.Start(); err != nil {
-		bitcoind.Process.Kill()
-		bitcoind.Wait()
-		os.RemoveAll(tempBitcoindDir)
-		t.Fatalf("unable to establish connection to bitcoind: %v", err)
-	}
-
-	return conn, func() {
-		conn.Stop()
-		bitcoind.Process.Kill()
-		bitcoind.Wait()
-		os.RemoveAll(tempBitcoindDir)
-	}
-}
-
 // NewNeutrinoBackend spawns a new neutrino node that connects to a miner at
 // the specified address.
 func NewNeutrinoBackend(t *testing.T, minerAddr string) (*neutrino.ChainService, func()) {
 	t.Helper()
 
-	spvDir, err := ioutil.TempDir("", "neutrino")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	spvDir, errr := ioutil.TempDir("", "neutrino")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 
 	dbName := filepath.Join(spvDir, "neutrino.db")

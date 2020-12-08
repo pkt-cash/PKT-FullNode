@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
 
@@ -159,7 +160,7 @@ func TestValidateDeps(t *testing.T) {
 func testValidateDeps(t *testing.T, test depTest) {
 	fv := lnwire.NewFeatureVector(test.raw, lnwire.Features)
 	err := ValidateDeps(fv)
-	if !reflect.DeepEqual(err, test.expErr) {
+	if !reflect.DeepEqual(er.Wrapped(err), test.expErr) {
 		t.Fatalf("validation mismatch, want: %v, got: %v",
 			test.expErr, err)
 

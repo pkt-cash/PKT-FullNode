@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
@@ -176,12 +177,12 @@ func TestMailBoxResetAfterShutdown(t *testing.T) {
 	ctx.mailbox.Stop()
 
 	err := ctx.mailbox.ResetMessages()
-	if err != ErrMailBoxShuttingDown {
+	if !ErrMailBoxShuttingDown.Is(err) {
 		t.Fatalf("expected ErrMailBoxShuttingDown, got: %v", err)
 	}
 
 	err = ctx.mailbox.ResetPackets()
-	if err != ErrMailBoxShuttingDown {
+	if !ErrMailBoxShuttingDown.Is(err) {
 		t.Fatalf("expected ErrMailBoxShuttingDown, got: %v", err)
 	}
 }
@@ -516,7 +517,7 @@ func TestMailBoxDuplicateAddPacket(t *testing.T) {
 
 		// Adding again with the same incoming circuit key should fail.
 		err = ctx.mailbox.AddPacket(pkt)
-		if err != ErrPacketAlreadyExists {
+		if !ErrPacketAlreadyExists.Is(err) {
 			t.Fatalf("expected ErrPacketAlreadyExists, got: %v", err)
 		}
 	}

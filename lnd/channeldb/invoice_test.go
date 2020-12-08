@@ -26,10 +26,10 @@ func randInvoice(value lnwire.MilliSatoshi) (*Invoice, er.R) {
 		payAddr [32]byte
 	)
 	if _, err := rand.Read(pre[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if _, err := rand.Read(payAddr[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	i := &Invoice{
@@ -50,7 +50,7 @@ func randInvoice(value lnwire.MilliSatoshi) (*Invoice, er.R) {
 	// on one of the random bytes.
 	var r [MaxPaymentRequestSize]byte
 	if _, err := rand.Read(r[:]); err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 	if r[0]&1 == 0 {
 		i.PaymentRequest = r[:]

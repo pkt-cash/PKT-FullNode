@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
@@ -52,8 +53,8 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	}
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
-	carolInvoice, err := carol.AddHoldInvoice(ctxt, invoiceReq)
-	util.RequireNoErr(t.t, err)
+	carolInvoice, errr := carol.AddHoldInvoice(ctxt, invoiceReq)
+	require.NoError(t.t, errr)
 
 	// Now that we've created the invoice, we'll send a single payment from
 	// Alice to Carol. We won't wait for the response however, as Carol
@@ -61,19 +62,19 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	ctx, cancel := context.WithCancel(ctxb)
 	defer cancel()
 
-	_, err = alice.RouterClient.SendPaymentV2(
+	_, errr = alice.RouterClient.SendPaymentV2(
 		ctx, &routerrpc.SendPaymentRequest{
 			PaymentRequest: carolInvoice.PaymentRequest,
 			TimeoutSeconds: 60,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
 	// At this point, all 3 nodes should now have an active channel with
 	// the created HTLC pending on all of them.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() er.R {
+	err := wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, payHash[:])
 	}, defaultTimeout)
 	util.RequireNoErr(t.t, err)
@@ -93,10 +94,10 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// channel arbitrator won't go to chain.
 	ctx, cancel = context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
-	_, err = carol.SettleInvoice(ctx, &invoicesrpc.SettleInvoiceMsg{
+	_, errr = carol.SettleInvoice(ctx, &invoicesrpc.SettleInvoiceMsg{
 		Preimage: preimage[:],
 	})
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
 	// Increase the fee estimate so that the following force close tx will
 	// be cpfp'ed.
@@ -177,8 +178,8 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// output.
 	pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	pendingChanResp, err := carol.PendingChannels(ctxt, pendingChansRequest)
-	util.RequireNoErr(t.t, err)
+	pendingChanResp, errr := carol.PendingChannels(ctxt, pendingChansRequest)
+	require.NoError(t.t, errr)
 
 	require.NotZero(t.t, len(pendingChanResp.PendingForceClosingChannels))
 	forceCloseChan := pendingChanResp.PendingForceClosingChannels[0]
@@ -218,8 +219,8 @@ func testMultiHopReceiverChainClaim(net *lntest.NetworkHarness, t *harnessTest,
 	// The invoice should show as settled for Carol, indicating that it was
 	// swept on-chain.
 	invoicesReq := &lnrpc.ListInvoiceRequest{}
-	invoicesResp, err := carol.ListInvoices(ctxb, invoicesReq)
-	util.RequireNoErr(t.t, err)
+	invoicesResp, errr := carol.ListInvoices(ctxb, invoicesReq)
+	require.NoError(t.t, errr)
 	require.Len(t.t, invoicesResp.Invoices, 1)
 	invoice := invoicesResp.Invoices[0]
 	require.Equal(t.t, lnrpc.Invoice_SETTLED, invoice.State)

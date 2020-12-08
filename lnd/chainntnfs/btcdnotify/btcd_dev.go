@@ -3,9 +3,9 @@
 package btcdnotify
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 )
@@ -17,7 +17,7 @@ import (
 // since if they are generated ahead of UnsafeStart the chainConn may start up
 // with an outdated best block and miss sending ntfns. Used for testing.
 func (b *BtcdNotifier) UnsafeStart(bestHeight int32, bestHash *chainhash.Hash,
-	syncHeight int32, generateBlocks func() error) er.R {
+	syncHeight int32, generateBlocks func() er.R) er.R {
 
 	// Connect to btcd, and register for notifications on connected, and
 	// disconnected blocks.

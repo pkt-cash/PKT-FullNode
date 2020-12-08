@@ -100,9 +100,9 @@ func TestNetworkResultStore(t *testing.T) {
 
 	const numResults = 4
 
-	tempDir, err := ioutil.TempDir("", "testdb")
-	if err != nil {
-		t.Fatal(err)
+	tempDir, errr := ioutil.TempDir("", "testdb")
+	if errr != nil {
+		t.Fatal(errr)
 	}
 
 	db, err := channeldb.Open(tempDir)
@@ -164,7 +164,7 @@ func TestNetworkResultStore(t *testing.T) {
 	// Try fetching the result directly for the non-stored one. This should
 	// fail.
 	_, err = store.getResult(3)
-	if err != ErrPaymentIDNotFound {
+	if !ErrPaymentIDNotFound.Is(err) {
 		t.Fatalf("expected ErrPaymentIDNotFound, got %v", err)
 	}
 

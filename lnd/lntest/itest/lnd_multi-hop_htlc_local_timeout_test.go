@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
@@ -57,7 +58,7 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	dustPayHash := makeFakePayHash(t)
 	payHash := makeFakePayHash(t)
 
-	_, err := alice.RouterClient.SendPaymentV2(
+	_, errr := alice.RouterClient.SendPaymentV2(
 		ctx, &routerrpc.SendPaymentRequest{
 			Dest:           carolPubKey,
 			Amt:            int64(dustHtlcAmt),
@@ -67,9 +68,9 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
-	_, err = alice.RouterClient.SendPaymentV2(
+	_, errr = alice.RouterClient.SendPaymentV2(
 		ctx, &routerrpc.SendPaymentRequest{
 			Dest:           carolPubKey,
 			Amt:            int64(htlcAmt),
@@ -79,12 +80,12 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 			FeeLimitMsat:   noFeeLimitMsat,
 		},
 	)
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
 	// Verify that all nodes in the path now have two HTLC's with the
 	// proper parameters.
 	nodes := []*lntest.HarnessNode{alice, bob, carol}
-	err = wait.NoError(func() er.R {
+	err := wait.NoError(func() er.R {
 		return assertActiveHtlcs(nodes, dustPayHash, payHash)
 	}, defaultTimeout)
 	util.RequireNoErr(t.t, err)
@@ -177,8 +178,8 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	// output pending.
 	pendingChansRequest := &lnrpc.PendingChannelsRequest{}
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-	pendingChanResp, err := bob.PendingChannels(ctxt, pendingChansRequest)
-	util.RequireNoErr(t.t, err)
+	pendingChanResp, errr := bob.PendingChannels(ctxt, pendingChansRequest)
+	require.NoError(t.t, errr)
 
 	require.NotZero(t.t, len(pendingChanResp.PendingForceClosingChannels))
 	forceCloseChan := pendingChanResp.PendingForceClosingChannels[0]
@@ -213,8 +214,8 @@ func testMultiHopHtlcLocalTimeout(net *lntest.NetworkHarness, t *harnessTest,
 	// At this point, Bob should show that the pending HTLC has advanced to
 	// the second stage and is to be swept.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	pendingChanResp, err = bob.PendingChannels(ctxt, pendingChansRequest)
-	util.RequireNoErr(t.t, err)
+	pendingChanResp, errr = bob.PendingChannels(ctxt, pendingChansRequest)
+	require.NoError(t.t, errr)
 	forceCloseChan = pendingChanResp.PendingForceClosingChannels[0]
 	require.Equal(t.t, uint32(2), forceCloseChan.PendingHtlcs[0].Stage)
 

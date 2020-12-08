@@ -444,3 +444,10 @@ func IsLoopBreak(e R) bool {
 	en, ok := e.(err)
 	return ok && en.e == errrLoopbreak
 }
+
+func Cis(code *ErrorCode, e R) bool {
+	if code == nil {
+		return e == nil
+	}
+	return code.Is(e)
+}

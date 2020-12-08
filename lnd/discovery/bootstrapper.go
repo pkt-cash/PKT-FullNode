@@ -219,7 +219,7 @@ func (c *ChannelGraphBootstrapper) SampleNodeAddrs(numAddrs uint32,
 
 			return er.LoopBreak
 		})
-		if err != nil && err != er.LoopBreak {
+		if err != nil && !er.IsLoopBreak(err) {
 			return nil, err
 		}
 

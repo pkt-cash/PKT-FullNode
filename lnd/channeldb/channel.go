@@ -933,14 +933,17 @@ func (c *OpenChannel) MarkDataLoss(commitPoint *btcec.PublicKey) er.R {
 	return c.putChanStatus(ChanStatusLocalDataLoss, putCommitPoint)
 }
 
-func mapErr(err er.R) er.R {
+func mapErr(err er.R, code *er.ErrorCode) (er.R, bool) {
 	switch {
 	case err == nil:
-		return nil
+		return nil, false
 	case ErrNoChanDBExists.Is(err), ErrNoActiveChannels.Is(err), ErrChannelNotFound.Is(err):
-		return ErrNoCommitPoint.Default()
+		if code != nil {
+			return code.New("", err), true
+		}
+		return nil, true
 	default:
-		return err
+		return err, true
 	}
 }
 
@@ -953,7 +956,7 @@ func (c *OpenChannel) DataLossCommitPoint() (*btcec.PublicKey, er.R) {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		if err = mapErr(err); err != nil {
+		if err, stop := mapErr(err, ErrNoCommitPoint); stop {
 			return err
 		}
 
@@ -1173,7 +1176,7 @@ func (c *OpenChannel) getClosingTx(key []byte) (*wire.MsgTx, er.R) {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		if err = mapErr(err); err != nil {
+		if err, stop := mapErr(err, ErrNoCloseTx); stop {
 			return err
 		}
 
@@ -2058,7 +2061,7 @@ func (c *OpenChannel) RemoteCommitChainTip() (*CommitDiff, er.R) {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		if err = mapErr(err); err != nil {
+		if err, stop := mapErr(err, ErrNoPendingCommit); stop {
 			return err
 		}
 
@@ -2093,7 +2096,7 @@ func (c *OpenChannel) UnsignedAckedUpdates() ([]LogUpdate, er.R) {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		if err = mapErr(err); err != nil {
+		if err, stop := mapErr(err, nil); stop {
 			return err
 		}
 
@@ -2123,10 +2126,7 @@ func (c *OpenChannel) RemoteUnsignedLocalUpdates() ([]LogUpdate, er.R) {
 		chanBucket, err := fetchChanBucket(
 			tx, c.IdentityPub, &c.FundingOutpoint, c.ChainHash,
 		)
-		if err = mapErr(err); err != nil {
-			if ErrNoCommitPoint.Is(err) {
-				return nil
-			}
+		if err, stop := mapErr(err, nil); stop {
 			return err
 		}
 

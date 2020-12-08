@@ -10,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -566,7 +567,7 @@ func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 		name           string
 		paymentHash    lntypes.Hash
 		sequenceNumber uint64
-		expectedErr    error
+		expectedErr    *er.ErrorCode
 	}{
 		{
 			name:           "lookup payment without duplicates",
@@ -623,7 +624,7 @@ func TestFetchPaymentWithSequenceNumber(t *testing.T) {
 					)
 					return err
 				}, func() {})
-			require.Equal(t, test.expectedErr, err)
+			require.True(t, er.Cis(test.expectedErr, err))
 		})
 	}
 }
@@ -686,27 +687,27 @@ func putDuplicatePayment(t *testing.T, duplicateBucket kvdb.RwBucket,
 	util.RequireNoErr(t, err)
 
 	// Generate fake information for the duplicate payment.
-	info, _, _, errr := genInfo()
-	util.RequireNoErr(t, errr)
+	info, _, _, err := genInfo()
+	util.RequireNoErr(t, err)
 
 	// Write the payment info to disk under the creation info key. This code
 	// is copied rather than using serializePaymentCreationInfo to ensure
 	// we always write in the legacy format used by duplicate payments.
 	var b bytes.Buffer
 	var scratch [8]byte
-	_, errr = b.Write(paymentHash[:])
-	util.RequireNoErr(t, errr)
+	_, errr := b.Write(paymentHash[:])
+	require.NoError(t, errr)
 
 	byteOrder.PutUint64(scratch[:], uint64(info.Value))
 	_, errr = b.Write(scratch[:])
-	util.RequireNoErr(t, errr)
+	require.NoError(t, errr)
 
-	errr = serializeTime(&b, info.CreationTime)
-	util.RequireNoErr(t, errr)
+	err = serializeTime(&b, info.CreationTime)
+	util.RequireNoErr(t, err)
 
 	byteOrder.PutUint32(scratch[:4], 0)
 	_, errr = b.Write(scratch[:4])
-	util.RequireNoErr(t, errr)
+	require.NoError(t, errr)
 
 	// Get the PaymentCreationInfo.
 	err = paymentBucket.Put(duplicatePaymentCreationInfoKey, b.Bytes())

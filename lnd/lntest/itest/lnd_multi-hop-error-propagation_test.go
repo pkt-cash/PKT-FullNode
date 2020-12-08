@@ -147,17 +147,17 @@ out:
 		Value: payAmt,
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	carolInvoice, err := carol.AddInvoice(ctxt, invoiceReq)
-	if err != nil {
-		t.Fatalf("unable to generate carol invoice: %v", err)
+	carolInvoice, errr := carol.AddInvoice(ctxt, invoiceReq)
+	if errr != nil {
+		t.Fatalf("unable to generate carol invoice: %v", errr)
 	}
 
-	carolPayReq, err := carol.DecodePayReq(ctxb,
+	carolPayReq, errr := carol.DecodePayReq(ctxb,
 		&lnrpc.PayReqString{
 			PayReq: carolInvoice.PaymentRequest,
 		})
-	if err != nil {
-		t.Fatalf("unable to decode generated payment request: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to decode generated payment request: %v", errr)
 	}
 
 	// Before we send the payment, ensure that the announcement of the new
@@ -172,25 +172,25 @@ out:
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
 
-	aliceEvents, err := net.Alice.RouterClient.SubscribeHtlcEvents(
+	aliceEvents, errr := net.Alice.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
-	bobEvents, err := net.Bob.RouterClient.SubscribeHtlcEvents(
+	bobEvents, errr := net.Bob.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
-	carolEvents, err := carol.RouterClient.SubscribeHtlcEvents(
+	carolEvents, errr := carol.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
 	// For the first scenario, we'll test the cancellation of an HTLC with
@@ -323,9 +323,9 @@ out:
 		Value: 100000,
 	}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	carolInvoice3, err := carol.AddInvoice(ctxt, invoiceReq)
-	if err != nil {
-		t.Fatalf("unable to generate carol invoice: %v", err)
+	carolInvoice3, errr := carol.AddInvoice(ctxt, invoiceReq)
+	if errr != nil {
+		t.Fatalf("unable to generate carol invoice: %v", errr)
 	}
 
 	sendReq = &routerrpc.SendPaymentRequest{
@@ -353,9 +353,9 @@ out:
 
 	// Generate new invoice to not pay same invoice twice.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	carolInvoice, err = carol.AddInvoice(ctxt, invoiceReq)
-	if err != nil {
-		t.Fatalf("unable to generate carol invoice: %v", err)
+	carolInvoice, errr = carol.AddInvoice(ctxt, invoiceReq)
+	if errr != nil {
+		t.Fatalf("unable to generate carol invoice: %v", errr)
 	}
 
 	// For our final test, we'll ensure that if a target link isn't
@@ -368,11 +368,11 @@ out:
 
 	// Reset mission control to forget the temporary channel failure above.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	_, err = net.Alice.RouterClient.ResetMissionControl(
+	_, errr = net.Alice.RouterClient.ResetMissionControl(
 		ctxt, &routerrpc.ResetMissionControlRequest{},
 	)
-	if err != nil {
-		t.Fatalf("unable to reset mission control: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to reset mission control: %v", errr)
 	}
 
 	sendAndAssertFailure(

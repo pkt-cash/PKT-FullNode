@@ -178,7 +178,7 @@ func TestFetchClosedChannelForID(t *testing.T) {
 	state.FundingOutpoint.Index++
 	cid := lnwire.NewChanIDFromOutPoint(&state.FundingOutpoint)
 	_, err = cdb.FetchClosedChannelForID(cid)
-	if ErrClosedChannelNotFound.Is(err) {
+	if !ErrClosedChannelNotFound.Is(err) {
 		t.Fatalf("expected ErrClosedChannelNotFound, instead got: %v", err)
 	}
 }

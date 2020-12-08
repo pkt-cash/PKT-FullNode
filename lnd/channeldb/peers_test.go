@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ func TestFlapCount(t *testing.T) {
 
 	// Try to read flap count for a peer that we have no records for.
 	_, err = db.ReadFlapCount(testPub)
-	require.Equal(t, ErrNoPeerBucket, err)
+	require.True(t, ErrNoPeerBucket.Is(err))
 
 	var (
 		testPub2       = route.Vertex{2, 2, 2}

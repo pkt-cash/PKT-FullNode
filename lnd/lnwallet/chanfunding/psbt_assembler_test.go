@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/psbt"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -140,7 +142,7 @@ func TestPsbtIntent(t *testing.T) {
 	// that it can continue with the funding flow. We want to make sure
 	// the signal arrives.
 	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -402,7 +404,7 @@ func TestPsbtVerify(t *testing.T) {
 
 			err = tc.doVerify(amt, pendingPsbt, psbtIntent)
 			if err != nil && tc.expectedErr != "" &&
-				err.Error() != tc.expectedErr {
+				!strings.Contains(err.String(), tc.expectedErr) {
 
 				t.Fatalf("unexpected error, got '%v' wanted "+
 					"'%v'", err, tc.expectedErr)
@@ -453,9 +455,8 @@ func TestPsbtFinalize(t *testing.T) {
 			},
 		},
 		{
-			name: "output value changed",
-			expectedErr: "outputs differ from verified PSBT: " +
-				"output 0 is different",
+			name:        "output value changed",
+			expectedErr: "output 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
 				i *PsbtIntent) er.R {
 
@@ -464,9 +465,8 @@ func TestPsbtFinalize(t *testing.T) {
 			},
 		},
 		{
-			name: "output pk script changed",
-			expectedErr: "outputs differ from verified PSBT: " +
-				"output 0 is different",
+			name:        "output pk script changed",
+			expectedErr: "output 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
 				i *PsbtIntent) er.R {
 
@@ -475,9 +475,8 @@ func TestPsbtFinalize(t *testing.T) {
 			},
 		},
 		{
-			name: "input previous outpoint index changed",
-			expectedErr: "inputs differ from verified PSBT: " +
-				"previous outpoint of input 0 is different",
+			name:        "input previous outpoint index changed",
+			expectedErr: "previous outpoint of input 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
 				i *PsbtIntent) er.R {
 
@@ -486,9 +485,8 @@ func TestPsbtFinalize(t *testing.T) {
 			},
 		},
 		{
-			name: "input previous outpoint hash changed",
-			expectedErr: "inputs differ from verified PSBT: " +
-				"previous outpoint of input 0 is different",
+			name:        "input previous outpoint hash changed",
+			expectedErr: "previous outpoint of input 0 is different",
 			doFinalize: func(amt int64, p *psbt.Packet,
 				i *PsbtIntent) er.R {
 
@@ -508,7 +506,7 @@ func TestPsbtFinalize(t *testing.T) {
 		},
 		{
 			name: "raw tx - no witness data in raw tx",
-			expectedErr: "inputs not signed: input 0 has no " +
+			expectedErr: "input 0 has no " +
 				"signature data attached",
 			doFinalize: func(amt int64, p *psbt.Packet,
 				i *PsbtIntent) er.R {
@@ -591,7 +589,7 @@ func TestPsbtFinalize(t *testing.T) {
 
 			err = tc.doFinalize(amt, pendingPsbt, psbtIntent)
 			if (err == nil && tc.expectedErr != "") ||
-				(err != nil && err.Error() != tc.expectedErr) {
+				(err != nil && !strings.Contains(err.String(), tc.expectedErr)) {
 
 				t.Fatalf("unexpected error, got '%v' wanted "+
 					"'%v'", err, tc.expectedErr)

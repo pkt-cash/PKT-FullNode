@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -36,7 +37,7 @@ type mockArbitratorLog struct {
 	state           ArbitratorState
 	newStates       chan ArbitratorState
 	failLog         bool
-	failFetch       error
+	failFetch       *er.ErrorCode
 	failCommit      bool
 	failCommitState ArbitratorState
 	resolutions     *ContractResolutions
@@ -125,7 +126,7 @@ func (b *mockArbitratorLog) LogContractResolutions(c *ContractResolutions) er.R 
 
 func (b *mockArbitratorLog) FetchContractResolutions() (*ContractResolutions, er.R) {
 	if b.failFetch != nil {
-		return nil, b.failFetch
+		return nil, b.failFetch.Default()
 	}
 
 	return b.resolutions, nil
@@ -289,7 +290,7 @@ type testChanArbOption func(cfg *ChannelArbitratorConfig)
 // remoteInitiatorOption sets the MarkChannelClosed function in the
 // Channel Arbitrator's config.
 func withMarkClosed(markClosed func(*channeldb.ChannelCloseSummary,
-	...channeldb.ChannelStatus) error) testChanArbOption {
+	...channeldb.ChannelStatus) er.R) testChanArbOption {
 
 	return func(cfg *ChannelArbitratorConfig) {
 		cfg.MarkChannelClosed = markClosed
@@ -387,9 +388,9 @@ func createTestChannelArbitrator(t *testing.T, log ArbitratorLog,
 
 	var cleanUp func()
 	if log == nil {
-		dbDir, err := ioutil.TempDir("", "chanArb")
-		if err != nil {
-			return nil, err
+		dbDir, errr := ioutil.TempDir("", "chanArb")
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 		dbPath := filepath.Join(dbDir, "testdb")
 		db, err := kvdb.Create(kvdb.BoltBackendName, dbPath, true)
@@ -583,7 +584,7 @@ func TestChannelArbitratorLocalForceClose(t *testing.T) {
 		return nil
 	}
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -757,7 +758,7 @@ func TestChannelArbitratorLocalForceClosePendingHtlc(t *testing.T) {
 		Htlcs:   htlcSet,
 	}
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -1006,7 +1007,7 @@ func TestChannelArbitratorLocalForceCloseRemoteConfirmed(t *testing.T) {
 		return nil
 	}
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -1114,7 +1115,7 @@ func TestChannelArbitratorLocalForceDoubleSpend(t *testing.T) {
 		return lnwallet.ErrDoubleSpend.Default()
 	}
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -1271,7 +1272,7 @@ func TestChannelArbitratorPersistence(t *testing.T) {
 	chanArbCtx.AssertState(StateDefault)
 
 	// Now make fetching the resolutions fail.
-	log.failFetch = er.Errorf("intentional fetch failure")
+	log.failFetch = er.GenericErrorType.Code("intentional fetch failure")
 	chanArb.cfg.ChainEvents.RemoteUnilateralClosure <- &RemoteUnilateralCloseInfo{
 		UnilateralCloseSummary: uniClose,
 	}
@@ -1334,7 +1335,7 @@ func TestChannelArbitratorForceCloseBreachedChannel(t *testing.T) {
 
 	// We start by attempting a local force close. We'll return an
 	// unexpected publication error, causing the state machine to halt.
-	expErr := er.New("intentional publication error")
+	expErr := er.GenericErrorType.Code("intentional publication error")
 	stateChan := make(chan ArbitratorState)
 	chanArb.cfg.PublishTx = func(*wire.MsgTx, string) er.R {
 		// When the force close tx is being broadcasted, check that the
@@ -1344,10 +1345,10 @@ func TestChannelArbitratorForceCloseBreachedChannel(t *testing.T) {
 		case <-chanArb.quit:
 			return er.Errorf("exiting")
 		}
-		return expErr
+		return expErr.Default()
 	}
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -1374,7 +1375,7 @@ func TestChannelArbitratorForceCloseBreachedChannel(t *testing.T) {
 	// Make sure we get the expected error.
 	select {
 	case err := <-errChan:
-		if err != expErr {
+		if !expErr.Is(err) {
 			t.Fatalf("unexpected error force closing channel: %v",
 				err)
 		}
@@ -1611,7 +1612,7 @@ func TestChannelArbitratorAlreadyForceClosed(t *testing.T) {
 
 	// Then, we'll create a request to signal a force close request to the
 	// channel arbitrator.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	select {
@@ -1626,7 +1627,7 @@ func TestChannelArbitratorAlreadyForceClosed(t *testing.T) {
 	// the expected errAlreadyForceClosed error.
 	select {
 	case err = <-errChan:
-		if err != errAlreadyForceClosed {
+		if !errAlreadyForceClosed.Is(err) {
 			t.Fatalf("expected errAlreadyForceClosed, got %v", err)
 		}
 	case <-time.After(time.Second):
@@ -1742,7 +1743,7 @@ func TestChannelArbitratorDanglingCommitForceClose(t *testing.T) {
 			// from the PoV of the channel arb. There's now an HTLC
 			// that only exists on the commitment transaction of
 			// the remote party.
-			errChan := make(chan error, 1)
+			errChan := make(chan er.R, 1)
 			respChan := make(chan *wire.MsgTx, 1)
 			switch {
 			// If we want an HTLC expiration trigger, then We'll
@@ -2138,7 +2139,7 @@ func TestChannelArbitratorAnchors(t *testing.T) {
 	}
 	chanArb.UpdateContractSignals(signals)
 
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	respChan := make(chan *wire.MsgTx, 1)
 
 	// With the channel found, and the request crafted, we'll send over a
@@ -2287,7 +2288,7 @@ type mockChannel struct {
 }
 
 func (m *mockChannel) NewAnchorResolutions() ([]*lnwallet.AnchorResolution,
-	error) {
+	er.R) {
 
 	return m.anchorResolutions, nil
 }
@@ -2298,4 +2299,9 @@ func (m *mockChannel) ForceCloseChan() (*lnwallet.LocalForceCloseSummary, er.R) 
 		HtlcResolutions: &lnwallet.HtlcResolutions{},
 	}
 	return summary, nil
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

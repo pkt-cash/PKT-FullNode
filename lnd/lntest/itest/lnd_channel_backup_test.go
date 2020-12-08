@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
@@ -80,9 +81,9 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
-				multi, err := ioutil.ReadFile(backupFilePath)
-				if err != nil {
-					return nil, err
+				multi, errr := ioutil.ReadFile(backupFilePath)
+				if errr != nil {
+					return nil, er.E(errr)
 				}
 
 				// Now that we have Dave's backup file, we'll
@@ -189,9 +190,9 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
-				multi, err := ioutil.ReadFile(backupFilePath)
-				if err != nil {
-					return nil, err
+				multi, errr := ioutil.ReadFile(backupFilePath)
+				if errr != nil {
+					return nil, er.E(errr)
 				}
 
 				// Now that we have Dave's backup file, we'll
@@ -213,29 +214,29 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 							"restore node: %v", err)
 					}
 
-					_, err = newNode.RestoreChannelBackups(
+					_, errr := newNode.RestoreChannelBackups(
 						ctxb,
 						&lnrpc.RestoreChanBackupRequest{
 							Backup: backup,
 						},
 					)
-					if err != nil {
+					if errr != nil {
 						return nil, er.Errorf("unable "+
 							"to restore backups: %v",
-							err)
+							errr)
 					}
 
-					_, err = newNode.RestoreChannelBackups(
+					_, errr = newNode.RestoreChannelBackups(
 						ctxb,
 						&lnrpc.RestoreChanBackupRequest{
 							Backup: backup,
 						},
 					)
-					if err != nil {
+					if errr != nil {
 						return nil, er.Errorf("unable "+
 							"to restore backups the"+
 							"second time: %v",
-							err)
+							errr)
 					}
 
 					return newNode, nil
@@ -257,9 +258,9 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
-				multi, err := ioutil.ReadFile(backupFilePath)
-				if err != nil {
-					return nil, err
+				multi, errr := ioutil.ReadFile(backupFilePath)
+				if errr != nil {
+					return nil, er.E(errr)
 				}
 
 				// Let's assume time passes, the channel
@@ -344,9 +345,9 @@ func testChannelBackupRestore(net *lntest.NetworkHarness, t *harnessTest) {
 
 				// Read the entire Multi backup stored within
 				// this node's channels.backup file.
-				multi, err := ioutil.ReadFile(backupFilePath)
-				if err != nil {
-					return nil, err
+				multi, errr := ioutil.ReadFile(backupFilePath)
+				if errr != nil {
+					return nil, er.E(errr)
 				}
 
 				// Now that we have Dave's backup file, we'll
@@ -400,9 +401,9 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 		backupDir, chanbackup.DefaultBackupFileName,
 	)
 	carolArgs := fmt.Sprintf("--backupfilepath=%v", backupFilePath)
-	carol, err := net.NewNode("carol", []string{carolArgs})
-	if err != nil {
-		t.Fatalf("unable to create new node: %v", err)
+	carol, errr := net.NewNode("carol", []string{carolArgs})
+	if errr != nil {
+		t.Fatalf("unable to create new node: %v", errr)
 	}
 	defer shutdownAndAssert(net, t, carol)
 
@@ -429,7 +430,7 @@ func testChannelBackupUpdates(net *lntest.NetworkHarness, t *harnessTest) {
 			snapshot, err := backupStream.Recv()
 			if err != nil {
 				select {
-				case streamErr <- err:
+				case streamErr <- er.E(err):
 				case <-streamQuit:
 					return
 				}
@@ -657,7 +658,7 @@ func testExportChannelBackup(net *lntest.NetworkHarness, t *harnessTest) {
 			return nil
 		}, defaultTimeout)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatalf(err.String())
 		}
 	}
 	assertMultiBackupFound := func() func(bool, map[wire.OutPoint]struct{}) {
@@ -855,9 +856,9 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 
 		// Give the pubsub some time to update the channel backup.
 		err = wait.NoError(func() er.R {
-			fi, err := os.Stat(dave.ChanBackupPath())
-			if err != nil {
-				return err
+			fi, errr := os.Stat(dave.ChanBackupPath())
+			if errr != nil {
+				return er.E(errr)
 			}
 			if fi.Size() <= chanbackup.NilMultiSizePacked {
 				return er.Errorf("backup file empty")
@@ -904,12 +905,12 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 		}
 
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-		err = completePaymentRequests(
+		errr := completePaymentRequests(
 			ctxt, from, from.RouterClient,
 			[]string{invoiceResp.PaymentRequest}, true,
 		)
-		if err != nil {
-			t.Fatalf("unable to complete payments: %v", err)
+		if errr != nil {
+			t.Fatalf("unable to complete payments: %v", errr)
 		}
 	}
 
@@ -917,15 +918,15 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	// Carol and Dave to ensure they both sweep their coins at the end.
 	balReq := &lnrpc.WalletBalanceRequest{}
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	carolBalResp, err := carol.WalletBalance(ctxt, balReq)
-	if err != nil {
-		t.Fatalf("unable to get carol's balance: %v", err)
+	carolBalResp, errr := carol.WalletBalance(ctxt, balReq)
+	if errr != nil {
+		t.Fatalf("unable to get carol's balance: %v", errr)
 	}
 	carolStartingBalance := carolBalResp.ConfirmedBalance
 
-	daveBalance, err := dave.WalletBalance(ctxt, balReq)
-	if err != nil {
-		t.Fatalf("unable to get carol's balance: %v", err)
+	daveBalance, errr := dave.WalletBalance(ctxt, balReq)
+	if errr != nil {
+		t.Fatalf("unable to get carol's balance: %v", errr)
 	}
 	daveStartingBalance := daveBalance.ConfirmedBalance
 
@@ -961,7 +962,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 		balReq := &lnrpc.WalletBalanceRequest{}
 		daveBalResp, err := dave.WalletBalance(ctxt, balReq)
 		if err != nil {
-			return err
+			return er.E(err)
 		}
 
 		daveBal := daveBalResp.ConfirmedBalance
@@ -983,10 +984,10 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 	assertNumPendingChannels(t, dave, 1, 0)
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
-	pendingChanResp, err := dave.PendingChannels(
+	pendingChanResp, errr := dave.PendingChannels(
 		ctxt, &lnrpc.PendingChannelsRequest{},
 	)
-	util.RequireNoErr(t.t, err)
+	require.NoError(t.t, errr)
 
 	// We also want to make sure we cannot force close in this state. That
 	// would get the state machine in a weird state.
@@ -995,7 +996,7 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 		":",
 	)
 	chanPointIndex, _ := strconv.ParseUint(chanPointParts[1], 10, 32)
-	resp, err := dave.CloseChannel(ctxt, &lnrpc.CloseChannelRequest{
+	resp, errr := dave.CloseChannel(ctxt, &lnrpc.CloseChannelRequest{
 		ChannelPoint: &lnrpc.ChannelPoint{
 			FundingTxid: &lnrpc.ChannelPoint_FundingTxidStr{
 				FundingTxidStr: chanPointParts[0],
@@ -1007,11 +1008,11 @@ func testChanRestoreScenario(t *harnessTest, net *lntest.NetworkHarness,
 
 	// We don't get an error directly but only when reading the first
 	// message of the stream.
-	util.RequireNoErr(t.t, err)
-	_, err = resp.Recv()
-	util.RequireErr(t.t, err)
-	require.Contains(t.t, err.Error(), "cannot close channel with state: ")
-	require.Contains(t.t, err.Error(), "ChanStatusRestored")
+	require.NoError(t.t, errr)
+	_, errr = resp.Recv()
+	require.NoError(t.t, errr)
+	require.Contains(t.t, errr.Error(), "cannot close channel with state: ")
+	require.Contains(t.t, errr.Error(), "ChanStatusRestored")
 
 	// Increase the fee estimate so that the following force close tx will
 	// be cpfp'ed in case of anchor commitments.
@@ -1064,14 +1065,14 @@ func chanRestoreViaRPC(net *lntest.NetworkHarness,
 				"restore node: %v", err)
 		}
 
-		_, err = newNode.RestoreChannelBackups(
+		_, errr := newNode.RestoreChannelBackups(
 			ctxb, &lnrpc.RestoreChanBackupRequest{
 				Backup: backup,
 			},
 		)
-		if err != nil {
+		if errr != nil {
 			return nil, er.Errorf("unable "+
-				"to restore backups: %v", err)
+				"to restore backups: %v", errr)
 		}
 
 		return newNode, nil

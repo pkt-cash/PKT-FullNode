@@ -3,17 +3,17 @@ package itest
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // testSendToRouteMultiPath tests that we are able to successfully route a
@@ -66,11 +66,11 @@ func testSendToRouteMultiPath(net *lntest.NetworkHarness, t *harnessTest) {
 	payReq := payReqs[0]
 
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-	decodeResp, err := net.Bob.DecodePayReq(
+	decodeResp, errr := net.Bob.DecodePayReq(
 		ctxt, &lnrpc.PayReqString{PayReq: payReq},
 	)
-	if err != nil {
-		t.Fatalf("decode pay req: %v", err)
+	if errr != nil {
+		t.Fatalf("decode pay req: %v", errr)
 	}
 
 	payAddr := decodeResp.PaymentAddr
@@ -97,9 +97,9 @@ func testSendToRouteMultiPath(net *lntest.NetworkHarness, t *harnessTest) {
 		}
 
 		ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-		routeResp, err := net.Alice.RouterClient.BuildRoute(ctxt, req)
-		if err != nil {
-			return nil, err
+		routeResp, errr := net.Alice.RouterClient.BuildRoute(ctxt, req)
+		if errr != nil {
+			return nil, er.E(errr)
 		}
 
 		return routeResp.Route, nil

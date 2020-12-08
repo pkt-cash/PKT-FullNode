@@ -3,18 +3,18 @@ package itest
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,9 +60,9 @@ func testForwardInterceptor(net *lntest.NetworkHarness, t *harnessTest) {
 	// Connect the interceptor.
 	ctx := context.Background()
 	ctxt, cancelInterceptor := context.WithTimeout(ctx, defaultTimeout)
-	interceptor, err := testContext.bob.RouterClient.HtlcInterceptor(ctxt)
-	if err != nil {
-		t.Fatalf("failed to create HtlcInterceptor %v", err)
+	interceptor, errr := testContext.bob.RouterClient.HtlcInterceptor(ctxt)
+	if errr != nil {
+		t.Fatalf("failed to create HtlcInterceptor %v", errr)
 	}
 
 	// Prepare the test cases.
@@ -178,9 +178,9 @@ func testForwardInterceptor(net *lntest.NetworkHarness, t *harnessTest) {
 	// At this point we are left with the held packets, we want to make sure
 	// each one of them has a corresponding 'in-flight' payment at
 	// Alice's node.
-	payments, err := testContext.alice.ListPayments(context.Background(),
+	payments, errr := testContext.alice.ListPayments(context.Background(),
 		&lnrpc.ListPaymentsRequest{IncludeIncomplete: true})
-	if err != nil {
+	if errr != nil {
 		t.Fatalf("failed to fetch payments")
 	}
 	for _, testCase := range testCases {
@@ -383,7 +383,11 @@ func (c *interceptorTestContext) sendAliceToCarolPayment(ctx context.Context,
 	}
 
 	// Send the payment.
-	return c.alice.RouterClient.SendToRouteV2(ctx, sendReq)
+	ret, errr := c.alice.RouterClient.SendToRouteV2(ctx, sendReq)
+	if errr != nil {
+		return ret, er.E(errr)
+	}
+	return ret, nil
 }
 
 // buildRoute is a helper function to build a route with given hops.
@@ -409,7 +413,7 @@ func (c *interceptorTestContext) buildRoute(ctx context.Context, amtMsat int64, 
 
 	routeResp, err := c.alice.RouterClient.BuildRoute(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, er.E(err)
 	}
 
 	return routeResp.Route, nil

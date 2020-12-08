@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
@@ -18,9 +19,9 @@ import (
 func createTestMessageStore(t *testing.T) (*MessageStore, func()) {
 	t.Helper()
 
-	tempDir, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		t.Fatalf("unable to create temp dir: %v", err)
+	tempDir, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		t.Fatalf("unable to create temp dir: %v", errr)
 	}
 	db, err := channeldb.Open(tempDir)
 	if err != nil {
@@ -223,7 +224,7 @@ func TestMessageStoreUnsupportedMessage(t *testing.T) {
 	// Attempting to add it to the store should result in
 	// ErrUnsupportedMessage.
 	err := msgStore.AddMessage(unsupportedMsg, peer)
-	if err != ErrUnsupportedMessage {
+	if !ErrUnsupportedMessage.Is(err) {
 		t.Fatalf("expected ErrUnsupportedMessage, got %v", err)
 	}
 

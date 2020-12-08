@@ -83,11 +83,11 @@ func assertTimeoutError(ctxt context.Context, t *harnessTest,
 
 	// a DeadlineExceeded error will appear in the context if the above
 	// ctxtTimeout value is reached.
-	util.RequireNoErr(t.t, ctxt.Err(), "context time out")
+	require.NoError(t.t, ctxt.Err(), "context time out")
 
 	// Check that the network returns a timeout error.
 	require.Containsf(
-		t.t, err.Error(), "i/o timeout",
+		t.t, err.String(), "i/o timeout",
 		"expected to get a timeout error, instead got: %v", err,
 	)
 }
@@ -105,14 +105,14 @@ func connect(ctxt context.Context, node *lntest.HarnessNode,
 			_, err := node.ConnectPeer(ctxt, req)
 			// If there's no error, return nil
 			if err == nil {
-				return err
+				return er.E(err)
 			}
 			// If the error is no ErrServerNotActive, return it.
 			// Otherwise, we will retry until timeout.
 			if !strings.Contains(err.Error(),
-				lnd.ErrServerNotActive.Error()) {
+				lnd.ErrServerNotActive.Detail) {
 
-				return err
+				return er.E(err)
 			}
 		case <-syncTimeout:
 			return er.Errorf("chain backend did not " +

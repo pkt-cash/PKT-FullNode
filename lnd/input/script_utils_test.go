@@ -238,16 +238,16 @@ func TestHTLCSenderSpendValidation(t *testing.T) {
 	genCommitTx := func(confirmed bool) {
 		// Generate the raw HTLC redemption scripts, and its p2wsh
 		// counterpart.
-		htlcWitnessScript, errr := SenderHTLCScript(
+		htlcWitnessScript, err = SenderHTLCScript(
 			aliceLocalKey, bobLocalKey, revocationKey,
 			paymentHash[:], confirmed,
 		)
-		if errr != nil {
-			t.Fatalf("unable to create htlc sender script: %v", errr)
+		if err != nil {
+			t.Fatalf("unable to create htlc sender script: %v", err)
 		}
-		htlcPkScript, errr = WitnessScriptHash(htlcWitnessScript)
-		if errr != nil {
-			t.Fatalf("unable to create p2wsh htlc script: %v", errr)
+		htlcPkScript, err = WitnessScriptHash(htlcWitnessScript)
+		if err != nil {
+			t.Fatalf("unable to create p2wsh htlc script: %v", err)
 		}
 
 		// This will be Alice's commitment transaction. In this

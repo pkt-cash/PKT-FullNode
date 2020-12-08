@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/autopilotrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/chainrpc"
@@ -116,15 +117,15 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			newAddrReq := &lnrpc.NewAddressRequest{
 				Type: lnrpc.AddressType_WITNESS_PUBKEY_HASH,
 			}
-			addrRes, err := a.NewAddress(ctxb, newAddrReq)
-			require.Nil(t, err, "get address")
+			addrRes, errr := a.NewAddress(ctxb, newAddrReq)
+			require.Nil(t, errr, "get address")
 
 			// Create the full URL with the map query param.
 			url := "/v1/transactions/fee?target_conf=%d&" +
 				"AddrToAmount[%s]=%d"
 			url = fmt.Sprintf(url, 2, addrRes.Address, 50000)
 			resp := &lnrpc.EstimateFeeResponse{}
-			err = invokeGET(a, url, resp)
+			err := invokeGET(a, url, resp)
 			require.Nil(t, err, "estimate fee")
 			assert.Greater(t, resp.FeeSat, int64(253), "fee")
 		},
@@ -223,7 +224,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 
 				_, msg, err := c.ReadMessage()
 				if err != nil {
-					errChan <- err
+					errChan <- er.E(err)
 					return
 				}
 
@@ -247,7 +248,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 					msgStr, protoMsg,
 				)
 				if err != nil {
-					errChan <- err
+					errChan <- er.E(err)
 					return
 				}
 
@@ -293,12 +294,12 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 			// This time we send the macaroon in the special header
 			// Sec-Websocket-Protocol which is the only header field
 			// available to browsers when opening a WebSocket.
-			mac, errr := a.ReadMacaroon(
+			mac, err := a.ReadMacaroon(
 				a.AdminMacPath(), defaultTimeout,
 			)
-			util.RequireNoErr(t, errr, "read admin mac")
+			util.RequireNoErr(t, err, "read admin mac")
 			macBytes, errr := mac.MarshalBinary()
-			util.RequireNoErr(t, errr, "marshal admin mac")
+			require.NoError(t, errr, "marshal admin mac")
 
 			customHeader := make(http.Header)
 			customHeader.Set(
@@ -307,10 +308,10 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 					hex.EncodeToString(macBytes),
 				),
 			)
-			c, errr := openWebSocket(
+			c, err := openWebSocket(
 				a, url, "POST", req, customHeader,
 			)
-			require.Nil(t, errr, "websocket")
+			require.Nil(t, err, "websocket")
 			defer func() {
 				_ = c.WriteMessage(
 					websocket.CloseMessage,
@@ -332,7 +333,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 
 				_, msg, err := c.ReadMessage()
 				if err != nil {
-					errChan <- err
+					errChan <- er.E(err)
 					return
 				}
 
@@ -356,7 +357,7 @@ func testRestAPI(net *lntest.NetworkHarness, ht *harnessTest) {
 					msgStr, protoMsg,
 				)
 				if err != nil {
-					errChan <- err
+					errChan <- er.E(err)
 					return
 				}
 
@@ -413,7 +414,7 @@ func invokeGET(node *lntest.HarnessNode, url string, resp proto.Message) er.R {
 		return err
 	}
 
-	return jsonpb.Unmarshal(bytes.NewReader(rawResp), resp)
+	return er.E(jsonpb.Unmarshal(bytes.NewReader(rawResp), resp))
 }
 
 // invokePOST calls the given URL with the POST method, request body and
@@ -425,8 +426,8 @@ func invokePOST(node *lntest.HarnessNode, url string, req,
 	// Marshal the request to JSON using the jsonpb marshaler to get correct
 	// field names.
 	var buf bytes.Buffer
-	if err := jsonMarshaler.Marshal(&buf, req); err != nil {
-		return err
+	if errr := jsonMarshaler.Marshal(&buf, req); errr != nil {
+		return er.E(errr)
 	}
 
 	_, rawResp, err := makeRequest(node, url, "POST", &buf, nil)
@@ -434,21 +435,21 @@ func invokePOST(node *lntest.HarnessNode, url string, req,
 		return err
 	}
 
-	return jsonpb.Unmarshal(bytes.NewReader(rawResp), resp)
+	return er.E(jsonpb.Unmarshal(bytes.NewReader(rawResp), resp))
 }
 
 // makeRequest calls the given URL with the given method, request body and
 // appropriate macaroon header fields and returns the raw response body.
 func makeRequest(node *lntest.HarnessNode, url, method string,
 	request io.Reader, additionalHeaders http.Header) (http.Header, []byte,
-	error) {
+	er.R) {
 
 	// Assemble the full URL from the node's listening address then create
 	// the request so we can set the macaroon on it.
 	fullURL := fmt.Sprintf("https://%s%s", node.Cfg.RESTAddr(), url)
-	req, err := http.NewRequest(method, fullURL, request)
-	if err != nil {
-		return nil, nil, err
+	req, errr := http.NewRequest(method, fullURL, request)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	if err := addAdminMacaroon(node, req.Header); err != nil {
 		return nil, nil, err
@@ -460,14 +461,14 @@ func makeRequest(node *lntest.HarnessNode, url, method string,
 	}
 
 	// Do the actual call with the completed request object now.
-	resp, err := restClient.Do(req)
-	if err != nil {
-		return nil, nil, err
+	resp, errr := restClient.Do(req)
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	data, err := ioutil.ReadAll(resp.Body)
-	return resp.Header, data, err
+	data, errr := ioutil.ReadAll(resp.Body)
+	return resp.Header, data, er.E(errr)
 }
 
 // openWebSocket opens a new WebSocket connection to the given URL with the
@@ -488,20 +489,20 @@ func openWebSocket(node *lntest.HarnessNode, url, method string,
 	fullURL := fmt.Sprintf(
 		"wss://%s%s?method=%s", node.Cfg.RESTAddr(), url, method,
 	)
-	conn, resp, err := webSocketDialer.Dial(fullURL, header)
-	if err != nil {
-		return nil, err
+	conn, resp, errr := webSocketDialer.Dial(fullURL, header)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	// Send the given request message as the first message on the socket.
-	reqMsg, err := jsonMarshaler.MarshalToString(req)
-	if err != nil {
-		return nil, err
+	reqMsg, errr := jsonMarshaler.MarshalToString(req)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
-	err = conn.WriteMessage(websocket.TextMessage, []byte(reqMsg))
-	if err != nil {
-		return nil, err
+	errr = conn.WriteMessage(websocket.TextMessage, []byte(reqMsg))
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	return conn, nil
@@ -514,9 +515,9 @@ func addAdminMacaroon(node *lntest.HarnessNode, header http.Header) er.R {
 	if err != nil {
 		return err
 	}
-	macBytes, err := mac.MarshalBinary()
-	if err != nil {
-		return err
+	macBytes, errr := mac.MarshalBinary()
+	if errr != nil {
+		return er.E(errr)
 	}
 
 	header.Set("Grpc-Metadata-Macaroon", hex.EncodeToString(macBytes))

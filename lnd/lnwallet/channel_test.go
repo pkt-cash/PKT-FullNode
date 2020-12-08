@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"reflect"
 	"runtime"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -2977,7 +2979,7 @@ func TestAddHTLCNegativeBalance(t *testing.T) {
 	htlcAmt = lnwire.NewMSatFromSatoshis(2 * btcutil.UnitsPerCoin())
 	htlc, _ := createHTLC(numHTLCs+1, htlcAmt)
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected balance below channel reserve, instead "+
 			"got: %v", err)
 	}
@@ -4283,7 +4285,8 @@ func TestChanSyncFailure(t *testing.T) {
 
 		// Alice should detect from Bob's message that she lost state.
 		_, _, _, err = aliceOld.ProcessChanSyncMsg(bobSyncMsg)
-		if _, ok := err.(*ErrCommitSyncLocalDataLoss); !ok {
+		errr := er.Wrapped(err)
+		if _, ok := errr.(*ErrCommitSyncLocalDataLoss); !ok {
 			t.Fatalf("wrong error, expected "+
 				"ErrCommitSyncLocalDataLoss instead got: %v",
 				err)
@@ -4291,7 +4294,7 @@ func TestChanSyncFailure(t *testing.T) {
 
 		// Bob should detect that Alice probably lost state.
 		_, _, _, err = bobChannel.ProcessChanSyncMsg(aliceSyncMsg)
-		if err != ErrCommitSyncRemoteDataLoss {
+		if !ErrCommitSyncRemoteDataLoss.Is(err) {
 			t.Fatalf("wrong error, expected "+
 				"ErrCommitSyncRemoteDataLoss instead got: %v",
 				err)
@@ -4356,7 +4359,7 @@ func TestChanSyncFailure(t *testing.T) {
 	}
 	bobSyncMsg.LocalUnrevokedCommitPoint = nil
 	_, _, _, err = aliceOld.ProcessChanSyncMsg(bobSyncMsg)
-	if err != ErrCannotSyncCommitChains {
+	if !ErrCannotSyncCommitChains.Is(err) {
 		t.Fatalf("wrong error, expected ErrCannotSyncCommitChains "+
 			"instead got: %v", err)
 	}
@@ -4370,7 +4373,7 @@ func TestChanSyncFailure(t *testing.T) {
 	}
 	bobSyncMsg.NextLocalCommitHeight++
 	_, _, _, err = aliceChannel.ProcessChanSyncMsg(bobSyncMsg)
-	if err != ErrCannotSyncCommitChains {
+	if !ErrCannotSyncCommitChains.Is(err) {
 		t.Fatalf("wrong error, expected ErrCannotSyncCommitChains "+
 			"instead got: %v", err)
 	}
@@ -4383,7 +4386,7 @@ func TestChanSyncFailure(t *testing.T) {
 	}
 	bobSyncMsg.NextLocalCommitHeight--
 	_, _, _, err = aliceChannel.ProcessChanSyncMsg(bobSyncMsg)
-	if err != ErrCommitSyncRemoteDataLoss {
+	if !ErrCommitSyncRemoteDataLoss.Is(err) {
 		t.Fatalf("wrong error, expected ErrCommitSyncRemoteDataLoss "+
 			"instead got: %v", err)
 	}
@@ -4403,7 +4406,7 @@ func TestChanSyncFailure(t *testing.T) {
 
 	bobSyncMsg.LocalUnrevokedCommitPoint = modCommitPoint
 	_, _, _, err = aliceChannel.ProcessChanSyncMsg(bobSyncMsg)
-	if err != ErrInvalidLocalUnrevokedCommitPoint {
+	if !ErrInvalidLocalUnrevokedCommitPoint.Is(err) {
 		t.Fatalf("wrong error, expected "+
 			"ErrInvalidLocalUnrevokedCommitPoint instead got: %v",
 			err)
@@ -4425,7 +4428,7 @@ func TestChanSyncFailure(t *testing.T) {
 	}
 	bobSyncMsg.LocalUnrevokedCommitPoint = modCommitPoint
 	_, _, _, err = aliceChannel.ProcessChanSyncMsg(bobSyncMsg)
-	if err != ErrInvalidLocalUnrevokedCommitPoint {
+	if !ErrInvalidLocalUnrevokedCommitPoint.Is(err) {
 		t.Fatalf("wrong error, expected "+
 			"ErrInvalidLocalUnrevokedCommitPoint instead got: %v",
 			err)
@@ -4910,11 +4913,11 @@ func TestChanSyncUnableToSync(t *testing.T) {
 		RemoteCommitTailHeight: 9000,
 	}
 	_, _, _, err = bobChannel.ProcessChanSyncMsg(badChanSync)
-	if err != ErrCannotSyncCommitChains {
+	if !ErrCannotSyncCommitChains.Is(err) {
 		t.Fatalf("expected error instead have: %v", err)
 	}
 	_, _, _, err = aliceChannel.ProcessChanSyncMsg(badChanSync)
-	if err != ErrCannotSyncCommitChains {
+	if !ErrCannotSyncCommitChains.Is(err) {
 		t.Fatalf("expected error instead have: %v", err)
 	}
 }
@@ -4998,7 +5001,8 @@ func TestChanSyncInvalidLastSecret(t *testing.T) {
 	// Alice's former self should conclude that she possibly lost data as
 	// Bob is sending a valid commit secret for the latest state.
 	_, _, _, err = aliceOld.ProcessChanSyncMsg(bobChanSync)
-	if _, ok := err.(*ErrCommitSyncLocalDataLoss); !ok {
+	errr := er.Wrapped(err)
+	if _, ok := errr.(*ErrCommitSyncLocalDataLoss); !ok {
 		t.Fatalf("wrong error, expected ErrCommitSyncLocalDataLoss "+
 			"instead got: %v", err)
 	}
@@ -5006,7 +5010,7 @@ func TestChanSyncInvalidLastSecret(t *testing.T) {
 	// Bob should conclude that he should force close the channel, as Alice
 	// cannot continue operation.
 	_, _, _, err = bobChannel.ProcessChanSyncMsg(aliceChanSync)
-	if err != ErrInvalidLastCommitSecret {
+	if !ErrInvalidLastCommitSecret.Is(err) {
 		t.Fatalf("wrong error, expected ErrInvalidLastCommitSecret, "+
 			"instead got: %v", err)
 	}
@@ -5491,7 +5495,7 @@ func TestSignCommitmentFailNotLockedIn(t *testing.T) {
 	// If we now try to initiate a state update, then it should fail as
 	// Alice is unable to actually create a new state.
 	_, _, _, err = aliceChannel.SignNextCommitment()
-	if err != ErrNoWindow {
+	if !ErrNoWindow.Is(err) {
 		t.Fatalf("expected ErrNoWindow, instead have: %v", err)
 	}
 }
@@ -5853,7 +5857,8 @@ func TestInvalidCommitSigError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("bob accepted invalid state but shouldn't have")
 	}
-	if _, ok := err.(*InvalidCommitSigError); !ok {
+	errr := er.Wrapped(err)
+	if _, ok := errr.(*InvalidCommitSigError); !ok {
 		t.Fatalf("bob sent incorrect error, expected %T, got %T",
 			&InvalidCommitSigError{}, err)
 	}
@@ -6200,7 +6205,7 @@ func TestDesyncHTLCs(t *testing.T) {
 	// balance is unavailable.
 	htlcAmt = lnwire.NewMSatFromSatoshis(1 * btcutil.UnitsPerCoin())
 	htlc, _ = createHTLC(1, htlcAmt)
-	if _, err = aliceChannel.AddHTLC(htlc, nil); err != ErrBelowChanReserve {
+	if _, err = aliceChannel.AddHTLC(htlc, nil); !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrInsufficientBalance, instead received: %v",
 			err)
 	}
@@ -6275,12 +6280,12 @@ func TestMaxAcceptedHTLCs(t *testing.T) {
 	// The next HTLC should fail with ErrMaxHTLCNumber.
 	htlc, _ := createHTLC(numHTLCs, htlcAmt)
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrMaxHTLCNumber {
+	if !ErrMaxHTLCNumber.Is(err) {
 		t.Fatalf("expected ErrMaxHTLCNumber, instead received: %v", err)
 	}
 
 	// Receiving the next HTLC should fail.
-	if _, err := bobChannel.ReceiveHTLC(htlc); err != ErrMaxHTLCNumber {
+	if _, err := bobChannel.ReceiveHTLC(htlc); !ErrMaxHTLCNumber.Is(err) {
 		t.Fatalf("expected ErrMaxHTLCNumber, instead received: %v", err)
 	}
 
@@ -6323,13 +6328,13 @@ func TestMaxAcceptedHTLCs(t *testing.T) {
 	// The next HTLC should fail with ErrMaxHTLCNumber. The index is incremented
 	// by one.
 	htlc, _ = createHTLC(numHTLCs+1, htlcAmt)
-	if _, err = aliceChannel.AddHTLC(htlc, nil); err != ErrMaxHTLCNumber {
+	if _, err = aliceChannel.AddHTLC(htlc, nil); !ErrMaxHTLCNumber.Is(err) {
 		t.Fatalf("expected ErrMaxHTLCNumber, instead received: %v", err)
 	}
 
 	// Likewise, Bob should not be able to receive this HTLC if Alice can't
 	// add it.
-	if _, err := bobChannel.ReceiveHTLC(htlc); err != ErrMaxHTLCNumber {
+	if _, err := bobChannel.ReceiveHTLC(htlc); !ErrMaxHTLCNumber.Is(err) {
 		t.Fatalf("expected ErrMaxHTLCNumber, instead received: %v", err)
 	}
 }
@@ -6534,12 +6539,12 @@ func TestMaxPendingAmount(t *testing.T) {
 	htlcAmt = lnwire.NewMSatFromSatoshisF(0.1 * btcutil.UnitsPerCoinF())
 	htlc, _ := createHTLC(numHTLCs, htlcAmt)
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrMaxPendingAmount {
+	if !ErrMaxPendingAmount.Is(err) {
 		t.Fatalf("expected ErrMaxPendingAmount, instead received: %v", err)
 	}
 
 	// And also Bob shouldn't be accepting this HTLC upon calling ReceiveHTLC.
-	if _, err := bobChannel.ReceiveHTLC(htlc); err != ErrMaxPendingAmount {
+	if _, err := bobChannel.ReceiveHTLC(htlc); !ErrMaxPendingAmount.Is(err) {
 		t.Fatalf("expected ErrMaxPendingAmount, instead received: %v", err)
 	}
 }
@@ -6657,12 +6662,12 @@ func TestChanReserve(t *testing.T) {
 	htlc, _ = createHTLC(bobIndex, htlcAmt)
 	bobIndex++
 	_, err := bobChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 
 	// Alice will reject this htlc upon receiving the htlc.
-	if _, err := aliceChannel.ReceiveHTLC(htlc); err != ErrBelowChanReserve {
+	if _, err := aliceChannel.ReceiveHTLC(htlc); !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 
@@ -6700,12 +6705,12 @@ func TestChanReserve(t *testing.T) {
 	htlc, _ = createHTLC(aliceIndex, htlcAmt)
 	aliceIndex++
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 
 	// Likewise, Bob will reject receiving the htlc because of the same reason.
-	if _, err := bobChannel.ReceiveHTLC(htlc); err != ErrBelowChanReserve {
+	if _, err := bobChannel.ReceiveHTLC(htlc); !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 
@@ -6819,20 +6824,20 @@ func TestChanReserveRemoteInitiator(t *testing.T) {
 	// Bob should refuse to add this HTLC, since he realizes it will create
 	// an invalid commitment.
 	_, err = bobChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v",
 			err)
 	}
 
 	// Of course Alice will also not have enough balance to add it herself.
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v",
 			err)
 	}
 
 	// Same for Alice, she should refuse to accept this second HTLC.
-	if _, err := aliceChannel.ReceiveHTLC(htlc); err != ErrBelowChanReserve {
+	if _, err := aliceChannel.ReceiveHTLC(htlc); !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 }
@@ -6878,7 +6883,7 @@ func TestChanReserveLocalInitiatorDustHtlc(t *testing.T) {
 	// Alice should realize that the fee she must pay to add this HTLC to
 	// the local commitment would take her below the channel reserve.
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowChanReserve {
+	if !ErrBelowChanReserve.Is(err) {
 		t.Fatalf("expected ErrBelowChanReserve, instead received: %v", err)
 	}
 }
@@ -6923,14 +6928,14 @@ func TestMinHTLC(t *testing.T) {
 	amt := minValue - 100
 	htlc, _ = createHTLC(1, amt)
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrBelowMinHTLC {
+	if !ErrBelowMinHTLC.Is(err) {
 		t.Fatalf("expected ErrBelowMinHTLC, instead received: %v", err)
 	}
 
 	// Bob will receive this HTLC, but reject the next received htlc, since
 	// the htlc is too small.
 	_, err = bobChannel.ReceiveHTLC(htlc)
-	if err != ErrBelowMinHTLC {
+	if !ErrBelowMinHTLC.Is(err) {
 		t.Fatalf("expected ErrBelowMinHTLC, instead received: %v", err)
 	}
 }
@@ -6961,11 +6966,11 @@ func TestInvalidHTLCAmt(t *testing.T) {
 
 	// Sending or receiving the HTLC should fail with ErrInvalidHTLCAmt.
 	_, err = aliceChannel.AddHTLC(htlc, nil)
-	if err != ErrInvalidHTLCAmt {
+	if !ErrInvalidHTLCAmt.Is(err) {
 		t.Fatalf("expected ErrInvalidHTLCAmt, got: %v", err)
 	}
 	_, err = bobChannel.ReceiveHTLC(htlc)
-	if err != ErrInvalidHTLCAmt {
+	if !ErrInvalidHTLCAmt.Is(err) {
 		t.Fatalf("expected ErrInvalidHTLCAmt, got: %v", err)
 	}
 }
@@ -7975,7 +7980,7 @@ func TestForceCloseBorkedState(t *testing.T) {
 	// At this point, all channel mutating methods should now fail as they
 	// shouldn't be able to proceed if the channel is borked.
 	_, _, _, _, err = aliceChannel.ReceiveRevocation(revokeMsg)
-	if err != channeldb.ErrChanBorked {
+	if !channeldb.ErrChanBorked.Is(err) {
 		t.Fatalf("advance commitment tail should have failed")
 	}
 
@@ -7983,11 +7988,11 @@ func TestForceCloseBorkedState(t *testing.T) {
 	// ReceiveRevocation call will fail before it's actually advanced.
 	aliceChannel.remoteCommitChain.advanceTail()
 	_, _, _, err = aliceChannel.SignNextCommitment()
-	if err != channeldb.ErrChanBorked {
+	if !channeldb.ErrChanBorked.Is(err) {
 		t.Fatalf("sign commitment should have failed: %v", err)
 	}
 	_, _, err = aliceChannel.RevokeCurrentCommitment()
-	if err != channeldb.ErrChanBorked {
+	if !channeldb.ErrChanBorked.Is(err) {
 		t.Fatalf("append remove chain tail should have failed")
 	}
 }
@@ -9496,4 +9501,9 @@ func TestChannelLocalUnsignedUpdatesFailure(t *testing.T) {
 	util.RequireNoErr(t, err)
 	err = newAliceChannel.ReceiveNewCommitment(bobSig, bobHtlcSigs)
 	util.RequireNoErr(t, err)
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

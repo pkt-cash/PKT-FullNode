@@ -1,6 +1,7 @@
 package contractcourt
 
 import (
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/invoices"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
@@ -17,7 +18,7 @@ type notifyExitHopData struct {
 
 type mockRegistry struct {
 	notifyChan       chan notifyExitHopData
-	notifyErr        error
+	notifyErr        *er.ErrorCode
 	notifyResolution invoices.HtlcResolution
 }
 
@@ -34,13 +35,18 @@ func (r *mockRegistry) NotifyExitHopHtlc(payHash lntypes.Hash,
 		currentHeight: currentHeight,
 	}
 
-	return r.notifyResolution, r.notifyErr
+	var e er.R
+	if r.notifyErr != nil {
+		e = r.notifyErr.Default()
+	}
+
+	return r.notifyResolution, e
 }
 
 func (r *mockRegistry) HodlUnsubscribeAll(subscriber chan<- interface{}) {}
 
 func (r *mockRegistry) LookupInvoice(lntypes.Hash) (channeldb.Invoice,
-	error) {
+	er.R) {
 
-	return channeldb.Invoice{}, channeldb.ErrInvoiceNotFound
+	return channeldb.Invoice{}, channeldb.ErrInvoiceNotFound.Default()
 }

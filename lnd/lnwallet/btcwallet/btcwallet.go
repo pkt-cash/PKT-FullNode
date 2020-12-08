@@ -2,6 +2,7 @@ package btcwallet
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math"
 	"sync"
 	"time"
@@ -109,7 +110,7 @@ func New(cfg Config) (*BtcWallet, er.R) {
 			// Wallet has never been created, perform initial
 			// set up.
 			wallet, err = loader.CreateNewWallet(
-				pubPass, cfg.PrivatePass, cfg.HdSeed,
+				pubPass, cfg.PrivatePass, []byte(hex.EncodeToString(cfg.HdSeed)),
 				cfg.Birthday, nil,
 			)
 			if err != nil {

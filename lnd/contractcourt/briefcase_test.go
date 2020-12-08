@@ -12,6 +12,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -107,9 +108,9 @@ var (
 func makeTestDB() (kvdb.Backend, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "arblog")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "arblog")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	db, err := kvdb.Create(kvdb.BoltBackendName, tempDirName+"/test.db", true)
@@ -592,7 +593,7 @@ func TestContractResolutionsStorage(t *testing.T) {
 		t.Fatalf("unable to wipe log: %v", err)
 	}
 	_, err = testLog.FetchContractResolutions()
-	if err != errScopeBucketNoExist {
+	if !errScopeBucketNoExist.Is(err) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

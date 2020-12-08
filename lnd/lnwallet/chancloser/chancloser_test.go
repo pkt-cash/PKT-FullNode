@@ -70,7 +70,7 @@ func TestMaybeMatchScript(t *testing.T) {
 			)
 
 			if test.expectedErr == nil && err == nil {
-			} else if test.expectedErr == nil || test.expectedErr.Is(err) {
+			} else if test.expectedErr == nil || !test.expectedErr.Is(err) {
 				t.Fatalf("Error: %v, expected error: %v", err, test.expectedErr)
 			}
 		})

@@ -2,9 +2,11 @@ package autopilot
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -136,4 +138,9 @@ func TestBetweennessCentralityWithNonEmptyGraph(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

@@ -1,12 +1,12 @@
 package discovery
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lnwire"

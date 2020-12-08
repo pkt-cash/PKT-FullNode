@@ -23,13 +23,13 @@ func TestLinkNodeEncodeDecode(t *testing.T) {
 	// LinkNode instances.
 	_, pub1 := btcec.PrivKeyFromBytes(btcec.S256(), key[:])
 	_, pub2 := btcec.PrivKeyFromBytes(btcec.S256(), rev[:])
-	addr1, err := net.ResolveTCPAddr("tcp", "10.0.0.1:9000")
-	if err != nil {
-		t.Fatalf("unable to create test addr: %v", err)
+	addr1, errr := net.ResolveTCPAddr("tcp", "10.0.0.1:9000")
+	if errr != nil {
+		t.Fatalf("unable to create test addr: %v", errr)
 	}
-	addr2, err := net.ResolveTCPAddr("tcp", "10.0.0.2:9000")
-	if err != nil {
-		t.Fatalf("unable to create test addr: %v", err)
+	addr2, errr := net.ResolveTCPAddr("tcp", "10.0.0.2:9000")
+	if errr != nil {
+		t.Fatalf("unable to create test addr: %v", errr)
 	}
 
 	// Create two fresh link node instances with the above dummy data, then

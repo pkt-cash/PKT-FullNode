@@ -44,7 +44,7 @@ func testSendMultiPathPayment(net *lntest.NetworkHarness, t *harnessTest) {
 	// Increase Dave's fee to make the test deterministic. Otherwise it
 	// would be unpredictable whether pathfinding would go through Charlie
 	// or Dave for the first shard.
-	_, err := ctx.dave.UpdateChannelPolicy(
+	_, errr := ctx.dave.UpdateChannelPolicy(
 		context.Background(),
 		&lnrpc.PolicyUpdateRequest{
 			Scope:         &lnrpc.PolicyUpdateRequest_Global{Global: true},
@@ -53,8 +53,8 @@ func testSendMultiPathPayment(net *lntest.NetworkHarness, t *harnessTest) {
 			TimeLockDelta: 40,
 		},
 	)
-	if err != nil {
-		t.Fatalf("dave policy update: %v", err)
+	if errr != nil {
+		t.Fatalf("dave policy update: %v", errr)
 	}
 	// Our first test will be Alice paying Bob using a SendPayment call.
 	// Let Bob create an invoice for Alice to pay.
@@ -106,13 +106,13 @@ func testSendMultiPathPayment(net *lntest.NetworkHarness, t *harnessTest) {
 	// Make sure Bob show the invoice as settled for the full
 	// amount.
 	ctxt, _ := context.WithTimeout(ctxb, defaultTimeout)
-	inv, err := ctx.bob.LookupInvoice(
+	inv, errr := ctx.bob.LookupInvoice(
 		ctxt, &lnrpc.PaymentHash{
 			RHash: rHash,
 		},
 	)
-	if err != nil {
-		t.Fatalf("error when obtaining invoice: %v", err)
+	if errr != nil {
+		t.Fatalf("error when obtaining invoice: %v", errr)
 	}
 
 	if inv.AmtPaidSat != int64(paymentAmt) {

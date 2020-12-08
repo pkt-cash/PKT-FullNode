@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -219,7 +220,8 @@ func testDecodeHopPayloadValidation(t *testing.T, test decodePayloadTest) {
 	)
 
 	p, err := hop.NewPayloadFromReader(bytes.NewReader(test.payload))
-	if !reflect.DeepEqual(test.expErr, err) {
+	errr := er.Wrapped(err)
+	if !reflect.DeepEqual(test.expErr, errr) {
 		t.Fatalf("expected error mismatch, want: %v, got: %v",
 			test.expErr, err)
 	}

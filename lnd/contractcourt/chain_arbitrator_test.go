@@ -6,13 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestChainArbitratorRepulishCloses tests that the chain arbitrator will
@@ -21,9 +22,9 @@ import (
 func TestChainArbitratorRepublishCloses(t *testing.T) {
 	t.Parallel()
 
-	tempPath, err := ioutil.TempDir("", "testdb")
-	if err != nil {
-		t.Fatal(err)
+	tempPath, errr := ioutil.TempDir("", "testdb")
+	if errr != nil {
+		t.Fatal(errr)
 	}
 	defer os.RemoveAll(tempPath)
 
@@ -144,9 +145,9 @@ func TestResolveContract(t *testing.T) {
 
 	// To start with, we'll create a new temp DB for the duration of this
 	// test.
-	tempPath, err := ioutil.TempDir("", "testdb")
-	if err != nil {
-		t.Fatalf("unable to make temp dir: %v", err)
+	tempPath, errr := ioutil.TempDir("", "testdb")
+	if errr != nil {
+		t.Fatalf("unable to make temp dir: %v", errr)
 	}
 	defer os.RemoveAll(tempPath)
 	db, err := channeldb.Open(tempPath)
@@ -232,7 +233,7 @@ func TestResolveContract(t *testing.T) {
 	// At this point, the channel's arbitrator log should also be empty as
 	// well.
 	_, err = channelArb.log.FetchContractResolutions()
-	if err != errScopeBucketNoExist {
+	if !errScopeBucketNoExist.Is(err) {
 		t.Fatalf("channel arb log state should have been "+
 			"removed: %v", err)
 	}

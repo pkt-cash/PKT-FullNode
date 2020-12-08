@@ -20,6 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/integration/rpctest"
@@ -631,9 +632,9 @@ func testFundingTransactionLockedOutputs(miner *rpctest.Harness,
 	if err != nil {
 		t.Fatalf("unable to create amt: %v", err)
 	}
-	feePerKw, errr := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
-	if errr != nil {
-		t.Fatalf("unable to query fee estimator: %v", errr)
+	feePerKw, err := alice.Cfg.FeeEstimator.EstimateFeePerKW(1)
+	if err != nil {
+		t.Fatalf("unable to query fee estimator: %v", err)
 	}
 	req := &lnwallet.InitFundingReserveMsg{
 		ChainHash:        chainHash,
@@ -670,10 +671,11 @@ func testFundingTransactionLockedOutputs(miner *rpctest.Harness,
 		Flags:            lnwire.FFAnnounceChannel,
 		PendingChanID:    [32]byte{1, 2, 3, 4},
 	}
-	failedReservation, errr := alice.InitChannelReservation(failedReq)
-	if errr == nil {
+	failedReservation, err := alice.InitChannelReservation(failedReq)
+	if err == nil {
 		t.Fatalf("not error returned, should fail on coin selection")
 	}
+	errr := er.Wrapped(err)
 	if _, ok := errr.(*chanfunding.ErrInsufficientFunds); !ok {
 		t.Fatalf("error not coinselect error: %v", err)
 	}
@@ -715,7 +717,8 @@ func testFundingCancellationNotEnoughFunds(miner *rpctest.Harness,
 	// Attempt to create another channel with 44 BTC, this should fail.
 	req.PendingChanID = [32]byte{3, 4, 5, 6}
 	_, err = alice.InitChannelReservation(req)
-	if _, ok := err.(*chanfunding.ErrInsufficientFunds); !ok {
+	errr := er.Wrapped(err)
+	if _, ok := errr.(*chanfunding.ErrInsufficientFunds); !ok {
 		t.Fatalf("coin selection succeeded should have insufficient funds: %v",
 			err)
 	}
@@ -807,7 +810,7 @@ func testReservationInitiatorBalanceBelowDustCancel(miner *rpctest.Harness,
 		t.Fatalf("initialization should have failed due to " +
 			"insufficient local amount")
 
-	case !strings.Contains(errr.Error(), "funder balance too small"):
+	case !strings.Contains(errr.String(), "funder balance too small"):
 		t.Fatalf("incorrect error: %v", errr)
 	}
 }
@@ -1433,7 +1436,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 	const (
 		numTxns = 3
 	)
-	errCh1 := make(chan error, 1)
+	errCh1 := make(chan er.R, 1)
 	switch alice.BackEnd() {
 	case "neutrino":
 		// Neutrino doesn't listen for unconfirmed transactions.
@@ -1506,7 +1509,7 @@ func testTransactionSubscriptions(miner *rpctest.Harness,
 		}
 	}
 
-	errCh2 := make(chan error, 1)
+	errCh2 := make(chan er.R, 1)
 	go func() {
 		for i := 0; i < numTxns; i++ {
 			txDetail := <-txClient.ConfirmedTransactions()
@@ -1905,7 +1908,7 @@ func testPublishTransaction(r *rpctest.Harness,
 		}
 
 		err = alice.PublishTransaction(tx5, labels.External)
-		if err != lnwallet.ErrDoubleSpend {
+		if !lnwallet.ErrDoubleSpend.Is(err) {
 			t.Fatalf("expected ErrDoubleSpend, got: %v", err)
 		}
 
@@ -1933,7 +1936,7 @@ func testPublishTransaction(r *rpctest.Harness,
 			tx3Spend = tx6
 		}
 		err = alice.PublishTransaction(tx6, labels.External)
-		if err != expErr {
+		if !er.Cis(expErr, err) {
 			t.Fatalf("expected ErrDoubleSpend, got: %v", err)
 		}
 
@@ -1968,7 +1971,7 @@ func testPublishTransaction(r *rpctest.Harness,
 
 		// Expect rejection.
 		err = alice.PublishTransaction(tx7, labels.External)
-		if err != lnwallet.ErrDoubleSpend {
+		if !lnwallet.ErrDoubleSpend.Is(err) {
 			t.Fatalf("expected ErrDoubleSpend, got: %v", err)
 		}
 	}
@@ -2911,7 +2914,7 @@ func waitForMempoolTx(r *rpctest.Harness, txid *chainhash.Hash) er.R {
 func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) er.R {
 	var (
 		synced                  bool
-		err                     error
+		err                     er.R
 		bestHash, knownHash     *chainhash.Hash
 		bestHeight, knownHeight int32
 	)
@@ -2949,6 +2952,7 @@ func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) er.R {
 			return err
 		}
 	}
+	fmt.Printf("Wallet is synced to [%s @ %d]\n", bestHash.String(), bestHeight)
 	return nil
 }
 
@@ -3088,7 +3092,7 @@ func TestLightningWallet(t *testing.T) {
 	// dedicated miner to generate blocks, cause re-orgs, etc. We'll set
 	// up this node with a chain length of 125, so we have plenty of BTC
 	// to play around with.
-	miningNode, err := rpctest.New(netParams, nil, []string{"--txindex"})
+	miningNode, err := rpctest.New(netParams, nil, []string{"--txindex", "--tls"})
 	if err != nil {
 		t.Fatalf("unable to create mining node: %v", err)
 	}
@@ -3110,22 +3114,22 @@ func TestLightningWallet(t *testing.T) {
 	if errr != nil {
 		t.Fatalf("unable to create temp dir: %v", errr)
 	}
-	db, errr := channeldb.Open(tempDir)
-	if errr != nil {
-		t.Fatalf("unable to create db: %v", errr)
+	db, err := channeldb.Open(tempDir)
+	if err != nil {
+		t.Fatalf("unable to create db: %v", err)
 	}
 	testCfg := chainntnfs.CacheConfig{
 		QueryDisable: false,
 	}
-	hintCache, errr := chainntnfs.NewHeightHintCache(testCfg, db)
-	if errr != nil {
-		t.Fatalf("unable to create height hint cache: %v", errr)
+	hintCache, err := chainntnfs.NewHeightHintCache(testCfg, db)
+	if err != nil {
+		t.Fatalf("unable to create height hint cache: %v", err)
 	}
-	chainNotifier, errr := btcdnotify.New(
+	chainNotifier, err := btcdnotify.New(
 		&rpcConfig, netParams, hintCache, hintCache,
 	)
-	if errr != nil {
-		t.Fatalf("unable to create notifier: %v", errr)
+	if err != nil {
+		t.Fatalf("unable to create notifier: %v", err)
 	}
 	if err := chainNotifier.Start(); err != nil {
 		t.Fatalf("unable to start notifier: %v", err)
@@ -3161,17 +3165,19 @@ func runTests(t *testing.T, walletDriver *lnwallet.WalletDriver,
 
 		aliceWalletController lnwallet.WalletController
 		bobWalletController   lnwallet.WalletController
+
+		err er.R
 	)
 
-	tempTestDirAlice, err := ioutil.TempDir("", "lnwallet")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
+	tempTestDirAlice, errr := ioutil.TempDir("", "lnwallet")
+	if errr != nil {
+		t.Fatalf("unable to create temp directory: %v", errr)
 	}
 	defer os.RemoveAll(tempTestDirAlice)
 
-	tempTestDirBob, err := ioutil.TempDir("", "lnwallet")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
+	tempTestDirBob, errr := ioutil.TempDir("", "lnwallet")
+	if errr != nil {
+		t.Fatalf("unable to create temp directory: %v", errr)
 	}
 	defer os.RemoveAll(tempTestDirBob)
 

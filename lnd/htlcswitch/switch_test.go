@@ -232,12 +232,13 @@ func TestSwitchSendPending(t *testing.T) {
 	select {
 	case p := <-bobChannelLink.packets:
 		if p.linkFailure != nil {
-			err = p.linkFailure
+			err = er.E(p.linkFailure)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("no timely reply from switch")
 	}
-	linkErr, ok := err.(*LinkError)
+	errr := er.Wrapped(err)
+	linkErr, ok := errr.(*LinkError)
 	if !ok {
 		t.Fatalf("expected link error, got: %T", err)
 	}
@@ -415,9 +416,9 @@ func TestSwitchForwardFailAfterFullAdd(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -508,11 +509,11 @@ func TestSwitchForwardFailAfterFullAdd(t *testing.T) {
 	// Now we will restart bob, leaving the forwarding decision for this
 	// htlc is in the half-added state.
 	if err := s.Stop(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	if err := cdb.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb2, err := channeldb.Open(tempPath)
@@ -563,7 +564,7 @@ func TestSwitchForwardFailAfterFullAdd(t *testing.T) {
 
 	// Send the fail packet from the remote peer through the switch.
 	if err := s2.ForwardPackets(nil, fail); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	// Pull packet from alice's link, as it should have gone through
@@ -614,9 +615,9 @@ func TestSwitchForwardSettleAfterFullAdd(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -707,11 +708,11 @@ func TestSwitchForwardSettleAfterFullAdd(t *testing.T) {
 	// Now we will restart bob, leaving the forwarding decision for this
 	// htlc is in the half-added state.
 	if err := s.Stop(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	if err := cdb.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb2, err := channeldb.Open(tempPath)
@@ -764,7 +765,7 @@ func TestSwitchForwardSettleAfterFullAdd(t *testing.T) {
 
 	// Send the settle packet from the remote peer through the switch.
 	if err := s2.ForwardPackets(nil, settle); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	// Pull packet from alice's link, as it should have gone through
@@ -816,9 +817,9 @@ func TestSwitchForwardDropAfterFullAdd(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -901,11 +902,11 @@ func TestSwitchForwardDropAfterFullAdd(t *testing.T) {
 	// Now we will restart bob, leaving the forwarding decision for this
 	// htlc is in the half-added state.
 	if err := s.Stop(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	if err := cdb.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb2, err := channeldb.Open(tempPath)
@@ -981,9 +982,9 @@ func TestSwitchForwardFailAfterHalfAdd(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -1061,11 +1062,11 @@ func TestSwitchForwardFailAfterHalfAdd(t *testing.T) {
 	// Now we will restart bob, leaving the forwarding decision for this
 	// htlc is in the half-added state.
 	if err := s.Stop(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	if err := cdb.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb2, err := channeldb.Open(tempPath)
@@ -1147,9 +1148,9 @@ func TestSwitchForwardCircuitPersistence(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -1226,11 +1227,11 @@ func TestSwitchForwardCircuitPersistence(t *testing.T) {
 	}
 
 	if err := s.Stop(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	if err := cdb.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb2, err := channeldb.Open(tempPath)
@@ -1323,7 +1324,7 @@ func TestSwitchForwardCircuitPersistence(t *testing.T) {
 	}
 
 	if err := cdb2.Close(); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 
 	cdb3, err := channeldb.Open(tempPath)
@@ -1452,12 +1453,13 @@ func TestCircularForwards(t *testing.T) {
 			select {
 			case p := <-aliceChannelLink.packets:
 				if p.linkFailure != nil {
-					err = p.linkFailure
+					err = er.E(p.linkFailure)
 				}
 			case <-time.After(time.Second):
 				t.Fatal("no timely reply from switch")
 			}
-			if !reflect.DeepEqual(err, test.expectedErr) {
+			errr := er.Wrapped(err)
+			if !reflect.DeepEqual(errr, test.expectedErr) {
 				t.Fatalf("expected: %v, got: %v",
 					test.expectedErr, err)
 			}
@@ -2117,7 +2119,7 @@ func TestSwitchSendPayment(t *testing.T) {
 	_, err = s.GetPaymentResult(
 		paymentID, rhash, newMockDeobfuscator(),
 	)
-	if err != ErrPaymentIDNotFound {
+	if !ErrPaymentIDNotFound.Is(err) {
 		t.Fatalf("expected ErrPaymentIDNotFound, got %v", err)
 	}
 
@@ -2470,7 +2472,8 @@ func TestUpdateFailMalformedHTLCErrorConversion(t *testing.T) {
 			t.Fatalf("unable to send payment: %v", err)
 		}
 
-		routingErr := err.(ClearTextError)
+		errr := er.Wrapped(err)
+		routingErr := errr.(ClearTextError)
 		failureMsg := routingErr.WireMessage()
 		if _, ok := failureMsg.(*lnwire.FailInvalidOnionKey); !ok {
 			t.Fatalf("expected onion failure instead got: %v",
@@ -2533,7 +2536,7 @@ func TestSwitchGetPaymentResult(t *testing.T) {
 	_, err = s.GetPaymentResult(
 		paymentID, lntypes.Hash{}, newMockDeobfuscator(),
 	)
-	if err != ErrPaymentIDNotFound {
+	if !ErrPaymentIDNotFound.Is(err) {
 		t.Fatalf("expected ErrPaymentIDNotFound, got %v", err)
 	}
 
@@ -2696,7 +2699,7 @@ func TestInvalidFailure(t *testing.T) {
 	// message error.
 	deobfuscator := SphinxErrorDecrypter{
 		OnionErrorDecrypter: &mockOnionErrorDecryptor{
-			err: ErrUnreadableFailureMessage,
+			err: ErrUnreadableFailureMessage.Default(),
 		},
 	}
 
@@ -2709,7 +2712,7 @@ func TestInvalidFailure(t *testing.T) {
 
 	select {
 	case result := <-resultChan:
-		if result.Error != ErrUnreadableFailureMessage {
+		if !ErrUnreadableFailureMessage.Is(result.Error) {
 			t.Fatal("expected unreadable failure message")
 		}
 
@@ -2735,7 +2738,8 @@ func TestInvalidFailure(t *testing.T) {
 
 	select {
 	case result := <-resultChan:
-		rtErr, ok := result.Error.(ClearTextError)
+		errr := er.Wrapped(result.Error)
+		rtErr, ok := errr.(ClearTextError)
 		if !ok {
 			t.Fatal("expected ClearTextError")
 		}
@@ -3183,9 +3187,9 @@ func TestSwitchHoldForward(t *testing.T) {
 		t.Fatalf("unable to create bob server: %v", err)
 	}
 
-	tempPath, err := ioutil.TempDir("", "circuitdb")
-	if err != nil {
-		t.Fatalf("unable to temporary path: %v", err)
+	tempPath, errr := ioutil.TempDir("", "circuitdb")
+	if errr != nil {
+		t.Fatalf("unable to temporary path: %v", errr)
 	}
 
 	cdb, err := channeldb.Open(tempPath)
@@ -3203,7 +3207,7 @@ func TestSwitchHoldForward(t *testing.T) {
 
 	defer func() {
 		if err := s.Stop(); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatalf(err.String())
 		}
 	}()
 

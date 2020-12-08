@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/lnd"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc"
 	"github.com/pkt-cash/pktd/lnd/lntest"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 func testMultiHopPayments(net *lntest.NetworkHarness, t *harnessTest) {
@@ -190,32 +190,32 @@ func testMultiHopPayments(net *lntest.NetworkHarness, t *harnessTest) {
 	ctxt, cancel := context.WithTimeout(ctxb, defaultTimeout)
 	defer cancel()
 
-	aliceEvents, err := net.Alice.RouterClient.SubscribeHtlcEvents(
+	aliceEvents, errr := net.Alice.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
-	bobEvents, err := net.Bob.RouterClient.SubscribeHtlcEvents(
+	bobEvents, errr := net.Bob.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
-	carolEvents, err := carol.RouterClient.SubscribeHtlcEvents(
+	carolEvents, errr := carol.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
-	daveEvents, err := dave.RouterClient.SubscribeHtlcEvents(
+	daveEvents, errr := dave.RouterClient.SubscribeHtlcEvents(
 		ctxt, &routerrpc.SubscribeHtlcEventsRequest{},
 	)
-	if err != nil {
-		t.Fatalf("could not subscribe events: %v", err)
+	if errr != nil {
+		t.Fatalf("could not subscribe events: %v", errr)
 	}
 
 	// Using Carol as the source, pay to the 5 invoices from Bob created
@@ -280,9 +280,9 @@ func testMultiHopPayments(net *lntest.NetworkHarness, t *harnessTest) {
 	// accrued over each time range. Dave should've earned 170 satoshi for
 	// each of the forwarded payments.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	feeReport, err := dave.FeeReport(ctxt, &lnrpc.FeeReportRequest{})
-	if err != nil {
-		t.Fatalf("unable to query for fee report: %v", err)
+	feeReport, errr := dave.FeeReport(ctxt, &lnrpc.FeeReportRequest{})
+	if errr != nil {
+		t.Fatalf("unable to query for fee report: %v", errr)
 	}
 
 	if feeReport.DayFeeSum != uint64(expectedFeeDave) {
@@ -301,11 +301,11 @@ func testMultiHopPayments(net *lntest.NetworkHarness, t *harnessTest) {
 	// Next, ensure that if we issue the vanilla query for the forwarding
 	// history, it returns 5 values, and each entry is formatted properly.
 	ctxt, _ = context.WithTimeout(ctxb, defaultTimeout)
-	fwdingHistory, err := dave.ForwardingHistory(
+	fwdingHistory, errr := dave.ForwardingHistory(
 		ctxt, &lnrpc.ForwardingHistoryRequest{},
 	)
-	if err != nil {
-		t.Fatalf("unable to query for fee report: %v", err)
+	if errr != nil {
+		t.Fatalf("unable to query for fee report: %v", errr)
 	}
 	if len(fwdingHistory.ForwardingEvents) != numPayments {
 		t.Fatalf("wrong number of forwarding event: expected %v, "+

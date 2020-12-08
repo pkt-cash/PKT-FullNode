@@ -1,6 +1,7 @@
 package keychain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -68,7 +69,7 @@ func createTestBtcWallet(coinType uint32) (func(), *wallet.Wallet, er.R) {
 	pass := []byte("test")
 
 	baseWallet, err := loader.CreateNewWallet(
-		pass, pass, testHDSeed[:], time.Time{}, nil,
+		pass, pass, []byte(hex.EncodeToString(testHDSeed[:])), time.Time{}, nil,
 	)
 	if err != nil {
 		return nil, nil, err

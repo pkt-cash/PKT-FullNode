@@ -2165,7 +2165,6 @@ func (l *LightningNode) isPublic(tx kvdb.RTx, sourcePubKey []byte) (bool, er.R) 
 	// they extend to any other node than the source node. errDone will be
 	// used to terminate the check early.
 	nodeIsPublic := false
-	errDone := er.New("done")
 	err := l.ForEachChannel(tx, func(_ kvdb.RTx, info *ChannelEdgeInfo,
 		_, _ *ChannelEdgePolicy) er.R {
 
@@ -2177,20 +2176,20 @@ func (l *LightningNode) isPublic(tx kvdb.RTx, sourcePubKey []byte) (bool, er.R) 
 			!bytes.Equal(info.NodeKey2Bytes[:], sourcePubKey) {
 
 			nodeIsPublic = true
-			return errDone
+			return er.LoopBreak
 		}
 
 		// Since the edge _does_ extend to the source node, we'll also
 		// need to ensure that this is a public edge.
 		if info.AuthProof != nil {
 			nodeIsPublic = true
-			return errDone
+			return er.LoopBreak
 		}
 
 		// Otherwise, we'll continue our search.
 		return nil
 	})
-	if err != nil && err != errDone {
+	if err != nil && !er.IsLoopBreak(err) {
 		return false, err
 	}
 
@@ -3458,7 +3457,7 @@ func putLightningNode(nodeBucket kvdb.RwBucket, aliasBucket kvdb.RwBucket, // no
 
 	if len(node.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
 		return ErrTooManyExtraOpaqueBytes.New(
-			fmt.Sprintf("%s", len(node.ExtraOpaqueData)), nil)
+			fmt.Sprintf("%d", len(node.ExtraOpaqueData)), nil)
 	}
 	err = wire.WriteVarBytes(&b, 0, node.ExtraOpaqueData)
 	if err != nil {
@@ -3663,7 +3662,7 @@ func putChanEdgeInfo(edgeIndex kvdb.RwBucket, edgeInfo *ChannelEdgeInfo, chanID 
 
 	if len(edgeInfo.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
 		return ErrTooManyExtraOpaqueBytes.New(
-			fmt.Sprintf("%s", len(edgeInfo.ExtraOpaqueData)), nil)
+			fmt.Sprintf("%d", len(edgeInfo.ExtraOpaqueData)), nil)
 	}
 	err := wire.WriteVarBytes(&b, 0, edgeInfo.ExtraOpaqueData)
 	if err != nil {
@@ -4012,7 +4011,7 @@ func serializeChanEdgePolicy(w io.Writer, edge *ChannelEdgePolicy,
 
 	if len(edge.ExtraOpaqueData) > MaxAllowedExtraOpaqueBytes {
 		return ErrTooManyExtraOpaqueBytes.New(
-			fmt.Sprintf("%s", len(edge.ExtraOpaqueData)), nil)
+			fmt.Sprintf("%d", len(edge.ExtraOpaqueData)), nil)
 	}
 	if _, err := opaqueBuf.Write(edge.ExtraOpaqueData); err != nil {
 		return er.E(err)

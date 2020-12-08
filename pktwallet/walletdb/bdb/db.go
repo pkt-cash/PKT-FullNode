@@ -81,7 +81,7 @@ func (tx *transaction) ReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
 }
 
 func (tx *transaction) CreateTopLevelBucket(key []byte) (walletdb.ReadWriteBucket, er.R) {
-	boltBucket, err := tx.boltTx.CreateBucket(key)
+	boltBucket, err := tx.boltTx.CreateBucketIfNotExists(key)
 	if err != nil {
 		return nil, convertErr(err)
 	}
@@ -375,6 +375,18 @@ func (db *db) Copy(w io.Writer) er.R {
 // This function is part of the walletdb.Db interface implementation.
 func (db *db) Close() er.R {
 	return convertErr((*bbolt.DB)(db).Close())
+}
+
+// Batch is similar to the package-level Update method, but it will attempt to
+// optismitcally combine the invocation of several transaction functions into a
+// single db write transaction.
+//
+// This function is part of the walletdb.Db interface implementation.
+func (db *db) Batch(f func(tx walletdb.ReadWriteTx) er.R) er.R {
+	return convertErr((*bbolt.DB)(db).Batch(func(btx *bbolt.Tx) error {
+		interfaceTx := transaction{btx}
+		return er.Native(f(&interfaceTx))
+	}))
 }
 
 // filesExists reports whether the named file or directory exists.

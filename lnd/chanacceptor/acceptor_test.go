@@ -63,7 +63,7 @@ func newChanAcceptorCtx(t *testing.T, acceptCallCount int,
 }
 
 // sendRequest mocks sending a request to the channel acceptor.
-func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) er.R {
+func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) error {
 	select {
 	case c.extRequests <- request.PendingChanId:
 
@@ -76,7 +76,7 @@ func (c *channelAcceptorCtx) sendRequest(request *lnrpc.ChannelAcceptRequest) er
 
 // receiveResponse mocks sending of a response from the channel acceptor.
 func (c *channelAcceptorCtx) receiveResponse() (*lnrpc.ChannelAcceptResponse,
-	er.R) {
+	error) {
 
 	select {
 	case id := <-c.extRequests:
@@ -90,12 +90,12 @@ func (c *channelAcceptorCtx) receiveResponse() (*lnrpc.ChannelAcceptResponse,
 
 	case <-time.After(testTimeout):
 		c.t.Fatalf("timeout receiving request")
-		return nil, er.New("receiveResponse timeout")
+		return nil, er.Native(er.New("receiveResponse timeout"))
 
 	// Exit if our test acceptor closes the done channel, which indicates
 	// that the acceptor is shutting down.
 	case <-c.acceptor.done:
-		return nil, er.New("acceptor shutting down")
+		return nil, er.Native(er.New("acceptor shutting down"))
 	}
 }
 
@@ -114,7 +114,7 @@ func (c *channelAcceptorCtx) stop() {
 
 	select {
 	case actual := <-c.errChan:
-		assert.Equal(c.t, errShuttingDown, actual)
+		assert.True(c.t, errShuttingDown.Is(actual))
 
 	case <-time.After(testTimeout):
 		c.t.Fatal("timeout waiting for acceptor to exit")
@@ -143,6 +143,11 @@ func (c *channelAcceptorCtx) queryAndAssert(queries map[*lnwire.OpenChannel]*Cha
 				Node:        node,
 				OpenChanMsg: request,
 			})
+			e1 := expected.ChanAcceptError
+			e2 := resp.ChanAcceptError
+			assert.True(c.t, er.FuzzyEquals(e1, e2))
+			expected.ChanAcceptError = nil
+			resp.ChanAcceptError = nil
 			assert.Equal(c.t, expected, resp)
 			responses <- struct{}{}
 		}()

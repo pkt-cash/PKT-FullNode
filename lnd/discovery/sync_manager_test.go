@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"fmt"
 	"math"
 	"reflect"
 	"sync/atomic"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lntest/wait"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/ticker"

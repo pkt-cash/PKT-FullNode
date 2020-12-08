@@ -3,9 +3,9 @@
 package neutrinonotify
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/neutrino"
@@ -20,7 +20,7 @@ import (
 // outdated best block and miss sending ntfns. Used for testing.
 func (n *NeutrinoNotifier) UnsafeStart(bestHeight int32,
 	bestHash *chainhash.Hash, syncHeight int32,
-	generateBlocks func() error) er.R {
+	generateBlocks func() er.R) er.R {
 
 	// We'll obtain the latest block height of the p2p node. We'll
 	// start the auto-rescan from this point. Once a caller actually wishes

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"runtime"
 	"sync"
@@ -14,12 +15,12 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -468,7 +469,8 @@ func TestChannelLinkCancelFullCommitment(t *testing.T) {
 	if err == nil {
 		t.Fatalf("overflow payment should have failed")
 	}
-	lerr, ok := err.(*LinkError)
+	errr := er.Wrapped(err)
+	lerr, ok := errr.(*LinkError)
 	if !ok {
 		t.Fatalf("expected LinkError, got: %T", err)
 	}
@@ -542,7 +544,8 @@ func TestExitNodeTimelockPayloadMismatch(t *testing.T) {
 		t.Fatalf("payment should have failed but didn't")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -641,8 +644,8 @@ func TestLinkForwardTimelockPolicyMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatalf("payment should have failed but didn't")
 	}
-
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -700,7 +703,8 @@ func TestLinkForwardFeePolicyMismatch(t *testing.T) {
 		t.Fatalf("payment should have failed but didn't")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -758,7 +762,8 @@ func TestLinkForwardMinHTLCPolicyMismatch(t *testing.T) {
 		t.Fatalf("payment should have failed but didn't")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -825,7 +830,8 @@ func TestLinkForwardMaxHTLCPolicyMismatch(t *testing.T) {
 		t.Fatalf("payment should have failed but didn't")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -932,7 +938,8 @@ func TestUpdateForwardingPolicy(t *testing.T) {
 		t.Fatalf("payment should've been rejected")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got (%T): %v", err, err)
 	}
@@ -972,7 +979,8 @@ func TestUpdateForwardingPolicy(t *testing.T) {
 		t.Fatalf("payment should've been rejected")
 	}
 
-	rtErr, ok = err.(ClearTextError)
+	errr = er.Wrapped(err)
+	rtErr, ok = errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got (%T): %v",
 			err, err)
@@ -1219,7 +1227,8 @@ func TestChannelLinkMultiHopUnknownNextHop(t *testing.T) {
 	if err == nil {
 		t.Fatal("error haven't been received")
 	}
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected ClearTextError")
 	}
@@ -1335,7 +1344,8 @@ func TestChannelLinkMultiHopDecodeError(t *testing.T) {
 		t.Fatal("error haven't been received")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T", err)
 	}
@@ -1427,7 +1437,8 @@ func TestChannelLinkExpiryTooSoonExitNode(t *testing.T) {
 			"time lock value")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T %v",
 			rtErr, err)
@@ -1490,7 +1501,8 @@ func TestChannelLinkExpiryTooSoonMidNode(t *testing.T) {
 			"time lock value")
 	}
 
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected a ClearTextError, instead got: %T: %v",
 			rtErr, err)
@@ -1637,8 +1649,8 @@ func (m *mockPeer) RemoteFeatures() *lnwire.FeatureVector {
 }
 
 func newSingleLinkTestHarness(chanAmt, chanReserve btcutil.Amount) (
-	ChannelLink, *lnwallet.LightningChannel, chan time.Time, func() error,
-	func(), func() (*lnwallet.LightningChannel, error), er.R) {
+	ChannelLink, *lnwallet.LightningChannel, chan time.Time, func() er.R,
+	func(), func() (*lnwallet.LightningChannel, er.R), er.R) {
 
 	var chanIDBytes [8]byte
 	if _, err := util.ReadFull(rand.Reader, chanIDBytes[:]); err != nil {
@@ -3429,24 +3441,24 @@ func TestChannelRetransmission(t *testing.T) {
 			// bandwidth of htlc links hasn't been changed.
 			invoice, err = receiver.registry.LookupInvoice(rhash)
 			if err != nil {
-				err = errors.Errorf("unable to get invoice: %v", err)
+				err = er.Errorf("unable to get invoice: %v", err)
 				continue
 			}
 			if invoice.State != channeldb.ContractSettled {
-				err = errors.Errorf("alice invoice haven't been settled")
+				err = er.Errorf("alice invoice haven't been settled")
 				continue
 			}
 
 			aliceExpectedBandwidth := aliceBandwidthBefore - htlcAmt
 			if aliceExpectedBandwidth != n.aliceChannelLink.Bandwidth() {
-				err = errors.Errorf("expected alice to have %v, instead has %v",
+				err = er.Errorf("expected alice to have %v, instead has %v",
 					aliceExpectedBandwidth, n.aliceChannelLink.Bandwidth())
 				continue
 			}
 
 			bobExpectedBandwidth := bobBandwidthBefore + htlcAmt
 			if bobExpectedBandwidth != n.firstBobChannelLink.Bandwidth() {
-				err = errors.Errorf("expected bob to have %v, instead has %v",
+				err = er.Errorf("expected bob to have %v, instead has %v",
 					bobExpectedBandwidth, n.firstBobChannelLink.Bandwidth())
 				continue
 			}
@@ -3892,7 +3904,7 @@ func TestChannelLinkAcceptDuplicatePayment(t *testing.T) {
 	err = n.aliceServer.htlcSwitch.SendHTLC(
 		n.firstBobChannelLink.ShortChanID(), pid, htlc,
 	)
-	if err != ErrDuplicateAdd {
+	if !ErrDuplicateAdd.Is(err) {
 		t.Fatalf("ErrDuplicateAdd should have been "+
 			"received got: %v", err)
 	}
@@ -4026,7 +4038,7 @@ type persistentLinkHarness struct {
 func newPersistentLinkHarness(t *testing.T, link ChannelLink,
 	batchTicker chan time.Time,
 	restore func() (*lnwallet.LightningChannel,
-		error)) *persistentLinkHarness {
+		er.R)) *persistentLinkHarness {
 
 	coreLink := link.(*channelLink)
 
@@ -4066,7 +4078,7 @@ func (h *persistentLinkHarness) restart(restartSwitch bool,
 	// Since our in-memory state may have diverged from our persistent
 	// state, we will restore the persisted state to ensure we always start
 	// the link in a consistent state.
-	var err error
+	var err er.R
 	h.channel, err = h.restoreChan()
 	if err != nil {
 		h.t.Fatalf("unable to restore channels: %v", err)
@@ -4178,7 +4190,7 @@ func (h *persistentLinkHarness) restartLink(
 	aliceDb := aliceChannel.State().Db
 	aliceSwitch := h.coreLink.cfg.Switch
 	if restartSwitch {
-		var err error
+		var err er.R
 		aliceSwitch, err = initSwitchWithDB(testStartingHeight, aliceDb)
 		if err != nil {
 			return nil, nil, nil, err
@@ -5588,7 +5600,8 @@ func TestChannelLinkCanceledInvoice(t *testing.T) {
 
 	// Because the invoice is canceled, we expect an unknown payment hash
 	// result.
-	rtErr, ok := err.(ClearTextError)
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected ClearTextError, but got %v", err)
 	}
@@ -5605,7 +5618,7 @@ type hodlInvoiceTestCtx struct {
 	hash                lntypes.Hash
 	preimage            lntypes.Preimage
 	amount              lnwire.MilliSatoshi
-	errChan             chan error
+	errChan             chan er.R
 
 	restoreBob func() (*lnwallet.LightningChannel, er.R)
 
@@ -6262,8 +6275,9 @@ func TestPendingCommitTicker(t *testing.T) {
 
 // assertFailureCode asserts that an error is of type ClearTextError and that
 // the failure code is as expected.
-func assertFailureCode(t *testing.T, err error, code lnwire.FailCode) {
-	rtErr, ok := err.(ClearTextError)
+func assertFailureCode(t *testing.T, err er.R, code lnwire.FailCode) {
+	errr := er.Wrapped(err)
+	rtErr, ok := errr.(ClearTextError)
 	if !ok {
 		t.Fatalf("expected ClearTextError but got %T", err)
 	}
@@ -6272,4 +6286,9 @@ func assertFailureCode(t *testing.T, err error, code lnwire.FailCode) {
 		t.Fatalf("expected %v but got %v",
 			code, rtErr.WireMessage().Code())
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

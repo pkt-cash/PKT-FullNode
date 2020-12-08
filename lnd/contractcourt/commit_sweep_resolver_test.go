@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 type commitSweepResolverTestContext struct {
@@ -106,7 +107,7 @@ type mockSweeper struct {
 	sweptInputs   chan input.Input
 	updatedInputs chan wire.OutPoint
 	sweepTx       *wire.MsgTx
-	sweepErr      error
+	sweepErr      *er.ErrorCode
 }
 
 func newMockSweeper() *mockSweeper {
@@ -122,10 +123,15 @@ func (s *mockSweeper) SweepInput(input input.Input, params sweep.Params) (
 
 	s.sweptInputs <- input
 
+	var e er.R
+	if s.sweepErr != nil {
+		e = s.sweepErr.Default()
+	}
+
 	result := make(chan sweep.Result, 1)
 	result <- sweep.Result{
 		Tx:  s.sweepTx,
-		Err: s.sweepErr,
+		Err: e,
 	}
 	return result, nil
 }
@@ -214,7 +220,7 @@ func TestCommitSweepResolverNoDelay(t *testing.T) {
 // testCommitSweepResolverDelay tests resolution of a direct commitment output
 // that is encumbered by a time lock. sweepErr indicates whether the local node
 // fails to sweep the output.
-func testCommitSweepResolverDelay(t *testing.T, sweepErr error) {
+func testCommitSweepResolverDelay(t *testing.T, sweepErr *er.ErrorCode) {
 	defer timeout(t)()
 
 	const sweepProcessInterval = 100 * time.Millisecond
@@ -345,7 +351,7 @@ func TestCommitSweepResolverDelay(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		sweepErr error
+		sweepErr *er.ErrorCode
 	}{{
 		name:     "success",
 		sweepErr: nil,
