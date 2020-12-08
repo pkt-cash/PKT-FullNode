@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/macaroons"
 	"github.com/pkt-cash/pktd/lnd/routing"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -432,7 +433,7 @@ func (c *ChannelArbitrator) Start(state *chanArbStartState) er.R {
 	}
 
 	log.Debugf("Starting ChannelArbitrator(%v), htlc_set=%v",
-		c.cfg.ChanPoint, newLogClosure(func() string {
+		c.cfg.ChanPoint, log.C(func() string {
 			return spew.Sdump(c.activeHTLCs)
 		}),
 	)
@@ -801,7 +802,7 @@ func (c *ChannelArbitrator) stateStep(
 		// commitment transaction has already been broadcast.
 		log.Tracef("ChannelArbitrator(%v): logging chain_actions=%v",
 			c.cfg.ChanPoint,
-			newLogClosure(func() string {
+			log.C(func() string {
 				return spew.Sdump(chainActions)
 			}))
 
@@ -902,7 +903,7 @@ func (c *ChannelArbitrator) stateStep(
 		log.Infof("Broadcasting force close transaction %v, "+
 			"ChannelPoint(%v): %v", closeTx.TxHash(),
 			c.cfg.ChanPoint,
-			newLogClosure(func() string {
+			log.C(func() string {
 				return spew.Sdump(closeTx)
 			}))
 
@@ -1011,7 +1012,7 @@ func (c *ChannelArbitrator) stateStep(
 
 		log.Debugf("ChannelArbitrator(%v): sending resolution message=%v",
 			c.cfg.ChanPoint,
-			newLogClosure(func() string {
+			log.C(func() string {
 				return spew.Sdump(pktsToSend)
 			}))
 
@@ -2206,7 +2207,7 @@ func (c *ChannelArbitrator) channelAttendant(bestHeight int32) {
 
 			log.Tracef("ChannelArbitrator(%v): fresh set of htlcs=%v",
 				c.cfg.ChanPoint,
-				newLogClosure(func() string {
+				log.C(func() string {
 					return spew.Sdump(htlcUpdate)
 				}),
 			)

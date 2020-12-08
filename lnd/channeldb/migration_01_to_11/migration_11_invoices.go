@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11/zpay32"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 

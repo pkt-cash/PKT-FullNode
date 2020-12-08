@@ -6,6 +6,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnpeer"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // reliableSenderCfg contains all of necessary items for the reliableSender to

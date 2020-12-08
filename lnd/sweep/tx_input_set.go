@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"

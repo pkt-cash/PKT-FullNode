@@ -19,6 +19,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 func init() {
@@ -423,7 +424,7 @@ search:
 		}
 
 		log.Tracef("Retrieved SRV records from dns seed: %v",
-			newLogClosure(func() string {
+			log.C(func() string {
 				return spew.Sdump(addrs)
 			}),
 		)

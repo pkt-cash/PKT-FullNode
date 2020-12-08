@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // reserveStatus is an enum that signals how full a particular session is.

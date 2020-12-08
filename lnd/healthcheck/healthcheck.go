@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // Config contains configuration settings for our monitor.

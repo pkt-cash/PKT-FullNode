@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 )
@@ -116,7 +117,7 @@ func (c *WatchtowerClient) RegisterWithRootServer(grpcServer *grpc.Server) er.R 
 	// all our methods are routed properly.
 	RegisterWatchtowerClientServer(grpcServer, c)
 
-	c.cfg.Log.Debugf("WatchtowerClient RPC server successfully registered " +
+	log.Debugf("WatchtowerClient RPC server successfully registered " +
 		"with  root gRPC server")
 
 	return nil

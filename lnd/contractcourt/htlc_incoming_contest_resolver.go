@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/invoices"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // htlcIncomingContestResolver is a ContractResolver that's able to resolve an

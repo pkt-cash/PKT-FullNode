@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // SessionNegotiator is an interface for asynchronously requesting new sessions.

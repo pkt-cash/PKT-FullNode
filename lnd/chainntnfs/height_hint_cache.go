@@ -6,6 +6,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (
@@ -128,7 +129,7 @@ func (c *HeightHintCache) CommitSpendHint(height uint32,
 		return nil
 	}
 
-	Log.Tracef("Updating spend hint to height %d for %v", height,
+	log.Tracef("Updating spend hint to height %d for %v", height,
 		spendRequests)
 
 	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
@@ -163,7 +164,7 @@ func (c *HeightHintCache) CommitSpendHint(height uint32,
 func (c *HeightHintCache) QuerySpendHint(spendRequest SpendRequest) (uint32, er.R) {
 	var hint uint32
 	if c.cfg.QueryDisable {
-		Log.Debugf("Ignoring spend height hint for %v (height hint cache "+
+		log.Debugf("Ignoring spend height hint for %v (height hint cache "+
 			"query disabled)", spendRequest)
 		return 0, nil
 	}
@@ -199,7 +200,7 @@ func (c *HeightHintCache) PurgeSpendHint(spendRequests ...SpendRequest) er.R {
 		return nil
 	}
 
-	Log.Tracef("Removing spend hints for %v", spendRequests)
+	log.Tracef("Removing spend hints for %v", spendRequests)
 
 	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		spendHints := tx.ReadWriteBucket(spendHintBucket)
@@ -229,7 +230,7 @@ func (c *HeightHintCache) CommitConfirmHint(height uint32,
 		return nil
 	}
 
-	Log.Tracef("Updating confirm hints to height %d for %v", height,
+	log.Tracef("Updating confirm hints to height %d for %v", height,
 		confRequests)
 
 	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
@@ -264,7 +265,7 @@ func (c *HeightHintCache) CommitConfirmHint(height uint32,
 func (c *HeightHintCache) QueryConfirmHint(confRequest ConfRequest) (uint32, er.R) {
 	var hint uint32
 	if c.cfg.QueryDisable {
-		Log.Debugf("Ignoring confirmation height hint for %v (height hint "+
+		log.Debugf("Ignoring confirmation height hint for %v (height hint "+
 			"cache query disabled)", confRequest)
 		return 0, nil
 	}
@@ -301,7 +302,7 @@ func (c *HeightHintCache) PurgeConfirmHint(confRequests ...ConfRequest) er.R {
 		return nil
 	}
 
-	Log.Tracef("Removing confirm hints for %v", confRequests)
+	log.Tracef("Removing confirm hints for %v", confRequests)
 
 	return kvdb.Batch(c.db.Backend, func(tx kvdb.RwTx) er.R {
 		confirmHints := tx.ReadWriteBucket(confirmHintBucket)

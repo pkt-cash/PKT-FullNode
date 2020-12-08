@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/multimutex"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (

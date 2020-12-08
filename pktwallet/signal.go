@@ -7,6 +7,8 @@ package main
 import (
 	"os"
 	"os/signal"
+
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // interruptChannel is used to receive SIGINT (Ctrl+C) signals.

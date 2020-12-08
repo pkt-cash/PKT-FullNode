@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"fmt"
 	"image/color"
 	"net"
 	"sync"

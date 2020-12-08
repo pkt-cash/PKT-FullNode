@@ -6,6 +6,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // invoiceUpdateCtx is an object that describes the context for the invoice

@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -591,7 +592,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			fromVertex, toNodeDist.node, amountToSend,
 		)
 
-		log.Trace(newLogClosure(func() string {
+		log.Trace(log.C(func() string {
 			return fmt.Sprintf("path finding probability: fromnode=%v,"+
 				" tonode=%v, amt=%v, probability=%v",
 				fromVertex, toNodeDist.node, amountToSend,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (

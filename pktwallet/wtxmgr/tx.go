@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/clock"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -270,11 +270,11 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 
 	for addr, amt := range spentByAddress {
 		log.Infof("📩 %s [%s] from [%s] tx [%s] @ [%s]",
-			pktlog.GreenBg("Confirmed spend"),
-			pktlog.Coins(amt.ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()),
-			pktlog.Height(block.Height))
+			log.GreenBg("Confirmed spend"),
+			log.Coins(amt.ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()),
+			log.Height(block.Height))
 	}
 
 	return nil
@@ -538,10 +538,10 @@ func rollbackTransaction(
 
 			addr := txscript.PkScriptToAddress(output.PkScript, params)
 			log.Infof("😱 %s [%s] <- [%s] by rollback of [%s]",
-				pktlog.BgYellow("Got UNPAID"),
-				pktlog.Coins(btcutil.Amount(output.Value).ToBTC()),
-				pktlog.Address(addr.String()),
-				pktlog.Txid(rec.Hash.String()))
+				log.BgYellow("Got UNPAID"),
+				log.Coins(btcutil.Amount(output.Value).ToBTC()),
+				log.Address(addr.String()),
+				log.Txid(rec.Hash.String()))
 
 			// Delete the unspents from this coinbase
 			unspentKey, credKey := existsUnspent(ns, &op)
@@ -666,9 +666,9 @@ func rollbackTransaction(
 
 	for addr, amt := range unspentByAddress {
 		log.Infof("⚠️ Spend unconfirmed [%s] <- [%s] by rollback of [%s]",
-			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()))
+			log.Coins(btcutil.Amount(amt).ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()))
 	}
 
 	// For each detached non-coinbase credit, move the
@@ -711,9 +711,9 @@ func rollbackTransaction(
 	}
 	for addr, amt := range unearnedByAddress {
 		log.Infof("⚠️ Income unconfirmed [%s] <- [%s] by rollback of [%s]",
-			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()))
+			log.Coins(btcutil.Amount(amt).ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()))
 	}
 	return
 }
@@ -734,7 +734,7 @@ func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 		len(txns), b.Hash, b.Height)
 
 	for txHash := range txns {
-		log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
+		log.Infof("Rolling back tx [%s]", log.Txid(txHash.String()))
 		if _, err := rollbackTransaction(ns, &txHash, &b.Block, s.chainParams); err != nil {
 			return err
 		}

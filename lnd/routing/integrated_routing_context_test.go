@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"

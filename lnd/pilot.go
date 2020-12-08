@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/tor"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -138,7 +139,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 	chainCfg *lncfg.Chain, netParams chainreg.BitcoinNetParams) (
 	*autopilot.ManagerCfg, er.R) {
 
-	atplLog.Infof("Instantiating autopilot with active=%v, "+
+	log.Infof("Instantiating autopilot with active=%v, "+
 		"max_channels=%d, allocation=%f, min_chan_size=%d, "+
 		"max_chan_size=%d, private=%t, min_confs=%d, conf_target=%d",
 		cfg.Active, cfg.MaxChannels, cfg.Allocation, cfg.MinChannelSize,
@@ -197,7 +198,7 @@ func initAutoPilot(svr *server, cfg *lncfg.AutoPilot,
 				return false, er.New("no addresses specified")
 			}
 
-			atplLog.Tracef("Attempting to connect to %x",
+			log.Tracef("Attempting to connect to %x",
 				target.SerializeCompressed())
 
 			lnAddr := &lnwire.NetAddress{

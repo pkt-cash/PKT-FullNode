@@ -21,7 +21,6 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -35,6 +34,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/routing"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -316,10 +317,6 @@ type Config struct {
 
 	DB *lncfg.DB `group:"db" namespace:"db"`
 
-	// LogWriter is the root logger that all of the daemon's subloggers are
-	// hooked up to.
-	LogWriter *build.RotatingLogWriter
-
 	// registeredChains keeps track of all chains that have been registered
 	// with the daemon.
 	registeredChains *chainreg.ChainRegistry
@@ -462,7 +459,6 @@ func DefaultConfig() Config {
 		},
 		MaxOutgoingCltvExpiry:   htlcswitch.DefaultMaxOutgoingCltvExpiry,
 		MaxChannelFeeAllocation: htlcswitch.DefaultMaxLinkFeeAllocation,
-		LogWriter:               build.NewRotatingLogWriter(),
 		DB:                      lncfg.DefaultDB(),
 		registeredChains:        chainreg.NewChainRegistry(),
 		ActiveNetParams:         chainreg.BitcoinTestNetParams,
@@ -490,8 +486,7 @@ func LoadConfig() (*Config, er.R) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show usage", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", build.Version(),
-			"commit="+build.Commit)
+		fmt.Println(appName, "version", version.Version())
 		os.Exit(0)
 	}
 
@@ -539,7 +534,7 @@ func LoadConfig() (*Config, er.R) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		ltndLog.Warnf("%v", configFileError)
+		log.Warnf("%v", configFileError)
 	}
 
 	return cleanCfg, nil
@@ -1103,34 +1098,8 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 		cfg.registeredChains.PrimaryChain().String(),
 		lncfg.NormalizeNetwork(cfg.ActiveNetParams.Name))
 
-	// A log writer must be passed in, otherwise we can't function and would
-	// run into a panic later on.
-	if cfg.LogWriter == nil {
-		return nil, er.Errorf("log writer missing in config")
-	}
-
-	// Special show command to list supported subsystems and exit.
-	if cfg.DebugLevel == "show" {
-		fmt.Println("Supported subsystems",
-			cfg.LogWriter.SupportedSubsystems())
-		os.Exit(0)
-	}
-
-	// Initialize logging at the default logging level.
-	SetupLoggers(cfg.LogWriter)
-	err = cfg.LogWriter.InitLogRotator(
-		filepath.Join(cfg.LogDir, defaultLogFilename),
-		cfg.MaxLogFileSize, cfg.MaxLogFiles,
-	)
-	if err != nil {
-		str := "%s: log rotation setup failed: %v"
-		err = er.Errorf(str, funcName, err.String())
-		_, _ = fmt.Fprintln(os.Stderr, err)
-		return nil, err
-	}
-
 	// Parse, validate, and set debug log level(s).
-	err = build.ParseAndSetDebugLevels(cfg.DebugLevel, cfg.LogWriter)
+	err = log.SetLogLevels(cfg.DebugLevel)
 	if err != nil {
 		err = er.Errorf("%s: %v", funcName, err.String())
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -1196,7 +1165,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 	}
 
 	if cfg.DisableRest {
-		ltndLog.Infof("REST API is disabled!")
+		log.Infof("REST API is disabled!")
 		cfg.RESTListeners = nil
 	} else {
 		err = lncfg.EnforceSafeAuthentication(
@@ -1209,7 +1178,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 
 	// Remove the listening addresses specified if listening is disabled.
 	if cfg.DisableListen {
-		ltndLog.Infof("Listening on the p2p interface is disabled!")
+		log.Infof("Listening on the p2p interface is disabled!")
 		cfg.Listeners = nil
 		cfg.ExternalIPs = nil
 	} else {

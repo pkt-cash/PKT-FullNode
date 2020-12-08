@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/migration_01_to_11"
 	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
 )

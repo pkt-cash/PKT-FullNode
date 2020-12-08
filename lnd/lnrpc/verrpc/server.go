@@ -5,7 +5,8 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"google.golang.org/grpc"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 )
@@ -86,14 +87,9 @@ func (s *Server) GetVersion(_ context.Context,
 	_ *VersionRequest) (*Version, error) {
 
 	return &Version{
-		Commit:        build.Commit,
-		CommitHash:    build.CommitHash,
-		Version:       build.Version(),
-		AppMajor:      uint32(build.AppMajor),
-		AppMinor:      uint32(build.AppMinor),
-		AppPatch:      uint32(build.AppPatch),
-		AppPreRelease: build.AppPreRelease,
-		BuildTags:     build.Tags(),
-		GoVersion:     build.GoVersion,
+		Version:  version.Version(),
+		AppMajor: uint32(version.AppMajorVersion()),
+		AppMinor: uint32(version.AppMinorVersion()),
+		AppPatch: uint32(version.AppPatchVersion()),
 	}, nil
 }

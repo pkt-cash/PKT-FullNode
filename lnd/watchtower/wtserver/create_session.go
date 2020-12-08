@@ -6,6 +6,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 )
 

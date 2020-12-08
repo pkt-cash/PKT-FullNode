@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/addrmgr"
@@ -1394,7 +1395,6 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 			OnAddr:      sp.OnAddr,
 			OnRead:      sp.OnRead,
 			OnWrite:     sp.OnWrite,
-
 		},
 		NewestBlock:      sp.newestBlock,
 		HostToNetAddress: sp.server.addrManager.HostToNetAddress,

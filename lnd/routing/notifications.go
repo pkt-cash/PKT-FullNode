@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -127,7 +128,7 @@ func (r *ChannelRouter) notifyTopologyChange(topologyDiff *TopologyChange) {
 
 	log.Tracef("Sending topology notification to %v clients %v",
 		numClients,
-		newLogClosure(func() string {
+		log.C(func() string {
 			return spew.Sdump(topologyDiff)
 		}),
 	)

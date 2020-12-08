@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/lnclipb"
 	"github.com/pkt-cash/pktd/lnd/lnrpc/verrpc"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/urfave/cli"
 )
 
@@ -17,24 +18,20 @@ var versionCommand = cli.Command{
 	Returns version information about both lncli and lnd. If lncli is unable
 	to connect to lnd, the command fails but still prints the lncli version.
 	`,
-	Action: actionDecorator(version),
+	Action: actionDecorator(v),
 }
 
-func version(ctx *cli.Context) er.R {
+func v(ctx *cli.Context) er.R {
 	conn := getClientConn(ctx, false)
 	defer conn.Close()
 
 	versions := &lnclipb.VersionResponse{
 		Lncli: &verrpc.Version{
-			Commit:        build.Commit,
-			CommitHash:    build.CommitHash,
-			Version:       build.Version(),
-			AppMajor:      uint32(build.AppMajor),
-			AppMinor:      uint32(build.AppMinor),
-			AppPatch:      uint32(build.AppPatch),
-			AppPreRelease: build.AppPreRelease,
-			BuildTags:     build.Tags(),
-			GoVersion:     build.GoVersion,
+			Version:       version.Version(),
+			AppMajor:      uint32(version.AppMajorVersion()),
+			AppMinor:      uint32(version.AppMinorVersion()),
+			AppPatch:      uint32(version.AppPatchVersion()),
+			AppPreRelease: fmt.Sprintf("%v", version.IsPrerelease()),
 		},
 	}
 

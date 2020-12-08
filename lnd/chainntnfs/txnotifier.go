@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -614,17 +615,17 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 	hint, err := n.confirmHintCache.QueryConfirmHint(ntfn.ConfRequest)
 	if err == nil {
 		if hint > startHeight {
-			Log.Debugf("Using height hint %d retrieved from cache "+
+			log.Debugf("Using height hint %d retrieved from cache "+
 				"for %v instead of %d", hint, ntfn.ConfRequest,
 				startHeight)
 			startHeight = hint
 		}
 	} else if !ErrConfirmHintNotFound.Is(err) {
-		Log.Errorf("Unable to query confirm hint for %v: %v",
+		log.Errorf("Unable to query confirm hint for %v: %v",
 			ntfn.ConfRequest, err)
 	}
 
-	Log.Infof("New confirmation subscription: conf_id=%d, %v, "+
+	log.Infof("New confirmation subscription: conf_id=%d, %v, "+
 		"num_confs=%v height_hint=%d", ntfn.ConfID, ntfn.ConfRequest,
 		numConfs, startHeight)
 
@@ -648,7 +649,7 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 		// If the confirmation details for this set of notifications has
 		// already been found, we'll attempt to deliver them immediately
 		// to this client.
-		Log.Debugf("Attempting to dispatch confirmation for %v on "+
+		log.Debugf("Attempting to dispatch confirmation for %v on "+
 			"registration since rescan has finished",
 			ntfn.ConfRequest)
 
@@ -667,7 +668,7 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 	// another. When the rescan returns, this notification's details will be
 	// updated as well.
 	case rescanPending:
-		Log.Debugf("Waiting for pending rescan to finish before "+
+		log.Debugf("Waiting for pending rescan to finish before "+
 			"notifying %v at tip", ntfn.ConfRequest)
 
 		return &ConfRegistration{
@@ -685,7 +686,7 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 	// height greater than the notifier's current height, we'll refrain from
 	// spawning a historical dispatch.
 	if startHeight > n.currentHeight {
-		Log.Debugf("Height hint is above current height, not "+
+		log.Debugf("Height hint is above current height, not "+
 			"dispatching historical confirmation rescan for %v",
 			ntfn.ConfRequest)
 
@@ -700,7 +701,7 @@ func (n *TxNotifier) RegisterConf(txid *chainhash.Hash, pkScript []byte,
 		}, nil
 	}
 
-	Log.Debugf("Dispatching historical confirmation rescan for %v",
+	log.Debugf("Dispatching historical confirmation rescan for %v",
 		ntfn.ConfRequest)
 
 	// Construct the parameters for historical dispatch, scanning the range
@@ -745,7 +746,7 @@ func (n *TxNotifier) CancelConf(confRequest ConfRequest, confID uint64) {
 		return
 	}
 
-	Log.Infof("Canceling confirmation notification: conf_id=%d, %v", confID,
+	log.Infof("Canceling confirmation notification: conf_id=%d, %v", confID,
 		confRequest)
 
 	// We'll close all the notification channels to let the client know
@@ -815,7 +816,7 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 	// transaction/output script was included in a block, so we should defer
 	// until handling it then within ConnectTip.
 	if details == nil {
-		Log.Debugf("Confirmation details for %v not found during "+
+		log.Debugf("Confirmation details for %v not found during "+
 			"historical dispatch, waiting to dispatch at tip",
 			confRequest)
 
@@ -828,7 +829,7 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 		if err != nil {
 			// The error is not fatal as this is an optimistic
 			// optimization, so we'll avoid returning an error.
-			Log.Debugf("Unable to update confirm hint to %d for "+
+			log.Debugf("Unable to update confirm hint to %d for "+
 				"%v: %v", n.currentHeight, confRequest, err)
 		}
 
@@ -836,13 +837,13 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 	}
 
 	if details.BlockHeight > n.currentHeight {
-		Log.Debugf("Confirmation details for %v found above current "+
+		log.Debugf("Confirmation details for %v found above current "+
 			"height, waiting to dispatch at tip", confRequest)
 
 		return nil
 	}
 
-	Log.Debugf("Updating confirmation details for %v", confRequest)
+	log.Debugf("Updating confirmation details for %v", confRequest)
 
 	err := n.confirmHintCache.CommitConfirmHint(
 		details.BlockHeight, confRequest,
@@ -850,7 +851,7 @@ func (n *TxNotifier) UpdateConfDetails(confRequest ConfRequest,
 	if err != nil {
 		// The error is not fatal, so we should not return an error to
 		// the caller.
-		Log.Errorf("Unable to update confirm hint to %d for %v: %v",
+		log.Errorf("Unable to update confirm hint to %d for %v: %v",
 			details.BlockHeight, confRequest, err)
 	}
 
@@ -875,7 +876,7 @@ func (n *TxNotifier) dispatchConfDetails(
 
 	// If no details are provided, return early as we can't dispatch.
 	if details == nil {
-		Log.Debugf("Unable to dispatch %v, no details provided",
+		log.Debugf("Unable to dispatch %v, no details provided",
 			ntfn.ConfRequest)
 
 		return nil
@@ -886,7 +887,7 @@ func (n *TxNotifier) dispatchConfDetails(
 	// we'll dispatch a confirmation notification to the caller.
 	confHeight := details.BlockHeight + ntfn.NumConfirmations - 1
 	if confHeight <= n.currentHeight {
-		Log.Infof("Dispatching %v confirmation notification for %v",
+		log.Infof("Dispatching %v confirmation notification for %v",
 			ntfn.NumConfirmations, ntfn.ConfRequest)
 
 		// We'll send a 0 value to the Updates channel,
@@ -905,7 +906,7 @@ func (n *TxNotifier) dispatchConfDetails(
 			return ErrTxNotifierExiting.Default()
 		}
 	} else {
-		Log.Debugf("Queueing %v confirmation notification for %v at tip ",
+		log.Debugf("Queueing %v confirmation notification for %v at tip ",
 			ntfn.NumConfirmations, ntfn.ConfRequest)
 
 		// Otherwise, we'll keep track of the notification
@@ -1006,20 +1007,20 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 	hint, err := n.spendHintCache.QuerySpendHint(ntfn.SpendRequest)
 	if err == nil {
 		if hint > startHeight {
-			Log.Debugf("Using height hint %d retrieved from cache "+
+			log.Debugf("Using height hint %d retrieved from cache "+
 				"for %v instead of %d", hint, ntfn.SpendRequest,
 				startHeight)
 			startHeight = hint
 		}
 	} else if !ErrSpendHintNotFound.Is(err) {
-		Log.Errorf("Unable to query spend hint for %v: %v",
+		log.Errorf("Unable to query spend hint for %v: %v",
 			ntfn.SpendRequest, err)
 	}
 
 	n.Lock()
 	defer n.Unlock()
 
-	Log.Infof("New spend subscription: spend_id=%d, %v, height_hint=%d",
+	log.Infof("New spend subscription: spend_id=%d, %v, height_hint=%d",
 		ntfn.SpendID, ntfn.SpendRequest, startHeight)
 
 	// Keep track of the notification request so that we can properly
@@ -1041,7 +1042,7 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 	// and cached, then we can use them to immediately dispatch the spend
 	// notification to the client.
 	case rescanComplete:
-		Log.Debugf("Attempting to dispatch spend for %v on "+
+		log.Debugf("Attempting to dispatch spend for %v on "+
 			"registration since rescan has finished",
 			ntfn.SpendRequest)
 
@@ -1059,7 +1060,7 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 	// If there is an active rescan to determine whether the request has
 	// been spent, then we won't trigger another one.
 	case rescanPending:
-		Log.Debugf("Waiting for pending rescan to finish before "+
+		log.Debugf("Waiting for pending rescan to finish before "+
 			"notifying %v at tip", ntfn.SpendRequest)
 
 		return &SpendRegistration{
@@ -1079,7 +1080,7 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 	// TxNotifier is aware of, then we'll refrain from dispatching a
 	// historical rescan and wait for the spend to come in at tip.
 	if startHeight > n.currentHeight {
-		Log.Debugf("Spend hint of %d for %v is above current height %d",
+		log.Debugf("Spend hint of %d for %v is above current height %d",
 			startHeight, ntfn.SpendRequest, n.currentHeight)
 
 		// We'll also set the rescan status as complete to ensure that
@@ -1097,7 +1098,7 @@ func (n *TxNotifier) RegisterSpend(outpoint *wire.OutPoint, pkScript []byte,
 	// notifications don't also attempt a historical dispatch.
 	spendSet.rescanStatus = rescanPending
 
-	Log.Infof("Dispatching historical spend rescan for %v, start=%d, "+
+	log.Infof("Dispatching historical spend rescan for %v, start=%d, "+
 		"end=%d", ntfn.SpendRequest, startHeight, n.currentHeight)
 
 	return &SpendRegistration{
@@ -1132,7 +1133,7 @@ func (n *TxNotifier) CancelSpend(spendRequest SpendRequest, spendID uint64) {
 		return
 	}
 
-	Log.Infof("Canceling spend notification: spend_id=%d, %v", spendID,
+	log.Infof("Canceling spend notification: spend_id=%d, %v", spendID,
 		spendRequest)
 
 	// We'll close all the notification channels to let the client know
@@ -1254,11 +1255,11 @@ func (n *TxNotifier) updateSpendDetails(spendRequest SpendRequest,
 		if err != nil {
 			// The error is not fatal as this is an optimistic
 			// optimization, so we'll avoid returning an error.
-			Log.Debugf("Unable to update spend hint to %d for %v: %v",
+			log.Debugf("Unable to update spend hint to %d for %v: %v",
 				n.currentHeight, spendRequest, err)
 		}
 
-		Log.Debugf("Updated spend hint to height=%v for unconfirmed "+
+		log.Debugf("Updated spend hint to height=%v for unconfirmed "+
 			"spend request %v", n.currentHeight, spendRequest)
 		return nil
 	}
@@ -1281,11 +1282,11 @@ func (n *TxNotifier) updateSpendDetails(spendRequest SpendRequest,
 	if err != nil {
 		// The error is not fatal as this is an optimistic optimization,
 		// so we'll avoid returning an error.
-		Log.Debugf("Unable to update spend hint to %d for %v: %v",
+		log.Debugf("Unable to update spend hint to %d for %v: %v",
 			details.SpendingHeight, spendRequest, err)
 	}
 
-	Log.Debugf("Updated spend hint to height=%v for confirmed spend "+
+	log.Debugf("Updated spend hint to height=%v for confirmed spend "+
 		"request %v", details.SpendingHeight, spendRequest)
 
 	spendSet.details = details
@@ -1306,13 +1307,13 @@ func (n *TxNotifier) dispatchSpendDetails(ntfn *SpendNtfn, details *SpendDetail)
 	// If there are no spend details to dispatch or if the notification has
 	// already been dispatched, then we can skip dispatching to this client.
 	if details == nil || ntfn.dispatched {
-		Log.Debugf("Skipping dispatch of spend details(%v) for "+
+		log.Debugf("Skipping dispatch of spend details(%v) for "+
 			"request %v, dispatched=%v", details, ntfn.SpendRequest,
 			ntfn.dispatched)
 		return nil
 	}
 
-	Log.Infof("Dispatching confirmed spend notification for %v at "+
+	log.Infof("Dispatching confirmed spend notification for %v at "+
 		"current height=%d: %v", ntfn.SpendRequest, n.currentHeight,
 		details)
 
@@ -1367,7 +1368,7 @@ func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
 
 	// First, we'll iterate over all the transactions found in this block to
 	// determine if it includes any relevant transactions to the TxNotifier.
-	Log.Debugf("Filtering %d txns for %d spend requests at height %d",
+	log.Debugf("Filtering %d txns for %d spend requests at height %d",
 		len(txns), len(n.spendNotifications), blockHeight)
 	for _, tx := range txns {
 		n.filterTx(
@@ -1410,7 +1411,7 @@ func (n *TxNotifier) ConnectTip(blockHash *chainhash.Hash, blockHeight uint32,
 				}
 			}
 
-			Log.Debugf("Deleting mature spend request %v at "+
+			log.Debugf("Deleting mature spend request %v at "+
 				"height=%d", spendRequest, blockHeight)
 			delete(n.spendNotifications, spendRequest)
 		}
@@ -1438,7 +1439,7 @@ func (n *TxNotifier) filterTx(tx *btcutil.Tx, blockHash *chainhash.Hash,
 		notifyDetails := func(spendRequest SpendRequest,
 			prevOut wire.OutPoint, inputIdx uint32) {
 
-			Log.Debugf("Found spend of %v: spend_tx=%v, "+
+			log.Debugf("Found spend of %v: spend_tx=%v, "+
 				"block_height=%d", spendRequest, txHash,
 				blockHeight)
 
@@ -1487,7 +1488,7 @@ func (n *TxNotifier) filterTx(tx *btcutil.Tx, blockHash *chainhash.Hash,
 		// confirmation details of a request and hand them off to the
 		// onConf callback.
 		notifyDetails := func(confRequest ConfRequest) {
-			Log.Debugf("Found initial confirmation of %v: "+
+			log.Debugf("Found initial confirmation of %v: "+
 				"height=%d, hash=%v", confRequest,
 				blockHeight, blockHash)
 
@@ -1541,7 +1542,7 @@ func (n *TxNotifier) handleConfDetailsAtTip(confRequest ConfRequest,
 	// If we already have details for this request, we don't want to add it
 	// again since we have already dispatched notifications for it.
 	if confSet.details != nil {
-		Log.Warnf("Ignoring address reuse for %s at height %d.",
+		log.Warnf("Ignoring address reuse for %s at height %d.",
 			confRequest, details.BlockHeight)
 		return
 	}
@@ -1614,7 +1615,7 @@ func (n *TxNotifier) handleSpendDetailsAtTip(spendRequest SpendRequest,
 	}
 	opSet[spendRequest] = struct{}{}
 
-	Log.Debugf("Spend request %v spent at tip=%d", spendRequest,
+	log.Debugf("Spend request %v spent at tip=%d", spendRequest,
 		spendHeight)
 }
 
@@ -1659,7 +1660,7 @@ func (n *TxNotifier) NotifyHeight(height uint32) er.R {
 	for ntfn := range n.ntfnsByConfirmHeight[height] {
 		confSet := n.confNotifications[ntfn.ConfRequest]
 
-		Log.Infof("Dispatching %v confirmation notification for %v",
+		log.Infof("Dispatching %v confirmation notification for %v",
 			ntfn.NumConfirmations, ntfn.ConfRequest)
 
 		select {
@@ -1813,7 +1814,7 @@ func (n *TxNotifier) updateHints(height uint32) {
 	if err != nil {
 		// The error is not fatal as this is an optimistic optimization,
 		// so we'll avoid returning an error.
-		Log.Debugf("Unable to update confirm hints to %d for "+
+		log.Debugf("Unable to update confirm hints to %d for "+
 			"%v: %v", n.currentHeight, confRequests, err)
 	}
 
@@ -1829,7 +1830,7 @@ func (n *TxNotifier) updateHints(height uint32) {
 	if err != nil {
 		// The error is not fatal as this is an optimistic optimization,
 		// so we'll avoid returning an error.
-		Log.Debugf("Unable to update spend hints to %d for "+
+		log.Debugf("Unable to update spend hints to %d for "+
 			"%v: %v", n.currentHeight, spendRequests, err)
 	}
 }

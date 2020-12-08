@@ -68,6 +68,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtpolicy"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -484,7 +485,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 			peer, err := s.FindPeerByPubStr(string(pubKey))
 			if err != nil {
-				srvrLog.Errorf("unable to close channel, peer"+
+				log.Errorf("unable to close channel, peer"+
 					" with %v id can't be found: %v",
 					pubKey, err,
 				)
@@ -533,7 +534,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	// If enabled, use either UPnP or NAT-PMP to automatically configure
 	// port forwarding for users behind a NAT.
 	if cfg.NAT {
-		srvrLog.Info("Scanning local network for a UPnP enabled device")
+		log.Info("Scanning local network for a UPnP enabled device")
 
 		discoveryTimeout := time.Duration(10 * time.Second)
 
@@ -548,10 +549,10 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			// If we were not able to discover a UPnP enabled device
 			// on the local network, we'll fall back to attempting
 			// to discover a NAT-PMP enabled device.
-			srvrLog.Errorf("Unable to discover a UPnP enabled "+
+			log.Errorf("Unable to discover a UPnP enabled "+
 				"device on the local network: %v", err)
 
-			srvrLog.Info("Scanning local network for a NAT-PMP " +
+			log.Info("Scanning local network for a NAT-PMP " +
 				"enabled device")
 
 			pmp, err := nat.DiscoverPMP(discoveryTimeout)
@@ -559,7 +560,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 				err := er.Errorf("unable to discover a "+
 					"NAT-PMP enabled device on the local "+
 					"network: %v", err)
-				srvrLog.Error(err)
+				log.Error(err)
 				return nil, err
 			}
 
@@ -587,11 +588,11 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 		ips, err := s.configurePortForwarding(listenPorts...)
 		if err != nil {
-			srvrLog.Errorf("Unable to automatically set up port "+
+			log.Errorf("Unable to automatically set up port "+
 				"forwarding using %s: %v",
 				s.natTraversal.Name(), err)
 		} else {
-			srvrLog.Infof("Automatically set up port forwarding "+
+			log.Infof("Automatically set up port forwarding "+
 				"using %s to advertise external IP",
 				s.natTraversal.Name())
 			externalIPStrings = append(externalIPStrings, ips...)
@@ -622,7 +623,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	// We'll start by parsing the node color from configuration.
 	color, err := parseHexColor(cfg.Color)
 	if err != nil {
-		srvrLog.Errorf("unable to parse color: %v\n", err)
+		log.Errorf("unable to parse color: %v\n", err)
 		return nil, err
 	}
 
@@ -727,7 +728,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		return nil, er.Errorf("can't create mission control: %v", err)
 	}
 
-	srvrLog.Debugf("Instantiating payment session source with config: "+
+	log.Debugf("Instantiating payment session source with config: "+
 		"AttemptCost=%v + %v%%, MinRouteProbability=%v",
 		int64(routingConfig.AttemptCost),
 		float64(routingConfig.AttemptCostPPM)/10000,
@@ -819,18 +820,18 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 	utxnStore, err := newNurseryStore(s.cfg.ActiveNetParams.GenesisHash, remoteChanDB)
 	if err != nil {
-		srvrLog.Errorf("unable to create nursery store: %v", err)
+		log.Errorf("unable to create nursery store: %v", err)
 		return nil, err
 	}
 
-	srvrLog.Tracef("Sweeper batch window duration: %v",
+	log.Tracef("Sweeper batch window duration: %v",
 		sweep.DefaultBatchWindowDuration)
 
 	sweeperStore, err := sweep.NewSweeperStore(
 		remoteChanDB, s.cfg.ActiveNetParams.GenesisHash,
 	)
 	if err != nil {
-		srvrLog.Errorf("unable to create sweeper store: %v", err)
+		log.Errorf("unable to create sweeper store: %v", err)
 		return nil, err
 	}
 
@@ -1334,7 +1335,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 			Checks: []*healthcheck.Observation{
 				chainHealthCheck, diskCheck,
 			},
-			Shutdown: srvrLog.Criticalf,
+			Shutdown: log.Criticalf,
 		},
 	)
 
@@ -1558,7 +1559,7 @@ func (s *server) Start() er.R {
 
 				servers := strings.Split(tuple, ",")
 				if len(servers) > 2 || len(servers) == 0 {
-					srvrLog.Warnf("Ignoring invalid DNS "+
+					log.Warnf("Ignoring invalid DNS "+
 						"seed tuple: %v", servers)
 					return
 				}
@@ -1608,7 +1609,7 @@ func (s *server) Start() er.R {
 			s.wg.Add(1)
 			go s.peerBootstrapper(defaultMinPeers, bootstrappers)
 		} else {
-			srvrLog.Infof("Auto peer bootstrapping is disabled")
+			log.Infof("Auto peer bootstrapping is disabled")
 		}
 
 		// Set the active flag now that we've completed the full
@@ -1632,7 +1633,7 @@ func (s *server) Stop() er.R {
 		// Shutdown the wallet, funding manager, and the rpc server.
 		s.chanStatusMgr.Stop()
 		if err := s.cc.ChainNotifier.Stop(); err != nil {
-			srvrLog.Warnf("Unable to stop ChainNotifier: %v", err)
+			log.Warnf("Unable to stop ChainNotifier: %v", err)
 		}
 		s.chanRouter.Stop()
 		s.htlcSwitch.Stop()
@@ -1646,14 +1647,14 @@ func (s *server) Stop() er.R {
 		s.peerNotifier.Stop()
 		s.htlcNotifier.Stop()
 		if err := s.cc.Wallet.Shutdown(); err != nil {
-			srvrLog.Warnf("Unable to stop Wallet: %v", err)
+			log.Warnf("Unable to stop Wallet: %v", err)
 		}
 		if err := s.cc.ChainView.Stop(); err != nil {
-			srvrLog.Warnf("Unable to stop ChainView: %v", err)
+			log.Warnf("Unable to stop ChainView: %v", err)
 		}
 		s.connMgr.Stop()
 		if err := s.cc.FeeEstimator.Stop(); err != nil {
-			srvrLog.Warnf("Unable to stop FeeEstimator: %v", err)
+			log.Warnf("Unable to stop FeeEstimator: %v", err)
 		}
 		s.invoices.Stop()
 		s.fundingMgr.Stop()
@@ -1665,7 +1666,7 @@ func (s *server) Stop() er.R {
 		for _, peer := range s.Peers() {
 			err := s.DisconnectPeer(peer.IdentityKey())
 			if err != nil {
-				srvrLog.Warnf("could not disconnect peer: %v"+
+				log.Warnf("could not disconnect peer: %v"+
 					"received error: %v", peer.IdentityKey(),
 					err,
 				)
@@ -1682,14 +1683,14 @@ func (s *server) Stop() er.R {
 
 		if s.hostAnn != nil {
 			if err := s.hostAnn.Stop(); err != nil {
-				srvrLog.Warnf("unable to shut down host "+
+				log.Warnf("unable to shut down host "+
 					"annoucner: %v", err)
 			}
 		}
 
 		if s.livelinessMonitor != nil {
 			if err := s.livelinessMonitor.Stop(); err != nil {
-				srvrLog.Warnf("unable to shutdown liveliness "+
+				log.Warnf("unable to shutdown liveliness "+
 					"monitor: %v", err)
 			}
 		}
@@ -1726,7 +1727,7 @@ func (s *server) configurePortForwarding(ports ...uint16) ([]string, er.R) {
 	externalIPs := make([]string, 0, len(ports))
 	for _, port := range ports {
 		if err := s.natTraversal.AddPortMapping(port); err != nil {
-			srvrLog.Debugf("Unable to forward port %d: %v", port, err)
+			log.Debugf("Unable to forward port %d: %v", port, err)
 			continue
 		}
 
@@ -1746,7 +1747,7 @@ func (s *server) removePortForwarding() {
 	forwardedPorts := s.natTraversal.ForwardedPorts()
 	for _, port := range forwardedPorts {
 		if err := s.natTraversal.DeletePortMapping(port); err != nil {
-			srvrLog.Errorf("Unable to remove forwarding rules for "+
+			log.Errorf("Unable to remove forwarding rules for "+
 				"port %d: %v", port, err)
 		}
 	}
@@ -1784,7 +1785,7 @@ out:
 			// been detected.
 			ip, err := s.natTraversal.ExternalIP()
 			if err != nil {
-				srvrLog.Debugf("Unable to retrieve the "+
+				log.Debugf("Unable to retrieve the "+
 					"external IP address: %v", err)
 				continue
 			}
@@ -1793,11 +1794,11 @@ out:
 			for _, port := range forwardedPorts {
 				err := s.natTraversal.AddPortMapping(port)
 				if err != nil {
-					srvrLog.Warnf("Unable to automatically "+
+					log.Warnf("Unable to automatically "+
 						"re-create port forwarding using %s: %v",
 						s.natTraversal.Name(), err)
 				} else {
-					srvrLog.Debugf("Automatically re-created "+
+					log.Debugf("Automatically re-created "+
 						"forwarding for port %d using %s to "+
 						"advertise external IP",
 						port, s.natTraversal.Name())
@@ -1808,7 +1809,7 @@ out:
 				continue
 			}
 
-			srvrLog.Infof("Detected new external IP address %s", ip)
+			log.Infof("Detected new external IP address %s", ip)
 
 			// Next, we'll craft the new addresses that will be
 			// included in the new node announcement and advertised
@@ -1820,7 +1821,7 @@ out:
 				hostIP := fmt.Sprintf("%v:%d", ip, port)
 				addr, err := net.ResolveTCPAddr("tcp", hostIP)
 				if err != nil {
-					srvrLog.Debugf("Unable to resolve "+
+					log.Debugf("Unable to resolve "+
 						"host %v: %v", addr, err)
 					continue
 				}
@@ -1831,7 +1832,7 @@ out:
 			// Skip the update if we weren't able to resolve any of
 			// the new addresses.
 			if len(newAddrs) == 0 {
-				srvrLog.Debug("Skipping node announcement " +
+				log.Debug("Skipping node announcement " +
 					"update due to not being able to " +
 					"resolve any new addresses")
 				continue
@@ -1844,14 +1845,14 @@ out:
 			// the previous IP is no longer valid.
 			currentNodeAnn, err := s.genNodeAnnouncement(false)
 			if err != nil {
-				srvrLog.Debugf("Unable to retrieve current "+
+				log.Debugf("Unable to retrieve current "+
 					"node announcement: %v", err)
 				continue
 			}
 			for _, addr := range currentNodeAnn.Addresses {
 				host, _, err := net.SplitHostPort(addr.String())
 				if err != nil {
-					srvrLog.Debugf("Unable to determine "+
+					log.Debugf("Unable to determine "+
 						"host from address %v: %v",
 						addr, err)
 					continue
@@ -1872,14 +1873,14 @@ out:
 				true, netann.NodeAnnSetAddrs(newAddrs),
 			)
 			if err != nil {
-				srvrLog.Debugf("Unable to generate new node "+
+				log.Debugf("Unable to generate new node "+
 					"announcement: %v", err)
 				continue
 			}
 
 			err = s.BroadcastMessage(nil, &newNodeAnn)
 			if err != nil {
-				srvrLog.Debugf("Unable to broadcast new node "+
+				log.Debugf("Unable to broadcast new node "+
 					"announcement to peers: %v", err)
 				continue
 			}
@@ -1896,7 +1897,7 @@ out:
 // based on the server, and currently active bootstrap mechanisms as defined
 // within the current configuration.
 func initNetworkBootstrappers(s *server) ([]discovery.NetworkPeerBootstrapper, er.R) {
-	srvrLog.Infof("Initializing peer network bootstrappers!")
+	log.Infof("Initializing peer network bootstrappers!")
 
 	var bootStrappers []discovery.NetworkPeerBootstrapper
 
@@ -1918,7 +1919,7 @@ func initNetworkBootstrappers(s *server) ([]discovery.NetworkPeerBootstrapper, e
 		// If we have a set of DNS seeds for this chain, then we'll add
 		// it as an additional bootstrapping source.
 		if ok {
-			srvrLog.Infof("Creating DNS peer bootstrapper with "+
+			log.Infof("Creating DNS peer bootstrapper with "+
 				"seeds: %v", dnsSeeds)
 
 			dnsBootStrapper := discovery.NewDNSSeedBootstrapper(
@@ -2000,7 +2001,7 @@ func (s *server) peerBootstrapper(numTargetPeers uint32,
 					backOff = bootstrapBackOffCeiling
 				}
 
-				srvrLog.Debugf("Backing off peer bootstrapper to "+
+				log.Debugf("Backing off peer bootstrapper to "+
 					"%v", backOff)
 				sampleTicker = time.NewTicker(backOff)
 				continue
@@ -2013,7 +2014,7 @@ func (s *server) peerBootstrapper(numTargetPeers uint32,
 			// exact number we need to reach our threshold.
 			numNeeded := numTargetPeers - numActivePeers
 
-			srvrLog.Debugf("Attempting to obtain %v more network "+
+			log.Debugf("Attempting to obtain %v more network "+
 				"peers", numNeeded)
 
 			// With the number of peers we need calculated, we'll
@@ -2031,7 +2032,7 @@ func (s *server) peerBootstrapper(numTargetPeers uint32,
 				ignoreList, numNeeded*2, bootstrappers...,
 			)
 			if err != nil {
-				srvrLog.Errorf("Unable to retrieve bootstrap "+
+				log.Errorf("Unable to retrieve bootstrap "+
 					"peers: %v", err)
 				continue
 			}
@@ -2055,7 +2056,7 @@ func (s *server) peerBootstrapper(numTargetPeers uint32,
 							return
 						}
 
-						srvrLog.Errorf("Unable to "+
+						log.Errorf("Unable to "+
 							"connect to %v: %v",
 							a, err)
 						atomic.AddUint32(&epochErrors, 1)
@@ -2107,7 +2108,7 @@ func (s *server) initialPeerBootstrap(ignore map[autopilot.NodeID]struct{},
 		}
 
 		if attempts > 0 {
-			srvrLog.Debugf("Waiting %v before trying to locate "+
+			log.Debugf("Waiting %v before trying to locate "+
 				"bootstrap peers (attempt #%v)", delayTime,
 				attempts)
 
@@ -2136,7 +2137,7 @@ func (s *server) initialPeerBootstrap(ignore map[autopilot.NodeID]struct{},
 			ignore, peersNeeded, bootstrappers...,
 		)
 		if err != nil {
-			srvrLog.Errorf("Unable to retrieve initial bootstrap "+
+			log.Errorf("Unable to retrieve initial bootstrap "+
 				"peers: %v", err)
 			continue
 		}
@@ -2163,12 +2164,12 @@ func (s *server) initialPeerBootstrap(ignore map[autopilot.NodeID]struct{},
 					if err == nil {
 						return
 					}
-					srvrLog.Errorf("Unable to connect to "+
+					log.Errorf("Unable to connect to "+
 						"%v: %v", addr, err)
 				// TODO: tune timeout? 3 seconds might be *too*
 				// aggressive but works well.
 				case <-time.After(3 * time.Second):
-					srvrLog.Tracef("Skipping peer %v due "+
+					log.Tracef("Skipping peer %v due "+
 						"to not establishing a "+
 						"connection within 3 seconds",
 						addr)
@@ -2331,7 +2332,7 @@ func (s *server) establishPersistentConnections() er.R {
 		// haven't yet, then we won't have a policy. However, we don't
 		// need this to connect to the peer, so we'll log it and move on.
 		if policy == nil {
-			srvrLog.Warnf("No channel policy found for "+
+			log.Warnf("No channel policy found for "+
 				"ChannelPoint(%v): ", chanInfo.ChannelPoint)
 		}
 
@@ -2431,7 +2432,7 @@ func (s *server) establishPersistentConnections() er.R {
 				IdentityKey: nodeAddr.pubKey,
 				Address:     address,
 			}
-			srvrLog.Debugf("Attempting persistent connection to "+
+			log.Debugf("Attempting persistent connection to "+
 				"channel peer %v", lnAddr)
 
 			// Send the persistent connection request to the
@@ -2494,7 +2495,7 @@ func (s *server) prunePersistentPeerConnection(compressedPubKey [33]byte) {
 		s.cancelConnReqs(pubKeyStr, nil)
 		s.mu.Unlock()
 
-		srvrLog.Infof("Pruned peer %x from persistent connections, "+
+		log.Infof("Pruned peer %x from persistent connections, "+
 			"peer has no open channels", compressedPubKey)
 
 		return
@@ -2511,7 +2512,7 @@ func (s *server) prunePersistentPeerConnection(compressedPubKey [33]byte) {
 func (s *server) BroadcastMessage(skips map[route.Vertex]struct{},
 	msgs ...lnwire.Message) er.R {
 
-	srvrLog.Debugf("Broadcasting %v messages", len(msgs))
+	log.Debugf("Broadcasting %v messages", len(msgs))
 
 	// Filter out peers found in the skips map. We synchronize access to
 	// peersByPub throughout this process to ensure we deliver messages to
@@ -2521,7 +2522,7 @@ func (s *server) BroadcastMessage(skips map[route.Vertex]struct{},
 	for _, sPeer := range s.peersByPub {
 		if skips != nil {
 			if _, ok := skips[sPeer.PubKey()]; ok {
-				srvrLog.Tracef("Skipping %x in broadcast",
+				log.Tracef("Skipping %x in broadcast",
 					sPeer.PubKey())
 				continue
 			}
@@ -2570,7 +2571,7 @@ func (s *server) NotifyWhenOnline(peerKey [33]byte,
 	peer, ok := s.peersByPub[pubStr]
 	if ok {
 		// Connected, can return early.
-		srvrLog.Debugf("Notifying that peer %x is online", peerKey)
+		log.Debugf("Notifying that peer %x is online", peerKey)
 
 		select {
 		case peerChan <- peer:
@@ -2600,7 +2601,7 @@ func (s *server) NotifyWhenOffline(peerPubKey [33]byte) <-chan struct{} {
 	// notification.
 	peerPubKeyStr := string(peerPubKey[:])
 	if _, ok := s.peersByPub[peerPubKeyStr]; !ok {
-		srvrLog.Debugf("Notifying that peer %x is offline", peerPubKey)
+		log.Debugf("Notifying that peer %x is offline", peerPubKey)
 		close(c)
 		return c
 	}
@@ -2733,7 +2734,7 @@ func (s *server) InboundPeerConnected(conn net.Conn) {
 	// If we already have an outbound connection to this peer, then ignore
 	// this new connection.
 	if _, ok := s.outboundPeers[pubStr]; ok {
-		srvrLog.Debugf("Already have outbound connection for %x, "+
+		log.Debugf("Already have outbound connection for %x, "+
 			"ignoring inbound connection",
 			nodePub.SerializeCompressed())
 
@@ -2745,12 +2746,12 @@ func (s *server) InboundPeerConnected(conn net.Conn) {
 	// precedence once the prior peer has finished disconnecting, we'll
 	// ignore this connection.
 	if _, ok := s.scheduledPeerConnection[pubStr]; ok {
-		srvrLog.Debugf("Ignoring connection, peer already scheduled")
+		log.Debugf("Ignoring connection, peer already scheduled")
 		conn.Close()
 		return
 	}
 
-	srvrLog.Infof("New inbound connection from %v", conn.RemoteAddr())
+	log.Infof("New inbound connection from %v", conn.RemoteAddr())
 
 	// Check to see if we already have a connection with this peer. If so,
 	// we may need to drop our existing connection. This prevents us from
@@ -2775,7 +2776,7 @@ func (s *server) InboundPeerConnected(conn net.Conn) {
 		if !connectedPeer.Inbound() &&
 			!shouldDropLocalConnection(localPub, nodePub) {
 
-			srvrLog.Warnf("Received inbound connection from "+
+			log.Warnf("Received inbound connection from "+
 				"peer %v, but already have outbound "+
 				"connection, dropping conn", connectedPeer)
 			conn.Close()
@@ -2784,7 +2785,7 @@ func (s *server) InboundPeerConnected(conn net.Conn) {
 
 		// Otherwise, if we should drop the connection, then we'll
 		// disconnect our already connected peer.
-		srvrLog.Debugf("Disconnecting stale connection to %v",
+		log.Debugf("Disconnecting stale connection to %v",
 			connectedPeer)
 
 		s.cancelConnReqs(pubStr, nil)
@@ -2819,7 +2820,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 	// If we already have an inbound connection to this peer, then ignore
 	// this new connection.
 	if _, ok := s.inboundPeers[pubStr]; ok {
-		srvrLog.Debugf("Already have inbound connection for %x, "+
+		log.Debugf("Already have inbound connection for %x, "+
 			"ignoring outbound connection",
 			nodePub.SerializeCompressed())
 
@@ -2830,7 +2831,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 		return
 	}
 	if _, ok := s.persistentConnReqs[pubStr]; !ok && connReq != nil {
-		srvrLog.Debugf("Ignoring canceled outbound connection")
+		log.Debugf("Ignoring canceled outbound connection")
 		s.connMgr.Remove(connReq.ID())
 		conn.Close()
 		return
@@ -2840,7 +2841,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 	// precedence once the prior peer has finished disconnecting, we'll
 	// ignore this connection.
 	if _, ok := s.scheduledPeerConnection[pubStr]; ok {
-		srvrLog.Debugf("Ignoring connection, peer already scheduled")
+		log.Debugf("Ignoring connection, peer already scheduled")
 
 		if connReq != nil {
 			s.connMgr.Remove(connReq.ID())
@@ -2850,7 +2851,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 		return
 	}
 
-	srvrLog.Infof("Established connection to: %x@%v", pubStr,
+	log.Infof("Established connection to: %x@%v", pubStr,
 		conn.RemoteAddr())
 
 	if connReq != nil {
@@ -2886,7 +2887,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 		if connectedPeer.Inbound() &&
 			shouldDropLocalConnection(localPub, nodePub) {
 
-			srvrLog.Warnf("Established outbound connection to "+
+			log.Warnf("Established outbound connection to "+
 				"peer %v, but already have inbound "+
 				"connection, dropping conn", connectedPeer)
 			if connReq != nil {
@@ -2899,7 +2900,7 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 		// Otherwise, _their_ connection should be dropped. So we'll
 		// disconnect the peer and send the now obsolete peer to the
 		// server for garbage collection.
-		srvrLog.Debugf("Disconnecting stale connection to %v",
+		log.Debugf("Disconnecting stale connection to %v",
 			connectedPeer)
 
 		// Remove the current peer from the server's internal state and
@@ -2973,7 +2974,7 @@ func (s *server) peerConnected(conn net.Conn, connReq *connmgr.ConnReq,
 	addr := conn.RemoteAddr()
 	pubKey := brontideConn.RemotePub()
 
-	srvrLog.Infof("Finalizing connection to %x@%s, inbound=%v",
+	log.Infof("Finalizing connection to %x@%s, inbound=%v",
 		pubKey.SerializeCompressed(), addr, inbound)
 
 	peerAddr := &lnwire.NetAddress{
@@ -2995,7 +2996,7 @@ func (s *server) peerConnected(conn net.Conn, connReq *connmgr.ConnReq,
 		var err er.R
 		errBuffer, err = queue.NewCircularBuffer(peer.ErrorBufferSize)
 		if err != nil {
-			srvrLog.Errorf("unable to create peer %v", err)
+			log.Errorf("unable to create peer %v", err)
 			return
 		}
 	}
@@ -3161,7 +3162,7 @@ func (s *server) peerInitializer(p *peer.Brontide) {
 	defer s.mu.Unlock()
 
 	// Check if there are listeners waiting for this peer to come online.
-	srvrLog.Debugf("Notifying that peer %v is online", p)
+	log.Debugf("Notifying that peer %v is online", p)
 	for _, peerChan := range s.peerConnectedListeners[pubStr] {
 		select {
 		case peerChan <- p:
@@ -3188,7 +3189,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 
 	p.WaitForDisconnect(ready)
 
-	srvrLog.Debugf("Peer %v has been disconnected", p)
+	log.Debugf("Peer %v has been disconnected", p)
 
 	// If the server is exiting then we can bail out early ourselves as all
 	// the other sub-systems will already be shutting down.
@@ -3215,7 +3216,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 	// TODO(roasbeef): instead add a PurgeInterfaceLinks function?
 	links, err := s.htlcSwitch.GetLinksByInterface(p.PubKey())
 	if err != nil && !htlcswitch.ErrNoLinksFound.Is(err) {
-		srvrLog.Errorf("Unable to get channel links for %v: %v", p, err)
+		log.Errorf("Unable to get channel links for %v: %v", p, err)
 	}
 
 	for _, link := range links {
@@ -3227,7 +3228,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 
 	// If there were any notification requests for when this peer
 	// disconnected, we can trigger them now.
-	srvrLog.Debugf("Notifying that peer %v is offline", p)
+	log.Debugf("Notifying that peer %v is offline", p)
 	pubStr := string(pubKey.SerializeCompressed())
 	for _, offlineChan := range s.peerDisconnectedListeners[pubStr] {
 		close(offlineChan)
@@ -3292,7 +3293,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 				// the address used by our onion service to dial
 				// to lnd), so we don't have enough information
 				// to attempt a reconnect.
-				srvrLog.Debugf("Ignoring reconnection attempt "+
+				log.Debugf("Ignoring reconnection attempt "+
 					"to inbound peer %v without "+
 					"advertised address", p)
 				return
@@ -3301,7 +3302,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 			// address, log it, and fall back to the existing peer
 			// address.
 			default:
-				srvrLog.Errorf("Unable to retrieve advertised "+
+				log.Errorf("Unable to retrieve advertised "+
 					"address for node %x: %v", p.PubKey(),
 					err)
 			}
@@ -3332,7 +3333,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 		// call can stall for arbitrarily long if we shutdown while an
 		// outbound connection attempt is being made.
 		go func() {
-			srvrLog.Debugf("Scheduling connection re-establishment to "+
+			log.Debugf("Scheduling connection re-establishment to "+
 				"persistent peer %v in %s", p, backoff)
 
 			select {
@@ -3343,7 +3344,7 @@ func (s *server) peerTerminationWatcher(p *peer.Brontide, ready chan struct{}) {
 				return
 			}
 
-			srvrLog.Debugf("Attempting to re-establish persistent "+
+			log.Debugf("Attempting to re-establish persistent "+
 				"connection to peer %v", p)
 
 			s.connMgr.Connect(connReq)
@@ -3358,7 +3359,7 @@ func (s *server) removePeer(p *peer.Brontide) {
 		return
 	}
 
-	srvrLog.Debugf("removing peer %v", p)
+	log.Debugf("removing peer %v", p)
 
 	// As the peer is now finished, ensure that the TCP connection is
 	// closed and all of its related goroutines have exited.
@@ -3486,7 +3487,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 	// then we ignore this request to ensure we don't create a redundant
 	// connection.
 	if reqs, ok := s.persistentConnReqs[targetPub]; ok {
-		srvrLog.Warnf("Already have %d persistent connection "+
+		log.Warnf("Already have %d persistent connection "+
 			"requests for %x@%v, connecting anyway.", len(reqs),
 			targetPub, addr)
 	}
@@ -3494,7 +3495,7 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 	// If there's not already a pending or active connection to this node,
 	// then instruct the connection manager to attempt to establish a
 	// persistent connection to the peer.
-	srvrLog.Debugf("Connecting to %x@%v", targetPub, addr)
+	log.Debugf("Connecting to %x@%v", targetPub, addr)
 	if perm {
 		connReq := &connmgr.ConnReq{
 			Addr:      addr,
@@ -3545,7 +3546,7 @@ func (s *server) connectToPeer(addr *lnwire.NetAddress,
 		s.identityECDH, addr, timeout, s.cfg.net.Dial,
 	)
 	if err != nil {
-		srvrLog.Errorf("Unable to connect to %v: %v", addr, err)
+		log.Errorf("Unable to connect to %v: %v", addr, err)
 		select {
 		case errChan <- err:
 		case <-s.quit:
@@ -3577,7 +3578,7 @@ func (s *server) DisconnectPeer(pubKey *btcec.PublicKey) er.R {
 		return er.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	srvrLog.Infof("Disconnecting from %v", peer)
+	log.Infof("Disconnecting from %v", peer)
 
 	s.cancelConnReqs(pubStr, nil)
 

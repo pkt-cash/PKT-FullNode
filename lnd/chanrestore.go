@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -114,7 +115,7 @@ func (c *chanDBRestorer) openChannelShell(backup chanbackup.Single) (
 		return nil, er.Errorf("unknown Single version: %v", err)
 	}
 
-	ltndLog.Infof("SCB Recovery: created channel shell for ChannelPoint(%v), "+
+	log.Infof("SCB Recovery: created channel shell for ChannelPoint(%v), "+
 		"chan_type=%v", backup.FundingOutpoint, chanType)
 
 	chanShell := channeldb.ChannelShell{
@@ -213,7 +214,7 @@ func (c *chanDBRestorer) RestoreChansFromSingles(backups ...chanbackup.Single) e
 		}
 	}
 
-	ltndLog.Infof("Inserting %v SCB channel shells into DB",
+	log.Infof("Inserting %v SCB channel shells into DB",
 		len(channelShells))
 
 	// Now that we have all the backups mapped into a series of Singles,
@@ -222,7 +223,7 @@ func (c *chanDBRestorer) RestoreChansFromSingles(backups ...chanbackup.Single) e
 		return err
 	}
 
-	ltndLog.Infof("Informing chain watchers of new restored channels")
+	log.Infof("Informing chain watchers of new restored channels")
 
 	// Finally, we'll need to inform the chain arbitrator of these new
 	// channels so we'll properly watch for their ultimate closure on chain
@@ -252,7 +253,7 @@ func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) er.R {
 	// to ensure the new connection is created after this new link/channel
 	// is known.
 	if err := s.DisconnectPeer(nodePub); err != nil {
-		ltndLog.Infof("Peer(%v) is already connected, proceeding "+
+		log.Infof("Peer(%v) is already connected, proceeding "+
 			"with chan restore", nodePub.SerializeCompressed())
 	}
 
@@ -265,7 +266,7 @@ func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) er.R {
 			Address:     addr,
 		}
 
-		ltndLog.Infof("Attempting to connect to %v for SCB restore "+
+		log.Infof("Attempting to connect to %v for SCB restore "+
 			"DLP", netAddr)
 
 		// Attempt to connect to the peer using this full address. If
@@ -282,7 +283,7 @@ func (s *server) ConnectPeer(nodePub *btcec.PublicKey, addrs []net.Addr) er.R {
 		} else if err != nil {
 			// Otherwise, something else happened, so we'll try the
 			// next address.
-			ltndLog.Errorf("unable to connect to %v to "+
+			log.Errorf("unable to connect to %v to "+
 				"complete SCB restore: %v", netAddr, err)
 			continue
 		}

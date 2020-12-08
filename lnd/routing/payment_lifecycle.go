@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // paymentLifecycle holds all information about the current state of a payment
@@ -645,7 +646,7 @@ func (p *shardHandler) sendPaymentAttempt(
 
 	log.Tracef("Attempting to send payment %v (pid=%v), "+
 		"using route: %v", p.paymentHash, attempt.AttemptID,
-		newLogClosure(func() string {
+		log.C(func() string {
 			return spew.Sdump(attempt.Route)
 		}),
 	)

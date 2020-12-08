@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/blob"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (

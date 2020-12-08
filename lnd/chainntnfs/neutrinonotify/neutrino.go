@@ -14,6 +14,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
@@ -295,7 +296,7 @@ out:
 		case cancelMsg := <-n.notificationCancels:
 			switch msg := cancelMsg.(type) {
 			case *epochCancel:
-				chainntnfs.Log.Infof("Cancelling epoch "+
+				log.Infof("Cancelling epoch "+
 					"notification, epoch_id=%v", msg.epochID)
 
 				// First, we'll lookup the original
@@ -334,7 +335,7 @@ out:
 						msg.StartHeight, msg.EndHeight,
 					)
 					if err != nil {
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 						return
 					}
 
@@ -349,12 +350,12 @@ out:
 						msg.ConfRequest, confDetails,
 					)
 					if err != nil {
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 					}
 				}()
 
 			case *blockEpochRegistration:
-				chainntnfs.Log.Infof("New block epoch subscription")
+				log.Infof("New block epoch subscription")
 
 				n.blockEpochClients[msg.epochID] = msg
 
@@ -398,7 +399,7 @@ out:
 			case *rescanFilterUpdate:
 				err := n.chainView.Update(msg.updateOptions...)
 				if err != nil {
-					chainntnfs.Log.Errorf("Unable to "+
+					log.Errorf("Unable to "+
 						"update rescan filter: %v", err)
 				}
 				msg.errChan <- err
@@ -420,7 +421,7 @@ out:
 					// Handle the case where the notifier
 					// missed some blocks from its chain
 					// backend
-					chainntnfs.Log.Infof("Missed blocks, " +
+					log.Infof("Missed blocks, " +
 						"attempting to catch up")
 
 					_, missedBlocks, err :=
@@ -432,7 +433,7 @@ out:
 							false,
 						)
 					if err != nil {
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 						n.bestBlockMtx.Unlock()
 						continue
 					}
@@ -441,13 +442,13 @@ out:
 						filteredBlock, err :=
 							n.getFilteredBlock(block)
 						if err != nil {
-							chainntnfs.Log.Error(err)
+							log.Error(err)
 							n.bestBlockMtx.Unlock()
 							continue out
 						}
 						err = n.handleBlockConnected(filteredBlock)
 						if err != nil {
-							chainntnfs.Log.Error(err)
+							log.Error(err)
 							n.bestBlockMtx.Unlock()
 							continue out
 						}
@@ -457,7 +458,7 @@ out:
 
 				err := n.handleBlockConnected(update)
 				if err != nil {
-					chainntnfs.Log.Error(err)
+					log.Error(err)
 				}
 
 				n.bestBlockMtx.Unlock()
@@ -466,7 +467,7 @@ out:
 
 			n.bestBlockMtx.Lock()
 			if update.height != uint32(n.bestBlock.Height) {
-				chainntnfs.Log.Infof("Missed disconnected " +
+				log.Infof("Missed disconnected " +
 					"blocks, attempting to catch up")
 			}
 			newBestBlock, err := chainntnfs.RewindChain(
@@ -474,7 +475,7 @@ out:
 				int32(update.height-1),
 			)
 			if err != nil {
-				chainntnfs.Log.Errorf("Unable to rewind chain "+
+				log.Errorf("Unable to rewind chain "+
 					"from height %d to height %d: %v",
 					n.bestBlock.Height, update.height-1, err)
 			}
@@ -495,13 +496,13 @@ out:
 				update.tx, uint32(update.details.Height),
 			)
 			if err != nil {
-				chainntnfs.Log.Errorf("Unable to process "+
+				log.Errorf("Unable to process "+
 					"transaction %v: %v", update.tx.Hash(),
 					err)
 			}
 
 		case err := <-n.rescanErr:
-			chainntnfs.Log.Errorf("Error during rescan: %v", err)
+			log.Errorf("Error during rescan: %v", err)
 
 		case <-n.quit:
 			return
@@ -611,7 +612,7 @@ func (n *NeutrinoNotifier) handleBlockConnected(newBlock *filteredBlock) er.R {
 		return er.Errorf("unable to connect tip: %v", err)
 	}
 
-	chainntnfs.Log.Infof("New block: height=%v, sha=%v", newBlock.height,
+	log.Infof("New block: height=%v, sha=%v", newBlock.height,
 		newBlock.hash)
 
 	// Now that we've guaranteed the new block extends the txNotifier's
@@ -781,7 +782,7 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 			neutrino.QuitChan(n.quit),
 		)
 		if err != nil && !strings.Contains(err.String(), "not found") {
-			chainntnfs.Log.Errorf("Failed getting UTXO: %v", err)
+			log.Errorf("Failed getting UTXO: %v", err)
 			return
 		}
 
@@ -807,7 +808,7 @@ func (n *NeutrinoNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 			ntfn.HistoricalDispatch.SpendRequest, spendDetails,
 		)
 		if errr != nil {
-			chainntnfs.Log.Errorf("Failed to update spend details: %v", errr)
+			log.Errorf("Failed to update spend details: %v", errr)
 			return
 		}
 	}()

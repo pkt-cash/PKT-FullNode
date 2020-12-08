@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/contractcourt"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // preimageSubscriber reprints an active subscription to be notified once the
@@ -45,7 +46,7 @@ func (p *preimageBeacon) SubscribeUpdates() *contractcourt.WitnessSubscription {
 
 	p.clientCounter++
 
-	srvrLog.Debugf("Creating new witness beacon subscriber, id=%v",
+	log.Debugf("Creating new witness beacon subscriber, id=%v",
 		p.clientCounter)
 
 	return &contractcourt.WitnessSubscription{
@@ -72,7 +73,7 @@ func (p *preimageBeacon) LookupPreimage(
 	// Otherwise, we'll perform a final check using the witness cache.
 	preimage, err := p.wCache.LookupSha256Witness(payHash)
 	if err != nil {
-		ltndLog.Errorf("Unable to lookup witness: %v", err)
+		log.Errorf("Unable to lookup witness: %v", err)
 		return lntypes.Preimage{}, false
 	}
 
@@ -91,7 +92,7 @@ func (p *preimageBeacon) AddPreimages(preimages ...lntypes.Preimage) er.R {
 	// the caller when delivering notifications.
 	preimageCopies := make([]lntypes.Preimage, 0, len(preimages))
 	for _, preimage := range preimages {
-		srvrLog.Infof("Adding preimage=%v to witness cache", preimage)
+		log.Infof("Adding preimage=%v to witness cache", preimage)
 		preimageCopies = append(preimageCopies, preimage)
 	}
 

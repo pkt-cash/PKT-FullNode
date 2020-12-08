@@ -16,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -575,7 +576,7 @@ func (s *UtxoSweeper) collector(blockEpochs <-chan *chainntnfs.BlockEpoch) {
 
 			log.Debugf("Detected spend related to in flight inputs "+
 				"(is_ours=%v): %v",
-				newLogClosure(func() string {
+				log.C(func() string {
 					return spew.Sdump(spend.SpendingTx)
 				}), isOurTx,
 			)
@@ -1188,7 +1189,7 @@ func (s *UtxoSweeper) sweep(inputs inputSet, feeRate chainfee.SatPerKWeight,
 		tx.TxHash(), len(tx.TxIn), currentHeight)
 
 	log.Tracef("Sweep tx at height=%v: %v", currentHeight,
-		newLogClosure(func() string {
+		log.C(func() string {
 			return spew.Sdump(tx)
 		}),
 	)

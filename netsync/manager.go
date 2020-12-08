@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
@@ -33,7 +34,7 @@ const (
 	minInFlightBlocks = 10
 
 	// maxRejectedTxns is the maximum number of rejected transactions
-	// hashes to store in memory. 
+	// hashes to store in memory.
 	maxRejectedTxns = 1200
 
 	// maxRequestedBlocks is the maximum number of requested block
@@ -156,9 +157,9 @@ type peerSyncState struct {
 	requestQueue    []*wire.InvVect
 	requestedTxns   map[chainhash.Hash]struct{}
 	requestedBlocks map[chainhash.Hash]struct{}
-	syncPeerMutex sync.RWMutex
-	syncPeer      *peerpkg.Peer
-	peerStates    map[*peerpkg.Peer]*peerSyncState
+	syncPeerMutex   sync.RWMutex
+	syncPeer        *peerpkg.Peer
+	peerStates      map[*peerpkg.Peer]*peerSyncState
 }
 
 // SyncManager is used to communicate block related messages with peers. The
@@ -193,8 +194,8 @@ type SyncManager struct {
 	nextCheckpoint   *chaincfg.Checkpoint
 
 	// An optional fee estimator.
-	feeEstimator *mempool.FeeEstimator
-	syncPeerMutex  sync.RWMutex
+	feeEstimator  *mempool.FeeEstimator
+	syncPeerMutex sync.RWMutex
 }
 
 func (sm *SyncManager) SyncPeer() *peerpkg.Peer {
@@ -202,7 +203,6 @@ func (sm *SyncManager) SyncPeer() *peerpkg.Peer {
 	defer sm.syncPeerMutex.RUnlock()
 	return sm.syncPeer
 }
-
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
 // syncing from a new peer.
@@ -428,7 +428,7 @@ func (sm *SyncManager) handleNewPeerMsg(peer *peerpkg.Peer) {
 	}
 
 	if !peer.Connected() {
-	   return
+		return
 	}
 
 	log.Infof("New valid peer %s (%s)", peer, peer.UserAgent())
@@ -735,7 +735,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		if ruleerror.Err.Is(err) {
 			if !ruleerror.ErrDuplicateBlock.Is(err) {
 				log.Infof("Rejected block %v from %s: %v - disconnecting peer",
-				    blockHash, peer, err)
+					blockHash, peer, err)
 			}
 		} else {
 			log.Errorf("Failed to process block %v: %v",
@@ -1186,13 +1186,13 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
-	                log.Infof("Skipping already rejected transaction from %s", peer)
+					log.Infof("Skipping already rejected transaction from %s", peer)
 					continue
 				}
 				// Also skip if it has already been requested, so
 				// we don't end up doing things multiple times.
 				if _, exists := sm.requestedTxns[iv.Hash]; exists {
-	                log.Infof("Skipping already requested transaction from %s", peer)
+					log.Infof("Skipping already requested transaction from %s", peer)
 					continue
 				}
 			}
@@ -1643,7 +1643,7 @@ func New(config *Config) (*SyncManager, er.R) {
 		requestedTxns:   make(map[chainhash.Hash]struct{}),
 		requestedBlocks: make(map[chainhash.Hash]struct{}),
 		peerStates:      make(map[*peerpkg.Peer]*peerSyncState),
-		progressLogger:  newBlockProgressLogger("Processed", log),
+		progressLogger:  newBlockProgressLogger("Processed"),
 		msgChan:         make(chan interface{}, config.MaxPeers*3),
 		headerList:      list.New(),
 		quit:            make(chan struct{}),

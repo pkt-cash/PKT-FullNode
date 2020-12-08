@@ -5488,7 +5488,6 @@ func TestCheckHtlcForward(t *testing.T) {
 			MaxOutgoingCltvExpiry:  DefaultMaxOutgoingCltvExpiry,
 			HtlcNotifier:           &mockHTLCNotifier{},
 		},
-		log:     log,
 		channel: testChannel.channel,
 	}
 

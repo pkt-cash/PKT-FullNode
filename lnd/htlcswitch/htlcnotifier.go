@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // HtlcNotifier notifies clients of htlc forwards, failures and settles for

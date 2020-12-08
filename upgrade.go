@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // dirEmpty returns whether or not the specified directory path is empty.
@@ -119,7 +120,7 @@ func upgradeDataPaths() er.R {
 	// Only migrate if the old path exists and the new one doesn't.
 	if fileExists(oldHomePath) && !fileExists(newHomePath) {
 		// Create the new path.
-		pktdLog.Infof("Migrating application home path from '%s' to '%s'",
+		log.Infof("Migrating application home path from '%s' to '%s'",
 			oldHomePath, newHomePath)
 		errr := os.MkdirAll(newHomePath, 0700)
 		if errr != nil {
@@ -157,7 +158,7 @@ func upgradeDataPaths() er.R {
 				return er.E(errr)
 			}
 		} else {
-			pktdLog.Warnf("Not removing '%s' since it contains files "+
+			log.Warnf("Not removing '%s' since it contains files "+
 				"not created by this application.  You may "+
 				"want to manually move them or delete them.",
 				oldHomePath)

@@ -23,6 +23,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanvalidate"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
@@ -1003,7 +1004,7 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 		// and remote key which will be needed to calculate the multisig
 		// funding output in a next step.
 		pendingChanID := pendingReservation.pendingChanID
-		walletLog.Debugf("Advancing PSBT funding flow for "+
+		log.Debugf("Advancing PSBT funding flow for "+
 			"pending_id(%x), binding keys local_key=%v, "+
 			"remote_key=%x", pendingChanID,
 			&ourContribution.MultiSigKey,
@@ -1069,7 +1070,7 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 			)
 		}
 
-		walletLog.Debugf("Funding tx for ChannelPoint(%v) "+
+		log.Debugf("Funding tx for ChannelPoint(%v) "+
 			"generated: %v", chanPoint, spew.Sdump(fundingTx))
 	}
 
@@ -1206,9 +1207,9 @@ func (l *LightningWallet) handleChanPointReady(req *continueContributionMsg) {
 	txsort.InPlaceSort(ourCommitTx)
 	txsort.InPlaceSort(theirCommitTx)
 
-	walletLog.Debugf("Local commit tx for ChannelPoint(%v): %v",
+	log.Debugf("Local commit tx for ChannelPoint(%v): %v",
 		chanPoint, spew.Sdump(ourCommitTx))
-	walletLog.Debugf("Remote commit tx for ChannelPoint(%v): %v",
+	log.Debugf("Remote commit tx for ChannelPoint(%v): %v",
 		chanPoint, spew.Sdump(theirCommitTx))
 
 	// Record newly available information within the open channel state.
@@ -1546,9 +1547,9 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 	chanState.LocalCommitment.CommitTx = ourCommitTx
 	chanState.RemoteCommitment.CommitTx = theirCommitTx
 
-	walletLog.Debugf("Local commit tx for ChannelPoint(%v): %v",
+	log.Debugf("Local commit tx for ChannelPoint(%v): %v",
 		req.fundingOutpoint, spew.Sdump(ourCommitTx))
-	walletLog.Debugf("Remote commit tx for ChannelPoint(%v): %v",
+	log.Debugf("Remote commit tx for ChannelPoint(%v): %v",
 		req.fundingOutpoint, spew.Sdump(theirCommitTx))
 
 	channelValue := int64(pendingReservation.partialState.Capacity)

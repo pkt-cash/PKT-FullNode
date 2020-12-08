@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // headerProgressLogger provides periodic logging for other services in order
@@ -16,8 +16,7 @@ type headerProgressLogger struct {
 
 	entityType string
 
-	subsystemLogger pktlog.Logger
-	progressAction  string
+	progressAction string
 	sync.Mutex
 }
 
@@ -25,14 +24,12 @@ type headerProgressLogger struct {
 // The progress message is templated as follows:
 //  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
 //  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
-func newBlockProgressLogger(progressMessage string,
-	entityType string, logger pktlog.Logger) *headerProgressLogger {
+func newBlockProgressLogger(progressMessage string, entityType string) *headerProgressLogger {
 
 	return &headerProgressLogger{
 		entityType:       entityType,
 		lastBlockLogTime: time.Now(),
 		progressAction:   progressMessage,
-		subsystemLogger:  logger,
 	}
 }
 
@@ -64,11 +61,11 @@ func (b *headerProgressLogger) LogBlockHeight(timestamp time.Time, height int32)
 		entityStr += "s"
 	}
 	if b.entityType == "block" {
-		b.subsystemLogger.Infof("%s %d %s in the last %s (height %s, %s)",
+		log.Infof("%s %d %s in the last %s (height %s, %s)",
 			b.progressAction, b.receivedLogBlocks, entityStr, tDuration,
-			pktlog.Height(height), timestamp)
+			log.Height(height), timestamp)
 	} else {
-		b.subsystemLogger.Debugf("%s %d %s in the last %s (height %d, %s)",
+		log.Debugf("%s %d %s in the last %s (height %d, %s)",
 			b.progressAction, b.receivedLogBlocks, entityStr, tDuration,
 			height, timestamp)
 	}

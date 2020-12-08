@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 

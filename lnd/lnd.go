@@ -27,6 +27,8 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
+	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"golang.org/x/crypto/acme/autocert"
@@ -36,7 +38,6 @@ import (
 	"gopkg.in/macaroon.v2"
 
 	"github.com/pkt-cash/pktd/lnd/autopilot"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/cert"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/chanacceptor"
@@ -198,18 +199,9 @@ type rpcListeners func() ([]*ListenerWithSignal, func(), er.R)
 // This function starts all main system components then blocks until a signal
 // is received on the shutdownChan at which point everything is shut down again.
 func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
-	defer func() {
-		ltndLog.Info("Shutdown complete")
-		err := cfg.LogWriter.Close()
-		if err != nil {
-			ltndLog.Errorf("Could not close log rotator: %v", err)
-		}
-	}()
-
 	// Show version at startup.
-	ltndLog.Infof("Version: %s commit=%s, build=%s, logging=%s, debuglevel=%s",
-		build.Version(), build.Commit, build.Deployment,
-		build.LoggingType, cfg.DebugLevel)
+	log.Infof("Version: %s debuglevel=%s",
+		version.Version(), cfg.DebugLevel)
 
 	var network string
 	switch {
@@ -226,7 +218,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		network = "regtest"
 	}
 
-	ltndLog.Infof("Active chain: %v (network=%v)",
+	log.Infof("Active chain: %v (network=%v)",
 		strings.Title(cfg.registeredChains.PrimaryChain().String()),
 		network,
 	)
@@ -248,7 +240,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to create CPU profile: %v",
 				err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		pprof.StartCPUProfile(f)
@@ -263,7 +255,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	localChanDB, remoteChanDB, cleanUp, err := initializeDatabases(ctx, cfg)
 	switch {
 	case channeldb.ErrDryRunMigrationOK.Is(err):
-		ltndLog.Infof("%v, exiting", err)
+		log.Infof("%v, exiting", err)
 		return nil
 	case err != nil:
 		return er.Errorf("unable to open databases: %v", err)
@@ -275,7 +267,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	serverOpts, restDialOpts, restListen, cleanUp, err := getTLSConfig(cfg)
 	if err != nil {
 		err := er.Errorf("unable to load TLS credentials: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 
@@ -312,7 +304,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to initialize neutrino "+
 				"backend: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer neutrinoCleanUp()
@@ -341,7 +333,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 			// connections.
 			lis, err := lncfg.ListenOnAddress(grpcEndpoint)
 			if err != nil {
-				ltndLog.Errorf("unable to listen on %s",
+				log.Errorf("unable to listen on %s",
 					grpcEndpoint)
 				return nil, nil, err
 			}
@@ -388,7 +380,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to set up wallet password "+
 				"listeners: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
@@ -398,12 +390,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		publicWalletPw = walletInitParams.Password
 		defer func() {
 			if err := walletInitParams.UnloadWallet(); err != nil {
-				ltndLog.Errorf("Could not unload wallet: %v", err)
+				log.Errorf("Could not unload wallet: %v", err)
 			}
 		}()
 
 		if walletInitParams.RecoveryWindow > 0 {
-			ltndLog.Infof("Wallet recovery mode enabled with "+
+			log.Infof("Wallet recovery mode enabled with "+
 				"address lookahead of %d addresses",
 				walletInitParams.RecoveryWindow)
 		}
@@ -419,7 +411,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to set up macaroon "+
 				"authentication: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer macaroonService.Close()
@@ -430,7 +422,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		err = macaroonService.CreateUnlock(&privateWalletPw)
 		if err != nil && !macaroons.ErrAlreadyUnlocked.Is(err) {
 			err := er.Errorf("unable to unlock macaroons: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
@@ -468,7 +460,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 			if err != nil {
 				err := er.Errorf("unable to create macaroons "+
 					"%v", err)
-				ltndLog.Error(err)
+				log.Error(err)
 				return err
 			}
 		}
@@ -485,13 +477,13 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 				"clean up and invalidate old macaroons."
 
 			if fileExists(cfg.AdminMacPath) {
-				ltndLog.Warnf(msg, "admin", cfg.AdminMacPath)
+				log.Warnf(msg, "admin", cfg.AdminMacPath)
 			}
 			if fileExists(cfg.ReadMacPath) {
-				ltndLog.Warnf(msg, "readonly", cfg.ReadMacPath)
+				log.Warnf(msg, "readonly", cfg.ReadMacPath)
 			}
 			if fileExists(cfg.InvoiceMacPath) {
-				ltndLog.Warnf(msg, "invoice", cfg.InvoiceMacPath)
+				log.Warnf(msg, "invoice", cfg.InvoiceMacPath)
 			}
 		}
 	}
@@ -532,7 +524,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	activeChainControl, err := chainreg.NewChainControl(chainControlCfg)
 	if err != nil {
 		err := er.Errorf("unable to create chain control: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 
@@ -551,12 +543,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	)
 	if err != nil {
 		err := er.Errorf("error deriving node key: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 
 	if cfg.Tor.Active {
-		srvrLog.Infof("Proxying all network traffic via Tor "+
+		log.Infof("Proxying all network traffic via Tor "+
 			"(stream_isolation=%v)! NOTE: Ensure the backend node "+
 			"is proxying over Tor as well", cfg.Tor.StreamIsolation)
 	}
@@ -570,7 +562,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to open watchtower client "+
 				"database: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer towerClientDB.Close()
@@ -588,12 +580,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		// Start the tor controller before giving it to any other subsystems.
 		if err := torController.Start(); err != nil {
 			err := er.Errorf("unable to initialize tor controller: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer func() {
 			if err := torController.Stop(); err != nil {
-				ltndLog.Errorf("error stopping tor controller: %v", err)
+				log.Errorf("error stopping tor controller: %v", err)
 			}
 		}()
 	}
@@ -611,7 +603,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to open watchtower "+
 				"database: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer towerDB.Close()
@@ -624,7 +616,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		)
 		if err != nil {
 			err := er.Errorf("error deriving tower key: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
@@ -663,14 +655,14 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to configure watchtower: %v",
 				err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
 		tower, err = watchtower.New(wtConfig)
 		if err != nil {
 			err := er.Errorf("unable to create watchtower: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 	}
@@ -687,7 +679,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	)
 	if err != nil {
 		err := er.Errorf("unable to create server: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 
@@ -697,19 +689,19 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	atplCfg, err := initAutoPilot(server, cfg.Autopilot, mainChain, cfg.ActiveNetParams)
 	if err != nil {
 		err := er.Errorf("unable to initialize autopilot: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 
 	atplManager, err := autopilot.NewManager(atplCfg)
 	if err != nil {
 		err := er.Errorf("unable to create autopilot manager: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 	if err := atplManager.Start(); err != nil {
 		err := er.Errorf("unable to start autopilot manager: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 	defer atplManager.Stop()
@@ -737,12 +729,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	)
 	if err != nil {
 		err := er.Errorf("unable to create RPC server: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 	if err := rpcServer.Start(); err != nil {
 		err := er.Errorf("unable to start RPC server: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 	defer rpcServer.Stop()
@@ -758,11 +750,11 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to determine chain tip: %v",
 				err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
-		ltndLog.Infof("Waiting for chain backend to finish sync, "+
+		log.Infof("Waiting for chain backend to finish sync, "+
 			"start_height=%v", bestHeight)
 
 		for {
@@ -774,7 +766,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 			if err != nil {
 				err := er.Errorf("unable to determine if "+
 					"wallet is synced: %v", err)
-				ltndLog.Error(err)
+				log.Error(err)
 				return err
 			}
 
@@ -789,11 +781,11 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err != nil {
 			err := er.Errorf("unable to determine chain tip: %v",
 				err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 
-		ltndLog.Infof("Chain backend is fully synced (end_height=%v)!",
+		log.Infof("Chain backend is fully synced (end_height=%v)!",
 			bestHeight)
 	}
 
@@ -801,7 +793,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// server itself.
 	if err := server.Start(); err != nil {
 		err := er.Errorf("unable to start server: %v", err)
-		ltndLog.Error(err)
+		log.Error(err)
 		return err
 	}
 	defer server.Stop()
@@ -813,7 +805,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		if err := atplManager.StartAgent(); err != nil {
 			err := er.Errorf("unable to start autopilot agent: %v",
 				err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 	}
@@ -821,7 +813,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	if cfg.Watchtower.Active {
 		if err := tower.Start(); err != nil {
 			err := er.Errorf("unable to start watchtower: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return err
 		}
 		defer tower.Stop()
@@ -840,7 +832,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 
 	// Ensure we create TLS key and certificate if they don't exist.
 	if !fileExists(cfg.TLSCertPath) && !fileExists(cfg.TLSKeyPath) {
-		rpcsLog.Infof("Generating TLS certificates...")
+		log.Infof("Generating TLS certificates...")
 		err := cert.GenCertPair(
 			"lnd autogenerated cert", cfg.TLSCertPath,
 			cfg.TLSKeyPath, cfg.TLSExtraIPs, cfg.TLSExtraDomains,
@@ -849,7 +841,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		rpcsLog.Infof("Done generating TLS certificates")
+		log.Infof("Done generating TLS certificates")
 	}
 
 	certData, parsedCert, errr := cert.LoadCert(
@@ -878,7 +870,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 	// If the certificate expired or it was outdated, delete it and the TLS
 	// key and generate a new pair.
 	if time.Now().After(parsedCert.NotAfter) || refresh {
-		ltndLog.Info("TLS certificate is expired or outdated, " +
+		log.Info("TLS certificate is expired or outdated, " +
 			"generating a new one")
 
 		errr := os.Remove(cfg.TLSCertPath)
@@ -891,7 +883,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 			return nil, nil, nil, nil, er.E(errr)
 		}
 
-		rpcsLog.Infof("Renewing TLS certificates...")
+		log.Infof("Renewing TLS certificates...")
 		err = cert.GenCertPair(
 			"lnd autogenerated cert", cfg.TLSCertPath,
 			cfg.TLSKeyPath, cfg.TLSExtraIPs, cfg.TLSExtraDomains,
@@ -900,7 +892,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		rpcsLog.Infof("Done renewing TLS certificates")
+		log.Infof("Done renewing TLS certificates")
 
 		// Reload the certificate data.
 		certData, _, errr = cert.LoadCert(
@@ -922,7 +914,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 	// the certificates.
 	cleanUp := func() {}
 	if cfg.LetsEncryptDomain != "" {
-		ltndLog.Infof("Using Let's Encrypt certificate for domain %v",
+		log.Infof("Using Let's Encrypt certificate for domain %v",
 			cfg.LetsEncryptDomain)
 
 		manager := autocert.Manager{
@@ -939,22 +931,22 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		cleanUp = func() {
 			err := srv.Shutdown(context.Background())
 			if err != nil {
-				ltndLog.Errorf("Autocert listener shutdown "+
+				log.Errorf("Autocert listener shutdown "+
 					" error: %v", err)
 
 				return
 			}
 			<-shutdownCompleted
-			ltndLog.Infof("Autocert challenge listener stopped")
+			log.Infof("Autocert challenge listener stopped")
 		}
 
 		go func() {
-			ltndLog.Infof("Autocert challenge listener started "+
+			log.Infof("Autocert challenge listener started "+
 				"at %v", cfg.LetsEncryptListen)
 
 			err := srv.ListenAndServe()
 			if err != http.ErrServerClosed {
-				ltndLog.Errorf("autocert http: %v", err)
+				log.Errorf("autocert http: %v", err)
 			}
 			close(shutdownCompleted)
 		}()
@@ -964,7 +956,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 
 			lecert, err := manager.GetCertificate(h)
 			if err != nil {
-				ltndLog.Errorf("GetCertificate: %v", err)
+				log.Errorf("GetCertificate: %v", err)
 				return &certData, nil
 			}
 
@@ -1179,7 +1171,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	for _, lis := range listeners {
 		wg.Add(1)
 		go func(lis *ListenerWithSignal) {
-			rpcsLog.Infof("Password RPC server listening on %s",
+			log.Infof("Password RPC server listening on %s",
 				lis.Addr())
 
 			// Close the ready chan to indicate we are listening.
@@ -1209,21 +1201,21 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	for _, restEndpoint := range restEndpoints {
 		lis, err := restListen(restEndpoint)
 		if err != nil {
-			ltndLog.Errorf("Password gRPC proxy unable to listen "+
+			log.Errorf("Password gRPC proxy unable to listen "+
 				"on %s", restEndpoint)
 			return nil, shutdown, err
 		}
 		shutdownFuncs = append(shutdownFuncs, func() {
 			err := lis.Close()
 			if err != nil {
-				rpcsLog.Errorf("Error closing listener: %v",
+				log.Errorf("Error closing listener: %v",
 					err)
 			}
 		})
 
 		wg.Add(1)
 		go func() {
-			rpcsLog.Infof("Password gRPC proxy started at %s",
+			log.Infof("Password gRPC proxy started at %s",
 				lis.Addr())
 			wg.Done()
 			_ = srv.Serve(lis)
@@ -1234,7 +1226,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	wg.Wait()
 
 	// Wait for user to provide the password.
-	ltndLog.Infof("Waiting for wallet encryption password. Use `lncli " +
+	log.Infof("Waiting for wallet encryption password. Use `lncli " +
 		"create` to create a wallet, `lncli unlock` to unlock an " +
 		"existing wallet, or `lncli changepassword` to change the " +
 		"password of an existing wallet and unlock it.")
@@ -1281,7 +1273,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 			// Don't leave the file open in case the new wallet
 			// could not be created for whatever reason.
 			if err := loader.UnloadWallet(); err != nil {
-				ltndLog.Errorf("Could not unload new "+
+				log.Errorf("Could not unload new "+
 					"wallet: %v", err)
 			}
 			return nil, shutdown, err
@@ -1289,7 +1281,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 
 		// For new wallets, the ResetWalletTransactions flag is a no-op.
 		if cfg.ResetWalletTransactions {
-			ltndLog.Warnf("Ignoring reset-wallet-transactions " +
+			log.Warnf("Ignoring reset-wallet-transactions " +
 				"flag for new wallet as it has no effect")
 		}
 
@@ -1312,7 +1304,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 		// remind the user to turn off the setting again after
 		// successful completion.
 		if cfg.ResetWalletTransactions {
-			ltndLog.Warnf("Dropping all transaction history from " +
+			log.Warnf("Dropping all transaction history from " +
 				"on-chain wallet. Remember to disable " +
 				"reset-wallet-transactions flag for next " +
 				"start of lnd")
@@ -1322,7 +1314,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 			)
 			if err != nil {
 				if err := unlockMsg.UnloadWallet(); err != nil {
-					ltndLog.Errorf("Could not unload "+
+					log.Errorf("Could not unload "+
 						"wallet: %v", err)
 				}
 				return nil, shutdown, err
@@ -1353,11 +1345,11 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 func initializeDatabases(ctx context.Context,
 	cfg *Config) (*channeldb.DB, *channeldb.DB, func(), er.R) {
 
-	ltndLog.Infof("Opening the main database, this might take a few " +
+	log.Infof("Opening the main database, this might take a few " +
 		"minutes...")
 
 	if cfg.DB.Backend == lncfg.BoltBackend {
-		ltndLog.Infof("Opening bbolt database, sync_freelist=%v, "+
+		log.Infof("Opening bbolt database, sync_freelist=%v, "+
 			"auto_compact=%v", cfg.DB.Bolt.SyncFreelist,
 			cfg.DB.Bolt.AutoCompact)
 	}
@@ -1393,7 +1385,7 @@ func initializeDatabases(ctx context.Context,
 
 		case err != nil:
 			err := er.Errorf("unable to open local channeldb: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return nil, nil, nil, err
 		}
 
@@ -1403,7 +1395,7 @@ func initializeDatabases(ctx context.Context,
 
 		remoteChanDB = localChanDB
 	} else {
-		ltndLog.Infof("Database replication is available! Creating " +
+		log.Infof("Database replication is available! Creating " +
 			"local and remote channeldb instances")
 
 		// Otherwise, we'll open two instances, one for the state we
@@ -1420,11 +1412,11 @@ func initializeDatabases(ctx context.Context,
 		// migration, we'll only exit the second time here once the
 		// remote instance has had a time to migrate as well.
 		case channeldb.ErrDryRunMigrationOK.Is(err):
-			ltndLog.Infof("Local DB dry run migration successful")
+			log.Infof("Local DB dry run migration successful")
 
 		case err != nil:
 			err := er.Errorf("unable to open local channeldb: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return nil, nil, nil, err
 		}
 
@@ -1432,7 +1424,7 @@ func initializeDatabases(ctx context.Context,
 			localChanDB.Close()
 		})
 
-		ltndLog.Infof("Opening replicated database instance...")
+		log.Infof("Opening replicated database instance...")
 
 		remoteChanDB, err = channeldb.CreateWithBackend(
 			databaseBackends.RemoteDB,
@@ -1446,7 +1438,7 @@ func initializeDatabases(ctx context.Context,
 			localChanDB.Close()
 
 			err := er.Errorf("unable to open remote channeldb: %v", err)
-			ltndLog.Error(err)
+			log.Error(err)
 			return nil, nil, nil, err
 		}
 
@@ -1456,7 +1448,7 @@ func initializeDatabases(ctx context.Context,
 	}
 
 	openTime := time.Since(startOpenTime)
-	ltndLog.Infof("Database now open (time_to_open=%v)!", openTime)
+	log.Infof("Database now open (time_to_open=%v)!", openTime)
 
 	cleanUp := func() {
 		for _, closeFunc := range closeFuncs {
@@ -1554,7 +1546,7 @@ func initNeutrinoBackend(cfg *Config, chainDir string) (*neutrino.ChainService,
 
 	cleanUp := func() {
 		if err := neutrinoCS.Stop(); err != nil {
-			ltndLog.Infof("Unable to stop neutrino light client: %v", err)
+			log.Infof("Unable to stop neutrino light client: %v", err)
 		}
 		db.Close()
 	}

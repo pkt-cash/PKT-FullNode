@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channelnotifier"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -46,7 +47,7 @@ type channelNotifier struct {
 func (c *channelNotifier) SubscribeChans(startingChans map[wire.OutPoint]struct{}) (
 	*chanbackup.ChannelSubscription, er.R) {
 
-	ltndLog.Infof("Channel backup proxy channel notifier starting")
+	log.Infof("Channel backup proxy channel notifier starting")
 
 	// TODO(roasbeef): read existing set of chans and diff
 
@@ -62,7 +63,7 @@ func (c *channelNotifier) SubscribeChans(startingChans map[wire.OutPoint]struct{
 		)
 		if err != nil {
 			pub := newOrPendingChan.IdentityPub
-			ltndLog.Errorf("unable to fetch addrs for %x: %v",
+			log.Errorf("unable to fetch addrs for %x: %v",
 				pub.SerializeCompressed(), err)
 		}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/watchtower/lookout"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtserver"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // Standalone encapsulates the server-side functionality required by watchtower

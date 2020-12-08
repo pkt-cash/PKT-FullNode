@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -515,7 +516,7 @@ func (s *Switch) SendHTLC(firstHop lnwire.ShortChannelID, paymentID uint64,
 func (s *Switch) UpdateForwardingPolicies(
 	chanPolicies map[wire.OutPoint]ForwardingPolicy) {
 
-	log.Tracef("Updating link policies: %v", newLogClosure(func() string {
+	log.Tracef("Updating link policies: %v", log.C(func() string {
 		return spew.Sdump(chanPolicies)
 	}))
 
@@ -1072,7 +1073,7 @@ func (s *Switch) handlePacketForward(packet *htlcPacket) er.R {
 				)
 				log.Warnf("unable to find err source for "+
 					"outgoing_link=%v, errors=%v",
-					packet.outgoingChanID, newLogClosure(func() string {
+					packet.outgoingChanID, log.C(func() string {
 						return spew.Sdump(linkErrs)
 					}))
 			}
@@ -1739,7 +1740,7 @@ out:
 			}
 
 			log.Tracef("Acked %d settle fails: %v", len(s.pendingSettleFails),
-				newLogClosure(func() string {
+				log.C(func() string {
 					return spew.Sdump(s.pendingSettleFails)
 				}))
 

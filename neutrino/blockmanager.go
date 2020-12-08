@@ -17,7 +17,7 @@ import (
 
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
@@ -214,10 +214,10 @@ func newBlockManager(s *ChainService,
 		peerChan:      make(chan interface{}, MaxPeers*3),
 		blockNtfnChan: make(chan blockntfns.BlockNtfn),
 		blkHeaderProgressLogger: newBlockProgressLogger(
-			"Processed", "block", log,
+			"Processed", "block",
 		),
 		fltrHeaderProgessLogger: newBlockProgressLogger(
-			"Verified", "filter header", log,
+			"Verified", "filter header",
 		),
 		headerList: headerlist.NewBoundedMemoryChain(
 			numMaxMemHeaders,
@@ -389,7 +389,7 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 		return
 	}
 
-	log.Infof("New valid peer [%s] (%s)", pktlog.IpAddr(sp.Addr()), sp.UserAgent())
+	log.Infof("New valid peer [%s] (%s)", log.IpAddr(sp.Addr()), sp.UserAgent())
 
 	// Ignore the peer if it's not a sync candidate.
 	if !b.isSyncCandidate(sp) {
@@ -417,7 +417,7 @@ func (b *blockManager) handleNewPeerMsg(peers *list.List, sp *ServerPeer) {
 		}
 		stopHash := &zeroHash
 
-		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(sp.Addr()))
+		log.Infof("Requesting headers from [%s]", log.IpAddr(sp.Addr()))
 		sp.PushGetHeadersMsg(locator, stopHash)
 	}
 
@@ -452,7 +452,7 @@ func (b *blockManager) handleDonePeerMsg(peers *list.List, sp *ServerPeer) {
 		}
 	}
 
-	log.Infof("Lost peer [%s]", pktlog.IpAddr(sp.Addr()))
+	log.Infof("Lost peer [%s]", log.IpAddr(sp.Addr()))
 
 	// Attempt to find a new peer to sync from if the quitting peer is the
 	// sync peer.  Also, reset the header state.
@@ -2101,7 +2101,7 @@ func (b *blockManager) startSync(peers *list.List) {
 		}
 
 		log.Infof("Syncing to block height [%s] from peer [%s]",
-			pktlog.Height(bestPeer.LastBlock()), pktlog.IpAddr(bestPeer.Addr()))
+			log.Height(bestPeer.LastBlock()), log.IpAddr(bestPeer.Addr()))
 
 		// Now that we know we have a new sync peer, we'll lock it in
 		// within the proper attribute.
@@ -2119,9 +2119,9 @@ func (b *blockManager) startSync(peers *list.List) {
 		// fetch, setting our stop hash to the next checkpoint hash.
 		if b.nextCheckpoint != nil && int32(bestHeight) < b.nextCheckpoint.Height {
 			log.Infof("Downloading headers for blocks [%s] to [%s] from peer [%s]",
-				pktlog.Int(int(bestHeight+1)),
-				pktlog.Int(int(b.nextCheckpoint.Height)),
-				pktlog.IpAddr(bestPeer.Addr()),
+				log.Int(int(bestHeight+1)),
+				log.Int(int(b.nextCheckpoint.Height)),
+				log.IpAddr(bestPeer.Addr()),
 			)
 
 			stopHash = b.nextCheckpoint.Hash
@@ -2133,7 +2133,7 @@ func (b *blockManager) startSync(peers *list.List) {
 
 		// With our stop hash selected, we'll kick off the sync from
 		// this peer with an initial GetHeaders message.
-		log.Infof("Requesting headers from [%s]", pktlog.IpAddr(b.SyncPeer().Addr()))
+		log.Infof("Requesting headers from [%s]", log.IpAddr(b.SyncPeer().Addr()))
 		b.SyncPeer().PushGetHeadersMsg(locator, stopHash)
 	} else {
 		log.Warnf("No sync peer candidates available")
@@ -2300,7 +2300,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 			}
 
 			// Get headers based on locator.
-			log.Infof("Requesting headers from [%s]", pktlog.IpAddr(imsg.peer.Addr()))
+			log.Infof("Requesting headers from [%s]", log.IpAddr(imsg.peer.Addr()))
 			err = imsg.peer.PushGetHeadersMsg(locator,
 				&invVects[lastBlock].Hash)
 			if err != nil {
@@ -2385,10 +2385,10 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 	}
 
 	log.Infof("Headers from [%s] height: [%s] checking [%s] PacketCrypt proofs of total [%s] headers",
-		pktlog.IpAddr(hmsg.peer.Addr()),
-		pktlog.Height(int32(backHeight+1)),
-		pktlog.Int(len(needProofs)),
-		pktlog.Int(len(msg.Headers)),
+		log.IpAddr(hmsg.peer.Addr()),
+		log.Height(int32(backHeight+1)),
+		log.Int(len(needProofs)),
+		log.Int(len(msg.Headers)),
 	)
 
 	if len(needProofs) == 0 {

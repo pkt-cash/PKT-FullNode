@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/zpay32"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // A compile time assertion to ensure MissionControl meets the

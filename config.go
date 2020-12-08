@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +30,7 @@ import (
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -132,7 +132,7 @@ type config struct {
 	AddCheckpoints       []string      `long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
 	DisableCheckpoints   bool          `long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	DbType               string        `long:"dbtype" description:"Database backend to use for the Block Chain"`
-	StatsViz			 string		   `long:"statsviz" description:"Enable StatsViz runtime visualization on given port -- NOTE port must be between 1024 and 65535"`
+	StatsViz             string        `long:"statsviz" description:"Enable StatsViz runtime visualization on given port -- NOTE port must be between 1024 and 65535"`
 	Profile              string        `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65535"`
 	CPUProfile           string        `long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	DebugLevel           string        `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
@@ -208,71 +208,6 @@ func validLogLevel(logLevel string) bool {
 		return true
 	}
 	return false
-}
-
-// supportedSubsystems returns a sorted slice of the supported subsystems for
-// logging purposes.
-func supportedSubsystems() []string {
-	// Convert the subsystemLoggers map keys to a slice.
-	subsystems := make([]string, 0, len(subsystemLoggers))
-	for subsysID := range subsystemLoggers {
-		subsystems = append(subsystems, subsysID)
-	}
-
-	// Sort the subsystems for stable display.
-	sort.Strings(subsystems)
-	return subsystems
-}
-
-// parseAndSetDebugLevels attempts to parse the specified debug level and set
-// the levels accordingly.  An appropriate error is returned if anything is
-// invalid.
-func parseAndSetDebugLevels(debugLevel string) er.R {
-	// When the specified string doesn't have any delimters, treat it as
-	// the log level for all subsystems.
-	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
-		// Validate debug log level.
-		if !validLogLevel(debugLevel) {
-			str := "The specified debug level [%v] is invalid"
-			return er.Errorf(str, debugLevel)
-		}
-
-		// Change the logging level for all subsystems.
-		setLogLevels(debugLevel)
-
-		return nil
-	}
-
-	// Split the specified string into subsystem/level pairs while detecting
-	// issues and update the log levels accordingly.
-	for _, logLevelPair := range strings.Split(debugLevel, ",") {
-		if !strings.Contains(logLevelPair, "=") {
-			str := "The specified debug level contains an invalid " +
-				"subsystem/level pair [%v]"
-			return er.Errorf(str, logLevelPair)
-		}
-
-		// Extract the specified subsystem and log level.
-		fields := strings.Split(logLevelPair, "=")
-		subsysID, logLevel := fields[0], fields[1]
-
-		// Validate subsystem.
-		if _, exists := subsystemLoggers[subsysID]; !exists {
-			str := "The specified subsystem [%v] is invalid -- " +
-				"supported subsytems %v"
-			return er.Errorf(str, subsysID, supportedSubsystems())
-		}
-
-		// Validate log level.
-		if !validLogLevel(logLevel) {
-			str := "The specified debug level [%v] is invalid"
-			return er.Errorf(str, logLevel)
-		}
-
-		setLogLevel(subsysID, logLevel)
-	}
-
-	return nil
 }
 
 // validDbType returns whether or not dbType is a supported database type.
@@ -600,14 +535,8 @@ func loadConfig() (*config, []string, er.R) {
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
 	cfg.LogDir = filepath.Join(cfg.LogDir, netName(activeNetParams))
 
-	// Special show command to list supported subsystems and exit.
-	if cfg.DebugLevel == "show" {
-		fmt.Println("Supported subsystems", supportedSubsystems())
-		os.Exit(0)
-	}
-
 	// Parse, validate, and set debug log level(s).
-	if err := parseAndSetDebugLevels(cfg.DebugLevel); err != nil {
+	if err := log.SetLogLevels(cfg.DebugLevel); err != nil {
 		err := er.Errorf("%s: %v", funcName, err)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -740,7 +669,7 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	if cfg.RPCUser == "" || cfg.RPCPass == "" {
-		pktdLog.Infof("Creating a .cookie file")
+		log.Infof("Creating a .cookie file")
 		cookiePath := filepath.Join(defaultHomeDir, ".cookie")
 		var buf [32]byte
 		if _, errr := rand.Read(buf[:]); errr != nil {
@@ -765,7 +694,7 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	if cfg.DisableRPC {
-		pktdLog.Infof("RPC service is disabled")
+		log.Infof("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
@@ -984,7 +913,7 @@ func loadConfig() (*config, []string, er.R) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configNotFound && preCfg.ConfigFile != defaultConfigFile {
-		pktdLog.Warnf("Could not find config file [%s]", preCfg.ConfigFile)
+		log.Warnf("Could not find config file [%s]", preCfg.ConfigFile)
 	}
 
 	return &cfg, remainingArgs, nil

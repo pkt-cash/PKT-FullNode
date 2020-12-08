@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/labels"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -243,7 +244,7 @@ func (u *utxoNursery) Start() er.R {
 		return nil
 	}
 
-	utxnLog.Tracef("Starting UTXO nursery")
+	log.Tracef("Starting UTXO nursery")
 
 	// Retrieve the currently best known block. This is needed to have the
 	// state machine catch up with the blocks we missed when we were down.
@@ -319,7 +320,7 @@ func (u *utxoNursery) Stop() er.R {
 		return nil
 	}
 
-	utxnLog.Infof("UTXO nursery shutting down")
+	log.Infof("UTXO nursery shutting down")
 
 	close(u.quit)
 	u.wg.Wait()
@@ -414,7 +415,7 @@ func (u *utxoNursery) IncubateOutputs(chanPoint wire.OutPoint,
 	//  * need ability to cancel in the case that we learn of pre-image or
 	//    remote party pulls
 
-	utxnLog.Infof("Incubating Channel(%s) num-htlcs=%d",
+	log.Infof("Incubating Channel(%s) num-htlcs=%d",
 		chanPoint, numHtlcs)
 
 	u.mu.Lock()
@@ -422,7 +423,7 @@ func (u *utxoNursery) IncubateOutputs(chanPoint wire.OutPoint,
 
 	// 2. Persist the outputs we intended to sweep in the nursery store
 	if err := u.cfg.Store.Incubate(kidOutputs, babyOutputs); err != nil {
-		utxnLog.Errorf("unable to begin incubation of Channel(%s): %v",
+		log.Errorf("unable to begin incubation of Channel(%s): %v",
 			chanPoint, err)
 		return err
 	}
@@ -476,7 +477,7 @@ func (u *utxoNursery) NurseryReport(
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
-	utxnLog.Debugf("NurseryReport: building nursery report for channel %v",
+	log.Debugf("NurseryReport: building nursery report for channel %v",
 		chanPoint)
 
 	var report *contractMaturityReport
@@ -608,7 +609,7 @@ func (u *utxoNursery) reloadPreschool() er.R {
 			// This should never happen since the close summary
 			// should only be removed after the channel has been
 			// swept completely.
-			utxnLog.Warnf("Close summary not found for "+
+			log.Warnf("Close summary not found for "+
 				"chan_point=%v, can't determine height hint"+
 				"to sweep commit txn", chanPoint)
 			continue
@@ -649,23 +650,23 @@ func (u *utxoNursery) reloadClasses(bestHeight uint32) er.R {
 		return nil
 	}
 
-	utxnLog.Infof("(Re)-sweeping %d heights below height=%d",
+	log.Infof("(Re)-sweeping %d heights below height=%d",
 		len(activeHeights), bestHeight)
 
 	// Attempt to re-register notifications for any outputs still at these
 	// heights.
 	for _, classHeight := range activeHeights {
-		utxnLog.Debugf("Attempting to sweep outputs at height=%v",
+		log.Debugf("Attempting to sweep outputs at height=%v",
 			classHeight)
 
 		if err = u.graduateClass(classHeight); err != nil {
-			utxnLog.Errorf("Failed to sweep outputs at "+
+			log.Errorf("Failed to sweep outputs at "+
 				"height=%v: %v", classHeight, err)
 			return err
 		}
 	}
 
-	utxnLog.Infof("UTXO Nursery is now fully synced")
+	log.Infof("UTXO Nursery is now fully synced")
 
 	return nil
 }
@@ -708,7 +709,7 @@ func (u *utxoNursery) incubator(newBlockChan *chainntnfs.BlockEpochEvent) {
 			atomic.StoreUint32(&u.bestHeight, height)
 
 			if err := u.graduateClass(height); err != nil {
-				utxnLog.Errorf("error while graduating "+
+				log.Errorf("error while graduating "+
 					"class at height=%d: %v", height, err)
 
 				// TODO(conner): signal fatal error to daemon
@@ -737,7 +738,7 @@ func (u *utxoNursery) graduateClass(classHeight uint32) er.R {
 		return err
 	}
 
-	utxnLog.Infof("Attempting to graduate height=%v: num_kids=%v, "+
+	log.Infof("Attempting to graduate height=%v: num_kids=%v, "+
 		"num_babies=%v", classHeight, len(kgtnOutputs), len(cribOutputs))
 
 	// Offer the outputs to the sweeper and set up notifications that will
@@ -745,7 +746,7 @@ func (u *utxoNursery) graduateClass(classHeight uint32) er.R {
 	// outputs.
 	if len(kgtnOutputs) > 0 {
 		if err := u.sweepMatureOutputs(classHeight, kgtnOutputs); err != nil {
-			utxnLog.Errorf("Failed to sweep %d kindergarten "+
+			log.Errorf("Failed to sweep %d kindergarten "+
 				"outputs at height=%d: %v",
 				len(kgtnOutputs), classHeight, err)
 			return err
@@ -757,7 +758,7 @@ func (u *utxoNursery) graduateClass(classHeight uint32) er.R {
 	for i := range cribOutputs {
 		err := u.sweepCribOutput(classHeight, &cribOutputs[i])
 		if err != nil {
-			utxnLog.Errorf("Failed to sweep first-stage HTLC "+
+			log.Errorf("Failed to sweep first-stage HTLC "+
 				"(CLTV-delayed) output %v",
 				cribOutputs[i].OutPoint())
 			return err
@@ -774,7 +775,7 @@ func (u *utxoNursery) graduateClass(classHeight uint32) er.R {
 func (u *utxoNursery) sweepMatureOutputs(classHeight uint32,
 	kgtnOutputs []kidOutput) er.R {
 
-	utxnLog.Infof("Sweeping %v CSV-delayed outputs with sweep tx for "+
+	log.Infof("Sweeping %v CSV-delayed outputs with sweep tx for "+
 		"height %v", len(kgtnOutputs), classHeight)
 
 	feePref := sweep.FeePreference{ConfTarget: kgtnOutputConfTarget}
@@ -809,7 +810,7 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 	select {
 	case result, ok := <-resultChan:
 		if !ok {
-			utxnLog.Errorf("Notification chan closed, can't" +
+			log.Errorf("Notification chan closed, can't" +
 				" advance graduating output")
 			return
 		}
@@ -817,13 +818,13 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 		// In case of a remote spend, still graduate the output. There
 		// is no way to sweep it anymore.
 		if sweep.ErrRemoteSpend.Is(result.Err) {
-			utxnLog.Infof("Output %v was spend by remote party",
+			log.Infof("Output %v was spend by remote party",
 				output.OutPoint())
 			break
 		}
 
 		if result.Err != nil {
-			utxnLog.Errorf("Failed to sweep %v at "+
+			log.Errorf("Failed to sweep %v at "+
 				"height=%d", output.OutPoint(),
 				classHeight)
 			return
@@ -840,19 +841,19 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 
 	// Mark the confirmed kindergarten output as graduated.
 	if err := u.cfg.Store.GraduateKinder(classHeight, output); err != nil {
-		utxnLog.Errorf("Unable to graduate kindergarten output %v: %v",
+		log.Errorf("Unable to graduate kindergarten output %v: %v",
 			output.OutPoint(), err)
 		return
 	}
 
-	utxnLog.Infof("Graduated kindergarten output from height=%d",
+	log.Infof("Graduated kindergarten output from height=%d",
 		classHeight)
 
 	// Attempt to close the channel, only doing so if all of the channel's
 	// outputs have been graduated.
 	chanPoint := output.OriginChanPoint()
 	if err := u.closeAndRemoveIfMature(chanPoint); err != nil {
-		utxnLog.Errorf("Failed to close and remove channel %v",
+		log.Errorf("Failed to close and remove channel %v",
 			*chanPoint)
 		return
 	}
@@ -862,9 +863,9 @@ func (u *utxoNursery) waitForSweepConf(classHeight uint32,
 // notification that will advance it to the kindergarten bucket upon
 // confirmation.
 func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) er.R {
-	utxnLog.Infof("Publishing CLTV-delayed HTLC output using timeout tx "+
+	log.Infof("Publishing CLTV-delayed HTLC output using timeout tx "+
 		"(txid=%v): %v", baby.timeoutTx.TxHash(),
-		newLogClosure(func() string {
+		log.C(func() string {
 			return spew.Sdump(baby.timeoutTx)
 		}),
 	)
@@ -874,7 +875,7 @@ func (u *utxoNursery) sweepCribOutput(classHeight uint32, baby *babyOutput) er.R
 	label := labels.MakeLabel(labels.LabelTypeSweepTransaction, nil)
 	err := u.cfg.PublishTransaction(baby.timeoutTx, label)
 	if err != nil && !lnwallet.ErrDoubleSpend.Is(err) {
-		utxnLog.Errorf("Unable to broadcast baby tx: "+
+		log.Errorf("Unable to broadcast baby tx: "+
 			"%v, %v", err, spew.Sdump(baby.timeoutTx))
 		return err
 	}
@@ -899,7 +900,7 @@ func (u *utxoNursery) registerTimeoutConf(baby *babyOutput, heightHint uint32) e
 		return err
 	}
 
-	utxnLog.Infof("Htlc output %v registered for promotion "+
+	log.Infof("Htlc output %v registered for promotion "+
 		"notification.", baby.OutPoint())
 
 	u.wg.Add(1)
@@ -919,7 +920,7 @@ func (u *utxoNursery) waitForTimeoutConf(baby *babyOutput,
 	select {
 	case txConfirmation, ok := <-confChan.Confirmed:
 		if !ok {
-			utxnLog.Debugf("Notification chan "+
+			log.Debugf("Notification chan "+
 				"closed, can't advance baby output %v",
 				baby.OutPoint())
 			return
@@ -938,12 +939,12 @@ func (u *utxoNursery) waitForTimeoutConf(baby *babyOutput,
 
 	err := u.cfg.Store.CribToKinder(baby)
 	if err != nil {
-		utxnLog.Errorf("Unable to move htlc output from "+
+		log.Errorf("Unable to move htlc output from "+
 			"crib to kindergarten bucket: %v", err)
 		return
 	}
 
-	utxnLog.Infof("Htlc output %v promoted to "+
+	log.Infof("Htlc output %v promoted to "+
 		"kindergarten", baby.OutPoint())
 }
 
@@ -974,7 +975,7 @@ func (u *utxoNursery) registerPreschoolConf(kid *kidOutput, heightHint uint32) e
 		outputType = "Commitment"
 	}
 
-	utxnLog.Infof("%v outpoint %v registered for "+
+	log.Infof("%v outpoint %v registered for "+
 		"confirmation notification.", outputType, kid.OutPoint())
 
 	u.wg.Add(1)
@@ -998,7 +999,7 @@ func (u *utxoNursery) waitForPreschoolConf(kid *kidOutput,
 	select {
 	case txConfirmation, ok := <-confChan.Confirmed:
 		if !ok {
-			utxnLog.Errorf("Notification chan "+
+			log.Errorf("Notification chan "+
 				"closed, can't advance output %v",
 				kid.OutPoint())
 			return
@@ -1025,7 +1026,7 @@ func (u *utxoNursery) waitForPreschoolConf(kid *kidOutput,
 	bestHeight := atomic.LoadUint32(&u.bestHeight)
 	err := u.cfg.Store.PreschoolToKinder(kid, bestHeight)
 	if err != nil {
-		utxnLog.Errorf("Unable to move %v output "+
+		log.Errorf("Unable to move %v output "+
 			"from preschool to kindergarten bucket: %v",
 			outputType, err)
 		return
@@ -1151,7 +1152,7 @@ func (u *utxoNursery) closeAndRemoveIfMature(chanPoint *wire.OutPoint) er.R {
 	if ErrContractNotFound.Is(err) {
 		return nil
 	} else if err != nil {
-		utxnLog.Errorf("Unable to determine maturity of "+
+		log.Errorf("Unable to determine maturity of "+
 			"channel=%s", chanPoint)
 		return err
 	}
@@ -1166,12 +1167,12 @@ func (u *utxoNursery) closeAndRemoveIfMature(chanPoint *wire.OutPoint) er.R {
 	// a channel unless it is mature, as this is the only place the utxo
 	// nursery removes a channel.
 	if err := u.cfg.Store.RemoveChannel(chanPoint); err != nil {
-		utxnLog.Errorf("Unable to remove channel=%s from "+
+		log.Errorf("Unable to remove channel=%s from "+
 			"nursery store: %v", chanPoint, err)
 		return err
 	}
 
-	utxnLog.Infof("Removed channel %v from nursery store", chanPoint)
+	log.Infof("Removed channel %v from nursery store", chanPoint)
 
 	return nil
 }

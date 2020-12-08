@@ -1,14 +1,11 @@
 package routing
 
 import (
-	"fmt"
-
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // BlockPadding is used to increment the finalCltvDelta value for the last hop
@@ -155,9 +152,6 @@ type paymentSession struct {
 	// specified in the payment is one, under no circumstances splitting
 	// will happen and this value remains unused.
 	minShardAmt lnwire.MilliSatoshi
-
-	// log is a payment session-specific logger.
-	log pktlog.Logger
 }
 
 // newPaymentSession instantiates a new payment session.
@@ -172,8 +166,6 @@ func newPaymentSession(p *LightningPayment,
 		return nil, err
 	}
 
-	logPrefix := fmt.Sprintf("PaymentSession(%x):", p.PaymentHash)
-
 	return &paymentSession{
 		additionalEdges:   edges,
 		getBandwidthHints: getBandwidthHints,
@@ -183,7 +175,6 @@ func newPaymentSession(p *LightningPayment,
 		pathFindingConfig: pathFindingConfig,
 		missionControl:    missionControl,
 		minShardAmt:       DefaultShardMinAmt,
-		log:               build.NewPrefixLog(logPrefix, log),
 	}, nil
 }
 
@@ -243,7 +234,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			return nil, err
 		}
 
-		p.log.Debugf("pathfinding for amt=%v", maxAmt)
+		log.Debugf("pathfinding for amt=%v", maxAmt)
 
 		// Get a routing graph.
 		routingGraph, cleanup, err := p.getRoutingGraph()
@@ -274,7 +265,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			// Don't split if this is a legacy payment without mpp
 			// record.
 			if p.payment.PaymentAddr == nil {
-				p.log.Debugf("not splitting because payment " +
+				log.Debugf("not splitting because payment " +
 					"address is unspecified")
 
 				return nil, er.E(errNoPathFound)
@@ -283,7 +274,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			// No splitting if this is the last shard.
 			isLastShard := activeShards+1 >= p.payment.MaxParts
 			if isLastShard {
-				p.log.Debugf("not splitting because shard "+
+				log.Debugf("not splitting because shard "+
 					"limit %v has been reached",
 					p.payment.MaxParts)
 
@@ -296,7 +287,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 
 			// Put a lower bound on the minimum shard size.
 			if maxAmt < p.minShardAmt {
-				p.log.Debugf("not splitting because minimum "+
+				log.Debugf("not splitting because minimum "+
 					"shard amount %v has been reached",
 					p.minShardAmt)
 
@@ -311,7 +302,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 		// any case, but the sent out partial payments would be held by
 		// the receiver until the mpp timeout.
 		case errr == errInsufficientBalance:
-			p.log.Debug("not splitting because local balance " +
+			log.Debug("not splitting because local balance " +
 				"is insufficient")
 
 			return nil, err

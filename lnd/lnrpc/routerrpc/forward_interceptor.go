@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (

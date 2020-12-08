@@ -10,6 +10,7 @@ import (
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (

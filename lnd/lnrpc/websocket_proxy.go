@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"golang.org/x/net/context"
 )
 
@@ -54,10 +54,9 @@ var (
 // NewWebSocketProxy attempts to expose the underlying handler as a response-
 // streaming WebSocket stream with newline-delimited JSON as the content
 // encoding.
-func NewWebSocketProxy(h http.Handler, logger pktlog.Logger) http.Handler {
+func NewWebSocketProxy(h http.Handler) http.Handler {
 	p := &WebsocketProxy{
 		backend: h,
-		logger:  logger,
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -72,7 +71,6 @@ func NewWebSocketProxy(h http.Handler, logger pktlog.Logger) http.Handler {
 // WebsocketProxy provides websocket transport upgrade to compatible endpoints.
 type WebsocketProxy struct {
 	backend  http.Handler
-	logger   pktlog.Logger
 	upgrader *websocket.Upgrader
 }
 
@@ -96,13 +94,13 @@ func (p *WebsocketProxy) upgradeToWebSocketProxy(w http.ResponseWriter,
 
 	conn, err := p.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		p.logger.Errorf("error upgrading websocket:", err)
+		log.Errorf("error upgrading websocket:", err)
 		return
 	}
 	defer func() {
 		err := conn.Close()
 		if err != nil && !IsClosedConnError(err) {
-			p.logger.Errorf("WS: error closing upgraded conn: %v",
+			log.Errorf("WS: error closing upgraded conn: %v",
 				err)
 		}
 	}()
@@ -115,7 +113,7 @@ func (p *WebsocketProxy) upgradeToWebSocketProxy(w http.ResponseWriter,
 		r.Context(), r.Method, r.URL.String(), requestForwarder,
 	)
 	if err != nil {
-		p.logger.Errorf("WS: error preparing request:", err)
+		log.Errorf("WS: error preparing request:", err)
 		return
 	}
 
@@ -153,17 +151,17 @@ func (p *WebsocketProxy) upgradeToWebSocketProxy(w http.ResponseWriter,
 			_, payload, err := conn.ReadMessage()
 			if err != nil {
 				if IsClosedConnError(err) {
-					p.logger.Tracef("WS: socket "+
+					log.Tracef("WS: socket "+
 						"closed: %v", err)
 					return
 				}
-				p.logger.Errorf("error reading message: %v",
+				log.Errorf("error reading message: %v",
 					err)
 				return
 			}
 			_, err = requestForwarder.Write(payload)
 			if err != nil {
-				p.logger.Errorf("WS: error writing message "+
+				log.Errorf("WS: error writing message "+
 					"to upstream http server: %v", err)
 				return
 			}
@@ -180,7 +178,7 @@ func (p *WebsocketProxy) upgradeToWebSocketProxy(w http.ResponseWriter,
 	// to the WebSocket.
 	for responseForwarder.Scan() {
 		if len(responseForwarder.Bytes()) == 0 {
-			p.logger.Errorf("WS: empty scan: %v",
+			log.Errorf("WS: empty scan: %v",
 				responseForwarder.Err())
 
 			continue
@@ -190,12 +188,12 @@ func (p *WebsocketProxy) upgradeToWebSocketProxy(w http.ResponseWriter,
 			websocket.TextMessage, responseForwarder.Bytes(),
 		)
 		if err != nil {
-			p.logger.Errorf("WS: error writing message: %v", err)
+			log.Errorf("WS: error writing message: %v", err)
 			return
 		}
 	}
 	if err := responseForwarder.Err(); err != nil && !IsClosedConnError(err) {
-		p.logger.Errorf("WS: scanner err: %v", err)
+		log.Errorf("WS: scanner err: %v", err)
 	}
 }
 

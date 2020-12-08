@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -277,7 +278,7 @@ func (s *SubSwapper) backupUpdater() {
 			)
 			for i, closedChan := range chanUpdate.ClosedChans {
 				log.Debugf("Removing channel %v from backup "+
-					"state", newLogClosure(func() string {
+					"state", log.C(func() string {
 					return chanUpdate.ClosedChans[i].String()
 				}))
 

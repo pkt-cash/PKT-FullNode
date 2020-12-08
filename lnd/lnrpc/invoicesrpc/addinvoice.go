@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 
 	"github.com/pkt-cash/pktd/lnd/channeldb"
@@ -355,7 +356,7 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	}
 
 	log.Tracef("[addinvoice] adding new invoice %v",
-		newLogClosure(func() string {
+		log.C(func() string {
 			return spew.Sdump(newInvoice)
 		}),
 	)

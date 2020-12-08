@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lntypes"
 	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/lnd/zpay32"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // invoiceExpiry holds and invoice's payment hash and its expiry. This

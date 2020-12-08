@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // missionControlState is an object that manages the internal mission control

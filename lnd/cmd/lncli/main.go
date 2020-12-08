@@ -14,10 +14,10 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/urfave/cli"
 
 	"golang.org/x/crypto/ssh/terminal"
@@ -234,7 +234,7 @@ func extractPathArgs(ctx *cli.Context) (string, string, er.R) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "lncli"
-	app.Version = build.Version() + " commit=" + build.Commit
+	app.Version = version.Version()
 	app.Usage = "control plane for your Lightning Network Daemon (lnd)"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

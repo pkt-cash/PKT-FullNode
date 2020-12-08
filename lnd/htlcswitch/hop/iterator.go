@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // Iterator is an interface that abstracts away the routing information

@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/queue"
 	"github.com/pkt-cash/pktd/lnd/record"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (

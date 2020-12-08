@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/routing"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 

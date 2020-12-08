@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -459,7 +460,7 @@ func queryChainServiceBatch(
 
 				log.Tracef("Query for #%v failed, moving "+
 					"on: %v", handleQuery,
-					newLogClosure(func() string {
+					log.C(func() string {
 						return spew.Sdump(queryMsgs[handleQuery])
 					}))
 

@@ -16,12 +16,13 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/arl/statsviz"
 	"github.com/pkt-cash/pktd/blockchain/indexers"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/limits"
 	"github.com/pkt-cash/pktd/pktconfig/version"
-	"github.com/arl/statsviz"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -57,22 +58,22 @@ func pktdMain(serverChan chan<- *server) er.R {
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from
 	// another subsystem such as the RPC server.
 	interrupt := interruptListener()
-	defer pktdLog.Info("Shutdown complete")
+	defer log.Info("Shutdown complete")
 
 	// Show version at startup.
-	pktdLog.Infof("Version %s", version.Version())
+	log.Infof("Version %s", version.Version())
 
-	version.WarnIfPrerelease(pktdLog)
+	log.WarnIfPrerelease()
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
 		go func() {
 			listenAddr := net.JoinHostPort("", cfg.Profile)
-			pktdLog.Infof("Profile server listening on %s", listenAddr)
+			log.Infof("Profile server listening on %s", listenAddr)
 			profileRedirect := http.RedirectHandler("/debug/pprof",
 				http.StatusSeeOther)
 			http.Handle("/", profileRedirect)
-			pktdLog.Errorf("%v", http.ListenAndServe(listenAddr, nil))
+			log.Errorf("%v", http.ListenAndServe(listenAddr, nil))
 		}()
 	}
 
@@ -80,13 +81,13 @@ func pktdMain(serverChan chan<- *server) er.R {
 	if cfg.CPUProfile != "" {
 		f, errr := os.Create(cfg.CPUProfile)
 		if errr != nil {
-			pktdLog.Errorf("Unable to create cpu profile: %v", err)
+			log.Errorf("Unable to create cpu profile: %v", err)
 			return er.E(errr)
 		}
 		if errp := pprof.StartCPUProfile(f); errp != nil {
-            pktdLog.Errorf("could not start CPU profile: ", errp)
+			log.Errorf("could not start CPU profile: ", errp)
 			return er.E(errp)
-        }
+		}
 		defer f.Close()
 		defer pprof.StopCPUProfile()
 	}
@@ -94,21 +95,21 @@ func pktdMain(serverChan chan<- *server) er.R {
 	// Enable StatsViz server if requested.
 	if cfg.StatsViz != "" {
 		statsvizAddr := net.JoinHostPort("", cfg.StatsViz)
-		pktdLog.Infof("StatsViz server listening on %s", statsvizAddr)
+		log.Infof("StatsViz server listening on %s", statsvizAddr)
 		smux := http.NewServeMux()
 		statsvizRedirect := http.RedirectHandler("/debug/statsviz", http.StatusSeeOther)
 		smux.Handle("/", statsvizRedirect)
 		if err := statsviz.Register(smux, statsviz.Root("/debug/statsviz")); err != nil {
-			pktdLog.Errorf("%v", err)
+			log.Errorf("%v", err)
 		}
 		go func() {
-			pktdLog.Errorf("%v", http.ListenAndServe(statsvizAddr, smux))
+			log.Errorf("%v", http.ListenAndServe(statsvizAddr, smux))
 		}()
 	}
 
 	// Perform upgrades to pktd as new versions require it.
 	if err := doUpgrades(); err != nil {
-		pktdLog.Errorf("%v", err)
+		log.Errorf("%v", err)
 		return err
 	}
 
@@ -120,12 +121,12 @@ func pktdMain(serverChan chan<- *server) er.R {
 	// Load the block database.
 	db, err := loadBlockDB()
 	if err != nil {
-		pktdLog.Errorf("%v", err)
+		log.Errorf("%v", err)
 		return err
 	}
 	defer func() {
 		// Ensure the database is sync'd and closed on shutdown.
-		pktdLog.Infof("Gracefully shutting down the database...")
+		log.Infof("Gracefully shutting down the database...")
 		db.Close()
 	}()
 
@@ -140,7 +141,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 	// drops the address index since it relies on it.
 	if cfg.DropAddrIndex {
 		if err := indexers.DropAddrIndex(db, interrupt); err != nil {
-			pktdLog.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return err
 		}
 
@@ -148,7 +149,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 	}
 	if cfg.DropTxIndex {
 		if err := indexers.DropTxIndex(db, interrupt); err != nil {
-			pktdLog.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return err
 		}
 
@@ -156,7 +157,7 @@ func pktdMain(serverChan chan<- *server) er.R {
 	}
 	if cfg.DropCfIndex {
 		if err := indexers.DropCfIndex(db, interrupt); err != nil {
-			pktdLog.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return err
 		}
 
@@ -168,14 +169,14 @@ func pktdMain(serverChan chan<- *server) er.R {
 		cfg.AgentWhitelist, db, activeNetParams.Params, interrupt)
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
-		pktdLog.Errorf("Unable to start server on %v: %v",
+		log.Errorf("Unable to start server on %v: %v",
 			cfg.Listeners, err)
 		return err
 	}
 	defer func() {
 		// Shut down in 2 minutes, or just pull the plug.
 		const shutdownTimeout = 2 * time.Minute
-		pktdLog.Infof("Attempting graceful shutdown (%s timeout)...", shutdownTimeout)
+		log.Infof("Attempting graceful shutdown (%s timeout)...", shutdownTimeout)
 		server.Stop()
 		shutdownDone := make(chan struct{})
 		go func() {
@@ -186,11 +187,11 @@ func pktdMain(serverChan chan<- *server) er.R {
 		select {
 		case <-shutdownDone:
 		case <-time.Tick(shutdownTimeout):
-		pktdLog.Errorf("Graceful shutdown in %s failed - forcefully terminating in 5s...", shutdownTimeout)
-		time.Sleep(5 * time.Second)
-		panic("Forcefully terminating the server process...")
+			log.Errorf("Graceful shutdown in %s failed - forcefully terminating in 5s...", shutdownTimeout)
+			time.Sleep(5 * time.Second)
+			panic("Forcefully terminating the server process...")
 		}
-		srvrLog.Infof("Server shutdown complete")
+		log.Infof("Server shutdown complete")
 	}()
 
 	server.Start()
@@ -216,7 +217,7 @@ func removeRegressionDB(dbPath string) er.R {
 	// Remove the old regression test database if it already exists.
 	fi, err := os.Stat(dbPath)
 	if err == nil {
-		pktdLog.Infof("Removing regression test database from '%s'", dbPath)
+		log.Infof("Removing regression test database from '%s'", dbPath)
 		if fi.IsDir() {
 			errr := os.RemoveAll(dbPath)
 			if errr != nil {
@@ -268,7 +269,7 @@ func warnMultipleDBs() {
 	// Warn if there are extra databases.
 	if len(duplicateDbPaths) > 0 {
 		selectedDbPath := blockDbPath(cfg.DbType)
-		pktdLog.Warnf("WARNING: There are multiple block chain databases "+
+		log.Warnf("WARNING: There are multiple block chain databases "+
 			"using different database types.\nYou probably don't "+
 			"want to waste disk space by having more than one.\n"+
 			"Your current database is located at [%v].\nThe "+
@@ -287,7 +288,7 @@ func loadBlockDB() (database.DB, er.R) {
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
 	if cfg.DbType == "memdb" {
-		pktdLog.Infof("Creating block database in memory.")
+		log.Infof("Creating block database in memory.")
 		db, err := database.Create(cfg.DbType)
 		if err != nil {
 			return nil, err
@@ -304,7 +305,7 @@ func loadBlockDB() (database.DB, er.R) {
 	// each run, so remove it now if it already exists.
 	removeRegressionDB(dbPath)
 
-	pktdLog.Infof("Loading block database from '%s'", dbPath)
+	log.Infof("Loading block database from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, dbPath, activeNetParams.Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
@@ -324,13 +325,13 @@ func loadBlockDB() (database.DB, er.R) {
 		}
 	}
 
-	pktdLog.Info("Block database loaded")
+	log.Info("Block database loaded")
 	return db, nil
 }
 
 func main() {
 	version.SetUserAgentName("pktd")
-	runtime.GOMAXPROCS(runtime.NumCPU()*6)
+	runtime.GOMAXPROCS(runtime.NumCPU() * 6)
 
 	// Block and transaction processing can cause bursty allocations.  This
 	// limits the garbage collector from excessively overallocating during

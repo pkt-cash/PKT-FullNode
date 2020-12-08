@@ -8,6 +8,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/keychain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // ChannelRestorer is an interface that allows the Recover method to map the
@@ -64,7 +65,7 @@ func Recover(backups []Single, restorer ChannelRestorer,
 		log.Infof("Attempting to connect to node=%x (addrs=%v) to "+
 			"restore ChannelPoint(%v)",
 			backup.RemoteNodePub.SerializeCompressed(),
-			newLogClosure(func() string {
+			log.C(func() string {
 				return spew.Sdump(backups[i].Addresses)
 			}), backup.FundingOutpoint)
 

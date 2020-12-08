@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // MigrateRouteSerialization migrates the way we serialize routes across the

@@ -30,20 +30,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pktlog
+package log
 
 import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
+
+	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
 // defaultFlags specifies changes to the default logger behavior.  It is set
@@ -104,6 +105,7 @@ const (
 	LevelError
 	LevelCritical
 	LevelOff
+	LevelInvalid
 )
 
 // levelStrs defines the human-readable names for each logging level.
@@ -133,6 +135,59 @@ func LevelFromString(s string) (l Level, ok bool) {
 	}
 }
 
+// SetLogLevels attempts to parse the specified debug level and set
+// the levels accordingly.  An appropriate error is returned if anything is
+// invalid.
+func SetLogLevels(debugLevel string) er.R {
+	// When the specified string doesn't have any delimters, treat it as
+	// the log level for all subsystems.
+	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
+		if lvl, ok := LevelFromString(debugLevel); !ok {
+			return er.Errorf("The specified debug level [%v] is invalid", debugLevel)
+		} else {
+			b.lock.Lock()
+			defer b.lock.Unlock()
+			b.lvl = lvl
+		}
+		return nil
+	}
+
+	// Split the specified string into subsystem/level pairs while detecting
+	// issues and update the log levels accordingly.
+	glvl := LevelInvalid
+	m := make(map[string]Level)
+	for _, logLevelPair := range strings.Split(debugLevel, ",") {
+		if !strings.Contains(logLevelPair, "=") {
+			if lvl, ok := LevelFromString(logLevelPair); !ok {
+				return er.Errorf("The specified debug level [%v] is invalid", logLevelPair)
+			} else {
+				glvl = lvl
+			}
+			str := "The specified debug level contains an invalid " +
+				"subsystem/level pair [%v]"
+			return er.Errorf(str, logLevelPair)
+		}
+
+		// Extract the specified subsystem and log level.
+		fields := strings.Split(logLevelPair, "=")
+		subsysID, logLevel := fields[0], fields[1]
+
+		if lvl, ok := LevelFromString(logLevel); !ok {
+			return er.Errorf("The specified debug level [%v] is invalid", logLevel)
+		} else {
+			m[subsysID] = lvl
+		}
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if glvl != LevelInvalid {
+		b.lvl = glvl
+	}
+	b.lmap = m
+	return nil
+}
+
 // String returns the tag of the logger used in log messages, or "OFF" if
 // the level will not produce any log output.
 func (l Level) String() string {
@@ -147,6 +202,8 @@ func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
 	b := &Backend{
 		flag: defaultFlags,
 		ch:   make(chan *[]byte, 1024),
+		lvl:  LevelTrace,
+		lmap: make(map[string]Level),
 	}
 	for _, o := range opts {
 		o(b)
@@ -159,14 +216,6 @@ func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
 		}
 	}()
 	return b
-}
-
-// Backend is a logging backend.  Subsystems created from the backend write to
-// the backend's Writer.  Backend provides atomic writes to the Writer from all
-// subsystems.
-type Backend struct {
-	ch   chan *[]byte
-	flag uint32
 }
 
 // BackendOption is a function used to modify the behavior of a Backend.
@@ -296,19 +345,19 @@ func Int(num int) string {
 // Appends a header in the default format 'YYYY-MM-DD hh:mm:ss.sss [LVL] TAG: '.
 // If either of the Lshortfile or Llongfile flags are specified, the file named
 // and line number are included after the tag and before the final colon.
-func formatHeader(flags uint32, buf *[]byte, t time.Time, lvl, tag string, file string, line int) bool {
+func formatHeader(flags uint32, buf *[]byte, t time.Time, lvl Level, file string, line int) bool {
 
 	hasColor := false
 	if flags&Lcolor == Lcolor {
 		hasColor = true
 		switch lvl {
-		case "DBG":
+		case LevelDebug:
 			*buf = append(*buf, colorDbg...)
-		case "WRN":
+		case LevelWarn:
 			*buf = append(*buf, colorWarn...)
-		case "ERR":
+		case LevelError:
 			*buf = append(*buf, colorErr...)
-		case "CRT":
+		case LevelCritical:
 			*buf = append(*buf, colorCrit...)
 		default:
 			hasColor = false
@@ -337,16 +386,14 @@ func formatHeader(flags uint32, buf *[]byte, t time.Time, lvl, tag string, file 
 		itoa(buf, int(t.Unix()), -1)
 	}
 	*buf = append(*buf, " ["...)
-	*buf = append(*buf, lvl...)
+	*buf = append(*buf, lvl.String()...)
 	*buf = append(*buf, "] "...)
-	*buf = append(*buf, tag...)
-	if file != "" {
-		*buf = append(*buf, ' ')
+	if flags&(Lshortfile|Llongfile) != 0 {
 		*buf = append(*buf, file...)
 		*buf = append(*buf, ':')
 		itoa(buf, line, -1)
+		*buf = append(*buf, ' ')
 	}
-	*buf = append(*buf, ": "...)
 
 	return hasColor
 }
@@ -359,47 +406,22 @@ const calldepth = 3
 
 // callsite returns the file name and line number of the callsite to the
 // subsystem logger.
-func callsite(flag uint32) (string, int) {
+func callsite(flag uint32) (string, string, int) {
 	_, file, line, ok := runtime.Caller(calldepth)
 	if !ok {
-		return "???", 0
+		return "???", "", 0
+	}
+	short := file
+	for i := len(file) - 1; i > 0; i-- {
+		if os.IsPathSeparator(file[i]) {
+			short = file[i+1:]
+			break
+		}
 	}
 	if flag&Lshortfile != 0 {
-		short := file
-		for i := len(file) - 1; i > 0; i-- {
-			if os.IsPathSeparator(file[i]) {
-				short = file[i+1:]
-				break
-			}
-		}
 		file = short
 	}
-	return file, line
-}
-
-// print outputs a log message to the writer associated with the backend after
-// creating a prefix for the given level and tag according to the formatHeader
-// function and formatting the provided arguments using the default formatting
-// rules.
-func (b *Backend) print(lvl, tag string, args ...interface{}) {
-	t := time.Now() // get as early as possible
-
-	bytebuf := buffer()
-
-	var file string
-	var line int
-	if b.flag&(Lshortfile|Llongfile) != 0 {
-		file, line = callsite(b.flag)
-	}
-
-	hasColor := formatHeader(b.flag, bytebuf, t, lvl, tag, file, line)
-	buf := bytes.NewBuffer(*bytebuf)
-	fmt.Fprintln(buf, args...)
-	*bytebuf = buf.Bytes()
-	if hasColor {
-		*bytebuf = append(*bytebuf, Reset...)
-	}
-	b.write(bytebuf)
+	return file, short, line
 }
 
 func (b *Backend) write(buf *[]byte) {
@@ -412,24 +434,51 @@ func (b *Backend) write(buf *[]byte) {
 	}
 }
 
-// printf outputs a log message to the writer associated with the backend after
+// Backend is a logging backend.  Subsystems created from the backend write to
+// the backend's Writer.  Backend provides atomic writes to the Writer from all
+// subsystems.
+type Backend struct {
+	ch   chan *[]byte
+	flag uint32
+
+	lock sync.RWMutex
+	lvl  Level
+	lmap map[string]Level
+}
+
+var b = NewBackend(os.Stdout)
+
+// doLog outputs a log message to the writer associated with the backend after
 // creating a prefix for the given level and tag according to the formatHeader
 // function and formatting the provided arguments according to the given format
 // specifier.
-func (b *Backend) printf(lvl, tag string, format string, args ...interface{}) {
-	t := time.Now() // get as early as possible
-
-	bytebuf := buffer()
-
-	var file string
-	var line int
-	if b.flag&(Lshortfile|Llongfile) != 0 {
-		file, line = callsite(b.flag)
+func doLog(
+	lvl Level,
+	format string,
+	args ...interface{},
+) {
+	file, keyFile, line := callsite(b.flag)
+	doit := true
+	b.lock.RLock()
+	if lvl <= b.lvl {
+	} else if lvl1 := b.lmap[keyFile]; lvl <= lvl1 {
+	} else {
+		doit = false
+	}
+	b.lock.RUnlock()
+	if !doit {
+		return
 	}
 
-	hasColor := formatHeader(b.flag, bytebuf, t, lvl, tag, file, line)
+	t := time.Now()
+	bytebuf := buffer()
+	hasColor := formatHeader(b.flag, bytebuf, t, lvl, file, line)
 	buf := bytes.NewBuffer(*bytebuf)
-	fmt.Fprintf(buf, format, args...)
+	if format == "" {
+		fmt.Fprintln(buf, args...)
+	} else {
+		fmt.Fprintf(buf, format, args...)
+	}
 	*bytebuf = buf.Bytes()
 	if hasColor {
 		*bytebuf = append(*bytebuf, Reset...)
@@ -439,169 +488,122 @@ func (b *Backend) printf(lvl, tag string, format string, args ...interface{}) {
 	b.write(bytebuf)
 }
 
-// Logger returns a new logger for a particular subsystem that writes to the
-// Backend b.  A tag describes the subsystem and is included in all log
-// messages.  The logger uses the info verbosity level by default.
-func (b *Backend) Logger(subsystemTag string) Logger {
-	return &slog{LevelInfo, subsystemTag, b}
-}
-
-// slog is a subsystem logger for a Backend.  Implements the Logger interface.
-type slog struct {
-	lvl Level // atomic
-	tag string
-	b   *Backend
-}
-
 // Trace formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelTrace.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Trace(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelTrace {
-		l.b.print("TRC", l.tag, args...)
-	}
+func Trace(args ...interface{}) {
+	doLog(LevelTrace, "", args...)
 }
 
 // Tracef formats message according to format specifier, prepends the prefix as
 // necessary, and writes to log with LevelTrace.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Tracef(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelTrace {
-		l.b.printf("TRC", l.tag, format, args...)
-	}
+func Tracef(format string, args ...interface{}) {
+	doLog(LevelTrace, format, args...)
 }
 
 // Debug formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelDebug.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Debug(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelDebug {
-		l.b.print("DBG", l.tag, args...)
-	}
+func Debug(args ...interface{}) {
+	doLog(LevelDebug, "", args...)
 }
 
 // Debugf formats message according to format specifier, prepends the prefix as
 // necessary, and writes to log with LevelDebug.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Debugf(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelDebug {
-		l.b.printf("DBG", l.tag, format, args...)
-	}
+func Debugf(format string, args ...interface{}) {
+	doLog(LevelDebug, format, args...)
 }
 
 // Info formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelInfo.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Info(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelInfo {
-		l.b.print("INF", l.tag, args...)
-	}
+func Info(args ...interface{}) {
+	doLog(LevelInfo, "", args...)
 }
 
 // Infof formats message according to format specifier, prepends the prefix as
 // necessary, and writes to log with LevelInfo.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Infof(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelInfo {
-		l.b.printf("INF", l.tag, format, args...)
-	}
+func Infof(format string, args ...interface{}) {
+	doLog(LevelInfo, format, args...)
 }
 
 // Warn formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelWarn.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Warn(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelWarn {
-		l.b.print("WRN", l.tag, args...)
-	}
+func Warn(args ...interface{}) {
+	doLog(LevelWarn, "", args...)
 }
 
 // Warnf formats message according to format specifier, prepends the prefix as
 // necessary, and writes to log with LevelWarn.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Warnf(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelWarn {
-		l.b.printf("WRN", l.tag, format, args...)
-	}
+func Warnf(format string, args ...interface{}) {
+	doLog(LevelWarn, format, args...)
 }
 
 // Error formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelError.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Error(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelError {
-		l.b.print("ERR", l.tag, args...)
-	}
+func Error(args ...interface{}) {
+	doLog(LevelError, "", args...)
 }
 
 // Errorf formats message according to format specifier, prepends the prefix as
 // necessary, and writes to log with LevelError.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Errorf(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelError {
-		l.b.printf("ERR", l.tag, format, args...)
-	}
+func Errorf(format string, args ...interface{}) {
+	doLog(LevelError, format, args...)
 }
 
 // Critical formats message using the default formats for its operands, prepends
 // the prefix as necessary, and writes to log with LevelCritical.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Critical(args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelCritical {
-		l.b.print("CRT", l.tag, args...)
-	}
+func Critical(args ...interface{}) {
+	doLog(LevelCritical, "", args...)
 }
 
 // Criticalf formats message according to format specifier, prepends the prefix
 // as necessary, and writes to log with LevelCritical.
 //
 // This is part of the Logger interface implementation.
-func (l *slog) Criticalf(format string, args ...interface{}) {
-	lvl := l.Level()
-	if lvl <= LevelCritical {
-		l.b.printf("CRT", l.tag, format, args...)
+func Criticalf(format string, args ...interface{}) {
+	doLog(LevelCritical, format, args...)
+}
+
+// logClosure is used to provide a closure over expensive logging operations so
+// don't have to be performed when the logging level doesn't warrant it.
+type logClosure func() string
+
+// String invokes the underlying function and returns the result.
+func (c logClosure) String() string {
+	return c()
+}
+
+// log.C returns a new closure over a function that returns a string
+// which itself provides a Stringer interface so that it can be used with the
+// logging system.
+func C(c func() string) logClosure {
+	return logClosure(c)
+}
+
+func WarnIfPrerelease() {
+	if version.IsCustom() || version.IsDirty() {
+		Warnf("THIS IS A DEVELOPMENT VERSION, THINGS MAY BREAK")
+	} else if version.IsPrerelease() {
+		Infof("This is a pre-release version")
 	}
-}
-
-// Level returns the current logging level
-//
-// This is part of the Logger interface implementation.
-func (l *slog) Level() Level {
-	return Level(atomic.LoadUint32((*uint32)(&l.lvl)))
-}
-
-// SetLevel changes the logging level to the passed level.
-//
-// This is part of the Logger interface implementation.
-func (l *slog) SetLevel(level Level) {
-	atomic.StoreUint32((*uint32)(&l.lvl), uint32(level))
-}
-
-// Disabled is a Logger that will never output anything.
-var Disabled Logger
-
-func init() {
-	Disabled = &slog{lvl: LevelOff, b: NewBackend(ioutil.Discard)}
 }

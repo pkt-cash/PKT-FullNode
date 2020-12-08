@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
 )

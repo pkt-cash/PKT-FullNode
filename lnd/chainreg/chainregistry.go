@@ -27,6 +27,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/chainview"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/rpcclient"

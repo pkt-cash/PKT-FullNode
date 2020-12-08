@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (

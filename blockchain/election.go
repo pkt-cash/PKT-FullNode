@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"

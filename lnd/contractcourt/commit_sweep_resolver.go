@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -64,7 +65,6 @@ func newCommitSweepResolver(res lnwallet.CommitOutputResolution,
 		chanPoint:           chanPoint,
 	}
 
-	r.initLogger(r)
 	r.initReport()
 
 	return r
@@ -154,7 +154,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 
 	unlockHeight := confHeight + c.commitResolution.MaturityDelay
 
-	c.log.Debugf("commit conf_height=%v, unlock_height=%v",
+	log.Debugf("commit conf_height=%v, unlock_height=%v",
 		confHeight, unlockHeight)
 
 	// Update report now that we learned the confirmation height.
@@ -164,7 +164,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 
 	// If there is a csv delay, we'll wait for that.
 	if c.commitResolution.MaturityDelay > 0 {
-		c.log.Debugf("waiting for csv lock to expire at height %v",
+		log.Debugf("waiting for csv lock to expire at height %v",
 			unlockHeight)
 
 		// We only need to wait for the block before the block that
@@ -181,7 +181,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 	isLocalCommitTx := c.commitResolution.SelfOutputSignDesc.WitnessScript[0] == opcode.OP_IF
 	isDelayedOutput := c.commitResolution.MaturityDelay != 0
 
-	c.log.Debugf("isDelayedOutput=%v, isLocalCommitTx=%v", isDelayedOutput,
+	log.Debugf("isDelayedOutput=%v, isLocalCommitTx=%v", isDelayedOutput,
 		isLocalCommitTx)
 
 	// There're three types of commitments, those that have tweaks
@@ -212,7 +212,7 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 		witnessType = input.CommitmentNoDelay
 	}
 
-	c.log.Infof("Sweeping with witness type: %v", witnessType)
+	log.Infof("Sweeping with witness type: %v", witnessType)
 
 	// We'll craft an input with all the information required for
 	// the sweeper to create a fully valid sweeping transaction to
@@ -227,12 +227,12 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 
 	// With our input constructed, we'll now offer it to the
 	// sweeper.
-	c.log.Infof("sweeping commit output")
+	log.Infof("sweeping commit output")
 
 	feePref := sweep.FeePreference{ConfTarget: commitOutputConfTarget}
 	resultChan, err := c.Sweeper.SweepInput(inp, sweep.Params{Fee: feePref})
 	if err != nil {
-		c.log.Errorf("unable to sweep input: %v", err)
+		log.Errorf("unable to sweep input: %v", err)
 
 		return nil, err
 	}
@@ -252,16 +252,16 @@ func (c *commitSweepResolver) Resolve() (ContractResolver, er.R) {
 			// it's likely what we sent was actually a revoked
 			// commitment. Report the error and continue to wrap up
 			// the contract.
-			c.log.Warnf("local commitment output was swept by "+
+			log.Warnf("local commitment output was swept by "+
 				"remote party via %v", sweepResult.Tx.TxHash())
 			outcome = channeldb.ResolverOutcomeUnclaimed
 		case sweepResult.Err == nil:
 			// No errors, therefore continue processing.
-			c.log.Infof("local commitment output fully resolved by "+
+			log.Infof("local commitment output fully resolved by "+
 				"sweep tx: %v", sweepResult.Tx.TxHash())
 		default:
 			// Unknown errors.
-			c.log.Errorf("unable to sweep input: %v",
+			log.Errorf("unable to sweep input: %v",
 				sweepResult.Err)
 
 			return nil, sweepResult.Err
@@ -371,7 +371,6 @@ func newCommitSweepResolverFromReader(r io.Reader, resCfg ResolverConfig) (
 	// removed this, but keep in mind that this data may still be present in
 	// the database.
 
-	c.initLogger(c)
 	c.initReport()
 
 	return c, nil

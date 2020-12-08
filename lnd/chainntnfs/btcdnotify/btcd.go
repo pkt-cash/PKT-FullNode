@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/queue"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -295,7 +296,7 @@ out:
 		case cancelMsg := <-b.notificationCancels:
 			switch msg := cancelMsg.(type) {
 			case *epochCancel:
-				chainntnfs.Log.Infof("Cancelling epoch "+
+				log.Infof("Cancelling epoch "+
 					"notification, epoch_id=%v", msg.epochID)
 
 				// First, we'll lookup the original
@@ -336,7 +337,7 @@ out:
 						msg.StartHeight, msg.EndHeight,
 					)
 					if err != nil {
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 						return
 					}
 
@@ -351,12 +352,12 @@ out:
 						msg.ConfRequest, confDetails,
 					)
 					if err != nil {
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 					}
 				}()
 
 			case *blockEpochRegistration:
-				chainntnfs.Log.Infof("New block epoch subscription")
+				log.Infof("New block epoch subscription")
 
 				b.blockEpochClients[msg.epochID] = msg
 
@@ -400,7 +401,7 @@ out:
 				blockHeader, err :=
 					b.chainConn.GetBlockHeader(update.blockHash)
 				if err != nil {
-					chainntnfs.Log.Errorf("Unable to fetch "+
+					log.Errorf("Unable to fetch "+
 						"block header: %v", err)
 					continue
 				}
@@ -409,7 +410,7 @@ out:
 					// Handle the case where the notifier
 					// missed some blocks from its chain
 					// backend
-					chainntnfs.Log.Infof("Missed blocks, " +
+					log.Infof("Missed blocks, " +
 						"attempting to catch up")
 					newBestBlock, missedBlocks, err :=
 						chainntnfs.HandleMissedBlocks(
@@ -423,14 +424,14 @@ out:
 						// Set the bestBlock here in case
 						// a catch up partially completed.
 						b.bestBlock = newBestBlock
-						chainntnfs.Log.Error(err)
+						log.Error(err)
 						continue
 					}
 
 					for _, block := range missedBlocks {
 						err := b.handleBlockConnected(block)
 						if err != nil {
-							chainntnfs.Log.Error(err)
+							log.Error(err)
 							continue out
 						}
 					}
@@ -441,13 +442,13 @@ out:
 					Hash:   update.blockHash,
 				}
 				if err := b.handleBlockConnected(newBlock); err != nil {
-					chainntnfs.Log.Error(err)
+					log.Error(err)
 				}
 				continue
 			}
 
 			if update.blockHeight != b.bestBlock.Height {
-				chainntnfs.Log.Infof("Missed disconnected" +
+				log.Infof("Missed disconnected" +
 					"blocks, attempting to catch up")
 			}
 
@@ -456,7 +457,7 @@ out:
 				update.blockHeight-1,
 			)
 			if err != nil {
-				chainntnfs.Log.Errorf("Unable to rewind chain "+
+				log.Errorf("Unable to rewind chain "+
 					"from height %d to height %d: %v",
 					b.bestBlock.Height, update.blockHeight-1, err)
 			}
@@ -479,7 +480,7 @@ out:
 				newSpend.tx, uint32(newSpend.details.Height),
 			)
 			if err != nil {
-				chainntnfs.Log.Errorf("Unable to process "+
+				log.Errorf("Unable to process "+
 					"transaction %v: %v",
 					newSpend.tx.Hash(), err)
 			}
@@ -523,7 +524,7 @@ func (b *BtcdNotifier) historicalConfDetails(confRequest chainntnfs.ConfRequest,
 	// We failed querying the index for the transaction, fall back to
 	// scanning manually.
 	case err != nil:
-		chainntnfs.Log.Debugf("Unable to determine confirmation of %v "+
+		log.Debugf("Unable to determine confirmation of %v "+
 			"through the backend's txindex (%v), scanning manually",
 			confRequest.TxID, err)
 
@@ -636,7 +637,7 @@ func (b *BtcdNotifier) handleBlockConnected(epoch chainntnfs.BlockEpoch) er.R {
 		return er.Errorf("unable to connect tip: %v", errr)
 	}
 
-	chainntnfs.Log.Infof("New block: height=%v, sha=%v", epoch.Height,
+	log.Infof("New block: height=%v, sha=%v", epoch.Height,
 		epoch.Hash)
 
 	// Now that we've guaranteed the new block extends the txNotifier's
@@ -748,7 +749,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 		asyncResult := b.chainConn.RescanAsync(startHash, addrs, nil)
 		go func() {
 			if rescanErr := asyncResult.Receive(); rescanErr != nil {
-				chainntnfs.Log.Errorf("Rescan to determine "+
+				log.Errorf("Rescan to determine "+
 					"the spend details of %v failed: %v",
 					ntfn.HistoricalDispatch.SpendRequest,
 					rescanErr)
@@ -854,7 +855,7 @@ func (b *BtcdNotifier) RegisterSpendNtfn(outpoint *wire.OutPoint,
 	)
 	go func() {
 		if rescanErr := asyncResult.Receive(); rescanErr != nil {
-			chainntnfs.Log.Errorf("Rescan to determine the spend "+
+			log.Errorf("Rescan to determine the spend "+
 				"details of %v failed: %v", outpoint, rescanErr)
 		}
 	}()

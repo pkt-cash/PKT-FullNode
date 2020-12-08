@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcjson"
@@ -24,7 +25,6 @@ import (
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/neutrino/banman"
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -35,12 +35,12 @@ import (
 )
 
 var (
-	// Try pktlog.LevelInfo for output like you'd see in normal operation,
-	// or pktlog.LevelTrace to help debug code. Anything but
-	// pktlog.LevelOff turns on log messages from the tests themselves as
+	// Try log.LevelInfo for output like you'd see in normal operation,
+	// or log.LevelTrace to help debug code. Anything but
+	// log.LevelOff turns on log messages from the tests themselves as
 	// well. Keep in mind some log messages may not appear in order due to
 	// use of multiple query goroutines in the tests.
-	logLevel    = pktlog.LevelOff
+	logLevel    = log.LevelOff
 	syncTimeout = 30 * time.Second
 	syncUpdate  = time.Second
 
@@ -995,7 +995,7 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 				"blocks, filters, and filter headers.")
 		}
 	}
-	if logLevel != pktlog.LevelOff {
+	if logLevel != log.LevelOff {
 		t.Logf("Finished checking %d blocks and their cfilters",
 			haveBest.Height)
 	}
@@ -1009,14 +1009,6 @@ func TestNeutrinoSync(t *testing.T) {
 		t.Skip("Skipping TestNeutrinoSync because it is slow, use ALL_TESTS=1 to enable")
 		return
 	}
-	// Set up logging.
-	logger := pktlog.NewBackend(os.Stdout)
-	chainLogger := logger.Logger("CHAIN")
-	chainLogger.SetLevel(logLevel)
-	neutrino.UseLogger(chainLogger)
-	rpcLogger := logger.Logger("RPCC")
-	rpcLogger.SetLevel(logLevel)
-	rpcclient.UseLogger(rpcLogger)
 
 	// Create a btcd SimNet node and generate 800 blocks
 	h1, err := rpctest.New(
@@ -1192,7 +1184,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 	if err != nil {
 		return err
 	}
-	if logLevel != pktlog.LevelOff {
+	if logLevel != log.LevelOff {
 		t.Logf("Syncing to %d (%s)", knownBestHeight, knownBestHash)
 	}
 	var haveBest *waddrmgr.BlockStamp
@@ -1256,7 +1248,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 		total += syncUpdate
 	}
 
-	if logLevel != pktlog.LevelOff {
+	if logLevel != log.LevelOff {
 		t.Logf("Synced cfheaders to %d (%s)", haveBest.Height,
 			haveBest.Hash)
 	}
@@ -1286,7 +1278,7 @@ func waitForSync(t *testing.T, svc *neutrino.ChainService,
 			rescanMtx.RUnlock()
 			continue
 		}
-		if logLevel != pktlog.LevelOff {
+		if logLevel != log.LevelOff {
 			t.Logf("Rescan caught up to block %d", rescanHeight)
 		}
 		if rescanHeight == haveBest.Height {
@@ -1499,7 +1491,7 @@ func banPeer(t *testing.T, svc *neutrino.ChainService, harness *rpctest.Harness)
 
 		err := svc.BanPeer(peerAddr, banman.ExceededBanThreshold)
 		if err != nil {
-			if logLevel != pktlog.LevelOff {
+			if logLevel != log.LevelOff {
 				t.Fatalf("unable to ban peer %v: %v", peerAddr,
 					err)
 			}

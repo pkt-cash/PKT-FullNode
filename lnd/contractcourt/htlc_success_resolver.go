@@ -13,6 +13,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/labels"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 

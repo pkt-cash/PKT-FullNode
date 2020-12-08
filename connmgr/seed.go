@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg"

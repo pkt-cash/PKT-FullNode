@@ -2,13 +2,10 @@ package contractcourt
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/lnd/build"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -98,8 +95,6 @@ type ResolverConfig struct {
 type contractResolverKit struct {
 	ResolverConfig
 
-	log pktlog.Logger
-
 	quit chan struct{}
 }
 
@@ -109,12 +104,6 @@ func newContractResolverKit(cfg ResolverConfig) *contractResolverKit {
 		ResolverConfig: cfg,
 		quit:           make(chan struct{}),
 	}
-}
-
-// initLogger initializes the resolver-specific logger.
-func (r *contractResolverKit) initLogger(resolver ContractResolver) {
-	logPrefix := fmt.Sprintf("%T(%v):", resolver, r.ChanPoint)
-	r.log = build.NewPrefixLog(logPrefix, log)
 }
 
 var (

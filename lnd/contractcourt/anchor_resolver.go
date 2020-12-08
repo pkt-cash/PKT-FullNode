@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -66,8 +67,6 @@ func newAnchorResolver(anchorSignDescriptor input.SignDescriptor,
 		chanPoint:            chanPoint,
 		currentReport:        report,
 	}
-
-	r.initLogger(r)
 
 	return r
 }
@@ -136,7 +135,7 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 		// Anchor was swept by someone else. This is possible after the
 		// 16 block csv lock.
 		case sweep.ErrRemoteSpend.Is(sweepRes.Err):
-			c.log.Warnf("our anchor spent by someone else")
+			log.Warnf("our anchor spent by someone else")
 			outcome = channeldb.ResolverOutcomeUnclaimed
 
 		// The sweeper gave up on sweeping the anchor. This happens
@@ -147,12 +146,12 @@ func (c *anchorResolver) Resolve() (ContractResolver, er.R) {
 		//
 		// We consider the anchor as being lost.
 		case sweep.ErrTooManyAttempts.Is(sweepRes.Err):
-			c.log.Warnf("anchor sweep abandoned")
+			log.Warnf("anchor sweep abandoned")
 			outcome = channeldb.ResolverOutcomeUnclaimed
 
 		// An unexpected error occurred.
 		default:
-			c.log.Errorf("unable to sweep anchor: %v", sweepRes.Err)
+			log.Errorf("unable to sweep anchor: %v", sweepRes.Err)
 
 			return nil, sweepRes.Err
 		}

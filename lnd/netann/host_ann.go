@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/ticker"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // HostAnnouncerConfig is the main config for the HostAnnouncer.

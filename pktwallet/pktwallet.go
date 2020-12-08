@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/arl/statsviz"
 	"github.com/pkt-cash/pktd/neutrino"
@@ -62,7 +63,7 @@ func walletMain() er.R {
 
 	// Show version at startup.
 	log.Infof("Version %s", version.Version())
-	version.WarnIfPrerelease(log)
+	log.WarnIfPrerelease()
 
 	// Enable Profile server if requested.
 	if cfg.Profile != "" {
@@ -79,15 +80,15 @@ func walletMain() er.R {
 	// Enable StatsViz server if requested.
 	if cfg.StatsViz != "" {
 		statsvizAddr := net.JoinHostPort("", cfg.StatsViz)
-		pktdLog.Infof("StatsViz server listening on %s", statsvizAddr)
+		log.Infof("StatsViz server listening on %s", statsvizAddr)
 		svmux := http.NewServeMux()
 		statsvizRedirect := http.RedirectHandler("/debug/statsviz", http.StatusSeeOther)
 		svmux.Handle("/", statsvizRedirect)
 		if err := statsviz.Register(svmux, statsviz.Root("/debug/statsviz")); err != nil {
-			pktdLog.Errorf("%v", err)
+			log.Errorf("%v", err)
 		}
 		go func() {
-			pktdLog.Errorf("%v", http.ListenAndServe(statsvizAddr, svmux))
+			log.Errorf("%v", http.ListenAndServe(statsvizAddr, svmux))
 		}()
 	}
 

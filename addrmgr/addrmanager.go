@@ -9,7 +9,6 @@ import (
 	"container/list"
 	crand "crypto/rand" // for seeding
 	"encoding/binary"
-	"github.com/json-iterator/go"
 	"io"
 	"math/rand"
 	"net"
@@ -20,7 +19,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -725,7 +727,7 @@ func (a *AddrManager) reset() {
 	}
 }
 
-// HostToNetAddress returns a netaddress given a host address. 
+// HostToNetAddress returns a netaddress given a host address.
 // If the host is not an IP address it will be resolved
 func (a *AddrManager) HostToNetAddress(host string, port uint16, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
 	var ip net.IP

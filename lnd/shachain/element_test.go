@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-errors/errors"
+	"github.com/pkt-cash/pktd/btcutil/er"
 )
 
 // bitsToIndex is a helper function which takes 'n' last bits as input and

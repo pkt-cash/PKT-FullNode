@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/subscribe"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // PeerNotifier is a subsystem which observes peer offline and online events.

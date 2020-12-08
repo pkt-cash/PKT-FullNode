@@ -9,6 +9,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/netann"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // ChannelGraphTimeSeries is an interface that provides time and block based

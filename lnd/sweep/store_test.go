@@ -3,9 +3,10 @@ package sweep
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
+	"github.com/pkt-cash/pktd/wire"
 )
 
 // TestStore asserts that the store persists the presented data to disk and is

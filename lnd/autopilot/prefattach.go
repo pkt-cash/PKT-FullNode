@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // minMedianChanSizeFraction determines the minimum size a channel must have to

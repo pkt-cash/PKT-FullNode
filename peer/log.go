@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/pktlog"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -20,40 +19,6 @@ const (
 	// that will be logged.
 	maxRejectReasonLen = 250
 )
-
-// log is a logger that is initialized with no output filters.  This
-// means the package will not perform any logging by default until the caller
-// requests it.
-var log pktlog.Logger
-
-// The default amount of logging is none.
-func init() {
-	DisableLog()
-}
-
-// DisableLog disables all library log output.  Logging output is disabled
-// by default until UseLogger is called.
-func DisableLog() {
-	log = pktlog.Disabled
-}
-
-// UseLogger uses a specified Logger to output package logging info.
-func UseLogger(logger pktlog.Logger) {
-	log = logger
-}
-
-// LogClosure is a closure that can be printed with %v to be used to
-// generate expensive-to-create data for a detailed log level and avoid doing
-// the work if the data isn't printed.
-type logClosure func() string
-
-func (c logClosure) String() string {
-	return c()
-}
-
-func newLogClosure(c func() string) logClosure {
-	return logClosure(c)
-}
 
 // directionString is a helper function that returns a string that represents
 // the direction of a connection (inbound or outbound).

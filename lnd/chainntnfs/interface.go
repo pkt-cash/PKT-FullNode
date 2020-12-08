@@ -10,6 +10,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -501,7 +502,7 @@ func RewindChain(chainConn ChainConn, txNotifier *TxNotifier,
 				height, err)
 		}
 
-		Log.Infof("Block disconnected from main chain: "+
+		log.Infof("Block disconnected from main chain: "+
 			"height=%v, sha=%v", height, newBestBlock.Hash)
 
 		err = txNotifier.DisconnectTip(uint32(height))

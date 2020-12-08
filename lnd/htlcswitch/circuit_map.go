@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch/hop"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 var (
@@ -543,7 +544,7 @@ func (cm *circuitMap) CommitCircuits(circuits ...*PaymentCircuit) (
 		inKeys = append(inKeys, circuit.Incoming)
 	}
 
-	log.Tracef("Committing fresh circuits: %v", newLogClosure(func() string {
+	log.Tracef("Committing fresh circuits: %v", log.C(func() string {
 		return spew.Sdump(inKeys)
 	}))
 
@@ -691,7 +692,7 @@ func (cm *circuitMap) OpenCircuits(keystones ...Keystone) er.R {
 		return nil
 	}
 
-	log.Tracef("Opening finalized circuits: %v", newLogClosure(func() string {
+	log.Tracef("Opening finalized circuits: %v", log.C(func() string {
 		return spew.Sdump(keystones)
 	}))
 
@@ -821,7 +822,7 @@ func (cm *circuitMap) CloseCircuit(outKey CircuitKey) (*PaymentCircuit, er.R) {
 // circuit was already cleaned up at a different point in time.
 func (cm *circuitMap) DeleteCircuits(inKeys ...CircuitKey) er.R {
 
-	log.Tracef("Deleting resolved circuits: %v", newLogClosure(func() string {
+	log.Tracef("Deleting resolved circuits: %v", log.C(func() string {
 		return spew.Sdump(inKeys)
 	}))
 

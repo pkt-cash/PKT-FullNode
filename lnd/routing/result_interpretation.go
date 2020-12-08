@@ -6,6 +6,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // Instantiate variables to allow taking a reference from the failure reason.

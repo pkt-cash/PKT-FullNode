@@ -17,6 +17,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/params"
 
 	"github.com/pkt-cash/pktd/blockchain"

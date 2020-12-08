@@ -2,6 +2,7 @@ package wtxmgr
 
 import (
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb/migration"
 )

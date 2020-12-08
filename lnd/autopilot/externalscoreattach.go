@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // ExternalScoreAttachment is an implementation of the AttachmentHeuristic

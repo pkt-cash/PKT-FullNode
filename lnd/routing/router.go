@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 
 	sphinx "github.com/pkt-cash/pktd/lightning-onion"
@@ -1400,7 +1401,7 @@ func (r *ChannelRouter) processUpdate(msg interface{}) er.R {
 		}
 
 		log.Tracef("New channel update applied: %v",
-			newLogClosure(func() string { return spew.Sdump(msg) }))
+			log.C(func() string { return spew.Sdump(msg) }))
 		r.stats.incNumChannelUpdates()
 
 	default:
@@ -1521,7 +1522,7 @@ func (r *ChannelRouter) FindRoute(source, target route.Vertex,
 	}
 
 	go log.Tracef("Obtained path to send %v to %x: %v",
-		amt, target, newLogClosure(func() string {
+		amt, target, log.C(func() string {
 			return spew.Sdump(route)
 		}),
 	)
@@ -1556,7 +1557,7 @@ func generateSphinxPacket(rt *route.Route, paymentHash []byte,
 	}
 
 	log.Tracef("Constructed per-hop payloads for payment_hash=%x: %v",
-		paymentHash[:], newLogClosure(func() string {
+		paymentHash[:], log.C(func() string {
 			path := make([]sphinx.OnionHop, sphinxPath.TrueRouteLength())
 			for i := range path {
 				hopCopy := sphinxPath[i]
@@ -1585,7 +1586,7 @@ func generateSphinxPacket(rt *route.Route, paymentHash []byte,
 	}
 
 	log.Tracef("Generated sphinx packet: %v",
-		newLogClosure(func() string {
+		log.C(func() string {
 			// We make a copy of the ephemeral key and unset the
 			// internal curve here in order to keep the logs from
 			// getting noisy.
@@ -1743,8 +1744,8 @@ func (r *ChannelRouter) SendPaymentAsync(payment *LightningPayment) er.R {
 
 // spewPayment returns a log closures that provides a spewed string
 // representation of the passed payment.
-func spewPayment(payment *LightningPayment) logClosure {
-	return newLogClosure(func() string {
+func spewPayment(payment *LightningPayment) fmt.Stringer {
+	return log.C(func() string {
 		// Make a copy of the payment with a nilled Curve
 		// before spewing.
 		var routeHints [][]zpay32.HopHint
@@ -1835,7 +1836,7 @@ func (r *ChannelRouter) SendToRoute(hash lntypes.Hash, rt *route.Route) (
 	}
 
 	log.Tracef("Dispatching SendToRoute for hash %v: %v",
-		hash, newLogClosure(func() string {
+		hash, log.C(func() string {
 			return spew.Sdump(rt)
 		}),
 	)

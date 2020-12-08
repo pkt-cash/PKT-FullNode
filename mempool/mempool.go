@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -291,9 +292,7 @@ func (mp *TxPool) limitNumOrphans() er.R {
 
 		numOrphans := len(mp.orphans)
 		if numExpired := origNumOrphans - numOrphans; numExpired > 0 {
-			log.Debugf("Expired %d %s (remaining: %d)", numExpired,
-				pickNoun(numExpired, "orphan", "orphans"),
-				numOrphans)
+			log.Debugf("Expired %d orphan(s) (remaining: %d)", numExpired, numOrphans)
 		}
 	}
 

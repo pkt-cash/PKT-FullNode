@@ -26,7 +26,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/sweep"
 	"github.com/pkt-cash/pktd/lnd/watchtower"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtclient"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // subRPCServerConfigs is special sub-config in the main configuration that
@@ -97,8 +97,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	tower *watchtower.Standalone,
 	towerClient wtclient.Client,
 	tcpResolver lncfg.TCPResolver,
-	genInvoiceFeatures func() *lnwire.FeatureVector,
-	rpcLogger pktlog.Logger) er.R {
+	genInvoiceFeatures func() *lnwire.FeatureVector) er.R {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -111,7 +110,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 		fieldElem := field.Elem()
 		fieldName := selfType.Field(i).Name
 
-		ltndLog.Debugf("Populating dependencies for sub RPC "+
+		log.Debugf("Populating dependencies for sub RPC "+
 			"server: %v", fieldName)
 
 		// If this sub-config doesn't actually have any fields, then we
@@ -253,9 +252,6 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			}
 			subCfgValue.FieldByName("Resolver").Set(
 				reflect.ValueOf(tcpResolver),
-			)
-			subCfgValue.FieldByName("Log").Set(
-				reflect.ValueOf(rpcLogger),
 			)
 
 		default:

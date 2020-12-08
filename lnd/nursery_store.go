@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -355,7 +356,7 @@ func (ns *nurseryStore) CribToKinder(bby *babyOutput) er.R {
 			return err
 		}
 
-		utxnLog.Tracef("Transitioning (crib -> baby) output for "+
+		log.Tracef("Transitioning (crib -> baby) output for "+
 			"chan_point=%v at height_index=%v", chanPoint,
 			maturityHeight)
 
@@ -436,7 +437,7 @@ func (ns *nurseryStore) PreschoolToKinder(kid *kidOutput,
 		}
 
 		if maturityHeight <= lastGradHeight {
-			utxnLog.Debugf("Late Registration for kid output=%v "+
+			log.Debugf("Late Registration for kid output=%v "+
 				"detected: class_height=%v, "+
 				"last_graduated_height=%v", kid.OutPoint(),
 				maturityHeight, lastGradHeight)
@@ -444,7 +445,7 @@ func (ns *nurseryStore) PreschoolToKinder(kid *kidOutput,
 			maturityHeight = lastGradHeight + 1
 		}
 
-		utxnLog.Infof("Transitioning (crib -> kid) output for "+
+		log.Infof("Transitioning (crib -> kid) output for "+
 			"chan_point=%v at height_index=%v", chanPoint,
 			maturityHeight)
 
@@ -1335,7 +1336,7 @@ func (ns *nurseryStore) removeOutputFromHeight(tx kvdb.RwTx, height uint32,
 	if err != nil && !errBucketNotEmpty.Is(err) {
 		return err
 	} else if err == nil && pruned {
-		utxnLog.Infof("Height bucket %d pruned", height)
+		log.Infof("Height bucket %d pruned", height)
 	}
 
 	return nil

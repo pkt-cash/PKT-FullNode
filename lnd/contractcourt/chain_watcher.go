@@ -16,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/shachain"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/constants"
@@ -992,7 +993,7 @@ func (c *chainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail
 	}
 
 	log.Debugf("Punishment breach retribution created: %v",
-		newLogClosure(func() string {
+		log.C(func() string {
 			retribution.KeyRing.CommitPoint.Curve = nil
 			retribution.KeyRing.LocalHtlcKey = nil
 			retribution.KeyRing.RemoteHtlcKey = nil

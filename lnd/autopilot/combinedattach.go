@@ -3,6 +3,7 @@ package autopilot
 import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // WeightedHeuristic is a tuple that associates a weight to an

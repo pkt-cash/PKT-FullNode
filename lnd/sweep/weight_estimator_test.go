@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"

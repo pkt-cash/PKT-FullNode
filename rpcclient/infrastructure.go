@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,7 +20,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/gorilla/websocket"
 
@@ -288,7 +290,7 @@ type (
 
 	// rawNotification is a partially-unmarshaled JSON-RPC notification.
 	rawNotification struct {
-		Method string            `json:"method"`
+		Method string                `json:"method"`
 		Params []jsoniter.RawMessage `json:"params"`
 	}
 
@@ -296,7 +298,7 @@ type (
 	// to be valid (according to JSON-RPC 1.0 spec), ID may not be nil.
 	rawResponse struct {
 		Result jsoniter.RawMessage `json:"result"`
-		Error  *btcjson.RPCErr `json:"error"`
+		Error  *btcjson.RPCErr     `json:"error"`
 	}
 )
 

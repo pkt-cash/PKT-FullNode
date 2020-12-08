@@ -12,6 +12,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -184,13 +185,13 @@ func NewChanCloser(cfg ChanCloseCfg, deliveryScript []byte,
 	// TODO(roasbeef): clamp fee func?
 	channelCommitFee := cfg.Channel.StateSnapshot().CommitFee
 	if idealFeeSat > channelCommitFee {
-		chancloserLog.Infof("Ideal starting fee of %v is greater than commit "+
+		log.Infof("Ideal starting fee of %v is greater than commit "+
 			"fee of %v, clamping", int64(idealFeeSat), int64(channelCommitFee))
 
 		idealFeeSat = channelCommitFee
 	}
 
-	chancloserLog.Infof("Ideal fee for closure of ChannelPoint(%v) is: %v sat",
+	log.Infof("Ideal fee for closure of ChannelPoint(%v) is: %v sat",
 		cfg.Channel.ChannelPoint(), int64(idealFeeSat))
 
 	cid := lnwire.NewChanIDFromOutPoint(cfg.Channel.ChannelPoint())
@@ -222,7 +223,7 @@ func (c *ChanCloser) initChanShutdown() (*lnwire.Shutdown, er.R) {
 	// We do so before closing the channel as otherwise the current edge policy
 	// won't be retrievable from the graph.
 	if err := c.cfg.DisableChannel(c.chanPoint); err != nil {
-		chancloserLog.Warnf("Unable to disable channel %v on close: %v",
+		log.Warnf("Unable to disable channel %v on close: %v",
 			c.chanPoint, err)
 	}
 
@@ -240,7 +241,7 @@ func (c *ChanCloser) initChanShutdown() (*lnwire.Shutdown, er.R) {
 		return nil, err
 	}
 
-	chancloserLog.Infof("ChannelPoint(%v): sending shutdown message",
+	log.Infof("ChannelPoint(%v): sending shutdown message",
 		c.chanPoint)
 
 	return shutdown, nil
@@ -257,7 +258,7 @@ func (c *ChanCloser) ShutdownChan() (*lnwire.Shutdown, er.R) {
 		return nil, ErrChanAlreadyClosing.Default()
 	}
 
-	chancloserLog.Infof("ChannelPoint(%v): initiating shutdown", c.chanPoint)
+	log.Infof("ChannelPoint(%v): initiating shutdown", c.chanPoint)
 
 	shutdownMsg, err := c.initChanShutdown()
 	if err != nil {
@@ -325,7 +326,7 @@ func maybeMatchScript(disconnect func() er.R, upfrontScript,
 	// If an upfront shutdown script was provided, disconnect from the peer, as
 	// per BOLT 2, and return an error.
 	if !bytes.Equal(upfrontScript, peerScript) {
-		chancloserLog.Warnf("peer's script: %x does not match upfront "+
+		log.Warnf("peer's script: %x does not match upfront "+
 			"shutdown script: %x", peerScript, upfrontScript)
 
 		// Disconnect from the peer because they have violated option upfront
@@ -404,7 +405,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 			return nil, false, err
 		}
 
-		chancloserLog.Infof("ChannelPoint(%v): responding to shutdown",
+		log.Infof("ChannelPoint(%v): responding to shutdown",
 			c.chanPoint)
 
 		msgsToSend := make([]lnwire.Message, 0, 2)
@@ -459,7 +460,7 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 		// closing transaction should look like.
 		c.state = closeFeeNegotiation
 
-		chancloserLog.Infof("ChannelPoint(%v): shutdown response received, "+
+		log.Infof("ChannelPoint(%v): shutdown response received, "+
 			"entering fee negotiation", c.chanPoint)
 
 		// Starting with our ideal fee rate, we'll create an initial closing
@@ -512,13 +513,13 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 			// we'll return this latest close signed message so we can continue
 			// negotiation.
 			if feeProposal != remoteProposedFee {
-				chancloserLog.Debugf("ChannelPoint(%v): close tx fee "+
+				log.Debugf("ChannelPoint(%v): close tx fee "+
 					"disagreement, continuing negotiation", c.chanPoint)
 				return []lnwire.Message{closeSigned}, false, nil
 			}
 		}
 
-		chancloserLog.Infof("ChannelPoint(%v) fee of %v accepted, ending "+
+		log.Infof("ChannelPoint(%v) fee of %v accepted, ending "+
 			"negotiation", c.chanPoint, remoteProposedFee)
 
 		// Otherwise, we've agreed on a fee for the closing transaction! We'll
@@ -553,8 +554,8 @@ func (c *ChanCloser) ProcessCloseMsg(msg lnwire.Message) ([]lnwire.Message,
 
 		// With the closing transaction crafted, we'll now broadcast it to the
 		// network.
-		chancloserLog.Infof("Broadcasting cooperative close tx: %v",
-			newLogClosure(func() string {
+		log.Infof("Broadcasting cooperative close tx: %v",
+			log.C(func() string {
 				return spew.Sdump(closeTx)
 			}),
 		)
@@ -615,7 +616,7 @@ func (c *ChanCloser) proposeCloseSigned(fee btcutil.Amount) (*lnwire.ClosingSign
 		return nil, err
 	}
 
-	chancloserLog.Infof("ChannelPoint(%v): proposing fee of %v sat to close "+
+	log.Infof("ChannelPoint(%v): proposing fee of %v sat to close "+
 		"chan", c.chanPoint, int64(fee))
 
 	// We'll assemble a ClosingSigned message using this information and return
@@ -670,7 +671,7 @@ func calcCompromiseFee(chanPoint wire.OutPoint, ourIdealFee, lastSentFee,
 
 	// TODO(roasbeef): take in number of rounds as well?
 
-	chancloserLog.Infof("ChannelPoint(%v): computing fee compromise, ideal="+
+	log.Infof("ChannelPoint(%v): computing fee compromise, ideal="+
 		"%v, last_sent=%v, remote_offer=%v", chanPoint, int64(ourIdealFee),
 		int64(lastSentFee), int64(remoteFee))
 
@@ -696,7 +697,7 @@ func calcCompromiseFee(chanPoint wire.OutPoint, ourIdealFee, lastSentFee,
 		// If the fee is lower, but still acceptable, then we'll just return
 		// this fee and end the negotiation.
 		if feeInAcceptableRange(lastSentFee, remoteFee) {
-			chancloserLog.Infof("ChannelPoint(%v): proposed remote fee is "+
+			log.Infof("ChannelPoint(%v): proposed remote fee is "+
 				"close enough, capitulating", chanPoint)
 			return remoteFee
 		}
@@ -710,7 +711,7 @@ func calcCompromiseFee(chanPoint wire.OutPoint, ourIdealFee, lastSentFee,
 		// If the fee is greater, but still acceptable, then we'll just return
 		// this fee in order to put an end to the negotiation.
 		if feeInAcceptableRange(lastSentFee, remoteFee) {
-			chancloserLog.Infof("ChannelPoint(%v): proposed remote fee is "+
+			log.Infof("ChannelPoint(%v): proposed remote fee is "+
 				"close enough, capitulating", chanPoint)
 			return remoteFee
 		}

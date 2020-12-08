@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // blockProgressLogger provides periodic logging for other services in order
@@ -20,8 +20,7 @@ type blockProgressLogger struct {
 	receivedLogTx     int64
 	lastBlockLogTime  time.Time
 
-	subsystemLogger pktlog.Logger
-	progressAction  string
+	progressAction string
 	sync.Mutex
 }
 
@@ -29,11 +28,10 @@ type blockProgressLogger struct {
 // The progress message is templated as follows:
 //  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
 //  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
-func newBlockProgressLogger(progressMessage string, logger pktlog.Logger) *blockProgressLogger {
+func newBlockProgressLogger(progressMessage string) *blockProgressLogger {
 	return &blockProgressLogger{
 		lastBlockLogTime: time.Now(),
 		progressAction:   progressMessage,
-		subsystemLogger:  logger,
 	}
 }
 
@@ -66,7 +64,7 @@ func (b *blockProgressLogger) LogBlockHeight(block *btcutil.Block) {
 	if b.receivedLogTx == 1 {
 		txStr = "transaction"
 	}
-	b.subsystemLogger.Infof("%s %d %s in the last %s (%d %s, height %d, %s)",
+	log.Infof("%s %d %s in the last %s (%d %s, height %d, %s)",
 		b.progressAction, b.receivedLogBlocks, blockStr, tDuration, b.receivedLogTx,
 		txStr, block.Height(), block.MsgBlock().Header.Timestamp)
 

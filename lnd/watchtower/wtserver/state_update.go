@@ -4,6 +4,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtwire"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // handleStateUpdates processes a stream of StateUpdate requests from the
