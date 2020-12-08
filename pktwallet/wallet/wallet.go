@@ -2900,9 +2900,10 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 				blk.header.PrevBlock.String())
 		}
 	}
+	bs := w.Manager.SyncedTo()
 	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		for _, b := range blks {
-			if bs := w.Manager.SyncedTo(); b.height > bs.Height+1 {
+			if b.height > bs.Height+1 {
 				// This happens if we get a resync/dropdb triggered while we're syncing
 				continue
 			}
@@ -2923,11 +2924,12 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 			}
 			addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 			hash := b.header.BlockHash()
-			if err := w.Manager.SetSyncedTo(addrmgrNs, &waddrmgr.BlockStamp{
+			bs = waddrmgr.BlockStamp{
 				Height:    b.height,
 				Hash:      hash,
 				Timestamp: b.header.Timestamp,
-			}); err != nil {
+			}
+			if err := w.Manager.SetSyncedTo(addrmgrNs, &bs); err != nil {
 				return err
 			}
 			w.NtfnServer.notifyAttachedBlock(dbtx, &wtxmgr.BlockMeta{
