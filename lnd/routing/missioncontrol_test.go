@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/channeldb/kvdb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/routing/route"
@@ -56,13 +57,14 @@ func createMcTestContext(t *testing.T) *mcTestContext {
 		now: mcTestTime,
 	}
 
-	file, err := ioutil.TempFile("", "*.db")
-	if err != nil {
-		t.Fatal(err)
+	file, errr := ioutil.TempFile("", "*.db")
+	if errr != nil {
+		t.Fatal(errr)
 	}
 
 	ctx.dbPath = file.Name()
 
+	var err er.R
 	ctx.db, err = kvdb.Open(kvdb.BoltBackendName, ctx.dbPath, true)
 	if err != nil {
 		t.Fatal(err)

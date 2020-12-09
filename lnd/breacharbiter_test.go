@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/chainntnfs"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/htlcswitch"
@@ -1374,7 +1375,7 @@ func testBreachSpends(t *testing.T, test breachTest) {
 		forceCloseTx = bobClose.CloseTx
 		chanPoint    = alice.ChanPoint
 		publTx       = make(chan *wire.MsgTx)
-		publErr      error
+		publErr      *er.ErrorCode
 		publMtx      sync.Mutex
 	)
 
@@ -1382,7 +1383,10 @@ func testBreachSpends(t *testing.T, test breachTest) {
 	publErr = lnwallet.ErrDoubleSpend
 	brar.cfg.PublishTransaction = func(tx *wire.MsgTx, _ string) er.R {
 		publMtx.Lock()
-		err := publErr
+		var err er.R
+		if publErr != nil {
+			err = publErr.Default()
+		}
 		publMtx.Unlock()
 		publTx <- tx
 
@@ -1626,7 +1630,7 @@ func assertBrarCleanup(t *testing.T, brar *breachArbiter,
 
 	}, time.Second)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf(err.String())
 	}
 }
 
@@ -1790,9 +1794,9 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 		return nil, nil, nil, err
 	}
 	bobPreimageProducer := shachain.NewRevocationProducer(*bobRoot)
-	bobFirstRevoke, errr := bobPreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	bobFirstRevoke, err := bobPreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	bobCommitPoint := input.ComputeCommitmentPoint(bobFirstRevoke[:])
 
@@ -1801,44 +1805,44 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 		return nil, nil, nil, err
 	}
 	alicePreimageProducer := shachain.NewRevocationProducer(*aliceRoot)
-	aliceFirstRevoke, errr := alicePreimageProducer.AtIndex(0)
-	if errr != nil {
-		return nil, nil, nil, errr
+	aliceFirstRevoke, err := alicePreimageProducer.AtIndex(0)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, errr := lnwallet.CreateCommitmentTxns(
+	aliceCommitTx, bobCommitTx, err := lnwallet.CreateCommitmentTxns(
 		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
 		bobCommitPoint, *fundingTxIn, channeldb.SingleFunderTweaklessBit,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	alicePath, errr := ioutil.TempDir("", "alicedb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbAlice, errr := channeldb.Open(alicePath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbAlice, err := channeldb.Open(alicePath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	bobPath, errr := ioutil.TempDir("", "bobdb")
 	if errr != nil {
-		return nil, nil, nil, errr
+		return nil, nil, nil, er.E(errr)
 	}
 
-	dbBob, errr := channeldb.Open(bobPath)
-	if errr != nil {
-		return nil, nil, nil, errr
+	dbBob, err := channeldb.Open(bobPath)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	estimator := chainfee.NewStaticEstimator(12500, 0)
-	feePerKw, errr := estimator.EstimateFeePerKW(1)
-	if errr != nil {
-		return nil, nil, nil, errr
+	feePerKw, err := estimator.EstimateFeePerKW(1)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// TODO(roasbeef): need to factor in commit fee?
@@ -1910,20 +1914,20 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 	bobSigner := &mock.SingleSigner{Privkey: bobKeyPriv}
 
 	alicePool := lnwallet.NewSigPool(1, aliceSigner)
-	channelAlice, errr := lnwallet.NewLightningChannel(
+	channelAlice, err := lnwallet.NewLightningChannel(
 		aliceSigner, aliceChannelState, alicePool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	alicePool.Start()
 
 	bobPool := lnwallet.NewSigPool(1, bobSigner)
-	channelBob, errr := lnwallet.NewLightningChannel(
+	channelBob, err := lnwallet.NewLightningChannel(
 		bobSigner, bobChannelState, bobPool,
 	)
-	if errr != nil {
-		return nil, nil, nil, errr
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	bobPool.Start()
 
@@ -1952,9 +1956,9 @@ func createInitChannels(revocationWindow int) (*lnwallet.LightningChannel, *lnwa
 
 	// Now that the channel are open, simulate the start of a session by
 	// having Alice and Bob extend their revocation windows to each other.
-	errr = initRevocationWindows(channelAlice, channelBob, revocationWindow)
-	if errr != nil {
-		return nil, nil, nil, errr
+	err = initRevocationWindows(channelAlice, channelBob, revocationWindow)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	return channelAlice, channelBob, cleanUpFunc, nil
@@ -2043,4 +2047,9 @@ func forceStateTransition(chanA, chanB *lnwallet.LightningChannel) er.R {
 	}
 
 	return nil
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

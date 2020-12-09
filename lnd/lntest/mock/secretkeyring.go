@@ -23,7 +23,7 @@ func (s *SecretKeyRing) DeriveNextKey(keyFam keychain.KeyFamily) (
 
 // DeriveKey currently returns dummy values.
 func (s *SecretKeyRing) DeriveKey(keyLoc keychain.KeyLocator) (keychain.KeyDescriptor,
-	error) {
+	er.R) {
 	return keychain.KeyDescriptor{
 		PubKey: s.RootKey.PubKey(),
 	}, nil
@@ -31,13 +31,13 @@ func (s *SecretKeyRing) DeriveKey(keyLoc keychain.KeyLocator) (keychain.KeyDescr
 
 // DerivePrivKey currently returns dummy values.
 func (s *SecretKeyRing) DerivePrivKey(keyDesc keychain.KeyDescriptor) (*btcec.PrivateKey,
-	error) {
+	er.R) {
 	return s.RootKey, nil
 }
 
 // ECDH currently returns dummy values.
 func (s *SecretKeyRing) ECDH(_ keychain.KeyDescriptor, pubKey *btcec.PublicKey) ([32]byte,
-	error) {
+	er.R) {
 
 	return [32]byte{}, nil
 }

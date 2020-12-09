@@ -101,7 +101,7 @@ func BenchmarkEncodeCreateSession(t *testing.B) {
 	t.ReportAllocs()
 	t.ResetTimer()
 
-	var err error
+	var err er.R
 	for i := 0; i < t.N; i++ {
 		err = m.Encode(ioutil.Discard, 0)
 	}
@@ -134,7 +134,7 @@ func BenchmarkDecodeCreateSession(t *testing.B) {
 	t.ReportAllocs()
 	t.ResetTimer()
 
-	var err error
+	var err er.R
 	for i := 0; i < t.N; i++ {
 		r.Seek(0, 0)
 		err = m.Decode(r, 0)

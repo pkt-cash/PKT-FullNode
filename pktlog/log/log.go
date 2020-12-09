@@ -47,11 +47,6 @@ import (
 	"github.com/pkt-cash/pktd/pktconfig/version"
 )
 
-// defaultFlags specifies changes to the default logger behavior.  It is set
-// during package init and configured using the LOGFLAGS environment variable.
-// New logger backends can override these default flags using WithFlags.
-var defaultFlags uint32
-
 // Flags to modify Backend's behavior.
 const (
 	// Llongfile modifies the logger output to include full path and line number
@@ -66,31 +61,6 @@ const (
 
 	Llongdate
 )
-
-// Read logger flags from the LOGFLAGS environment variable.  Multiple flags can
-// be set at once, separated by commas.
-func init() {
-	hasFlags := false
-	for _, f := range strings.Split(os.Getenv("LOGFLAGS"), ",") {
-		switch f {
-		case "none":
-		case "longfile":
-			defaultFlags |= Llongfile
-		case "shortfile":
-			defaultFlags |= Lshortfile
-		case "color":
-			defaultFlags |= Lcolor
-		case "longdate":
-			defaultFlags |= Llongdate
-		default:
-			continue
-		}
-		hasFlags = true
-	}
-	if !hasFlags {
-		defaultFlags |= Lshortfile | Lcolor
-	}
-}
 
 // Level is the level at which a logger is configured.  All messages sent
 // to a level which is below the current level are filtered.
@@ -197,16 +167,38 @@ func (l Level) String() string {
 	return levelStrs[l]
 }
 
-// NewBackend creates a logger backend from a Writer.
-func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
-	b := &Backend{
-		flag: defaultFlags,
-		ch:   make(chan *[]byte, 1024),
-		lvl:  LevelTrace,
-		lmap: make(map[string]Level),
+const defaultFlags = Lshortfile | Lcolor
+const defaultLevel = LevelDebug
+
+// newBackend creates a logger backend from a Writer.
+func newBackend(w io.Writer) *backend {
+	flags := uint32(0)
+	hasFlags := false
+	for _, f := range strings.Split(os.Getenv("LOGFLAGS"), ",") {
+		switch f {
+		case "none":
+		case "longfile":
+			flags |= Llongfile
+		case "shortfile":
+			flags |= Lshortfile
+		case "color":
+			flags |= Lcolor
+		case "longdate":
+			flags |= Llongdate
+		default:
+			continue
+		}
+		hasFlags = true
 	}
-	for _, o := range opts {
-		o(b)
+	if !hasFlags {
+		flags = defaultFlags
+	}
+
+	b := &backend{
+		flag: flags,
+		ch:   make(chan *[]byte, 1024),
+		lvl:  defaultLevel,
+		lmap: make(map[string]Level),
 	}
 	go func() {
 		for {
@@ -216,18 +208,6 @@ func NewBackend(w io.Writer, opts ...BackendOption) *Backend {
 		}
 	}()
 	return b
-}
-
-// BackendOption is a function used to modify the behavior of a Backend.
-type BackendOption func(b *Backend)
-
-// WithFlags configures a Backend to use the specified flags rather than using
-// the package's defaults as determined through the LOGFLAGS environment
-// variable.
-func WithFlags(flags uint32) BackendOption {
-	return func(b *Backend) {
-		b.flag = flags
-	}
 }
 
 // bufferPool defines a concurrent safe free list of byte slices used to provide
@@ -424,7 +404,7 @@ func callsite(flag uint32) (string, string, int) {
 	return file, short, line
 }
 
-func (b *Backend) write(buf *[]byte) {
+func (b *backend) write(buf *[]byte) {
 	select {
 	case b.ch <- buf:
 		// ok
@@ -434,10 +414,10 @@ func (b *Backend) write(buf *[]byte) {
 	}
 }
 
-// Backend is a logging backend.  Subsystems created from the backend write to
-// the backend's Writer.  Backend provides atomic writes to the Writer from all
+// backend is a logging backend.  Subsystems created from the backend write to
+// the backend's Writer.  backend provides atomic writes to the Writer from all
 // subsystems.
-type Backend struct {
+type backend struct {
 	ch   chan *[]byte
 	flag uint32
 
@@ -446,7 +426,17 @@ type Backend struct {
 	lmap map[string]Level
 }
 
-var b = NewBackend(os.Stdout)
+var b *backend
+
+func init() {
+	b = newBackend(os.Stdout)
+	pktlog := os.Getenv("PKTLOG")
+	if pktlog != "" {
+		if err := SetLogLevels(pktlog); err != nil {
+			Errorf("Error setting log parame: ", err.String())
+		}
+	}
+}
 
 // doLog outputs a log message to the writer associated with the backend after
 // creating a prefix for the given level and tag according to the formatHeader
@@ -457,11 +447,11 @@ func doLog(
 	format string,
 	args ...interface{},
 ) {
-	file, keyFile, line := callsite(b.flag)
+	file, shortFile, line := callsite(b.flag)
 	doit := true
 	b.lock.RLock()
-	if lvl <= b.lvl {
-	} else if lvl1 := b.lmap[keyFile]; lvl <= lvl1 {
+	if lvl >= b.lvl {
+	} else if lvl1, ok := b.lmap[shortFile]; ok && lvl >= lvl1 {
 	} else {
 		doit = false
 	}
@@ -488,98 +478,50 @@ func doLog(
 	b.write(bytebuf)
 }
 
-// Trace formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelTrace.
-//
-// This is part of the Logger interface implementation.
 func Trace(args ...interface{}) {
 	doLog(LevelTrace, "", args...)
 }
 
-// Tracef formats message according to format specifier, prepends the prefix as
-// necessary, and writes to log with LevelTrace.
-//
-// This is part of the Logger interface implementation.
 func Tracef(format string, args ...interface{}) {
 	doLog(LevelTrace, format, args...)
 }
 
-// Debug formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelDebug.
-//
-// This is part of the Logger interface implementation.
 func Debug(args ...interface{}) {
 	doLog(LevelDebug, "", args...)
 }
 
-// Debugf formats message according to format specifier, prepends the prefix as
-// necessary, and writes to log with LevelDebug.
-//
-// This is part of the Logger interface implementation.
 func Debugf(format string, args ...interface{}) {
 	doLog(LevelDebug, format, args...)
 }
 
-// Info formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelInfo.
-//
-// This is part of the Logger interface implementation.
 func Info(args ...interface{}) {
 	doLog(LevelInfo, "", args...)
 }
 
-// Infof formats message according to format specifier, prepends the prefix as
-// necessary, and writes to log with LevelInfo.
-//
-// This is part of the Logger interface implementation.
 func Infof(format string, args ...interface{}) {
 	doLog(LevelInfo, format, args...)
 }
 
-// Warn formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelWarn.
-//
-// This is part of the Logger interface implementation.
 func Warn(args ...interface{}) {
 	doLog(LevelWarn, "", args...)
 }
 
-// Warnf formats message according to format specifier, prepends the prefix as
-// necessary, and writes to log with LevelWarn.
-//
-// This is part of the Logger interface implementation.
 func Warnf(format string, args ...interface{}) {
 	doLog(LevelWarn, format, args...)
 }
 
-// Error formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelError.
-//
-// This is part of the Logger interface implementation.
 func Error(args ...interface{}) {
 	doLog(LevelError, "", args...)
 }
 
-// Errorf formats message according to format specifier, prepends the prefix as
-// necessary, and writes to log with LevelError.
-//
-// This is part of the Logger interface implementation.
 func Errorf(format string, args ...interface{}) {
 	doLog(LevelError, format, args...)
 }
 
-// Critical formats message using the default formats for its operands, prepends
-// the prefix as necessary, and writes to log with LevelCritical.
-//
-// This is part of the Logger interface implementation.
 func Critical(args ...interface{}) {
 	doLog(LevelCritical, "", args...)
 }
 
-// Criticalf formats message according to format specifier, prepends the prefix
-// as necessary, and writes to log with LevelCritical.
-//
-// This is part of the Logger interface implementation.
 func Criticalf(format string, args ...interface{}) {
 	doLog(LevelCritical, format, args...)
 }

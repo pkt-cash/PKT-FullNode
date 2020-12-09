@@ -15,14 +15,14 @@ import (
 )
 
 type mockSigner struct {
-	err er.R
+	err *er.ErrorCode
 }
 
 func (m *mockSigner) SignMessage(pk *btcec.PublicKey,
 	msg []byte) (input.Signature, er.R) {
 
 	if m.err != nil {
-		return nil, m.err
+		return nil, m.err.Default()
 	}
 
 	return nil, nil
@@ -46,7 +46,7 @@ type updateDisableTest struct {
 	disable      bool
 	startTime    time.Time
 	signer       lnwallet.MessageSigner
-	expErr       er.R
+	expErr       *er.ErrorCode
 }
 
 var updateDisableTests = []updateDisableTest{
@@ -95,7 +95,7 @@ var updateDisableTests = []updateDisableTest{
 		name:      "invalid sig from signer",
 		startTime: time.Now(),
 		signer:    &mockSigner{}, // returns a nil signature
-		expErr:    er.New("cannot decode empty signature"),
+		expErr:    lnwire.ErrEmptySignature,
 	},
 }
 
@@ -145,7 +145,7 @@ func TestUpdateDisableFlag(t *testing.T) {
 			// Both non-nil, compare error strings since some
 			// methods don't return concrete error types.
 			case tc.expErr != nil && err != nil:
-				if err.Error() != tc.expErr.Error() {
+				if !er.Cis(tc.expErr, err) {
 					fail = true
 				}
 

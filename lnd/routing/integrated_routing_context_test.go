@@ -90,7 +90,7 @@ func (h htlcAttempt) String() string {
 // testPayment launches a test payment and asserts that it is completed after
 // the expected number of attempts.
 func (c *integratedRoutingContext) testPayment(maxParts uint32) ([]htlcAttempt,
-	error) {
+	er.R) {
 
 	var (
 		nextPid  uint64
@@ -98,9 +98,9 @@ func (c *integratedRoutingContext) testPayment(maxParts uint32) ([]htlcAttempt,
 	)
 
 	// Create temporary database for mission control.
-	file, err := ioutil.TempFile("", "*.db")
-	if err != nil {
-		c.t.Fatal(err)
+	file, errr := ioutil.TempFile("", "*.db")
+	if errr != nil {
+		c.t.Fatal(errr)
 	}
 
 	dbPath := file.Name()

@@ -2,13 +2,15 @@ package netann
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
+	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,4 +66,9 @@ func TestCreateChanAnnouncement(t *testing.T) {
 	}
 
 	assert.Equal(t, chanAnn, expChanAnn)
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

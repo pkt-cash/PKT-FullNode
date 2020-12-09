@@ -1,9 +1,11 @@
 package lnwire
 
 import (
+	"os"
 	"testing"
 
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 )
 
 func TestMilliSatoshiConversion(t *testing.T) {
@@ -74,4 +76,9 @@ func TestMilliSatoshiConversion(t *testing.T) {
 				test.mSatAmount.ToBTC())
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

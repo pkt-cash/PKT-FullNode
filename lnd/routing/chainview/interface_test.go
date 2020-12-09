@@ -829,7 +829,7 @@ func TestFilteredChainView(t *testing.T) {
 	// dedicated miner to generate blocks, cause re-orgs, etc. We'll set up
 	// this node with a chain length of 125, so we have plenty of BTC to
 	// play around with.
-	miner, err := rpctest.New(netParams, nil, []string{"--txindex"})
+	miner, err := rpctest.New(netParams, nil, []string{"--txindex", "--tls"})
 	if err != nil {
 		t.Fatalf("unable to create mining node: %v", err)
 	}

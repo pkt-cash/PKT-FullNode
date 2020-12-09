@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcec"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/lnd/watchtower/wtdb"
 )
 
@@ -115,7 +115,7 @@ func TestTowerCandidateIterator(t *testing.T) {
 		}
 	}
 
-	if _, err := towerIterator.Next(); err != ErrTowerCandidatesExhausted {
+	if _, err := towerIterator.Next(); !ErrTowerCandidatesExhausted.Is(err) {
 		t.Fatalf("expected ErrTowerCandidatesExhausted, got %v", err)
 	}
 	towerIterator.Reset()

@@ -3,6 +3,7 @@ package wtwire_test
 import (
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/feature"
@@ -21,7 +22,7 @@ type checkRemoteInitTest struct {
 	lHash     chainhash.Hash
 	rFeatures *lnwire.RawFeatureVector
 	rHash     chainhash.Hash
-	expErr    error
+	expErr    *er.ErrorCode
 }
 
 var checkRemoteInitTests = []checkRemoteInitTest{
@@ -45,7 +46,7 @@ var checkRemoteInitTests = []checkRemoteInitTest{
 		lHash:     testnetChainHash,
 		rFeatures: lnwire.NewRawFeatureVector(wtwire.AltruistSessionsRequired),
 		rHash:     mainnetChainHash,
-		expErr:    wtwire.NewErrUnknownChainHash(mainnetChainHash),
+		expErr:    wtwire.ErrUnknownChainHash,
 	},
 	{
 		name:      "different chain, local-required remote-optional",
@@ -53,7 +54,7 @@ var checkRemoteInitTests = []checkRemoteInitTest{
 		lHash:     testnetChainHash,
 		rFeatures: lnwire.NewRawFeatureVector(wtwire.AltruistSessionsRequired),
 		rHash:     mainnetChainHash,
-		expErr:    wtwire.NewErrUnknownChainHash(mainnetChainHash),
+		expErr:    wtwire.ErrUnknownChainHash,
 	},
 	{
 		name:      "same chain, remote-unknown-required",
@@ -61,9 +62,7 @@ var checkRemoteInitTests = []checkRemoteInitTest{
 		lHash:     testnetChainHash,
 		rFeatures: lnwire.NewRawFeatureVector(lnwire.GossipQueriesRequired),
 		rHash:     testnetChainHash,
-		expErr: feature.NewErrUnknownRequired(
-			[]lnwire.FeatureBit{lnwire.GossipQueriesRequired},
-		),
+		expErr:    feature.ErrUnknownRequired,
 	},
 }
 
@@ -85,23 +84,7 @@ func testCheckRemoteInit(t *testing.T, test checkRemoteInitTest) {
 	remoteInit := wtwire.NewInitMessage(test.rFeatures, test.rHash)
 
 	err := localInit.CheckRemoteInit(remoteInit, wtwire.FeatureNames)
-	switch {
-
-	// Both non-nil, pass.
-	case err == nil && test.expErr == nil:
-		return
-
-	// One is nil and one is non-nil, fail.
-	default:
+	if !er.Cis(test.expErr, err) {
 		t.Fatalf("error mismatch, want: %v, got: %v", test.expErr, err)
-
-	// Both non-nil, assert same error type.
-	case err != nil && test.expErr != nil:
-	}
-
-	// Compare error strings to assert same type.
-	if err.Error() != test.expErr.Error() {
-		t.Fatalf("error mismatch, want: %v, got: %v",
-			test.expErr.Error(), err.Error())
 	}
 }

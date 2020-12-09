@@ -41,7 +41,7 @@ func TestStore(t *testing.T) {
 	})
 }
 
-func testStore(t *testing.T, createStore func() (SweeperStore, error)) {
+func testStore(t *testing.T, createStore func() (SweeperStore, er.R)) {
 	store, err := createStore()
 	if err != nil {
 		t.Fatal(err)

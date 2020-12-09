@@ -160,7 +160,7 @@ func (m *mockGraph) addChannel(id uint64, node1id, node2id byte,
 // NOTE: Part of the routingGraph interface.
 func (m *mockGraph) forEachNodeChannel(nodePub route.Vertex,
 	cb func(*channeldb.ChannelEdgeInfo, *channeldb.ChannelEdgePolicy,
-		*channeldb.ChannelEdgePolicy) error) er.R {
+		*channeldb.ChannelEdgePolicy) er.R) er.R {
 
 	// Look up the mock node.
 	node, ok := m.nodes[nodePub]

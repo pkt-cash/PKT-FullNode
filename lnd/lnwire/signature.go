@@ -12,13 +12,15 @@ import (
 // signature (raw bytes and *btcec.Signature).
 type Sig [64]byte
 
+var ErrEmptySignature = Err.CodeWithDetail("ErrEmptySignature", "cannot decode empty signature")
+
 // NewSigFromRawSignature returns a Sig from a Bitcoin raw signature encoded in
 // the canonical DER encoding.
 func NewSigFromRawSignature(sig []byte) (Sig, er.R) {
 	var b Sig
 
 	if len(sig) == 0 {
-		return b, er.Errorf("cannot decode empty signature")
+		return b, ErrEmptySignature.Default()
 	}
 
 	// Extract lengths of R and S. The DER representation is laid out as
@@ -66,7 +68,7 @@ func NewSigFromRawSignature(sig []byte) (Sig, er.R) {
 // existing btcec.Signature.
 func NewSigFromSignature(e input.Signature) (Sig, er.R) {
 	if e == nil {
-		return Sig{}, er.Errorf("cannot decode empty signature")
+		return Sig{}, ErrEmptySignature.Default()
 	}
 
 	// Serialize the signature with all the checks that entails.

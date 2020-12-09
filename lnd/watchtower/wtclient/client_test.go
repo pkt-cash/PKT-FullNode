@@ -3,13 +3,16 @@ package wtclient_test
 import (
 	"encoding/binary"
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
@@ -396,9 +399,9 @@ type harnessCfg struct {
 }
 
 func newHarness(t *testing.T, cfg harnessCfg) *testHarness {
-	towerTCPAddr, err := net.ResolveTCPAddr("tcp", towerAddrStr)
-	if err != nil {
-		t.Fatalf("Unable to resolve tower TCP addr: %v", err)
+	towerTCPAddr, errr := net.ResolveTCPAddr("tcp", towerAddrStr)
+	if errr != nil {
+		t.Fatalf("Unable to resolve tower TCP addr: %v", errr)
 	}
 
 	privKey, err := btcec.NewPrivateKey(btcec.S256())
@@ -499,7 +502,7 @@ func newHarness(t *testing.T, cfg harnessCfg) *testHarness {
 func (h *testHarness) startServer() {
 	h.t.Helper()
 
-	var err error
+	var err er.R
 	h.server, err = wtserver.New(h.serverCfg)
 	if err != nil {
 		h.t.Fatalf("unable to create wtserver: %v", err)
@@ -517,15 +520,16 @@ func (h *testHarness) startServer() {
 func (h *testHarness) startClient() {
 	h.t.Helper()
 
-	towerTCPAddr, err := net.ResolveTCPAddr("tcp", towerAddrStr)
-	if err != nil {
-		h.t.Fatalf("Unable to resolve tower TCP addr: %v", err)
+	towerTCPAddr, errr := net.ResolveTCPAddr("tcp", towerAddrStr)
+	if errr != nil {
+		h.t.Fatalf("Unable to resolve tower TCP addr: %v", errr)
 	}
 	towerAddr := &lnwire.NetAddress{
 		IdentityKey: h.serverCfg.NodeKeyECDH.PubKey(),
 		Address:     towerTCPAddr,
 	}
 
+	var err er.R
 	h.client, err = wtclient.New(h.clientCfg)
 	if err != nil {
 		h.t.Fatalf("unable to create wtclient: %v", err)
@@ -617,7 +621,7 @@ func (h *testHarness) advanceChannelN(id uint64, n int) []blob.BreachHint {
 
 // backupStates instructs the channel identified by id to send backups to the
 // client for states in the range [to, from).
-func (h *testHarness) backupStates(id, from, to uint64, expErr error) {
+func (h *testHarness) backupStates(id, from, to uint64, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	for i := from; i < to; i++ {
@@ -627,14 +631,14 @@ func (h *testHarness) backupStates(id, from, to uint64, expErr error) {
 
 // backupStates instructs the channel identified by id to send a backup for
 // state i.
-func (h *testHarness) backupState(id, i uint64, expErr error) {
+func (h *testHarness) backupState(id, i uint64, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	_, retribution := h.channel(id).getState(i)
 
 	chanID := chanIDFromInt(id)
 	err := h.client.BackupState(&chanID, retribution, false)
-	if err != expErr {
+	if !er.Cis(expErr, err) {
 		h.t.Fatalf("back error mismatch, want: %v, got: %v",
 			expErr, err)
 	}
@@ -1493,4 +1497,9 @@ func TestClient(t *testing.T) {
 			tc.fn(h)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

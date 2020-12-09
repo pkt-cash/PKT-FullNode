@@ -38,6 +38,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/mempool"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
@@ -215,6 +216,8 @@ func assertTxInWallet(t *testing.T, w *lnwallet.LightningWallet,
 	if err != nil {
 		t.Fatalf("unable to retrieve transactions: %v", err)
 	}
+	log.Debugf("ListTransactionDetails(0, %d) -> [%d] txns",
+		btcwallet.UnconfirmedHeight, len(txs))
 	for _, tx := range txs {
 		if tx.Hash != txHash {
 			continue
@@ -232,7 +235,7 @@ func assertTxInWallet(t *testing.T, w *lnwallet.LightningWallet,
 		// confirmation status, so we can exit.
 		return
 	}
-
+	log.Errorf("transaction %v not found: %s", txHash, er.New("").String())
 	t.Fatalf("transaction %v not found", txHash)
 }
 

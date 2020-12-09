@@ -175,7 +175,7 @@ func (m *mockChanEvent) NotifyPendingOpenChannelEvent(outpoint wire.OutPoint,
 
 type newChannelMsg struct {
 	channel *channeldb.OpenChannel
-	err     chan error
+	err     chan er.R
 }
 
 type testNode struct {
@@ -359,7 +359,7 @@ func createTestFundingManager(t *testing.T, privKey *btcec.PrivateKey,
 		SendAnnouncement: func(msg lnwire.Message,
 			_ ...discovery.OptionalMsgField) chan er.R {
 
-			errChan := make(chan error, 1)
+			errChan := make(chan er.R, 1)
 			select {
 			case sentAnnouncements <- msg:
 				errChan <- nil
@@ -505,7 +505,7 @@ func recreateAliceFundingManager(t *testing.T, alice *testNode) {
 		SendAnnouncement: func(msg lnwire.Message,
 			_ ...discovery.OptionalMsgField) chan er.R {
 
-			errChan := make(chan error, 1)
+			errChan := make(chan er.R, 1)
 			select {
 			case aliceAnnounceChan <- msg:
 				errChan <- nil
@@ -563,9 +563,9 @@ type cfgOption func(*fundingConfig)
 func setupFundingManagers(t *testing.T,
 	options ...cfgOption) (*testNode, *testNode) {
 
-	aliceTestDir, err := ioutil.TempDir("", "alicelnwallet")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
+	aliceTestDir, errr := ioutil.TempDir("", "alicelnwallet")
+	if errr != nil {
+		t.Fatalf("unable to create temp directory: %v", errr)
 	}
 
 	alice, err := createTestFundingManager(
@@ -575,9 +575,9 @@ func setupFundingManagers(t *testing.T,
 		t.Fatalf("failed creating fundingManager: %v", err)
 	}
 
-	bobTestDir, err := ioutil.TempDir("", "boblnwallet")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
+	bobTestDir, errr := ioutil.TempDir("", "boblnwallet")
+	if errr != nil {
+		t.Fatalf("unable to create temp directory: %v", errr)
 	}
 
 	bob, err := createTestFundingManager(
@@ -655,7 +655,7 @@ func fundChannel(t *testing.T, alice, bob *testNode, localFundingAmt,
 	updateChan chan *lnrpc.OpenStatusUpdate, announceChan bool) *wire.MsgTx {
 
 	// Create a funding request and start the workflow.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -909,7 +909,7 @@ func assertDatabaseState(t *testing.T, node *testNode,
 	t.Helper()
 
 	var state channelOpeningState
-	var err error
+	var err er.R
 	for i := 0; i < testPollNumTries; i++ {
 		// If this is not the first try, sleep before retrying.
 		if i > 0 {
@@ -922,7 +922,7 @@ func assertDatabaseState(t *testing.T, node *testNode,
 		}
 
 		// If we found the channel, check if it had the expected state.
-		if err != ErrChannelNotFound && state == expectedState {
+		if !ErrChannelNotFound.Is(err) && state == expectedState {
 			// Got expected state, return with success.
 			return
 		}
@@ -1152,7 +1152,7 @@ func assertErrChannelNotFound(t *testing.T, node *testNode,
 	t.Helper()
 
 	var state channelOpeningState
-	var err error
+	var err er.R
 	for i := 0; i < testPollNumTries; i++ {
 		// If this is not the first try, sleep before retrying.
 		if i > 0 {
@@ -1160,7 +1160,7 @@ func assertErrChannelNotFound(t *testing.T, node *testNode,
 		}
 		state, _, err = node.fundingMgr.getChannelOpeningState(
 			fundingOutPoint)
-		if err == ErrChannelNotFound {
+		if ErrChannelNotFound.Is(err) {
 			// Got expected state, return with success.
 			return
 		} else if err != nil {
@@ -1314,7 +1314,7 @@ func testLocalCSVLimit(t *testing.T, aliceMaxCSV, bobRequiredCSV uint16) {
 	expectFail := aliceMaxCSV < bobRequiredCSV
 
 	// First, we will initiate an outgoing channel from Alice -> Bob.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
@@ -1379,7 +1379,7 @@ func testLocalCSVLimit(t *testing.T, aliceMaxCSV, bobRequiredCSV uint16) {
 	// We do not need to complete the rest of the funding flow (it is
 	// covered in other tests). So now we test that Alice will appropriately
 	// handle incoming channels, opening a channel from Bob->Alice.
-	errChan = make(chan error, 1)
+	errChan = make(chan er.R, 1)
 	updateChan = make(chan *lnrpc.OpenStatusUpdate)
 	initReq = &openChanReq{
 		targetPubkey:    alice.privKey.PubKey(),
@@ -1511,7 +1511,7 @@ func TestFundingManagerRestartBehavior(t *testing.T) {
 	alice.fundingMgr.cfg.SendAnnouncement = func(msg lnwire.Message,
 		_ ...discovery.OptionalMsgField) chan er.R {
 
-		errChan := make(chan error, 1)
+		errChan := make(chan er.R, 1)
 		errChan <- er.Errorf("intentional error in SendAnnouncement")
 		return errChan
 	}
@@ -1732,7 +1732,7 @@ func TestFundingManagerPeerTimeoutAfterInitFunding(t *testing.T) {
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
 
 	// Create a funding request and start the workflow.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -1794,7 +1794,7 @@ func TestFundingManagerPeerTimeoutAfterFundingOpen(t *testing.T) {
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
 
 	// Create a funding request and start the workflow.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -1865,7 +1865,7 @@ func TestFundingManagerPeerTimeoutAfterFundingAccept(t *testing.T) {
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
 
 	// Create a funding request and start the workflow.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -2589,7 +2589,7 @@ func TestFundingManagerCustomChannelParameters(t *testing.T) {
 
 	// Create a funding request with the custom parameters and start the
 	// workflow.
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:     bob.privKey.PubKey(),
 		chainHash:        *fundingNetParams.GenesisHash,
@@ -2874,7 +2874,7 @@ func TestFundingManagerMaxPendingChannels(t *testing.T) {
 	var initReqs []*openChanReq
 	for i := 0; i < maxPending+1; i++ {
 		updateChan := make(chan *lnrpc.OpenStatusUpdate)
-		errChan := make(chan error, 1)
+		errChan := make(chan er.R, 1)
 		initReq := &openChanReq{
 			targetPubkey:    bob.privKey.PubKey(),
 			chainHash:       *fundingNetParams.GenesisHash,
@@ -3044,7 +3044,7 @@ func TestFundingManagerRejectPush(t *testing.T) {
 
 	// Create a funding request and start the workflow.
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -3101,7 +3101,7 @@ func TestFundingManagerMaxConfs(t *testing.T) {
 
 	// Create a funding request and start the workflow.
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -3277,7 +3277,7 @@ func TestGetUpfrontShutdownScript(t *testing.T) {
 		peerEnabled    bool
 		localEnabled   bool
 		expectedScript lnwire.DeliveryAddress
-		expectedErr    error
+		expectedErr    *er.ErrorCode
 	}{
 		{
 			name:      "peer disabled, no shutdown",
@@ -3332,7 +3332,7 @@ func TestGetUpfrontShutdownScript(t *testing.T) {
 				test.localEnabled, &mockPeer, test.upfrontScript,
 				test.getScript,
 			)
-			if err != test.expectedErr {
+			if !er.Cis(test.expectedErr, err) {
 				t.Fatalf("got: %v, expected error: %v", err, test.expectedErr)
 			}
 
@@ -3383,7 +3383,7 @@ func TestMaxChannelSizeConfig(t *testing.T) {
 	// Attempt to create a channel above the limit
 	// imposed by --maxchansize, which should be rejected.
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,
@@ -3452,7 +3452,7 @@ func TestWumboChannelConfig(t *testing.T) {
 	// that's below the wumbo channel mark, we should be able to start the
 	// funding process w/o issue.
 	updateChan := make(chan *lnrpc.OpenStatusUpdate)
-	errChan := make(chan error, 1)
+	errChan := make(chan er.R, 1)
 	initReq := &openChanReq{
 		targetPubkey:    bob.privKey.PubKey(),
 		chainHash:       *fundingNetParams.GenesisHash,

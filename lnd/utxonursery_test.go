@@ -15,12 +15,14 @@ import (
 
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/sweep"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire"
 )
@@ -435,7 +437,7 @@ func createNurseryTestContext(t *testing.T,
 
 	publishChan := make(chan wire.MsgTx, 1)
 	publishFunc := func(tx *wire.MsgTx, source string) er.R {
-		utxnLog.Tracef("Publishing tx %v by %v", tx.TxHash(), source)
+		log.Tracef("Publishing tx %v by %v", tx.TxHash(), source)
 		publishChan <- *tx
 		return nil
 	}
@@ -487,7 +489,7 @@ func createNurseryTestContext(t *testing.T,
 		var tx wire.MsgTx
 		select {
 		case tx = <-ctx.publishChan:
-			utxnLog.Debugf("Published tx %v", tx.TxHash())
+			log.Debugf("Published tx %v", tx.TxHash())
 			return tx
 		case <-time.After(defaultTestTimeout):
 			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
@@ -499,7 +501,7 @@ func createNurseryTestContext(t *testing.T,
 
 	ctx.restart = func() bool {
 		return checkStartStop(func() {
-			utxnLog.Tracef("Restart sweeper and nursery")
+			log.Tracef("Restart sweeper and nursery")
 			// Simulate lnd restart.
 			ctx.nursery.Stop()
 
@@ -683,7 +685,7 @@ func assertNurseryReport(t *testing.T, nursery *utxoNursery,
 
 func assertNurseryReportUnavailable(t *testing.T, nursery *utxoNursery) {
 	_, err := nursery.NurseryReport(&testChanPoint)
-	if err != ErrContractNotFound {
+	if !ErrContractNotFound.Is(err) {
 		t.Fatal("expected report to be unavailable")
 	}
 }
@@ -711,7 +713,7 @@ func testRestartLoop(t *testing.T, test func(*testing.T,
 
 				return true
 			}
-			utxnLog.Debugf("Skipping restart point %v",
+			log.Debugf("Skipping restart point %v",
 				currentStartStopIdx)
 			return false
 		}
@@ -931,7 +933,7 @@ func (i *nurseryStoreInterceptor) HeightsBelowOrEqual(height uint32) (
 }
 
 func (i *nurseryStoreInterceptor) ForChanOutputs(chanPoint *wire.OutPoint,
-	callback func([]byte, []byte) error, reset func()) er.R {
+	callback func([]byte, []byte) er.R, reset func()) er.R {
 
 	return i.ns.ForChanOutputs(chanPoint, callback, reset)
 }
@@ -970,7 +972,7 @@ func newMockSweeper(t *testing.T) *mockSweeper {
 func (s *mockSweeper) sweepInput(input input.Input,
 	_ sweep.Params) (chan sweep.Result, er.R) {
 
-	utxnLog.Debugf("mockSweeper sweepInput called for %v", *input.OutPoint())
+	log.Debugf("mockSweeper sweepInput called for %v", *input.OutPoint())
 
 	select {
 	case s.sweepChan <- input:
@@ -1006,7 +1008,7 @@ func (s *mockSweeper) sweepAll() {
 	s.lock.Unlock()
 
 	for o, c := range currentChans {
-		utxnLog.Debugf("mockSweeper signal swept for %v", o)
+		log.Debugf("mockSweeper signal swept for %v", o)
 
 		select {
 		case c <- sweep.Result{}:

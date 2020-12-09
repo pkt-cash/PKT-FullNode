@@ -44,7 +44,7 @@ func generateTests(t *testing.T) []deriveTest {
 		tests []deriveTest
 		from  index
 		to    index
-		err   error
+		err   er.R
 	)
 
 	from, err = bitsToIndex(0)

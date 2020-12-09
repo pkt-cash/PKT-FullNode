@@ -9,6 +9,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/lnd/input"
@@ -72,7 +73,7 @@ type backupTaskTest struct {
 	expRewardAmt     int64
 	expRewardScript  []byte
 	session          *wtdb.ClientSessionBody
-	bindErr          error
+	bindErr          *er.ErrorCode
 	expSweepScript   []byte
 	signer           input.Signer
 	tweakless        bool
@@ -92,7 +93,7 @@ func genTaskTest(
 	rewardScript []byte,
 	expSweepAmt int64,
 	expRewardAmt int64,
-	bindErr error,
+	bindErr *er.ErrorCode,
 	tweakless bool) backupTaskTest {
 
 	// Parse the key pairs for all keys used in the test.
@@ -488,7 +489,7 @@ func testBackupTask(t *testing.T, test backupTaskTest) {
 	// session's negotiated parameters and allows the backup task to derive
 	// the final free variables in the justice transaction.
 	err := task.bindSession(test.session)
-	if err != test.bindErr {
+	if !er.Cis(test.bindErr, err) {
 		t.Fatalf("expected: %v when binding session, got: %v",
 			test.bindErr, err)
 	}

@@ -1,7 +1,6 @@
 package wtwire
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -9,6 +8,8 @@ import (
 	"github.com/pkt-cash/pktd/lnd/feature"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 )
+
+var ErrUnknownChainHash = er.GenericErrorType.Code("ErrUnknownChainHash")
 
 // Init is the first message sent over the watchtower wire protocol, and
 // specifies connection features bits and level of requiredness maintained by
@@ -85,7 +86,7 @@ func (msg *Init) CheckRemoteInit(remoteInit *Init,
 
 	// Check that the remote peer is on the same chain.
 	if msg.ChainHash != remoteInit.ChainHash {
-		return er.E(NewErrUnknownChainHash(remoteInit.ChainHash))
+		return ErrUnknownChainHash.New(remoteInit.ChainHash.String(), nil)
 	}
 
 	remoteConnFeatures := lnwire.NewFeatureVector(
@@ -95,21 +96,4 @@ func (msg *Init) CheckRemoteInit(remoteInit *Init,
 	// Check that the remote peer doesn't have any required connection
 	// feature bits that we ourselves are unaware of.
 	return feature.ValidateRequired(remoteConnFeatures)
-}
-
-// ErrUnknownChainHash signals that the remote Init has a different chain hash
-// from the one we advertised.
-type ErrUnknownChainHash struct {
-	hash chainhash.Hash
-}
-
-// NewErrUnknownChainHash creates an ErrUnknownChainHash using the remote Init's
-// chain hash.
-func NewErrUnknownChainHash(hash chainhash.Hash) *ErrUnknownChainHash {
-	return &ErrUnknownChainHash{hash}
-}
-
-// Error returns a human-readable error displaying the unknown chain hash.
-func (e *ErrUnknownChainHash) Error() string {
-	return fmt.Sprintf("remote init has unknown chain hash: %s", e.hash)
 }

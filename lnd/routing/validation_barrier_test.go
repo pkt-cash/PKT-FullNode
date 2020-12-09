@@ -124,7 +124,7 @@ func TestValidationBarrierQuit(t *testing.T) {
 			close(quit)
 		}
 
-		var err error
+		var err er.R
 		select {
 		case <-time.After(timeout):
 			t.Fatalf("timeout waiting for job to be signaled")
@@ -137,7 +137,7 @@ func TestValidationBarrierQuit(t *testing.T) {
 			t.Fatalf("unexpected failure while waiting: %v", err)
 
 		// Last half should return the shutdown error.
-		case i >= numTasks/2 && err != routing.ErrVBarrierShuttingDown:
+		case i >= numTasks/2 && !routing.ErrVBarrierShuttingDown.Is(err):
 			t.Fatalf("expected failure after quitting: want %v, "+
 				"got %v", routing.ErrVBarrierShuttingDown, err)
 		}

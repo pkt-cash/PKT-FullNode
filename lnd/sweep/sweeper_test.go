@@ -14,19 +14,18 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/lnd/build"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lntest/mock"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	testLog = build.NewSubLogger("SWPR_TEST", nil)
-
 	testMaxSweepAttempts = 3
 
 	testMaxInputsPerTx = 3
@@ -166,12 +165,12 @@ func (ctx *sweeperTestContext) restartSweeper() {
 }
 
 func (ctx *sweeperTestContext) tick() {
-	testLog.Trace("Waiting for tick to be consumed")
+	log.Trace("Waiting for tick to be consumed")
 	select {
 	case c := <-ctx.timeoutChan:
 		select {
 		case c <- time.Time{}:
-			testLog.Trace("Tick")
+			log.Trace("Tick")
 		case <-time.After(defaultTestTimeout):
 			debug.PrintStack()
 			ctx.t.Fatal("tick timeout - tick not consumed")
@@ -264,11 +263,11 @@ func (ctx *sweeperTestContext) receiveTx() wire.MsgTx {
 	return tx
 }
 
-func (ctx *sweeperTestContext) expectResult(c chan Result, expected error) {
+func (ctx *sweeperTestContext) expectResult(c chan Result, expected *er.ErrorCode) {
 	ctx.t.Helper()
 	select {
 	case result := <-c:
-		if result.Err != expected {
+		if !expected.Is(result.Err) {
 			ctx.t.Fatalf("expected %v result, but got %v",
 				expected, result.Err,
 			)
@@ -371,7 +370,7 @@ func TestSuccess(t *testing.T) {
 
 	// Sweeping an input without a fee preference should result in an error.
 	_, err := ctx.sweeper.SweepInput(spendableInputs[0], Params{})
-	if err != ErrNoFeePreference {
+	if !ErrNoFeePreference.Is(err) {
 		t.Fatalf("expected ErrNoFeePreference, got %v", err)
 	}
 
@@ -666,7 +665,7 @@ func testRemoteSpend(t *testing.T, postSweep bool) {
 
 	select {
 	case result := <-resultChan1:
-		if result.Err != ErrRemoteSpend {
+		if !ErrRemoteSpend.Is(result.Err) {
 			t.Fatalf("expected remote spend")
 		}
 		if result.Tx.TxHash() != remoteTx.TxHash() {
@@ -1202,7 +1201,7 @@ func TestBumpFeeRBF(t *testing.T) {
 	_, err := ctx.sweeper.UpdateParams(
 		wire.OutPoint{}, ParamsUpdate{Fee: lowFeePref},
 	)
-	if err != lnwallet.ErrNotMine {
+	if !lnwallet.ErrNotMine.Is(err) {
 		t.Fatalf("expected error lnwallet.ErrNotMine, got \"%v\"", err)
 	}
 
@@ -1230,7 +1229,7 @@ func TestBumpFeeRBF(t *testing.T) {
 
 	// We should expect to see an error if a fee preference isn't provided.
 	_, err = ctx.sweeper.UpdateParams(*input.OutPoint(), ParamsUpdate{})
-	if err != ErrNoFeePreference {
+	if !ErrNoFeePreference.Is(err) {
 		t.Fatalf("expected ErrNoFeePreference, got %v", err)
 	}
 
@@ -1304,12 +1303,12 @@ func TestExclusiveGroup(t *testing.T) {
 	// Expect the other two inputs to return an error. They have no chance
 	// of confirming.
 	result1 := <-results[1]
-	if result1.Err != ErrExclusiveGroupSpend {
+	if !ErrExclusiveGroupSpend.Is(result1.Err) {
 		t.Fatal("expected second input to be canceled")
 	}
 
 	result2 := <-results[2]
-	if result2.Err != ErrExclusiveGroupSpend {
+	if !ErrExclusiveGroupSpend.Is(result2.Err) {
 		t.Fatal("expected third input to be canceled")
 	}
 }
@@ -2080,4 +2079,9 @@ func TestRequiredTxOuts(t *testing.T) {
 			testCase.assertSweeps(t, inputs, sweeps)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

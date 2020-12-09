@@ -405,7 +405,7 @@ func (h *testHarness) markInactive(channels []*channeldb.OpenChannel) {
 
 // assertEnables requests enables for all of the passed channels, and asserts
 // that the errors returned from RequestEnable matches expErr.
-func (h *testHarness) assertEnables(channels []*channeldb.OpenChannel, expErr error) {
+func (h *testHarness) assertEnables(channels []*channeldb.OpenChannel, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	for _, channel := range channels {
@@ -415,7 +415,7 @@ func (h *testHarness) assertEnables(channels []*channeldb.OpenChannel, expErr er
 
 // assertDisables requests disables for all of the passed channels, and asserts
 // that the errors returned from RequestDisable matches expErr.
-func (h *testHarness) assertDisables(channels []*channeldb.OpenChannel, expErr error) {
+func (h *testHarness) assertDisables(channels []*channeldb.OpenChannel, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	for _, channel := range channels {
@@ -425,22 +425,22 @@ func (h *testHarness) assertDisables(channels []*channeldb.OpenChannel, expErr e
 
 // assertEnable requests an enable for the given outpoint, and asserts that the
 // returned error matches expErr.
-func (h *testHarness) assertEnable(outpoint wire.OutPoint, expErr error) {
+func (h *testHarness) assertEnable(outpoint wire.OutPoint, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	err := h.mgr.RequestEnable(outpoint)
-	if err != expErr {
+	if !er.Cis(expErr, err) {
 		h.t.Fatalf("expected enable error: %v, got %v", expErr, err)
 	}
 }
 
 // assertDisable requests a disable for the given outpoint, and asserts that the
 // returned error matches expErr.
-func (h *testHarness) assertDisable(outpoint wire.OutPoint, expErr error) {
+func (h *testHarness) assertDisable(outpoint wire.OutPoint, expErr *er.ErrorCode) {
 	h.t.Helper()
 
 	err := h.mgr.RequestDisable(outpoint)
-	if err != expErr {
+	if !er.Cis(expErr, err) {
 		h.t.Fatalf("expected disable error: %v, got %v", expErr, err)
 	}
 }

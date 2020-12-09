@@ -61,8 +61,8 @@ func TestParseHexColor(t *testing.T) {
 // new TLS certificate pair is regenerated when the old pair expires. This is
 // necessary because the pair expires after a little over a year.
 func TestTLSAutoRegeneration(t *testing.T) {
-	tempDirPath, err := ioutil.TempDir("", ".testLnd")
-	if err != nil {
+	tempDirPath, errr := ioutil.TempDir("", ".testLnd")
+	if errr != nil {
 		t.Fatalf("couldn't create temporary cert directory")
 	}
 	defer os.RemoveAll(tempDirPath)
@@ -71,41 +71,41 @@ func TestTLSAutoRegeneration(t *testing.T) {
 	keyPath := tempDirPath + "/tls.key"
 
 	certDerBytes, keyBytes := genExpiredCertPair(t, tempDirPath)
-	expiredCert, err := x509.ParseCertificate(certDerBytes)
-	if err != nil {
-		t.Fatalf("failed to parse certificate: %v", err)
+	expiredCert, errr := x509.ParseCertificate(certDerBytes)
+	if errr != nil {
+		t.Fatalf("failed to parse certificate: %v", errr)
 	}
 
 	certBuf := bytes.Buffer{}
-	err = pem.Encode(
+	errr = pem.Encode(
 		&certBuf, &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: certDerBytes,
 		},
 	)
-	if err != nil {
-		t.Fatalf("failed to encode certificate: %v", err)
+	if errr != nil {
+		t.Fatalf("failed to encode certificate: %v", errr)
 	}
 
 	keyBuf := bytes.Buffer{}
-	err = pem.Encode(
+	errr = pem.Encode(
 		&keyBuf, &pem.Block{
 			Type:  "EC PRIVATE KEY",
 			Bytes: keyBytes,
 		},
 	)
-	if err != nil {
-		t.Fatalf("failed to encode private key: %v", err)
+	if errr != nil {
+		t.Fatalf("failed to encode private key: %v", errr)
 	}
 
 	// Write cert and key files.
-	err = ioutil.WriteFile(tempDirPath+"/tls.cert", certBuf.Bytes(), 0644)
-	if err != nil {
-		t.Fatalf("failed to write cert file: %v", err)
+	errr = ioutil.WriteFile(tempDirPath+"/tls.cert", certBuf.Bytes(), 0644)
+	if errr != nil {
+		t.Fatalf("failed to write cert file: %v", errr)
 	}
-	err = ioutil.WriteFile(tempDirPath+"/tls.key", keyBuf.Bytes(), 0600)
-	if err != nil {
-		t.Fatalf("failed to write key file: %v", err)
+	errr = ioutil.WriteFile(tempDirPath+"/tls.key", keyBuf.Bytes(), 0600)
+	if errr != nil {
+		t.Fatalf("failed to write key file: %v", errr)
 	}
 
 	rpcListener := net.IPAddr{IP: net.ParseIP("127.0.0.1"), Zone: ""}
@@ -127,13 +127,13 @@ func TestTLSAutoRegeneration(t *testing.T) {
 
 	// Grab the certificate to test that getTLSConfig did its job correctly
 	// and generated a new cert.
-	newCertData, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
+	newCertData, errr := tls.LoadX509KeyPair(certPath, keyPath)
+	if errr != nil {
 		t.Fatalf("couldn't grab new certificate")
 	}
 
-	newCert, err := x509.ParseCertificate(newCertData.Certificate[0])
-	if err != nil {
+	newCert, errr := x509.ParseCertificate(newCertData.Certificate[0])
+	if errr != nil {
 		t.Fatalf("couldn't parse new certificate")
 	}
 

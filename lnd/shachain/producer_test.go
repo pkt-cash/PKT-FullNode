@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
 
@@ -12,7 +13,7 @@ import (
 func TestShaChainProducerRestore(t *testing.T) {
 	t.Parallel()
 
-	var err error
+	var err er.R
 
 	seed := chainhash.DoubleHashH([]byte("shachaintest"))
 	sender := NewRevocationProducer(seed)

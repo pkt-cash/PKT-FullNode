@@ -154,7 +154,7 @@ func createTestCtxSingleNode(startingHeight uint32) (*testCtx, func(), er.R) {
 		graph      *channeldb.ChannelGraph
 		sourceNode *channeldb.LightningNode
 		cleanup    func()
-		err        error
+		err        er.R
 	)
 
 	graph, cleanup, err = makeTestGraph()
@@ -282,12 +282,12 @@ func TestSendPaymentRouteFailureFallback(t *testing.T) {
 
 			roasbeefSongoku := lnwire.NewShortChanIDFromInt(12345)
 			if firstHop == roasbeefSongoku {
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					// TODO(roasbeef): temp node failure
 					//  should be?
 					&lnwire.FailTemporaryChannelFailure{},
 					1,
-				)
+				))
 			}
 
 			return preImage, nil
@@ -415,12 +415,12 @@ func TestChannelUpdateValidation(t *testing.T) {
 	// The unsigned channel update is attached to the failure message.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
 		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
-			return [32]byte{}, htlcswitch.NewForwardingError(
+			return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: errChanUpdate,
 				},
 				1,
-			)
+			))
 		})
 
 	// The payment parameter is mostly redundant in SendToRoute. Can be left
@@ -537,7 +537,7 @@ func TestSendPaymentErrorRepeatedFeeInsufficient(t *testing.T) {
 
 			roasbeefSongoku := lnwire.NewShortChanIDFromInt(chanID)
 			if firstHop == roasbeefSongoku {
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					// Within our error, we'll add a
 					// channel update which is meant to
 					// reflect the new fee schedule for the
@@ -545,7 +545,7 @@ func TestSendPaymentErrorRepeatedFeeInsufficient(t *testing.T) {
 					&lnwire.FailFeeInsufficient{
 						Update: errChanUpdate,
 					}, 1,
-				)
+				))
 			}
 
 			return preImage, nil
@@ -640,11 +640,11 @@ func TestSendPaymentErrorNonFinalTimeLockErrors(t *testing.T) {
 		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailExpiryTooSoon{
 						Update: errChanUpdate,
 					}, 1,
-				)
+				))
 			}
 
 			return preImage, nil
@@ -693,11 +693,11 @@ func TestSendPaymentErrorNonFinalTimeLockErrors(t *testing.T) {
 		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
 
 			if firstHop == roasbeefSongoku {
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailIncorrectCltvExpiry{
 						Update: errChanUpdate,
 					}, 1,
-				)
+				))
 			}
 
 			return preImage, nil
@@ -755,19 +755,19 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 				// We'll first simulate an error from the first
 				// hop to simulate the channel from songoku to
 				// sophon not having enough capacity.
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailTemporaryChannelFailure{},
 					1,
-				)
+				))
 			}
 
 			// Next, we'll create an error from phan nuwen to
 			// indicate that the sophon node is not longer online,
 			// which should prune out the rest of the routes.
 			if firstHop == roasbeefPhanNuwen {
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailUnknownNextPeer{}, 1,
-				)
+				))
 			}
 
 			return preImage, nil
@@ -784,7 +784,7 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 
 	// The final error returned should also indicate that the peer wasn't
 	// online (the last error we returned).
-	if err != channeldb.FailureReasonNoRoute {
+	if er.Wrapped(err) != channeldb.FailureReasonNoRoute {
 		t.Fatalf("expected no route instead got: %v", err)
 	}
 
@@ -821,7 +821,7 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 				failure := htlcswitch.NewForwardingError(
 					&lnwire.FailUnknownNextPeer{}, 1,
 				)
-				return [32]byte{}, failure
+				return [32]byte{}, er.E(failure)
 			}
 
 			return preImage, nil
@@ -864,10 +864,10 @@ func TestSendPaymentErrorPathPruning(t *testing.T) {
 				// We'll first simulate an error from the first
 				// outgoing link to simulate the channel from luo ji to
 				// roasbeef not having enough capacity.
-				return [32]byte{}, htlcswitch.NewForwardingError(
+				return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailTemporaryChannelFailure{},
 					1,
-				)
+				))
 			}
 			return preImage, nil
 		})
@@ -2449,7 +2449,7 @@ func TestEmptyRoutesGenerateSphinxPacket(t *testing.T) {
 	sessionKey, _ := btcec.NewPrivateKey(btcec.S256())
 	emptyRoute := &route.Route{}
 	_, _, err := generateSphinxPacket(emptyRoute, testHash[:], sessionKey)
-	if err != route.ErrNoRouteHopsProvided {
+	if !route.ErrNoRouteHopsProvided.Is(err) {
 		t.Fatalf("expected empty hops error: instead got: %v", err)
 	}
 }
@@ -2550,7 +2550,7 @@ func TestUnknownErrorSource(t *testing.T) {
 			// couldn't be decoded (FailureMessage is nil).
 			if firstHop.ToUint64() == 2 {
 				return [32]byte{},
-					htlcswitch.NewUnknownForwardingError(1)
+					er.E(htlcswitch.NewUnknownForwardingError(1))
 			}
 
 			// Otherwise the payment succeeds.
@@ -2681,11 +2681,11 @@ func TestSendToRouteStructuredError(t *testing.T) {
 	// The unsigned channel update is attached to the failure message.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
 		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
-			return [32]byte{}, htlcswitch.NewForwardingError(
+			return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: lnwire.ChannelUpdate{},
 				}, 1,
-			)
+			))
 		})
 
 	// The payment parameter is mostly redundant in SendToRoute. Can be left
@@ -2697,7 +2697,7 @@ func TestSendToRouteStructuredError(t *testing.T) {
 	// router and ignored because it is missing a valid signature.
 	_, err = ctx.router.SendToRoute(payment, rt)
 
-	fErr, ok := err.(*htlcswitch.ForwardingError)
+	fErr, ok := er.Wrapped(err).(*htlcswitch.ForwardingError)
 	if !ok {
 		t.Fatalf("expected forwarding error")
 	}
@@ -2761,11 +2761,11 @@ func TestSendToRouteMultiShardSend(t *testing.T) {
 	// still allowed to retry with other shards after a failed one.
 	ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcher).setPaymentResult(
 		func(firstHop lnwire.ShortChannelID) ([32]byte, er.R) {
-			return [32]byte{}, htlcswitch.NewForwardingError(
+			return [32]byte{}, er.E(htlcswitch.NewForwardingError(
 				&lnwire.FailFeeInsufficient{
 					Update: lnwire.ChannelUpdate{},
 				}, 1,
-			)
+			))
 		})
 
 	// The payment parameter is mostly redundant in SendToRoute. Can be left
@@ -2912,7 +2912,7 @@ func TestSendToRouteMaxHops(t *testing.T) {
 	// indicating that the route is too long.
 	var payment lntypes.Hash
 	_, err = ctx.router.SendToRoute(payment, rt)
-	if err != route.ErrMaxRouteHopsExceeded {
+	if !route.ErrMaxRouteHopsExceeded.Is(err) {
 		t.Fatalf("expected ErrMaxRouteHopsExceeded, but got %v", err)
 	}
 }
@@ -3049,7 +3049,7 @@ func TestBuildRoute(t *testing.T) {
 	_, err = ctx.router.BuildRoute(
 		nil, hops, nil, 40,
 	)
-	errNoChannel, ok := err.(ErrNoChannel)
+	errNoChannel, ok := er.Wrapped(err).(ErrNoChannel)
 	if !ok {
 		t.Fatalf("expected incompatible policies error, but got %v",
 			err)

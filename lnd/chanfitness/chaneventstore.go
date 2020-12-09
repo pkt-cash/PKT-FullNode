@@ -222,7 +222,7 @@ func (c *ChannelEventStore) addChannel(channelPoint wire.OutPoint,
 
 	peerMonitor, err := c.getPeerMonitor(peer)
 	if err != nil {
-		log.Error("could not create monitor: %v", err)
+		log.Errorf("could not create monitor: %v", err)
 		return
 	}
 
@@ -293,7 +293,7 @@ func (c *ChannelEventStore) closeChannel(channelPoint wire.OutPoint,
 func (c *ChannelEventStore) peerEvent(peer route.Vertex, online bool) {
 	peerMonitor, err := c.getPeerMonitor(peer)
 	if err != nil {
-		log.Error("could not create monitor: %v", err)
+		log.Errorf("could not create monitor: %v", err)
 		return
 	}
 

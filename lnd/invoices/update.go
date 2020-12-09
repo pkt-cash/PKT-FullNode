@@ -35,7 +35,7 @@ func (i *invoiceUpdateCtx) invoiceRef() channeldb.InvoiceRef {
 // log logs a message specific to this update context.
 func (i *invoiceUpdateCtx) log(s string) {
 	log.Debugf("Invoice%v: %v, amt=%v, expiry=%v, circuit=%v, mpp=%v",
-		i.invoiceRef, s, i.amtPaid, i.expiry, i.circuitKey, i.mpp)
+		i.invoiceRef(), s, i.amtPaid, i.expiry, i.circuitKey, i.mpp)
 }
 
 // failRes is a helper function which creates a failure resolution with

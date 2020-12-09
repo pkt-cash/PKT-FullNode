@@ -45,7 +45,7 @@ func TestOnionFile(t *testing.T) {
 	if err := onionFile.DeletePrivateKey(V2); err != nil {
 		t.Fatalf("unable to delete private key: %v", err)
 	}
-	if _, err := onionFile.PrivateKey(V2); ErrNoPrivateKey.Is(err) {
+	if _, err := onionFile.PrivateKey(V2); !ErrNoPrivateKey.Is(err) {
 		t.Fatal("found deleted private key")
 	}
 }

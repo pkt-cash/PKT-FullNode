@@ -9,7 +9,6 @@ import (
 
 	prand "math/rand"
 
-	"github.com/go-errors/errors"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
@@ -51,7 +50,7 @@ func createTestNode() (*channeldb.LightningNode, er.R) {
 
 	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
-		return nil, errors.Errorf("unable create private key: %v", err)
+		return nil, er.Errorf("unable create private key: %v", err)
 	}
 
 	pub := priv.PubKey().SerializeCompressed()

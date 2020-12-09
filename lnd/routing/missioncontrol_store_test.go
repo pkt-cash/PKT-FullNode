@@ -24,9 +24,9 @@ func TestMissionControlStore(t *testing.T) {
 	// Set time zone explicitly to keep test deterministic.
 	time.Local = time.UTC
 
-	file, err := ioutil.TempFile("", "*.db")
-	if err != nil {
-		t.Fatal(err)
+	file, errr := ioutil.TempFile("", "*.db")
+	if errr != nil {
+		t.Fatal(errr)
 	}
 
 	dbPath := file.Name()

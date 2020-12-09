@@ -3341,8 +3341,7 @@ func (f *fundingManager) handleErrorMsg(peer lnpeer.Peer,
 	// we waited too long. Return a nice error message to the user in that
 	// case so the user knows what's the problem.
 	if resCtx.reservation.IsPsbt() {
-		fundingErr = er.Errorf("%w: %v", chanfunding.ErrRemoteCanceled,
-			fundingErr)
+		fundingErr = chanfunding.ErrRemoteCanceled.New("", fundingErr)
 	}
 
 	resCtx.err <- fundingErr

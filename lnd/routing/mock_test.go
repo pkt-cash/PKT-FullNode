@@ -31,12 +31,12 @@ func (m *mockPaymentAttemptDispatcher) SendHTLC(firstHop lnwire.ShortChannelID,
 	var result *htlcswitch.PaymentResult
 	preimage, err := m.onPayment(firstHop)
 	if err != nil {
-		rtErr, ok := err.(htlcswitch.ClearTextError)
+		_, ok := err.(htlcswitch.ClearTextError)
 		if !ok {
 			return err
 		}
 		result = &htlcswitch.PaymentResult{
-			Error: rtErr,
+			Error: err,
 		}
 	} else {
 		result = &htlcswitch.PaymentResult{Preimage: preimage}
@@ -76,7 +76,7 @@ func (m *mockPaymentAttemptDispatcher) CleanStore(map[uint64]struct{}) er.R {
 }
 
 func (m *mockPaymentAttemptDispatcher) setPaymentResult(
-	f func(firstHop lnwire.ShortChannelID) ([32]byte, error)) {
+	f func(firstHop lnwire.ShortChannelID) ([32]byte, er.R)) {
 
 	m.onPayment = f
 }
@@ -143,7 +143,7 @@ func (m *mockPaymentSession) RequestRoute(_, _ lnwire.MilliSatoshi,
 	_, height uint32) (*route.Route, er.R) {
 
 	if len(m.routes) == 0 {
-		return nil, errNoPathFound
+		return nil, er.E(errNoPathFound)
 	}
 
 	r := m.routes[0]
@@ -153,8 +153,8 @@ func (m *mockPaymentSession) RequestRoute(_, _ lnwire.MilliSatoshi,
 }
 
 type mockPayer struct {
-	sendResult       chan error
-	paymentResultErr chan error
+	sendResult       chan er.R
+	paymentResultErr chan er.R
 	paymentResult    chan *htlcswitch.PaymentResult
 	quit             chan struct{}
 }

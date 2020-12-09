@@ -21,6 +21,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/channeldb"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/record"
@@ -149,9 +150,9 @@ type testChan struct {
 func makeTestGraph() (*channeldb.ChannelGraph, func(), er.R) {
 	// First, create a temporary directory to be used for the duration of
 	// this test.
-	tempDirName, err := ioutil.TempDir("", "channeldb")
-	if err != nil {
-		return nil, nil, err
+	tempDirName, errr := ioutil.TempDir("", "channeldb")
+	if errr != nil {
+		return nil, nil, er.E(errr)
 	}
 
 	// Next, create channeldb for the first time.
@@ -171,26 +172,26 @@ func makeTestGraph() (*channeldb.ChannelGraph, func(), er.R) {
 // parseTestGraph returns a fully populated ChannelGraph given a path to a JSON
 // file which encodes a test graph.
 func parseTestGraph(path string) (*testGraphInstance, er.R) {
-	graphJSON, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
+	graphJSON, errr := ioutil.ReadFile(path)
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// First unmarshal the JSON graph into an instance of the testGraph
 	// struct. Using the struct tags created above in the struct, the JSON
 	// will be properly parsed into the struct above.
 	var g testGraph
-	if err := json.Unmarshal(graphJSON, &g); err != nil {
-		return nil, err
+	if errr := json.Unmarshal(graphJSON, &g); errr != nil {
+		return nil, er.E(errr)
 	}
 
 	// We'll use this fake address for the IP address of all the nodes in
 	// our tests. This value isn't needed for path finding so it doesn't
 	// need to be unique.
 	var testAddrs []net.Addr
-	testAddr, err := net.ResolveTCPAddr("tcp", "192.0.0.1:8888")
-	if err != nil {
-		return nil, err
+	testAddr, errr := net.ResolveTCPAddr("tcp", "192.0.0.1:8888")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	testAddrs = append(testAddrs, testAddr)
 
@@ -306,7 +307,7 @@ func parseTestGraph(path string) (*testGraphInstance, er.R) {
 		copy(edgeInfo.BitcoinKey2Bytes[:], node2Bytes)
 
 		err = graph.AddChannelEdge(&edgeInfo)
-		if err != nil && err != channeldb.ErrEdgeAlreadyExist {
+		if err != nil && !channeldb.ErrEdgeAlreadyExist.Is(err) {
 			return nil, err
 		}
 
@@ -417,9 +418,9 @@ func createTestGraphFromChannels(testChannels []*testChannel, source string) (
 	// our tests. This value isn't needed for path finding so it doesn't
 	// need to be unique.
 	var testAddrs []net.Addr
-	testAddr, err := net.ResolveTCPAddr("tcp", "192.0.0.1:8888")
-	if err != nil {
-		return nil, err
+	testAddr, errr := net.ResolveTCPAddr("tcp", "192.0.0.1:8888")
+	if errr != nil {
+		return nil, er.E(errr)
 	}
 	testAddrs = append(testAddrs, testAddr)
 
@@ -550,7 +551,7 @@ func createTestGraphFromChannels(testChannels []*testChannel, source string) (
 		}
 
 		err = graph.AddChannelEdge(&edgeInfo)
-		if err != nil && err != channeldb.ErrEdgeAlreadyExist {
+		if err != nil && !channeldb.ErrEdgeAlreadyExist.Is(err) {
 			return nil, err
 		}
 
@@ -1025,7 +1026,7 @@ func TestPathFindingWithAdditionalEdges(t *testing.T) {
 	restrictions.DestCustomRecords = record.CustomSet{70000: []byte{}}
 
 	_, err = find(&restrictions)
-	if err != errNoTlvPayload {
+	if er.Wrapped(err) != errNoTlvPayload {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1034,7 +1035,7 @@ func TestPathFindingWithAdditionalEdges(t *testing.T) {
 	restrictions.DestFeatures = lnwire.EmptyFeatureVector()
 
 	_, err = find(&restrictions)
-	if err != errNoTlvPayload {
+	if er.Wrapped(err) != errNoTlvPayload {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1386,7 +1387,7 @@ func TestNewRoutePathTooLong(t *testing.T) {
 	// Assert that finding a 21 hop route fails.
 	node21 := ctx.keyFromAlias("node-21")
 	_, err = ctx.findPath(node21, payAmt)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("not route error expected, but got %v", err)
 	}
 
@@ -1397,7 +1398,7 @@ func TestNewRoutePathTooLong(t *testing.T) {
 		100000: bytes.Repeat([]byte{1}, 100),
 	}
 	_, err = ctx.findPath(node20, payAmt)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("not route error expected, but got %v", err)
 	}
 }
@@ -1432,7 +1433,7 @@ func TestPathNotAvailable(t *testing.T) {
 		noRestrictions, testPathFindingConfig,
 		sourceNode.PubKeyBytes, unknownNode, 100, 0,
 	)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 }
@@ -1503,7 +1504,7 @@ func TestDestTLVGraphFallback(t *testing.T) {
 
 	// Path to luoji should fail because his node ann features are empty.
 	_, err = find(&restrictions, luoji)
-	if err != errNoTlvPayload {
+	if er.Wrapped(err) != errNoTlvPayload {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1520,11 +1521,11 @@ func TestDestTLVGraphFallback(t *testing.T) {
 	restrictions.DestFeatures = lnwire.EmptyFeatureVector()
 
 	_, err = find(&restrictions, luoji)
-	if err != errNoTlvPayload {
+	if er.Wrapped(err) != errNoTlvPayload {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 	_, err = find(&restrictions, satoshi)
-	if err != errNoTlvPayload {
+	if er.Wrapped(err) != errNoTlvPayload {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1589,7 +1590,7 @@ func TestMissingFeatureDep(t *testing.T) {
 	joost := ctx.keyFromAlias("joost")
 
 	_, err := ctx.findPath(conner, 100)
-	if err != errMissingDependentFeature {
+	if er.Wrapped(err) != errMissingDependentFeature {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1611,7 +1612,7 @@ func TestMissingFeatureDep(t *testing.T) {
 	// intermediate hops are simply skipped if they have invalid feature
 	// vectors, leaving no possible route to joost.
 	_, err = ctx.findPath(joost, 100)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 }
@@ -1665,7 +1666,7 @@ func TestUnknownRequiredFeatures(t *testing.T) {
 	// Pathfinding should fail since we check the destination's features for
 	// unknown required features before beginning pathfinding.
 	_, err := ctx.findPath(conner, 100)
-	if !reflect.DeepEqual(err, errUnknownRequiredFeature) {
+	if !reflect.DeepEqual(er.Wrapped(err), errUnknownRequiredFeature) {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1677,7 +1678,7 @@ func TestUnknownRequiredFeatures(t *testing.T) {
 	// that we don't try to route _through_ nodes with unknown required
 	// features.
 	_, err = ctx.findPath(joost, 100)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 }
@@ -1712,7 +1713,7 @@ func TestDestPaymentAddr(t *testing.T) {
 	ctx.restrictParams.DestFeatures = lnwire.EmptyFeatureVector()
 
 	_, err := ctx.findPath(luoji, 100)
-	if err != errNoPaymentAddr {
+	if er.Wrapped(err) != errNoPaymentAddr {
 		t.Fatalf("path shouldn't have been found: %v", err)
 	}
 
@@ -1757,9 +1758,14 @@ func TestPathInsufficientCapacity(t *testing.T) {
 		noRestrictions, testPathFindingConfig,
 		sourceNode.PubKeyBytes, target, payAmt, 0,
 	)
-	if err != errInsufficientBalance {
+	if er.Wrapped(err) != errInsufficientBalance {
 		t.Fatalf("graph shouldn't be able to support payment: %v", err)
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }
 
 // TestRouteFailMinHTLC tests that if we attempt to route an HTLC which is
@@ -1788,7 +1794,7 @@ func TestRouteFailMinHTLC(t *testing.T) {
 		noRestrictions, testPathFindingConfig,
 		sourceNode.PubKeyBytes, target, payAmt, 0,
 	)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("graph shouldn't be able to support payment: %v", err)
 	}
 }
@@ -1852,7 +1858,7 @@ func TestRouteFailMaxHTLC(t *testing.T) {
 	// We'll now attempt to route through that edge with a payment above
 	// 100k msat, which should fail.
 	_, err = ctx.findPath(target, payAmt)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("graph shouldn't be able to support payment: %v", err)
 	}
 }
@@ -1934,7 +1940,7 @@ func TestRouteFailDisabledEdge(t *testing.T) {
 		noRestrictions, testPathFindingConfig,
 		sourceNode.PubKeyBytes, target, payAmt, 0,
 	)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("graph shouldn't be able to support payment: %v", err)
 	}
 }
@@ -1987,7 +1993,7 @@ func TestPathSourceEdgesBandwidth(t *testing.T) {
 		noRestrictions, testPathFindingConfig,
 		sourceNode.PubKeyBytes, target, payAmt, 0,
 	)
-	if err != errNoPathFound {
+	if er.Wrapped(err) != errNoPathFound {
 		t.Fatalf("graph shouldn't be able to support payment: %v", err)
 	}
 
@@ -2234,7 +2240,7 @@ func TestNewRouteFromEmptyHops(t *testing.T) {
 
 	var source route.Vertex
 	_, err := route.NewRouteFromHops(0, 0, source, []*route.Hop{})
-	if err != route.ErrNoRouteHopsProvided {
+	if !route.ErrNoRouteHopsProvided.Is(err) {
 		t.Fatalf("expected empty hops error: instead got: %v", err)
 	}
 }
@@ -2419,7 +2425,7 @@ func testCltvLimit(t *testing.T, limit uint32, expectedChannel uint64) {
 	path, err := ctx.findPath(target, paymentAmt)
 	if expectedChannel == 0 {
 		// Finish test if we expect no route.
-		if err == errNoPathFound {
+		if er.Wrapped(err) == errNoPathFound {
 			return
 		}
 		t.Fatal("expected no path to be found")
@@ -2614,7 +2620,7 @@ func testProbabilityRouting(t *testing.T, paymentAmt btcutil.Amount,
 		target, lnwire.NewMSatFromSatoshis(paymentAmt),
 	)
 	if expectedChan == 0 {
-		if err != errNoPathFound {
+		if er.Wrapped(err) != errNoPathFound {
 			t.Fatalf("expected no path found, but got %v", err)
 		}
 		return
@@ -2874,7 +2880,7 @@ func (c *pathFindingTestContext) cleanup() {
 
 func (c *pathFindingTestContext) findPath(target route.Vertex,
 	amt lnwire.MilliSatoshi) ([]*channeldb.ChannelEdgePolicy,
-	error) {
+	er.R) {
 
 	return dbFindPath(
 		c.graph, nil, c.bandwidthHints, &c.restrictParams,

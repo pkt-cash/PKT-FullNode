@@ -50,20 +50,20 @@ func (b *mockBackend) publishTransaction(tx *wire.MsgTx) er.R {
 	txHash := tx.TxHash()
 	if _, ok := b.unconfirmedTxes[txHash]; ok {
 		// Tx already exists
-		testLog.Tracef("mockBackend duplicate tx %v", tx.TxHash())
+		log.Tracef("mockBackend duplicate tx %v", tx.TxHash())
 		return lnwallet.ErrDoubleSpend.Default()
 	}
 
 	for _, in := range tx.TxIn {
 		if _, ok := b.unconfirmedSpendInputs[in.PreviousOutPoint]; ok {
 			// Double spend
-			testLog.Tracef("mockBackend double spend tx %v", tx.TxHash())
+			log.Tracef("mockBackend double spend tx %v", tx.TxHash())
 			return lnwallet.ErrDoubleSpend.Default()
 		}
 
 		if _, ok := b.confirmedSpendInputs[in.PreviousOutPoint]; ok {
 			// Already included in block
-			testLog.Tracef("mockBackend already in block tx %v", tx.TxHash())
+			log.Tracef("mockBackend already in block tx %v", tx.TxHash())
 			return lnwallet.ErrDoubleSpend.Default()
 		}
 	}
@@ -73,7 +73,7 @@ func (b *mockBackend) publishTransaction(tx *wire.MsgTx) er.R {
 		b.unconfirmedSpendInputs[in.PreviousOutPoint] = struct{}{}
 	}
 
-	testLog.Tracef("mockBackend publish tx %v", tx.TxHash())
+	log.Tracef("mockBackend publish tx %v", tx.TxHash())
 
 	return nil
 }
@@ -105,7 +105,7 @@ func (b *mockBackend) ListUnspentWitness(minconfirms, maxconfirms int32) (
 	return b.walletUtxos, nil
 }
 
-func (b *mockBackend) WithCoinSelectLock(f func() error) er.R {
+func (b *mockBackend) WithCoinSelectLock(f func() er.R) er.R {
 	return f()
 }
 
@@ -116,11 +116,11 @@ func (b *mockBackend) deleteUnconfirmed(txHash chainhash.Hash) {
 	tx, ok := b.unconfirmedTxes[txHash]
 	if !ok {
 		// Tx already exists
-		testLog.Errorf("mockBackend delete tx not existing %v", txHash)
+		log.Errorf("mockBackend delete tx not existing %v", txHash)
 		return
 	}
 
-	testLog.Tracef("mockBackend delete tx %v", tx.TxHash())
+	log.Tracef("mockBackend delete tx %v", tx.TxHash())
 	delete(b.unconfirmedTxes, txHash)
 	for _, in := range tx.TxIn {
 		delete(b.unconfirmedSpendInputs, in.PreviousOutPoint)
@@ -133,7 +133,7 @@ func (b *mockBackend) mine() {
 
 	notifications := make(map[wire.OutPoint]*wire.MsgTx)
 	for _, tx := range b.unconfirmedTxes {
-		testLog.Tracef("mockBackend mining tx %v", tx.TxHash())
+		log.Tracef("mockBackend mining tx %v", tx.TxHash())
 		for _, in := range tx.TxIn {
 			b.confirmedSpendInputs[in.PreviousOutPoint] = struct{}{}
 			notifications[in.PreviousOutPoint] = tx
@@ -143,7 +143,7 @@ func (b *mockBackend) mine() {
 	b.unconfirmedTxes = make(map[chainhash.Hash]*wire.MsgTx)
 
 	for outpoint, tx := range notifications {
-		testLog.Tracef("mockBackend delivering spend ntfn for %v",
+		log.Tracef("mockBackend delivering spend ntfn for %v",
 			outpoint)
 		b.notifier.SpendOutpoint(outpoint, *tx)
 	}

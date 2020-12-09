@@ -17,7 +17,7 @@ type incubateTest struct {
 	chanPoint   *wire.OutPoint
 	commOutput  *kidOutput
 	htlcOutputs []babyOutput
-	err         error
+	err         *er.ErrorCode
 }
 
 // incubateTests holds the test vectors used to test the state transitions of
@@ -146,7 +146,7 @@ func TestNurseryStoreIncubate(t *testing.T) {
 			// Now, move the commitment output to the kindergarten
 			// bucket.
 			err = ns.PreschoolToKinder(test.commOutput, 0)
-			if err != test.err {
+			if !er.Cis(test.err, err) {
 				t.Fatalf("unable to move commitment output from "+
 					"pscl to kndr: %v", err)
 			}
@@ -375,7 +375,7 @@ func assertNumChanOutputs(t *testing.T, ns NurseryStore,
 		count = 0
 	})
 
-	if count == 0 && err == ErrContractNotFound {
+	if count == 0 && ErrContractNotFound.Is(err) {
 		return
 	} else if err != nil {
 		t.Fatalf("unable to count num outputs for channel %v: %v",

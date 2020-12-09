@@ -129,7 +129,7 @@ type mockCoinSelectionLocker struct {
 	fail bool
 }
 
-func (m *mockCoinSelectionLocker) WithCoinSelectLock(f func() error) er.R {
+func (m *mockCoinSelectionLocker) WithCoinSelectLock(f func() er.R) er.R {
 	if err := f(); err != nil {
 		return err
 	}

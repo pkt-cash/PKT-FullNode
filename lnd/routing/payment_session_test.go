@@ -27,7 +27,7 @@ func TestRequestRoute(t *testing.T) {
 	session, err := newPaymentSession(
 		payment,
 		func() (map[uint64]lnwire.MilliSatoshi,
-			error) {
+			er.R) {
 
 			return nil, nil
 		},

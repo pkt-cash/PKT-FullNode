@@ -222,15 +222,15 @@ func TestDeleteMacaroonID(t *testing.T) {
 	// Third, checks that removing encryptedKeyID returns an error.
 	encryptedKeyID := []byte("enckey")
 	_, err = service.DeleteMacaroonID(ctxb, encryptedKeyID)
-	require.Equal(t, macaroons.ErrDeletionForbidden, err)
+	require.True(t, macaroons.ErrDeletionForbidden.Is(err))
 
 	// Fourth, checks that removing DefaultKeyID returns an error.
 	_, err = service.DeleteMacaroonID(ctxb, macaroons.DefaultRootKeyID)
-	require.Equal(t, macaroons.ErrDeletionForbidden, err)
+	require.True(t, macaroons.ErrDeletionForbidden.Is(err))
 
 	// Fifth, checks that removing empty key id returns an error.
 	_, err = service.DeleteMacaroonID(ctxb, []byte{})
-	require.Equal(t, macaroons.ErrMissingRootKeyID, err)
+	require.True(t, macaroons.ErrMissingRootKeyID.Is(err))
 
 	// Sixth, checks that removing a non-existed key id returns nil.
 	nonExistedID := []byte("test-non-existed")

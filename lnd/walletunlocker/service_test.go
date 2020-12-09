@@ -3,6 +3,7 @@ package walletunlocker_test
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"path"
@@ -72,7 +73,7 @@ func createTestWalletWithPw(t *testing.T, pubPw, privPw []byte, dir string,
 	netDir := btcwallet.NetworkDir(dir, netParams)
 	loader := wallet.NewLoader(netParams, netDir, "wallet.db", true, 0)
 	_, err := loader.CreateNewWallet(
-		pubPw, privPw, testSeed, time.Time{}, nil,
+		pubPw, privPw, []byte(hex.EncodeToString(testSeed)), time.Time{}, nil,
 	)
 	util.RequireNoErr(t, err)
 	err = loader.UnloadWallet()
@@ -156,14 +157,14 @@ func TestGenSeed(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seedResp, err := service.GenSeed(ctx, genSeedReq)
-	util.RequireNoErr(t, err)
+	seedResp, errr := service.GenSeed(ctx, genSeedReq)
+	require.NoError(t, errr)
 
 	// We should then be able to take the generated mnemonic, and properly
 	// decipher both it.
 	var mnemonic aezeed.Mnemonic
 	copy(mnemonic[:], seedResp.CipherSeedMnemonic[:])
-	_, err = mnemonic.ToCipherSeed(aezeedPass)
+	_, err := mnemonic.ToCipherSeed(aezeedPass)
 	util.RequireNoErr(t, err)
 }
 
@@ -190,14 +191,14 @@ func TestGenSeedGenerateEntropy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seedResp, err := service.GenSeed(ctx, genSeedReq)
-	util.RequireNoErr(t, err)
+	seedResp, errr := service.GenSeed(ctx, genSeedReq)
+	require.NoError(t, errr)
 
 	// We should then be able to take the generated mnemonic, and properly
 	// decipher both it.
 	var mnemonic aezeed.Mnemonic
 	copy(mnemonic[:], seedResp.CipherSeedMnemonic[:])
-	_, err = mnemonic.ToCipherSeed(aezeedPass)
+	_, err := mnemonic.ToCipherSeed(aezeedPass)
 	util.RequireNoErr(t, err)
 }
 
@@ -227,9 +228,9 @@ func TestGenSeedInvalidEntropy(t *testing.T) {
 
 	// We should get an error now since the entropy source was invalid.
 	ctx := context.Background()
-	_, err := service.GenSeed(ctx, genSeedReq)
-	util.RequireErr(t, err)
-	require.Contains(t, err.String(), "incorrect entropy length")
+	_, errr = service.GenSeed(ctx, genSeedReq)
+	require.Error(t, errr)
+	require.Contains(t, errr.Error(), "incorrect entropy length")
 }
 
 // TestInitWallet tests that the user is able to properly initialize the wallet
@@ -268,7 +269,7 @@ func TestInitWallet(t *testing.T) {
 	go func() {
 		response, err := service.InitWallet(ctx, req)
 		if err != nil {
-			errChan <- err
+			errChan <- er.E(err)
 			return
 		}
 
@@ -309,13 +310,13 @@ func TestInitWallet(t *testing.T) {
 
 	// Now calling InitWallet should fail, since a wallet already exists in
 	// the directory.
-	_, err := service.InitWallet(ctx, req)
-	util.RequireErr(t, err)
+	_, errr = service.InitWallet(ctx, req)
+	require.Error(t, errr)
 
 	// Similarly, if we try to do GenSeed again, we should get an error as
 	// the wallet already exists.
-	_, err = service.GenSeed(ctx, &lnrpc.GenSeedRequest{})
-	util.RequireErr(t, err)
+	_, errr = service.GenSeed(ctx, &lnrpc.GenSeedRequest{})
+	require.Error(t, errr)
 }
 
 // TestInitWalletInvalidCipherSeed tests that if we attempt to create a wallet
@@ -342,8 +343,8 @@ func TestCreateWalletInvalidEntropy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err := service.InitWallet(ctx, req)
-	util.RequireErr(t, err)
+	_, errr = service.InitWallet(ctx, req)
+	require.Error(t, errr)
 }
 
 // TestUnlockWallet checks that trying to unlock non-existing wallet fail, that
@@ -371,7 +372,7 @@ func TestUnlockWallet(t *testing.T) {
 
 	// Should fail to unlock non-existing wallet.
 	_, err := service.UnlockWallet(ctx, req)
-	util.RequireErr(t, err)
+	require.Error(t, err)
 
 	// Create a wallet we can try to unlock.
 	createTestWallet(t, testDir, testNetParams)
@@ -381,7 +382,7 @@ func TestUnlockWallet(t *testing.T) {
 		WalletPassword: []byte("wrong-ofc"),
 	}
 	_, err = service.UnlockWallet(ctx, wrongReq)
-	util.RequireErr(t, err)
+	require.Error(t, err)
 
 	// With the correct password, we should be able to unlock the wallet.
 	errChan := make(chan er.R, 1)
@@ -390,7 +391,7 @@ func TestUnlockWallet(t *testing.T) {
 		// wallet.
 		_, err := service.UnlockWallet(ctx, req)
 		if err != nil {
-			errChan <- err
+			errChan <- er.E(err)
 		}
 	}()
 
@@ -461,8 +462,8 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 	}
 
 	// Changing the password to a non-existing wallet should fail.
-	_, err = service.ChangePassword(ctx, req)
-	util.RequireErr(t, err)
+	_, errr = service.ChangePassword(ctx, req)
+	require.Error(t, errr)
 
 	// Create a wallet to test changing the password.
 	createTestWallet(t, testDir, testNetParams)
@@ -473,8 +474,8 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 		CurrentPassword: []byte("wrong-ofc"),
 		NewPassword:     newPassword,
 	}
-	_, err = service.ChangePassword(ctx, wrongReq)
-	util.RequireErr(t, err)
+	_, errr = service.ChangePassword(ctx, wrongReq)
+	require.Error(t, errr)
 
 	// The files should still exist after an unsuccessful attempt to change
 	// the wallet's password.
@@ -487,8 +488,8 @@ func TestChangeWalletPasswordNewRootkey(t *testing.T) {
 	// Attempting to change the wallet's password using an invalid
 	// new password should fail.
 	wrongReq.NewPassword = []byte("8")
-	_, err = service.ChangePassword(ctx, wrongReq)
-	util.RequireErr(t, err)
+	_, errr = service.ChangePassword(ctx, wrongReq)
+	require.Error(t, errr)
 
 	// When providing the correct wallet's current password and a new
 	// password that meets the length requirement, the password change
@@ -577,8 +578,8 @@ func TestChangeWalletPasswordStateless(t *testing.T) {
 		NewMacaroonRootKey: true,
 	}
 	ctx := context.Background()
-	_, err = service.ChangePassword(ctx, badReq)
-	util.RequireErr(t, err)
+	_, errr = service.ChangePassword(ctx, badReq)
+	require.Error(t, errr)
 
 	// Prepare the correct request we are going to send to the unlocker
 	// service. We don't provide a current password to indicate there
@@ -621,9 +622,9 @@ func doChangePassword(service *walletunlocker.UnlockerService, testDir string,
 	// new password that meets the length requirement, the password
 	// change should succeed.
 	ctx := context.Background()
-	response, err := service.ChangePassword(ctx, req)
-	if err != nil {
-		errChan <- er.Errorf("could not change password: %v", err)
+	response, errr := service.ChangePassword(ctx, req)
+	if errr != nil {
+		errChan <- er.Errorf("could not change password: %v", errr)
 		return
 	}
 
@@ -641,7 +642,7 @@ func doChangePassword(service *walletunlocker.UnlockerService, testDir string,
 		errChan <- er.Errorf("could not create test store: %v", err)
 		return
 	}
-	_, _, errr := store.RootKey(defaultRootKeyIDContext)
+	_, _, errr = store.RootKey(defaultRootKeyIDContext)
 	if errr != nil {
 		errChan <- er.Errorf("could not get root key: %v", errr)
 		return

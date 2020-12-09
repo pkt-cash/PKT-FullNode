@@ -116,10 +116,10 @@ func TestStore(t *testing.T) {
 	_, store = openTestStore(t, tempDir)
 
 	err = store.CreateUnlock(&badpw)
-	require.Equal(t, snacl.ErrInvalidPassword, err)
+	require.True(t, snacl.ErrInvalidPassword.Is(err))
 
 	err = store.CreateUnlock(nil)
-	require.Equal(t, macaroons.ErrPasswordRequired, err)
+	require.True(t, macaroons.ErrPasswordRequired.Is(err))
 
 	_, _, errr = store.RootKey(defaultRootKeyIDContext)
 	require.True(t, macaroons.ErrStoreLocked.Is(er.E(errr)))
@@ -148,7 +148,7 @@ func TestStoreGenerateNewRootKey(t *testing.T) {
 
 	// The store must be unlocked to replace the root key.
 	err := store.GenerateNewRootKey()
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	require.True(t, macaroons.ErrStoreLocked.Is(err))
 
 	// Unlock the store and read the current key.
 	pw := []byte("weks")
@@ -177,7 +177,7 @@ func TestStoreChangePassword(t *testing.T) {
 
 	// The store must be unlocked to replace the root key.
 	err := store.ChangePassword(nil, nil)
-	require.Equal(t, macaroons.ErrStoreLocked, err)
+	require.True(t, macaroons.ErrStoreLocked.Is(err))
 
 	// Unlock the DB and read the current root key. This will need to stay
 	// the same after changing the password for the test to succeed.
@@ -189,14 +189,14 @@ func TestStoreChangePassword(t *testing.T) {
 
 	// Both passwords must be set.
 	err = store.ChangePassword(nil, nil)
-	require.Equal(t, macaroons.ErrPasswordRequired, err)
+	require.True(t, macaroons.ErrPasswordRequired.Is(err))
 
 	// Make sure that an error is returned if we try to change the password
 	// without the correct old password.
 	wrongPw := []byte("wrong")
 	newPw := []byte("newpassword")
 	err = store.ChangePassword(wrongPw, newPw)
-	require.Equal(t, snacl.ErrInvalidPassword, err)
+	require.True(t, snacl.ErrInvalidPassword.Is(err))
 
 	// Now really do change the password.
 	err = store.ChangePassword(pw, newPw)

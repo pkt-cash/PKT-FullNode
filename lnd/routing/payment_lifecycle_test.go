@@ -568,8 +568,8 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 	// setupRouter is a helper method that creates and starts the router in
 	// the desired configuration for this test.
-	setupRouter := func() (*ChannelRouter, chan error,
-		chan *htlcswitch.PaymentResult, chan error) {
+	setupRouter := func() (*ChannelRouter, chan er.R,
+		chan *htlcswitch.PaymentResult, chan er.R) {
 
 		chain := newMockChain(startingBlockHeight)
 		chainView := newMockChainView(chain)
@@ -676,7 +676,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 			paymentResult <- err
 		}()
 
-		var resendResult chan error
+		var resendResult chan er.R
 		for _, step := range test.steps {
 			switch step {
 
@@ -752,10 +752,10 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 			// called, and we respond with a forwarding error
 			case sendToSwitchResultFailure:
 				select {
-				case sendResult <- htlcswitch.NewForwardingError(
+				case sendResult <- er.E(htlcswitch.NewForwardingError(
 					&lnwire.FailTemporaryChannelFailure{},
 					1,
-				):
+				)):
 				case <-time.After(stepTimeout):
 					t.Fatalf("unable to send result")
 				}
@@ -783,7 +783,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 				select {
 				case getPaymentResult <- &htlcswitch.PaymentResult{
-					Error: failure,
+					Error: er.E(failure),
 				}:
 				case <-time.After(stepTimeout):
 					t.Fatalf("unable to get result")
@@ -801,7 +801,7 @@ func TestRouterPaymentStateMachine(t *testing.T) {
 
 				select {
 				case getPaymentResult <- &htlcswitch.PaymentResult{
-					Error: failure,
+					Error: er.E(failure),
 				}:
 				case <-time.After(stepTimeout):
 					t.Fatalf("unable to get result")
