@@ -70,7 +70,7 @@ func setUpNotifier(t *testing.T, h *rpctest.Harness) *BtcdNotifier {
 
 // TestHistoricalConfDetailsTxIndex ensures that we correctly retrieve
 // historical confirmation details using the backend node's txindex.
-// TODO(cjd): TEST DISABLED - needs investigation
+// TODO(cjd): DISABLED TEST - needs investigation
 func _TestHistoricalConfDetailsTxIndex(t *testing.T) {
 	t.Parallel()
 
@@ -157,7 +157,7 @@ func _TestHistoricalConfDetailsTxIndex(t *testing.T) {
 // TestHistoricalConfDetailsNoTxIndex ensures that we correctly retrieve
 // historical confirmation details using the set of fallback methods when the
 // backend node's txindex is disabled.
-// TODO(cjd): TEST DISABLED - needs investigation
+// TODO(cjd): DISABLED TEST - needs investigation
 func _TestHistoricalConfDetailsNoTxIndex(t *testing.T) {
 	t.Parallel()
 
