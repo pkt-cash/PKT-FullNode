@@ -103,7 +103,7 @@ func TestFundPsbt(t *testing.T) {
 			Outputs: []psbt.POutput{{}},
 		},
 		feeRateSatPerKB: 0,
-		expectedErr:     "transaction output is dust",
+		expectedErr:     "ErrRejectDust",
 	}, {
 		name: "two outputs, no inputs",
 		packet: &psbt.Packet{

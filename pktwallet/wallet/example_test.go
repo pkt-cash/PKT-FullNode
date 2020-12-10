@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -39,7 +40,8 @@ func testWallet(t *testing.T) (*Wallet, func()) {
 	loader := NewLoader(
 		&chaincfg.TestNet3Params, dir, "wallet.db", true, 250,
 	)
-	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now(), nil)
+	w, err := loader.CreateNewWallet(pubPass, privPass,
+		[]byte(hex.EncodeToString(seed)), time.Now(), nil)
 	if err != nil {
 		t.Fatalf("unable to create wallet: %v", err)
 	}
