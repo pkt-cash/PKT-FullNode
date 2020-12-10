@@ -1796,7 +1796,7 @@ func (lc *LightningChannel) restoreCommitState(
 		}
 		lc.remoteCommitChain.addCommitment(pendingRemoteCommit)
 
-		log.Debugf("pending remote commitment: %v",
+		log.Tracef("pending remote commitment: %v",
 			log.C(func() string {
 				return spew.Sdump(lc.remoteCommitChain.tip())
 			}),

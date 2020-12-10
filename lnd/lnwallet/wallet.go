@@ -1070,8 +1070,9 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 			)
 		}
 
-		log.Debugf("Funding tx for ChannelPoint(%v) "+
-			"generated: %v", chanPoint, spew.Sdump(fundingTx))
+		log.Tracef("Funding tx for ChannelPoint(%v) "+
+			"generated: %v", chanPoint,
+			log.C(func() string { return spew.Sdump(fundingTx) }))
 	}
 
 	// If we landed here and didn't exit early, it means we already have
@@ -1207,10 +1208,10 @@ func (l *LightningWallet) handleChanPointReady(req *continueContributionMsg) {
 	txsort.InPlaceSort(ourCommitTx)
 	txsort.InPlaceSort(theirCommitTx)
 
-	log.Debugf("Local commit tx for ChannelPoint(%v): %v",
-		chanPoint, spew.Sdump(ourCommitTx))
-	log.Debugf("Remote commit tx for ChannelPoint(%v): %v",
-		chanPoint, spew.Sdump(theirCommitTx))
+	log.Tracef("Local commit tx for ChannelPoint(%v): %v",
+		chanPoint, log.C(func() string { return spew.Sdump(ourCommitTx) }))
+	log.Tracef("Remote commit tx for ChannelPoint(%v): %v",
+		chanPoint, log.C(func() string { return spew.Sdump(theirCommitTx) }))
 
 	// Record newly available information within the open channel state.
 	chanState.FundingOutpoint = chanPoint
@@ -1547,10 +1548,10 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 	chanState.LocalCommitment.CommitTx = ourCommitTx
 	chanState.RemoteCommitment.CommitTx = theirCommitTx
 
-	log.Debugf("Local commit tx for ChannelPoint(%v): %v",
-		req.fundingOutpoint, spew.Sdump(ourCommitTx))
-	log.Debugf("Remote commit tx for ChannelPoint(%v): %v",
-		req.fundingOutpoint, spew.Sdump(theirCommitTx))
+	log.Tracef("Local commit tx for ChannelPoint(%v): %v",
+		req.fundingOutpoint, log.C(func() string { return spew.Sdump(ourCommitTx) }))
+	log.Tracef("Remote commit tx for ChannelPoint(%v): %v",
+		req.fundingOutpoint, log.C(func() string { return spew.Sdump(theirCommitTx) }))
 
 	channelValue := int64(pendingReservation.partialState.Capacity)
 	hashCache := txscript.NewTxSigHashes(ourCommitTx)

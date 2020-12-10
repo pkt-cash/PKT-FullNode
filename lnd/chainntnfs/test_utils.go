@@ -172,7 +172,7 @@ func NewMiner(t *testing.T, extraArgs []string, createChain bool,
 
 	// Add the trickle interval argument to the extra args.
 	trickle := fmt.Sprintf("--trickleinterval=%v", TrickleInterval)
-	extraArgs = append(extraArgs, trickle)
+	extraArgs = append(extraArgs, trickle, "--tls")
 
 	node, err := rpctest.New(NetParams, nil, extraArgs)
 	if err != nil {

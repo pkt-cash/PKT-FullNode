@@ -14,5 +14,5 @@ type TestChainNotifier interface {
 
 	// UnsafeStart enables notifiers to start up with a specific best block.
 	// Used for testing.
-	UnsafeStart(int32, *chainhash.Hash, int32, func() error) er.R
+	UnsafeStart(int32, *chainhash.Hash, int32, func() er.R) er.R
 }

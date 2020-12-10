@@ -825,8 +825,8 @@ var interfaceImpls = []struct {
 	},
 }
 
-func TestFilteredChainView(t *testing.T) {
-	t.Fatalf("This test doesn't work because our Neutrino doesn't support sha256 coins yet")
+// TODO(cjd): DISABLED TEST - our Neutrino doesn't support sha256 coins yet
+func _TestFilteredChainView(t *testing.T) {
 	// Initialize the harness around a btcd node which will serve as our
 	// dedicated miner to generate blocks, cause re-orgs, etc. We'll set up
 	// this node with a chain length of 125, so we have plenty of BTC to

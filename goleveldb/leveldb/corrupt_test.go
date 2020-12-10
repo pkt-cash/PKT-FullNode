@@ -1,3 +1,5 @@
+// +build goleveldbtests
+
 // Copyright (c) 2013, Suryandaru Triandana <syndtr@gmail.com>
 // All rights reserved.
 //

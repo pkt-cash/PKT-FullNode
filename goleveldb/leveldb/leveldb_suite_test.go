@@ -1,3 +1,5 @@
+// +build goleveldbtests
+
 package leveldb
 
 import (
