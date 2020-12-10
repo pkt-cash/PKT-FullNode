@@ -1335,7 +1335,7 @@ func TestNewRoute(t *testing.T) {
 
 			if testCase.expectError {
 				expectedCode := testCase.expectedErrorCode
-				if err == nil || !IsError(err, expectedCode) {
+				if err == nil || !IsError(er.Wrapped(err), expectedCode) {
 					t.Fatalf("expected newRoute to fail "+
 						"with error code %v but got "+
 						"%v instead",

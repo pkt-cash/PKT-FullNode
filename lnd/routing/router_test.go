@@ -993,7 +993,7 @@ func TestIgnoreNodeAnnouncement(t *testing.T) {
 	copy(node.PubKeyBytes[:], pub.SerializeCompressed())
 
 	err = ctx.router.AddNode(node)
-	if !IsError(err, ErrIgnored) {
+	if !IsError(er.Wrapped(err), ErrIgnored) {
 		t.Fatalf("expected to get ErrIgnore, instead got: %v", err)
 	}
 }
@@ -1064,7 +1064,7 @@ func TestIgnoreChannelEdgePolicyForUnknownChannel(t *testing.T) {
 	// Attempt to update the edge. This should be ignored, since the edge
 	// is not yet added to the router.
 	err = ctx.router.UpdateEdge(edgePolicy)
-	if !IsError(err, ErrIgnored) {
+	if !IsError(er.Wrapped(err), ErrIgnored) {
 		t.Fatalf("expected to get ErrIgnore, instead got: %v", err)
 	}
 

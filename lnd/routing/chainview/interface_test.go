@@ -16,6 +16,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb" // Required to register the boltdb walletdb implementation.
@@ -825,6 +826,7 @@ var interfaceImpls = []struct {
 }
 
 func TestFilteredChainView(t *testing.T) {
+	t.Fatalf("This test doesn't work because our Neutrino doesn't support sha256 coins yet")
 	// Initialize the harness around a btcd node which will serve as our
 	// dedicated miner to generate blocks, cause re-orgs, etc. We'll set up
 	// this node with a chain length of 125, so we have plenty of BTC to
@@ -874,4 +876,9 @@ func TestFilteredChainView(t *testing.T) {
 			cleanUpFunc()
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	globalcfg.SelectConfig(globalcfg.BitcoinDefaults())
+	os.Exit(m.Run())
 }

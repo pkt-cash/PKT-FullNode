@@ -938,7 +938,7 @@ func marshallError(sendError er.R) (*lnrpc.Failure, er.R) {
 		return response, nil
 	}
 
-	rtErr, ok := sendError.(htlcswitch.ClearTextError)
+	rtErr, ok := er.Wrapped(sendError).(htlcswitch.ClearTextError)
 	if !ok {
 		return nil, sendError
 	}

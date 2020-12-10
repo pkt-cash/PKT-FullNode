@@ -48,7 +48,7 @@ func newErrf(code errorCode, format string, a ...interface{}) er.R {
 
 // IsError is a helper function which is needed to have ability to check that
 // returned error has specific error code.
-func IsError(e interface{}, codes ...errorCode) bool {
+func IsError(e error, codes ...errorCode) bool {
 	err, ok := e.(*routerError)
 	if !ok {
 		return false

@@ -2955,7 +2955,7 @@ func waitForWalletSync(r *rpctest.Harness, w *lnwallet.LightningWallet) er.R {
 			return err
 		}
 	}
-	fmt.Printf("Wallet is synced to [%s @ %d]\n", bestHash.String(), bestHeight)
+	log.Infof("Wallet is synced to [%s @ %d]\n", bestHash.String(), bestHeight)
 	return nil
 }
 

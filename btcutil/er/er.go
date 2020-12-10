@@ -55,7 +55,7 @@ func NewErrorType(ident string) ErrorType {
 
 func (c *ErrorCode) Is(err R) bool {
 	if err == nil {
-		return false
+		return c == nil
 	}
 	if te, ok := err.(typedErr); ok {
 		return te.code == c

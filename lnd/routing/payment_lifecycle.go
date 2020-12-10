@@ -732,8 +732,7 @@ func marshallError(sendError er.R, time time.Time) *channeldb.HTLCFailInfo {
 		return response
 	}
 
-	// TODO(cjd): This line is wrong, check if the compiler catches it
-	rtErr, ok := sendError.(htlcswitch.ClearTextError)
+	rtErr, ok := er.Wrapped(sendError).(htlcswitch.ClearTextError)
 	if !ok {
 		response.Reason = channeldb.HTLCFailInternal
 		return response

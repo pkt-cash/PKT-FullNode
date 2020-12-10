@@ -1518,7 +1518,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 		}
 
 		if err := d.addNode(msg); err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 
 				log.Debug(err)
@@ -1685,7 +1685,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 			// If the edge was rejected due to already being known,
 			// then it may be that case that this new message has a
 			// fresh channel proof, so we'll check.
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 
 				// Attempt to process the rejected message to
@@ -1984,7 +1984,7 @@ func (d *AuthenticatedGossiper) processNetworkAnnouncement(
 		}
 
 		if err := d.cfg.Router.UpdateEdge(update); err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 				log.Debug(err)
 			} else {

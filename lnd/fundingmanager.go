@@ -2517,7 +2517,7 @@ func (f *fundingManager) addToRouterGraph(completeChan *channeldb.OpenChannel,
 	select {
 	case err := <-errChan:
 		if err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 				log.Debugf("Router rejected "+
 					"ChannelAnnouncement: %v", err)
@@ -2534,7 +2534,7 @@ func (f *fundingManager) addToRouterGraph(completeChan *channeldb.OpenChannel,
 	select {
 	case err := <-errChan:
 		if err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 				log.Debugf("Router rejected "+
 					"ChannelUpdate: %v", err)
@@ -2973,7 +2973,7 @@ func (f *fundingManager) announceChannel(localIDKey, remoteIDKey, localFundingKe
 	select {
 	case err := <-errChan:
 		if err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 				log.Debugf("Router rejected "+
 					"AnnounceSignatures: %v", err)
@@ -3002,7 +3002,7 @@ func (f *fundingManager) announceChannel(localIDKey, remoteIDKey, localFundingKe
 	select {
 	case err := <-errChan:
 		if err != nil {
-			if routing.IsError(err, routing.ErrOutdated,
+			if routing.IsError(er.Wrapped(err), routing.ErrOutdated,
 				routing.ErrIgnored) {
 				log.Debugf("Router rejected "+
 					"NodeAnnouncement: %v", err)

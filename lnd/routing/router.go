@@ -2044,7 +2044,7 @@ func (r *ChannelRouter) processSendError(paymentID uint64, rt *route.Route,
 	// down the route. If the error is not related to the propagation of
 	// our payment, we can stop trying because an internal error has
 	// occurred.
-	rtErr, ok := sendErr.(htlcswitch.ClearTextError)
+	rtErr, ok := er.Wrapped(sendErr).(htlcswitch.ClearTextError)
 	if !ok {
 		return &internalErrorReason
 	}
@@ -2131,7 +2131,7 @@ func (r *ChannelRouter) applyChannelUpdate(msg *lnwire.ChannelUpdate,
 		FeeBaseMSat:               lnwire.MilliSatoshi(msg.BaseFee),
 		FeeProportionalMillionths: lnwire.MilliSatoshi(msg.FeeRate),
 	})
-	if err != nil && !IsError(err, ErrIgnored, ErrOutdated) {
+	if err != nil && !IsError(er.Wrapped(err), ErrIgnored, ErrOutdated) {
 		log.Errorf("Unable to apply channel update: %v", err)
 		return false
 	}
