@@ -1745,7 +1745,7 @@ func (lc *LightningChannel) restoreCommitState(
 	}
 	lc.localCommitChain.addCommitment(localCommit)
 
-	log.Debugf("starting local commitment: %v",
+	log.Tracef("starting local commitment: %v",
 		log.C(func() string {
 			return spew.Sdump(lc.localCommitChain.tail())
 		}),

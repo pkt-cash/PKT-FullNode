@@ -2717,7 +2717,7 @@ func paysUncreditedAddress(
 				}
 			}
 			if !found {
-				log.Debug("Reload [%s] because it pays [%s] and we are missing that credit",
+				log.Debugf("Reload [%s] because it pays [%s] and we are missing that credit",
 					tx.TxHash(), addr.EncodeAddress())
 				return true
 			}
@@ -2739,7 +2739,7 @@ func spendsUndebitedAddress(
 	}
 	for op, addr := range watchedAddrs {
 		if _, ok := ops[op]; ok {
-			log.Debug("Reload [%s] because it spends from [%s]",
+			log.Debugf("Reload [%s] because it spends from [%s]",
 				tx.TxHash(), addr.EncodeAddress())
 			return true
 		}

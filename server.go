@@ -757,7 +757,7 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		break
 
 	default:
-		log.Debug("Filter request for unknown filter: %v",
+		log.Debugf("Filter request for unknown filter: %v",
 			msg.FilterType)
 		return
 	}
@@ -1192,16 +1192,14 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	// Do not accept getaddr requests from outbound peers.  This reduces
 	// fingerprinting attacks.
 	if !sp.Inbound() {
-		log.Debugf("Ignoring getaddr request from outbound peer ",
-			"%v", sp)
+		log.Debugf("Ignoring getaddr request from outbound peer [%v]", sp)
 		return
 	}
 
 	// Only allow one getaddr request per connection to discourage
 	// address stamping of inv announcements.
 	if sp.sentAddrs {
-		log.Debugf("Ignoring repeated getaddr request from peer ",
-			"%v", sp)
+		log.Debugf("Ignoring repeated getaddr request from peer [%v]", sp)
 		return
 	}
 	sp.sentAddrs = true

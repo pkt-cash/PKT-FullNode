@@ -965,7 +965,7 @@ func (s *ChainService) prepareCFiltersQueries(
 			if len(out) == 0 {
 				return nil, err
 			}
-			log.Info("Non-criticial error from prepareCFiltersQuery [%s]", err.String())
+			log.Infof("Non-criticial error from prepareCFiltersQuery [%s]", err.String())
 			break
 		}
 		out = append(out, x)
@@ -1383,7 +1383,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 			tryHeight++
 		}
 		if dh, err := s.GetBlockHash(tryHeight); err != nil {
-			log.Debug("Non-critical error getting hash at height [%d]: [%s]",
+			log.Debugf("Non-critical error getting hash at height [%d]: [%s]",
 				doHeight, err.String())
 			doHeight = int64(height)
 		} else {
