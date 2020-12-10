@@ -2348,9 +2348,8 @@ func lock(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
 	t.Helper()
 
 	expiry, err := s.LockOutput(ns, id, op)
-	if exp == nil && err == nil {
-	} else if exp == nil || !exp.Is(err) {
-		t.Fatalf("expected err %q, got %q", exp, err)
+	if !exp.Is(err) {
+		t.Fatalf("expected err %v, got %v", exp, err)
 	}
 	if exp != nil && exp != ErrOutputAlreadyLocked {
 		assertLocked(t, ns, op, s.clock.Now(), false)
@@ -2366,9 +2365,8 @@ func unlock(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
 	t.Helper()
 
 	err := s.UnlockOutput(ns, id, op)
-	if exp == nil && err == nil {
-	} else if exp == nil || !exp.Is(err) {
-		t.Fatalf("expected err %q, got %q", exp, err)
+	if !exp.Is(err) {
+		t.Fatalf("expected err %v, got %v", exp, err)
 	}
 	if exp != nil {
 		assertLocked(t, ns, op, s.clock.Now(), true)
