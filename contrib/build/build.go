@@ -64,10 +64,11 @@ type config struct {
 	bindir    string
 }
 
-func build(name string, conf *config) {
+func build(name string, pkg string, conf *config) {
 	fmt.Printf("Building %s\n", name)
 	args := append([]string{"build", "-o", conf.bindir + "/" + name}, conf.buildargs...)
-	exe(exeNoRedirect, "go", args...)
+	args = append(args, pkg)
+	exe(exeNoRedirect|exeEcho, "go", args...)
 }
 
 func chkdir() {
@@ -107,9 +108,9 @@ func main() {
 	conf.buildargs = append(conf.buildargs, "-ldflags="+ldflags())
 
 	assertNil(os.MkdirAll(conf.bindir, 0755), "mkdir bin")
-	build("pktd", &conf)
-	build("pktwallet", &conf)
-	build("pktctl", &conf)
+	build("pktd", ".", &conf)
+	build("pktwallet", "./pktwallet", &conf)
+	build("pktctl", "./cmd/pktctl", &conf)
 	if strings.Contains(strings.Join(os.Args, "|"), "--test") {
 		test()
 	} else {
