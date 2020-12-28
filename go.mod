@@ -12,6 +12,7 @@ require (
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da
 	github.com/aead/siphash v1.0.1
 	github.com/arl/statsviz v0.2.2-0.20201115121518-5ea9f0cf1bd1
+	github.com/btcsuite/winsvc v1.0.0
 	github.com/coreos/etcd v3.3.22+incompatible
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect

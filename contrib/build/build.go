@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -65,6 +66,9 @@ type config struct {
 }
 
 func build(name string, pkg string, conf *config) {
+	if os.Getenv("GOOS") == "windows" {
+		name = name + ".exe"
+	}
 	fmt.Printf("Building %s\n", name)
 	args := append([]string{"build", "-o", conf.bindir + "/" + name}, conf.buildargs...)
 	args = append(args, pkg)
@@ -100,6 +104,8 @@ func test() {
 	exe(exeNoRedirect, "go", "test", "-count=1", "-cover", "-parallel=1", "./...", "-tags=dev")
 }
 
+var regex = regexp.MustCompile("[A-Z0-9_]+=.*")
+
 func main() {
 	chkdir()
 	conf := config{}
@@ -108,6 +114,16 @@ func main() {
 	conf.buildargs = append(conf.buildargs, "-ldflags="+ldflags())
 
 	assertNil(os.MkdirAll(conf.bindir, 0755), "mkdir bin")
+
+	for _, a := range os.Args {
+		if !regex.MatchString(a) {
+			continue
+		}
+		i := strings.IndexRune(a, '=')
+		fmt.Printf("env %s=%s\n", a[0:i], a[i+1:])
+		os.Setenv(a[0:i], a[i+1:])
+	}
+
 	build("pktd", ".", &conf)
 	build("pktwallet", "./pktwallet", &conf)
 	build("pktctl", "./cmd/pktctl", &conf)
