@@ -5,11 +5,9 @@ import (
 	litecoinWire "github.com/ltcsuite/ltcd/wire"
 	"github.com/pkt-cash/pktd/chaincfg"
 	bitcoinCfg "github.com/pkt-cash/pktd/chaincfg"
-	pktCfg "github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/wire/protocol"
-	pktProtocol "github.com/pkt-cash/pktd/wire/protocol"
 )
 
 // BitcoinNetParams couples the p2p parameters of a network with the
@@ -95,42 +93,9 @@ var BitcoinRegTestNetParams = BitcoinNetParams{
 // BitcoinMainNetParams contains parameters specific to the current Bitcoin
 // mainnet.
 var PktMainNetParams = BitcoinNetParams{
-	Params:   &bitcoinCfg.MainNetParams,
+	Params:   &bitcoinCfg.PktMainNetParams,
 	RPCPort:  "8334",
 	CoinType: keychain.CoinTypeBitcoin,
-}
-
-func ApplyPktParams(params *BitcoinNetParams) {
-	p := pktCfg.PktMainNetParams
-	params.Name = p.Name
-	params.Net = pktProtocol.BitcoinNet(p.Net)
-	params.DefaultPort = p.DefaultPort
-	params.CoinbaseMaturity = p.CoinbaseMaturity
-	copy(params.GenesisHash[:], p.GenesisHash[:])
-	params.PubKeyHashAddrID = p.PubKeyHashAddrID
-	params.ScriptHashAddrID = p.ScriptHashAddrID
-	params.PrivateKeyID = p.PrivateKeyID
-	params.WitnessPubKeyHashAddrID = p.WitnessPubKeyHashAddrID
-	params.WitnessScriptHashAddrID = p.WitnessScriptHashAddrID
-	params.Bech32HRPSegwit = p.Bech32HRPSegwit
-	copy(params.HDPrivateKeyID[:], p.HDPrivateKeyID[:])
-	copy(params.HDPublicKeyID[:], p.HDPublicKeyID[:])
-	params.HDCoinType = p.HDCoinType
-
-	checkPoints := make([]chaincfg.Checkpoint, len(p.Checkpoints))
-	for i := 0; i < len(p.Checkpoints); i++ {
-		var chainHash chainhash.Hash
-		copy(chainHash[:], p.Checkpoints[i].Hash[:])
-
-		checkPoints[i] = chaincfg.Checkpoint{
-			Height: p.Checkpoints[i].Height,
-			Hash:   &chainHash,
-		}
-	}
-	params.Checkpoints = checkPoints
-
-	params.RPCPort = "64765"
-	params.CoinType = p.HDCoinType
 }
 
 // ApplyLitecoinParams applies the relevant chain configuration parameters that

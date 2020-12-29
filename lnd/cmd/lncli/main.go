@@ -184,7 +184,7 @@ func extractPathArgs(ctx *cli.Context) (string, string, er.R) {
 	// specified.
 	chain := strings.ToLower(ctx.GlobalString("chain"))
 	switch chain {
-	case "bitcoin", "litecoin":
+	case "bitcoin", "litecoin", "pkt":
 	default:
 		return "", "", er.Errorf("unknown chain: %v", chain)
 	}
@@ -254,8 +254,8 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "chain, c",
-			Usage: "The chain lnd is running on, e.g. bitcoin.",
-			Value: "bitcoin",
+			Usage: "The chain lnd is running on, e.g. pkt.",
+			Value: "pkt",
 		},
 		cli.StringFlag{
 			Name: "network, n",

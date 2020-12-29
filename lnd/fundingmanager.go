@@ -77,6 +77,9 @@ const (
 	// currently accepted on the Litecoin chain within the Lightning
 	// Protocol.
 	maxLtcFundingAmount = MaxBtcFundingAmount * chainreg.BtcToLtcConversionRate
+
+	// 10mn PKT chan limit
+	maxPktFundingAmount = btcutil.Amount(1 << 30 * 10000000)
 )
 
 var (

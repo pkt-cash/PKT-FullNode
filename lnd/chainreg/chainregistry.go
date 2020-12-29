@@ -42,6 +42,8 @@ type Config struct {
 	// Litecoin defines settings for the Litecoin chain.
 	Litecoin *lncfg.Chain
 
+	Pkt *lncfg.Chain
+
 	// PrimaryChain is a function that returns our primary chain via its
 	// ChainCode.
 	PrimaryChain func() ChainCode
@@ -136,6 +138,13 @@ const (
 	DefaultLitecoinTimeLockDelta  = 576
 	DefaultLitecoinDustLimit      = btcutil.Amount(54600)
 
+	DefaultPktMinHTLCInMSat  = lnwire.MilliSatoshi(1)
+	DefaultPktMinHTLCOutMSat = lnwire.MilliSatoshi(1000)
+	DefaultPktBaseFeeMSat    = lnwire.MilliSatoshi(1000)
+	DefaultPktFeeRate        = lnwire.MilliSatoshi(1)
+	DefaultPktTimeLockDelta  = 576
+	DefaultPktDustLimit      = btcutil.Amount(54600)
+
 	// DefaultBitcoinStaticFeePerKW is the fee rate of 50 sat/vbyte
 	// expressed in sat/kw.
 	DefaultBitcoinStaticFeePerKW = chainfee.SatPerKWeight(12500)
@@ -147,6 +156,8 @@ const (
 	// DefaultLitecoinStaticFeePerKW is the fee rate of 200 sat/vbyte
 	// expressed in sat/kw.
 	DefaultLitecoinStaticFeePerKW = chainfee.SatPerKWeight(50000)
+
+	DefaultPktStaticFeePerKW = chainfee.SatPerKWeight(1000)
 
 	// BtcToLtcConversionRate is a fixed ratio used in order to scale up
 	// payments when running on the Litecoin chain.
@@ -228,6 +239,9 @@ func NewChainControl(cfg *Config) (*ChainControl, er.R) {
 	if cfg.PrimaryChain() == LitecoinChain {
 		homeChainConfig = cfg.Litecoin
 	}
+	if cfg.PrimaryChain() == PktChain {
+		homeChainConfig = cfg.Pkt
+	}
 	log.Infof("Primary chain is set to: %v",
 		cfg.PrimaryChain())
 
@@ -256,6 +270,17 @@ func NewChainControl(cfg *Config) (*ChainControl, er.R) {
 		cc.MinHtlcIn = cfg.Litecoin.MinHTLCIn
 		cc.FeeEstimator = chainfee.NewStaticEstimator(
 			DefaultLitecoinStaticFeePerKW, 0,
+		)
+	case PktChain:
+		cc.RoutingPolicy = htlcswitch.ForwardingPolicy{
+			MinHTLCOut:    cfg.Pkt.MinHTLCOut,
+			BaseFee:       cfg.Pkt.BaseFee,
+			FeeRate:       cfg.Pkt.FeeRate,
+			TimeLockDelta: cfg.Pkt.TimeLockDelta,
+		}
+		cc.MinHtlcIn = cfg.Pkt.MinHTLCIn
+		cc.FeeEstimator = chainfee.NewStaticEstimator(
+			DefaultPktStaticFeePerKW, 0,
 		)
 	default:
 		return nil, er.Errorf("default routing policy for chain %v is "+

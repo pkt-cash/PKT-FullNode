@@ -20,6 +20,7 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/lnd/autopilot"
 	"github.com/pkt-cash/pktd/lnd/chainreg"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
@@ -382,6 +383,15 @@ func DefaultConfig() Config {
 			Dir:          defaultLitecoindDir,
 			RPCHost:      defaultRPCHost,
 			EstimateMode: defaultBitcoindEstimateMode,
+		},
+		Pkt: &lncfg.Chain{
+			MinHTLCIn:     chainreg.DefaultPktMinHTLCInMSat,
+			MinHTLCOut:    chainreg.DefaultPktMinHTLCOutMSat,
+			BaseFee:       chainreg.DefaultPktBaseFeeMSat,
+			FeeRate:       chainreg.DefaultPktFeeRate,
+			TimeLockDelta: chainreg.DefaultPktTimeLockDelta,
+			MaxLocalDelay: defaultMaxLocalCSVDelay,
+			Node:          "neutrino",
 		},
 		NeutrinoMode: &lncfg.Neutrino{
 			UserAgentName:    neutrino.UserAgentName,
@@ -817,6 +827,11 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 			"mutually exclusive, only one should be selected")
 	}
 
+	if !cfg.Bitcoin.Active && !cfg.Litecoin.Active && !cfg.Pkt.Active {
+		// Default to PKT
+		cfg.Pkt.Active = true
+	}
+
 	// Determine the active chain configuration and its parameters.
 	switch {
 	// At this moment, multiple active chains are not supported.
@@ -832,7 +847,17 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 			"litecoin.active must be set to 1 (true)", funcName)
 
 	case cfg.Pkt.Active:
-		chainreg.ApplyPktParams(&cfg.ActiveNetParams)
+		cfg.ActiveNetParams = chainreg.PktMainNetParams
+		// Calling it /pkt/mainnet makes life easier
+		cfg.ActiveNetParams.Name = "mainnet"
+		cfg.Pkt.ChainDir = filepath.Join(cfg.DataDir,
+			defaultChainSubDirname,
+			chainreg.PktChain.String())
+
+		// Finally we'll register the litecoin chain as our current
+		// primary chain.
+		cfg.registeredChains.RegisterPrimaryChain(chainreg.PktChain)
+		MaxFundingAmount = maxPktFundingAmount
 
 	case cfg.Litecoin.Active:
 		err := cfg.Litecoin.Validate(minTimeLockDelta, minLtcRemoteDelay)
@@ -1008,6 +1033,7 @@ func ValidateConfig(cfg Config, usageMessage string) (*Config, er.R) {
 		// primary chain.
 		cfg.registeredChains.RegisterPrimaryChain(chainreg.BitcoinChain)
 	}
+	globalcfg.SelectConfig(cfg.ActiveNetParams.GlobalConf)
 
 	// Ensure that the user didn't attempt to specify negative values for
 	// any of the autopilot params.

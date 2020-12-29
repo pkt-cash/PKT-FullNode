@@ -208,7 +208,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	case cfg.Bitcoin.TestNet3 || cfg.Litecoin.TestNet3:
 		network = "testnet"
 
-	case cfg.Bitcoin.MainNet || cfg.Litecoin.MainNet:
+	case cfg.Bitcoin.MainNet || cfg.Litecoin.MainNet || cfg.Pkt.MainNet:
 		network = "mainnet"
 
 	case cfg.Bitcoin.SimNet || cfg.Litecoin.SimNet:
@@ -295,6 +295,9 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	mainChain := cfg.Bitcoin
 	if cfg.registeredChains.PrimaryChain() == chainreg.LitecoinChain {
 		mainChain = cfg.Litecoin
+	}
+	if cfg.registeredChains.PrimaryChain() == chainreg.PktChain {
+		mainChain = cfg.Pkt
 	}
 	var neutrinoCS *neutrino.ChainService
 	if mainChain.Node == "neutrino" {
@@ -502,6 +505,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	chainControlCfg := &chainreg.Config{
 		Bitcoin:                     cfg.Bitcoin,
 		Litecoin:                    cfg.Litecoin,
+		Pkt:                         cfg.Pkt,
 		PrimaryChain:                cfg.registeredChains.PrimaryChain,
 		HeightHintCacheQueryDisable: cfg.HeightHintCacheQueryDisable,
 		NeutrinoMode:                cfg.NeutrinoMode,
