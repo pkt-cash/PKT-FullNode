@@ -20,14 +20,26 @@ func usage() {
 
 func main() {
 	version.SetUserAgentName("checksig")
-	if len(os.Args) != 4 {
+	addrStr := ""
+	sigStr := ""
+	msg := ""
+	if len(os.Args) == 2 && os.Args[1] == "-" {
+		if _, err := fmt.Scanf("%s %s %s", &addrStr, &sigStr, &msg); err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading in arguments from stdin")
+			os.Exit(100)
+		}
+	} else if len(os.Args) != 4 {
 		usage()
 		os.Exit(100)
+	} else {
+		addrStr = os.Args[1]
+		sigStr = os.Args[2]
+		msg = os.Args[3]
 	}
 
 	// Decode the provided address.
 	params := &chaincfg.PktMainNetParams
-	addr, err := btcutil.DecodeAddress(os.Args[1], params)
+	addr, err := btcutil.DecodeAddress(addrStr, params)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Invalid address")
 		os.Exit(100)
@@ -39,7 +51,7 @@ func main() {
 		os.Exit(100)
 	}
 
-	sig, errr := base64.StdEncoding.DecodeString(os.Args[2])
+	sig, errr := base64.StdEncoding.DecodeString(sigStr)
 	if errr != nil {
 		fmt.Fprintln(os.Stderr, "Malformed base64 encoding")
 		os.Exit(100)
@@ -47,7 +59,7 @@ func main() {
 
 	var buf bytes.Buffer
 	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	wire.WriteVarString(&buf, 0, os.Args[3])
+	wire.WriteVarString(&buf, 0, msg)
 	expectedMessageHash := chainhash.DoubleHashB(buf.Bytes())
 	pk, wasCompressed, err := btcec.RecoverCompact(btcec.S256(), sig, expectedMessageHash)
 	if err != nil {
@@ -68,7 +80,8 @@ func main() {
 		os.Exit(100)
 	}
 
-	if address.EncodeAddress() == os.Args[1] {
+	if address.EncodeAddress() == addrStr {
+		fmt.Println("OK")
 		os.Exit(0)
 	}
 
