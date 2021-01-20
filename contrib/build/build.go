@@ -127,6 +127,7 @@ func main() {
 	build("pktd", ".", &conf)
 	build("pktwallet", "./pktwallet", &conf)
 	build("pktctl", "./cmd/pktctl", &conf)
+	build("checksig", "./cmd/checksig", &conf)
 	build("pld", "./lnd/cmd/lnd", &conf)
 	build("pldctl", "./lnd/cmd/lncli", &conf)
 	if strings.Contains(strings.Join(os.Args, "|"), "--test") {
