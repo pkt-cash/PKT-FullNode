@@ -1138,6 +1138,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	macaroonFiles := []string{
 		cfg.AdminMacPath, cfg.ReadMacPath, cfg.InvoiceMacPath,
 	}
+	fmt.Printf("\n\nchainConfig.ChainDir = %s\n\n", chainConfig.ChainDir)
 	pwService := walletunlocker.New(
 		chainConfig.ChainDir, cfg.ActiveNetParams.Params,
 		!cfg.SyncFreelist, macaroonFiles,

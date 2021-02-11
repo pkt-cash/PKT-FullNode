@@ -2834,6 +2834,34 @@ func (r *rpcServer) WalletBalance(ctx context.Context,
 	}, nil
 }
 
+func (r *rpcServer) GetAddressBalances(
+	ctx context.Context,
+	in *lnrpc.GetAddressBalancesRequest,
+) (*lnrpc.GetAddressBalancesResponse, error) {
+	if be, ok := r.server.cc.Wc.(*btcwallet.BtcWallet); !ok {
+		return nil, er.Native(er.New("GetAddressBalances only possible with BtcWallet"))
+	} else if adb, err := be.InternalWallet().CalculateAddressBalances(in.Minconf, in.Showzerobalance); err != nil {
+		return nil, er.Native(err)
+	} else {
+		resp := make([]*lnrpc.GetAddressBalancesResponseAddr, 0, len(adb))
+		for k, v := range adb {
+			resp = append(resp, &lnrpc.GetAddressBalancesResponseAddr{
+				Address:         k.EncodeAddress(),
+				Total:           v.Total.ToBTC(),
+				Stotal:          int64(v.Total),
+				Spendable:       v.Spendable.ToBTC(),
+				Sspendable:      int64(v.Spendable),
+				Immaturereward:  v.ImmatureReward.ToBTC(),
+				Simmaturereward: int64(v.ImmatureReward),
+				Unconfirmed:     v.Unconfirmed.ToBTC(),
+				Sunconfirmed:    int64(v.Unconfirmed),
+				Outputcount:     v.OutputCount,
+			})
+		}
+		return &lnrpc.GetAddressBalancesResponse{Addrs: resp}, nil
+	}
+}
+
 func (r *rpcServer) ChannelBalance(ctx context.Context,
 	in *lnrpc.ChannelBalanceRequest) (
 	*lnrpc.ChannelBalanceResponse, error) {

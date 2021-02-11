@@ -399,7 +399,7 @@ func (u *UnlockerService) UnlockWallet0(ctx context.Context,
 
 	if !walletExists {
 		// Cannot unlock a wallet that does not exist!
-		return nil, er.Errorf("wallet not found")
+		return nil, er.Errorf("wallet not found at path [%s/wallet.db]", netDir)
 	}
 
 	// Try opening the existing wallet with the provided password.

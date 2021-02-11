@@ -313,6 +313,7 @@ func main() {
 		abandonChannelCommand,
 		listPeersCommand,
 		walletBalanceCommand,
+		getAddressBalancesCommand,
 		channelBalanceCommand,
 		getInfoCommand,
 		getRecoveryInfoCommand,

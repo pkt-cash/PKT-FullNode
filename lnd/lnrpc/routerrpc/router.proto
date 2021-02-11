@@ -4,7 +4,7 @@ import "rpc.proto";
 
 package routerrpc;
 
-option go_package = "github.com/lightningnetwork/lnd/lnrpc/routerrpc";
+option go_package = "github.com/pkt-cash/pktd/lnd/lnrpc/routerrpc";
 
 // Router is a service that offers advanced interaction with the router
 // subsystem of the daemon.

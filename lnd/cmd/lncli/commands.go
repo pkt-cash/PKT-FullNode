@@ -1164,6 +1164,51 @@ func walletBalance(ctx *cli.Context) er.R {
 	return nil
 }
 
+var getAddressBalancesCommand = cli.Command{
+	Name:     "getaddressbalances",
+	Category: "Wallet",
+	Description: `
+	Get the balance for each active address, including:
+	* The amount which is immediately spendable
+	* The amount which is unconfirmed (specify minconf to decide how many confirms are needed)
+	* The amount which is a mining reward that has not yet matured`,
+	Flags: []cli.Flag{
+		cli.IntFlag{
+			Name:  "minconf",
+			Usage: "The minimum required confirms for a transaction to be considered confirmed",
+		},
+		cli.BoolFlag{
+			Name:  "show_zero_balance",
+			Usage: "Show addresses which are active in the wallet but have no known coins",
+		},
+	},
+	Usage:  "Compute and display balances for each address in the wallet.",
+	Action: actionDecorator(getAddressBalances),
+}
+
+func getAddressBalances(ctx *cli.Context) er.R {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	minconf := 1
+	if ctx.IsSet("minconf") {
+		minconf = ctx.Int("minconf")
+	}
+
+	req := &lnrpc.GetAddressBalancesRequest{
+		Minconf:         int32(minconf),
+		Showzerobalance: ctx.IsSet("show_zero_balance"),
+	}
+	resp, err := client.GetAddressBalances(ctxb, req)
+	if err != nil {
+		return er.E(err)
+	}
+
+	printRespJSON(resp)
+	return nil
+}
+
 var channelBalanceCommand = cli.Command{
 	Name:     "channelbalance",
 	Category: "Channels",
