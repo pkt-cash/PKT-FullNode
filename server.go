@@ -2746,6 +2746,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	// created before calling the function to create the CPU miner.
 	policy := mining.Policy{
 		SkipChecks:        msc,
+		Coinbase:          []byte(cfg.Coinbase),
 		BlockMinWeight:    cfg.BlockMinWeight,
 		BlockMaxWeight:    cfg.BlockMaxWeight,
 		BlockMinSize:      cfg.BlockMinSize,

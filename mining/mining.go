@@ -31,10 +31,10 @@ const (
 	// a block header and max possible transaction count.
 	blockHeaderOverhead = wire.MaxBlockHeaderPayload + wire.MaxVarIntPayload
 
-	// CoinbaseFlags is added to the coinbase script of a generated block
+	// DefaultCoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
 	// generated via pktd.
-	CoinbaseFlags = "/P2SH/pktd/"
+	DefaultCoinbaseFlags = "/P2SH/pktd/"
 )
 
 // MinHighPriority is the minimum priority value that allows a
@@ -248,9 +248,9 @@ func mergeUtxoView(viewA *blockchain.UtxoViewpoint, viewB *blockchain.UtxoViewpo
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
-func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, er.R) {
+func standardCoinbaseScript(coinbase []byte, nextBlockHeight int32, extraNonce uint64) ([]byte, er.R) {
 	return scriptbuilder.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
-		AddInt64(int64(extraNonce)).AddData([]byte(CoinbaseFlags)).
+		AddInt64(int64(extraNonce)).AddData([]byte(coinbase)).
 		Script()
 }
 
@@ -499,7 +499,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddresses map[btcutil.Address]f
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 	extraNonce := uint64(0)
-	coinbaseScript, err := standardCoinbaseScript(nextBlockHeight, extraNonce)
+	coinbaseScript, err := standardCoinbaseScript(g.policy.Coinbase, nextBlockHeight, extraNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -997,7 +997,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) er.R {
 // height.  It also recalculates and updates the new merkle root that results
 // from changing the coinbase script.
 func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32, extraNonce uint64) er.R {
-	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
+	coinbaseScript, err := standardCoinbaseScript(g.policy.Coinbase, blockHeight, extraNonce)
 	if err != nil {
 		return err
 	}

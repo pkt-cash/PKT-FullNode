@@ -100,7 +100,7 @@ var (
 	gbtCoinbaseAux = &btcjson.GetBlockTemplateResultAux{
 		Flags: hex.EncodeToString(builderScript(
 			scriptbuilder.NewScriptBuilder().
-				AddData([]byte(mining.CoinbaseFlags)))),
+				AddData([]byte(mining.DefaultCoinbaseFlags)))),
 	}
 
 	// gbtCapabilities describes additional capabilities returned with a

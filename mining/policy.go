@@ -53,6 +53,8 @@ type Policy struct {
 	TxMinFreeFee btcutil.Amount
 
 	SkipChecks int
+
+	Coinbase []byte
 }
 
 // minInt is a helper function to return the minimum of two ints.  This avoids
