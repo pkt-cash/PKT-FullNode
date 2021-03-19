@@ -15,7 +15,7 @@ type MacaroonCredential struct {
 
 // RequireTransportSecurity implements the PerRPCCredentials interface.
 func (m MacaroonCredential) RequireTransportSecurity() bool {
-	return true
+	return false
 }
 
 // GetRequestMetadata implements the PerRPCCredentials interface. This method

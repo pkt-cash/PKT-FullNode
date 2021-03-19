@@ -176,6 +176,7 @@ type Config struct {
 	DataDir      string `short:"b" long:"datadir" description:"The directory to store lnd's data within"`
 	SyncFreelist bool   `long:"sync-freelist" description:"Whether the databases used within lnd should sync their freelist to disk. This is disabled by default resulting in improved memory performance during operation, but with an increase in startup time."`
 
+	NoTLS              bool     `long:"notls" description:"Disable TLS on RPC and REST"`
 	TLSCertPath        string   `long:"tlscertpath" description:"Path to write the TLS certificate for lnd's RPC and REST services"`
 	TLSKeyPath         string   `long:"tlskeypath" description:"Path to write the TLS private key for lnd's RPC and REST services"`
 	TLSExtraIPs        []string `long:"tlsextraip" description:"Adds an extra ip to the generated certificate"`
@@ -338,6 +339,7 @@ func DefaultConfig() Config {
 		ConfigFile:        DefaultConfigFile,
 		DataDir:           defaultDataDir,
 		DebugLevel:        defaultLogLevel,
+		NoTLS:             false,
 		TLSCertPath:       defaultTLSCertPath,
 		TLSKeyPath:        defaultTLSKeyPath,
 		LetsEncryptDir:    defaultLetsEncryptDir,

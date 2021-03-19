@@ -829,10 +829,14 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	return nil
 }
 
-// getTLSConfig returns a TLS configuration for the gRPC server and credentials
+// getTLSConfig1 returns a TLS configuration for the gRPC server and credentials
 // and a proxy destination for the REST reverse proxy.
-func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
-	func(net.Addr) (net.Listener, er.R), func(), er.R) {
+func getTLSConfig1(cfg *Config) (
+	[]grpc.ServerOption,
+	*tls.Config,
+	func(),
+	er.R,
+) {
 
 	// Ensure we create TLS key and certificate if they don't exist.
 	if !fileExists(cfg.TLSCertPath) && !fileExists(cfg.TLSKeyPath) {
@@ -843,7 +847,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 			cfg.TLSDisableAutofill, cert.DefaultAutogenValidity,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 		log.Infof("Done generating TLS certificates")
 	}
@@ -852,7 +856,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		cfg.TLSCertPath, cfg.TLSKeyPath,
 	)
 	if errr != nil {
-		return nil, nil, nil, nil, er.E(errr)
+		return nil, nil, nil, er.E(errr)
 	}
 
 	// We check whether the certifcate we have on disk match the IPs and
@@ -867,7 +871,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 			cfg.TLSExtraDomains, cfg.TLSDisableAutofill,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -879,12 +883,12 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 
 		errr := os.Remove(cfg.TLSCertPath)
 		if errr != nil {
-			return nil, nil, nil, nil, er.E(errr)
+			return nil, nil, nil, er.E(errr)
 		}
 
 		errr = os.Remove(cfg.TLSKeyPath)
 		if errr != nil {
-			return nil, nil, nil, nil, er.E(errr)
+			return nil, nil, nil, er.E(errr)
 		}
 
 		log.Infof("Renewing TLS certificates...")
@@ -894,7 +898,7 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 			cfg.TLSDisableAutofill, cert.DefaultAutogenValidity,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 		log.Infof("Done renewing TLS certificates")
 
@@ -903,16 +907,11 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 			cfg.TLSCertPath, cfg.TLSKeyPath,
 		)
 		if errr != nil {
-			return nil, nil, nil, nil, er.E(errr)
+			return nil, nil, nil, er.E(errr)
 		}
 	}
 
 	tlsCfg := cert.TLSConfFromCert(certData)
-
-	restCreds, errr := credentials.NewClientTLSFromFile(cfg.TLSCertPath, "")
-	if errr != nil {
-		return nil, nil, nil, nil, er.E(errr)
-	}
 
 	// If Let's Encrypt is enabled, instantiate autocert to request/renew
 	// the certificates.
@@ -974,6 +973,48 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 	serverCreds := credentials.NewTLS(tlsCfg)
 	serverOpts := []grpc.ServerOption{grpc.Creds(serverCreds)}
 
+	return serverOpts, tlsCfg, cleanUp, nil
+
+	// // For our REST dial options, we'll still use TLS, but also increase
+	// // the max message size that we'll decode to allow clients to hit
+	// // endpoints which return more data such as the DescribeGraph call.
+	// // We set this to 200MiB atm. Should be the same value as maxMsgRecvSize
+	// // in cmd/lncli/main.go.
+	// restDialOpts := []grpc.DialOption{
+	// 	grpc.WithTransportCredentials(restCreds),
+	// 	grpc.WithDefaultCallOptions(
+	// 		grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200),
+	// 	),
+	// }
+
+	// // Return a function closure that can be used to listen on a given
+	// // address with the current TLS config.
+	// restListen := func(addr net.Addr) (net.Listener, er.R) {
+	// 	// For restListen we will call ListenOnAddress if TLS is
+	// 	// disabled.
+	// 	if cfg.DisableRestTLS {
+	// 		return lncfg.ListenOnAddress(addr)
+	// 	}
+
+	// 	return lncfg.TLSListenOnAddress(addr, tlsCfg)
+	// }
+
+	// return serverOpts, restDialOpts, restListen, cleanUp, nil
+}
+
+// getTLSConfig1 returns a TLS configuration for the gRPC server and credentials
+// and a proxy destination for the REST reverse proxy.
+func getTLSConfig(cfg *Config) (
+	[]grpc.ServerOption,
+	[]grpc.DialOption,
+	func(net.Addr) (net.Listener, er.R),
+	func(), er.R,
+) {
+	restCreds, errr := credentials.NewClientTLSFromFile(cfg.TLSCertPath, "")
+	if errr != nil {
+		return nil, nil, nil, nil, er.E(errr)
+	}
+
 	// For our REST dial options, we'll still use TLS, but also increase
 	// the max message size that we'll decode to allow clients to hit
 	// endpoints which return more data such as the DescribeGraph call.
@@ -986,12 +1027,24 @@ func getTLSConfig(cfg *Config) ([]grpc.ServerOption, []grpc.DialOption,
 		),
 	}
 
+	cleanUp := func() {}
+	var serverOpts []grpc.ServerOption
+	var tlsCfg *tls.Config
+
+	if !cfg.NoTLS {
+		var err er.R
+		serverOpts, tlsCfg, cleanUp, err = getTLSConfig1(cfg)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+
 	// Return a function closure that can be used to listen on a given
 	// address with the current TLS config.
 	restListen := func(addr net.Addr) (net.Listener, er.R) {
 		// For restListen we will call ListenOnAddress if TLS is
 		// disabled.
-		if cfg.DisableRestTLS {
+		if cfg.DisableRestTLS || tlsCfg == nil {
 			return lncfg.ListenOnAddress(addr)
 		}
 

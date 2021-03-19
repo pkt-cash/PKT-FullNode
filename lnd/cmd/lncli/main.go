@@ -82,22 +82,25 @@ func getClientConn(ctx *cli.Context, skipMacaroons bool) *grpc.ClientConn {
 		fatal(er.Errorf("could not create cert pool: %v", err))
 	}
 
-	// Build transport credentials from the certificate pool. If there is no
-	// certificate pool, we expect the server to use a non-self-signed
-	// certificate such as a certificate obtained from Let's Encrypt.
-	var creds credentials.TransportCredentials
-	if certPool != nil {
-		creds = credentials.NewClientTLSFromCert(certPool, "")
+	var opts []grpc.DialOption
+	if ctx.GlobalBool("notls") {
+		opts = append(opts, grpc.WithInsecure())
 	} else {
-		// Fallback to the system pool. Using an empty tls config is an
-		// alternative to x509.SystemCertPool(). That call is not
-		// supported on Windows.
-		creds = credentials.NewTLS(&tls.Config{})
-	}
+		// Build transport credentials from the certificate pool. If there is no
+		// certificate pool, we expect the server to use a non-self-signed
+		// certificate such as a certificate obtained from Let's Encrypt.
+		var creds credentials.TransportCredentials
+		if certPool != nil {
+			creds = credentials.NewClientTLSFromCert(certPool, "")
+		} else {
+			// Fallback to the system pool. Using an empty tls config is an
+			// alternative to x509.SystemCertPool(). That call is not
+			// supported on Windows.
+			creds = credentials.NewTLS(&tls.Config{})
+		}
 
-	// Create a dial options array.
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
+		// Create a dial options array.
+		opts = append(opts, grpc.WithTransportCredentials(creds))
 	}
 
 	// Only process macaroon credentials if --no-macaroons isn't set and
@@ -246,6 +249,10 @@ func main() {
 			Name:  "lnddir",
 			Value: defaultLndDir,
 			Usage: "The path to lnd's base directory.",
+		},
+		cli.BoolFlag{
+			Name:  "notls",
+			Usage: "Disable TLS, needed if --notls is passed to pld.",
 		},
 		cli.StringFlag{
 			Name:  "tlscertpath",
