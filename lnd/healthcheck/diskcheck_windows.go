@@ -12,7 +12,7 @@ func AvailableDiskSpaceRatio(path string) (float64, er.R) {
 
 	pathPtr, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return 0, err
+		return 0, er.E(err)
 	}
 	err = windows.GetDiskFreeSpaceEx(pathPtr, &free, &total, &avail)
 
@@ -26,7 +26,7 @@ func AvailableDiskSpace(path string) (uint64, er.R) {
 
 	pathPtr, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return 0, err
+		return 0, er.E(err)
 	}
 	err = windows.GetDiskFreeSpaceEx(pathPtr, &free, &total, &avail)
 
