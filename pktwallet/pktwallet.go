@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -43,6 +44,7 @@ func main() {
 
 	// Work around defer not working after os.Exit.
 	if err := walletMain(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s", err.String())
 		os.Exit(1)
 	}
 }
