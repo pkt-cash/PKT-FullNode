@@ -7,6 +7,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
 )
 
@@ -35,7 +36,10 @@ func newMockBlockHeaderStore() *mockBlockHeaderStore {
 func (m *mockBlockHeaderStore) ChainTip() (*wire.BlockHeader,
 	uint32, er.R) {
 	return nil, 0, nil
-
+}
+func (m *mockBlockHeaderStore) ChainTip1(tx walletdb.ReadTx) (*wire.BlockHeader,
+	uint32, er.R) {
+	return nil, 0, nil
 }
 func (m *mockBlockHeaderStore) LatestBlockLocator() (
 	blockchain.BlockLocator, er.R) {
@@ -52,6 +56,11 @@ func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
 	return nil, headerfs.ErrHeightNotFound.Default()
 }
 
+func (m *mockBlockHeaderStore) FetchHeaderByHeight1(tx walletdb.ReadTx, height uint32) (
+	*wire.BlockHeader, er.R) {
+	return m.FetchHeaderByHeight(height)
+}
+
 func (m *mockBlockHeaderStore) FetchHeaderAncestors(uint32,
 	*chainhash.Hash) ([]wire.BlockHeader, uint32, er.R) {
 
@@ -61,7 +70,7 @@ func (m *mockBlockHeaderStore) HeightFromHash(*chainhash.Hash) (uint32, er.R) {
 	return 0, nil
 
 }
-func (m *mockBlockHeaderStore) RollbackLastBlock() (*waddrmgr.BlockStamp,
+func (m *mockBlockHeaderStore) RollbackLastBlock(tx walletdb.ReadWriteTx) (*waddrmgr.BlockStamp,
 	er.R) {
 	return nil, nil
 }
@@ -73,8 +82,15 @@ func (m *mockBlockHeaderStore) FetchHeader(h *chainhash.Hash) (
 	}
 	return nil, 0, er.Errorf("not found")
 }
+func (m *mockBlockHeaderStore) FetchHeader1(tx walletdb.ReadTx, h *chainhash.Hash) (
+	*wire.BlockHeader, uint32, er.R) {
+	if header, ok := m.headers[*h]; ok {
+		return &header, 0, nil
+	}
+	return nil, 0, er.Errorf("not found")
+}
 
-func (m *mockBlockHeaderStore) WriteHeaders(headers ...headerfs.BlockHeader) er.R {
+func (m *mockBlockHeaderStore) WriteHeaders(tx walletdb.ReadWriteTx, headers ...headerfs.BlockHeader) er.R {
 	for _, h := range headers {
 		m.headers[h.BlockHash()] = *h.BlockHeader
 	}

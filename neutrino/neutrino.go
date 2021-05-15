@@ -571,11 +571,6 @@ type ChainService struct {
 	FilterCache *lru.Cache
 	BlockCache  *lru.Cache
 
-	// queryPeers will be called to send messages to one or more peers,
-	// expecting a response.
-	queryPeers func(wire.Message, func(*ServerPeer, wire.Message,
-		chan<- struct{}) bool, ...QueryOption)
-
 	// queryBatch will be called to distribute a batch of messages across
 	// our connected peers.
 	queryBatch func([]wire.Message, func(*ServerPeer, wire.Message,
@@ -688,15 +683,6 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 		invListeners:      make(map[chainhash.Hash][]chan *ServerPeer),
 	}
 
-	// We set the queryPeers method to point to queryChainServicePeers,
-	// passing a reference to the newly created ChainService.
-	s.queryPeers = func(msg wire.Message,
-		f func(*ServerPeer, wire.Message, chan<- struct{}) bool,
-		qo ...QueryOption,
-	) {
-		queryChainServicePeers(&s, msg, f, qo...)
-	}
-
 	// We do the same for queryBatch.
 	s.queryBatch = func(msgs []wire.Message, f func(*ServerPeer,
 		wire.Message, wire.Message) bool, q <-chan struct{},
@@ -724,14 +710,13 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	s.BlockCache = lru.NewCache(blockCacheSize)
 
 	s.BlockHeaders, err = headerfs.NewBlockHeaderStore(
-		cfg.DataDir, cfg.Database, &cfg.ChainParams,
+		cfg.Database, &cfg.ChainParams,
 	)
 	if err != nil {
 		return nil, err
 	}
 	s.RegFilterHeaders, err = headerfs.NewFilterHeaderStore(
-		cfg.DataDir, cfg.Database, headerfs.RegularFilter,
-		&cfg.ChainParams, cfg.AssertFilterHeader,
+		cfg.Database, &cfg.ChainParams, cfg.AssertFilterHeader, s.BlockHeaders,
 	)
 	if err != nil {
 		return nil, err
@@ -1056,8 +1041,11 @@ func (s *ChainService) NetTotals() (uint64, uint64) {
 
 // rollBackToHeight rolls back all blocks until it hits the specified height.
 // It sends notifications along the way.
-func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, er.R) {
-	header, headerHeight, err := s.BlockHeaders.ChainTip()
+func (s *ChainService) rollBackToHeight(tx walletdb.ReadWriteTx, height uint32) (
+	*waddrmgr.BlockStamp,
+	er.R,
+) {
+	header, headerHeight, err := s.BlockHeaders.ChainTip1(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -1066,13 +1054,13 @@ func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, er
 		Hash:   header.BlockHash(),
 	}
 
-	_, regHeight, err := s.RegFilterHeaders.ChainTip()
+	_, regHeight, err := s.RegFilterHeaders.ChainTip1(tx)
 	if err != nil {
 		return nil, err
 	}
 
 	for uint32(bs.Height) > height {
-		header, _, err := s.BlockHeaders.FetchHeader(&bs.Hash)
+		header, _, err := s.BlockHeaders.FetchHeader1(tx, &bs.Hash)
 		if err != nil {
 			return nil, err
 		}
@@ -1081,14 +1069,14 @@ func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, er
 
 		// Only roll back filter headers if they've caught up this far.
 		if uint32(bs.Height) <= regHeight {
-			newFilterTip, err := s.RegFilterHeaders.RollbackLastBlock(newTip)
+			newFilterTip, err := s.RegFilterHeaders.RollbackLastBlock(tx)
 			if err != nil {
 				return nil, err
 			}
 			regHeight = uint32(newFilterTip.Height)
 		}
 
-		bs, err = s.BlockHeaders.RollbackLastBlock()
+		bs, err = s.BlockHeaders.RollbackLastBlock(tx)
 		if err != nil {
 			return nil, err
 		}
@@ -1097,7 +1085,7 @@ func (s *ChainService) rollBackToHeight(height uint32) (*waddrmgr.BlockStamp, er
 		// header in the disconnected notification in case we're rolling
 		// back farther and the notification subscriber needs it but
 		// can't read it before it's deleted from the store.
-		prevHeader, _, err := s.BlockHeaders.FetchHeader(newTip)
+		prevHeader, _, err := s.BlockHeaders.FetchHeader1(tx, newTip)
 		if err != nil {
 			return nil, err
 		}

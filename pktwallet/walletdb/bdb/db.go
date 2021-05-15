@@ -220,7 +220,9 @@ func (b *bucket) ForEach(fn func(k, v []byte) er.R) er.R {
 //
 // This function is part of the walletdb.ReadWriteBucket interface implementation.
 func (b *bucket) Put(key, value []byte) er.R {
-	return convertErr((*bbolt.Bucket)(b).Put(key, value))
+	v := make([]byte, len(value))
+	copy(v, value)
+	return convertErr((*bbolt.Bucket)(b).Put(key, v))
 }
 
 // Get returns the value for the given key.  Returns nil if the key does

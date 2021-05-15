@@ -2,12 +2,11 @@ package headerfs
 
 import (
 	"bytes"
-	"encoding/binary"
-	"os"
-	"path/filepath"
+	"encoding/hex"
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
@@ -25,6 +24,7 @@ type BlockHeaderStore interface {
 	// ChainTip returns the best known block header and height for the
 	// BlockHeaderStore.
 	ChainTip() (*wire.BlockHeader, uint32, er.R)
+	ChainTip1(tx walletdb.ReadTx) (*wire.BlockHeader, uint32, er.R)
 
 	// LatestBlockLocator returns the latest block locator object based on
 	// the tip of the current main chain from the PoV of the
@@ -34,6 +34,7 @@ type BlockHeaderStore interface {
 	// FetchHeaderByHeight attempts to retrieve a target block header based
 	// on a block height.
 	FetchHeaderByHeight(height uint32) (*wire.BlockHeader, er.R)
+	FetchHeaderByHeight1(tx walletdb.ReadTx, height uint32) (*wire.BlockHeader, er.R)
 
 	// FetchHeaderAncestors fetches the numHeaders block headers that are
 	// the ancestors of the target stop hash. A total of numHeaders+1
@@ -52,17 +53,18 @@ type BlockHeaderStore interface {
 	// FetchHeader attempts to retrieve a block header determined by the
 	// passed block height.
 	FetchHeader(*chainhash.Hash) (*wire.BlockHeader, uint32, er.R)
+	FetchHeader1(walletdb.ReadTx, *chainhash.Hash) (*wire.BlockHeader, uint32, er.R)
 
 	// WriteHeaders adds a set of headers to the BlockHeaderStore in a
 	// single atomic transaction.
-	WriteHeaders(...BlockHeader) er.R
+	WriteHeaders(tx walletdb.ReadWriteTx, bh ...BlockHeader) er.R
 
 	// RollbackLastBlock rolls back the BlockHeaderStore by a _single_
 	// header. This method is meant to be used in the case of re-org which
 	// disconnects the latest block header from the end of the main chain.
 	// The information about the new header tip after truncation is
 	// returned.
-	RollbackLastBlock() (*waddrmgr.BlockStamp, er.R)
+	RollbackLastBlock(tx walletdb.ReadWriteTx) (*waddrmgr.BlockStamp, er.R)
 }
 
 // headerBufPool is a pool of bytes.Buffer that will be re-used by the various
@@ -73,69 +75,13 @@ var headerBufPool = sync.Pool{
 	New: func() interface{} { return new(bytes.Buffer) },
 }
 
-// headerStore combines a on-disk set of headers within a flat file in addition
-// to a databse which indexes that flat file. Together, these two abstractions
-// can be used in order to build an indexed header store for any type of
-// "header" as it deals only with raw bytes, and leaves it to a higher layer to
-// interpret those raw bytes accordingly.
-//
-// TODO(roasbeef): quickcheck coverage
-type headerStore struct {
-	mtx sync.RWMutex
-
-	fileName string
-
-	file *os.File
-
-	*headerIndex
-}
-
-// newHeaderStore creates a new headerStore given an already open database, a
-// target file path for the flat-file and a particular header type. The target
-// file will be created as necessary.
-func newHeaderStore(db walletdb.DB, filePath string,
-	hType HeaderType) (*headerStore, er.R) {
-
-	var flatFileName string
-	switch hType {
-	case Block:
-		flatFileName = "block_headers.bin"
-	case RegularFilter:
-		flatFileName = "reg_filter_headers.bin"
-	default:
-		return nil, er.Errorf("unrecognized filter type: %v", hType)
-	}
-
-	flatFileName = filepath.Join(filePath, flatFileName)
-
-	// We'll open the file, creating it if necessary and ensuring that all
-	// writes are actually appends to the end of the file.
-	fileFlags := os.O_RDWR | os.O_APPEND | os.O_CREATE
-	headerFile, errr := os.OpenFile(flatFileName, fileFlags, 0644)
-	if errr != nil {
-		return nil, er.E(errr)
-	}
-
-	// With the file open, we'll then create the header index so we can
-	// have random access into the flat files.
-	index, err := newHeaderIndex(db, hType)
-	if err != nil {
-		return nil, err
-	}
-
-	return &headerStore{
-		fileName:    flatFileName,
-		file:        headerFile,
-		headerIndex: index,
-	}, nil
-}
-
 // blockHeaderStore is an implementation of the BlockHeaderStore interface, a
 // fully fledged database for Bitcoin block headers. The blockHeaderStore
 // combines a flat file to store the block headers with a database instance for
 // managing the index into the set of flat files.
 type blockHeaderStore struct {
-	*headerStore
+	Db walletdb.DB
+	*headerIndex
 }
 
 // A compile-time check to ensure the blockHeaderStore adheres to the
@@ -147,78 +93,43 @@ var _ BlockHeaderStore = (*blockHeaderStore)(nil)
 // parameters for the target chain. These parameters are required as if this is
 // the initial start up of the blockHeaderStore, then the initial genesis
 // header will need to be inserted.
-func NewBlockHeaderStore(filePath string, db walletdb.DB,
-	netParams *chaincfg.Params) (BlockHeaderStore, er.R) {
+func NewBlockHeaderStore(
+	db walletdb.DB,
+	netParams *chaincfg.Params,
+) (BlockHeaderStore, er.R) {
 
-	hStore, err := newHeaderStore(db, filePath, Block)
+	var bhs BlockHeaderStore
+	retry := false
+	err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
+		hStore, err := newHeaderIndex(tx, "blocks")
+		if err != nil {
+			return err
+		}
+		bhs0 := &blockHeaderStore{headerIndex: hStore, Db: db}
+		bhs = bhs0
+		if _, err := bhs0.headerByHash(tx, netParams.GenesisHash); err != nil {
+			genesisHeader := BlockHeader{
+				BlockHeader: &genesis.Block(netParams.GenesisHash).Header,
+				Height:      0,
+			}
+			gh := []headerEntry{genesisHeader.toIndexEntry()}
+			if err := bhs0.addHeaders(tx, gh, true); err != nil {
+				return err
+			}
+		}
+		if err := bhs0.CheckConnectivity(tx); err != nil {
+			log.Warnf("CheckConnectivity failed [%v] resyncing header chain", err)
+			hStore.deleteBuckets(tx)
+			retry = true
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	// With the header store created, we'll fetch the file size to see if
-	// we need to initialize it with the first header or not.
-	fileInfo, errr := hStore.file.Stat()
-	if errr != nil {
-		return nil, er.E(errr)
+	if retry {
+		return NewBlockHeaderStore(db, netParams)
 	}
-
-	bhs := &blockHeaderStore{
-		headerStore: hStore,
-	}
-
-	// If the size of the file is zero, then this means that we haven't yet
-	// written the initial genesis header to disk, so we'll do so now.
-	if fileInfo.Size() == 0 {
-		genesisHeader := BlockHeader{
-			BlockHeader: &genesis.Block(netParams.GenesisHash).Header,
-			Height:      0,
-		}
-		if err := bhs.WriteHeaders(genesisHeader); err != nil {
-			return nil, err
-		}
-
-		return bhs, nil
-	}
-
-	// As a final initialization step (if this isn't the first time), we'll
-	// ensure that the header tip within the flat files, is in sync with
-	// out database index.
-	tipHash, tipHeight, err := bhs.chainTip()
-	if err != nil {
-		return nil, err
-	}
-
-	// First, we'll compute the size of the current file so we can
-	// calculate the latest header written to disk.
-	fileHeight := uint32(fileInfo.Size()/80) - 1
-
-	// Using the file's current height, fetch the latest on-disk header.
-	latestFileHeader, err := bhs.readHeader(fileHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the index's tip hash, and the file on-disk match, then we're
-	// done here.
-	latestBlockHash := latestFileHeader.BlockHash()
-	if tipHash.IsEqual(&latestBlockHash) {
-		return bhs, nil
-	}
-
-	// TODO(roasbeef): below assumes index can never get ahead?
-	//  * we always update files _then_ indexes
-	//  * need to dual pointer walk back for max safety
-
-	// Otherwise, we'll need to truncate the file until it matches the
-	// current index tip.
-	for fileHeight > tipHeight {
-		if err := bhs.singleTruncate(); err != nil {
-			return nil, err
-		}
-
-		fileHeight--
-	}
-
 	return bhs, nil
 }
 
@@ -227,24 +138,24 @@ func NewBlockHeaderStore(filePath string, db walletdb.DB,
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) FetchHeader(hash *chainhash.Hash) (*wire.BlockHeader, uint32, er.R) {
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
-	// First, we'll query the index to obtain the block height of the
-	// passed block hash.
-	height, err := h.heightFromHash(hash)
-	if err != nil {
+	var header *wire.BlockHeader
+	var height uint32
+	return header, height, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
+		header, height, err = h.FetchHeader1(tx, hash)
+		return err
+	})
+}
+func (h *blockHeaderStore) FetchHeader1(tx walletdb.ReadTx, hash *chainhash.Hash) (
+	*wire.BlockHeader, uint32, er.R,
+) {
+	if he, err := h.headerByHash(tx, hash); err != nil {
 		return nil, 0, err
-	}
-
-	// With the height known, we can now read the header from disk.
-	header, err := h.readHeader(height)
-	if err != nil {
+	} else if hdr, err := blockHeaderFromHe(he); err != nil {
 		return nil, 0, err
+	} else {
+		return hdr.BlockHeader, he.height, nil
 	}
-
-	return &header, height, nil
 }
 
 // FetchHeaderByHeight attempts to retrieve a target block header based on a
@@ -252,19 +163,25 @@ func (h *blockHeaderStore) FetchHeader(hash *chainhash.Hash) (*wire.BlockHeader,
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (*wire.BlockHeader, er.R) {
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
+	var header *wire.BlockHeader
+	return header, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
+		header, err = h.FetchHeaderByHeight1(tx, height)
+		return err
+	})
+}
 
-	// For this query, we don't need to consult the index, and can instead
-	// just seek into the flat file based on the target height and return
-	// the full header.
-	header, err := h.readHeader(height)
-	if err != nil {
+func (h *blockHeaderStore) FetchHeaderByHeight1(
+	tx walletdb.ReadTx,
+	height uint32,
+) (*wire.BlockHeader, er.R) {
+	if he, err := h.readHeader(tx, height); err != nil {
 		return nil, err
+	} else if hdr, err := blockHeaderFromHe(he); err != nil {
+		return nil, err
+	} else {
+		return hdr.BlockHeader, nil
 	}
-
-	return &header, nil
 }
 
 // FetchHeaderAncestors fetches the numHeaders block headers that are the
@@ -275,23 +192,28 @@ func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (*wire.BlockHeader
 // height of each header without knowing the height of the stop hash.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) FetchHeaderAncestors(numHeaders uint32,
-	stopHash *chainhash.Hash) ([]wire.BlockHeader, uint32, er.R) {
-
-	// First, we'll find the final header in the range, this will be the
-	// ending height of our scan.
-	endHeight, err := h.heightFromHash(stopHash)
-	if err != nil {
-		return nil, 0, err
-	}
-	startHeight := endHeight - numHeaders
-
-	headers, err := h.readHeaderRange(startHeight, endHeight)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return headers, startHeight, nil
+func (h *blockHeaderStore) FetchHeaderAncestors(
+	numHeaders uint32,
+	stopHash *chainhash.Hash,
+) ([]wire.BlockHeader, uint32, er.R) {
+	var headers []wire.BlockHeader
+	var startHeight uint32
+	return headers, startHeight, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		// First, we'll find the final header in the range, this will be the
+		// ending height of our scan.
+		endEntry, err := h.headerByHash(tx, stopHash)
+		if err != nil {
+			return err
+		}
+		startHeight = endEntry.height - numHeaders
+		if headers, err = h.readHeaderRange(tx, startHeight, endEntry.height); err != nil {
+			return err
+		} else if realHash := headers[len(headers)-1].BlockHash(); realHash != endEntry.hash {
+			return er.Errorf("Fetching %v headers up to %v - hash mismatch, got %v",
+				numHeaders, stopHash, realHash)
+		}
+		return err
+	})
 }
 
 // HeightFromHash returns the height of a particular block header given its
@@ -299,7 +221,15 @@ func (h *blockHeaderStore) FetchHeaderAncestors(numHeaders uint32,
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) HeightFromHash(hash *chainhash.Hash) (uint32, er.R) {
-	return h.heightFromHash(hash)
+	var height uint32
+	return height, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		if he, err := h.headerByHash(tx, hash); err != nil {
+			return err
+		} else {
+			height = he.height
+			return nil
+		}
+	})
 }
 
 // RollbackLastBlock rollsback both the index, and on-disk header file by a
@@ -308,40 +238,17 @@ func (h *blockHeaderStore) HeightFromHash(hash *chainhash.Hash) (uint32, er.R) {
 // information about the new header tip after truncation is returned.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) RollbackLastBlock() (*waddrmgr.BlockStamp, er.R) {
-	// Lock store for write.
-	h.mtx.Lock()
-	defer h.mtx.Unlock()
-
-	// First, we'll obtain the latest height that the index knows of.
-	_, chainTipHeight, err := h.chainTip()
-	if err != nil {
+func (h *blockHeaderStore) RollbackLastBlock(
+	tx walletdb.ReadWriteTx,
+) (*waddrmgr.BlockStamp, er.R) {
+	if prev, err := h.truncateIndex(tx, true); err != nil {
 		return nil, err
+	} else {
+		return &waddrmgr.BlockStamp{
+			Height: int32(prev.height),
+			Hash:   prev.hash,
+		}, nil
 	}
-
-	// With this height obtained, we'll use it to read the latest header
-	// from disk, so we can populate our return value which requires the
-	// prev header hash.
-	bestHeader, err := h.readHeader(chainTipHeight)
-	if err != nil {
-		return nil, err
-	}
-	prevHeaderHash := bestHeader.PrevBlock
-
-	// Now that we have the information we need to return from this
-	// function, we can now truncate the header file, and then use the hash
-	// of the prevHeader to set the proper index chain tip.
-	if err := h.singleTruncate(); err != nil {
-		return nil, err
-	}
-	if err := h.truncateIndex(&prevHeaderHash, true); err != nil {
-		return nil, err
-	}
-
-	return &waddrmgr.BlockStamp{
-		Height: int32(chainTipHeight) - 1,
-		Hash:   prevHeaderHash,
-	}, nil
 }
 
 // BlockHeader is a Bitcoin block header that also has its height included.
@@ -356,51 +263,38 @@ type BlockHeader struct {
 // toIndexEntry converts the BlockHeader into a matching headerEntry. This
 // method is used when a header is to be written to disk.
 func (b *BlockHeader) toIndexEntry() headerEntry {
+	var buf [80]byte
+	hb := bytes.NewBuffer(buf[:])
+	hb.Reset()
+
+	// Finally, decode the raw bytes into a proper bitcoin header.
+	if err := b.Serialize(hb); err != nil {
+		panic(er.Errorf("Failed to serialize header %v", err))
+	}
 	return headerEntry{
 		hash:   b.BlockHash(),
 		height: b.Height,
+		bytes:  hb.Bytes(),
 	}
 }
 
-// WriteHeaders writes a set of headers to disk and updates the index in a
-// single atomic transaction.
+func blockHeaderFromHe(he *headerEntry) (*BlockHeader, er.R) {
+	var ret wire.BlockHeader
+	if err := ret.Deserialize(bytes.NewReader(he.bytes)); err != nil {
+		return nil, err
+	}
+	return &BlockHeader{&ret, he.height}, nil
+}
+
+// WriteHeaders writes a set of headers to disk.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) WriteHeaders(hdrs ...BlockHeader) er.R {
-	// Lock store for write.
-	h.mtx.Lock()
-	defer h.mtx.Unlock()
-
-	// First, we'll grab a buffer from the write buffer pool so we an
-	// reduce our total number of allocations, and also write the headers
-	// in a single swoop.
-	headerBuf := headerBufPool.Get().(*bytes.Buffer)
-	headerBuf.Reset()
-	defer headerBufPool.Put(headerBuf)
-
-	// Next, we'll write out all the passed headers in series into the
-	// buffer we just extracted from the pool.
-	for _, header := range hdrs {
-		if err := header.Serialize(headerBuf); err != nil {
-			return err
-		}
-	}
-
-	// With all the headers written to the buffer, we'll now write out the
-	// entire batch in a single write call.
-	if err := h.appendRaw(headerBuf.Bytes()); err != nil {
-		return err
-	}
-
-	// Once those are written, we'll then collate all the headers into
-	// headerEntry instances so we can write them all into the index in a
-	// single atomic batch.
+func (h *blockHeaderStore) WriteHeaders(tx walletdb.ReadWriteTx, hdrs ...BlockHeader) er.R {
 	headerLocs := make([]headerEntry, len(hdrs))
 	for i, header := range hdrs {
 		headerLocs[i] = header.toIndexEntry()
 	}
-
-	return h.addHeaders(headerLocs)
+	return h.addHeaders(tx, headerLocs, false)
 }
 
 // blockLocatorFromHash takes a given block hash and then creates a block
@@ -409,18 +303,18 @@ func (h *blockHeaderStore) WriteHeaders(hdrs ...BlockHeader) er.R {
 // 10 locators.
 //
 // TODO(roasbeef): make into single transaction.
-func (h *blockHeaderStore) blockLocatorFromHash(hash *chainhash.Hash) (
+func (h *blockHeaderStore) blockLocatorFromHash(tx walletdb.ReadTx, he *headerEntry) (
 	blockchain.BlockLocator, er.R) {
 
 	var locator blockchain.BlockLocator
 
 	// Append the initial hash
-	locator = append(locator, hash)
+	locator = append(locator, &he.hash)
 
 	// If hash isn't found in DB or this is the genesis block, return the
 	// locator as is
-	height, err := h.heightFromHash(hash)
-	if height == 0 || err != nil {
+	height := he.height
+	if height == 0 {
 		return locator, nil
 	}
 
@@ -438,11 +332,11 @@ func (h *blockHeaderStore) blockLocatorFromHash(hash *chainhash.Hash) (
 			height -= decrement
 		}
 
-		blockHeader, err := h.FetchHeaderByHeight(height)
+		he, err := h.readHeader(tx, height)
 		if err != nil {
 			return locator, err
 		}
-		headerHash := blockHeader.BlockHash()
+		headerHash := he.hash
 
 		locator = append(locator, &headerHash)
 	}
@@ -455,99 +349,48 @@ func (h *blockHeaderStore) blockLocatorFromHash(hash *chainhash.Hash) (
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) LatestBlockLocator() (blockchain.BlockLocator, er.R) {
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
 	var locator blockchain.BlockLocator
-
-	chainTipHash, _, err := h.chainTip()
-	if err != nil {
-		return locator, err
-	}
-
-	return h.blockLocatorFromHash(chainTipHash)
+	return locator, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		if ct, err := h.chainTip(tx); err != nil {
+			return err
+		} else {
+			locator, err = h.blockLocatorFromHash(tx, ct)
+			return err
+		}
+	})
 }
 
 // CheckConnectivity cycles through all of the block headers on disk, from last
 // to first, and makes sure they all connect to each other. Additionally, at
 // each block header, we also ensure that the index entry for that height and
 // hash also match up properly.
-func (h *blockHeaderStore) CheckConnectivity() er.R {
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
-	return walletdb.View(h.db, func(tx walletdb.ReadTx) er.R {
-		// First, we'll fetch the root bucket, in order to use that to
-		// fetch the bucket that houses the header index.
-		rootBucket := tx.ReadBucket(indexBucket)
-
-		// With the header bucket retrieved, we'll now fetch the chain
-		// tip so we can start our backwards scan.
-		tipHash := rootBucket.Get(bitcoinTip)
-		tipHeightBytes := rootBucket.Get(tipHash)
-
-		// With the height extracted, we'll now read the _last_ block
-		// header within the file before we kick off our connectivity
-		// loop.
-		tipHeight := binary.BigEndian.Uint32(tipHeightBytes)
-		header, err := h.readHeader(tipHeight)
-		if err != nil {
-			return err
+func (h *blockHeaderStore) CheckConnectivity(tx walletdb.ReadTx) er.R {
+	if he, err := h.chainTip(tx); err != nil {
+		return err
+	} else {
+		for {
+			if hdr, err := blockHeaderFromHe(he); err != nil {
+				return err
+			} else if bh := hdr.BlockHeader.BlockHash(); !he.hash.IsEqual(&bh) {
+				return er.Errorf("hash mismatch at height %v, %v != %v",
+					he.height, he.hash, bh)
+			} else if he2, err := h.readHeader(tx, he.height); err != nil {
+				return err
+			} else if !he2.hash.IsEqual(&he.hash) {
+				return er.Errorf("header with hash not equal to header at height "+
+					" %v", he.height)
+			} else if !bytes.Equal(he2.bytes, he.bytes) {
+				return er.Errorf("header with bytes not equal to header at height "+
+					" %v", he.height)
+			} else if he.height > 0 {
+				if he, err = h.headerByHash(tx, &hdr.BlockHeader.PrevBlock); err != nil {
+					return err
+				}
+			} else {
+				return nil
+			}
 		}
-
-		// We'll now cycle backwards, seeking backwards along the
-		// header file to ensure each header connects properly and the
-		// index entries are also accurate. To do this, we start from a
-		// height of one before our current tip.
-		var newHeader wire.BlockHeader
-		for height := tipHeight - 1; height > 0; height-- {
-			// First, read the block header for this block height,
-			// and also compute the block hash for it.
-			newHeader, err = h.readHeader(height)
-			if err != nil {
-				return er.Errorf("Couldn't retrieve header %s:"+
-					" %s", header.PrevBlock, err)
-			}
-			newHeaderHash := newHeader.BlockHash()
-
-			// With the header retrieved, we'll now fetch the
-			// height for this current header hash to ensure the
-			// on-disk state and the index matches up properly.
-			indexHeightBytes := rootBucket.Get(newHeaderHash[:])
-			if indexHeightBytes == nil {
-				return er.Errorf("index and on-disk file out of sync "+
-					"at height: %v", height)
-			}
-			indexHeight := binary.BigEndian.Uint32(indexHeightBytes)
-
-			// With the index entry retrieved, we'll now assert
-			// that the height matches up with our current height
-			// in this backwards walk.
-			if indexHeight != height {
-				return er.Errorf("index height isn't monotonically " +
-					"increasing")
-			}
-
-			// Finally, we'll assert that this new header is
-			// actually the prev header of the target header from
-			// the last loop. This ensures connectivity.
-			if newHeader.BlockHash() != header.PrevBlock {
-				return er.Errorf("Block %s doesn't match "+
-					"block %s's PrevBlock (%s)",
-					newHeader.BlockHash(),
-					header.BlockHash(), header.PrevBlock)
-			}
-
-			// As all the checks have passed, we'll now reset our
-			// header pointer to this current location, and
-			// continue our backwards walk.
-			header = newHeader
-		}
-
-		return nil
-	})
+	}
 }
 
 // ChainTip returns the best known block header and height for the
@@ -555,21 +398,23 @@ func (h *blockHeaderStore) CheckConnectivity() er.R {
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) ChainTip() (*wire.BlockHeader, uint32, er.R) {
-	// Lock store for read.
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
+	var bh *wire.BlockHeader
+	var height uint32
+	return bh, height, walletdb.View(h.Db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
+		bh, height, err = h.ChainTip1(tx)
+		return err
+	})
+}
 
-	_, tipHeight, err := h.chainTip()
-	if err != nil {
+func (h *blockHeaderStore) ChainTip1(tx walletdb.ReadTx) (*wire.BlockHeader, uint32, er.R) {
+	if ct, err := h.chainTip(tx); err != nil {
 		return nil, 0, err
-	}
-
-	latestHeader, err := h.readHeader(tipHeight)
-	if err != nil {
+	} else if ch, err := blockHeaderFromHe(ct); err != nil {
 		return nil, 0, err
+	} else {
+		return ch.BlockHeader, ct.height, nil
 	}
-
-	return &latestHeader, tipHeight, nil
 }
 
 // FilterHeaderStore is an implementation of a fully fledged database for any
@@ -577,7 +422,8 @@ func (h *blockHeaderStore) ChainTip() (*wire.BlockHeader, uint32, er.R) {
 // store the block headers with a database instance for managing the index into
 // the set of flat files.
 type FilterHeaderStore struct {
-	*headerStore
+	Db walletdb.DB
+	*headerIndex
 }
 
 // NewFilterHeaderStore returns a new instance of the FilterHeaderStore based
@@ -585,155 +431,145 @@ type FilterHeaderStore struct {
 // parameters are required as if this is the initial start up of the
 // FilterHeaderStore, then the initial genesis filter header will need to be
 // inserted.
-func NewFilterHeaderStore(filePath string, db walletdb.DB,
-	filterType HeaderType, netParams *chaincfg.Params,
-	headerStateAssertion *FilterHeader) (*FilterHeaderStore, er.R) {
+func NewFilterHeaderStore(
+	db walletdb.DB,
+	netParams *chaincfg.Params,
+	headerStateAssertion *FilterHeader,
+	bhs BlockHeaderStore,
+) (*FilterHeaderStore, er.R) {
 
-	fStore, err := newHeaderStore(db, filePath, filterType)
-	if err != nil {
-		return nil, err
-	}
+	var fhs *FilterHeaderStore
+	resetState := false
+	if err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
+		fStore, err := newHeaderIndex(tx, "filters")
+		if err != nil {
+			return err
+		}
 
-	// With the header store created, we'll fetch the fiie size to see if
-	// we need to initialize it with the first header or not.
-	fileInfo, errr := fStore.file.Stat()
-	if errr != nil {
-		return nil, er.E(errr)
-	}
+		fhs = &FilterHeaderStore{
+			db,
+			fStore,
+		}
 
-	fhs := &FilterHeaderStore{
-		fStore,
-	}
-
-	// TODO(roasbeef): also reconsile with block header state due to way
-	// roll back works atm
-
-	// If the size of the file is zero, then this means that we haven't yet
-	// written the initial genesis header to disk, so we'll do so now.
-	if fileInfo.Size() == 0 {
-
-		var genesisFilterHash chainhash.Hash
-		switch filterType {
-		case RegularFilter:
-			basicFilter, err := builder.BuildBasicFilter(
+		if _, err := fhs.headerByHash(tx, netParams.GenesisHash); err != nil {
+			if basicFilter, err := builder.BuildBasicFilter(
 				genesis.Block(netParams.GenesisHash), nil,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			genesisFilterHash, err = builder.MakeHeaderForFilter(
+			); err != nil {
+				return err
+			} else if genesisFilterHash, err := builder.MakeHeaderForFilter(
 				basicFilter,
 				genesis.Block(netParams.GenesisHash).Header.PrevBlock,
-			)
-			if err != nil {
-				return nil, err
+			); err != nil {
+				return err
+			} else {
+				fh := FilterHeader{
+					HeaderHash: *netParams.GenesisHash,
+					FilterHash: genesisFilterHash,
+					Height:     0,
+				}
+				log.Debug("Inserting genesis block filter")
+				return fhs.addHeaders(tx, []headerEntry{fh.toIndexEntry()}, true)
 			}
-
-		default:
-			return nil, er.Errorf("unknown filter type: %v", filterType)
 		}
 
-		genesisHeader := FilterHeader{
-			HeaderHash: *netParams.GenesisHash,
-			FilterHash: genesisFilterHash,
-			Height:     0,
-		}
-		if err := fhs.WriteHeaders(genesisHeader); err != nil {
-			return nil, err
-		}
-
-		return fhs, nil
-	}
-
-	// If we have a state assertion then we'll check it now to see if we
-	// need to modify our filter header files before we proceed.
-	if headerStateAssertion != nil {
-		reset, err := fhs.maybeResetHeaderState(
+		// If we have a state assertion then we'll check it now to see if we
+		// need to modify our filter header files before we proceed.
+		if reset, err := fhs.maybeResetHeaderState(
+			tx,
 			headerStateAssertion,
-		)
-		if err != nil {
-			return nil, err
+			bhs,
+		); err != nil {
+			return err
+		} else if reset {
+			resetState = reset
+			return nil
 		}
-
-		// If the filter header store was reset, we'll re-initialize it
-		// to recreate our on-disk state.
-		if reset {
-			return NewFilterHeaderStore(
-				filePath, db, filterType, netParams, nil,
-			)
-		}
-	}
-
-	// As a final initialization step, we'll ensure that the header tip
-	// within the flat files, is in sync with out database index.
-	tipHash, tipHeight, err := fhs.chainTip()
-	if err != nil {
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	// First, we'll compute the size of the current file so we can
-	// calculate the latest header written to disk.
-	fileHeight := uint32(fileInfo.Size()/32) - 1
-
-	// Using the file's current height, fetch the latest on-disk header.
-	latestFileHeader, err := fhs.readHeader(fileHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the index's tip hash, and the file on-disk match, then we're
-	// doing here.
-	if tipHash.IsEqual(latestFileHeader) {
+	if resetState {
+		log.Warn("Corrupt filter db, rebuilding")
+		return NewFilterHeaderStore(db, netParams, nil, bhs)
+	} else {
 		return fhs, nil
 	}
-
-	// Otherwise, we'll need to truncate the file until it matches the
-	// current index tip.
-	for fileHeight > tipHeight {
-		if err := fhs.singleTruncate(); err != nil {
-			return nil, err
-		}
-
-		fileHeight--
-	}
-
-	// TODO(roasbeef): make above into func
-
-	return fhs, nil
 }
 
 // maybeResetHeaderState will reset the header state if the header assertion
 // fails, but only if the target height is found. The boolean returned indicates
 // that header state was reset.
 func (f *FilterHeaderStore) maybeResetHeaderState(
-	headerStateAssertion *FilterHeader) (bool, er.R) {
+	tx walletdb.ReadWriteTx,
+	headerStateAssertion *FilterHeader,
+	bhs BlockHeaderStore,
+) (bool, er.R) {
 
-	// First, we'll attempt to locate the header at this height. If no such
-	// header is found, then we'll exit early.
-	assertedHeader, err := f.FetchHeaderByHeight(
-		headerStateAssertion.Height,
-	)
-	if err != nil {
-		if ErrHeaderNotFound.Is(err) {
-			return false, nil
+	failed := false
+
+	if headerStateAssertion != nil {
+		// First, we'll attempt to locate the header at this height. If no such
+		// header is found, then we'll exit early.
+		assertedHeader, err := f.FetchHeaderByHeight(headerStateAssertion.Height)
+		if assertedHeader == nil {
+			if !ErrHeaderNotFound.Is(err) {
+				return false, err
+			}
+		} else if *assertedHeader != headerStateAssertion.FilterHash {
+			log.Warnf("Filter header at height %v is not %v, assertion failed, resyncing filters",
+				headerStateAssertion.Height, headerStateAssertion.HeaderHash)
+			failed = true
 		}
-		return false, err
+	}
+
+	if !failed && bhs != nil {
+		hdr, err := f.chainTip(tx)
+		if err != nil {
+			return false, err
+		}
+		for {
+			if bh, err := bhs.FetchHeaderByHeight1(tx, hdr.height); err != nil {
+				if ErrHashNotFound.Is(err) {
+					log.Warnf("We have filter header number %v but no block header, "+
+						"resetting filter headers", hdr.height)
+					failed = true
+					break
+				}
+				return false, err
+			} else if bh := bh.BlockHash(); !hdr.hash.IsEqual(&bh) {
+				log.Warnf("Filter header / block header mismatch at height %v: %v != %v",
+					hdr.height, hdr.hash, bh)
+				failed = true
+				break
+			} else if len(hdr.bytes) != 32 {
+				log.Warnf("Filter header at height %v is not 32 bytes: %v",
+					hdr.height, hex.EncodeToString(hdr.bytes))
+				failed = true
+				break
+			} else if hdr.height == 0 {
+				break
+			}
+			height := hdr.height - 1
+			hdr, err = f.readHeader(tx, height)
+			if err != nil {
+				log.Warnf("Filter header missing at height %v (%v), resyncing filter headers",
+					height, err)
+				failed = true
+				break
+			}
+		}
 	}
 
 	// If our on disk state and the provided header assertion don't match,
 	// then we'll purge this state so we can sync it anew once we fully
 	// start up.
-	if *assertedHeader != headerStateAssertion.FilterHash {
-		// Close the file before removing it. This is required by some
-		// OS, e.g., Windows.
-		if err := f.file.Close(); err != nil {
-			return true, er.E(err)
+	if failed {
+		if err := f.deleteBuckets(tx); err != nil {
+			return true, err
+		} else {
+			return true, f.createBuckets(tx)
 		}
-		if err := os.Remove(f.fileName); err != nil {
-			return true, er.E(err)
-		}
-		return true, nil
 	}
 
 	return false, nil
@@ -742,25 +578,36 @@ func (f *FilterHeaderStore) maybeResetHeaderState(
 // FetchHeader returns the filter header that corresponds to the passed block
 // height.
 func (f *FilterHeaderStore) FetchHeader(hash *chainhash.Hash) (*chainhash.Hash, er.R) {
-	// Lock store for read.
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
-
-	height, err := f.heightFromHash(hash)
-	if err != nil {
+	var out *chainhash.Hash
+	return out, walletdb.View(f.Db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
+		out, err = f.FetchHeader1(tx, hash)
+		return err
+	})
+}
+func (f *FilterHeaderStore) FetchHeader1(tx walletdb.ReadTx, hash *chainhash.Hash) (*chainhash.Hash, er.R) {
+	if hdr, err := f.headerByHash(tx, hash); err != nil {
 		return nil, err
+	} else if h, err := chainhash.NewHash(hdr.bytes); err != nil {
+		return nil, err
+	} else {
+		return h, nil
 	}
-
-	return f.readHeader(height)
 }
 
 // FetchHeaderByHeight returns the filter header for a particular block height.
 func (f *FilterHeaderStore) FetchHeaderByHeight(height uint32) (*chainhash.Hash, er.R) {
-	// Lock store for read.
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
-
-	return f.readHeader(height)
+	var hash *chainhash.Hash
+	return hash, walletdb.View(f.Db, func(tx walletdb.ReadTx) er.R {
+		if hdr, err := f.readHeader(tx, height); err != nil {
+			return err
+		} else if h, err := chainhash.NewHash(hdr.bytes); err != nil {
+			return err
+		} else {
+			hash = h
+			return nil
+		}
+	})
 }
 
 // FetchHeaderAncestors fetches the numHeaders filter headers that are the
@@ -769,23 +616,33 @@ func (f *FilterHeaderStore) FetchHeaderByHeight(height uint32) (*chainhash.Hash,
 // then return the final header specified by the stop hash. We'll also return
 // the starting height of the header range as well so callers can compute the
 // height of each header without knowing the height of the stop hash.
-func (f *FilterHeaderStore) FetchHeaderAncestors(numHeaders uint32,
-	stopHash *chainhash.Hash) ([]chainhash.Hash, uint32, er.R) {
-
-	// First, we'll find the final header in the range, this will be the
-	// ending height of our scan.
-	endHeight, err := f.heightFromHash(stopHash)
-	if err != nil {
-		return nil, 0, err
-	}
-	startHeight := endHeight - numHeaders
-
-	headers, err := f.readHeaderRange(startHeight, endHeight)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return headers, startHeight, nil
+func (f *FilterHeaderStore) FetchHeaderAncestors(
+	numHeaders uint32,
+	stopHash *chainhash.Hash,
+) ([]chainhash.Hash, uint32, er.R) {
+	var hashes []chainhash.Hash
+	var height uint32
+	return hashes, height, walletdb.View(f.Db, func(tx walletdb.ReadTx) er.R {
+		// First, we'll find the final header in the range, this will be the
+		// ending height of our scan.
+		endEntry, err := f.headerByHash(tx, stopHash)
+		if err != nil {
+			return err
+		}
+		startHeight := endEntry.height - numHeaders
+		hashes, err = f.readHeaderRange(tx, startHeight, endEntry.height)
+		if err != nil {
+			return err
+		}
+		// for i, h := range hashes {
+		// 	log.Debugf("Load filter header %d => [%s]", startHeight+uint32(i), h)
+		// }
+		if !bytes.Equal(hashes[len(hashes)-1][:], endEntry.bytes) {
+			return er.Errorf("Hash mismatch on %v: %v %v", endEntry.height,
+				hashes[len(hashes)-1], endEntry.bytes)
+		}
+		return nil
+	})
 }
 
 // FilterHeader represents a filter header (basic or extended). The filter
@@ -809,69 +666,41 @@ func (f *FilterHeader) toIndexEntry() headerEntry {
 	return headerEntry{
 		hash:   f.HeaderHash,
 		height: f.Height,
+		bytes:  f.FilterHash[:],
 	}
 }
 
 // WriteHeaders writes a batch of filter headers to persistent storage. The
 // headers themselves are appended to the flat file, and then the index updated
 // to reflect the new entires.
-func (f *FilterHeaderStore) WriteHeaders(hdrs ...FilterHeader) er.R {
-	// Lock store for write.
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
-	// If there are 0 headers to be written, return immediately. This
-	// prevents the newTip assignment from panicking because of an index
-	// of -1.
-	if len(hdrs) == 0 {
-		return nil
+func (f *FilterHeaderStore) WriteHeaders(tx walletdb.ReadWriteTx, hdrs ...FilterHeader) er.R {
+	headerLocs := make([]headerEntry, len(hdrs))
+	for i := range hdrs {
+		headerLocs[i] = hdrs[i].toIndexEntry()
 	}
-
-	// First, we'll grab a buffer from the write buffer pool so we an
-	// reduce our total number of allocations, and also write the headers
-	// in a single swoop.
-	headerBuf := headerBufPool.Get().(*bytes.Buffer)
-	headerBuf.Reset()
-	defer headerBufPool.Put(headerBuf)
-
-	// Next, we'll write out all the passed headers in series into the
-	// buffer we just extracted from the pool.
-	for _, header := range hdrs {
-		if _, err := headerBuf.Write(header.FilterHash[:]); err != nil {
-			return er.E(err)
-		}
-	}
-
-	// With all the headers written to the buffer, we'll now write out the
-	// entire batch in a single write call.
-	if err := f.appendRaw(headerBuf.Bytes()); err != nil {
-		return err
-	}
-
-	// As the block headers should already be written, we only need to
-	// update the tip pointer for this particular header type.
-	newTip := hdrs[len(hdrs)-1].toIndexEntry().hash
-	return f.truncateIndex(&newTip, false)
+	return f.addHeaders(tx, headerLocs, false)
 }
 
 // ChainTip returns the latest filter header and height known to the
 // FilterHeaderStore.
 func (f *FilterHeaderStore) ChainTip() (*chainhash.Hash, uint32, er.R) {
-	// Lock store for read.
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
+	var hash *chainhash.Hash
+	var height uint32
+	return hash, height, walletdb.View(f.Db, func(tx walletdb.ReadTx) er.R {
+		var err er.R
+		hash, height, err = f.ChainTip1(tx)
+		return err
+	})
+}
 
-	_, tipHeight, err := f.chainTip()
-	if err != nil {
-		return nil, 0, er.Errorf("unable to fetch chain tip: %v", err)
+func (f *FilterHeaderStore) ChainTip1(tx walletdb.ReadTx) (*chainhash.Hash, uint32, er.R) {
+	if ct, err := f.chainTip(tx); err != nil {
+		return nil, 0, err
+	} else if ch, err := chainhash.NewHash(ct.bytes); err != nil {
+		return nil, 0, err
+	} else {
+		return ch, ct.height, nil
 	}
-
-	latestHeader, err := f.readHeader(tipHeight)
-	if err != nil {
-		return nil, 0, er.Errorf("unable to read header: %v", err)
-	}
-
-	return latestHeader, tipHeight, nil
 }
 
 // RollbackLastBlock rollsback both the index, and on-disk header file by a
@@ -879,37 +708,14 @@ func (f *FilterHeaderStore) ChainTip() (*chainhash.Hash, uint32, er.R) {
 // re-org which disconnects the latest filter header from the end of the main
 // chain. The information about the latest header tip after truncation is
 // returned.
-func (f *FilterHeaderStore) RollbackLastBlock(newTip *chainhash.Hash) (*waddrmgr.BlockStamp, er.R) {
-	// Lock store for write.
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
-	// First, we'll obtain the latest height that the index knows of.
-	_, chainTipHeight, err := f.chainTip()
-	if err != nil {
+func (f *FilterHeaderStore) RollbackLastBlock(tx walletdb.ReadWriteTx) (*waddrmgr.BlockStamp, er.R) {
+	if he, err := f.truncateIndex(tx, false); err != nil {
 		return nil, err
+	} else {
+		// TODO(roasbeef): return chain hash also?
+		return &waddrmgr.BlockStamp{
+			Height: int32(he.height),
+			Hash:   he.hash,
+		}, nil
 	}
-
-	// With this height obtained, we'll use it to read what will be the new
-	// chain tip from disk.
-	newHeightTip := chainTipHeight - 1
-	newHeaderTip, err := f.readHeader(newHeightTip)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now that we have the information we need to return from this
-	// function, we can now truncate both the header file and the index.
-	if err := f.singleTruncate(); err != nil {
-		return nil, err
-	}
-	if err := f.truncateIndex(newTip, false); err != nil {
-		return nil, err
-	}
-
-	// TODO(roasbeef): return chain hash also?
-	return &waddrmgr.BlockStamp{
-		Height: int32(newHeightTip),
-		Hash:   *newHeaderTip,
-	}, nil
 }

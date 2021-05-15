@@ -557,23 +557,33 @@ func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) 
 	defer db.Close()
 
 	hdrStore, err := headerfs.NewBlockHeaderStore(
-		tempDir, db, &chaincfg.SimNetParams,
+		db, &chaincfg.SimNetParams,
 	)
 	if err != nil {
 		t.Fatalf("Error creating block header store: %s", err)
 	}
 
-	cfStore, err := headerfs.NewFilterHeaderStore(
-		tempDir, db, headerfs.RegularFilter,
-		&chaincfg.SimNetParams, nil,
-	)
+	cfStore, err := headerfs.NewFilterHeaderStore(db, &chaincfg.SimNetParams, nil, nil)
 	if err != nil {
 		t.Fatalf("Error creating filter header store: %s", err)
 	}
 
+	walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
+		runCheckCFCheckptSanityTestCase1(t, testCase, tx, cfStore, hdrStore)
+		return nil
+	})
+}
+func runCheckCFCheckptSanityTestCase1(
+	t *testing.T,
+	testCase *cfCheckptTestCase,
+	tx walletdb.ReadWriteTx,
+	cfStore *headerfs.FilterHeaderStore,
+	hdrStore headerfs.BlockHeaderStore,
+) {
 	var (
 		height uint32
 		header *wire.BlockHeader
+		err    er.R
 	)
 	for i, point := range testCase.storepoints {
 		cfBatch := make([]headerfs.FilterHeader, 0, wire.CFCheckptInterval)
@@ -609,11 +619,11 @@ func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) 
 			Height:     height,
 		})
 
-		if err = hdrStore.WriteHeaders(hdrBatch...); err != nil {
+		if err = hdrStore.WriteHeaders(tx, hdrBatch...); err != nil {
 			t.Fatalf("Error writing batch of headers: %s", err)
 		}
 
-		if err = cfStore.WriteHeaders(cfBatch...); err != nil {
+		if err = cfStore.WriteHeaders(tx, cfBatch...); err != nil {
 			t.Fatalf("Error writing batch of cfheaders: %s", err)
 		}
 	}
@@ -623,14 +633,14 @@ func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) 
 			wire.CFCheckptInterval + i)
 		header = heightToHeader(height)
 
-		if err = hdrStore.WriteHeaders(headerfs.BlockHeader{
+		if err = hdrStore.WriteHeaders(tx, headerfs.BlockHeader{
 			BlockHeader: header,
 			Height:      height,
 		}); err != nil {
 			t.Fatalf("Error writing single block header: %s", err)
 		}
 
-		if err = cfStore.WriteHeaders(headerfs.FilterHeader{
+		if err = cfStore.WriteHeaders(tx, headerfs.FilterHeader{
 			FilterHash: zeroHash,
 			HeaderHash: zeroHash,
 			Height:     height,
