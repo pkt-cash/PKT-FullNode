@@ -376,9 +376,6 @@ func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) 
 }
 
 func getWalletSeed(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
-	if w.Manager.IsLocked() {
-		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
-	}
 	seed := w.Manager.Seed()
 	if seed == nil {
 		return nil, er.New("No seed found, this is probably a legacy wallet")
