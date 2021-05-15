@@ -290,6 +290,8 @@ func Seed(reader *bufio.Reader, passphrase []byte) ([]byte, *seedwords.Seed, er.
 		fmt.Println("Please keep in mind that anyone who has access\n" +
 			"to the seed only needs to guess your wallet passphrase to\n" +
 			"access your funds.")
+		fmt.Println("The seed is encrypted using your wallet passphrase\n" +
+			"YOU MUST REMEMBER YOUR WALLET PASSPHRASE TO RESTORE FROM SEED.\n")
 
 		for {
 			fmt.Print(`Once you have stored the seed in a safe ` +
