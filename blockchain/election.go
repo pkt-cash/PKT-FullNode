@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/database"
 	"github.com/pkt-cash/pktd/txscript"
@@ -19,11 +20,13 @@ func electionIsVoteAgainst(pkScript, networkSteward []byte) bool {
 	return va != nil && bytes.Equal(va, networkSteward)
 }
 
+// ElectionState ...
 type ElectionState struct {
 	NetworkSteward []byte
 	Disapproval    int64
 }
 
+// ElectionCandidate ...
 type electionCandidate struct {
 	approval    int64
 	disapproval int64

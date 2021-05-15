@@ -30,7 +30,7 @@ var helpDescsEnUS = map[string]string{
 		"The levelspec can either a debug level or of the form:\n" +
 		"<subsystem>=<level>,<subsystem2>=<level2>,...\n" +
 		"The valid debug levels are trace, debug, info, warn, error, and critical.\n" +
-		"The valid subsystems are AMGR, ADXR, BCDB, BMGR, BTCD, CHAN, DISC, PEER, RPCS, SCRP, SRVR, and TXMP.\n" +
+		"The valid subsystems are AMGR, ADXR, PKDB, BMGR, BTCD, CHAN, DISC, PEER, RPCS, SCRP, SRVR, and TXMP.\n" +
 		"Finally the keyword 'show' will return a list of the available subsystems.",
 	"debuglevel-levelspec":   "The debug level(s) to use or the keyword 'show'",
 	"debuglevel--condition0": "levelspec!=show",
@@ -161,11 +161,9 @@ var helpDescsEnUS = map[string]string{
 	"getnetworkinforesult-incrementalfee":     "Minimum fee increment for BIP 125 replacement",
 	"getnetworkinforesult-localaddresses":     "TODO Always empty for now",
 
-	"getnetworkinfonetworks-proxy_randomize_credentials": "True if randomized credentials are used",
-	"getnetworkinfonetworks-proxy":                       "host:port of proxy, if in use",
 	"getnetworkinfonetworks-reachable":                   "If the network is externally reachable",
 	"getnetworkinfonetworks-limited":                     "True if this is the only allowed network",
-	"getnetworkinfonetworks-name":                        "IPv4 / IPv6 / onion",
+	"getnetworkinfonetworks-name":                        "IPv4 / IPv6",
 
 	// GenerateCmd help
 	"generate--synopsis": "Generates a set number of blocks (simnet or regtest only) and returns a JSON\n" +
@@ -426,7 +424,6 @@ var helpDescsEnUS = map[string]string{
 	"infochainresult-blocks":          "The number of blocks processed",
 	"infochainresult-timeoffset":      "The time offset",
 	"infochainresult-connections":     "The number of connected peers",
-	"infochainresult-proxy":           "The proxy used by the server",
 	"infochainresult-difficulty":      "The current target difficulty",
 	"infochainresult-testnet":         "Whether or not server is using testnet",
 	"infochainresult-relayfee":        "The minimum relay fee for non-free transactions in BTC/KB",
@@ -440,7 +437,6 @@ var helpDescsEnUS = map[string]string{
 	"infowalletresult-blocks":          "The number of blocks processed",
 	"infowalletresult-timeoffset":      "The time offset",
 	"infowalletresult-connections":     "The number of connected peers",
-	"infowalletresult-proxy":           "The proxy used by the server",
 	"infowalletresult-difficulty":      "The current target difficulty",
 	"infowalletresult-testnet":         "Whether or not server is using testnet",
 	"infowalletresult-keypoololdest":   "Seconds since 1 Jan 1970 GMT of the oldest pre-generated key in the key pool",

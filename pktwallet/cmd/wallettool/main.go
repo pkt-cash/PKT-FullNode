@@ -122,7 +122,7 @@ func repair0(temppath string, db walletdb.DB) er.R {
 	if util.Exists(backupPath) {
 		return er.Errorf("%s exists so no place to put the backup", backupPath)
 	}
-	toDb, err := walletdb.Create("bdb", temppath)
+	toDb, err := walletdb.Create("bdb", temppath, false)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func mainInt() int {
 		return 1
 	}
 
-	db, err := walletdb.Open("bdb", opts.DbPath)
+	db, err := walletdb.Open("bdb", opts.DbPath, false)
 	if err != nil {
 		fmt.Println("Failed to open database:", err)
 		return 1

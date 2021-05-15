@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -53,7 +54,6 @@ const (
 	// a serialized block (4 bytes network version + 4 bytes block size +
 	// 4 bytes checksum).
 	blockMetadataSize = 12
-
 )
 
 var (
@@ -472,7 +472,7 @@ func (s *blockStore) writeBlock(rawBlock []byte) (blockLocation, er.R) {
 	_, _ = hasher.Write(scratch[:])
 
 	// Serialized block.
-	if err := s.writeData(rawBlock[:], "block"); err != nil {
+	if err := s.writeData(rawBlock, "block"); err != nil {
 		return blockLocation{}, err
 	}
 	_, _ = hasher.Write(rawBlock)

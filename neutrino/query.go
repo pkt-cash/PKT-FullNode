@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkt-cash/pktd/blockchain"
@@ -459,7 +460,7 @@ func queryChainServiceBatch(
 
 				log.Tracef("Query for #%v failed, moving "+
 					"on: %v", handleQuery,
-					newLogClosure(func() string {
+					log.C(func() string {
 						return spew.Sdump(queryMsgs[handleQuery])
 					}))
 
@@ -964,7 +965,7 @@ func (s *ChainService) prepareCFiltersQueries(
 			if len(out) == 0 {
 				return nil, err
 			}
-			log.Info("Non-criticial error from prepareCFiltersQuery [%s]", err.String())
+			log.Infof("Non-criticial error from prepareCFiltersQuery [%s]", err.String())
 			break
 		}
 		out = append(out, x)
@@ -1244,9 +1245,7 @@ func (s *ChainService) doFilterRequest(
 	bottomHeight := int32(queries[0].startHeight)
 	topHeight := int32(queries[len(queries)-1].stopHeight)
 	if bottomHeight > topHeight {
-		x := topHeight
-		topHeight = bottomHeight
-		bottomHeight = x
+		topHeight, bottomHeight = bottomHeight, topHeight
 	}
 	pfr := pendingFiltersReq{
 		ch: ch, bottomHeight: bottomHeight, topHeight: topHeight,
@@ -1384,7 +1383,7 @@ func (s *ChainService) GetCFilter(blockHash chainhash.Hash,
 			tryHeight++
 		}
 		if dh, err := s.GetBlockHash(tryHeight); err != nil {
-			log.Debug("Non-critical error getting hash at height [%d]: [%s]",
+			log.Debugf("Non-critical error getting hash at height [%d]: [%s]",
 				doHeight, err.String())
 			doHeight = int64(height)
 		} else {
@@ -1541,7 +1540,7 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 	}
 
 	// Add block to the cache before returning it.
-	_, err = s.BlockCache.Put(*inv, &cache.CacheableBlock{foundBlock})
+	_, err = s.BlockCache.Put(*inv, &cache.CacheableBlock{Block: foundBlock})
 	if err != nil {
 		log.Warnf("couldn't write block to cache: %v", err)
 	}

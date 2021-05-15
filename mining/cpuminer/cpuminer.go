@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/mining"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 )
@@ -194,6 +195,12 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
 	log.Infof("Block submitted via CPU miner accepted (hash %s, "+
 		"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+	for i, tx := range block.MsgBlock().Transactions {
+		if i == 0 {
+			continue
+		}
+		log.Infof("    With txn [%s]", tx.TxHash().String())
+	}
 	return true
 }
 

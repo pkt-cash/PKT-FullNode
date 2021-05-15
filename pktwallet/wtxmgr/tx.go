@@ -7,10 +7,12 @@ package wtxmgr
 
 import (
 	"bytes"
+	"encoding/binary"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/lnd/clock"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -19,6 +21,48 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/wire"
+)
+
+const (
+	// TxLabelLimit is the length limit we impose on transaction labels.
+	TxLabelLimit = 500
+
+	// DefaultLockDuration is the default duration used to lock outputs.
+	DefaultLockDuration = 10 * time.Minute
+)
+
+var (
+	// ErrEmptyLabel is returned when an attempt to write a label that is
+	// empty is made.
+	ErrEmptyLabel = Err.CodeWithDetail("ErrEmptyLabel", "empty transaction label not allowed")
+
+	// ErrLabelTooLong is returned when an attempt to write a label that is
+	// to long is made.
+	ErrLabelTooLong = Err.CodeWithDetail("ErrLabelTooLong", "transaction label exceeds limit")
+
+	// ErrNoLabelBucket is returned when the bucket holding optional
+	// transaction labels is not found. This occurs when no transactions
+	// have been labelled yet.
+	ErrNoLabelBucket = Err.CodeWithDetail("ErrNoLabelBucket", "labels bucket does not exist")
+
+	// ErrTxLabelNotFound is returned when no label is found for a
+	// transaction hash.
+	ErrTxLabelNotFound = Err.CodeWithDetail("ErrTxLabelNotFound",
+		"label for transaction not found")
+
+	// ErrUnknownOutput is an error returned when an output not known to the
+	// wallet is attempted to be locked.
+	ErrUnknownOutput = Err.CodeWithDetail("ErrUnknownOutput", "unknown output")
+
+	// ErrOutputAlreadyLocked is an error returned when an output has
+	// already been locked to a different ID.
+	ErrOutputAlreadyLocked = Err.CodeWithDetail("ErrOutputAlreadyLocked",
+		"output already locked")
+
+	// ErrOutputUnlockNotAllowed is an error returned when an output unlock
+	// is attempted with a different ID than the one which locked it.
+	ErrOutputUnlockNotAllowed = Err.CodeWithDetail("ErrOutputUnlockNotAllowed",
+		"output unlock not alowed")
 )
 
 // Block contains the minimum amount of data to uniquely identify any block on
@@ -125,10 +169,16 @@ type Credit struct {
 	FromCoinBase bool
 }
 
+// LockID represents a unique context-specific ID assigned to an output lock.
+type LockID [32]byte
+
 // Store implements a transaction store for storing and managing wallet
 // transactions.
 type Store struct {
 	chainParams *chaincfg.Params
+
+	// clock is used to determine when outputs locks have expired.
+	clock clock.Clock
 
 	// Event callbacks.  These execute in the same goroutine as the wtxmgr
 	// caller.
@@ -143,7 +193,7 @@ func Open(ns walletdb.ReadBucket, chainParams *chaincfg.Params) (*Store, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{chainParams, nil} // TODO: set callbacks
+	s := &Store{chainParams, clock.NewDefaultClock(), nil} // TODO: set callbacks
 	return s, nil
 }
 
@@ -220,11 +270,11 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 
 	for addr, amt := range spentByAddress {
 		log.Infof("📩 %s [%s] from [%s] tx [%s] @ [%s]",
-			pktlog.GreenBg("Confirmed spend"),
-			pktlog.Coins(amt.ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()),
-			pktlog.Height(block.Height))
+			log.GreenBg("Confirmed spend"),
+			log.Coins(amt.ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()),
+			log.Height(block.Height))
 	}
 
 	return nil
@@ -313,21 +363,20 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 				if !txid.IsEqual(&rec.Hash) {
 					transactions = append(transactions, txid)
 				}
-			} else {
-				// Ideally we would do some sort of transaction rollback operation
-				// but we're dealing with a corrupt db and rollbackTransaction()
-				// is not going to rollback everything it can and ignore what it
-				// can't, instead it will fail with an error when any of the things
-				// it expects to be present are not. Also deleting the tx object
-				// without all of the associated credits and debits is risky because
-				// it can cause errors in other code. So we're just going to detach
-				// it from the block and let it be with the caviats:
-				//
-				// 1. there may be dangling credits and no associated block record
-				//      ForEachUnspentOutput will filter these out
-				// 2. there may be debits which spent credits that should not have
-				//      been spent.
 			}
+			// Ideally we would do some sort of transaction rollback operation
+			// but we're dealing with a corrupt db and rollbackTransaction()
+			// is not going to rollback everything it can and ignore what it
+			// can't, instead it will fail with an error when any of the things
+			// it expects to be present are not. Also deleting the tx object
+			// without all of the associated credits and debits is risky because
+			// it can cause errors in other code. So we're just going to detach
+			// it from the block and let it be with the caviats:
+			//
+			// 1. there may be dangling credits and no associated block record
+			//      ForEachUnspentOutput will filter these out
+			// 2. there may be debits which spent credits that should not have
+			//      been spent.
 		}
 	}
 	transactions = append(transactions, rec.Hash)
@@ -367,7 +416,19 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// from the unconfirmed set.  This also handles removing unconfirmed
 	// transaction spend chains if any other unconfirmed transactions spend
 	// outputs of the removed double spend.
-	return s.removeDoubleSpends(ns, rec)
+	if err := s.removeDoubleSpends(ns, rec); err != nil {
+		return err
+	}
+
+	// Clear any locked outputs since we now have a confirmed spend for
+	// them, making them not eligible for coin selection anyway.
+	for _, txIn := range rec.MsgTx.TxIn {
+		if err := unlockOutput(ns, txIn.PreviousOutPoint); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // AddCredit marks a transaction record as containing a transaction output
@@ -477,10 +538,10 @@ func rollbackTransaction(
 
 			addr := txscript.PkScriptToAddress(output.PkScript, params)
 			log.Infof("😱 %s [%s] <- [%s] by rollback of [%s]",
-				pktlog.BgYellow("Got UNPAID"),
-				pktlog.Coins(btcutil.Amount(output.Value).ToBTC()),
-				pktlog.Address(addr.String()),
-				pktlog.Txid(rec.Hash.String()))
+				log.BgYellow("Got UNPAID"),
+				log.Coins(btcutil.Amount(output.Value).ToBTC()),
+				log.Address(addr.String()),
+				log.Txid(rec.Hash.String()))
 
 			// Delete the unspents from this coinbase
 			unspentKey, credKey := existsUnspent(ns, &op)
@@ -605,9 +666,9 @@ func rollbackTransaction(
 
 	for addr, amt := range unspentByAddress {
 		log.Infof("⚠️ Spend unconfirmed [%s] <- [%s] by rollback of [%s]",
-			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()))
+			log.Coins(btcutil.Amount(amt).ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()))
 	}
 
 	// For each detached non-coinbase credit, move the
@@ -650,9 +711,9 @@ func rollbackTransaction(
 	}
 	for addr, amt := range unearnedByAddress {
 		log.Infof("⚠️ Income unconfirmed [%s] <- [%s] by rollback of [%s]",
-			pktlog.Coins(btcutil.Amount(amt).ToBTC()),
-			pktlog.Address(addr),
-			pktlog.Txid(rec.Hash.String()))
+			log.Coins(btcutil.Amount(amt).ToBTC()),
+			log.Address(addr),
+			log.Txid(rec.Hash.String()))
 	}
 	return
 }
@@ -673,7 +734,7 @@ func (s *Store) RollbackOne(ns walletdb.ReadWriteBucket, height int32) er.R {
 		len(txns), b.Hash, b.Height)
 
 	for txHash := range txns {
-		log.Infof("Rolling back tx [%s]", pktlog.Txid(txHash.String()))
+		log.Infof("Rolling back tx [%s]", log.Txid(txHash.String()))
 		if _, err := rollbackTransaction(ns, &txHash, &b.Block, s.chainParams); err != nil {
 			return err
 		}
@@ -708,6 +769,13 @@ func (s *Store) ForEachUnspentOutput(
 		if err != nil {
 			return err
 		}
+
+		// Skip the output if it's locked.
+		_, _, isLocked := isLockedOutput(ns, op, s.clock.Now())
+		if isLocked {
+			return nil
+		}
+
 		if existsRawUnminedInput(ns, k) != nil {
 			// Output is spent by an unmined transaction.
 			// Skip this k/v pair.
@@ -772,6 +840,12 @@ func (s *Store) ForEachUnspentOutput(
 		err := readCanonicalOutPoint(k, &op)
 		if err != nil {
 			return err
+		}
+
+		// Skip the output if it's locked.
+		_, _, isLocked := isLockedOutput(ns, op, s.clock.Now())
+		if isLocked {
+			return nil
 		}
 
 		// TODO(jrick): Reading/parsing the entire transaction record
@@ -839,4 +913,185 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 		}
 		return nil
 	})
+}
+
+// PutTxLabel validates transaction labels and writes them to disk if they
+// are non-zero and within the label length limit. The entry is keyed by the
+// transaction hash:
+// [0:32] Transaction hash (32 bytes)
+//
+// The label itself is written to disk in length value format:
+// [0:2] Label length
+// [2: +len] Label
+func (s *Store) PutTxLabel(ns walletdb.ReadWriteBucket, txid chainhash.Hash,
+	label string) er.R {
+
+	if len(label) == 0 {
+		return ErrEmptyLabel.Default()
+	}
+
+	if len(label) > TxLabelLimit {
+		return ErrLabelTooLong.Default()
+	}
+
+	labelBucket, err := ns.CreateBucketIfNotExists(bucketTxLabels)
+	if err != nil {
+		return err
+	}
+
+	return PutTxLabel(labelBucket, txid, label)
+}
+
+// PutTxLabel writes a label for a tx to the bucket provided. Note that it does
+// not perform any validation on the label provided, or check whether there is
+// an existing label for the txid.
+func PutTxLabel(labelBucket walletdb.ReadWriteBucket, txid chainhash.Hash,
+	label string) er.R {
+
+	// We expect the label length to be limited on creation, so we can
+	// store the label's length as a uint16.
+	labelLen := uint16(len(label))
+
+	var buf bytes.Buffer
+
+	var b [2]byte
+	binary.BigEndian.PutUint16(b[:], labelLen)
+	if _, err := buf.Write(b[:]); err != nil {
+		return er.E(err)
+	}
+
+	if _, err := buf.WriteString(label); err != nil {
+		return er.E(err)
+	}
+
+	return labelBucket.Put(txid[:], buf.Bytes())
+}
+
+// FetchTxLabel reads a transaction label from the tx labels bucket. If a label
+// with 0 length was written, we return an error, since this is unexpected.
+func FetchTxLabel(ns walletdb.ReadBucket, txid chainhash.Hash) (string, er.R) {
+	labelBucket := ns.NestedReadBucket(bucketTxLabels)
+	if labelBucket == nil {
+		return "", ErrNoLabelBucket.Default()
+	}
+
+	v := labelBucket.Get(txid[:])
+	if v == nil {
+		return "", ErrTxLabelNotFound.Default()
+	}
+
+	return DeserializeLabel(v)
+}
+
+// DeserializeLabel reads a deserializes a length-value encoded label from the
+// byte array provided.
+func DeserializeLabel(v []byte) (string, er.R) {
+	// If the label is empty, return an error.
+	length := binary.BigEndian.Uint16(v[0:2])
+	if length == 0 {
+		return "", ErrEmptyLabel.Default()
+	}
+
+	// Read the remainder of the bytes into a label string.
+	label := string(v[2:])
+	return label, nil
+}
+
+// isKnownOutput returns whether the output is known to the transaction store
+// either as confirmed or unconfirmed.
+func isKnownOutput(ns walletdb.ReadWriteBucket, op wire.OutPoint) bool {
+	k := canonicalOutPoint(&op.Hash, op.Index)
+	if existsRawUnminedCredit(ns, k) != nil {
+		return true
+	}
+	if existsRawUnspent(ns, k) != nil {
+		return true
+	}
+	return false
+}
+
+// LockOutput locks an output to the given ID, preventing it from being
+// available for coin selection. The absolute time of the lock's expiration is
+// returned. The expiration of the lock can be extended by successive
+// invocations of this call.
+//
+// Outputs can be unlocked before their expiration through `UnlockOutput`.
+// Otherwise, they are unlocked lazily through calls which iterate through all
+// known outputs, e.g., `Balance`, `UnspentOutputs`.
+//
+// If the output is not known, ErrUnknownOutput is returned. If the output has
+// already been locked to a different ID, then ErrOutputAlreadyLocked is
+// returned.
+func (s *Store) LockOutput(ns walletdb.ReadWriteBucket, id LockID,
+	op wire.OutPoint) (time.Time, er.R) {
+
+	// Make sure the output is known.
+	if !isKnownOutput(ns, op) {
+		return time.Time{}, ErrUnknownOutput.Default()
+	}
+
+	// Make sure the output hasn't already been locked to some other ID.
+	lockedID, _, isLocked := isLockedOutput(ns, op, s.clock.Now())
+	if isLocked && lockedID != id {
+		return time.Time{}, ErrOutputAlreadyLocked.Default()
+	}
+
+	expiry := s.clock.Now().Add(DefaultLockDuration)
+	if err := lockOutput(ns, id, op, expiry); err != nil {
+		return time.Time{}, err
+	}
+
+	return expiry, nil
+}
+
+// UnlockOutput unlocks an output, allowing it to be available for coin
+// selection if it remains unspent. The ID should match the one used to
+// originally lock the output.
+func (s *Store) UnlockOutput(ns walletdb.ReadWriteBucket, id LockID,
+	op wire.OutPoint) er.R {
+
+	// Make sure the output is known.
+	if !isKnownOutput(ns, op) {
+		return ErrUnknownOutput.Default()
+	}
+
+	// If the output has already been unlocked, we can return now.
+	lockedID, _, isLocked := isLockedOutput(ns, op, s.clock.Now())
+	if !isLocked {
+		return nil
+	}
+
+	// Make sure the output was locked to the same ID.
+	if lockedID != id {
+		return ErrOutputUnlockNotAllowed.Default()
+	}
+
+	return unlockOutput(ns, op)
+}
+
+// DeleteExpiredLockedOutputs iterates through all existing locked outputs and
+// deletes those which have already expired.
+func (s *Store) DeleteExpiredLockedOutputs(ns walletdb.ReadWriteBucket) er.R {
+	// Collect all expired output locks first to remove them later on. This
+	// is necessary as deleting while iterating would invalidate the
+	// iterator.
+	var expiredOutputs []wire.OutPoint
+	err := forEachLockedOutput(
+		ns, func(op wire.OutPoint, _ LockID, expiration time.Time) {
+			if !s.clock.Now().Before(expiration) {
+				expiredOutputs = append(expiredOutputs, op)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, op := range expiredOutputs {
+		if err := unlockOutput(ns, op); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

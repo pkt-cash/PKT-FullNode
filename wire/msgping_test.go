@@ -239,7 +239,7 @@ func TestPingWireErrors(t *testing.T) {
 		var msg MsgPing
 		r := newFixedReader(test.max, test.buf)
 		err = msg.BtcDecode(r, test.pver, test.enc)
-		if !er.FuzzyEquals(err, test.writeErr) {
+		if !er.FuzzyEquals(err, test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue

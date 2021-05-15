@@ -21,11 +21,12 @@ import (
 // active.
 func mockRemotePeer() er.R {
 	// Configure peer to act as a simnet node that offers no services.
+	peer.TstAllowSelfConns()
 	peerCfg := &peer.Config{
 		UserAgentName:    "peer",  // User agent name to advertise.
 		UserAgentVersion: "1.0.0", // User agent version to advertise.
 		ChainParams:      &chaincfg.SimNetParams,
-		TrickleInterval:  time.Second * 5,
+		TrickleInterval:  time.Second * 2,
 	}
 
 	// Accept connections on the simnet port.
@@ -57,6 +58,7 @@ func Example_newOutboundPeer() {
 	// connecting to a remote peer, however, since this example is executed
 	// and tested, a mock remote peer is needed to listen for the outbound
 	// peer.
+	peer.TstAllowSelfConns()
 	if err := mockRemotePeer(); err != nil {
 		fmt.Printf("mockRemotePeer: unexpected error %v\n", err)
 		return
@@ -72,7 +74,7 @@ func Example_newOutboundPeer() {
 		UserAgentVersion: "1.0.0", // User agent version to advertise.
 		ChainParams:      &chaincfg.SimNetParams,
 		Services:         0,
-		TrickleInterval:  time.Second * 10,
+		TrickleInterval:  time.Second * 2,
 		Listeners: peer.MessageListeners{
 			OnVersion: func(p *peer.Peer, msg *wire.MsgVersion) *wire.MsgReject {
 				fmt.Println("outbound: received version")

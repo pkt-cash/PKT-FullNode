@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/pkt-cash/pktd/pktlog"
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -88,12 +86,4 @@ func UserAgentName() string {
 
 func UserAgentVersion() string {
 	return version
-}
-
-func WarnIfPrerelease(log pktlog.Logger) {
-	if IsCustom() || IsDirty() {
-		log.Warnf("THIS IS A DEVELOPMENT VERSION, THINGS MAY BREAK")
-	} else if IsPrerelease() {
-		log.Infof("This is a pre-release version")
-	}
 }

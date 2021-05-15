@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // shutdownRequestChannel is used to initiate shutdown from one of the
@@ -32,11 +34,11 @@ func interruptListener() <-chan struct{} {
 		// channel to notify the caller.
 		select {
 		case sig := <-interruptChannel:
-			pktdLog.Infof("Received signal (%s).  Shutting down...",
+			log.Infof("Received signal (%s).  Shutting down...",
 				sig)
 
 		case <-shutdownRequestChannel:
-			pktdLog.Info("Shutdown requested.  Shutting down...")
+			log.Info("Shutdown requested.  Shutting down...")
 		}
 		close(c)
 
@@ -46,14 +48,14 @@ func interruptListener() <-chan struct{} {
 		for {
 			select {
 			case sig := <-interruptChannel:
-				pktdLog.Infof("Received signal (%s).  Already "+
+				log.Infof("Received signal (%s).  Already "+
 					"shutting down...", sig)
 				buf := make([]byte, 1<<20)
 				stacklen := runtime.Stack(buf, true)
-				pktdLog.Infof("*** goroutine dump...\n%s\n*** end\n", buf[:stacklen])
+				log.Infof("*** goroutine dump...\n%s\n*** end\n", buf[:stacklen])
 
 			case <-shutdownRequestChannel:
-				pktdLog.Info("Shutdown requested.  Already " +
+				log.Info("Shutdown requested.  Already " +
 					"shutting down...")
 			}
 		}

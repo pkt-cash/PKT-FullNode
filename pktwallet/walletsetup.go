@@ -7,12 +7,13 @@ package main
 import (
 	"bufio"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire/protocol"
@@ -116,7 +117,8 @@ type WalletSetupCfg struct {
 // provided path.
 func createWallet(cfg *config) er.R {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
-	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, 250)
+	// TODO(cjd): noFreelistSync ?
+	loader := wallet.NewLoader(activeNet.Params, dbDir, cfg.Wallet, false, 250)
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time
@@ -138,7 +140,10 @@ func createWallet(cfg *config) er.R {
 		}
 	}
 
-	fi, _ := os.Stdin.Stat()
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		panic("createWallet: os.Stdin.Stat failure.")
+	}
 	tty := false
 	var privPass []byte
 	pubPass := []byte(wallet.InsecurePubPassphrase)
@@ -273,9 +278,9 @@ func createWallet(cfg *config) er.R {
 	if tty {
 		fmt.Println("Creating the wallet...")
 	}
-	w, err := loader.CreateNewWallet(pubPass, privPass, seedInput, seed)
-	if err != nil {
-		return err
+	w, werr := loader.CreateNewWallet(pubPass, privPass, seedInput, time.Now(), seed)
+	if werr != nil {
+		return werr
 	}
 
 	w.Manager.Close()
@@ -314,7 +319,7 @@ func createSimulationWallet(cfg *config) er.R {
 	fmt.Println("Creating the wallet...")
 
 	// Create the wallet database backed by bolt db.
-	db, err := walletdb.Create("bdb", dbPath)
+	db, err := walletdb.Create("bdb", dbPath, false)
 	if err != nil {
 		return err
 	}
@@ -326,7 +331,7 @@ func createSimulationWallet(cfg *config) er.R {
 	}
 
 	// Create the wallet.
-	err = wallet.Create(db, pubPass, privPass, nil, seed, activeNet.Params)
+	err = wallet.Create(db, pubPass, privPass, nil, time.Time{}, seed, activeNet.Params)
 	if err != nil {
 		return err
 	}

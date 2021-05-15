@@ -1,12 +1,15 @@
 package util
 
 import (
+	"encoding/binary"
 	"encoding/hex"
+	"io"
 	"os"
 	"testing"
 	"unsafe"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/stretchr/testify/require"
 )
 
 func IsNil(i interface{}) bool {
@@ -40,4 +43,30 @@ func CloneBytes(b []byte) []byte {
 		panic("copy not length of bytes")
 	}
 	return out
+}
+
+func WriteBin(w io.Writer, order binary.ByteOrder, data interface{}) er.R {
+	return er.E(binary.Write(w, order, data))
+}
+
+func ReadBin(r io.Reader, order binary.ByteOrder, data interface{}) er.R {
+	return er.E(binary.Read(r, order, data))
+}
+
+func ReadFull(r io.Reader, buf []byte) (int, er.R) {
+	i, e := io.ReadFull(r, buf)
+	return i, er.E(e)
+}
+
+func Write(w io.Writer, b []byte) (int, er.R) {
+	i, e := w.Write(b)
+	return i, er.E(e)
+}
+
+func RequireErr(t require.TestingT, err er.R, msgAndArgs ...interface{}) {
+	require.Error(t, er.Native(err), msgAndArgs...)
+}
+
+func RequireNoErr(t require.TestingT, err er.R, msgAndArgs ...interface{}) {
+	require.NoError(t, er.Native(err), msgAndArgs...)
 }

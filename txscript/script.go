@@ -322,6 +322,20 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 	return chainhash.DoubleHashH(b.Bytes())
 }
 
+// CalcWitnessSigHash computes the sighash digest for the specified input of
+// the target transaction observing the desired sig hash type.
+func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType params.SigHashType,
+	tx *wire.MsgTx, idx int, amt int64) ([]byte, er.R) {
+
+	parsedScript, err := parsescript.ParseScript(script)
+	if err != nil {
+		return nil, er.Errorf("cannot parse output script: %v", err)
+	}
+
+	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx,
+		amt)
+}
+
 // calcWitnessSignatureHash computes the sighash digest of a transaction's
 // segwit input using the new, optimized digest calculation algorithm defined
 // in BIP0143: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki.
@@ -567,7 +581,10 @@ func calcSignatureHash(script []parsescript.ParsedOpcode, hashType params.SigHas
 	// value) appended.
 	wbuf := bytes.NewBuffer(make([]byte, 0, txCopy.SerializeSizeStripped()+4))
 	txCopy.SerializeNoWitness(wbuf)
-	binary.Write(wbuf, binary.LittleEndian, hashType)
+	errr := binary.Write(wbuf, binary.LittleEndian, hashType)
+	if errr != nil {
+		panic("calcSignatureHash: binary.Write failed")
+	}
 	return chainhash.DoubleHashB(wbuf.Bytes())
 }
 

@@ -8,21 +8,21 @@ package addrmgr
 import (
 	"container/list"
 	crand "crypto/rand" // for seeding
-	"encoding/base32"
 	"encoding/binary"
-	"github.com/json-iterator/go"
 	"io"
 	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -99,13 +99,16 @@ const (
 )
 
 const (
+
+	// New defaults for some values are normalized with Bitcoin Core.
+
 	// needAddressThreshold is the number of addresses under which the
 	// address manager will claim to need more addresses.
-	needAddressThreshold = 1000
+	needAddressThreshold = 3000
 
 	// dumpAddressInterval is the interval used to dump the address
 	// cache to disk for future use.
-	dumpAddressInterval = time.Minute * 10
+	dumpAddressInterval = 2 * time.Minute
 
 	// triedBucketSize is the maximum number of addresses in each
 	// tried address bucket.
@@ -137,15 +140,15 @@ const (
 
 	// numMissingDays is the number of days before which we assume an
 	// address has vanished if we have not seen it announced  in that long.
-	numMissingDays = 30
+	numMissingDays = 14
 
 	// numRetries is the number of tried without a single success before
 	// we assume an address is bad.
-	numRetries = 3
+	numRetries = 5
 
 	// maxFailures is the maximum number of failures we will accept without
 	// a success before considering an address bad.
-	maxFailures = 10
+	maxFailures = 15
 
 	// minBadDays is the number of days since the last success before we
 	// will consider evicting an address.
@@ -154,7 +157,7 @@ const (
 	// getAddrMax is the most addresses that we will send in response
 	// to a getAddr (in practise the most addresses we will return from a
 	// call to AddressCache()).
-	getAddrMax = 2500
+	getAddrMax = 5000
 
 	// getAddrPercent is the percentage of total addresses known that we
 	// will share with a call to AddressCache.
@@ -712,7 +715,10 @@ func (a *AddrManager) reset() {
 	a.addrIndex = make(map[string]*KnownAddress)
 
 	// fill key with bytes from a good random source.
-	io.ReadFull(crand.Reader, a.key[:])
+	_, err := io.ReadFull(crand.Reader, a.key[:])
+	if err != nil {
+		panic("reset: io.ReadFull failure")
+	}
 	for i := range a.addrNew {
 		a.addrNew[i] = make(map[string]*KnownAddress)
 	}
@@ -721,24 +727,11 @@ func (a *AddrManager) reset() {
 	}
 }
 
-// HostToNetAddress returns a netaddress given a host address.  If the address
-// is a Tor .onion address this will be taken care of.  Else if the host is
-// not an IP address it will be resolved (via Tor if required).
+// HostToNetAddress returns a netaddress given a host address.
+// If the host is not an IP address it will be resolved
 func (a *AddrManager) HostToNetAddress(host string, port uint16, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
-	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
-	if len(host) == 22 && host[16:] == ".onion" {
-		// go base32 encoding uses capitals (as does the rfc
-		// but Tor and bitcoind tend to user lowercase, so we switch
-		// case here.
-		data, err := base32.StdEncoding.DecodeString(
-			strings.ToUpper(host[:16]))
-		if err != nil {
-			return nil, er.E(err)
-		}
-		prefix := []byte{0xfd, 0x87, 0xd8, 0x7e, 0xeb, 0x43}
-		ip = net.IP(append(prefix, data...))
-	} else if ip = net.ParseIP(host); ip == nil {
+	if ip = net.ParseIP(host); ip == nil {
 		ips, err := a.lookupFunc(host)
 		if err != nil {
 			return nil, err
@@ -752,16 +745,8 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services protoc
 	return wire.NewNetAddressIPPort(ip, port, services), nil
 }
 
-// ipString returns a string for the ip from the provided NetAddress. If the
-// ip is in the range used for Tor addresses then it will be transformed into
-// the relevant .onion address.
+// ipString returns a string for the ip from the provided NetAddress.
 func ipString(na *wire.NetAddress) string {
-	if IsOnionCatTor(na) {
-		// We know now that na.IP is long enough.
-		base32 := base32.StdEncoding.EncodeToString(na.IP[6:])
-		return strings.ToLower(base32) + ".onion"
-	}
-
 	return na.IP.String()
 }
 
@@ -1052,18 +1037,6 @@ func getReachabilityFrom(localAddr, remoteAddr *wire.NetAddress) int {
 		return Unreachable
 	}
 
-	if IsOnionCatTor(remoteAddr) {
-		if IsOnionCatTor(localAddr) {
-			return Private
-		}
-
-		if IsRoutable(localAddr) && IsIPv4(localAddr) {
-			return Ipv4
-		}
-
-		return Default
-	}
-
 	if IsRFC4380(remoteAddr) {
 		if !IsRoutable(localAddr) {
 			return Default
@@ -1141,7 +1114,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 
 		// Send something unroutable if nothing suitable.
 		var ip net.IP
-		if !IsIPv4(remoteAddr) && !IsOnionCatTor(remoteAddr) {
+		if !IsIPv4(remoteAddr) {
 			ip = net.IPv6zero
 		} else {
 			ip = net.IPv4zero

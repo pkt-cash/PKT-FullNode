@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/constants"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
@@ -1076,6 +1077,13 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) er.R {
 		if err != nil {
 			return err
 		}
+
+		// Notify other peers that this block was accepted. Since it was
+		// originally seen as an orphan the accept message was never sent
+		// to downstream peers and they would end up missing this block.
+		b.chainLock.Unlock()
+		b.sendNotification(NTBlockAccepted, block)
+		b.chainLock.Lock()
 	}
 
 	// Log the point where the chain forked and old and new best chain
@@ -1375,6 +1383,7 @@ func (b *BlockChain) BlockHashByHeight(blockHeight int32) (*chainhash.Hash, er.R
 	return &node.hash, nil
 }
 
+// BlockHashByHeightContextual ...
 func (b *BlockChain) BlockHashByHeightContextual(height int32, context *chainhash.Hash) (
 	*chainhash.Hash,
 	er.R,

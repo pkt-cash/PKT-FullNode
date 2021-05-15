@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 )
@@ -311,6 +312,7 @@ func (b *BlockChain) computeNextTarget(timespanSeconds int64, currentDiff uint32
 	return newTargetBits
 }
 
+// ComputeNextTarget ...
 func (b *BlockChain) ComputeNextTarget(timespanSeconds int64, currentDiff uint32) uint32 {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()

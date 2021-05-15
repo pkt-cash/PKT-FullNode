@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/addrmgr"
@@ -40,14 +41,14 @@ var (
 	// ConnectionRetryInterval is the base amount of time to wait in
 	// between retries when connecting to persistent peers.  It is adjusted
 	// by the number of retries such that there is a retry backoff.
-	ConnectionRetryInterval = time.Second * 5
+	ConnectionRetryInterval = time.Second * 3
 
 	// UserAgentName is the user agent name and is used to help identify
-	// ourselves to other bitcoin peers.
+	// ourselves to other peers.
 	UserAgentName = "neutrino"
 
 	// UserAgentVersion is the user agent version and is used to help
-	// identify ourselves to other bitcoin peers.
+	// identify ourselves to other peers.
 	UserAgentVersion = "0.0.4-beta"
 
 	// Services describes the services that are supported by the server.
@@ -64,7 +65,7 @@ var (
 	BanDuration = time.Hour * 24
 
 	// TargetOutbound is the number of outbound peers to target.
-	TargetOutbound = 8
+	TargetOutbound = 12
 
 	// MaxPeers is the maximum number of connections the client maintains.
 	MaxPeers = 125
@@ -206,20 +207,30 @@ func (sp *ServerPeer) pushSendHeadersMsg() er.R {
 	return nil
 }
 
-// OnVerAck is invoked when a peer receives a verack bitcoin message and is used
-// to send the "sendheaders" command to peers that are of a sufficienty new
+// OnVerAck is invoked when a peer receives a verack message and is used to
+// send the "sendheaders" command to peers that are of a sufficienty new
 // protocol version.
 func (sp *ServerPeer) OnVerAck(_ *peer.Peer, msg *wire.MsgVerAck) {
 	sp.pushSendHeadersMsg()
 }
 
-// OnVersion is invoked when a peer receives a version bitcoin message
-// and is used to negotiate the protocol version details as well as kick start
-// the communications.
+// OnVersion is invoked when a peer receives a version message and is used to
+// negotiate the protocol version details as well as kickstart communications.
 func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgReject {
 	// Add the remote peer time as a sample for creating an offset against
 	// the local clock to keep the network time in sync.
 	sp.server.timeSource.AddTimeSample(sp.Addr(), msg.Timestamp)
+
+	// If the peer doesn't allow us to relay any transactions to them, then
+	// we won't add them as a peer, as they aren't of much use to us.
+	if msg.DisableRelayTx {
+		log.Debugf("%v does not allow transaction relay, disconecting",
+			sp)
+
+		sp.Disconnect()
+
+		return nil
+	}
 
 	// Check to see if the peer supports the latest protocol version and
 	// service bits required to service us. If not, then we'll disconnect
@@ -234,9 +245,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 			log.Errorf("Unable to ban peer %v: %v", peerAddr, err)
 		}
 
-		if sp.connReq != nil {
-			sp.server.connManager.Remove(sp.connReq.ID())
-		}
+		sp.Disconnect()
 
 		return nil
 	}
@@ -267,6 +276,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 			[]*wire.NetAddress{sp.NA()}, sp.NA(),
 		)
 		addrManager.Good(sp.NA())
+		sp.server.connManager.NotifyConnectionRequestActuallyCompleted()
 
 		// Update the address manager with the advertised services for
 		// outbound connections in case they have changed. This is not
@@ -285,10 +295,10 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	return nil
 }
 
-// OnInv is invoked when a peer receives an inv bitcoin message and is
-// used to examine the inventory being advertised by the remote peer and react
+// OnInv is invoked when a peer receives an inv wire message and is used to
+// examine the inventory being advertised by the remote peer and react
 // accordingly.  We pass the message down to blockmanager which will call
-// QueueMessage with any appropriate responses.
+// QueueMessage with any appropriate responses
 func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
 	sp.server.inv(msg, sp)
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
@@ -352,7 +362,7 @@ func (s *ChainService) StopListenInvs(h chainhash.Hash, ch chan *ServerPeer) boo
 	return false
 }
 
-// OnHeaders is invoked when a peer receives a headers bitcoin
+// OnHeaders is invoked when a peer receives a headers wire
 // message.  The message is passed down to the block manager.
 func (sp *ServerPeer) OnHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	log.Tracef("Got headers with %d items from %s", len(msg.Headers),
@@ -360,7 +370,7 @@ func (sp *ServerPeer) OnHeaders(p *peer.Peer, msg *wire.MsgHeaders) {
 	sp.server.blockManager.QueueHeaders(msg, sp)
 }
 
-// OnFeeFilter is invoked when a peer receives a feefilter bitcoin message and
+// OnFeeFilter is invoked when a peer receives a feefilter wire message and
 // is used by remote peers to request that no transactions which have a fee rate
 // lower than provided value are inventoried to them.  The peer will be
 // disconnected if an invalid fee filter value is provided.
@@ -376,13 +386,13 @@ func (sp *ServerPeer) OnFeeFilter(_ *peer.Peer, msg *wire.MsgFeeFilter) {
 	atomic.StoreInt64(&sp.feeFilter, msg.MinFee)
 }
 
-// OnReject is invoked when a peer receives a reject bitcoin message and is
+// OnReject is invoked when a peer receives a reject wire message and is
 // used to notify the server about a rejected transaction.
 func (sp *ServerPeer) OnReject(_ *peer.Peer, msg *wire.MsgReject) {
 	// TODO(roaseef): log?
 }
 
-// OnAddr is invoked when a peer receives an addr bitcoin message and is
+// OnAddr is invoked when a peer receives an addr wire message and is
 // used to notify the server about advertised addresses.
 func (sp *ServerPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	// Ignore addresses when running on the simulation test network.  This
@@ -622,8 +632,7 @@ type pendingFiltersReq struct {
 }
 
 // NewChainService returns a new chain service configured to connect to the
-// bitcoin network type specified by chainParams.  Use start to begin syncing
-// with peers.
+// network specified by chainParams. Use start to begin syncing with peers.
 func NewChainService(cfg Config) (*ChainService, er.R) {
 	// First, we'll sort out the methods that we'll use to established
 	// outbound TCP connections, as well as perform any DNS queries.
@@ -656,8 +665,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 
 	// When creating the addr manager, we'll check to see if the user has
 	// provided their own resolution function. If so, then we'll use that
-	// instead as this may be proxying requests over an anonymizing
-	// network.
+	// instead as this may be routing requests over an anonymizing network.
 	amgr := addrmgr.New(cfg.DataDir, nameResolver)
 
 	s := ChainService{
@@ -754,6 +762,12 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 			}
 
 			for tries := 0; tries < 100; tries++ {
+				select {
+				case <-s.quit:
+					return nil, er.Errorf("Neutrino already shutting down...")
+				default:
+				}
+
 				addr := s.addrManager.GetAddress()
 				if addr == nil {
 					break
@@ -769,6 +783,7 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 				// Skip any addresses that correspond to our set
 				// of currently connected peers.
 				if _, ok := connectedPeers[addrString]; ok {
+					log.Debugf("Skipping new connection from already connected peer %v", addrString)
 					continue
 				}
 
@@ -828,23 +843,6 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	}
 	s.connManager = cmgr
 
-	// Start up persistent peers.
-	permanentPeers := cfg.ConnectPeers
-	if len(permanentPeers) == 0 {
-		permanentPeers = cfg.AddPeers
-	}
-	for _, addr := range permanentPeers {
-		tcpAddr, err := s.addrStringToNetAddr(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		go s.connManager.Connect(&connmgr.ConnReq{
-			Addr:      tcpAddr,
-			Permanent: true,
-		})
-	}
-
 	s.utxoScanner = NewUtxoScanner(&UtxoScannerConfig{
 		BestSnapshot: s.BestBlock,
 		GetBlockHash: s.GetBlockHash,
@@ -871,6 +869,48 @@ func NewChainService(cfg Config) (*ChainService, er.R) {
 	s.banStore, err = banman.NewStore(cfg.Database)
 	if err != nil {
 		return nil, er.Errorf("unable to initialize ban store: %v", err)
+	}
+
+	// Start up persistent peers.
+	permanentPeers := cfg.ConnectPeers
+	if len(permanentPeers) == 0 {
+		permanentPeers = cfg.AddPeers
+	}
+
+	for _, addr := range permanentPeers {
+		addr := addr
+
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+
+			// Since netwok access might not be established yet, we
+			// loop until we are able to look up the permanent
+			// peer.
+			var tcpAddr net.Addr
+			for {
+				tcpAddr, err = s.addrStringToNetAddr(addr)
+				if err != nil {
+					log.Warnf("unable to lookup IP for "+
+						"%v", addr)
+
+					select {
+					// Try again in 5 seconds.
+					case <-time.After(ConnectionRetryInterval):
+					case <-s.quit:
+						return
+					}
+					continue
+				}
+
+				break
+			}
+
+			s.connManager.Connect(&connmgr.ConnReq{
+				Addr:      tcpAddr,
+				Permanent: true,
+			})
+		}()
 	}
 
 	return &s, nil
@@ -1086,14 +1126,7 @@ func (s *ChainService) peerHandler() {
 		connmgr.SeedFromDNS(&s.chainParams, RequiredServices,
 			s.nameResolver, func(addrs []*wire.NetAddress) {
 				var validAddrs []*wire.NetAddress
-				for _, addr := range addrs {
-					// if addr.Services&RequiredServices !=
-					// 	RequiredServices {
-					// 	continue
-					// }
-
-					validAddrs = append(validAddrs, addr)
-				}
+				validAddrs = append(validAddrs, addrs...)
 
 				if len(validAddrs) == 0 {
 					return
@@ -1268,6 +1301,12 @@ func (s *ChainService) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 		s.firstPeerConnect = nil
 	}
 
+	// Update the address' last seen time if the peer has acknowledged our
+	// version and has sent us its version as well.
+	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
+		s.addrManager.Connected(sp.NA())
+	}
+
 	return true
 }
 
@@ -1285,28 +1324,22 @@ func (s *ChainService) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
 		}
 		if !sp.Inbound() && sp.connReq != nil {
-			s.connManager.Disconnect(sp.connReq.ID())
+			if sp.persistent {
+				s.connManager.Disconnect(sp.connReq.ID())
+			} else {
+				s.connManager.Remove(sp.connReq.ID())
+				go s.connManager.NewConnReq()
+			}
 		}
 		delete(list, sp.ID())
 		log.Debugf("Removed peer %s", sp)
 		return
 	}
 
+	// We'll always remove peers that are not persistent.
 	if sp.connReq != nil {
-		// If the peer has been banned, we'll remove the connection
-		// request from the manager to ensure we don't reconnect again.
-		// Otherwise, we'll just simply disconnect.
-		if s.IsBanned(sp.connReq.Addr.String()) {
-			s.connManager.Remove(sp.connReq.ID())
-		} else {
-			s.connManager.Disconnect(sp.connReq.ID())
-		}
-	}
-
-	// Update the address' last seen time if the peer has acknowledged
-	// our version and has sent us its version as well.
-	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
-		s.addrManager.Connected(sp.NA())
+		s.connManager.Remove(sp.connReq.ID())
+		go s.connManager.NewConnReq()
 	}
 
 	// If we get here it means that either we didn't know about the peer
@@ -1362,12 +1395,6 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 			OnAddr:      sp.OnAddr,
 			OnRead:      sp.OnRead,
 			OnWrite:     sp.OnWrite,
-
-			// Note: The reference client currently bans peers that send alerts
-			// not signed with its key.  We could verify against their key, but
-			// since the reference client is currently unwilling to support
-			// other implementations' alert messages, we will not relay theirs.
-			OnAlert: nil,
 		},
 		NewestBlock:      sp.newestBlock,
 		HostToNetAddress: sp.server.addrManager.HostToNetAddress,
@@ -1386,18 +1413,34 @@ func newPeerConfig(sp *ServerPeer) *peer.Config {
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
 func (s *ChainService) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
+	// In the event that we have to disconnect the peer, we'll choose the
+	// appropriate method to do so based on whether the connection request
+	// is for a persistent peer or not.
+	var disconnect func()
+	if c.Permanent {
+		disconnect = func() {
+			s.connManager.Disconnect(c.ID())
+		}
+	} else {
+		disconnect = func() {
+			// Since we're completely removing the request for this
+			// peer, we'll need to request a new one.
+			s.connManager.Remove(c.ID())
+			go s.connManager.NewConnReq()
+		}
+	}
+
 	// If the peer is banned, then we'll disconnect them.
 	peerAddr := c.Addr.String()
 	if s.IsBanned(peerAddr) {
-		// Remove will end up closing the connection.
-		s.connManager.Remove(c.ID())
+		disconnect()
 		return
 	}
 
 	// If we're already connected to this peer, then we'll close out the new
 	// connection and keep the old.
 	if s.PeerByAddr(peerAddr) != nil {
-		conn.Close()
+		disconnect()
 		return
 	}
 
@@ -1405,7 +1448,8 @@ func (s *ChainService) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) 
 	p, err := peer.NewOutboundPeer(newPeerConfig(sp), peerAddr)
 	if err != nil {
 		log.Debugf("Cannot create outbound peer %s: %s", c.Addr, err)
-		s.connManager.Disconnect(c.ID())
+		disconnect()
+		return
 	}
 	sp.Peer = p
 	sp.connReq = c

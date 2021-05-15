@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
@@ -132,11 +132,11 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 				if !isNew {
 					// don't log when we see the same money again
 				} else if block != nil {
-					log.Infof("💸 "+pktlog.GreenBg("Got paid!")+" [%s] -> [%s] tx [%s] @ [%s]",
-						pktlog.Coins(txOutAmt.ToBTC()),
-						pktlog.Address(addr.String()),
-						pktlog.Txid(rec.Hash.String()),
-						pktlog.Height(block.Height))
+					log.Infof("💸 "+log.GreenBg("Got paid!")+" [%s] -> [%s] tx [%s] @ [%s]",
+						log.Coins(txOutAmt.ToBTC()),
+						log.Address(addr.String()),
+						log.Txid(rec.Hash.String()),
+						log.Height(block.Height))
 
 					// Begin watching so we'll know when it's spent
 					w.watch.WatchOutpoints([]watcher.OutPointWatch{
@@ -148,9 +148,9 @@ func (w *Wallet) addRelevantTx(dbtx walletdb.ReadWriteTx, rec *wtxmgr.TxRecord, 
 					})
 				} else {
 					log.Infof("⏱  Detected unconfirmed payment [%s] -> [%s] tx [%s]",
-						pktlog.Coins(txOutAmt.ToBTC()),
-						pktlog.Address(addr.String()),
-						pktlog.Txid(rec.Hash.String()))
+						log.Coins(txOutAmt.ToBTC()),
+						log.Address(addr.String()),
+						log.Txid(rec.Hash.String()))
 				}
 				continue
 			}

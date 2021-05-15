@@ -14,12 +14,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/decred/go-socks/socks"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -27,12 +25,13 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktd/connmgr"
 	"github.com/pkt-cash/pktd/database"
 	_ "github.com/pkt-cash/pktd/database/ffldb"
 	"github.com/pkt-cash/pktd/mempool"
+	"github.com/pkt-cash/pktd/mining"
 	"github.com/pkt-cash/pktd/peer"
 	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (
@@ -40,11 +39,10 @@ const (
 	defaultDataDirname           = "data"
 	defaultLogLevel              = "info"
 	defaultLogDirname            = "logs"
-	defaultLogFilename           = "pktd.log"
 	defaultMaxPeers              = 125
 	defaultBanDuration           = time.Hour * 24
-	defaultBanThreshold          = 100
-	defaultConnectTimeout        = time.Second * 30
+	defaultBanThreshold          = 120
+	defaultConnectTimeout        = time.Second * 10
 	defaultMaxRPCClients         = 10
 	defaultMaxRPCWebsockets      = 25
 	defaultMaxRPCConcurrentReqs  = 20
@@ -100,7 +98,7 @@ type config struct {
 	LogDir               string        `long:"logdir" description:"Directory to log output."`
 	AddPeers             []string      `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
 	ConnectPeers         []string      `long:"connect" description:"Connect only to the specified peers at startup"`
-	DisableListen        bool          `long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
+	DisableListen        bool          `long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect option is used without also specifying listening interfaces via --listen"`
 	Listeners            []string      `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
 	MaxPeers             int           `long:"maxpeers" description:"Max number of inbound and outbound peers"`
 	DisableBanning       bool          `long:"nobanning" description:"Disable banning of misbehaving peers"`
@@ -126,14 +124,6 @@ type config struct {
 	EnableTLS            bool          `long:"tls" description:"Enable TLS for the RPC server -- default is disabled unless bound to non-localhost"`
 	DisableDNSSeed       bool          `long:"nodnsseed" description:"Disable DNS seeding for peers"`
 	ExternalIPs          []string      `long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
-	Proxy                string        `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyUser            string        `long:"proxyuser" description:"Username for proxy server"`
-	ProxyPass            string        `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	OnionProxy           string        `long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	OnionProxyUser       string        `long:"onionuser" description:"Username for onion proxy server"`
-	OnionProxyPass       string        `long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
-	NoOnion              bool          `long:"noonion" description:"Disable connecting to tor hidden services"`
-	TorIsolation         bool          `long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
 	TestNet3             bool          `long:"testnet" description:"Use the test network"`
 	PktTest              bool          `long:"pkttest" description:"Use the pkt.cash test network"`
 	BtcMainNet           bool          `long:"btc" description:"Use the bitcoin main network"`
@@ -143,7 +133,8 @@ type config struct {
 	AddCheckpoints       []string      `long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
 	DisableCheckpoints   bool          `long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	DbType               string        `long:"dbtype" description:"Database backend to use for the Block Chain"`
-	Profile              string        `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	StatsViz             string        `long:"statsviz" description:"Enable StatsViz runtime visualization on given port -- NOTE port must be between 1024 and 65535"`
+	Profile              string        `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65535"`
 	CPUProfile           string        `long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	DebugLevel           string        `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	Upnp                 bool          `long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
@@ -152,7 +143,8 @@ type config struct {
 	NoRelayPriority      bool          `long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
 	TrickleInterval      time.Duration `long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected peer"`
 	MaxOrphanTxs         int           `long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	Generate             bool          `long:"generate" description:"Generate (mine) bitcoins using the CPU"`
+	Generate             bool          `long:"generate" hidden:"true" description:"Generate (mine) bitcoins using the CPU - doesn't work for PacketCrypt"`
+	Coinbase             string        `long:"coinbase" description:"Include this message in generated coinbase"`
 	MiningAddrs          []string      `long:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
 	BlockMinSize         uint32        `long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
 	BlockMaxSize         uint32        `long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
@@ -174,7 +166,6 @@ type config struct {
 	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
 	MiningSkipChecks     string        `long:"miningskipchecks" description:"Either 'txns', 'template' or 'both', skips certain time-consuming checks during mining process, be careful as you might create invalid block templates!"`
 	lookup               func(string) ([]net.IP, er.R)
-	oniondial            func(string, string, time.Duration) (net.Conn, er.R)
 	dial                 func(string, string, time.Duration) (net.Conn, er.R)
 	addCheckpoints       []chaincfg.Checkpoint
 	miningAddrs          map[btcutil.Address]float64
@@ -219,71 +210,6 @@ func validLogLevel(logLevel string) bool {
 		return true
 	}
 	return false
-}
-
-// supportedSubsystems returns a sorted slice of the supported subsystems for
-// logging purposes.
-func supportedSubsystems() []string {
-	// Convert the subsystemLoggers map keys to a slice.
-	subsystems := make([]string, 0, len(subsystemLoggers))
-	for subsysID := range subsystemLoggers {
-		subsystems = append(subsystems, subsysID)
-	}
-
-	// Sort the subsystems for stable display.
-	sort.Strings(subsystems)
-	return subsystems
-}
-
-// parseAndSetDebugLevels attempts to parse the specified debug level and set
-// the levels accordingly.  An appropriate error is returned if anything is
-// invalid.
-func parseAndSetDebugLevels(debugLevel string) er.R {
-	// When the specified string doesn't have any delimters, treat it as
-	// the log level for all subsystems.
-	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
-		// Validate debug log level.
-		if !validLogLevel(debugLevel) {
-			str := "The specified debug level [%v] is invalid"
-			return er.Errorf(str, debugLevel)
-		}
-
-		// Change the logging level for all subsystems.
-		setLogLevels(debugLevel)
-
-		return nil
-	}
-
-	// Split the specified string into subsystem/level pairs while detecting
-	// issues and update the log levels accordingly.
-	for _, logLevelPair := range strings.Split(debugLevel, ",") {
-		if !strings.Contains(logLevelPair, "=") {
-			str := "The specified debug level contains an invalid " +
-				"subsystem/level pair [%v]"
-			return er.Errorf(str, logLevelPair)
-		}
-
-		// Extract the specified subsystem and log level.
-		fields := strings.Split(logLevelPair, "=")
-		subsysID, logLevel := fields[0], fields[1]
-
-		// Validate subsystem.
-		if _, exists := subsystemLoggers[subsysID]; !exists {
-			str := "The specified subsystem [%v] is invalid -- " +
-				"supported subsytems %v"
-			return er.Errorf(str, subsysID, supportedSubsystems())
-		}
-
-		// Validate log level.
-		if !validLogLevel(logLevel) {
-			str := "The specified debug level [%v] is invalid"
-			return er.Errorf(str, logLevel)
-		}
-
-		setLogLevel(subsysID, logLevel)
-	}
-
-	return nil
 }
 
 // validDbType returns whether or not dbType is a supported database type.
@@ -430,6 +356,8 @@ func loadConfig() (*config, []string, er.R) {
 		MinRelayTxFee:        -1, // this gets configured later
 		FreeTxRelayLimit:     defaultFreeTxRelayLimit,
 		TrickleInterval:      defaultTrickleInterval,
+		Coinbase:             mining.DefaultCoinbaseFlags,
+		MiningAddrs:          []string{"pkt1q6hqsqhqdgqfd8t3xwgceulu7k9d9w5t2amath0qxyfjlvl3s3u4sjza2g2"},
 		BlockMinSize:         defaultBlockMinSize,
 		BlockMaxSize:         defaultBlockMaxSize,
 		BlockMinWeight:       defaultBlockMinWeight,
@@ -611,14 +539,8 @@ func loadConfig() (*config, []string, er.R) {
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
 	cfg.LogDir = filepath.Join(cfg.LogDir, netName(activeNetParams))
 
-	// Special show command to list supported subsystems and exit.
-	if cfg.DebugLevel == "show" {
-		fmt.Println("Supported subsystems", supportedSubsystems())
-		os.Exit(0)
-	}
-
 	// Parse, validate, and set debug log level(s).
-	if err := parseAndSetDebugLevels(cfg.DebugLevel); err != nil {
+	if err := log.SetLogLevels(cfg.DebugLevel); err != nil {
 		err := er.Errorf("%s: %v", funcName, err)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -640,6 +562,18 @@ func loadConfig() (*config, []string, er.R) {
 		profilePort, err := strconv.Atoi(cfg.Profile)
 		if err != nil || profilePort < 1024 || profilePort > 65535 {
 			str := "%s: The profile port must be between 1024 and 65535"
+			err := er.Errorf(str, funcName)
+			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, usageMessage)
+			return nil, nil, err
+		}
+	}
+
+	// Validate StatsViz port number
+	if cfg.StatsViz != "" {
+		statsvizPort, err := strconv.Atoi(cfg.StatsViz)
+		if err != nil || statsvizPort < 1024 || statsvizPort > 65535 {
+			str := "%s: The StatsViz port must be between 1024 and 65535"
 			err := er.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
@@ -698,8 +632,8 @@ func loadConfig() (*config, []string, er.R) {
 		return nil, nil, err
 	}
 
-	// --proxy or --connect without --listen disables listening.
-	if (cfg.Proxy != "" || len(cfg.ConnectPeers) > 0) &&
+	// --connect without --listen disables listening.
+	if len(cfg.ConnectPeers) > 0 &&
 		len(cfg.Listeners) == 0 {
 		cfg.DisableListen = true
 	}
@@ -739,7 +673,7 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	if cfg.RPCUser == "" || cfg.RPCPass == "" {
-		pktdLog.Infof("Creating a .cookie file")
+		log.Infof("Creating a .cookie file")
 		cookiePath := filepath.Join(defaultHomeDir, ".cookie")
 		var buf [32]byte
 		if _, errr := rand.Read(buf[:]); errr != nil {
@@ -764,7 +698,7 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	if cfg.DisableRPC {
-		pktdLog.Infof("RPC service is disabled")
+		log.Infof("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
@@ -956,15 +890,6 @@ func loadConfig() (*config, []string, er.R) {
 	cfg.ConnectPeers = normalizeAddresses(cfg.ConnectPeers,
 		activeNetParams.DefaultPort)
 
-	// --noonion and --onion do not mix.
-	if cfg.NoOnion && cfg.OnionProxy != "" {
-		err := er.Errorf("%s: the --noonion and --onion options may "+
-			"not be activated at the same time", funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
-
 	// Check the checkpoints for syntax errors.
 	var err er.R
 	cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
@@ -976,22 +901,9 @@ func loadConfig() (*config, []string, er.R) {
 		return nil, nil, err
 	}
 
-	// Tor stream isolation requires either proxy or onion proxy to be set.
-	if cfg.TorIsolation && cfg.Proxy == "" && cfg.OnionProxy == "" {
-		str := "%s: Tor stream isolation requires either proxy or " +
-			"onionproxy to be set"
-		err := er.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
-
 	// Setup dial and DNS resolution (lookup) functions depending on the
 	// specified options.  The default is to use the standard
-	// net.DialTimeout function as well as the system DNS resolver.  When a
-	// proxy is specified, the dial function is set to the proxy specific
-	// dial function and the lookup is set to use tor (unless --noonion is
-	// specified in which case the system DNS resolver is used).
+	// net.DialTimeout function as well as the system DNS resolver.
 	cfg.dial = func(n string, addr string, to time.Duration) (net.Conn, er.R) {
 		ret, errr := net.DialTimeout(n, addr, to)
 		return ret, er.E(errr)
@@ -1000,140 +912,25 @@ func loadConfig() (*config, []string, er.R) {
 		out, errr := net.LookupIP(host)
 		return out, er.E(errr)
 	}
-	if cfg.Proxy != "" {
-		_, _, err := net.SplitHostPort(cfg.Proxy)
-		if err != nil {
-			str := "%s: Proxy address '%s' is invalid: %v"
-			err := er.Errorf(str, funcName, cfg.Proxy, err)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-
-		// Tor isolation flag means proxy credentials will be overridden
-		// unless there is also an onion proxy configured in which case
-		// that one will be overridden.
-		torIsolation := false
-		if cfg.TorIsolation && cfg.OnionProxy == "" &&
-			(cfg.ProxyUser != "" || cfg.ProxyPass != "") {
-
-			torIsolation = true
-			fmt.Fprintln(os.Stderr, "Tor isolation set -- "+
-				"overriding specified proxy user credentials")
-		}
-
-		proxy := &socks.Proxy{
-			Addr:         cfg.Proxy,
-			Username:     cfg.ProxyUser,
-			Password:     cfg.ProxyPass,
-			TorIsolation: torIsolation,
-		}
-		cfg.dial = func(n string, addr string, to time.Duration) (net.Conn, er.R) {
-			ret, errr := proxy.DialTimeout(n, addr, to)
-			return ret, er.E(errr)
-		}
-
-		// Treat the proxy as tor and perform DNS resolution through it
-		// unless the --noonion flag is set or there is an
-		// onion-specific proxy configured.
-		if !cfg.NoOnion && cfg.OnionProxy == "" {
-			cfg.lookup = func(host string) ([]net.IP, er.R) {
-				return connmgr.TorLookupIP(host, cfg.Proxy)
-			}
-		}
-	}
-
-	// Setup onion address dial function depending on the specified options.
-	// The default is to use the same dial function selected above.  However,
-	// when an onion-specific proxy is specified, the onion address dial
-	// function is set to use the onion-specific proxy while leaving the
-	// normal dial function as selected above.  This allows .onion address
-	// traffic to be routed through a different proxy than normal traffic.
-	if cfg.OnionProxy != "" {
-		_, _, err := net.SplitHostPort(cfg.OnionProxy)
-		if err != nil {
-			str := "%s: Onion proxy address '%s' is invalid: %v"
-			err := er.Errorf(str, funcName, cfg.OnionProxy, err)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-
-		// Tor isolation flag means onion proxy credentials will be
-		// overridden.
-		if cfg.TorIsolation &&
-			(cfg.OnionProxyUser != "" || cfg.OnionProxyPass != "") {
-			fmt.Fprintln(os.Stderr, "Tor isolation set -- "+
-				"overriding specified onionproxy user "+
-				"credentials ")
-		}
-
-		cfg.oniondial = func(network, addr string, timeout time.Duration) (net.Conn, er.R) {
-			proxy := &socks.Proxy{
-				Addr:         cfg.OnionProxy,
-				Username:     cfg.OnionProxyUser,
-				Password:     cfg.OnionProxyPass,
-				TorIsolation: cfg.TorIsolation,
-			}
-			conn, errr := proxy.DialTimeout(network, addr, timeout)
-			return conn, er.E(errr)
-		}
-
-		// When configured in bridge mode (both --onion and --proxy are
-		// configured), it means that the proxy configured by --proxy is
-		// not a tor proxy, so override the DNS resolution to use the
-		// onion-specific proxy.
-		if cfg.Proxy != "" {
-			cfg.lookup = func(host string) ([]net.IP, er.R) {
-				return connmgr.TorLookupIP(host, cfg.OnionProxy)
-			}
-		}
-	} else {
-		cfg.oniondial = cfg.dial
-	}
-
-	// Specifying --noonion means the onion address dial function results in
-	// an error.
-	if cfg.NoOnion {
-		cfg.oniondial = func(a, b string, t time.Duration) (net.Conn, er.R) {
-			return nil, er.New("tor has been disabled")
-		}
-	}
 
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configNotFound && preCfg.ConfigFile != defaultConfigFile {
-		pktdLog.Warnf("Could not find config file [%s]", preCfg.ConfigFile)
+		log.Warnf("Could not find config file [%s]", preCfg.ConfigFile)
 	}
 
 	return &cfg, remainingArgs, nil
 }
 
 // pktdDial connects to the address on the named network using the appropriate
-// dial function depending on the address and configuration options.  For
-// example, .onion addresses will be dialed using the onion specific proxy if
-// one was specified, but will otherwise use the normal dial function (which
-// could itself use a proxy or not).
+// dial function depending on the address and configuration options.
 func pktdDial(addr net.Addr) (net.Conn, er.R) {
-	if strings.Contains(addr.String(), ".onion:") {
-		return cfg.oniondial(addr.Network(), addr.String(),
-			defaultConnectTimeout)
-	}
 	return cfg.dial(addr.Network(), addr.String(), defaultConnectTimeout)
 }
 
 // pktdLookup resolves the IP of the given host using the correct DNS lookup
-// function depending on the configuration options.  For example, addresses will
-// be resolved using tor when the --proxy flag was specified unless --noonion
-// was also specified in which case the normal system DNS resolver will be used.
-//
-// Any attempt to resolve a tor address (.onion) will return an error since they
-// are not intended to be resolved outside of the tor proxy.
+// function depending on the configuration options.
 func pktdLookup(host string) ([]net.IP, er.R) {
-	if strings.HasSuffix(host, ".onion") {
-		return nil, er.Errorf("attempt to resolve tor address %s", host)
-	}
-
 	return cfg.lookup(host)
 }

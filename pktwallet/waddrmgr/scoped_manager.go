@@ -283,14 +283,14 @@ func (s *ScopedKeyManager) deriveKey(acctInfo *accountInfo, branch,
 	}
 
 	// Derive and return the key.
-	branchKey, err := acctKey.Child(branch)
+	branchKey, err := acctKey.DeriveNonStandard(branch)
 	if err != nil {
 		str := fmt.Sprintf("failed to derive extended key branch %d",
 			branch)
 		return nil, managerError(ErrKeyChain, str, err)
 	}
 
-	addressKey, err := branchKey.Child(index)
+	addressKey, err := branchKey.DeriveNonStandard(index)
 	branchKey.Zero() // Zero branch key after it's used.
 	if err != nil {
 		str := fmt.Sprintf("failed to derive child extended key -- "+
@@ -832,7 +832,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 	}
 
 	// Derive the appropriate branch key and ensure it is zeroed when done.
-	branchKey, err := acctKey.Child(branchNum)
+	branchKey, err := acctKey.DeriveNonStandard(branchNum)
 	if err != nil {
 		str := fmt.Sprintf("failed to derive extended key branch %d",
 			branchNum)
@@ -849,7 +849,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 		var nextKey *hdkeychain.ExtendedKey
 		for {
 			// Derive the next child in the external chain branch.
-			key, err := branchKey.Child(nextIndex)
+			key, err := branchKey.DeriveNonStandard(nextIndex)
 			if err != nil {
 				// When this particular child is invalid, skip to the
 				// next index.
@@ -1032,7 +1032,7 @@ func (s *ScopedKeyManager) extendAddresses(ns walletdb.ReadWriteBucket,
 	}
 
 	// Derive the appropriate branch key and ensure it is zeroed when done.
-	branchKey, err := acctKey.Child(branchNum)
+	branchKey, err := acctKey.DeriveNonStandard(branchNum)
 	if err != nil {
 		str := fmt.Sprintf("failed to derive extended key branch %d",
 			branchNum)
@@ -1051,7 +1051,7 @@ func (s *ScopedKeyManager) extendAddresses(ns walletdb.ReadWriteBucket,
 		var nextKey *hdkeychain.ExtendedKey
 		for {
 			// Derive the next child in the external chain branch.
-			key, err := branchKey.Child(nextIndex)
+			key, err := branchKey.DeriveNonStandard(nextIndex)
 			if err != nil {
 				// When this particular child is invalid, skip to the
 				// next index.
@@ -1386,7 +1386,7 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 	// Check that account with the same name does not exist
 	_, err := s.lookupAccount(ns, name)
 	if err == nil {
-		str := fmt.Sprintf("account with the same name already exists")
+		str := "account with the same name already exists"
 		return managerError(ErrDuplicateAccount, str, err)
 	}
 
@@ -1400,13 +1400,13 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 	// Decrypt the cointype key.
 	serializedKeyPriv, err := s.rootManager.cryptoKeyPriv.Decrypt(coinTypePrivEnc)
 	if err != nil {
-		str := fmt.Sprintf("failed to decrypt cointype serialized private key")
+		str := "failed to decrypt cointype serialized private key"
 		return managerError(ErrLocked, str, err)
 	}
 	coinTypeKeyPriv, err := hdkeychain.NewKeyFromString(string(serializedKeyPriv))
 	zero.Bytes(serializedKeyPriv)
 	if err != nil {
-		str := fmt.Sprintf("failed to create cointype extended private key")
+		str := "failed to create cointype extended private key"
 		return managerError(ErrKeyChain, str, err)
 	}
 
@@ -1470,7 +1470,7 @@ func (s *ScopedKeyManager) RenameAccount(ns walletdb.ReadWriteBucket,
 	// Check that account with the new name does not exist
 	_, err := s.lookupAccount(ns, name)
 	if err == nil {
-		str := fmt.Sprintf("account with the same name already exists")
+		str := "account with the same name already exists"
 		return managerError(ErrDuplicateAccount, str, err)
 	}
 
@@ -1560,12 +1560,6 @@ func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
 	// Prevent duplicates.
 	serializedPubKey := wif.SerializePubKey()
 	pubKeyHash := btcutil.Hash160(serializedPubKey)
-	alreadyExists := s.existsAddress(ns, pubKeyHash)
-	if alreadyExists {
-		str := fmt.Sprintf("address for public key %x already exists",
-			serializedPubKey)
-		return nil, managerError(ErrDuplicateAddress, str, nil)
-	}
 
 	// Encrypt public key.
 	encryptedPubKey, err := s.rootManager.cryptoKeyPub.Encrypt(

@@ -5,7 +5,7 @@
 package rpcclient
 
 import (
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 
@@ -21,6 +21,8 @@ const (
 	// ANAdd indicates the specified host should be added as a persistent
 	// peer.
 	ANAdd AddNodeCommand = "add"
+
+	ANRemove AddNodeCommand = "remove"
 )
 
 // String returns the AddNodeCommand in human-readable form.
@@ -56,6 +58,40 @@ func (c *Client) AddNodeAsync(host string, command AddNodeCommand) FutureAddNode
 // It may not be used to remove non-persistent peers.
 func (c *Client) AddNode(host string, command AddNodeCommand) er.R {
 	return c.AddNodeAsync(host, command).Receive()
+}
+
+// FutureNodeResult is a future promise to deliver the result of a NodeAsync
+// RPC invocation (or an applicable error).
+type FutureNodeResult chan *response
+
+// Receive waits for the response promised by the future and returns an error if
+// any occurred when performing the specified command.
+func (r FutureNodeResult) Receive() er.R {
+	_, err := receiveFuture(r)
+	return err
+}
+
+// NodeAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See Node for the blocking version and more details.
+func (c *Client) NodeAsync(command btcjson.NodeSubCmd, host string,
+	connectSubCmd *string) FutureNodeResult {
+	cmd := btcjson.NewNodeCmd(command, host, connectSubCmd)
+	return c.sendCmd(cmd)
+}
+
+// Node attempts to perform the passed node command on the host.
+// For example, it can be used to add or a remove a persistent peer, or to do
+// connect or diconnect a non-persistent one.
+//
+// The connectSubCmd should be set either "perm" or "temp", depending on
+// whether we are targetting a persistent or non-persistent peer. Passing nil
+// will cause the default value to be used, which currently is "temp".
+func (c *Client) Node(command btcjson.NodeSubCmd, host string,
+	connectSubCmd *string) er.R {
+	return c.NodeAsync(command, host, connectSubCmd).Receive()
 }
 
 // FutureGetPeerInfoResult is a future promise to deliver the result of a

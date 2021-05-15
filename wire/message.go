@@ -45,7 +45,6 @@ const (
 	CmdHeaders      = "headers"
 	CmdPing         = "ping"
 	CmdPong         = "pong"
-	CmdAlert        = "alert"
 	CmdMemPool      = "mempool"
 	CmdFilterAdd    = "filteradd"
 	CmdFilterClear  = "filterclear"
@@ -158,9 +157,6 @@ func makeEmptyMessage(command string) (Message, er.R) {
 
 	case CmdHeaders:
 		msg = &MsgHeaders{}
-
-	case CmdAlert:
-		msg = &MsgAlert{}
 
 	case CmdMemPool:
 		msg = &MsgMemPool{}
@@ -297,7 +293,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 			cmd, CommandSize)
 		return totalBytes, messageError("WriteMessage", str)
 	}
-	copy(command[:], []byte(cmd))
+	copy(command[:], cmd)
 
 	// Encode the message payload.
 	var bw bytes.Buffer
@@ -421,7 +417,7 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet protocol.BitcoinN
 
 	// Test checksum.
 	checksum := chainhash.DoubleHashB(payload)[0:4]
-	if !bytes.Equal(checksum[:], hdr.checksum[:]) {
+	if !bytes.Equal(checksum, hdr.checksum[:]) {
 		str := fmt.Sprintf("payload checksum failed - header "+
 			"indicates %v, but actual checksum is %v.",
 			hdr.checksum, checksum)

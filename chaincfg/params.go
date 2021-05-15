@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
@@ -611,6 +612,7 @@ var PktMainNetParams = Params{
 	},
 	GenesisHash:              newHashFromStr("0bdc1712a46194e552cf417ab0439c2d4f456c35cf63a0a406964c6f93432d85"),
 	PowLimitBits:             0x1f0fffff,
+	PowLimit:                 difficulty.CompactToBig(0x1f0fffff),
 	BIP0034Height:            0,
 	BIP0065Height:            0,
 	BIP0066Height:            0,

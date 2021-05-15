@@ -9,6 +9,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 const (

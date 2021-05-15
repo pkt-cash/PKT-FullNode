@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/rpcclient"
 	"github.com/pkt-cash/pktd/wire"
 	"github.com/pkt-cash/pktd/wire/protocol"
@@ -35,6 +36,14 @@ const (
 	// BlockVersion is the default block version used when generating
 	// blocks.
 	BlockVersion = 4
+
+	// DefaultMaxConnectionRetries is the default number of times we re-try
+	// to connect to the node after starting it.
+	DefaultMaxConnectionRetries = 20
+
+	// DefaultConnectionRetryTimeout is the default duration we wait between
+	// two connection attempts.
+	DefaultConnectionRetryTimeout = 50 * time.Millisecond
 )
 
 var (
@@ -49,6 +58,13 @@ var (
 
 	// Used to protest concurrent access to above declared variables.
 	harnessStateMtx sync.RWMutex
+
+	// ListenAddressGenerator is a function that is used to generate two
+	// listen addresses (host:port), one for the P2P listener and one for
+	// the RPC listener. This is exported to allow overwriting of the
+	// default behavior which isn't very concurrency safe (just selecting
+	// a random port can produce collisions and therefore flakes).
+	ListenAddressGenerator = generateListeningAddresses
 )
 
 // Harness fully encapsulates an active pktd process to provide a unified
@@ -65,15 +81,22 @@ type Harness struct {
 	// to.
 	ActiveNet *chaincfg.Params
 
+	// MaxConnRetries is the maximum number of times we re-try to connect to
+	// the node after starting it.
+	MaxConnRetries int
+
+	// ConnectionRetryTimeout is the duration we wait between two connection
+	// attempts.
+	ConnectionRetryTimeout time.Duration
+
 	Node     *rpcclient.Client
 	node     *node
 	handlers *rpcclient.NotificationHandlers
 
 	wallet *memWallet
 
-	testNodeDir    string
-	maxConnRetries int
-	nodeNum        int
+	testNodeDir string
+	nodeNum     int
 
 	sync.Mutex
 }
@@ -137,7 +160,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	}
 
 	// Generate p2p+rpc listening addresses.
-	config.listen, config.rpcListen = generateListeningAddresses()
+	config.listen, config.rpcListen = ListenAddressGenerator()
 
 	// Create the testing node bounded to the simnet.
 	node, err := newNode(config, nodeTestData)
@@ -177,13 +200,14 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	}
 
 	h := &Harness{
-		handlers:       handlers,
-		node:           node,
-		maxConnRetries: 20,
-		testNodeDir:    nodeTestData,
-		ActiveNet:      activeNet,
-		nodeNum:        nodeNum,
-		wallet:         wallet,
+		handlers:               handlers,
+		node:                   node,
+		MaxConnRetries:         DefaultMaxConnectionRetries,
+		ConnectionRetryTimeout: DefaultConnectionRetryTimeout,
+		testNodeDir:            nodeTestData,
+		ActiveNet:              activeNet,
+		nodeNum:                nodeNum,
+		wallet:                 wallet,
 	}
 
 	// Track this newly created test instance within the package level
@@ -299,9 +323,9 @@ func (h *Harness) connectRPCClient() er.R {
 	var err er.R
 
 	rpcConf := h.node.config.rpcConnConfig()
-	for i := 0; i < h.maxConnRetries; i++ {
+	for i := 0; i < h.MaxConnRetries; i++ {
 		if client, err = rpcclient.New(&rpcConf, h.handlers); err != nil {
-			time.Sleep(time.Duration(i) * 50 * time.Millisecond)
+			time.Sleep(time.Duration(i) * h.ConnectionRetryTimeout)
 			continue
 		}
 		break
@@ -333,11 +357,63 @@ func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
 	return h.wallet.CreateTransaction(targetOutputs, feeRate, change)
 }
 
+// RPCConfig returns the harnesses current rpc configuration. This allows other
+// potential RPC clients created within tests to connect to a given test
+// harness instance.
+func (h *Harness) RPCConfig() rpcclient.ConnConfig {
+	return h.node.config.rpcConnConfig()
+}
+
 // P2PAddress returns the harness' P2P listening address. This allows potential
 // peers (such as SPV peers) created within tests to connect to a given test
 // harness instance.
 func (h *Harness) P2PAddress() string {
 	return h.node.config.listen
+}
+
+// GenerateAndSubmitBlock creates a block whose contents include the passed
+// transactions and submits it to the running simnet node. For generating
+// blocks with only a coinbase tx, callers can simply pass nil instead of
+// transactions to be mined. Additionally, a custom block version can be set by
+// the caller. A blockVersion of -1 indicates that the current default block
+// version should be used. An uninitialized time.Time should be used for the
+// blockTime parameter if one doesn't wish to set a custom time.
+//
+// This function is safe for concurrent access.
+func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
+	blockTime time.Time) (*btcutil.Block, er.R) {
+	return h.GenerateAndSubmitBlockWithCustomCoinbaseOutputs(txns,
+		blockVersion, blockTime, []wire.TxOut{})
+}
+
+// NewAddress returns a fresh address spendable by the Harness' internal
+// wallet.
+//
+// This function is safe for concurrent access.
+func (h *Harness) NewAddress() (btcutil.Address, er.R) {
+	return h.wallet.NewAddress()
+}
+
+// SendOutputs creates, signs, and finally broadcasts a transaction spending
+// the harness' available mature coinbase outputs creating new outputs
+// according to targetOutputs.
+//
+// This function is safe for concurrent access.
+func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
+
+	return h.wallet.SendOutputs(targetOutputs, feeRate)
+}
+
+// SendOutputsWithoutChange creates and sends a transaction that pays to the
+// specified outputs while observing the passed fee rate and ignoring a change
+// output. The passed fee rate should be expressed in sat/b.
+//
+// This function is safe for concurrent access.
+func (h *Harness) SendOutputsWithoutChange(targetOutputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
+
+	return h.wallet.SendOutputsWithoutChange(targetOutputs, feeRate)
 }
 
 // GenerateAndSubmitBlockWithCustomCoinbaseOutputs creates a block whose

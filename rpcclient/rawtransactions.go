@@ -7,8 +7,8 @@ package rpcclient
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/json-iterator/go"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -120,4 +120,50 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 // then relay it to the network.
 func (c *Client) SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) (*chainhash.Hash, er.R) {
 	return c.SendRawTransactionAsync(tx, allowHighFees).Receive()
+}
+
+// FutureGetRawTransactionVerboseResult is a future promise to deliver the
+// result of a GetRawTransactionVerboseAsync RPC invocation (or an applicable
+// error).
+type FutureGetRawTransactionVerboseResult chan *response
+
+// Receive waits for the response promised by the future and returns information
+// about a transaction given its hash.
+func (r FutureGetRawTransactionVerboseResult) Receive() (*btcjson.TxRawResult, er.R) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a gettrawtransaction result object.
+	var rawTxResult btcjson.TxRawResult
+	err = er.E(jsoniter.Unmarshal(res, &rawTxResult))
+	if err != nil {
+		return nil, err
+	}
+
+	return &rawTxResult, nil
+}
+
+// GetRawTransactionVerboseAsync returns an instance of a type that can be used
+// to get the result of the RPC at some future time by invoking the Receive
+// function on the returned instance.
+//
+// See GetRawTransactionVerbose for the blocking version and more details.
+func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash) FutureGetRawTransactionVerboseResult {
+	hash := ""
+	if txHash != nil {
+		hash = txHash.String()
+	}
+
+	cmd := btcjson.NewGetRawTransactionCmd(hash, btcjson.Bool(true))
+	return c.sendCmd(cmd)
+}
+
+// GetRawTransactionVerbose returns information about a transaction given
+// its hash.
+//
+// See GetRawTransaction to obtain only the transaction already deserialized.
+func (c *Client) GetRawTransactionVerbose(txHash *chainhash.Hash) (*btcjson.TxRawResult, er.R) {
+	return c.GetRawTransactionVerboseAsync(txHash).Receive()
 }

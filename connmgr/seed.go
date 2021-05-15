@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/pkt-cash/pktd/chaincfg"
@@ -60,8 +61,10 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices protocol.ServiceFlag,
 				return
 			}
 			addresses := make([]*wire.NetAddress, len(seedpeers))
-			// if this errors then we have *real* problems
 			intPort, _ := strconv.Atoi(chainParams.DefaultPort)
+			if intPort == 0 {
+				panic("SeedFromDNS: failed to set intPort")
+			}
 			for i, peer := range seedpeers {
 				addresses[i] = wire.NewNetAddressTimestamp(
 					// bitcoind seeds with addresses from

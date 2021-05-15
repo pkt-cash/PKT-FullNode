@@ -254,7 +254,7 @@ func TestConnected(t *testing.T) {
 
 func TestNeedMoreAddresses(t *testing.T) {
 	n := addrmgr.New("testneedmoreaddresses", lookupFunc)
-	addrsToAdd := 1500
+	addrsToAdd := 5000
 	b := n.NeedMoreAddresses()
 	if !b {
 		t.Errorf("Expected that we need more addresses")
@@ -392,15 +392,6 @@ func TestGetBestLocalAddress(t *testing.T) {
 			wire.NetAddress{IP: net.ParseIP("2001:470::1")},
 			wire.NetAddress{IP: net.ParseIP("2001:470::1")},
 		},
-		/* XXX
-		{
-			// Remote connection from Tor
-			wire.NetAddress{IP: net.ParseIP("fd87:d87e:eb43::100")},
-			wire.NetAddress{IP: net.IPv4zero},
-			wire.NetAddress{IP: net.ParseIP("204.124.8.100")},
-			wire.NetAddress{IP: net.ParseIP("fd87:d87e:eb43:25::1")},
-		},
-		*/
 	}
 
 	amgr := addrmgr.New("testgetbestlocaladdress", nil)
@@ -442,21 +433,6 @@ func TestGetBestLocalAddress(t *testing.T) {
 			continue
 		}
 	}
-	/*
-		// Add a Tor generated IP address
-		localAddr = wire.NetAddress{IP: net.ParseIP("fd87:d87e:eb43:25::1")}
-		amgr.AddLocalAddress(&localAddr, addrmgr.ManualPrio)
-
-		// Test against want3
-		for x, test := range tests {
-			got := amgr.GetBestLocalAddress(&test.remoteAddr)
-			if !test.want3.IP.Equal(got.IP) {
-				t.Errorf("TestGetBestLocalAddress test3 #%d failed for remote address %s: want %s got %s",
-					x, test.remoteAddr.IP, test.want3.IP, got.IP)
-				continue
-			}
-		}
-	*/
 }
 
 func TestNetAddressKey(t *testing.T) {

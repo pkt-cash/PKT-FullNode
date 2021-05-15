@@ -131,6 +131,16 @@ type ReadWriteBucket interface {
 
 	// Tx returns the bucket's transaction.
 	Tx() ReadWriteTx
+
+	// NextSequence returns an autoincrementing integer for the bucket.
+	NextSequence() (uint64, er.R)
+
+	// SetSequence updates the sequence number for the bucket.
+	SetSequence(v uint64) er.R
+
+	// Sequence returns the current integer for the bucket without
+	// incrementing it.
+	Sequence() uint64
 }
 
 // ReadCursor represents a bucket cursor that can be positioned at the start or
@@ -172,6 +182,13 @@ type ReadWriteCursor interface {
 	Delete() er.R
 }
 
+// BucketIsEmpty returns whether the bucket is empty, that is, whether there are
+// no key/value pairs or nested buckets.
+func BucketIsEmpty(bucket ReadBucket) bool {
+	k, v := bucket.ReadCursor().First()
+	return k == nil && v == nil
+}
+
 // DB represents an ACID database.  All database access is performed through
 // read or read+write transactions.
 type DB interface {
@@ -189,26 +206,41 @@ type DB interface {
 	Close() er.R
 }
 
+// BatchDB is a special version of the main DB interface that allos the caller
+// to specify write transactions that should be combine dtoegether if multiple
+// goroutines are calling the Batch method.
+type BatchDB interface {
+	DB
+
+	// Batch is similar to the package-level Update method, but it will
+	// attempt to optismitcally combine the invocation of several
+	// transaction functions into a single db write transaction.
+	Batch(func(tx ReadWriteTx) er.R) er.R
+}
+
 // View opens a database read transaction and executes the function f with the
 // transaction passed as a parameter.  After f exits, the transaction is rolled
-// back.  If f errors, its error is returned, not a rollback error (if any
+// back.  If f errors, its er.R is returned, not a rollback er.R (if any
 // occur).
 func View(db DB, f func(tx ReadTx) er.R) er.R {
 	tx, err := db.BeginReadTx()
 	if err != nil {
 		return err
 	}
+
 	// Make sure the transaction rolls back in the event of a panic.
 	defer func() {
-        if tx != nil {
-                tx.Rollback()
-        }
+		if tx != nil {
+			tx.Rollback()
+		}
 	}()
+
 	err = f(tx)
 	rollbackErr := tx.Rollback()
 	if err != nil {
 		return err
 	}
+
 	if rollbackErr != nil {
 		return rollbackErr
 	}
@@ -228,9 +260,9 @@ func Update(db DB, f func(tx ReadWriteTx) er.R) er.R {
 	}
 	// Make sure the transaction rolls back in the event of a panic.
 	defer func() {
-        if tx != nil {
-                tx.Rollback()
-        }
+		if tx != nil {
+			tx.Rollback()
+		}
 	}()
 	err = f(tx)
 	if err != nil {
@@ -240,6 +272,23 @@ func Update(db DB, f func(tx ReadWriteTx) er.R) er.R {
 		return err
 	}
 	return tx.Commit()
+}
+
+// Batch opens a database read/write transaction and executes the function f
+// with the transaction passed as a parameter.  After f exits, if f did not
+// er.R, the transaction is committed.  Otherwise, if f did er.R, the
+// transaction is rolled back.  If the rollback fails, the original er.R
+// returned by f is still returned.  If the commit fails, the commit er.R is
+// returned.
+//
+// Batch is only useful when there are multiple goroutines calling it.
+func Batch(db DB, f func(tx ReadWriteTx) er.R) er.R {
+	batchDB, ok := db.(BatchDB)
+	if !ok {
+		return er.Errorf("need batch")
+	}
+
+	return batchDB.Batch(f)
 }
 
 // Driver defines a structure for backend drivers to use when they registered
@@ -252,12 +301,12 @@ type Driver struct {
 	// Create is the function that will be invoked with all user-specified
 	// arguments to create the database.  This function must return
 	// ErrDbExists if the database already exists.
-	Create func(args ...interface{}) (DB, er.R)
+	Create func(path string, noFreeListSync bool) (DB, er.R)
 
 	// Open is the function that will be invoked with all user-specified
 	// arguments to open the database.  This function must return
 	// ErrDbDoesNotExist if the database has not already been created.
-	Open func(args ...interface{}) (DB, er.R)
+	Open func(path string, noFreeListSync bool) (DB, er.R)
 }
 
 // driverList holds all of the registered database backends.
@@ -290,13 +339,13 @@ func SupportedDrivers() []string {
 // database driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Create(dbType string, args ...interface{}) (DB, er.R) {
+func Create(dbType, path string, noFreeListSync bool) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType.Default()
 	}
 
-	return drv.Create(args...)
+	return drv.Create(path, noFreeListSync)
 }
 
 // Open opens an existing database for the specified type.  The arguments are
@@ -304,11 +353,11 @@ func Create(dbType string, args ...interface{}) (DB, er.R) {
 // driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Open(dbType string, args ...interface{}) (DB, er.R) {
+func Open(dbType, path string, noFreeListSync bool) (DB, er.R) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		return nil, ErrDbUnknownType.Default()
 	}
 
-	return drv.Open(args...)
+	return drv.Open(path, noFreeListSync)
 }

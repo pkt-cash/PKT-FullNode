@@ -120,3 +120,11 @@ func MaxUnits() Amount {
 func UnitsPerCoin() Amount {
 	return Amount(globalcfg.UnitsPerCoinI64())
 }
+
+func UnitsPerCoinF() float64 {
+	return float64(globalcfg.UnitsPerCoinI64())
+}
+
+func UnitsPerCoinI64() int64 {
+	return globalcfg.UnitsPerCoinI64()
+}

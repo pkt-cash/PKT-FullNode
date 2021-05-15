@@ -38,10 +38,10 @@ var ErrScriptNotCanonical = txscripterr.Err.Code("ErrScriptNotCanonical")
 // For example, the following would build a 2-of-3 multisig script for usage in
 // a pay-to-script-hash (although in this situation MultiSigScript() would be a
 // better choice to generate the script):
-// 	builder := txscript.NewScriptBuilder()
-// 	builder.AddOp(txscript.OP_2).AddData(pubKey1).AddData(pubKey2)
-// 	builder.AddData(pubKey3).AddOp(txscript.OP_3)
-// 	builder.AddOp(txscript.OP_CHECKMULTISIG)
+// 	builder := scriptbuilder.NewScriptBuilder()
+// 	builder.AddOp(opcode.OP_2).AddData(pubKey1).AddData(pubKey2)
+// 	builder.AddData(pubKey3).AddOp(opcode.OP_3)
+// 	builder.AddOp(opcode.OP_CHECKMULTISIG)
 // 	script, err := builder.Script()
 // 	if err != nil {
 // 		// Handle the error.

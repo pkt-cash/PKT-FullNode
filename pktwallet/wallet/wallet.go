@@ -17,6 +17,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/pushtx"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/params"
 
 	"github.com/pkt-cash/pktd/blockchain"
@@ -59,6 +60,17 @@ var (
 	// down.
 	ErrWalletShuttingDown = Err.CodeWithDetail("ErrWalletShuttingDown",
 		"wallet shutting down")
+
+	// ErrUnknownTransaction is returned when an attempt is made to label
+	// a transaction that is not known to the wallet.
+	ErrUnknownTransaction = Err.CodeWithDetail("ErrUnknownTransaction",
+		"cannot label transaction not known to wallet")
+
+	// ErrTxLabelExists is returned when a transaction already has a label
+	// and an attempt has been made to label it without setting overwrite
+	// to true.
+	ErrTxLabelExists = Err.CodeWithDetail("ErrTxLabelExists",
+		"transaction already labelled")
 
 	// Namespace bucket keys.
 	waddrmgrNamespaceKey = []byte("waddrmgr")
@@ -133,6 +145,10 @@ type rescanJob struct {
 	stopHeight int32
 	name       string
 	dropDb     bool
+}
+
+func (w *Wallet) Database() walletdb.DB {
+	return w.db
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -320,7 +336,7 @@ func (w *Wallet) SetChainSynced(synced bool) {
 // activeData returns the currently-active receiving addresses and all unspent
 // outputs.  This is primarely intended to provide the parameters for a
 // rescan request.
-func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
+func (w *Wallet) activeData(dbtx walletdb.ReadWriteTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -332,6 +348,16 @@ func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.C
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Before requesting the list of spendable UTXOs, we'll delete any
+	// expired output locks.
+	err = w.TxStore.DeleteExpiredLockedOutputs(
+		dbtx.ReadWriteBucket(wtxmgrNamespaceKey),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	unspent, err := w.TxStore.GetUnspentOutputs(txmgrNs)
 	return addrs, unspent, err
 }
@@ -434,7 +460,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 	//func (w *Wallet) activeData(dbtx walletdb.ReadTx) ([]btcutil.Address, []wtxmgr.Credit, er.R) {
 	var addrs []btcutil.Address
 	var credits []wtxmgr.Credit
-	if err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
+	if err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		addrs, credits, err = w.activeData(dbtx)
 		return err
 	}); err != nil {
@@ -447,6 +473,9 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) er.R {
 			OutPoint:    c.OutPoint,
 			Addr:        txscript.PkScriptToAddress(c.PkScript, w.chainParams),
 		})
+	}
+	for _, a := range addrs {
+		log.Debugf("Watching address [%s]", a.String())
 	}
 	w.watch.WatchAddrs(addrs)
 	w.watch.WatchOutpoints(ao)
@@ -592,6 +621,7 @@ type (
 		InputMinHeight  int
 		InputComparator utils.Comparator
 		MaxInputs       int
+		Label           string
 	}
 	createTxRequest struct {
 		req  CreateTxReq
@@ -661,9 +691,9 @@ type (
 	}
 
 	changePassphraseRequest struct {
-		old, new []byte
-		private  bool
-		err      chan er.R
+		oldPass, newPass []byte
+		private          bool
+		err              chan er.R
 	}
 
 	changePassphrasesRequest struct {
@@ -710,7 +740,7 @@ out:
 			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 				addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				return w.Manager.ChangePassphrase(
-					addrmgrNs, req.old, req.new, req.private,
+					addrmgrNs, req.oldPass, req.newPass, req.private,
 					&waddrmgr.DefaultScryptOptions,
 				)
 			})
@@ -834,13 +864,29 @@ func (c heldUnlock) release() {
 // old to new.  Changing the passphrase is synchronized with all other address
 // manager locking and unlocking.  The lock state will be the same as it was
 // before the password change.
-func (w *Wallet) ChangePrivatePassphrase(old, new []byte) er.R {
+func (w *Wallet) ChangePrivatePassphrase(oldPass, newPass []byte) er.R {
 	err := make(chan er.R, 1)
 	w.changePassphrase <- changePassphraseRequest{
-		old:     old,
-		new:     new,
+		oldPass: oldPass,
+		newPass: newPass,
 		private: true,
 		err:     err,
+	}
+	return <-err
+}
+
+// ChangePassphrases modifies the public and private passphrase of the wallet
+// atomically.
+func (w *Wallet) ChangePassphrases(publicOld, publicNew, privateOld,
+	privateNew []byte) er.R {
+
+	err := make(chan er.R, 1)
+	w.changePassphrases <- changePassphrasesRequest{
+		publicOld:  publicOld,
+		publicNew:  publicNew,
+		privateOld: privateOld,
+		privateNew: privateNew,
+		err:        err,
 	}
 	return <-err
 }
@@ -1010,7 +1056,6 @@ func (w *Wallet) CurrentAddress(account uint32, scope waddrmgr.KeyScope) (btcuti
 	// to satisfy the query. Notify the rpc server about the new address.
 	if props != nil {
 		w.watch.WatchAddr(addr)
-		w.NtfnServer.notifyAccountProperties(props)
 	}
 
 	return addr, nil
@@ -1035,6 +1080,58 @@ func (w *Wallet) PubKeyForAddress(a btcutil.Address) (*btcec.PublicKey, er.R) {
 	return pubKey, err
 }
 
+// LabelTransaction adds a label to the transaction with the hash provided. The
+// call will fail if the label is too long, or if the transaction already has
+// a label and the overwrite boolean is not set.
+func (w *Wallet) LabelTransaction(hash chainhash.Hash, label string,
+	overwrite bool) er.R {
+
+	// Check that the transaction is known to the wallet, and fail if it is
+	// unknown. If the transaction is known, check whether it already has
+	// a label.
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+
+		dbTx, err := w.TxStore.TxDetails(txmgrNs, &hash)
+		if err != nil {
+			return err
+		}
+
+		// If the transaction looked up is nil, it was not found. We
+		// do not allow labelling of unknown transactions so we fail.
+		if dbTx == nil {
+			return ErrUnknownTransaction.Default()
+		}
+
+		_, err = wtxmgr.FetchTxLabel(txmgrNs, hash)
+		return err
+	})
+
+	switch {
+	// If no labels have been written yet, we can silence the error.
+	// Likewise if there is no label, we do not need to do any overwrite
+	// checks.
+	case wtxmgr.ErrNoLabelBucket.Is(err):
+	case wtxmgr.ErrTxLabelNotFound.Is(err):
+
+	// If we successfully looked up a label, fail if the overwrite param
+	// is not set.
+	case err == nil:
+		if !overwrite {
+			return ErrTxLabelExists.Default()
+		}
+
+	// In another unrelated error occurred, return it.
+	default:
+		return err
+	}
+
+	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.PutTxLabel(txmgrNs, hash, label)
+	})
+}
+
 // PrivKeyForAddress looks up the associated private key for a P2PKH or P2PK
 // address.
 func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) {
@@ -1053,6 +1150,22 @@ func (w *Wallet) PrivKeyForAddress(a btcutil.Address) (*btcec.PrivateKey, er.R) 
 		return err
 	})
 	return privKey, err
+}
+
+// HaveAddress returns whether the wallet is the owner of the address a.
+func (w *Wallet) HaveAddress(a btcutil.Address) (bool, er.R) {
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) er.R {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		_, err := w.Manager.Address(addrmgrNs, a)
+		return err
+	})
+	if err == nil {
+		return true, nil
+	}
+	if waddrmgr.ErrAddressNotFound.Is(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 // AccountOfAddress finds the account that an address is associated with.
@@ -1428,41 +1541,143 @@ func (w *Wallet) ListAllTransactions() ([]btcjson.ListTransactionsResult, er.R) 
 	return txList, err
 }
 
-// creditSlice satisifies the sort.Interface interface to provide sorting
-// transaction credits from oldest to newest.  Credits with the same receive
-// time and mined in the same block are not guaranteed to be sorted by the order
-// they appear in the block.  Credits from the same transaction are sorted by
-// output index.
-type creditSlice []wtxmgr.Credit
-
-func (s creditSlice) Len() int {
-	return len(s)
+// BlockIdentifier identifies a block by either a height or a hash.
+type BlockIdentifier struct {
+	height int32
+	hash   *chainhash.Hash
 }
 
-func (s creditSlice) Less(i, j int) bool {
-	switch {
-	// If both credits are from the same tx, sort by output index.
-	case s[i].OutPoint.Hash == s[j].OutPoint.Hash:
-		return s[i].OutPoint.Index < s[j].OutPoint.Index
+// NewBlockIdentifierFromHeight constructs a BlockIdentifier for a block height.
+func NewBlockIdentifierFromHeight(height int32) *BlockIdentifier {
+	return &BlockIdentifier{height: height}
+}
 
-	// If both transactions are unmined, sort by their received date.
-	case s[i].Height == -1 && s[j].Height == -1:
-		return s[i].Received.Before(s[j].Received)
+// NewBlockIdentifierFromHash constructs a BlockIdentifier for a block hash.
+func NewBlockIdentifierFromHash(hash *chainhash.Hash) *BlockIdentifier {
+	return &BlockIdentifier{hash: hash}
+}
 
-	// Unmined (newer) txs always come last.
-	case s[i].Height == -1:
-		return false
-	case s[j].Height == -1:
-		return true
+// GetTransactionsResult is the result of the wallet's GetTransactions method.
+// See GetTransactions for more details.
+type GetTransactionsResult struct {
+	MinedTransactions   []Block
+	UnminedTransactions []TransactionSummary
+}
 
-	// If both txs are mined in different blocks, sort by block height.
-	default:
-		return s[i].Height < s[j].Height
+// GetTransactions returns transaction results between a starting and ending
+// block.  Blocks in the block range may be specified by either a height or a
+// hash.
+//
+// Because this is a possibly lenghtly operation, a cancel channel is provided
+// to cancel the task.  If this channel unblocks, the results created thus far
+// will be returned.
+//
+// Transaction results are organized by blocks in ascending order and unmined
+// transactions in an unspecified order.  Mined transactions are saved in a
+// Block structure which records properties about the block.
+func (w *Wallet) GetTransactions(
+	startBlock, endBlock *BlockIdentifier,
+	cancel <-chan struct{},
+) (*GetTransactionsResult, er.R) {
+	var start, end int32 = 0, -1
+
+	w.chainClientLock.Lock()
+	chainClient := w.chainClient
+	w.chainClientLock.Unlock()
+
+	// TODO: Fetching block heights by their hashes is inherently racy
+	// because not all block headers are saved but when they are for SPV the
+	// db can be queried directly without this.
+	if startBlock != nil {
+		if startBlock.hash == nil {
+			start = startBlock.height
+		} else {
+			if chainClient == nil {
+				return nil, er.New("no chain server client")
+			}
+			switch client := chainClient.(type) {
+			case *chain.RPCClient:
+				startHeader, err := client.GetBlockHeaderVerbose(
+					startBlock.hash,
+				)
+				if err != nil {
+					return nil, err
+				}
+				start = startHeader.Height
+			case *chain.NeutrinoClient:
+				var err er.R
+				start, err = client.GetBlockHeight(startBlock.hash)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
-}
+	if endBlock != nil {
+		if endBlock.hash == nil {
+			end = endBlock.height
+		} else {
+			if chainClient == nil {
+				return nil, er.New("no chain server client")
+			}
+			switch client := chainClient.(type) {
+			case *chain.RPCClient:
+				endHeader, err := client.GetBlockHeaderVerbose(
+					endBlock.hash,
+				)
+				if err != nil {
+					return nil, err
+				}
+				end = endHeader.Height
+			case *chain.NeutrinoClient:
+				var err er.R
+				end, err = client.GetBlockHeight(endBlock.hash)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
 
-func (s creditSlice) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
+	var res GetTransactionsResult
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+
+		rangeFn := func(details []wtxmgr.TxDetails) (bool, er.R) {
+			// TODO: probably should make RangeTransactions not reuse the
+			// details backing array memory.
+			dets := make([]wtxmgr.TxDetails, len(details))
+			copy(dets, details)
+			details = dets
+
+			txs := make([]TransactionSummary, 0, len(details))
+			for i := range details {
+				txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
+			}
+
+			if details[0].Block.Height != -1 {
+				blockHash := details[0].Block.Hash
+				res.MinedTransactions = append(res.MinedTransactions, Block{
+					Hash:         &blockHash,
+					Height:       details[0].Block.Height,
+					Timestamp:    details[0].Block.Time.Unix(),
+					Transactions: txs,
+				})
+			} else {
+				res.UnminedTransactions = txs
+			}
+
+			select {
+			case <-cancel:
+				return true, nil
+			default:
+				return false, nil
+			}
+		}
+
+		return w.TxStore.RangeTransactions(txmgrNs, start, end, rangeFn)
+	})
+	return &res, err
 }
 
 // ListUnspent returns a slice of objects representing the unspent wallet
@@ -1486,19 +1701,23 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 		results = make([]*btcjson.ListUnspentResult, 0)
 		w.TxStore.ForEachUnspentOutput(txmgrNs, nil, func(key []byte, output *wtxmgr.Credit) er.R {
 
+			// Only mature coinbase outputs are included.
+			immature := false
+			if output.FromCoinBase {
+				target := int32(w.ChainParams().CoinbaseMaturity)
+				if !confirmed(target, output.Height, syncBlock.Height) {
+					immature = true
+					if minconf > 0 {
+						return nil
+					}
+				}
+			}
+
 			// Outputs with fewer confirmations than the minimum or more
 			// confs than the maximum are excluded.
 			confs := confirms(output.Height, syncBlock.Height)
 			if confs < minconf || confs > maxconf {
 				return nil
-			}
-
-			// Only mature coinbase outputs are included.
-			if output.FromCoinBase {
-				target := int32(w.ChainParams().CoinbaseMaturity)
-				if !confirmed(target, output.Height, syncBlock.Height) {
-					return nil
-				}
 			}
 
 			// Exclude locked outputs from the result set.
@@ -1574,6 +1793,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32,
 				}
 				spendable = true
 			}
+			spendable = spendable && !immature
 
 			result := &btcjson.ListUnspentResult{
 				TxID:          output.OutPoint.Hash.String(),
@@ -1671,7 +1891,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 
 	// Attempt to import private key into wallet.
 	var addr btcutil.Address
-	var props *waddrmgr.AccountProperties
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		maddr, err := manager.ImportPrivateKey(addrmgrNs, wif, bs)
@@ -1679,34 +1898,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 			return err
 		}
 		addr = maddr.Address()
-		props, err = manager.AccountProperties(
-			addrmgrNs, waddrmgr.ImportedAddrAccount,
-		)
-		if err != nil {
-			return err
-		}
-
-		// We'll only update our birthday with the new one if it is
-		// before our current one. Otherwise, if we do, we can
-		// potentially miss detecting relevant chain events that
-		// occurred between them while rescanning.
-		birthdayBlock, _, err := w.Manager.BirthdayBlock(addrmgrNs)
-		if err != nil {
-			return err
-		}
-		if bs.Height >= birthdayBlock.Height {
-			return nil
-		}
-
-		err = w.Manager.SetBirthday(addrmgrNs, bs.Timestamp)
-		if err != nil {
-			return err
-		}
-
-		// To ensure this birthday block is correct, we'll mark it as
-		// unverified to prompt a sanity check at the next restart to
-		// ensure it is correct as it was provided by the caller.
-		return w.Manager.SetBirthdayBlock(addrmgrNs, *bs, false)
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1719,7 +1911,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 		// Do not block on finishing the rescan.  The rescan success
 		// or failure is logged elsewhere, and the channel is not
 		// required to be read, so discard the return value.
-		name := fmt.Sprintf("import-%s-rescan", addr.EncodeAddress())
+		name := fmt.Sprintf("import-%s-resync", addr.EncodeAddress())
 		watch := watcher.New()
 		watch.WatchAddr(addr)
 		w.rescanJ = &rescanJob{
@@ -1728,14 +1920,11 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 			stopHeight: -1,
 			watch:      &watch,
 		}
-	} else {
-		w.watch.WatchAddr(addr)
 	}
+	w.watch.WatchAddr(addr)
 
 	addrStr := addr.EncodeAddress()
 	log.Infof("Imported payment address %s", addrStr)
-
-	w.NtfnServer.notifyAccountProperties(props)
 
 	// Return the payment address string of the imported private key.
 	return addrStr, nil
@@ -1798,6 +1987,42 @@ func (w *Wallet) LockedOutpoints() []btcjson.LockedUnspent {
 	return locked
 }
 
+// LeaseOutput locks an output to the given ID, preventing it from being
+// available for coin selection. The absolute time of the lock's expiration is
+// returned. The expiration of the lock can be extended by successive
+// invocations of this call.
+//
+// Outputs can be unlocked before their expiration through `UnlockOutput`.
+// Otherwise, they are unlocked lazily through calls which iterate through all
+// known outputs, e.g., `CalculateBalance`, `ListUnspent`.
+//
+// If the output is not known, ErrUnknownOutput is returned. If the output has
+// already been locked to a different ID, then ErrOutputAlreadyLocked is
+// returned.
+//
+// NOTE: This differs from LockOutpoint in that outputs are locked for a limited
+// amount of time and their locks are persisted to disk.
+func (w *Wallet) LeaseOutput(id wtxmgr.LockID, op wire.OutPoint) (time.Time, er.R) {
+	var expiry time.Time
+	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		var err er.R
+		expiry, err = w.TxStore.LockOutput(ns, id, op)
+		return err
+	})
+	return expiry, err
+}
+
+// ReleaseOutput unlocks an output, allowing it to be available for coin
+// selection if it remains unspent. The ID should match the one used to
+// originally lock the output.
+func (w *Wallet) ReleaseOutput(id wtxmgr.LockID, op wire.OutPoint) er.R {
+	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
+		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.UnlockOutput(ns, id, op)
+	})
+}
+
 // SortedActivePaymentAddresses returns a slice of all active payment
 // addresses in a wallet.
 func (w *Wallet) SortedActivePaymentAddresses() ([]string, er.R) {
@@ -1821,14 +2046,11 @@ func (w *Wallet) SortedActivePaymentAddresses() ([]string, er.R) {
 func (w *Wallet) NewAddress(account uint32,
 	scope waddrmgr.KeyScope) (btcutil.Address, er.R) {
 
-	var (
-		addr  btcutil.Address
-		props *waddrmgr.AccountProperties
-	)
+	var addr btcutil.Address
 	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) er.R {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		var err er.R
-		addr, props, err = w.newAddress(addrmgrNs, account, scope)
+		addr, _, err = w.newAddress(addrmgrNs, account, scope)
 		return err
 	})
 	if err != nil {
@@ -1837,8 +2059,6 @@ func (w *Wallet) NewAddress(account uint32,
 
 	// Notify the rpc server about the newly created address.
 	w.watch.WatchAddr(addr)
-
-	w.NtfnServer.notifyAccountProperties(props)
 
 	return addr, nil
 }
@@ -1968,7 +2188,7 @@ func (w *Wallet) SendOutputs(txr CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 		return createdTx, nil
 	}
 
-	txHash, err := w.reliablyPublishTransaction(createdTx.Tx)
+	txHash, err := w.reliablyPublishTransaction(createdTx.Tx, txr.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -2144,12 +2364,22 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType params.SigHashType,
 	return signErrors, err
 }
 
+// PublishTransaction sends the transaction to the consensus RPC server so it
+// can be propagated to other nodes and eventually mined.
+//
+// This function is unstable and will be removed once syncing code is moved out
+// of the wallet.
+func (w *Wallet) PublishTransaction(tx *wire.MsgTx, label string) er.R {
+	_, err := w.reliablyPublishTransaction(tx, label)
+	return err
+}
+
 // reliablyPublishTransaction is a superset of publishTransaction which contains
 // the primary logic required for publishing a transaction, updating the
 // relevant database state, and finally possible removing the transaction from
 // the database (along with cleaning up all inputs used, and outputs created) if
 // the transaction is rejected by the backend.
-func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er.R) {
+func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx, label string) (*chainhash.Hash, er.R) {
 	// We need to addRelevantTx this transaction so the user's next tx won't just keep
 	// on trying to spend the same money over and over, but it will get flushed on restarts
 	// because if the tx is invalid, the wallet would otherwise just remember it forever.
@@ -2158,7 +2388,19 @@ func (w *Wallet) reliablyPublishTransaction(tx *wire.MsgTx) (*chainhash.Hash, er
 		return nil, err
 	}
 	err = walletdb.Update(w.db, func(dbTx walletdb.ReadWriteTx) er.R {
-		return w.addRelevantTx(dbTx, txRec, nil)
+		if err := w.addRelevantTx(dbTx, txRec, nil); err != nil {
+			return err
+		}
+
+		// If the tx label is empty, we can return early.
+		if len(label) == 0 {
+			return nil
+		}
+
+		// If there is a label we should write, get the namespace key
+		// and record it in the tx store.
+		txmgrNs := dbTx.ReadWriteBucket(wtxmgrNamespaceKey)
+		return w.TxStore.PutTxLabel(txmgrNs, tx.TxHash(), label)
 	})
 	if err != nil {
 		return nil, err
@@ -2281,7 +2523,7 @@ func (w *Wallet) ChainParams() *chaincfg.Params {
 // Create creates an new wallet, writing it to an empty database.  If the passed
 // seed is non-nil, it is used.  Otherwise, a secure random seed of the
 // recommended length is generated.
-func Create(db walletdb.DB, pubPass, privPass []byte, seedInput []byte,
+func Create(db walletdb.DB, pubPass, privPass []byte, seedInput []byte, seedBirthday time.Time,
 	seedx *seedwords.Seed, params *chaincfg.Params) er.R {
 
 	// If a seed was provided, ensure that it is of valid length. Otherwise,
@@ -2303,6 +2545,8 @@ func Create(db walletdb.DB, pubPass, privPass []byte, seedInput []byte,
 	var birthday time.Time
 	if seedx != nil {
 		birthday = seedx.Birthday()
+	} else if seedBirthday != (time.Time{}) {
+		birthday = seedBirthday
 	} else {
 		// If we don't know the bday, put it before all of this began
 		birthday = time.Unix(1231006505, 0)
@@ -2454,7 +2698,7 @@ func paysUncreditedAddress(
 				}
 			}
 			if !found {
-				log.Debug("Reload [%s] because it pays [%s] and we are missing that credit",
+				log.Debugf("Reload [%s] because it pays [%s] and we are missing that credit",
 					tx.TxHash(), addr.EncodeAddress())
 				return true
 			}
@@ -2476,7 +2720,7 @@ func spendsUndebitedAddress(
 	}
 	for op, addr := range watchedAddrs {
 		if _, ok := ops[op]; ok {
-			log.Debug("Reload [%s] because it spends from [%s]",
+			log.Debugf("Reload [%s] because it spends from [%s]",
 				tx.TxHash(), addr.EncodeAddress())
 			return true
 		}
@@ -2637,9 +2881,10 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 				blk.header.PrevBlock.String())
 		}
 	}
+	bs := w.Manager.SyncedTo()
 	return walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) er.R {
 		for _, b := range blks {
-			if bs := w.Manager.SyncedTo(); b.height > bs.Height+1 {
+			if b.height > bs.Height+1 {
 				// This happens if we get a resync/dropdb triggered while we're syncing
 				continue
 			}
@@ -2658,14 +2903,24 @@ func (w *Wallet) connectBlocks(blks []SyncerResp, isRescan bool) er.R {
 			if isRescan {
 				continue
 			}
+			log.Debugf("Syncing %s @ %d", b.header.BlockHash(), b.height)
 			addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
-			if err := w.Manager.SetSyncedTo(addrmgrNs, &waddrmgr.BlockStamp{
+			hash := b.header.BlockHash()
+			bs = waddrmgr.BlockStamp{
 				Height:    b.height,
-				Hash:      b.header.BlockHash(),
+				Hash:      hash,
 				Timestamp: b.header.Timestamp,
-			}); err != nil {
+			}
+			if err := w.Manager.SetSyncedTo(addrmgrNs, &bs); err != nil {
 				return err
 			}
+			w.NtfnServer.notifyAttachedBlock(dbtx, &wtxmgr.BlockMeta{
+				Block: wtxmgr.Block{
+					Hash:   hash,
+					Height: b.height,
+				},
+				Time: b.header.Timestamp,
+			})
 		}
 		return nil
 	})
@@ -2898,6 +3153,11 @@ func (w *Wallet) checkBlock() {
 	}
 	st := w.Manager.SyncedTo()
 	if st.Height >= bestHeight {
+		synced := w.ChainSynced()
+		if !synced {
+			log.Infof("Wallet frontend synced to tip [%d]", st.Height)
+			w.SetChainSynced(true)
+		}
 	} else if err := w.block(wtxmgr.Block{
 		Hash:   *bestH,
 		Height: bestHeight,
@@ -3013,9 +3273,6 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	}
 
 	w.NtfnServer = newNotificationServer(w)
-	w.TxStore.NotifyUnspent = func(hash *chainhash.Hash, index uint32) {
-		w.NtfnServer.notifyUnspentOutput(0, hash, index)
-	}
 
 	return w, nil
 }

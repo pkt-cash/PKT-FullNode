@@ -17,6 +17,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/lnd/clock"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	_ "github.com/pkt-cash/pktd/pktwallet/walletdb/bdb"
 	"github.com/pkt-cash/pktd/wire"
@@ -46,15 +47,6 @@ var (
 	}
 )
 
-func testDB() (walletdb.DB, func(), er.R) {
-	tmpDir, errr := ioutil.TempDir("", "wtxmgr_test")
-	if errr != nil {
-		return nil, func() {}, er.E(errr)
-	}
-	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
-	return db, func() { os.RemoveAll(tmpDir) }, err
-}
-
 var namespaceKey = []byte("txstore")
 
 func testStore() (*Store, walletdb.DB, func(), er.R) {
@@ -63,7 +55,7 @@ func testStore() (*Store, walletdb.DB, func(), er.R) {
 		return nil, nil, func() {}, er.E(errr)
 	}
 
-	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"))
+	db, err := walletdb.Create("bdb", filepath.Join(tmpDir, "db"), true)
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		return nil, nil, nil, err
@@ -100,7 +92,6 @@ func serializeTx(tx *btcutil.Tx) []byte {
 }
 
 func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
-	t.Parallel()
 
 	// Create a double spend of the received blockchain transaction.
 	dupRecvTx, _ := btcutil.NewTxFromBytes(TstRecvSerializedTx)
@@ -556,7 +547,6 @@ func TestInsertsCreditsDebitsRollbacks(t *testing.T) {
 }
 
 func TestFindingSpentCredits(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -663,7 +653,6 @@ func spendOutputs(outputs []wire.OutPoint, outputValues ...int64) *wire.MsgTx {
 }
 
 func TestCoinbases(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1069,7 +1058,6 @@ func TestCoinbases(t *testing.T) {
 
 // Test moving multiple transactions from unmined buckets to the same block.
 func TestMoveMultipleToSameBlock(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1246,7 +1234,6 @@ func TestMoveMultipleToSameBlock(t *testing.T) {
 // NewTxRecord and NewTxRecordFromMsgTx both save the serialized transaction, so
 // manually strip it out to test this code path.
 func TestInsertUnserializedTx(t *testing.T) {
-	t.Parallel()
 
 	s, db, teardown, err := testStore()
 	if err != nil {
@@ -1313,7 +1300,6 @@ func TestInsertUnserializedTx(t *testing.T) {
 // descendants. Any balance modifications due to the unmined transaction should
 // be revered.
 func TestRemoveUnminedTx(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1462,7 +1448,6 @@ func TestRemoveUnminedTx(t *testing.T) {
 // TestInsertMempoolTxAlreadyConfirmed ensures that transactions that already
 // exist within the store as confirmed cannot be added as unconfirmed.
 func TestInsertMempoolTxAlreadyConfirmed(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1525,7 +1510,6 @@ func TestInsertMempoolTxAlreadyConfirmed(t *testing.T) {
 // that double spends an existing output within the wallet, it doesn't remove
 // any other spending transactions of the same output.
 func TestOutputsAfterRemoveDoubleSpend(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1798,7 +1782,6 @@ func testInsertMempoolDoubleSpendTx(t *testing.T, first bool) {
 // first spend seen is confirmed, then the second spend transaction within the
 // mempool should be removed from the wallet's store.
 func TestInsertMempoolDoubleSpendConfirmedFirstTx(t *testing.T) {
-	t.Parallel()
 	testInsertMempoolDoubleSpendTx(t, true)
 }
 
@@ -1807,7 +1790,6 @@ func TestInsertMempoolDoubleSpendConfirmedFirstTx(t *testing.T) {
 // second spend seen is confirmed, then the first spend transaction within the
 // mempool should be removed from the wallet's store.
 func TestInsertMempoolDoubleSpendConfirmSecondTx(t *testing.T) {
-	t.Parallel()
 	testInsertMempoolDoubleSpendTx(t, false)
 }
 
@@ -1816,7 +1798,6 @@ func TestInsertMempoolDoubleSpendConfirmSecondTx(t *testing.T) {
 // then the unconfirmed double spends within the mempool should be removed from
 // the wallet's store.
 func TestInsertConfirmedDoubleSpendTx(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -1990,7 +1971,6 @@ func TestInsertConfirmedDoubleSpendTx(t *testing.T) {
 // confirmed. This can lead to outputs being duplicated in the store, which can
 // lead to creating double spends when querying the wallet's UTXO set.
 func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
-	t.Parallel()
 
 	store, db, teardown, err := testStore()
 	if err != nil {
@@ -2117,4 +2097,620 @@ func TestAddDuplicateCreditAfterConfirm(t *testing.T) {
 				minedTxs[0].Hash)
 		}
 	})
+}
+
+// TestInsertMempoolTxAndConfirm ensures that there aren't any lingering
+// unconfirmed records for a transaction that existed within the store as
+// unconfirmed before becoming confirmed.
+// TODO(cjd): DISABLED TEST - newly imported with lnd, not working, needs investigation
+func _TestInsertMempoolTxAndConfirm(t *testing.T) {
+	t.Parallel()
+
+	store, db, teardown, err := testStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	// Create a transaction which we'll insert into the store as
+	// unconfirmed.
+	tx := newCoinBase(1e8)
+	txRec, err := NewTxRecordFromMsgTx(tx, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
+		if err := store.InsertTx(ns, txRec, nil); err != nil {
+			t.Fatal(err)
+		}
+		err := store.AddCredit(ns, txRec, nil, 0, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	// Then, proceed to confirm it.
+	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
+		block := &BlockMeta{
+			Block: Block{Height: 1337},
+			Time:  time.Now(),
+		}
+		if err := store.InsertTx(ns, txRec, block); err != nil {
+			t.Fatal(err)
+		}
+		err := store.AddCredit(ns, txRec, block, 0, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	// We should not see any lingering unconfirmed records for it once it's
+	// been confirmed.
+	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
+		for _, input := range tx.TxIn {
+			prevOut := input.PreviousOutPoint
+			k := canonicalOutPoint(&prevOut.Hash, prevOut.Index)
+			if existsRawUnminedInput(ns, k) != nil {
+				t.Fatalf("found transaction input %v as "+
+					"unconfirmed", prevOut)
+			}
+		}
+		if existsRawUnmined(ns, txRec.Hash[:]) != nil {
+			t.Fatal("found transaction as unconfirmed")
+		}
+		for i := range tx.TxOut {
+			k := canonicalOutPoint(&txRec.Hash, uint32(i))
+			if existsRawUnminedCredit(ns, k) != nil {
+				t.Fatalf("found transaction output %v as "+
+					"unconfirmed", i)
+			}
+		}
+	})
+}
+
+// TestTxLabel tests reading and writing of transaction labels.
+func TestTxLabel(t *testing.T) {
+	t.Parallel()
+
+	store, db, teardown, err := testStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	// txid is the transaction hash we will use to write and get labels for.
+	txid := TstRecvTx.Hash()
+
+	// txidNotFound is distinct from txid, and will not have a label written
+	// to disk.
+	txidNotFound := TstSpendingTx.Hash()
+
+	// getBucket gets the top level bucket, and fails the test if it is
+	// not found.
+	getBucket := func(tx walletdb.ReadWriteTx) walletdb.ReadWriteBucket {
+		testBucket := tx.ReadWriteBucket(namespaceKey)
+		if testBucket == nil {
+			t.Fatalf("could not get bucket: %v", err)
+		}
+
+		return testBucket
+	}
+
+	// tryPutLabel attempts to write a label to disk.
+	tryPutLabel := func(label string) er.R {
+		return walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
+			// Try to write the label to disk.
+			return store.PutTxLabel(getBucket(tx), *txid, label)
+		})
+	}
+
+	// tryReadLabel attempts to retrieve a label for a given txid.
+	tryReadLabel := func(labelTx chainhash.Hash) (string, er.R) {
+		var label string
+
+		err := walletdb.Update(db, func(tx walletdb.ReadWriteTx) er.R {
+			var err er.R
+			label, err = FetchTxLabel(getBucket(tx), labelTx)
+			return err
+		})
+
+		return label, err
+	}
+
+	// First, try to lookup a label when the labels bucket does not exist
+	// yet.
+	_, err = tryReadLabel(*txid)
+	if !ErrNoLabelBucket.Is(err) {
+		t.Fatalf("expected: %v, got: %v", ErrNoLabelBucket, err)
+	}
+
+	// Now try to write an empty label, which should fail.
+	err = tryPutLabel("")
+	if !ErrEmptyLabel.Is(err) {
+		t.Fatalf("expected: %v, got: %v", ErrEmptyLabel, err)
+	}
+
+	// Create a label which exceeds the length limit.
+	longLabel := make([]byte, TxLabelLimit+1)
+	err = tryPutLabel(string(longLabel))
+	if !ErrLabelTooLong.Is(err) {
+		t.Fatalf("expected: %v, got: %v", ErrLabelTooLong, err)
+	}
+
+	// Write an acceptable length label to disk, this should succeed.
+	testLabel := "test label"
+	err = tryPutLabel(testLabel)
+	if err != nil {
+		t.Fatalf("expected: no error, got: %v", err)
+	}
+
+	diskLabel, err := tryReadLabel(*txid)
+	if err != nil {
+		t.Fatalf("expected: no error, got: %v", err)
+	}
+	if diskLabel != testLabel {
+		t.Fatalf("expected: %v, got: %v", testLabel, diskLabel)
+	}
+
+	// Finally, try to read a label for a transaction which does not have
+	// one.
+	_, err = tryReadLabel(*txidNotFound)
+	if !ErrTxLabelNotFound.Is(err) {
+		t.Fatalf("expected: %v, got: %v", ErrTxLabelNotFound, err)
+	}
+}
+
+func assertBalance(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
+	confirmed bool, blockHeight int32, exp btcutil.Amount) {
+
+	t.Helper()
+
+	minConf := int32(0)
+	if confirmed {
+		minConf = 1
+	}
+	balance, err := s.Balance(ns, minConf, blockHeight)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance != exp {
+		t.Fatalf("expected balance %v, got %v", exp, balance)
+	}
+}
+
+func assertUtxos(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
+	exp []wire.OutPoint) {
+
+	t.Helper()
+
+	utxos, err := s.GetUnspentOutputs(ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expUtxo := range exp {
+		found := false
+		for _, utxo := range utxos {
+			if expUtxo == utxo.OutPoint {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected utxo %v", expUtxo)
+		}
+	}
+}
+
+func assertLocked(t *testing.T, ns walletdb.ReadWriteBucket, op wire.OutPoint,
+	timeNow time.Time, exp bool) {
+
+	t.Helper()
+
+	_, _, locked := isLockedOutput(ns, op, timeNow)
+	if locked && locked != exp {
+		t.Fatalf("expected locked output %v", op)
+	}
+	if !locked && locked != exp {
+		t.Fatalf("unexpected locked output %v", op)
+	}
+}
+
+func assertOutputLocksExist(t *testing.T, s *Store, ns walletdb.ReadBucket,
+	exp ...wire.OutPoint) {
+
+	t.Helper()
+
+	var found []wire.OutPoint
+	forEachLockedOutput(ns, func(op wire.OutPoint, _ LockID, _ time.Time) {
+		found = append(found, op)
+	})
+	if len(found) != len(exp) {
+		t.Fatalf("expected to find %v locked output(s), found %v",
+			len(exp), len(found))
+	}
+
+	for _, expOp := range exp {
+		exists := false
+		for _, foundOp := range found {
+			if expOp == foundOp {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			t.Fatalf("expected output lock for %v to exist", expOp)
+		}
+	}
+}
+
+func lock(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
+	id LockID, op wire.OutPoint, exp *er.ErrorCode) time.Time {
+
+	t.Helper()
+
+	expiry, err := s.LockOutput(ns, id, op)
+	if !exp.Is(err) {
+		t.Fatalf("expected err %v, got %v", exp, err)
+	}
+	if exp != nil && exp != ErrOutputAlreadyLocked {
+		assertLocked(t, ns, op, s.clock.Now(), false)
+	} else {
+		assertLocked(t, ns, op, s.clock.Now(), true)
+	}
+	return expiry
+}
+
+func unlock(t *testing.T, s *Store, ns walletdb.ReadWriteBucket,
+	id LockID, op wire.OutPoint, exp *er.ErrorCode) {
+
+	t.Helper()
+
+	err := s.UnlockOutput(ns, id, op)
+	if !exp.Is(err) {
+		t.Fatalf("expected err %v, got %v", exp, err)
+	}
+	if exp != nil {
+		assertLocked(t, ns, op, s.clock.Now(), true)
+	} else {
+		assertLocked(t, ns, op, s.clock.Now(), false)
+	}
+}
+
+func insertUnconfirmedCredit(t *testing.T, store *Store, db walletdb.DB,
+	tx *wire.MsgTx, idx uint32) {
+
+	t.Helper()
+	insertConfirmedCredit(t, store, db, tx, idx, nil)
+}
+
+func insertConfirmedCredit(t *testing.T, store *Store, db walletdb.DB,
+	tx *wire.MsgTx, idx uint32, block *BlockMeta) {
+
+	t.Helper()
+
+	commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
+		rec, err := NewTxRecordFromMsgTx(tx, time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.InsertTx(ns, rec, block); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.AddCredit(ns, rec, block, idx, false); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+// TestOutputLocks aims to test all cases revolving output locks, ensuring they
+// are and aren't eligible for coin selection after certain operations.
+func TestOutputLocks(t *testing.T) {
+	t.Parallel()
+
+	// Define a series of constants we'll use throughout our tests.
+	block := &BlockMeta{
+		Block: Block{
+			Hash:   chainhash.Hash{1, 3, 3, 7},
+			Height: 1337,
+		},
+		Time: time.Now(),
+	}
+
+	// Create a coinbase transaction with two outputs, which we'll spend.
+	coinbase := newCoinBase(
+		btcutil.UnitsPerCoinI64(), btcutil.UnitsPerCoinI64()*2,
+	)
+	coinbaseHash := coinbase.TxHash()
+
+	// One of the spends will be unconfirmed.
+	unconfirmedBalance := btcutil.UnitsPerCoinI64() / 2
+	unconfirmedTx := spendOutput(&coinbaseHash, 0, unconfirmedBalance)
+	unconfirmedOutPoint := wire.OutPoint{
+		Hash:  unconfirmedTx.TxHash(),
+		Index: 0,
+	}
+
+	// The other will be confirmed.
+	confirmedBalance := btcutil.UnitsPerCoinI64()
+	confirmedTx := spendOutput(&coinbaseHash, 1, confirmedBalance)
+	confirmedOutPoint := wire.OutPoint{
+		Hash:  confirmedTx.TxHash(),
+		Index: 0,
+	}
+
+	balance := btcutil.Amount(unconfirmedBalance + confirmedBalance)
+
+	testCases := []struct {
+		name string
+		run  func(*testing.T, *Store, walletdb.ReadWriteBucket)
+	}{
+		{
+			// Asserts that we cannot lock unknown outputs to the
+			// store.
+			name: "unknown output",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				lockID := LockID{1}
+				op := wire.OutPoint{Index: 1}
+				_ = lock(t, s, ns, lockID, op, ErrUnknownOutput)
+			},
+		},
+		{
+			// Asserts that we cannot lock outputs that have already
+			// been locked to someone else.
+			name: "already locked output",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				lockID1 := LockID{1}
+				lockID2 := LockID{2}
+
+				_ = lock(
+					t, s, ns, lockID1, unconfirmedOutPoint,
+					nil,
+				)
+				_ = lock(
+					t, s, ns, lockID2, unconfirmedOutPoint,
+					ErrOutputAlreadyLocked,
+				)
+
+				_ = lock(
+					t, s, ns, lockID1, confirmedOutPoint,
+					nil,
+				)
+				_ = lock(
+					t, s, ns, lockID2, confirmedOutPoint,
+					ErrOutputAlreadyLocked,
+				)
+			},
+		},
+		{
+			// Asserts that only the ID which locked at output can
+			// manually unlock it.
+			name: "unlock output",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				lockID1 := LockID{1}
+				lockID2 := LockID{2}
+
+				_ = lock(t, s, ns, lockID1, confirmedOutPoint, nil)
+				unlock(
+					t, s, ns, lockID2, confirmedOutPoint,
+					ErrOutputUnlockNotAllowed,
+				)
+				unlock(t, s, ns, lockID1, confirmedOutPoint, nil)
+			},
+		},
+		{
+			// Asserts that locking an output that's already locked
+			// with the correct ID results in an extension of the
+			// lock.
+			name: "extend locked output lease",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				// Lock the output and set the clock time a
+				// minute before the expiration. It should
+				// remain locked.
+				lockID := LockID{1}
+				expiry := lock(
+					t, s, ns, lockID, confirmedOutPoint, nil,
+				)
+				s.clock.(*clock.TestClock).SetTime(
+					expiry.Add(-time.Minute),
+				)
+				assertLocked(
+					t, ns, confirmedOutPoint, s.clock.Now(),
+					true,
+				)
+
+				// Lock it once again, extending its expiration,
+				// and set the clock time a second before the
+				// expiration. It should remain locked.
+				s.clock.(*clock.TestClock).SetTime(
+					expiry.Add(-time.Minute),
+				)
+				newExpiry := lock(
+					t, s, ns, lockID, confirmedOutPoint, nil,
+				)
+				if !newExpiry.After(expiry) {
+					t.Fatal("expected output lock " +
+						"duration to be renewed")
+				}
+				s.clock.(*clock.TestClock).SetTime(
+					newExpiry.Add(-time.Second),
+				)
+				assertLocked(
+					t, ns, confirmedOutPoint, s.clock.Now(),
+					true,
+				)
+
+				// Set the clock time to the new expiration, it
+				// should now be unlocked.
+				s.clock.(*clock.TestClock).SetTime(newExpiry)
+				assertLocked(
+					t, ns, confirmedOutPoint, s.clock.Now(),
+					false,
+				)
+			},
+		},
+		{
+			// Asserts that balances are reflected properly after
+			// locking confirmed and unconfirmed outputs.
+			name: "balance after locked outputs",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				// We should see our full balance before locking
+				// any outputs.
+				assertBalance(
+					t, s, ns, false, block.Height, balance,
+				)
+
+				// Lock all of our outputs. Our balance should
+				// be 0.
+				lockID := LockID{1}
+				_ = lock(
+					t, s, ns, lockID, unconfirmedOutPoint, nil,
+				)
+				expiry := lock(
+					t, s, ns, lockID, confirmedOutPoint, nil,
+				)
+				assertBalance(t, s, ns, false, block.Height, 0)
+
+				// Wait for the output locks to expire, causing
+				// our full balance to return .
+				s.clock.(*clock.TestClock).SetTime(expiry)
+				assertBalance(
+					t, s, ns, false, block.Height, balance,
+				)
+			},
+		},
+		{
+			// Asserts that the available utxos are reflected
+			// properly after locking confirmed and unconfirmed
+			// outputs.
+			name: "utxos after locked outputs",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				// We should see all of our utxos before locking
+				// any.
+				assertUtxos(t, s, ns, []wire.OutPoint{
+					unconfirmedOutPoint,
+					confirmedOutPoint,
+				})
+
+				// Lock the unconfirmed utxo, we should now only
+				// see the confirmed.
+				lockID := LockID{1}
+				_ = lock(t, s, ns, lockID, unconfirmedOutPoint, nil)
+				assertUtxos(t, s, ns, []wire.OutPoint{
+					confirmedOutPoint,
+				})
+
+				// Now lock the confirmed utxo, we should no
+				// longer see any utxos available.
+				expiry := lock(
+					t, s, ns, lockID, confirmedOutPoint, nil,
+				)
+				assertUtxos(t, s, ns, nil)
+
+				// Wait for the output locks to expire for the
+				// utxos to become available once again.
+				s.clock.(*clock.TestClock).SetTime(expiry)
+				assertUtxos(t, s, ns, []wire.OutPoint{
+					unconfirmedOutPoint,
+					confirmedOutPoint,
+				})
+			},
+		},
+		{
+			// Asserts that output locks are removed for outputs
+			// which have had a confirmed spend, ensuring the
+			// database doesn't store stale data.
+			name: "clear locked outputs after confirmed spend",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				// Lock an output.
+				lockID := LockID{1}
+				lock(t, s, ns, lockID, confirmedOutPoint, nil)
+
+				// Create a spend and add it to the store as
+				// confirmed.
+				txHash := confirmedTx.TxHash()
+				spendTx := spendOutput(&txHash, 0, 500)
+				spendRec, err := NewTxRecordFromMsgTx(
+					spendTx, time.Now(),
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = s.InsertTx(ns, spendRec, block)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// The output should no longer be locked.
+				assertLocked(
+					t, ns, confirmedOutPoint, s.clock.Now(),
+					false,
+				)
+			},
+		},
+		{
+			// Assert that deleting expired locked outputs works as
+			// intended.
+			name: "delete expired locked outputs",
+			run: func(t *testing.T, s *Store, ns walletdb.ReadWriteBucket) {
+				// Lock an output.
+				lockID := LockID{1}
+				expiry := lock(
+					t, s, ns, lockID, confirmedOutPoint, nil,
+				)
+
+				// We should expect to find it if we iterate
+				// over the locked outputs bucket.
+				assertOutputLocksExist(t, s, ns, confirmedOutPoint)
+
+				// Delete all expired locked outputs. Since the
+				// lock hasn't expired yet, it should still
+				// exist.
+				err := s.DeleteExpiredLockedOutputs(ns)
+				if err != nil {
+					t.Fatalf("unable to delete expired "+
+						"locked outputs: %v", err)
+				}
+				assertOutputLocksExist(t, s, ns, confirmedOutPoint)
+
+				// Let the output lock expired.
+				s.clock.(*clock.TestClock).SetTime(expiry)
+
+				// Delete all expired locked outputs. We should
+				// no longer see any locked outputs.
+				err = s.DeleteExpiredLockedOutputs(ns)
+				if err != nil {
+					t.Fatalf("unable to delete expired "+
+						"locked outputs: %v", err)
+				}
+				assertOutputLocksExist(t, s, ns)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			store, db, teardown, err := testStore()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer teardown()
+
+			// Replace the store's default clock with a mock one in
+			// order to simulate a real clock and speed up our
+			// tests.
+			store.clock = clock.NewTestClock(time.Time{})
+
+			// Add the spends we created above to the store.
+			insertConfirmedCredit(t, store, db, confirmedTx, 0, block)
+			insertUnconfirmedCredit(t, store, db, unconfirmedTx, 0)
+
+			// Run the test!
+			commitDBTx(t, store, db, func(ns walletdb.ReadWriteBucket) {
+				testCase.run(t, store, ns)
+			})
+		})
+	}
 }

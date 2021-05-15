@@ -126,6 +126,14 @@ var DefaultScryptOptions = ScryptOptions{
 	P: 1,
 }
 
+// FastScryptOptions are the scrypt options that should be used for testing
+// purposes only where speed is more important than security.
+var FastScryptOptions = ScryptOptions{
+	N: 16,
+	R: 8,
+	P: 1,
+}
+
 // addrKey is used to uniquely identify an address even when those addresses
 // would end up being the same bitcoin address (as is the case for
 // pay-to-pubkey and pay-to-pubkey-hash style of addresses).
@@ -177,12 +185,45 @@ type unlockDeriveInfo struct {
 	index       uint32
 }
 
-// newSecretKey generates a new secret key using the active secretKeyGen.
-func newSecretKey(passphrase *[]byte, config *ScryptOptions) (*snacl.SecretKey, er.R) {
-	if config.alwaysFail {
-		return nil, snacl.ErrDecryptFailed.Default()
-	}
+// SecretKeyGenerator is the function signature of a method that can generate
+// secret keys for the address manager.
+type SecretKeyGenerator func(
+	passphrase *[]byte, config *ScryptOptions) (*snacl.SecretKey, er.R)
+
+// defaultNewSecretKey returns a new secret key.  See newSecretKey.
+func defaultNewSecretKey(passphrase *[]byte,
+	config *ScryptOptions) (*snacl.SecretKey, er.R) {
 	return snacl.NewSecretKey(passphrase, config.N, config.R, config.P)
+}
+
+var (
+	// secretKeyGen is the inner method that is executed when calling
+	// newSecretKey.
+	secretKeyGen = defaultNewSecretKey
+
+	// secretKeyGenMtx protects access to secretKeyGen, so that it can be
+	// replaced in testing.
+	secretKeyGenMtx sync.RWMutex
+)
+
+// SetSecretKeyGen replaces the existing secret key generator, and returns the
+// previous generator.
+func SetSecretKeyGen(keyGen SecretKeyGenerator) SecretKeyGenerator {
+	secretKeyGenMtx.Lock()
+	oldKeyGen := secretKeyGen
+	secretKeyGen = keyGen
+	secretKeyGenMtx.Unlock()
+
+	return oldKeyGen
+}
+
+// newSecretKey generates a new secret key using the active secretKeyGen.
+func newSecretKey(passphrase *[]byte,
+	config *ScryptOptions) (*snacl.SecretKey, er.R) {
+
+	secretKeyGenMtx.RLock()
+	defer secretKeyGenMtx.RUnlock()
+	return secretKeyGen(passphrase, config)
 }
 
 // EncryptorDecryptor provides an abstraction on top of snacl.CryptoKey so that
@@ -435,7 +476,7 @@ func (m *Manager) NewScopedKeyManager(ns walletdb.ReadWriteBucket, scope KeyScop
 	// need to fully decrypt it.
 	serializedMasterRootPriv, err := m.cryptoKeyPriv.Decrypt(masterRootPrivEnc)
 	if err != nil {
-		str := fmt.Sprintf("failed to decrypt master root serialized private key")
+		str := "failed to decrypt master root serialized private key"
 		return nil, managerError(ErrLocked, str, err)
 	}
 
@@ -446,7 +487,7 @@ func (m *Manager) NewScopedKeyManager(ns walletdb.ReadWriteBucket, scope KeyScop
 	)
 	zero.Bytes(serializedMasterRootPriv)
 	if err != nil {
-		str := fmt.Sprintf("failed to create master extended private key")
+		str := "failed to create master extended private key"
 		return nil, managerError(ErrKeyChain, str, err)
 	}
 
@@ -810,8 +851,8 @@ func (m *Manager) ChangePassphrase(ns walletdb.ReadWriteBucket, oldPassphrase,
 
 		// Now that the db has been successfully updated, clear the old
 		// key and set the new one.
-		copy(m.cryptoKeyPrivEncrypted[:], encPriv)
-		copy(m.cryptoKeyScriptEncrypted[:], encScript)
+		copy(m.cryptoKeyPrivEncrypted, encPriv)
+		copy(m.cryptoKeyScriptEncrypted, encScript)
 		m.masterKeyPriv.Zero() // Clear the old key.
 		m.masterKeyPriv = newMasterKey
 		m.privPassphraseSalt = passphraseSalt
@@ -1256,13 +1297,13 @@ func deriveCoinTypeKey(masterNode *hdkeychain.ExtendedKey,
 	// The branch is 0 for external addresses and 1 for internal addresses.
 
 	// Derive the purpose key as a child of the master node.
-	purpose, err := masterNode.Child(scope.Purpose + hdkeychain.HardenedKeyStart)
+	purpose, err := masterNode.DeriveNonStandard(scope.Purpose + hdkeychain.HardenedKeyStart)
 	if err != nil {
 		return nil, err
 	}
 
 	// Derive the coin type key as a child of the purpose key.
-	coinTypeKey, err := purpose.Child(scope.Coin + hdkeychain.HardenedKeyStart)
+	coinTypeKey, err := purpose.DeriveNonStandard(scope.Coin + hdkeychain.HardenedKeyStart)
 	if err != nil {
 		return nil, err
 	}
@@ -1284,7 +1325,7 @@ func deriveAccountKey(coinTypeKey *hdkeychain.ExtendedKey,
 	}
 
 	// Derive the account key as a child of the coin type key.
-	return coinTypeKey.Child(account + hdkeychain.HardenedKeyStart)
+	return coinTypeKey.DeriveNonStandard(account + hdkeychain.HardenedKeyStart)
 }
 
 // checkBranchKeys ensures deriving the extended keys for the internal and
@@ -1299,12 +1340,12 @@ func deriveAccountKey(coinTypeKey *hdkeychain.ExtendedKey,
 // The branch is 0 for external addresses and 1 for internal addresses.
 func checkBranchKeys(acctKey *hdkeychain.ExtendedKey) er.R {
 	// Derive the external branch as the first child of the account key.
-	if _, err := acctKey.Child(ExternalBranch); err != nil {
+	if _, err := acctKey.DeriveNonStandard(ExternalBranch); err != nil {
 		return err
 	}
 
 	// Derive the external branch as the second child of the account key.
-	_, err := acctKey.Child(InternalBranch)
+	_, err := acctKey.DeriveNonStandard(InternalBranch)
 	return err
 }
 

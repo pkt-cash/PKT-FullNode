@@ -62,9 +62,8 @@ Inbound and Outbound Peers
 
 A peer can either be inbound or outbound.  The caller is responsible for
 establishing the connection to remote peers and listening for incoming peers.
-This provides high flexibility for things such as connecting via proxies, acting
-as a proxy, creating bridge peers, choosing whether to listen for inbound peers,
-etc.
+This provides high flexibility for things such as creating bridge peers,
+choosing whether to listen for inbound peers, etc.
 
 NewOutboundPeer and NewInboundPeer functions must be followed by calling Connect
 with a net.Conn instance to the peer.  This will start all async I/O goroutines

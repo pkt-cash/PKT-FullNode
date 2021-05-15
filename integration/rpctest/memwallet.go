@@ -127,7 +127,7 @@ func newMemWallet(net *chaincfg.Params, harnessID uint32) (*memWallet, er.R) {
 
 	// The first child key from the hd root is reserved as the coinbase
 	// generation address.
-	coinbaseChild, err := hdRoot.Child(0)
+	coinbaseChild, err := hdRoot.DeriveNonStandard(0)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func (m *memWallet) unwindBlock(update *chainUpdate) {
 func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 	index := m.hdIndex
 
-	childKey, err := m.hdRoot.Child(index)
+	childKey, err := m.hdRoot.DeriveNonStandard(index)
 	if err != nil {
 		return nil, err
 	}
@@ -363,6 +363,16 @@ func (m *memWallet) newAddress() (btcutil.Address, er.R) {
 	m.hdIndex++
 
 	return addr, nil
+}
+
+// NewAddress returns a fresh address spendable by the wallet.
+//
+// This function is safe for concurrent access.
+func (m *memWallet) NewAddress() (btcutil.Address, er.R) {
+	m.Lock()
+	defer m.Unlock()
+
+	return m.newAddress()
 }
 
 // fundTx attempts to fund a transaction sending amt bitcoin. The coins are
@@ -438,6 +448,34 @@ func (m *memWallet) fundTx(tx *wire.MsgTx, amt btcutil.Amount,
 	return er.Errorf("not enough funds for coin selection")
 }
 
+// SendOutputs creates, then sends a transaction paying to the specified output
+// while observing the passed fee rate. The passed fee rate should be expressed
+// in satoshis-per-byte.
+func (m *memWallet) SendOutputs(outputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
+
+	tx, err := m.CreateTransaction(outputs, feeRate, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.rpc.SendRawTransaction(tx, true)
+}
+
+// SendOutputsWithoutChange creates and sends a transaction that pays to the
+// specified outputs while observing the passed fee rate and ignoring a change
+// output. The passed fee rate should be expressed in sat/b.
+func (m *memWallet) SendOutputsWithoutChange(outputs []*wire.TxOut,
+	feeRate btcutil.Amount) (*chainhash.Hash, er.R) {
+
+	tx, err := m.CreateTransaction(outputs, feeRate, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.rpc.SendRawTransaction(tx, true)
+}
+
 // CreateTransaction returns a fully signed transaction paying to the specified
 // outputs while observing the desired fee rate. The passed fee rate should be
 // expressed in satoshis-per-byte. The transaction being created can optionally
@@ -473,7 +511,7 @@ func (m *memWallet) CreateTransaction(outputs []*wire.TxOut,
 		outPoint := txIn.PreviousOutPoint
 		utxo := m.utxos[outPoint]
 
-		extendedKey, err := m.hdRoot.Child(utxo.keyIndex)
+		extendedKey, err := m.hdRoot.DeriveNonStandard(utxo.keyIndex)
 		if err != nil {
 			return nil, err
 		}

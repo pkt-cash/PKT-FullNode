@@ -182,6 +182,7 @@ var helpDescsEnUS = map[string]string{
 	"importprivkey-privkey":   "The WIF-encoded private key",
 	"importprivkey-label":     "Unused (must be unset or 'imported')",
 	"importprivkey-rescan":    "Rescan the blockchain (since the genesis block) for outputs controlled by the imported key",
+	"importprivkey-legacy":    "If true then import as a legacy address, otherwise segwit",
 
 	// ListLockUnspentCmd help.
 	"listlockunspent--synopsis": "Returns a JSON array of outpoints marked as locked (with lockunspent) for this wallet session.",

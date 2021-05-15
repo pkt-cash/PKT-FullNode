@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
@@ -23,7 +24,7 @@ var (
 const (
 	// DefaultRebroadcastInterval is the default period that we'll wait
 	// between blocks to attempt another rebroadcast.
-	DefaultRebroadcastInterval = time.Minute
+	DefaultRebroadcastInterval = 10 * time.Second
 )
 
 // broadcastReq is an internal message the Broadcaster will use to process

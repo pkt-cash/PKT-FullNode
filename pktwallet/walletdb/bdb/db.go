@@ -81,7 +81,7 @@ func (tx *transaction) ReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
 }
 
 func (tx *transaction) CreateTopLevelBucket(key []byte) (walletdb.ReadWriteBucket, er.R) {
-	boltBucket, err := tx.boltTx.CreateBucket(key)
+	boltBucket, err := tx.boltTx.CreateBucketIfNotExists(key)
 	if err != nil {
 		return nil, convertErr(err)
 	}
@@ -265,6 +265,22 @@ func (b *bucket) Tx() walletdb.ReadWriteTx {
 	}
 }
 
+// NextSequence returns an autoincrementing integer for the bucket.
+func (b *bucket) NextSequence() (uint64, er.R) {
+	i, e := (*bbolt.Bucket)(b).NextSequence()
+	return i, er.E(e)
+}
+
+// SetSequence updates the sequence number for the bucket.
+func (b *bucket) SetSequence(v uint64) er.R {
+	return er.E((*bbolt.Bucket)(b).SetSequence(v))
+}
+
+// Sequence returns the current integer for the bucket without incrementing it.
+func (b *bucket) Sequence() uint64 {
+	return (*bbolt.Bucket)(b).Sequence()
+}
+
 // cursor represents a cursor over key/value pairs and nested buckets of a
 // bucket.
 //
@@ -361,6 +377,18 @@ func (db *db) Close() er.R {
 	return convertErr((*bbolt.DB)(db).Close())
 }
 
+// Batch is similar to the package-level Update method, but it will attempt to
+// optismitcally combine the invocation of several transaction functions into a
+// single db write transaction.
+//
+// This function is part of the walletdb.Db interface implementation.
+func (db *db) Batch(f func(tx walletdb.ReadWriteTx) er.R) er.R {
+	return convertErr((*bbolt.DB)(db).Batch(func(btx *bbolt.Tx) error {
+		interfaceTx := transaction{btx}
+		return er.Native(f(&interfaceTx))
+	}))
+}
+
 // filesExists reports whether the named file or directory exists.
 func fileExists(name string) bool {
 	if _, err := os.Stat(name); err != nil {
@@ -373,7 +401,7 @@ func fileExists(name string) bool {
 
 // openDB opens the database at the provided path.  walletdb.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, create bool) (walletdb.DB, er.R) {
+func openDB(dbPath string, create, noFreeListSync bool) (walletdb.DB, er.R) {
 	if !create && !fileExists(dbPath) {
 		return nil, walletdb.ErrDbDoesNotExist.Default()
 	}

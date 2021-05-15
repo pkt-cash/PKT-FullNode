@@ -2,7 +2,6 @@ package txscript
 
 import (
 	"crypto/sha256"
-	"errors"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/txscript/parsescript"
@@ -55,7 +54,8 @@ const (
 var (
 	// ErrUnsupportedScriptType is an error returned when we attempt to
 	// parse/re-compute an output script into a PkScript struct.
-	ErrUnsupportedScriptType = errors.New("unsupported script type")
+	ErrUnsupportedScriptType = er.GenericErrorType.CodeWithDetail("ErrUnsupportedScriptType",
+		"unsupported script type")
 )
 
 // PkScript is a wrapper struct around a byte array, allowing it to be used
@@ -86,7 +86,7 @@ func ParsePkScript(pkScript []byte) (PkScript, er.R) {
 	}
 
 	if !isSupportedScriptType(scriptClass) {
-		return outputScript, er.E(ErrUnsupportedScriptType)
+		return outputScript, ErrUnsupportedScriptType.Default()
 	}
 
 	outputScript.class = scriptClass
@@ -168,7 +168,7 @@ func ComputePkScript(sigScript []byte, witness wire.TxWitness) (PkScript, er.R) 
 	case len(witness) > 0:
 		return computeWitnessPkScript(witness)
 	default:
-		return PkScript{}, er.E(ErrUnsupportedScriptType)
+		return PkScript{}, ErrUnsupportedScriptType.Default()
 	}
 }
 
@@ -179,7 +179,7 @@ func computeNonWitnessPkScript(sigScript []byte) (PkScript, er.R) {
 	// Since we only support P2PKH and P2SH scripts as the only non-witness
 	// script types, we should expect to see a push only script.
 	case !IsPushOnlyScript(sigScript):
-		return PkScript{}, er.E(ErrUnsupportedScriptType)
+		return PkScript{}, ErrUnsupportedScriptType.Default()
 
 	// If a signature script is provided with a length long enough to
 	// represent a P2PKH script, then we'll attempt to parse the compressed

@@ -167,7 +167,7 @@ func TestNewHashFromStr(t *testing.T) {
 		{
 			"01234567890123456789012345678901234567890123456789012345678912345",
 			Hash{},
-			er.E(ErrHashStrSize),
+			ErrHashStrSize.Default(),
 		},
 
 		// Hash string that is contains non-hex chars.

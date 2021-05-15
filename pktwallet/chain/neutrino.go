@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 
 	"github.com/pkt-cash/pktd/btcutil"
@@ -70,6 +71,14 @@ func (s *NeutrinoClient) GetBlock(hash *chainhash.Hash) (*wire.MsgBlock, er.R) {
 		return nil, err
 	}
 	return block.MsgBlock(), nil
+}
+
+// GetBlockHeight gets the height of a block by its hash. It serves as a
+// replacement for the use of GetBlockVerboseTxAsync for the wallet package
+// since we can't actually return a FutureGetBlockVerboseResult because the
+// underlying type is private to rpcclient.
+func (s *NeutrinoClient) GetBlockHeight(hash *chainhash.Hash) (int32, er.R) {
+	return s.CS.GetBlockHeight(hash)
 }
 
 // GetBestBlock replicates the RPC client's GetBestBlock command.

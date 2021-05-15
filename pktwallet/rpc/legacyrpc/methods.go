@@ -20,7 +20,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/neutrino/banman"
-	"github.com/pkt-cash/pktd/pktlog"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/txscript/params"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
 
@@ -347,7 +347,7 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 
 func getAddressBalances(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	cmd := icmd.(*btcjson.GetAddressBalancesCmd)
-	szb := cmd.ShowZeroBalance != nil && *cmd.ShowZeroBalance == true
+	szb := cmd.ShowZeroBalance != nil && *cmd.ShowZeroBalance
 	if bals, err := w.CalculateAddressBalances(int32(*cmd.MinConf), szb); err != nil {
 		return nil, err
 	} else {
@@ -599,29 +599,35 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	//
 	// Yes, Label is the account name.
 	if cmd.Label != nil && *cmd.Label != waddrmgr.ImportedAddrAccountName {
-		return nil, errNotImportedAccount()
+		return "", errNotImportedAccount()
 	}
 
 	wif, err := btcutil.DecodeWIF(cmd.PrivKey)
 	if err != nil {
-		return nil, btcjson.ErrRPCInvalidAddressOrKey.New("WIF decode failed", err)
+		return "", btcjson.ErrRPCInvalidAddressOrKey.New("WIF decode failed", err)
 	}
 	if !wif.IsForNet(w.ChainParams()) {
-		return nil, btcjson.ErrRPCInvalidAddressOrKey.New(
-			"Key is not intended for "+w.ChainParams().Name, nil)
+		// If the wif is for the wrong chain, lets attempt to import it anyway
+		var err er.R
+		wif, err = btcutil.NewWIF(wif.PrivKey, w.ChainParams(), wif.CompressPubKey)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	scope := waddrmgr.KeyScopeBIP0084
+	if *cmd.Legacy {
+		scope = waddrmgr.KeyScopeBIP0044
 	}
 
 	// Import the private key, handling any errors.
-	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+	addr, err := w.ImportPrivateKey(scope, wif, nil, *cmd.Rescan)
 	switch {
-	case waddrmgr.ErrDuplicateAddress.Is(err):
-		// Do not return duplicate key errors to the client.
-		return nil, nil
 	case waddrmgr.ErrLocked.Is(err):
-		return nil, btcjson.ErrRPCWalletUnlockNeeded.Default()
+		return "", btcjson.ErrRPCWalletUnlockNeeded.Default()
 	}
 
-	return nil, err
+	return addr, err
 }
 
 // getNewAddress handles a getnewaddress request by returning a new
@@ -1198,6 +1204,7 @@ func sendOutputs(
 		DryRun:         dryRun,
 		InputMinHeight: inputMinHeight,
 		MaxInputs:      maxInputs,
+		Label:          "",
 	}
 	if inputMinHeight > 0 {
 		// TODO(cjd): Ideally we would expose the comparator choice to the
@@ -1263,7 +1270,7 @@ func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
 	}
 
 	txHashStr := tx.Tx.TxHash().String()
-	log.Infof("Successfully sent transaction [%s]", pktlog.Txid(txHashStr))
+	log.Infof("Successfully sent transaction [%s]", log.Txid(txHashStr))
 	return txHashStr, nil
 }
 

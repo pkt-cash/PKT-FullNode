@@ -239,8 +239,6 @@ type GetNetworkInfoNetworks struct {
 	Name                      string `json:"name"`
 	Limited                   bool   `json:"limited"`
 	Reachable                 bool   `json:"reachable"`
-	Proxy                     string `json:"proxy"`
-	Proxyrandomizecredentials string `json:"proxy_randomize_credentials"`
 }
 
 type GetNetworkInfoResult struct {
@@ -480,7 +478,7 @@ type GetMiningInfoResult struct {
 	Generate           bool    `json:"generate"`
 	GenProcLimit       int32   `json:"genproclimit"`
 	HashesPerSec       int64   `json:"hashespersec"`
-	NetworkHashPS      int64   `json:"networkhashps"`
+	NetworkHashPS      float64 `json:"networkhashps"`
 	PooledTx           uint64  `json:"pooledtx"`
 	TestNet            bool    `json:"testnet"`
 }
@@ -492,7 +490,6 @@ type InfoChainResult struct {
 	Blocks          int32   `json:"blocks"`
 	TimeOffset      int64   `json:"timeoffset"`
 	Connections     int32   `json:"connections"`
-	Proxy           string  `json:"proxy"`
 	Difficulty      float64 `json:"difficulty"`
 	TestNet         bool    `json:"testnet"`
 	RelayFee        float64 `json:"relayfee"`

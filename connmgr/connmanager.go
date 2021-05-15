@@ -13,12 +13,14 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 )
 
 // maxFailedAttempts is the maximum number of successive failed connection
 // attempts after which network failure is assumed and new connections will
-// be delayed by the configured retry duration.
-const maxFailedAttempts = 10
+// be delayed by the configured retry duration. We use 15 to normalize with
+// the Satoshi code.
+const maxFailedAttempts = 15
 
 var (
 	//ErrDialNil is used to indicate that Dial cannot be nil in the configuration.
@@ -27,8 +29,9 @@ var (
 	// maxRetryDuration is the max duration of time retrying of a persistent
 	// connection is allowed to grow to.  This is necessary since the retry
 	// logic uses a backoff mechanism which increases the interval base times
-	// the number of retries that have been done.
-	maxRetryDuration = time.Minute * 5
+	// the number of retries that have been done. Changing from 5 minutes to
+	// 10 minutes to normalize with current BTC core.
+	maxRetryDuration = 10 * time.Minute
 
 	// defaultRetryDuration is the default duration of time for retrying
 	// persistent connections.
@@ -36,7 +39,7 @@ var (
 
 	// defaultTargetOutbound is the default number of outbound connections to
 	// maintain.
-	defaultTargetOutbound = uint32(8)
+	defaultTargetOutbound = uint32(14)
 )
 
 // ConnState represents the state of the requested connection.
@@ -272,7 +275,6 @@ out:
 				conns[connReq.id] = connReq
 				log.Debugf("Connected to %v", connReq)
 				connReq.retryCount = 0
-				cm.failedAttempts = 0
 
 				delete(pending, connReq.id)
 
@@ -361,6 +363,13 @@ out:
 
 	cm.wg.Done()
 	log.Trace("Connection handler done")
+}
+
+// NotifyConnectionRequestActuallyCompleted tells the
+// connection manager the peer was actually added and
+// has already been marked as being good.
+func (cm *ConnManager) NotifyConnectionRequestActuallyCompleted() {
+	cm.failedAttempts = 0
 }
 
 // NewConnReq creates a new connection request and connects to the

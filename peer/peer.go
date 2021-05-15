@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/wire/protocol"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/decred/go-socks/socks"
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
@@ -36,15 +36,35 @@ const (
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
 	//
-	// The BTCD default is 10 - this controls the wait before nodes send
-	// more txns at once and reduces the time new txns have to wait before
-	// before being broadcast - with the previous settings, the maximum a
-	// single node could send would be about ~28MB worth of txns every ten
-	// minutes - XXX(trn) I'm investigating the effects of removing the
-	// trickling concept all-together and attempting to broadcast all txns
-	// immediately, but it would require some extra peer selection logic,
-	// rather than just rebroadcasting txns to connected peers at random.
-	DefaultTrickleInterval = 5 * time.Second
+	//
+	// XXX(trn): The BTCD default is 10 - this controls the wait before
+	// nodes send more txns at once and reduces the time new txns/inv msgs
+	// and forces a before they can be broadcast. The previous settings were
+	// limited the maximum a single node could send to about ~28MB worth of
+	// txns every ten minutes.
+	//
+	// XXX(trn) I'm investigating the effects of removing the trickling
+	// concept all-together and broadcasting or rebroadcasting all txns
+	// almost immediately, but it would require some extra peer selection
+	// logic, rather than just rebroadcasting txns to connected peers at
+	// random, as well as profiling to ensure proper performance at runtime.
+	//
+	// Gcash is currently using a *1ms* TrickleInterval, Bitcoin Core has
+	// removed trickling completely: at first they were using random delays
+	// between 1ms and 10s, but are now are using per-node/message Poisson
+	// delays. The entire point of the trickling concept is to slow down
+	// P2P message propagation. This was apparently done for privacy, as an
+	// attempt to reduce the chances of a non-directly connected node being
+	// able to fingerprint the exact origin of another nodes transactions.
+	// This was later proven mostly ineffective, at least for privacy, see:
+	// https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6292573/ - While we are
+	// not yet reducing this to millisecond timeframes or eliminating it,
+	// testing with the 2s interval in simulation (10,000 nodes) as well as
+	// on the pkt mainnet has been successful, without any negative effect.
+	//
+	// XXX(trn): TODO: Implement and test using per-node and per message
+	// poisson-distributed delays, as used by Bitcoin Core, post-0.13.0.
+	DefaultTrickleInterval = 2 * time.Second
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
@@ -58,16 +78,21 @@ const (
 	maxInvTrickleSize = 1000
 
 	// maxKnownInventory is the maximum number of items to keep in the known
-	// inventory cache.
-	maxKnownInventory = 1000
+	// inventory cache.  This has been slightly increased over BTCD defaults
+	// to closer match Bitcoin Core behavior, after reducing trickle timing.
+	maxKnownInventory = 1280
 
 	// pingInterval is the interval of time to wait in between sending ping
 	// messages.
 	pingInterval = 1 * time.Minute
 
 	// negotiateTimeout is the duration of inactivity before we timeout a
-	// peer that hasn't completed the initial version negotiation.
-	negotiateTimeout = 30 * time.Second
+	// peer that hasn't completed the initial version negotiation. The BTCD
+	// default timeout of 30 for negotiations has been decreased to 10 seconds
+	// to be closer to the behavior of the Satoshi Bitcoin implementation,
+	// which is currently is 5000ms, but is tunable, and often incresed by
+	// end-users to improve successful peer negotiations.
+	negotiateTimeout = 10 * time.Second
 
 	// idleTimeout is the duration of inactivity before we time out a peer.
 	idleTimeout = 5 * time.Minute
@@ -123,9 +148,6 @@ type MessageListeners struct {
 
 	// OnPong is invoked when a peer receives a pong bitcoin message.
 	OnPong func(p *Peer, msg *wire.MsgPong)
-
-	// OnAlert is invoked when a peer receives an alert bitcoin message.
-	OnAlert func(p *Peer, msg *wire.MsgAlert)
 
 	// OnMemPool is invoked when a peer receives a mempool bitcoin message.
 	OnMemPool func(p *Peer, msg *wire.MsgMemPool)
@@ -242,11 +264,6 @@ type Config struct {
 	// nil in  which case the host will be parsed as an IP address.
 	HostToNetAddress HostToNetAddrFunc `json:"-"`
 
-	// Proxy indicates a proxy is being used for connections.  The only
-	// effect this has is to prevent leaking the tor proxy address, so it
-	// only needs to specified if using a tor proxy.
-	Proxy string
-
 	// UserAgentName specifies the user agent name to advertise.  It is
 	// highly recommended to specify this value.
 	UserAgentName string
@@ -287,6 +304,11 @@ type Config struct {
 	// TrickleInterval is the duration of the ticker which trickles down the
 	// inventory to a peer.
 	TrickleInterval time.Duration
+
+	// allowSelfConns is only used to allow the tests to bypass the self
+	// connection detecting and disconnect logic since they intentionally
+	// do so for testing purposes.
+	allowSelfConns bool
 }
 
 // minUint32 is a helper function to return the minimum of two uint32s.
@@ -302,7 +324,7 @@ func minUint32(a, b uint32) uint32 {
 // net.Addr interface and create a bitcoin NetAddress structure using that
 // information.
 func newNetAddress(addr net.Addr, services protocol.ServiceFlag) (*wire.NetAddress, er.R) {
-	// addr will be a net.TCPAddr when not using a proxy.
+	// addr should be a net.TCPAddr
 	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
 		ip := tcpAddr.IP
 		port := uint16(tcpAddr.Port)
@@ -310,18 +332,7 @@ func newNetAddress(addr net.Addr, services protocol.ServiceFlag) (*wire.NetAddre
 		return na, nil
 	}
 
-	// addr will be a socks.ProxiedAddr when using a proxy.
-	if proxiedAddr, ok := addr.(*socks.ProxiedAddr); ok {
-		ip := net.ParseIP(proxiedAddr.Host)
-		if ip == nil {
-			ip = net.ParseIP("0.0.0.0")
-		}
-		port := uint16(proxiedAddr.Port)
-		na := wire.NewNetAddressIPPort(ip, port, services)
-		return na, nil
-	}
-
-	// For the most part, addr should be one of the two above cases, but
+	// For the most part, addr should be one the case above, however,
 	// to be safe, fall back to trying to parse the information from the
 	// address string as a last resort.
 	host, portStr, err := net.SplitHostPort(addr.String())
@@ -1099,7 +1110,7 @@ func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte,
 
 	// Use closures to log expensive operations so they are only run when
 	// the logging level requires it.
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		// Debug summary of message.
 		summary := messageSummary(msg)
 		if len(summary) > 0 {
@@ -1108,10 +1119,10 @@ func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte,
 		return fmt.Sprintf("Received %v%s from %s",
 			msg.Command(), summary, p)
 	}))
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		return spew.Sdump(msg)
 	}))
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		return spew.Sdump(buf)
 	}))
 
@@ -1127,7 +1138,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 
 	// Use closures to log expensive operations so they are only run when
 	// the logging level requires it.
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		// Debug summary of message.
 		summary := messageSummary(msg)
 		if len(summary) > 0 {
@@ -1136,10 +1147,10 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) er.R {
 		return fmt.Sprintf("Sending %v%s to %s", msg.Command(),
 			summary, p)
 	}))
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		return spew.Sdump(msg)
 	}))
-	log.Tracef("%v", newLogClosure(func() string {
+	log.Tracef("%v", log.C(func() string {
 		var buf bytes.Buffer
 		_, err := wire.WriteMessageWithEncodingN(&buf, msg, p.ProtocolVersion(),
 			p.cfg.ChainParams.Net, enc)
@@ -1467,9 +1478,7 @@ out:
 			// No read lock is necessary because verAckReceived is not written
 			// to in any other goroutine.
 			if p.verAckReceived {
-				log.Infof("Already received 'verack' from peer %v -- "+
-					"disconnecting", p)
-				break out
+				log.Infof("Received extraneous 'verack' message from peer %v", p)
 			}
 			p.flagsMtx.Lock()
 			p.verAckReceived = true
@@ -1498,11 +1507,6 @@ out:
 			p.handlePongMsg(msg)
 			if p.cfg.Listeners.OnPong != nil {
 				p.cfg.Listeners.OnPong(p, msg)
-			}
-
-		case *wire.MsgAlert:
-			if p.cfg.Listeners.OnAlert != nil {
-				p.cfg.Listeners.OnAlert(p, msg)
 			}
 
 		case *wire.MsgMemPool:
@@ -1689,7 +1693,7 @@ out:
 			// No handshake?  They'll find out soon enough.
 			if p.VersionKnown() {
 				// If this is a new block, then we'll blast it
-				// out immediately, sipping the inv trickle
+				// out immediately, skipping the inv trickle
 				// queue.
 				if iv.Type == wire.InvTypeBlock ||
 					iv.Type == wire.InvTypeWitnessBlock {
@@ -1717,6 +1721,9 @@ out:
 			invMsg := wire.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
 				iv := invSendQueue.Remove(e).(*wire.InvVect)
+				if iv == nil {
+					panic("queueHandler: iv == nil")
+				}
 
 				// Don't send inventory that became known after
 				// the initial check.
@@ -1750,6 +1757,9 @@ out:
 	// waiting for us.
 	for e := pendingMsgs.Front(); e != nil; e = pendingMsgs.Front() {
 		val := pendingMsgs.Remove(e)
+		if val == nil {
+			panic("queueHandler: val == nil")
+		}
 		msg := val.(outMsg)
 		if msg.doneChan != nil {
 			msg.doneChan <- struct{}{}
@@ -2073,19 +2083,6 @@ func (p *Peer) localVersionMsg() (*wire.MsgVersion, er.R) {
 	}
 
 	theirNA := p.na
-
-	// If we are behind a proxy and the connection comes from the proxy then
-	// we return an unroutable address as their address. This is to prevent
-	// leaking the tor proxy address.
-	if p.cfg.Proxy != "" {
-		proxyaddress, _, err := net.SplitHostPort(p.cfg.Proxy)
-		// invalid proxy means poorly configured, be on the safe side.
-		if err != nil || p.na.IP.String() == proxyaddress {
-			theirNA = wire.NewNetAddressIPPort(net.IP([]byte{0, 0, 0, 0}), 0,
-				theirNA.Services)
-		}
-	}
-
 	// Create a wire.NetAddress with only the services set to use as the
 	// "addrme" in the version message.
 	//

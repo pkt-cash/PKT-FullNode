@@ -17,6 +17,15 @@ import (
 // the chain.
 const isCurrentDelta = 2 * time.Hour
 
+// BackEnds returns a list of the available back ends.
+// TODO: Refactor each into a driver and use dynamic registration.
+func BackEnds() []string {
+	return []string{
+		"btcd",
+		"neutrino",
+	}
+}
+
 // Interface allows more than one backing blockchain source, such as a
 // pktd RPC chain server, or an SPV library, as long as we write a driver for
 // it.

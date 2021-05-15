@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcutil"
@@ -392,7 +393,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	}
 
 	// Create a progress logger for the indexing process below.
-	progressLogger := newBlockProgressLogger("Indexed", log)
+	progressLogger := newBlockProgressLogger("Indexed")
 
 	// At this point, one or more indexes are behind the current best chain
 	// tip and need to be caught up, so log the details and loop through

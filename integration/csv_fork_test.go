@@ -15,12 +15,17 @@ import (
 	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/txscript/opcode"
+	"github.com/pkt-cash/pktd/txscript/params"
+	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
+	"github.com/pkt-cash/pktd/wire/constants"
 
 	"github.com/pkt-cash/pktd/blockchain"
 	"github.com/pkt-cash/pktd/btcec"
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/integration/rpctest"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -108,7 +113,6 @@ func makeTestOutput(r *rpctest.Harness, t *testing.T,
 //    - Transactions with final lock-times from the PoV of MTP should be
 //      accepted to the mempool and mined in future block.
 func TestBIP0113Activation(t *testing.T) {
-	t.Parallel()
 
 	pktdCfg := []string{"--rejectnonstd"}
 	r, err := rpctest.New(&chaincfg.SimNetParams, nil, pktdCfg)
@@ -121,7 +125,7 @@ func TestBIP0113Activation(t *testing.T) {
 	defer r.TearDown()
 
 	// Create a fresh output for usage within the test below.
-	const outputValue = btcutil.SatoshiPerBitcoin
+	const outputValue = globalcfg.SatoshiPerBitcoin()
 	outputKey, testOutput, testPkScript, err := makeTestOutput(r, t,
 		outputValue)
 	if err != nil {
@@ -160,7 +164,7 @@ func TestBIP0113Activation(t *testing.T) {
 	tx.LockTime = uint32(chainInfo.MedianTime) + 1
 
 	sigScript, err := txscript.SignatureScript(tx, 0, testPkScript,
-		txscript.SigHashAll, outputKey, true)
+		params.SigHashAll, outputKey, true)
 	if err != nil {
 		t.Fatalf("unable to generate sig: %v", err)
 	}
@@ -247,7 +251,7 @@ func TestBIP0113Activation(t *testing.T) {
 		})
 		tx.LockTime = uint32(medianTimePast + timeLockDelta)
 		sigScript, err = txscript.SignatureScript(tx, 0, testPkScript,
-			txscript.SigHashAll, outputKey, true)
+			params.SigHashAll, outputKey, true)
 		if err != nil {
 			t.Fatalf("unable to generate sig: %v", err)
 		}
@@ -292,10 +296,10 @@ func createCSVOutput(r *rpctest.Harness, t *testing.T,
 		uint32(timeLock))
 
 	// Our CSV script is simply: <sequenceLock> OP_CSV OP_DROP
-	b := txscript.NewScriptBuilder().
+	b := scriptbuilder.NewScriptBuilder().
 		AddInt64(int64(sequenceLock)).
-		AddOp(txscript.OP_CHECKSEQUENCEVERIFY).
-		AddOp(txscript.OP_DROP)
+		AddOp(opcode.OP_CHECKSEQUENCEVERIFY).
+		AddOp(opcode.OP_DROP)
 	csvScript, err := b.Script()
 	if err != nil {
 		return nil, nil, nil, err
@@ -350,8 +354,8 @@ func spendCSVOutput(redeemScript []byte, csvUTXO *wire.OutPoint,
 	})
 	tx.AddTxOut(targetOutput)
 
-	b := txscript.NewScriptBuilder().
-		AddOp(txscript.OP_TRUE).
+	b := scriptbuilder.NewScriptBuilder().
+		AddOp(opcode.OP_TRUE).
 		AddData(redeemScript)
 
 	sigScript, err := b.Script()
@@ -400,7 +404,6 @@ func assertTxInBlock(r *rpctest.Harness, t *testing.T, blockHash *chainhash.Hash
 //    - See the cases exercised within the table driven tests towards the end
 //    of this test.
 func TestBIP0068AndBIP0112Activation(t *testing.T) {
-	t.Parallel()
 
 	// We'd like the test proper evaluation and validation of the BIP 68
 	// (sequence locks) and BIP 112 rule-sets which add input-age based
@@ -428,7 +431,7 @@ func TestBIP0068AndBIP0112Activation(t *testing.T) {
 	}
 
 	const (
-		outputAmt         = btcutil.SatoshiPerBitcoin
+		outputAmt         = globalcfg.SatoshiPerBitcoin()
 		relativeBlockLock = 10
 	)
 
@@ -601,7 +604,7 @@ func TestBIP0068AndBIP0112Activation(t *testing.T) {
 		// bit it set. The transaction should be rejected as a result.
 		{
 			tx: makeTxCase(
-				blockchain.LockTimeToSequence(false, 1)|wire.SequenceLockTimeDisabled,
+				blockchain.LockTimeToSequence(false, 1)|constants.SequenceLockTimeDisabled,
 				2,
 			),
 			accept: false,

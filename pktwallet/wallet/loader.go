@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/pktd/pktlog/log"
 
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/pktwallet/internal/prompt"
@@ -61,8 +63,9 @@ type Loader struct {
 // recovery window is non-zero, the wallet will attempt to recovery addresses
 // starting from the last SyncedTo height.
 func NewLoader(chainParams *chaincfg.Params, dbDirPath, walletName string,
-	recoveryWindow uint32) *Loader {
+	noFreelistSync bool, recoveryWindow uint32) *Loader {
 
+	// TODO(cjd): noFreeListSync ?
 	return &Loader{
 		chainParams:    chainParams,
 		walletName:     walletName,
@@ -115,7 +118,7 @@ func WalletDbPath(netDir, walletName string) string {
 // passphrases.  The seed is optional.  If non-nil, addresses are derived from
 // this seed.  If nil, a secure random seed is generated.
 func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase []byte,
-	seedInput []byte, seed *seedwords.Seed) (*Wallet, er.R) {
+	seedInput []byte, seedBirthday time.Time, seed *seedwords.Seed) (*Wallet, er.R) {
 
 	defer l.mu.Unlock()
 	l.mu.Lock()
@@ -138,13 +141,13 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase []byte,
 	if err != nil {
 		return nil, err
 	}
-	db, err := walletdb.Create("bdb", dbPath)
+	db, err := walletdb.Create("bdb", dbPath, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize the newly created database for the wallet before opening.
-	err = Create(db, pubPassphrase, privPassphrase, seedInput, seed, l.chainParams)
+	err = Create(db, pubPassphrase, privPassphrase, seedInput, seedBirthday, seed, l.chainParams)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +186,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	// Open the database using the boltdb backend.
 	dbPath := WalletDbPath(l.dbDirPath, l.walletName)
-	db, err := walletdb.Open("bdb", dbPath)
+	db, err := walletdb.Open("bdb", dbPath, false)
 	if err != nil {
 		log.Errorf("Failed to open database: %v", err)
 		return nil, err
@@ -216,6 +219,13 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	l.onLoaded(w, db)
 	return w, nil
+}
+
+// WalletExists returns whether a file exists at the loader's database path.
+// This may return an error for unexpected I/O failures.
+func (l *Loader) WalletExists() (bool, er.R) {
+	dbPath := filepath.Join(l.dbDirPath, l.walletName)
+	return fileExists(dbPath)
 }
 
 // LoadedWallet returns the loaded wallet, if any, and a bool for whether the

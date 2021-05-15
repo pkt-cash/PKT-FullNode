@@ -22,7 +22,7 @@ type params struct {
 }
 
 // mainNetParams contains parameters specific to the main network
-// (wire.MainNet).  NOTE: The RPC port is intentionally different than the
+// (protocol.MainNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation because pktd does not handle wallet requests.  The
 // separate wallet process listens on the well-known port and forwards requests
 // it does not handle on to pktd.  This approach allows the wallet process
@@ -42,7 +42,7 @@ var regressionNetParams = params{
 }
 
 // testNet3Params contains parameters specific to the test network (version 3)
-// (wire.TestNet3).  NOTE: The RPC port is intentionally different than the
+// (protocol.TestNet3).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
 var testNet3Params = params{
 	Params:  &chaincfg.TestNet3Params,
@@ -75,7 +75,7 @@ var simNetParams = params{
 // time of writing, pktd currently places blocks for testnet version 3 in the
 // data and log directory "testnet", which does not match the Name field of the
 // chaincfg parameters.  This function can be used to override this directory
-// name as "testnet" when the passed active network matches wire.TestNet3.
+// name as "testnet" when the passed active network matches protocol.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
 // "testnet3" is planned for the future, at which point this function can be
