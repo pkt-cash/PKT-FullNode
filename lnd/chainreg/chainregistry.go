@@ -289,7 +289,7 @@ func NewChainControl(cfg *Config) (*ChainControl, er.R) {
 
 	walletConfig := &btcwallet.Config{
 		PrivatePass:    cfg.PrivateWalletPw,
-		PublicPass:     cfg.PublicWalletPw,
+		PublicPass:     nil,
 		Birthday:       cfg.Birthday,
 		RecoveryWindow: cfg.RecoveryWindow,
 		DataDir:        homeChainConfig.ChainDir,

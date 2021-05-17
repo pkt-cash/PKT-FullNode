@@ -251,18 +251,6 @@ func createWallet(cfg *config) er.R {
 		})
 	}
 
-	// Ascertain the public passphrase.  This will either be a value
-	// specified by the user or the default hard-coded public passphrase if
-	// the user does not want the additional public data encryption.
-	if tty {
-		pub, err := prompt.PublicPass(reader, privPass,
-			[]byte(wallet.InsecurePubPassphrase), []byte(cfg.WalletPass))
-		if err != nil {
-			return err
-		}
-		pubPass = pub
-	}
-
 	// Ascertain the wallet generation seed.  This will either be an
 	// automatically generated value the user has already confirmed or a
 	// value the user has entered which has already been validated.
