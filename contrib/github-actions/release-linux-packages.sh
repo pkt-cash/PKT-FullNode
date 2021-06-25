@@ -17,7 +17,7 @@ function publish() {
   checksum="$(sha256sum "${binary}" | cut -d ' ' -f 1)"
 
   local base_url
-  base_url='https://github.com/thierrymarianne/contrib-pktd'
+  base_url='https://api.github.com/repos/'"${GITHUB_REPOSITORY}"
 
   local upload_url
   upload_url="$(curl \
@@ -26,6 +26,7 @@ function publish() {
     "${base_url}"/releases 2>> /dev/null | \
     jq -r '.[] | .upload_url' | \
     head -n1)"
+
   upload_url=${upload_url/\{?name,label\}/}
 
   local release_name

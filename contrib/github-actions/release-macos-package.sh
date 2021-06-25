@@ -12,12 +12,12 @@ function publish() {
       echo 'Invalid binary ('"${binary}"')'
       return 1
   fi
-  
+
   local checksum
   checksum=$(shasum -a256 "${binary}" | cut -d ' ' -f 1)
 
   local base_url
-  base_url='https://github.com/thierrymarianne/contrib-pktd'
+  base_url='https://api.github.com/repos/'"${GITHUB_REPOSITORY}"
 
   local upload_url
   upload_url="$(curl \
