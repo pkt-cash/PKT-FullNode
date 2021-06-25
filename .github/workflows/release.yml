@@ -30,7 +30,7 @@ jobs:
           # * Build cache (Linux)
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -92,7 +92,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/Library/Caches/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-
           restore-keys: |
             ${{ runner.os }}-go-
 
