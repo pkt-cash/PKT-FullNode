@@ -47,7 +47,7 @@ jobs:
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-linux-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-linux-packages.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
