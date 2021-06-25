@@ -65,6 +65,7 @@ jobs:
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-linux-packages.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
 
   macos:
     needs: release
@@ -111,3 +112,4 @@ jobs:
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-macos-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}

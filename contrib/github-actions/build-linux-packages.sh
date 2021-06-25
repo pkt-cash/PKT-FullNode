@@ -10,7 +10,7 @@ function build() {
   local VERSION
   VERSION=$(echo "${RELEASE_NAME}" | sed -E 's/.+v//')
 
-  mv -v "${GITHUB_WORKSPACE}"'/pktd-linux-'"${VERSION}"'_amd64.deb' \
+  mv -v "${GITHUB_WORKSPACE}"'/pktd-linux_'"${VERSION}"'_amd64.deb' \
     "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-linux-amd64.deb'
 
   cd "${GITHUB_WORKSPACE}" || exit

@@ -4,8 +4,17 @@ function publish() {
   local binary
   binary="${1}"
 
+  local extension
+  extension="${2}"
+
+  if [ ! -e "${binary}" ];
+  then
+      echo 'Invalid binary ('"${binary}"')'
+      return 1
+  fi
+  
   local checksum
-  checksum=$(shasum -a256 ${binary} | cut -d ' ' -f 1)
+  checksum=$(shasum -a256 "${binary}" | cut -d ' ' -f 1)
 
   local base_url
   base_url='https://github.com/thierrymarianne/contrib-pktd'
@@ -32,14 +41,14 @@ function publish() {
     --data-binary @${binary} \
     -H 'Content-Type: application/octet-stream' \
     -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    "${upload_url}?name=${release_name}.pkg"
+    "${upload_url}?name=${release_name}${extension}"
 
   curl \
     -X POST \
     --data "$checksum" \
     -H 'Content-Type: text/plain' \
     -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    "${upload_url}?name=${release_name}.sha256sum"
+    "${upload_url}?name=${release_name}${extension}.sha256sum"
 }
 
-publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-mac.pkg'
+publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-mac.pkg' '.pkg'

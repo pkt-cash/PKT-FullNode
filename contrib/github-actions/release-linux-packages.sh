@@ -7,8 +7,14 @@ function publish() {
   local extension
   extension="${2}"
 
+  if [ ! -e "${binary}" ];
+  then
+      echo 'Invalid binary ('"${binary}"')'
+      return 1
+  fi
+
   local checksum
-  checksum=$(sha256sum ${binary} | cut -d ' ' -f 1)
+  checksum="$(sha256sum "${binary}" | cut -d ' ' -f 1)"
 
   local base_url
   base_url='https://github.com/thierrymarianne/contrib-pktd'
