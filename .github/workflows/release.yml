@@ -47,18 +47,18 @@ jobs:
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source ${{ env.GITHUB_WORKSPACE }/contrib/github-actions/build-linux-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-linux-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
       - uses: actions/upload-artifact@main
         with:
           path: |
-            ${{ env.GITHUB_WORKSPACE }/pktd-linux-0.0.0_custom-1.x86_64.rpm
-            ${{ env.GITHUB_WORKSPACE }/pktd-linux_0.0.0-custom_amd64.deb
+            ${{ github.workspace }}/pktd-linux-0.0.0_custom-1.x86_64.rpm
+            ${{ github.workspace }}/pktd-linux_0.0.0-custom_amd64.deb
 
       - name: Publish release
-        run: /bin/bash -c "source ${{ env.GITHUB_WORKSPACE }/contrib/github-actions/release-linux-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-linux-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -90,16 +90,16 @@ jobs:
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source ${{ env.GITHUB_WORKSPACE }/contrib/github-actions/build-macos-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-macos-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
       - uses: actions/upload-artifact@main
         with:
           path: |
-            ${{ env.GITHUB_WORKSPACE }/pktd-mac-0.0.0-custom.pkg
+            ${{ github.workspace }}/pktd-mac-0.0.0-custom.pkg
 
       - name: Publish release
-        run: /bin/bash -c "source ${{ env.GITHUB_WORKSPACE }/contrib/github-actions/release-macos-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-macos-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
