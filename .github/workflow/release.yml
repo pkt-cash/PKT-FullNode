@@ -28,7 +28,6 @@ jobs:
           # In order:
           # * Module download cache
           # * Build cache (Linux)
-          # * Build cache (Mac)
             ~/go/pkg/mod
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
