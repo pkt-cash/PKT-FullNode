@@ -51,3 +51,5 @@ _testmain.go
 /goleveldb/gocov_report_goleveldb.json
 /cov/
 
+*.rpm
+*.deb
