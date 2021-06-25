@@ -58,7 +58,7 @@ jobs:
             ${{ github.workspace }}/pktd-linux_0.0.0-custom_amd64.deb
 
       - name: Publish release
-        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-linux-package.sh"
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-linux-packages.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
