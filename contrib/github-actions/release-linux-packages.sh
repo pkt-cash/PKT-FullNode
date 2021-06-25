@@ -45,5 +45,5 @@ function publish() {
     "${upload_url}?name=${release_name}${extension}.sha256sum"
 }
 
-publish '/home/runner/work/thierrymarianne/contrib-pktd/pktd-linux-0.0.0_custom-1.x86_64.rpm' '.rpm'
-publish '/home/runner/work/thierrymarianne/contrib-pktd/pktd-linux_0.0.0-custom_amd64.deb' '.deb'
+publish "${GITHUB_WORKSPACE}"'/pktd-linux-0.0.0_custom-1.x86_64.rpm' '.rpm'
+publish "${GITHUB_WORKSPACE}"'/pktd-linux_0.0.0-custom_amd64.deb' '.deb'
