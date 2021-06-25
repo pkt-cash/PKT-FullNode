@@ -70,7 +70,7 @@ jobs:
     steps:
 
       - name: Install packages
-        run: brew install jq bash curl brew-gem
+        run: brew install jq bash curl brew-gem sha256sum
 
       - name: Set up Ruby 2.6
         uses: ruby/setup-ruby@v1
