@@ -10,16 +10,22 @@ jobs:
     steps:
 
       - name: Install packages
-        run: sudo apt-get install rpm jq bash curl gemq
+        run: sudo apt-get install rpm jq bash curl rubygems
+
+      - name: Set up Ruby 2.6
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
 
       - uses: actions/checkout@v2
 
       - name: Set env
         run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.15.3'
 
       - run: go version
 
@@ -55,24 +61,27 @@ jobs:
     steps:
 
       - name: Install packages
-        run: brew install jq bash curl
-
-      - uses: actions/checkout@v2
-
-      - name: Set env
-        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        run: brew install jq bash curl brew-gem
 
       - name: Set up Ruby 2.6
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.6
 
-      - uses: actions/setup-go@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
         with:
-          go-version: '1.15.3'
+          go-version: 1.16.x
+
+      - uses: actions/checkout@v2
+
+      - name: Set env
+        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Install fpm
+        run: gem install --no-document fpm
 
       - run: go version
-
 
       - name: Create a release
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -80,9 +89,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: false
           automatic_release_tag: ${{ env.RELEASE_NAME }}
-
-      - name: Install fpm
-        run: gem install --no-document fpm
 
       - name: Build binaries
         run: /bin/bash -c "source ./.github/workflow/build-macos-package.sh"
