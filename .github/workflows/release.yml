@@ -6,15 +6,17 @@ on:
 jobs:
   release:
 
-    - name: Set env
-      run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    steps:
 
-    - name: Create a release
-      uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        prerelease: false
-        automatic_release_tag: ${{ env.RELEASE_NAME }}
+      - name: Set env
+        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Create a release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: false
+          automatic_release_tag: ${{ env.RELEASE_NAME }}
 
   linux:
     needs: release
