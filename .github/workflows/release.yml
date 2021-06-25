@@ -58,8 +58,8 @@ jobs:
       - uses: actions/upload-artifact@main
         with:
           path: |
-            ${{ github.workspace }}/pktd-linux-0.0.0_custom-1.x86_64.rpm
-            ${{ github.workspace }}/pktd-linux_0.0.0-custom_amd64.deb
+            ${{ github.workspace }}/${{ env.RELEASE_NAME }}-linux-x86_64.rpm
+            ${{ github.workspace }}/${{ env.RELEASE_NAME }}-linux-amd64.deb
 
       - name: Publish release
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-linux-packages.sh"
@@ -106,7 +106,7 @@ jobs:
       - uses: actions/upload-artifact@main
         with:
           path: |
-            ${{ github.workspace }}/pktd-mac-0.0.0-custom.pkg
+            ${{ github.workspace }}/${{ env.RELEASE_NAME }}-mac.pkg
 
       - name: Publish release
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-macos-package.sh"
