@@ -47,18 +47,18 @@ jobs:
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/build-linux-package.sh"
+        run: /bin/bash -c "source /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/.github/workflows/build-linux-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
       - uses: actions/upload-artifact@main
         with:
           path: |
-            /home/runner/work/thierrymarianne/contrib-pktd/pktd-linux-0.0.0_custom-1.x86_64.rpm
-            /home/runner/work/thierrymarianne/contrib-pktd/pktd-linux_0.0.0-custom_amd64.deb
+            /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/pktd-linux-0.0.0_custom-1.x86_64.rpm
+            /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/pktd-linux_0.0.0-custom_amd64.deb
 
       - name: Publish release
-        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/release-linux-package.sh"
+        run: /bin/bash -c "source /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/.github/workflows/release-linux-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -90,16 +90,16 @@ jobs:
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/build-macos-package.sh"
+        run: /bin/bash -c "source /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/.github/workflows/build-macos-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
       - uses: actions/upload-artifact@main
         with:
           path: |
-            /home/runner/work/thierrymarianne/contrib-pktd/pktd-mac-0.0.0-custom.pkg
+            /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/pktd-mac-0.0.0-custom.pkg
 
       - name: Publish release
-        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/release-macos-package.sh"
+        run: /bin/bash -c "source /home/runner/work//home/runner/work/contrib-pktd/contrib-pktd/.github/workflows/release-macos-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
