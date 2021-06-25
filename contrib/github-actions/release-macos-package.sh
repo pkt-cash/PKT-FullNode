@@ -42,4 +42,4 @@ function publish() {
     "${upload_url}?name=${release_name}.sha256sum"
 }
 
-publish "${GITHUB_WORKSPACE}"'/pktd-mac-0.0.0-custom.pkg'
+publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'.pkg'
