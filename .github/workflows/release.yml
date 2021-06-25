@@ -4,7 +4,21 @@ on:
       - pktd-v*.*.*
 
 jobs:
+  release:
+
+    - name: Set env
+      run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+    - name: Create a release
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        prerelease: false
+        automatic_release_tag: ${{ env.RELEASE_NAME }}
+
   linux:
+    needs: release
+
     runs-on: ubuntu-latest
 
     steps:
@@ -22,25 +36,15 @@ jobs:
         with:
           go-version: 1.16.x
 
-      - uses: actions/checkout@v2
-
-      - name: Set env
-        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
       - run: go version
 
-      - name: Create a release
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
-          automatic_release_tag: ${{ env.RELEASE_NAME }}
+      - uses: actions/checkout@v2
 
       - name: Install fpm
         run: gem install --no-document fpm
 
       - name: Build binaries
-        run: /bin/bash -c "source ./.github/workflows/build-linux-package.sh"
+        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/build-linux-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
@@ -51,11 +55,13 @@ jobs:
             /home/runner/work/thierrymarianne/contrib-pktd/pktd-linux_0.0.0-custom_amd64.deb
 
       - name: Publish release
-        run: /bin/bash -c "source ./.github/workflows/release-linux-package.sh"
+        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/release-linux-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   macos:
+    needs: release
+
     runs-on: macos-latest
 
     steps:
@@ -73,25 +79,15 @@ jobs:
         with:
           go-version: 1.16.x
 
-      - uses: actions/checkout@v2
+      - run: go version
 
-      - name: Set env
-        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
 
       - name: Install fpm
         run: gem install --no-document fpm
 
-      - run: go version
-
-      - name: Create a release
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
-          automatic_release_tag: ${{ env.RELEASE_NAME }}
-
       - name: Build binaries
-        run: /bin/bash -c "source ./.github/workflows/build-macos-package.sh"
+        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/build-macos-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
 
@@ -101,6 +97,6 @@ jobs:
             /home/runner/work/thierrymarianne/contrib-pktd/pktd-mac-0.0.0-custom.pkg
 
       - name: Publish release
-        run: /bin/bash -c "source ./.github/workflows/release-macos-package.sh"
+        run: /bin/bash -c "source /home/runner/work/thierrymarianne/contrib-pktd/.github/workflows/release-macos-package.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
