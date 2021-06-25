@@ -53,6 +53,7 @@ jobs:
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-linux-packages.sh"
         env:
           PKT_FAIL_DIRTY: 1
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
 
       - uses: actions/upload-artifact@main
         with:
@@ -99,6 +100,7 @@ jobs:
         run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-macos-package.sh"
         env:
           PKT_FAIL_DIRTY: 1
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
 
       - uses: actions/upload-artifact@main
         with:
