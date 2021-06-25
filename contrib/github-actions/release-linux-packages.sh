@@ -45,5 +45,5 @@ function publish() {
     "${upload_url}?name=${release_name}${extension}.sha256sum"
 }
 
-publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-x86_64.rpm' '.rpm'
-publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-amd64.deb' '.deb'
+publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-linux-x86_64.rpm' '.rpm'
+publish "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-linux-amd64.deb' '.deb'

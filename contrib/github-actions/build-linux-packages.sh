@@ -7,18 +7,16 @@ function build() {
   cd "${GITHUB_WORKSPACE}" || exit
   bash -x ./contrib/deb/build.sh
 
-  local RELEASE_VERSION
-  RELEASE_VERSION="${RELEASE_NAME}"
+  local VERSION
+  VERSION=$(echo "${RELEASE_NAME}" | sed -E 's/.+v//')
 
-  RELEASE_NAME=$(echo "${RELEASE_NAME}" | sed -e 's/v//')
-
-  mv -v "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'_amd64.deb' \
-    "${GITHUB_WORKSPACE}"'/'"${RELEASE_VERSION}"'-amd64.deb'
+  mv -v "${GITHUB_WORKSPACE}"'/pktd-linux-'"${VERSION}"'_amd64.deb' \
+    "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-linux-amd64.deb'
 
   cd "${GITHUB_WORKSPACE}" || exit
   bash -x ./contrib/rpm/build.sh
 
-  mv -v "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-1.x86_64.rpm' \
-    "${GITHUB_WORKSPACE}"'/'"${RELEASE_VERSION}"'-x86_64.rpm'
+  mv -v "${GITHUB_WORKSPACE}"'/pktd-linux-'"${VERSION}"'-1.x86_64.rpm' \
+    "${GITHUB_WORKSPACE}"'/'"${RELEASE_NAME}"'-linux-x86_64.rpm'
 }
 build
