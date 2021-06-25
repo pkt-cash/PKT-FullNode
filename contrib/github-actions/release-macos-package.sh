@@ -5,7 +5,7 @@ function publish() {
   binary="${1}"
 
   local checksum
-  checksum=$(sha256sum ${binary} | cut -d ' ' -f 1)
+  checksum=$(shasum -a256 ${binary} | cut -d ' ' -f 1)
 
   local base_url
   base_url='https://github.com/thierrymarianne/contrib-pktd'
