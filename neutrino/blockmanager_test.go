@@ -56,7 +56,7 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	}
 
 	hdrStore, err := headerfs.NewBlockHeaderStore(
-		tempDir, db, &chaincfg.SimNetParams,
+		db, &chaincfg.SimNetParams,
 	)
 	if err != nil {
 		cleanUp()
@@ -65,8 +65,7 @@ func setupBlockManager() (*blockManager, headerfs.BlockHeaderStore,
 	}
 
 	cfStore, err := headerfs.NewFilterHeaderStore(
-		tempDir, db, headerfs.RegularFilter, &chaincfg.SimNetParams,
-		nil,
+		db, &chaincfg.SimNetParams, nil, hdrStore,
 	)
 	if err != nil {
 		cleanUp()
@@ -315,17 +314,26 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unable to set up ChainService: %v", err)
 		}
-		defer cleanUp()
+		tx, err := cfStore.Db.BeginReadWriteTx()
+		if err != nil {
+			t.Fatalf("unable to start tx: %v", err)
+		}
+		defer func() {
+			if tx != nil {
+				tx.Rollback()
+			}
+			cleanUp()
+		}()
 
 		// Keep track of the filter headers and block headers. Since
 		// the genesis headers are written automatically when the store
 		// is created, we query it to add to the slices.
-		genesisBlockHeader, _, err := hdrStore.ChainTip()
+		genesisBlockHeader, _, err := hdrStore.ChainTip1(tx)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		genesisFilterHeader, _, err := cfStore.ChainTip()
+		genesisFilterHeader, _, err := cfStore.ChainTip1(tx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -338,21 +346,24 @@ func TestBlockManagerInitialInterval(t *testing.T) {
 
 		// Write all block headers but the genesis, since it is already
 		// in the store.
-		if err = hdrStore.WriteHeaders(headers.blockHeaders[1:]...); err != nil {
+		if err = hdrStore.WriteHeaders(tx, headers.blockHeaders[1:]...); err != nil {
 			t.Fatalf("Error writing batch of headers: %s", err)
 		}
 
 		// We emulate the case where a few filter headers are already
 		// written to the store by writing 1/3 of the first interval.
 		if test.partialInterval {
-			err = cfStore.WriteHeaders(
-				headers.cfHeaders[1 : wire.CFCheckptInterval/3]...,
+			err = cfStore.WriteHeaders(tx,
+				headers.cfHeaders[1:wire.CFCheckptInterval/3]...,
 			)
 			if err != nil {
 				t.Fatalf("Error writing batch of headers: %s",
 					err)
 			}
 		}
+
+		tx.Commit()
+		tx = nil
 
 		// We set up a custom query batch method for this test, as we
 		// will use this to feed the blockmanager with our crafted
@@ -541,7 +552,16 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unable to set up ChainService: %v", err)
 		}
-		defer cleanUp()
+		tx, err := cfStore.Db.BeginReadWriteTx()
+		if err != nil {
+			t.Fatalf("unable start tx: %v", err)
+		}
+		defer func() {
+			if tx != nil {
+				tx.Rollback()
+			}
+			cleanUp()
+		}()
 
 		// Create a mock peer to prevent panics when attempting to ban
 		// a peer that served an invalid filter header.
@@ -556,12 +576,12 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 		// Keep track of the filter headers and block headers. Since
 		// the genesis headers are written automatically when the store
 		// is created, we query it to add to the slices.
-		genesisBlockHeader, _, err := hdrStore.ChainTip()
+		genesisBlockHeader, _, err := hdrStore.ChainTip1(tx)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		genesisFilterHeader, _, err := cfStore.ChainTip()
+		genesisFilterHeader, _, err := cfStore.ChainTip1(tx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -589,21 +609,23 @@ func TestBlockManagerInvalidInterval(t *testing.T) {
 
 		// Write all block headers but the genesis, since it is already
 		// in the store.
-		if err = hdrStore.WriteHeaders(headers.blockHeaders[1:]...); err != nil {
+		if err = hdrStore.WriteHeaders(tx, headers.blockHeaders[1:]...); err != nil {
 			t.Fatalf("Error writing batch of headers: %s", err)
 		}
 
 		// We emulate the case where a few filter headers are already
 		// written to the store by writing 1/3 of the first interval.
 		if test.partialInterval {
-			err = cfStore.WriteHeaders(
-				headers.cfHeaders[1 : wire.CFCheckptInterval/3]...,
+			err = cfStore.WriteHeaders(tx,
+				headers.cfHeaders[1:wire.CFCheckptInterval/3]...,
 			)
 			if err != nil {
 				t.Fatalf("Error writing batch of headers: %s",
 					err)
 			}
 		}
+
+		tx.Commit()
 
 		bm.server.queryBatch = func(msgs []wire.Message,
 			f func(*ServerPeer, wire.Message, wire.Message) bool,

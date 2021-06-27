@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/pktd/pktwallet/walletdb"
 	"github.com/pkt-cash/pktd/txscript/opcode"
 	"github.com/pkt-cash/pktd/wire/protocol"
 	"github.com/pkt-cash/pktd/wire/ruleerror"
@@ -276,7 +277,9 @@ func newBlockManager(s *ChainService,
 
 	// Verification of PacketCrypt or AuxPoW proofs
 	bm.likelyChainTip = int32(time.Since(time.Unix(1566252000, 0)).Minutes())
-	bm.updateLikelyChainTip(int32(height))
+	walletdb.View(s.RegFilterHeaders.Db, func(tx walletdb.ReadTx) er.R {
+		return bm.updateLikelyChainTip(tx, int32(height))
+	})
 
 	var rv [4]byte
 	if _, errr := rand.Read(rv[:]); errr != nil {
@@ -287,18 +290,19 @@ func newBlockManager(s *ChainService,
 	return &bm, nil
 }
 
-func (b *blockManager) updateLikelyChainTip(height int32) {
+func (b *blockManager) updateLikelyChainTip(tx walletdb.ReadTx, height int32) er.R {
 	cp := b.findPreviousHeaderCheckpoint(height)
 	if cp == nil {
-		return
+		return nil
 	}
-	fh, err := b.server.BlockHeaders.FetchHeaderByHeight(uint32(height))
+	fh, err := b.server.BlockHeaders.FetchHeaderByHeight1(tx, uint32(cp.Height))
 	if err != nil {
 		log.Infof("Unable to update probable chain tip [%s]", err)
-		return
+		return err
 	}
 	b.likelyChainTip = int32(time.Since(fh.Timestamp).Minutes()) + int32(height)
 	log.Debugf("Updated the probable chain tip to [%d]", b.likelyChainTip)
+	return nil
 }
 
 // Start begins the core block handler which processes block and inv messages.
@@ -830,8 +834,10 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 			"with new set")
 	}
 
-	_, _, err = b.writeCFHeadersMsg(pristineHeaders, store)
-	return err
+	return walletdb.Update(store.Db, func(tx walletdb.ReadWriteTx) er.R {
+		_, _, err := b.writeCFHeadersMsg1(pristineHeaders, store, tx)
+		return err
+	})
 }
 
 // getCheckpointedCFHeaders catches a filter header store up with the
@@ -1107,17 +1113,31 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 	)
 }
 
+func (b *blockManager) writeCFHeadersMsg(
+	msg *wire.MsgCFHeaders,
+	store *headerfs.FilterHeaderStore,
+) (*chainhash.Hash, uint32, er.R) {
+	var hash *chainhash.Hash
+	var height uint32
+	return hash, height, walletdb.Update(store.Db, func(tx walletdb.ReadWriteTx) er.R {
+		var err er.R
+		hash, height, err = b.writeCFHeadersMsg1(msg, store, tx)
+		return err
+	})
+}
+
 // writeCFHeadersMsg writes a cfheaders message to the specified store. It
 // assumes that everything is being written in order. The hints are required to
 // store the correct block heights for the filters. We also return final
 // constructed cfheader in this range as this lets callers populate the prev
 // filter header field in the next message range before writing to disk.
-func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
-	store *headerfs.FilterHeaderStore) (*chainhash.Hash, uint32, er.R) {
+func (b *blockManager) writeCFHeadersMsg1(msg *wire.MsgCFHeaders,
+	store *headerfs.FilterHeaderStore, tx walletdb.ReadWriteTx,
+) (*chainhash.Hash, uint32, er.R) {
 
 	// Check that the PrevFilterHeader is the same as the last stored so we
 	// can prevent misalignment.
-	tip, tipHeight, err := store.ChainTip()
+	tip, tipHeight, err := store.ChainTip1(tx)
 	if err != nil {
 		return nil, tipHeight, err
 	}
@@ -1156,23 +1176,22 @@ func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
 		return nil, startHeight, err
 	}
 
+	for i := 0; i < numHeaders; i++ {
+		headerBatch[i].Height = startHeight + uint32(i)
+		headerBatch[i].HeaderHash = matchingBlockHeaders[i].BlockHash()
+	}
+
 	// The final height in our range will be offset to the end of this
 	// particular checkpoint interval.
 	lastHeight := startHeight + uint32(numHeaders) - 1
-	lastBlockHeader := matchingBlockHeaders[numHeaders-1]
-	lastHash := lastBlockHeader.BlockHash()
 
-	// We only need to set the height and hash of the very last filter
-	// header in the range to ensure that the index properly updates the
-	// tip of the chain.
-	headerBatch[numHeaders-1].HeaderHash = lastHash
-	headerBatch[numHeaders-1].Height = lastHeight
-
-	log.Debugf("Writing filter headers up to height=%v, hash=%v, "+
-		"new_tip=%v", lastHeight, lastHash, lastHeader)
+	log.Debugf("Writing filter headers up to height=%v, hash=%v, new_tip=%v",
+		lastHeight,
+		matchingBlockHeaders[numHeaders-1],
+		lastHeader)
 
 	// Write the header batch.
-	err = store.WriteHeaders(headerBatch...)
+	err = store.WriteHeaders(tx, headerBatch...)
 	if err != nil {
 		return nil, lastHeight, err
 	}
@@ -1183,7 +1202,7 @@ func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
 	// than know each new header that's been added to the tip.
 	b.newFilterHeadersMtx.Lock()
 	b.filterHeaderTip = lastHeight
-	b.filterHeaderTipHash = lastHash
+	b.filterHeaderTipHash = matchingBlockHeaders[numHeaders-1].BlockHash()
 	b.newFilterHeadersMtx.Unlock()
 	b.newFilterHeadersSignal.Broadcast()
 
@@ -2487,15 +2506,23 @@ func checkPacketCryptProof(
 	return nil
 }
 
-// handleHeadersMsg handles headers messages from all peers.
 func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
+	if err := walletdb.Update(b.server.RegFilterHeaders.Db, func(tx walletdb.ReadWriteTx) er.R {
+		return b.handleProvenHeadersMsg1(tx, phmsg)
+	}); err != nil {
+		log.Warnf("Error processing headers msg: %v", err)
+	}
+}
+
+// handleHeadersMsg handles headers messages from all peers.
+func (b *blockManager) handleProvenHeadersMsg1(tx walletdb.ReadWriteTx, phmsg *provenHeadersMsg) er.R {
 	hmsg := phmsg.hmsg
 	msg := hmsg.headers
 	numHeaders := len(msg.Headers)
 
 	// Nothing to do for an empty headers message.
 	if numHeaders == 0 {
-		return
+		return nil
 	}
 
 	// For checking to make sure blocks aren't too far in the future as of
@@ -2524,7 +2551,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			log.Warnf("Header list does not contain a previous" +
 				"element as expected -- disconnecting peer")
 			hmsg.peer.Disconnect()
-			return
+			return nil
 		}
 
 		// Ensure the header properly connects to the previous one,
@@ -2541,7 +2568,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 				log.Warnf("Header doesn't pass sanity check: "+
 					"%s -- disconnecting peer", err)
 				hmsg.peer.Disconnect()
-				return
+				return nil
 			}
 			thisHeaderHeight := int32(prevNode.Height + 1)
 			if blk, ok := phmsg.proofs[thisHeaderHeight]; ok {
@@ -2555,7 +2582,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 						" check: %s -- disconnecting peer",
 						blk.Hash().String(), thisHeaderHeight, err)
 					hmsg.peer.Disconnect()
-					return
+					return nil
 				}
 			}
 
@@ -2596,7 +2623,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			// peer or disconnect the peer that sent us these bad
 			// headers.
 			if hmsg.peer != b.SyncPeer() && !b.BlockHeadersSynced() {
-				return
+				return nil
 			}
 
 			// Check if this is the last block we know of. This is
@@ -2608,7 +2635,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 
 			// Check if this block is known. If so, we continue to
 			// the next one.
-			_, _, err := b.server.BlockHeaders.FetchHeader(&blockHash)
+			_, _, err := b.server.BlockHeaders.FetchHeader1(tx, &blockHash)
 			if err == nil {
 				continue
 			}
@@ -2620,8 +2647,8 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			// these headers. Otherwise, the headers don't connect
 			// to anything we know and we should disconnect the
 			// peer.
-			backHead, backHeight, err := b.server.BlockHeaders.FetchHeader(
-				&blockHeader.PrevBlock,
+			backHead, backHeight, err := b.server.BlockHeaders.FetchHeader1(
+				tx, &blockHeader.PrevBlock,
 			)
 			if err != nil {
 				log.Warnf("Received block header that does not"+
@@ -2629,7 +2656,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 					" peer %s (%s) -- disconnecting",
 					hmsg.peer.Addr(), err)
 				hmsg.peer.Disconnect()
-				return
+				return nil
 			}
 
 			// We've found a branch we weren't aware of. If the
@@ -2645,7 +2672,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 					"synchronized -- disconnecting peer "+
 					"%s", hmsg.peer.Addr())
 				hmsg.peer.Disconnect()
-				return
+				return nil
 			}
 
 			// Check the sanity of the new branch. If any of the
@@ -2666,7 +2693,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 						" check: %s -- disconnecting "+
 						"peer", err)
 					hmsg.peer.Disconnect()
-					return
+					return nil
 				}
 
 				thisHeaderHeight := int32(backHeight+1) + int32(j)
@@ -2681,7 +2708,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 							" check: %s -- disconnecting peer",
 							blk.Hash().String(), thisHeaderHeight, err)
 						hmsg.peer.Disconnect()
-						return
+						return nil
 					}
 				}
 
@@ -2708,14 +2735,10 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 					knownHead = &knownEl.Header
 					knownEl = knownEl.Prev()
 				} else {
-					knownHead, _, err = b.server.BlockHeaders.FetchHeader(
-						&knownHead.PrevBlock)
+					knownHead, _, err = b.server.BlockHeaders.FetchHeader1(
+						tx, &knownHead.PrevBlock)
 					if err != nil {
-						log.Criticalf("Can't get block"+
-							"header for hash %s: "+
-							"%v",
-							knownHead.PrevBlock,
-							err)
+						return err
 					}
 				}
 				knownWork.Add(knownWork,
@@ -2736,7 +2759,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 				hmsg.peer.Disconnect()
 				fallthrough
 			case 0:
-				return
+				return nil
 			default:
 			}
 
@@ -2748,19 +2771,18 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 			b.syncPeerMutex.Lock()
 			b.syncPeer = hmsg.peer
 			b.syncPeerMutex.Unlock()
-			_, err = b.server.rollBackToHeight(backHeight)
+			_, err = b.server.rollBackToHeight(tx, backHeight)
 			if err != nil {
-				log.Criticalf("ROLLBACK FAILED: %s", err)
+				return err
 			}
 
 			hdrs := headerfs.BlockHeader{
 				BlockHeader: blockHeader,
 				Height:      backHeight + 1,
 			}
-			err = b.server.BlockHeaders.WriteHeaders(hdrs)
+			err = b.server.BlockHeaders.WriteHeaders(tx, hdrs)
 			if err != nil {
-				log.Criticalf("Couldn't write block to "+
-					"database: %s", err)
+				return err
 			}
 
 			b.headerList.ResetHeaderState(headerlist.Node{
@@ -2798,16 +2820,15 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 					prevCheckpoint.Height,
 					prevCheckpoint.Hash)
 
-				_, err := b.server.rollBackToHeight(uint32(
+				_, err := b.server.rollBackToHeight(tx, uint32(
 					prevCheckpoint.Height),
 				)
 				if err != nil {
-					log.Criticalf("ROLLBACK FAILED: %s",
-						err)
+					return err
 				}
 
 				hmsg.peer.Disconnect()
-				return
+				return nil
 			}
 			break
 		}
@@ -2820,16 +2841,16 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 		// With all the headers in this batch validated, we'll write
 		// them all in a single transaction such that this entire batch
 		// is atomic.
-		err := b.server.BlockHeaders.WriteHeaders(headerWriteBatch...)
+		err := b.server.BlockHeaders.WriteHeaders(tx, headerWriteBatch...)
 		if err != nil {
 			log.Errorf("Unable to write block headers: %v", err)
-			return
+			return err
 		}
 	}
 
 	// When this header is a checkpoint, find the next checkpoint.
 	if receivedCheckpoint {
-		b.updateLikelyChainTip(b.nextCheckpoint.Height)
+		b.updateLikelyChainTip(tx, b.nextCheckpoint.Height)
 		b.nextCheckpoint = b.findNextHeaderCheckpoint(finalHeight)
 	}
 
@@ -2845,7 +2866,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 		if err != nil {
 			log.Warnf("Failed to send getheaders message to "+
 				"peer %s: %s", hmsg.peer.Addr(), err)
-			return
+			return nil
 		}
 	}
 
@@ -2857,6 +2878,7 @@ func (b *blockManager) handleProvenHeadersMsg(phmsg *provenHeadersMsg) {
 	b.headerTipHash = *finalHash
 	b.newHeadersMtx.Unlock()
 	b.newHeadersSignal.Broadcast()
+	return nil
 }
 
 func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,

@@ -148,8 +148,11 @@ func EstimateVirtualSize(numP2PKHIns, numP2WPKHIns, numNestedP2WPKHIns int,
 	changeSize := 0
 	outputCount := len(txOuts)
 	if addChangeOutput {
-		// We are always using P2WPKH as change output.
-		changeSize = P2WPKHOutputSize
+		// We are (almost) always using P2WPKH as change output.
+		// But a P2PKH is 2 bytes larger and it's better to just pay a little
+		// extra fee in the common case rather than make an invalid txn in the
+		// rare case.
+		changeSize = P2PKHOutputSize
 		outputCount++
 	}
 

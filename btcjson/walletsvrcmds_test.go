@@ -6,11 +6,11 @@ package btcjson_test
 
 import (
 	"bytes"
-	"github.com/json-iterator/go"
 	"fmt"
 	"reflect"
 	"testing"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/pktd/btcutil/er"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -176,51 +176,6 @@ func TestWalletSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.GetTransactionCmd{
 				Txid:             "123",
 				IncludeWatchOnly: btcjson.Bool(true),
-			},
-		},
-		{
-			name: "importprivkey",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("importprivkey", "abc")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewImportPrivKeyCmd("abc", nil, nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"importprivkey","params":["abc"],"id":1}`,
-			unmarshalled: &btcjson.ImportPrivKeyCmd{
-				PrivKey: "abc",
-				Label:   nil,
-				Rescan:  btcjson.Bool(true),
-			},
-		},
-		{
-			name: "importprivkey optional1",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("importprivkey", "abc", "label")
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewImportPrivKeyCmd("abc", btcjson.String("label"), nil)
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"importprivkey","params":["abc","label"],"id":1}`,
-			unmarshalled: &btcjson.ImportPrivKeyCmd{
-				PrivKey: "abc",
-				Label:   btcjson.String("label"),
-				Rescan:  btcjson.Bool(true),
-			},
-		},
-		{
-			name: "importprivkey optional2",
-			newCmd: func() (interface{}, er.R) {
-				return btcjson.NewCmd("importprivkey", "abc", "label", false)
-			},
-			staticCmd: func() interface{} {
-				return btcjson.NewImportPrivKeyCmd("abc", btcjson.String("label"), btcjson.Bool(false))
-			},
-			marshalled: `{"jsonrpc":"1.0","method":"importprivkey","params":["abc","label",false],"id":1}`,
-			unmarshalled: &btcjson.ImportPrivKeyCmd{
-				PrivKey: "abc",
-				Label:   btcjson.String("label"),
-				Rescan:  btcjson.Bool(false),
 			},
 		},
 		{

@@ -1134,6 +1134,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	// we either already got it, or it is out of our queried range.
 	i, ok := q.headerIndex[response.BlockHash]
 	if !ok {
+		// This happens CONSTANTLY because we query multiple ranges at the same time
 		return false
 	}
 
@@ -1142,6 +1143,7 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 	)
 	if err != nil {
 		// Malformed filter data. We can ignore this message.
+		log.Debugf("Malformed filter [%v]", response.BlockHash)
 		return false
 	}
 
@@ -1154,10 +1156,13 @@ func (s *ChainService) handleCFiltersResponse(q *cfiltersQuery,
 		gotFilter, prevHeader,
 	)
 	if err != nil {
+		log.Debugf("Error making header from filter [%v]: [%v]", response.BlockHash, err)
 		return false
 	}
 
 	if gotHeader != curHeader {
+		log.Debugf("Cfilter header mismatch [%v] (%v) (%v != %v)",
+			response.BlockHash, i, gotHeader, curHeader)
 		return false
 	}
 
@@ -1263,7 +1268,8 @@ func (s *ChainService) doFilterRequest(
 	for _, q := range queries {
 		wg.Add(1)
 		go func(query *cfiltersQuery) {
-			s.queryPeers(
+			queryChainServicePeers(
+				s,
 				// Send a wire.MsgGetCFilters
 				query.queryMsg(),
 
@@ -1469,7 +1475,8 @@ func (s *ChainService) GetBlock0(blockHash chainhash.Hash, height uint32,
 	// until after the query is finished, so we can just write to it
 	// naively.
 	var foundBlock *btcutil.Block
-	s.queryPeers(
+	queryChainServicePeers(
+		s,
 		// Send a wire.GetDataMsg
 		getData,
 
@@ -1630,7 +1637,8 @@ func (s *ChainService) SendTransaction0(tx *wire.MsgTx, options ...QueryOption) 
 	}()
 
 	// Send the peer query and listen for getdata.
-	s.queryPeers(
+	queryChainServicePeers(
+		s,
 		inv,
 		func(sp *ServerPeer,
 			resp wire.Message,
