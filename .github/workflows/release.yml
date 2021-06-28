@@ -113,3 +113,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NAME: ${{ env.RELEASE_NAME }}
+
+  windows:
+    needs: release
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Set env
+        run: echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Install packages
+        run: sudo apt-get install rpm jq bash curl zip
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+
+      - run: go version
+
+      - uses: actions/checkout@v2
+
+      - name: Build binaries
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/build-windows-package.sh"
+        env:
+          PKT_FAIL_DIRTY: 1
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
+
+      - uses: actions/upload-artifact@main
+        with:
+          path: |
+            ${{ github.workspace }}/${{ env.RELEASE_NAME }}-win.zip
+
+      - name: Publish release
+        run: /bin/bash -c "source $GITHUB_WORKSPACE/contrib/github-actions/release-windows-package.sh"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
