@@ -515,7 +515,6 @@ var PktTestNetParams = Params{
 	DNSSeeds: []DNSSeed{
 		{"testseed.cjd.li", false},
 		{"testseed.anode.co", false},
-		{"testseed.gridfinity.com", false},
 	},
 
 	// Chain parameters
@@ -598,7 +597,6 @@ var PktMainNetParams = Params{
 	DNSSeeds: []DNSSeed{
 		{"seed.cjd.li", false},
 		{"seed.anode.co", false},
-		{"seed.gridfinity.com", false},
 	},
 
 	// Chain parameters
