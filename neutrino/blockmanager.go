@@ -30,7 +30,6 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktd/neutrino/banman"
 	"github.com/pkt-cash/pktd/neutrino/blockntfns"
 	"github.com/pkt-cash/pktd/neutrino/chainsync"
 	"github.com/pkt-cash/pktd/neutrino/headerfs"
@@ -766,14 +765,8 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 	// Ban any peer that responds with the wrong prev filter header.
 	for peer, msg := range headers {
 		if msg.PrevFilterHeader != *filterTip {
-			err := b.server.BanPeer(peer, banman.InvalidFilterHeader)
-			if err != nil {
-				log.Errorf("Unable to ban peer %v: %v", peer, err)
-			}
 			sp := b.server.PeerByAddr(peer)
-			if sp != nil {
-				sp.Disconnect()
-			}
+			sp.addBanScore(0, 33, "InvalidFilterHeader")
 			delete(headers, peer)
 		}
 	}
@@ -800,17 +793,8 @@ func (b *blockManager) getUncheckpointedCFHeaders(
 				"headers", len(badPeers))
 
 			for _, peer := range badPeers {
-				err := b.server.BanPeer(
-					peer, banman.InvalidFilterHeader,
-				)
-				if err != nil {
-					log.Errorf("Unable to ban peer %v: %v",
-						peer, err)
-				}
 				sp := b.server.PeerByAddr(peer)
-				if sp != nil {
-					sp.Disconnect()
-				}
+				sp.addBanScore(0, 33, "InvalidFilterHeader")
 				delete(headers, peer)
 			}
 		}
@@ -985,17 +969,7 @@ func (b *blockManager) getCheckpointedCFHeaders(checkpoints []*chainhash.Hash,
 				// match what we know to be the best
 				// checkpoint, then we'll ban the peer so we
 				// can re-allocate the query elsewhere.
-				peerAddr := sp.Addr()
-				err := b.server.BanPeer(
-					peerAddr,
-					banman.InvalidFilterHeaderCheckpoint,
-				)
-				if err != nil {
-					log.Errorf("Unable to ban peer %v: %v",
-						peerAddr, err)
-				}
-
-				sp.Disconnect()
+				sp.addBanScore(0, 33, "InvalidFilterHeaderCheckpoint")
 
 				return false
 			}
@@ -1280,18 +1254,8 @@ func (b *blockManager) resolveConflict(
 				log.Warnf("Banning peer=%v since served "+
 					"checkpoints didn't match our "+
 					"checkpoint at height %d", peer, height)
-
-				err := b.server.BanPeer(
-					peer, banman.InvalidFilterHeaderCheckpoint,
-				)
-				if err != nil {
-					log.Errorf("Unable to ban peer %v: %v",
-						peer, err)
-				}
-				if sp := b.server.PeerByAddr(peer); sp != nil {
-					sp.Disconnect()
-				}
-				delete(checkpoints, peer)
+				sp := b.server.PeerByAddr(peer)
+				sp.addBanScore(0, 33, "InvalidFilterHeaderCheckpoint")
 				break
 			}
 			if err != nil {
@@ -1371,17 +1335,8 @@ func (b *blockManager) resolveConflict(
 				"headers", len(badPeers))
 
 			for _, peer := range badPeers {
-				err := b.server.BanPeer(
-					peer, banman.InvalidFilterHeader,
-				)
-				if err != nil {
-					log.Errorf("Unable to ban peer %v: %v",
-						peer, err)
-				}
 				sp := b.server.PeerByAddr(peer)
-				if sp != nil {
-					sp.Disconnect()
-				}
+				sp.addBanScore(0, 33, "InvalidFilterHeader")
 				delete(headers, peer)
 				delete(checkpoints, peer)
 			}
@@ -1393,17 +1348,8 @@ func (b *blockManager) resolveConflict(
 	// didn't respond, and ban them from future queries.
 	for peer := range checkpoints {
 		if _, ok := headers[peer]; !ok {
-			err := b.server.BanPeer(
-				peer, banman.InvalidFilterHeaderCheckpoint,
-			)
-			if err != nil {
-				log.Errorf("Unable to ban peer %v: %v", peer,
-					err)
-			}
 			sp := b.server.PeerByAddr(peer)
-			if sp != nil {
-				sp.Disconnect()
-			}
+			sp.addBanScore(0, 33, "InvalidFilterHeaderCheckpoint")
 			delete(checkpoints, peer)
 		}
 	}
