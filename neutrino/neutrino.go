@@ -60,7 +60,8 @@ var (
 
 	// BanThreshold is the maximum ban score before a peer is banned.
 	BanThreshold = uint32(100)
-
+	BanWarnThreshold = uint32(0)
+	
 	// BanDuration is the duration of a ban.
 	BanDuration = time.Hour * 24
 
@@ -154,6 +155,7 @@ type ServerPeer struct {
 	server         *ChainService
 	persistent     bool
 	knownAddresses map[string]struct{}
+	banScore       connmgr.DynamicBanScore
 	quit           chan struct{}
 
 	// The following map of subcribers is used to subscribe to messages
@@ -969,6 +971,46 @@ func (s *ChainService) GetBlockHeight(hash *chainhash.Hash) (int32, er.R) {
 	}
 	return int32(height), nil
 }
+
+
+// addBanScore increases the persistent and decaying ban score fields by the
+// values passed as parameters. If the resulting score exceeds BanWarnThreshold,
+// (Default 0) a warning is logged including the reason provided. Further, if
+// the score is above the ban threshold, the peer will be banned and
+// disconnected.
+func (sp *ServerPeer) addBanScore(persistent, transient uint32, reason string) {
+	if transient == 0 && persistent == 0 {
+		// The score is not being increased, but a warning message is
+		// still logged if the score is above the warn threshold.
+		score := sp.banScore.Int()
+		if score > BanWarnThreshold {
+			log.Warnf("Misbehaving peer %s: %s -- ban score is "+
+				"%d, it was not increased this time", sp,
+				reason, score)
+		}
+		return
+	}
+
+	score := sp.banScore.Increase(persistent, transient)
+	if score > BanWarnThreshold {
+		log.Warnf("Misbehaving peer %s: %s -- ban score increased to %d",
+			sp, reason, score)
+
+		if score > BanThreshold {
+			peerAddr := sp.Addr()
+			err := sp.server.BanPeer(
+				peerAddr, banman.ExceededBanThreshold,
+			)
+			if err != nil {
+				log.Errorf("Unable to ban peer %v: %v",
+					peerAddr, err)
+			}
+
+			sp.Disconnect()
+		}
+	}
+}
+
 
 // BanPeer bans a peer due to a specific reason for a duration of BanDuration.
 func (s *ChainService) BanPeer(addr string, reason banman.Reason) er.R {
