@@ -597,6 +597,7 @@ var PktMainNetParams = Params{
 	DNSSeeds: []DNSSeed{
 		{"seed.cjd.li", false},
 		{"seed.anode.co", false},
+		{"pktdseed.pkt.world", false},
 	},
 
 	// Chain parameters
