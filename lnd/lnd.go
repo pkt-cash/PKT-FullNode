@@ -376,11 +376,6 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// started with the --noseedbackup flag, we use the default password
 	// for wallet encryption.
 
-	//Check if Bitcoin dir is empty, pass mainChain dir
-	if cfg.Bitcoin.ChainDir == "" {
-		cfg.Bitcoin.ChainDir = mainChain.ChainDir
-	}
-
 	if !cfg.NoSeedBackup {
 		params, shutdown, err := waitForWalletPassword(
 			cfg, cfg.RESTListeners, serverOpts, restDialOpts,
@@ -1189,6 +1184,8 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	chainConfig := cfg.Bitcoin
 	if cfg.registeredChains.PrimaryChain() == chainreg.LitecoinChain {
 		chainConfig = cfg.Litecoin
+	} else if cfg.registeredChains.PrimaryChain() == chainreg.PktChain {
+		chainConfig = cfg.Pkt
 	}
 
 	// The macaroonFiles are passed to the wallet unlocker so they can be
