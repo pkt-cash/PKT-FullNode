@@ -375,6 +375,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// We wait until the user provides a password over RPC. In case lnd is
 	// started with the --noseedbackup flag, we use the default password
 	// for wallet encryption.
+
+	//Check if Bitcoin dir is empty, pass mainChain dir
+	if cfg.Bitcoin.ChainDir == "" {
+		cfg.Bitcoin.ChainDir = mainChain.ChainDir
+	}
+
 	if !cfg.NoSeedBackup {
 		params, shutdown, err := waitForWalletPassword(
 			cfg, cfg.RESTListeners, serverOpts, restDialOpts,
