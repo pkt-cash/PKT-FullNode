@@ -375,6 +375,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	// We wait until the user provides a password over RPC. In case lnd is
 	// started with the --noseedbackup flag, we use the default password
 	// for wallet encryption.
+
 	if !cfg.NoSeedBackup {
 		params, shutdown, err := waitForWalletPassword(
 			cfg, cfg.RESTListeners, serverOpts, restDialOpts,
@@ -1183,6 +1184,8 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	chainConfig := cfg.Bitcoin
 	if cfg.registeredChains.PrimaryChain() == chainreg.LitecoinChain {
 		chainConfig = cfg.Litecoin
+	} else if cfg.registeredChains.PrimaryChain() == chainreg.PktChain {
+		chainConfig = cfg.Pkt
 	}
 
 	// The macaroonFiles are passed to the wallet unlocker so they can be
