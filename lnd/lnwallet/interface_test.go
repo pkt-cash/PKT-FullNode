@@ -1193,7 +1193,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
 	txDetails, errr := alice.ListTransactionDetails(
-		startHeight, chainTip,
+		startHeight, chainTip,0,0,0,
 	)
 	if errr != nil {
 		t.Fatalf("unable to fetch tx details: %v", errr)
@@ -1307,7 +1307,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 	// with a confirmation height of 0, indicating that it has not been
 	// mined yet.
 	txDetails, errr = alice.ListTransactionDetails(
-		chainTip, btcwallet.UnconfirmedHeight,
+		chainTip, btcwallet.UnconfirmedHeight, 0,0,0,
 	)
 	if errr != nil {
 		t.Fatalf("unable to fetch tx details: %v", errr)
@@ -1364,7 +1364,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 		t.Fatalf("Couldn't sync Alice's wallet: %v", errr)
 	}
 	txDetails, errr = alice.ListTransactionDetails(
-		chainTip, chainTip,
+		chainTip, chainTip,0,0,0,
 	)
 	if errr != nil {
 		t.Fatalf("unable to fetch tx details: %v", errr)
@@ -1413,7 +1413,7 @@ func testListTransactionDetails(miner *rpctest.Harness,
 	// Query for transactions only in the latest block. We do not expect
 	// any transactions to be returned.
 	txDetails, errr = alice.ListTransactionDetails(
-		chainTip, chainTip,
+		chainTip, chainTip,0,0,0,
 	)
 	if errr != nil {
 		t.Fatalf("unexpected error: %v", errr)
