@@ -212,7 +212,7 @@ func assertTxInWallet(t *testing.T, w *lnwallet.LightningWallet,
 	// We'll fetch all of our transaction and go through each one until
 	// finding the expected transaction with its expected confirmation
 	// status.
-	txs, err := w.ListTransactionDetails(0, btcwallet.UnconfirmedHeight)
+	txs, err := w.ListTransactionDetails(0, btcwallet.UnconfirmedHeight, 0, 0, 0)
 	if err != nil {
 		t.Fatalf("unable to retrieve transactions: %v", err)
 	}
