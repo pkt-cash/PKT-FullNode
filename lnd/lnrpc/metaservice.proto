@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package lnrpc;
+
+import "pkt.proto";
+import "rpc.proto";
+
+option go_package = "github.com/pkt-cash/pktd/lnd/lnrpc";
+
+service MetaService {
+    rpc GetInfo2 (get_info_2_request) returns (get_info_2_response);
+}
+
+message get_info_2_request {}
+
+message neutrino_ban {
+    string addr = 1;
+    string reason = 2;
+    string endtime = 3;
+}
+
+message neutrino_query {
+	string peer = 1;   
+	string command = 2;        
+	uint32 req_num = 3;  
+	uint32 create_time = 4;      
+	uint32 last_request_time = 5;  
+	uint32 last_response_time = 6;
+}
+
+message neutrino_info {
+    peer_desc peers = 1;
+    neutrino_ban bans = 2;
+    neutrino_query queries = 3;
+    string backend_block_hash = 4;
+    int32 backend_height = 5;
+    time backend_block_timestamp = 6;
+    bool is_syncing = 7;
+}
+
+message info_wallet_result {
+    int32 version = 1;
+    int32 protocol_version = 2;
+    int32 wallet_version = 3;
+    float balance = 4;
+    int32 blocks = 5;
+    int64 time_offset = 6;
+    int32 connections = 7;
+    float difficulty = 8;
+    bool test_net = 9;
+    int64 keypool_oldest = 10;
+    int32 keypool_size = 11;
+    int64 unlocked_until = 12;
+    float pay_tx_fee = 13;
+    float relay_fee = 14;
+    string errors = 15;
+}
+
+message wallet_info {
+    string current_block_hash = 1;
+    int32 current_height = 2;
+    time current_block_timestamp = 3;
+    string backend = 4;
+    int32 wallet_version = 5;
+    wallet_stats wallet_stats = 6;
+    info_wallet_result info_wrpc_info = 7;
+    neutrino_info neutrino_info = 8;
+}
+
+message get_info_2_response { 
+    neutrino_info neutrino = 1;
+    wallet_info wallet = 2;
+    GetInfoResponse lightning = 3;
+}

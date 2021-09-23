@@ -1,0 +1,767 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "metaservice.proto",
+    "version": "version not set"
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "lnrpcChain": {
+      "type": "object",
+      "properties": {
+        "chain": {
+          "type": "string",
+          "title": "The blockchain the node is on (eg bitcoin, litecoin)"
+        },
+        "network": {
+          "type": "string",
+          "title": "The network the node is on (eg regtest, testnet, mainnet)"
+        }
+      }
+    },
+    "lnrpcConfig": {
+      "type": "object",
+      "properties": {
+        "newest_block": {
+          "$ref": "#/definitions/lnrpchash_func"
+        },
+        "host_to_net_addr_func": {
+          "$ref": "#/definitions/lnrpchost_to_net_addr_func"
+        },
+        "user_agent_name": {
+          "type": "string"
+        },
+        "user_agent_version": {
+          "type": "string"
+        },
+        "user_agent_comments": {
+          "type": "string"
+        },
+        "chain_params": {
+          "$ref": "#/definitions/lnrpcparams"
+        },
+        "services": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "protocol_version": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "disable_relay_tx": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "listeners": {
+          "$ref": "#/definitions/lnrpcmessage_listeners"
+        },
+        "trickle_interval": {
+          "type": "string",
+          "format": "int64"
+        },
+        "allow_self_conns": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "lnrpcDNSSeed": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "has_filtering": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "lnrpcFeature": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "is_required": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "is_known": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "lnrpcGetInfoResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The version of the LND software that the node is running."
+        },
+        "commit_hash": {
+          "type": "string",
+          "description": "The SHA1 commit hash that the daemon is compiled with."
+        },
+        "identity_pubkey": {
+          "type": "string",
+          "description": "The identity pubkey of the current node."
+        },
+        "alias": {
+          "type": "string",
+          "title": "If applicable, the alias of the current node, e.g. \"bob\""
+        },
+        "color": {
+          "type": "string",
+          "title": "The color of the current node in hex code format"
+        },
+        "num_pending_channels": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Number of pending channels"
+        },
+        "num_active_channels": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Number of active channels"
+        },
+        "num_inactive_channels": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Number of inactive channels"
+        },
+        "num_peers": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Number of peers"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int64",
+          "title": "The node's current view of the height of the best block"
+        },
+        "block_hash": {
+          "type": "string",
+          "title": "The node's current view of the hash of the best block"
+        },
+        "best_header_timestamp": {
+          "type": "string",
+          "format": "int64",
+          "title": "Timestamp of the block best known to the wallet"
+        },
+        "synced_to_chain": {
+          "type": "boolean",
+          "format": "boolean",
+          "title": "Whether the wallet's view is synced to the main chain"
+        },
+        "synced_to_graph": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "Whether we consider ourselves synced with the public channel graph."
+        },
+        "testnet": {
+          "type": "boolean",
+          "format": "boolean",
+          "title": "Whether the current node is connected to testnet. This field is\ndeprecated and the network field should be used instead"
+        },
+        "chains": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lnrpcChain"
+          },
+          "title": "A list of active chains the node is connected to"
+        },
+        "uris": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The URIs of the current node."
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/lnrpcFeature"
+          },
+          "description": "Features that our node has advertised in our init message, node\nannouncements and invoices."
+        }
+      }
+    },
+    "lnrpcLocation": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "zone": {
+          "$ref": "#/definitions/lnrpczone"
+        },
+        "tx": {
+          "$ref": "#/definitions/lnrpczoneTrans"
+        },
+        "extend": {
+          "type": "string"
+        },
+        "cache_start": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cache_end": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cache_zone": {
+          "$ref": "#/definitions/lnrpczone"
+        }
+      }
+    },
+    "lnrpccoin_amount": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "proper_name": {
+          "type": "string"
+        },
+        "units": {
+          "type": "string",
+          "format": "int64"
+        },
+        "zeros": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "lnrpcget_info_2_response": {
+      "type": "object",
+      "properties": {
+        "neutrino": {
+          "$ref": "#/definitions/lnrpcneutrino_info"
+        },
+        "wallet": {
+          "$ref": "#/definitions/lnrpcwallet_info"
+        },
+        "lightning": {
+          "$ref": "#/definitions/lnrpcGetInfoResponse"
+        }
+      }
+    },
+    "lnrpcglobal_config": {
+      "type": "object",
+      "properties": {
+        "proof_of_work_algorithm": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "has_network_steward": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "max_units": {
+          "type": "string",
+          "format": "int64"
+        },
+        "units_per_coin": {
+          "type": "string",
+          "format": "int64"
+        },
+        "max_time_offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "median_time_blocks": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "amounts": {
+          "$ref": "#/definitions/lnrpccoin_amount"
+        }
+      }
+    },
+    "lnrpchash_func": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "format": "byte"
+        },
+        "height": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "lnrpchost_to_net_addr_func": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/lnrpcnet_address"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "lnrpcinfo_wallet_result": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "protocol_version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "wallet_version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "balance": {
+          "type": "number",
+          "format": "float"
+        },
+        "blocks": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "time_offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "connections": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "difficulty": {
+          "type": "number",
+          "format": "float"
+        },
+        "test_net": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "keypool_oldest": {
+          "type": "string",
+          "format": "int64"
+        },
+        "keypool_size": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "unlocked_until": {
+          "type": "string",
+          "format": "int64"
+        },
+        "pay_tx_fee": {
+          "type": "number",
+          "format": "float"
+        },
+        "relay_fee": {
+          "type": "number",
+          "format": "float"
+        },
+        "errors": {
+          "type": "string"
+        }
+      }
+    },
+    "lnrpcmessage_listeners": {
+      "type": "object"
+    },
+    "lnrpcnet_address": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "tervices": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "IP": {
+          "type": "string",
+          "format": "byte"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "lnrpcneutrino_ban": {
+      "type": "object",
+      "properties": {
+        "addr": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "endtime": {
+          "type": "string"
+        }
+      }
+    },
+    "lnrpcneutrino_info": {
+      "type": "object",
+      "properties": {
+        "peers": {
+          "$ref": "#/definitions/lnrpcpeer_desc"
+        },
+        "bans": {
+          "$ref": "#/definitions/lnrpcneutrino_ban"
+        },
+        "queries": {
+          "$ref": "#/definitions/lnrpcneutrino_query"
+        },
+        "backend_block_hash": {
+          "type": "string"
+        },
+        "backend_height": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "backend_block_timestamp": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "is_syncing": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "lnrpcneutrino_query": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "req_num": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "create_time": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "last_request_time": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "last_response_time": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "lnrpcparams": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "net": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "default_port": {
+          "type": "string"
+        },
+        "DNSSeed": {
+          "$ref": "#/definitions/lnrpcDNSSeed"
+        },
+        "config": {
+          "$ref": "#/definitions/lnrpcglobal_config"
+        }
+      }
+    },
+    "lnrpcpeer_desc": {
+      "type": "object",
+      "properties": {
+        "bytes_received": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "bytes_sent": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "last_recv": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "last_send": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "connected": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "addr": {
+          "type": "string"
+        },
+        "cfg": {
+          "$ref": "#/definitions/lnrpcConfig"
+        },
+        "inbound": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "na": {
+          "$ref": "#/definitions/lnrpcnet_address"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "user_agent": {
+          "type": "string"
+        },
+        "services": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "version_known": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "advertised_proto_ver": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "protocol_version": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "send_headers_preferred": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "ver_ack_received": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "witness_enabled": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "wire_encoding": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "time_offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "time_connected": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "starting_height": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "last_block": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "last_announced_block": {
+          "type": "string",
+          "format": "byte"
+        },
+        "last_ping_nonce": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "last_ping_time": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "last_ping_micros": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "lnrpctime": {
+      "type": "object",
+      "properties": {
+        "wall": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "ext": {
+          "type": "string",
+          "format": "int64"
+        },
+        "loc": {
+          "$ref": "#/definitions/lnrpcLocation"
+        }
+      }
+    },
+    "lnrpcwallet_info": {
+      "type": "object",
+      "properties": {
+        "current_block_hash": {
+          "type": "string"
+        },
+        "current_height": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "current_block_timestamp": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "wallet_version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "wallet_stats": {
+          "$ref": "#/definitions/lnrpcwallet_stats"
+        },
+        "info_wrpc_info": {
+          "$ref": "#/definitions/lnrpcinfo_wallet_result"
+        },
+        "neutrino_info": {
+          "$ref": "#/definitions/lnrpcneutrino_info"
+        }
+      }
+    },
+    "lnrpcwallet_stats": {
+      "type": "object",
+      "properties": {
+        "maintenance_in_progress": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "maintenance_name": {
+          "type": "string"
+        },
+        "maintenance_cycles": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maintenance_last_block_visited": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "time_of_last_maintenance": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "syncing": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "sync_started": {
+          "$ref": "#/definitions/lnrpctime"
+        },
+        "sync_remaining_seconds": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sync_current_block": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sync_from": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sync_to": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "birthday_block": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "lnrpczone": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isDST": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "lnrpczoneTrans": {
+      "type": "object",
+      "properties": {
+        "when": {
+          "type": "string",
+          "format": "int64"
+        },
+        "index": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "isstd": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "isutc": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "type_url": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "runtimeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

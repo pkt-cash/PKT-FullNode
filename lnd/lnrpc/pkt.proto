@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package lnrpc;
+
+option go_package = "github.com/pkt-cash/pktd/lnd/lnrpc";
+
+message hash_func {
+    bytes hash = 1;
+    int32 height = 2;
+    string error = 3;
+}
+message net_address {
+    time timestamp = 1;
+    uint64 tervices = 2;
+    bytes IP = 3;
+    uint32 port = 4;
+}
+
+message host_to_net_addr_func {
+    net_address address = 1;
+    string error = 2;
+}
+
+message DNSSeed {
+    string host = 1;
+    bool has_filtering = 2;
+}
+
+message coin_amount {
+    string name = 1;
+    string proper_name = 2;
+    int64 units = 3;
+    int32 zeros = 4;
+}
+
+message global_config {
+    int32 proof_of_work_algorithm = 1;
+	bool has_network_steward = 2;
+	int64 max_units = 3;
+	int64 units_per_coin = 4;
+	int64 max_time_offset = 5;
+	int32 median_time_blocks = 6;
+	coin_amount amounts = 7;
+}
+
+message params {
+    string name = 1;
+    uint32 net = 2;
+    string default_port = 3;
+    DNSSeed DNSSeed = 4;
+    global_config config = 5;
+    
+}
+
+message message_listeners {
+
+}
+
+message Config {
+    hash_func newest_block = 1;
+    host_to_net_addr_func host_to_net_addr_func = 2;
+    string user_agent_name = 3;
+    string user_agent_version = 4;
+    string user_agent_comments = 5;
+    params chain_params = 6;
+    uint64 services = 7;
+    uint32 protocol_version = 8;
+    bool disable_relay_tx = 9;
+    message_listeners listeners = 10;
+    int64 trickle_interval = 11;
+    bool allow_self_conns = 12;
+}
+
+message zoneTrans {
+    int64 when = 1;
+    uint32 index = 2;
+    bool isstd = 3;
+    bool isutc = 4;
+}
+
+message zone {
+    string name = 1;
+    int32 offset = 2;
+    bool isDST = 3;
+}
+
+message Location {
+    string name = 1;
+    zone zone = 2;
+    zoneTrans tx = 3;
+    string extend = 4;
+    int64 cache_start = 5;
+    int64 cache_end = 6;
+    zone cache_zone = 7;
+}
+
+message time {
+    uint64 wall = 1;
+    int64 ext = 2;
+    Location loc = 3;
+}
+
+message peer_desc {
+    uint64 bytes_received = 1;
+	uint64 bytes_sent     = 2;
+	time last_recv   = 3;   
+	time last_send   = 4;   
+	bool connected       = 5;
+
+	string addr          = 6;
+	Config cfg           = 7;
+	bool inbound = 8;
+
+	net_address na = 9;
+	int32 id = 10;
+	string user_agent = 11;            
+	uint64 services = 12;
+	bool version_known = 13;
+	uint32 advertised_proto_ver = 14;
+	uint32 protocol_version = 15;
+	bool send_headers_preferred = 16;
+	bool ver_ack_received = 17;
+	bool witness_enabled = 18;
+
+	uint32 wire_encoding = 19;
+
+	int64 time_offset = 20;    
+	time time_connected = 21;
+	int32 starting_height = 22; 
+	int32 last_block = 23;
+	bytes last_announced_block = 24; 
+	uint64 last_ping_nonce = 25;
+	time last_ping_time = 26;
+	int64 last_ping_micros = 27;  
+}
+
+message wallet_stats {
+    bool maintenance_in_progress = 1;
+    string maintenance_name = 2;
+    int32 maintenance_cycles = 3;
+    int32 maintenance_last_block_visited = 4;
+    time time_of_last_maintenance = 5;
+    bool syncing = 6;
+    time sync_started = 7;
+    int64 sync_remaining_seconds = 8;
+    int32 sync_current_block = 9;
+    int32 sync_from = 10;
+    int32 sync_to = 11;
+    int32 birthday_block = 12;
+}
