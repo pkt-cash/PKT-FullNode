@@ -38,31 +38,12 @@ message neutrino_info {
     bool is_syncing = 7;
 }
 
-message info_wallet_result {
-    int32 version = 1;
-    int32 protocol_version = 2;
-    int32 wallet_version = 3;
-    float balance = 4;
-    int32 blocks = 5;
-    int64 time_offset = 6;
-    int32 connections = 7;
-    float difficulty = 8;
-    bool test_net = 9;
-    int64 keypool_oldest = 10;
-    int32 keypool_size = 11;
-    int64 unlocked_until = 12;
-    float pay_tx_fee = 13;
-    float relay_fee = 14;
-    string errors = 15;
-}
-
 message wallet_info {
     string current_block_hash = 1;
     int32 current_height = 2;
     string current_block_timestamp = 3;
     int32 wallet_version = 4;
     wallet_stats wallet_stats = 5;
-    info_wallet_result info_wrpc_info = 6;
 }
 
 message GetInfo2Responce { 
