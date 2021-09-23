@@ -5042,9 +5042,25 @@ func (r *rpcServer) GetTransactions(ctx context.Context,
 		endHeight = req.EndHeight
 	}
 
+	var limit int32 = 0
+	// If the user has provided a limit, we overwrite our default.
+	if req.TxnsLimit != 0 {
+		limit = req.TxnsLimit
+	}
+	var skip int32 = 0
+	// If the user has provided a skip, we overwrite our default.
+	if req.TxnsSkip != 0 {
+		skip = req.TxnsSkip
+	}
+	//coinbaseExclude is default
+	var coinbase int32 = 2
+	// If the user has provided coinbase, we overwrite our default.
+	if req.Coinbase != 0 {
+		coinbase = req.Coinbase
+	}
+
 	transactions, err := r.server.cc.Wallet.ListTransactionDetails(
-		req.StartHeight, endHeight,
-	)
+		req.StartHeight, endHeight, skip, limit, coinbase)
 	if err != nil {
 		return nil, er.Native(err)
 	}

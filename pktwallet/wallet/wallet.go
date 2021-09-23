@@ -147,6 +147,14 @@ type rescanJob struct {
 	dropDb     bool
 }
 
+type CoinbaseSelector int
+
+const (
+	coinbaseInclude CoinbaseSelector = 1
+	coinbaseExclude                  = 2
+	coinbaseOnly                     = 3
+)
+
 func (w *Wallet) Database() walletdb.DB {
 	return w.db
 }
@@ -1577,6 +1585,8 @@ type GetTransactionsResult struct {
 // Block structure which records properties about the block.
 func (w *Wallet) GetTransactions(
 	startBlock, endBlock *BlockIdentifier,
+	limit, skip, //0 means no limit imposed
+	coinbase int32,
 	cancel <-chan struct{},
 ) (*GetTransactionsResult, er.R) {
 	var start, end int32 = 0, -1
@@ -1638,8 +1648,10 @@ func (w *Wallet) GetTransactions(
 			}
 		}
 	}
-
+	log.Infof("Default skip: %d, limit:%d, coinbase:%d\n", skip, limit, coinbase)
 	var res GetTransactionsResult
+	var totalTxns = 0
+	var skippedtxns int32 = 0
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) er.R {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -1649,7 +1661,6 @@ func (w *Wallet) GetTransactions(
 			dets := make([]wtxmgr.TxDetails, len(details))
 			copy(dets, details)
 			details = dets
-
 			txs := make([]TransactionSummary, 0, len(details))
 			for i := range details {
 				txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
@@ -1657,14 +1668,36 @@ func (w *Wallet) GetTransactions(
 
 			if details[0].Block.Height != -1 {
 				blockHash := details[0].Block.Hash
-				res.MinedTransactions = append(res.MinedTransactions, Block{
-					Hash:         &blockHash,
-					Height:       details[0].Block.Height,
-					Timestamp:    details[0].Block.Time.Unix(),
-					Transactions: txs,
-				})
-			} else {
+				if (details[0].MsgTx.TxIn[0].PreviousOutPoint.Hash.IsEqual(&chainhash.Hash{0000000000000000000000000000000000000000000000000000000000000000})) {
+					if coinbase == coinbaseExclude {
+						txs = txs[1:]
+					} else if coinbase == coinbaseOnly {
+						txs = txs[:1]
+					}
+				}
+				//Skipping transactions
+				if skippedtxns < skip {
+					skippedtxns++
+				} else {
+					if skippedtxns > 0 {
+						log.Infof("%d transactions were skipped", limit)
+					}
+					res.MinedTransactions = append(res.MinedTransactions, Block{
+						Hash:         &blockHash,
+						Height:       details[0].Block.Height,
+						Timestamp:    details[0].Block.Time.Unix(),
+						Transactions: txs,
+					})
+					totalTxns += len(txs)
+				}
+			} else if coinbase != coinbaseOnly {
 				res.UnminedTransactions = txs
+				totalTxns += len(txs)
+			}
+
+			if (limit > 0) && (totalTxns >= int(limit)) {
+				log.Infof("Limit on number of transactions was reached %d", limit)
+				return true, nil
 			}
 
 			select {

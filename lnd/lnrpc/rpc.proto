@@ -587,6 +587,9 @@ message GetTransactionsRequest {
     default to this option.
     */
     int32 end_height = 2;
+    int32 txns_limit = 3;
+    int32 txns_skip = 4;
+    int32 coinbase = 5;
 }
 
 message TransactionDetails {

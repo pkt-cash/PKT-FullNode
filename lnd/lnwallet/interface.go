@@ -222,7 +222,7 @@ type WalletController interface {
 	// the tip of the chain until the start height (inclusive) and
 	// unconfirmed transactions.
 	ListTransactionDetails(startHeight,
-		endHeight int32) ([]*TransactionDetail, er.R)
+		endHeight, skip, limit, coinbase int32) ([]*TransactionDetail, er.R)
 
 	// LockOutpoint marks an outpoint as locked meaning it will no longer
 	// be deemed as eligible for coin selection. Locking outputs are

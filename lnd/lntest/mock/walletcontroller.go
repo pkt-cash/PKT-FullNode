@@ -120,7 +120,7 @@ func (w *WalletController) ListUnspentWitness(minconfirms,
 
 // ListTransactionDetails currently returns dummy values.
 func (w *WalletController) ListTransactionDetails(_,
-	_ int32) ([]*lnwallet.TransactionDetail, er.R) {
+	_, _, _, _ int32) ([]*lnwallet.TransactionDetail, er.R) {
 
 	return nil, nil
 }
