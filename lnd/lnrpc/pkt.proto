@@ -4,63 +4,18 @@ package lnrpc;
 
 option go_package = "github.com/pkt-cash/pktd/lnd/lnrpc";
 
-message DNSSeed {
-    string host = 1;
-    bool has_filtering = 2;
-}
-
-message coin_amount {
-    string name = 1;
-    string proper_name = 2;
-    int64 units = 3;
-    int32 zeros = 4;
-}
-
-message global_config {
-    int32 proof_of_work_algorithm = 1;
-	bool has_network_steward = 2;
-	int64 max_units = 3;
-	int64 units_per_coin = 4;
-	int64 max_time_offset = 5;
-	int32 median_time_blocks = 6;
-	coin_amount amounts = 7;
-}
-
 message Config {
     string user_agent_name = 3;
     string user_agent_version = 4;
     string user_agent_comments = 5;
-    uint64 services = 7;
+    string services = 7;
     uint32 protocol_version = 8;
     bool disable_relay_tx = 9;
     int64 trickle_interval = 11;
     bool allow_self_conns = 12;
 }
 
-message zoneTrans {
-    int64 when = 1;
-    uint32 index = 2;
-    bool isstd = 3;
-    bool isutc = 4;
-}
-
-message zone {
-    string name = 1;
-    int32 offset = 2;
-    bool isDST = 3;
-}
-
-message Location {
-    string name = 1;
-    zone zone = 2;
-    zoneTrans tx = 3;
-    string extend = 4;
-    int64 cache_start = 5;
-    int64 cache_end = 6;
-    zone cache_zone = 7;
-}
-
-message peer_desc {
+message PeerDesc {
     uint64 bytes_received = 1;
 	uint64 bytes_sent = 2;
 	string last_recv = 3;   
@@ -90,7 +45,7 @@ message peer_desc {
 	int64 last_ping_micros = 27;  
 }
 
-message wallet_stats {
+message WalletStats {
     bool maintenance_in_progress = 1;
     string maintenance_name = 2;
     int32 maintenance_cycles = 3;

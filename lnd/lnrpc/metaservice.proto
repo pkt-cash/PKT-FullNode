@@ -13,13 +13,13 @@ service MetaService {
 
 message GetInfo2Request {}
 
-message neutrino_ban {
+message NeutrinoBan {
     string addr = 1;
     string reason = 2;
-    string endtime = 3;
+    string end_time = 3;
 }
 
-message neutrino_query {
+message NeutrinoQuery {
 	string peer = 1;   
 	string command = 2;        
 	uint32 req_num = 3;  
@@ -28,26 +28,26 @@ message neutrino_query {
 	uint32 last_response_time = 6;
 }
 
-message neutrino_info {
-    peer_desc peers = 1;
-    neutrino_ban bans = 2;
-    neutrino_query queries = 3;
+message NeutrinoInfo {
+    PeerDesc peers = 1;
+    NeutrinoBan bans = 2;
+    NeutrinoQuery queries = 3;
     string block_hash = 4;
     int32 height = 5;
     string block_timestamp = 6;
     bool is_syncing = 7;
 }
 
-message wallet_info {
+message WalletInfo {
     string current_block_hash = 1;
     int32 current_height = 2;
     string current_block_timestamp = 3;
     int32 wallet_version = 4;
-    wallet_stats wallet_stats = 5;
+    WalletStats wallet_stats = 5;
 }
 
 message GetInfo2Responce { 
-    neutrino_info neutrino = 1;
-    wallet_info wallet = 2;
+    NeutrinoInfo neutrino = 1;
+    WalletInfo wallet = 2;
     GetInfoResponse lightning = 3;
 }
