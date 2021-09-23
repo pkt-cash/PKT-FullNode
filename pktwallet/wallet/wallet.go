@@ -150,9 +150,9 @@ type rescanJob struct {
 type CoinbaseSelector int
 
 const (
-	coinbaseInclude CoinbaseSelector = 1
-	coinbaseExclude                  = 2
-	coinbaseOnly                     = 3
+	coinbaseInclude CoinbaseSelector = 0
+	coinbaseExclude                  = 1
+	coinbaseOnly                     = 2
 )
 
 func (w *Wallet) Database() walletdb.DB {
