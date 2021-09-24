@@ -7,7 +7,7 @@ option go_package = "github.com/pkt-cash/pktd/lnd/lnrpc";
 message Config {
     string user_agent_name = 3;
     string user_agent_version = 4;
-    string user_agent_comments = 5;
+    repeated string user_agent_comments = 5;
     string services = 7;
     uint32 protocol_version = 8;
     bool disable_relay_tx = 9;
