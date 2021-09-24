@@ -48,6 +48,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/lnd/metaservice"
 	"github.com/pkt-cash/pktd/lnd/signal"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/walletunlocker"
@@ -1204,6 +1205,10 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	// provided over RPC.
 	grpcServer := grpc.NewServer(serverOpts...)
 	lnrpc.RegisterWalletUnlockerServer(grpcServer, pwService)
+
+	// Set up meta Service
+	metaService := metaservice.NewMetaService(&neutrino.ChainService{})
+	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	var shutdownFuncs []func()
 	shutdown := func() {

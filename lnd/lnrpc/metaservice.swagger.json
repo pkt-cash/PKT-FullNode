@@ -28,12 +28,6 @@
     "lnrpcConfig": {
       "type": "object",
       "properties": {
-        "newest_block": {
-          "$ref": "#/definitions/lnrpchash_func"
-        },
-        "host_to_net_addr_func": {
-          "$ref": "#/definitions/lnrpchost_to_net_addr_func"
-        },
         "user_agent_name": {
           "type": "string"
         },
@@ -43,12 +37,8 @@
         "user_agent_comments": {
           "type": "string"
         },
-        "chain_params": {
-          "$ref": "#/definitions/lnrpcparams"
-        },
         "services": {
-          "type": "string",
-          "format": "uint64"
+          "type": "string"
         },
         "protocol_version": {
           "type": "integer",
@@ -58,26 +48,11 @@
           "type": "boolean",
           "format": "boolean"
         },
-        "listeners": {
-          "$ref": "#/definitions/lnrpcmessage_listeners"
-        },
         "trickle_interval": {
           "type": "string",
           "format": "int64"
         },
         "allow_self_conns": {
-          "type": "boolean",
-          "format": "boolean"
-        }
-      }
-    },
-    "lnrpcDNSSeed": {
-      "type": "object",
-      "properties": {
-        "host": {
-          "type": "string"
-        },
-        "has_filtering": {
           "type": "boolean",
           "format": "boolean"
         }
@@ -96,6 +71,20 @@
         "is_known": {
           "type": "boolean",
           "format": "boolean"
+        }
+      }
+    },
+    "lnrpcGetInfo2Responce": {
+      "type": "object",
+      "properties": {
+        "neutrino": {
+          "$ref": "#/definitions/lnrpcNeutrinoInfo"
+        },
+        "wallet": {
+          "$ref": "#/definitions/lnrpcWalletInfo"
+        },
+        "lightning": {
+          "$ref": "#/definitions/lnrpcGetInfoResponse"
         }
       }
     },
@@ -194,214 +183,7 @@
         }
       }
     },
-    "lnrpcLocation": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "zone": {
-          "$ref": "#/definitions/lnrpczone"
-        },
-        "tx": {
-          "$ref": "#/definitions/lnrpczoneTrans"
-        },
-        "extend": {
-          "type": "string"
-        },
-        "cache_start": {
-          "type": "string",
-          "format": "int64"
-        },
-        "cache_end": {
-          "type": "string",
-          "format": "int64"
-        },
-        "cache_zone": {
-          "$ref": "#/definitions/lnrpczone"
-        }
-      }
-    },
-    "lnrpccoin_amount": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "proper_name": {
-          "type": "string"
-        },
-        "units": {
-          "type": "string",
-          "format": "int64"
-        },
-        "zeros": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "lnrpcget_info_2_response": {
-      "type": "object",
-      "properties": {
-        "neutrino": {
-          "$ref": "#/definitions/lnrpcneutrino_info"
-        },
-        "wallet": {
-          "$ref": "#/definitions/lnrpcwallet_info"
-        },
-        "lightning": {
-          "$ref": "#/definitions/lnrpcGetInfoResponse"
-        }
-      }
-    },
-    "lnrpcglobal_config": {
-      "type": "object",
-      "properties": {
-        "proof_of_work_algorithm": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "has_network_steward": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "max_units": {
-          "type": "string",
-          "format": "int64"
-        },
-        "units_per_coin": {
-          "type": "string",
-          "format": "int64"
-        },
-        "max_time_offset": {
-          "type": "string",
-          "format": "int64"
-        },
-        "median_time_blocks": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "amounts": {
-          "$ref": "#/definitions/lnrpccoin_amount"
-        }
-      }
-    },
-    "lnrpchash_func": {
-      "type": "object",
-      "properties": {
-        "hash": {
-          "type": "string",
-          "format": "byte"
-        },
-        "height": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
-    },
-    "lnrpchost_to_net_addr_func": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "$ref": "#/definitions/lnrpcnet_address"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
-    },
-    "lnrpcinfo_wallet_result": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "protocol_version": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "wallet_version": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "balance": {
-          "type": "number",
-          "format": "float"
-        },
-        "blocks": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "time_offset": {
-          "type": "string",
-          "format": "int64"
-        },
-        "connections": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "difficulty": {
-          "type": "number",
-          "format": "float"
-        },
-        "test_net": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "keypool_oldest": {
-          "type": "string",
-          "format": "int64"
-        },
-        "keypool_size": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "unlocked_until": {
-          "type": "string",
-          "format": "int64"
-        },
-        "pay_tx_fee": {
-          "type": "number",
-          "format": "float"
-        },
-        "relay_fee": {
-          "type": "number",
-          "format": "float"
-        },
-        "errors": {
-          "type": "string"
-        }
-      }
-    },
-    "lnrpcmessage_listeners": {
-      "type": "object"
-    },
-    "lnrpcnet_address": {
-      "type": "object",
-      "properties": {
-        "timestamp": {
-          "$ref": "#/definitions/lnrpctime"
-        },
-        "tervices": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "IP": {
-          "type": "string",
-          "format": "byte"
-        },
-        "port": {
-          "type": "integer",
-          "format": "int64"
-        }
-      }
-    },
-    "lnrpcneutrino_ban": {
+    "lnrpcNeutrinoBan": {
       "type": "object",
       "properties": {
         "addr": {
@@ -410,32 +192,41 @@
         "reason": {
           "type": "string"
         },
-        "endtime": {
+        "end_time": {
           "type": "string"
         }
       }
     },
-    "lnrpcneutrino_info": {
+    "lnrpcNeutrinoInfo": {
       "type": "object",
       "properties": {
         "peers": {
-          "$ref": "#/definitions/lnrpcpeer_desc"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lnrpcPeerDesc"
+          }
         },
         "bans": {
-          "$ref": "#/definitions/lnrpcneutrino_ban"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lnrpcNeutrinoBan"
+          }
         },
         "queries": {
-          "$ref": "#/definitions/lnrpcneutrino_query"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lnrpcNeutrinoQuery"
+          }
         },
-        "backend_block_hash": {
+        "block_hash": {
           "type": "string"
         },
-        "backend_height": {
+        "height": {
           "type": "integer",
           "format": "int32"
         },
-        "backend_block_timestamp": {
-          "$ref": "#/definitions/lnrpctime"
+        "block_timestamp": {
+          "type": "string"
         },
         "is_syncing": {
           "type": "boolean",
@@ -443,7 +234,7 @@
         }
       }
     },
-    "lnrpcneutrino_query": {
+    "lnrpcNeutrinoQuery": {
       "type": "object",
       "properties": {
         "peer": {
@@ -470,28 +261,7 @@
         }
       }
     },
-    "lnrpcparams": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "net": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "default_port": {
-          "type": "string"
-        },
-        "DNSSeed": {
-          "$ref": "#/definitions/lnrpcDNSSeed"
-        },
-        "config": {
-          "$ref": "#/definitions/lnrpcglobal_config"
-        }
-      }
-    },
-    "lnrpcpeer_desc": {
+    "lnrpcPeerDesc": {
       "type": "object",
       "properties": {
         "bytes_received": {
@@ -503,10 +273,10 @@
           "format": "uint64"
         },
         "last_recv": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "last_send": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "connected": {
           "type": "boolean",
@@ -523,7 +293,7 @@
           "format": "boolean"
         },
         "na": {
-          "$ref": "#/definitions/lnrpcnet_address"
+          "type": "string"
         },
         "id": {
           "type": "integer",
@@ -533,8 +303,7 @@
           "type": "string"
         },
         "services": {
-          "type": "string",
-          "format": "uint64"
+          "type": "string"
         },
         "version_known": {
           "type": "boolean",
@@ -561,15 +330,14 @@
           "format": "boolean"
         },
         "wire_encoding": {
-          "type": "integer",
-          "format": "int64"
+          "type": "string"
         },
         "time_offset": {
           "type": "string",
           "format": "int64"
         },
         "time_connected": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "starting_height": {
           "type": "integer",
@@ -588,7 +356,7 @@
           "format": "uint64"
         },
         "last_ping_time": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "last_ping_micros": {
           "type": "string",
@@ -596,23 +364,7 @@
         }
       }
     },
-    "lnrpctime": {
-      "type": "object",
-      "properties": {
-        "wall": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "ext": {
-          "type": "string",
-          "format": "int64"
-        },
-        "loc": {
-          "$ref": "#/definitions/lnrpcLocation"
-        }
-      }
-    },
-    "lnrpcwallet_info": {
+    "lnrpcWalletInfo": {
       "type": "object",
       "properties": {
         "current_block_hash": {
@@ -623,9 +375,6 @@
           "format": "int32"
         },
         "current_block_timestamp": {
-          "$ref": "#/definitions/lnrpctime"
-        },
-        "backend": {
           "type": "string"
         },
         "wallet_version": {
@@ -633,17 +382,11 @@
           "format": "int32"
         },
         "wallet_stats": {
-          "$ref": "#/definitions/lnrpcwallet_stats"
-        },
-        "info_wrpc_info": {
-          "$ref": "#/definitions/lnrpcinfo_wallet_result"
-        },
-        "neutrino_info": {
-          "$ref": "#/definitions/lnrpcneutrino_info"
+          "$ref": "#/definitions/lnrpcWalletStats"
         }
       }
     },
-    "lnrpcwallet_stats": {
+    "lnrpcWalletStats": {
       "type": "object",
       "properties": {
         "maintenance_in_progress": {
@@ -662,14 +405,14 @@
           "format": "int32"
         },
         "time_of_last_maintenance": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "syncing": {
           "type": "boolean",
           "format": "boolean"
         },
         "sync_started": {
-          "$ref": "#/definitions/lnrpctime"
+          "type": "string"
         },
         "sync_remaining_seconds": {
           "type": "string",
@@ -690,43 +433,6 @@
         "birthday_block": {
           "type": "integer",
           "format": "int32"
-        }
-      }
-    },
-    "lnrpczone": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "offset": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "isDST": {
-          "type": "boolean",
-          "format": "boolean"
-        }
-      }
-    },
-    "lnrpczoneTrans": {
-      "type": "object",
-      "properties": {
-        "when": {
-          "type": "string",
-          "format": "int64"
-        },
-        "index": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "isstd": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "isutc": {
-          "type": "boolean",
-          "format": "boolean"
         }
       }
     },

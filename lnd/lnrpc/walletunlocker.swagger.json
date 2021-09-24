@@ -14,7 +14,7 @@
     "/v1/changepassword": {
       "post": {
         "summary": "lncli: `changepassword`\nChangePassword changes the password of the encrypted wallet. This will\nautomatically unlock the wallet database if successful.",
-        "operationId": "WalletUnlocker_ChangePassword",
+        "operationId": "ChangePassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -23,7 +23,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response.",
+            "description": "An unexpected error response",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -48,7 +48,7 @@
       "get": {
         "summary": "GenSeed is the first method that should be used to instantiate a new lnd\ninstance. This method allows a caller to generate a new aezeed cipher seed\ngiven an optional passphrase. If provided, the passphrase will be necessary\nto decrypt the cipherseed to expose the internal wallet seed.",
         "description": "Once the cipherseed is obtained and verified by the user, the InitWallet\nmethod should be used to commit the newly generated seed, and create the\nwallet.",
-        "operationId": "WalletUnlocker_GenSeed",
+        "operationId": "GenSeed",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -57,7 +57,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response.",
+            "description": "An unexpected error response",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -90,7 +90,7 @@
       "post": {
         "summary": "InitWallet is used when lnd is starting up for the first time to fully\ninitialize the daemon and its internal wallet. At the very least a wallet\npassword must be provided. This will be used to encrypt sensitive material\non disk.",
         "description": "In the case of a recovery scenario, the user can also specify their aezeed\nmnemonic and passphrase. If set, then the daemon will use this prior state\nto initialize its internal wallet.\n\nAlternatively, this can be used along with the GenSeed RPC to obtain a\nseed, then present it to the user. Once it has been verified by the user,\nthe seed can be fed into this RPC in order to commit the new wallet.",
-        "operationId": "WalletUnlocker_InitWallet",
+        "operationId": "InitWallet",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -99,7 +99,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response.",
+            "description": "An unexpected error response",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -123,7 +123,7 @@
     "/v1/unlockwallet": {
       "post": {
         "summary": "lncli: `unlock`\nUnlockWallet is used at startup of lnd to provide a password to unlock\nthe wallet database.",
-        "operationId": "WalletUnlocker_UnlockWallet",
+        "operationId": "UnlockWallet",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -132,7 +132,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response.",
+            "description": "An unexpected error response",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -183,10 +183,12 @@
         },
         "stateless_init": {
           "type": "boolean",
+          "format": "boolean",
           "title": "stateless_init is an optional argument instructing the daemon NOT to create\nany *.macaroon files in its filesystem. If this parameter is set, then the\nadmin macaroon returned in the response MUST be stored by the caller of the\nRPC as otherwise all access to the daemon will be lost!"
         },
         "new_macaroon_root_key": {
           "type": "boolean",
+          "format": "boolean",
           "description": "new_macaroon_root_key is an optional argument instructing the daemon to\nrotate the macaroon root key when set to true. This will invalidate all\npreviously generated macaroons."
         }
       }
@@ -294,6 +296,7 @@
         },
         "stateless_init": {
           "type": "boolean",
+          "format": "boolean",
           "title": "stateless_init is an optional argument instructing the daemon NOT to create\nany *.macaroon files in its filesystem. If this parameter is set, then the\nadmin macaroon returned in the response MUST be stored by the caller of the\nRPC as otherwise all access to the daemon will be lost!"
         }
       }
@@ -344,6 +347,7 @@
         },
         "stateless_init": {
           "type": "boolean",
+          "format": "boolean",
           "description": "stateless_init is an optional argument instructing the daemon NOT to create\nany *.macaroon files in its file system."
         }
       }

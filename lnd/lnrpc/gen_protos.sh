@@ -2,7 +2,7 @@
 
 echo "Generating root gRPC server protos"
 
-PROTOS="rpc.proto walletunlocker.proto **/*.proto"
+PROTOS="rpc.proto walletunlocker.proto metaservice.proto pkt.proto **/*.proto"
 
 # For each of the sub-servers, we then generate their protos, but a restricted
 # set as they don't yet require REST proxies, or swagger docs.

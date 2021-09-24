@@ -93,7 +93,7 @@ func actionDecorator(f func(*cli.Context) er.R) func(*cli.Context) er.R {
 			// running, but the RPC server is not active yet (only
 			// WalletUnlocker server active) and most likely this
 			// is because of an encrypted wallet.
-			if ok && s.Code() == codes.Unimplemented {
+			if ok && s.Code() == codes.Unimplemented && c.Command.Name != "getinfo" {
 				return er.Errorf("Wallet is encrypted. " +
 					"Please unlock using 'lncli unlock', " +
 					"or set password using 'lncli create'" +
@@ -1246,7 +1246,15 @@ func getInfo(ctx *cli.Context) er.R {
 	req := &lnrpc.GetInfoRequest{}
 	resp, err := client.GetInfo(ctxb, req)
 	if err != nil {
-		return er.E(err)
+		req := &lnrpc.GetInfo2Request{}
+		metaclient, cleanUp := getMetaServiceClient(ctx)
+		defer cleanUp()
+		resp, err := metaclient.GetInfo2(ctxb, req)
+		if err != nil {
+			return er.E(err)
+		} else {
+			printRespJSON(resp)
+		}
 	}
 
 	printRespJSON(resp)
