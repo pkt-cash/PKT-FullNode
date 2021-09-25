@@ -2,20 +2,18 @@ package walletunlocker
 
 import (
 	"context"
-	"crypto/rand"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/lnd/aezeed"
 	"github.com/pkt-cash/pktd/lnd/chanbackup"
-	"github.com/pkt-cash/pktd/lnd/keychain"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 )
 
 var (
@@ -50,7 +48,7 @@ type WalletInitMsg struct {
 
 	// WalletSeed is the deciphered cipher seed that the wallet should use
 	// to initialize itself.
-	WalletSeed *aezeed.CipherSeed
+	Seed *seedwords.Seed
 
 	// RecoveryWindow is the address look-ahead used when restoring a seed
 	// with existing funds. A recovery window zero indicates that no
@@ -179,55 +177,30 @@ func (u *UnlockerService) GenSeed0(_ context.Context,
 		return nil, er.Errorf("wallet already exists")
 	}
 
-	var entropy [aezeed.EntropySize]byte
+	//var entropy [aezeed.EntropySize]byte
 
-	switch {
-	// If the user provided any entropy, then we'll make sure it's sized
-	// properly.
-	case len(in.SeedEntropy) != 0 && len(in.SeedEntropy) != aezeed.EntropySize:
-		return nil, er.Errorf("incorrect entropy length: expected "+
-			"16 bytes, instead got %v bytes", len(in.SeedEntropy))
-
-	// If the user provided the correct number of bytes, then we'll copy it
-	// over into our buffer for usage.
-	case len(in.SeedEntropy) == aezeed.EntropySize:
-		copy(entropy[:], in.SeedEntropy[:])
-
-	// Otherwise, we'll generate a fresh new set of bytes to use as entropy
-	// to generate the seed.
-	default:
-		if _, err := rand.Read(entropy[:]); err != nil {
-			return nil, er.E(err)
-		}
+	if len(in.SeedEntropy) != 0 {
+		return nil, er.Errorf("seed input entropy is not supported")
 	}
 
 	// Now that we have our set of entropy, we'll create a new cipher seed
 	// instance.
 	//
-	cipherSeed, err := aezeed.New(
-		keychain.KeyDerivationVersion, &entropy, time.Now(),
-	)
+	cipherSeed, err := seedwords.RandomSeed()
 	if err != nil {
 		return nil, err
 	}
 
-	// With our raw cipher seed obtained, we'll convert it into an encoded
-	// mnemonic using the user specified pass phrase.
-	mnemonic, err := cipherSeed.ToMnemonic(in.AezeedPassphrase)
-	if err != nil {
-		return nil, err
-	}
+	encipheredSeed := cipherSeed.Encrypt(in.AezeedPassphrase)
 
-	// Additionally, we'll also obtain the raw enciphered cipher seed as
-	// well to return to the user.
-	encipheredSeed, err := cipherSeed.Encipher(in.AezeedPassphrase)
+	mnemonic, err := encipheredSeed.Words("english")
 	if err != nil {
 		return nil, err
 	}
 
 	return &lnrpc.GenSeedResponse{
-		CipherSeedMnemonic: []string(mnemonic[:]),
-		EncipheredSeed:     encipheredSeed[:],
+		CipherSeedMnemonic: strings.Split(mnemonic, " "),
+		EncipheredSeed:     encipheredSeed.Bytes[:],
 	}, nil
 }
 
@@ -320,15 +293,13 @@ func (u *UnlockerService) InitWallet0(ctx context.Context,
 		return nil, er.Errorf("wallet already exists")
 	}
 
-	// At this point, we know that the wallet doesn't already exist. So
-	// we'll map the user provided aezeed and passphrase into a decoded
-	// cipher seed instance.
-	var mnemonic aezeed.Mnemonic
-	copy(mnemonic[:], in.CipherSeedMnemonic[:])
+	mnemonic := strings.Join(in.CipherSeedMnemonic, " ")
+	seedEnc, err := seedwords.SeedFromWords(mnemonic)
+	if err != nil {
+		return nil, err
+	}
 
-	// If we're unable to map it back into the ciphertext, then either the
-	// mnemonic is wrong, or the passphrase is wrong.
-	cipherSeed, err := mnemonic.ToCipherSeed(in.AezeedPassphrase)
+	seed, err := seedEnc.Decrypt(in.AezeedPassphrase, false)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +309,7 @@ func (u *UnlockerService) InitWallet0(ctx context.Context,
 	// daemon to initialize itself and startup.
 	initMsg := &WalletInitMsg{
 		Passphrase:     password,
-		WalletSeed:     cipherSeed,
+		Seed:           seed,
 		RecoveryWindow: uint32(recoveryWindow),
 		StatelessInit:  in.StatelessInit,
 	}

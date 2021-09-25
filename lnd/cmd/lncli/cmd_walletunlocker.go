@@ -15,6 +15,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lncfg"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/lnd/walletunlocker"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
 	"github.com/urfave/cli"
 )
 
@@ -224,8 +225,8 @@ func create(ctx *cli.Context) er.R {
 mnemonicCheck:
 	for {
 		fmt.Println()
-		fmt.Printf("Do you have an existing cipher seed " +
-			"mnemonic you want to use? (Enter y/n): ")
+		fmt.Printf("Do you have an existing Pktwallet seed " +
+			"you want to use? (Enter y/n): ")
 
 		reader := bufio.NewReader(os.Stdin)
 		answer, errr := reader.ReadString('\n')
@@ -256,9 +257,7 @@ mnemonicCheck:
 		recoveryWindow     int32
 	)
 	if hasMnemonic {
-		// We'll now prompt the user to enter in their 24-word
-		// mnemonic.
-		fmt.Printf("Input your 24-word mnemonic separated by spaces: ")
+		fmt.Printf("Input your 15-word Pktwallet seed separated by spaces: ")
 		reader := bufio.NewReader(os.Stdin)
 		mnemonic, errr := reader.ReadString('\n')
 		if errr != nil {
@@ -274,53 +273,53 @@ mnemonicCheck:
 
 		fmt.Println()
 
-		if len(cipherSeedMnemonic) != 24 {
+		if len(cipherSeedMnemonic) != 15 {
 			return er.Errorf("wrong cipher seed mnemonic "+
 				"length: got %v words, expecting %v words",
-				len(cipherSeedMnemonic), 24)
+				len(cipherSeedMnemonic), 15)
 		}
 
-		// Additionally, the user may have a passphrase, that will also
-		// need to be provided so the daemon can properly decipher the
-		// cipher seed.
-		aezeedPass, err = readPassword("Input your cipher seed " +
-			"passphrase (press enter if your seed doesn't have a " +
-			"passphrase): ")
+		seedEnc, err := seedwords.SeedFromWords(mnemonic)
 		if err != nil {
 			return err
 		}
-
-		for {
-			fmt.Println()
-			fmt.Printf("Input an optional address look-ahead "+
-				"used to scan for used keys (default %d): ",
-				defaultRecoveryWindow)
-
-			reader := bufio.NewReader(os.Stdin)
-			answer, errr := reader.ReadString('\n')
-			if errr != nil {
-				return er.E(errr)
-			}
-
-			fmt.Println()
-
-			answer = strings.TrimSpace(answer)
-
-			if len(answer) == 0 {
-				recoveryWindow = defaultRecoveryWindow
-				break
-			}
-
-			lookAhead, err := strconv.Atoi(answer)
-			if err != nil {
-				fmt.Printf("Unable to parse recovery "+
-					"window: %v\n", err)
-				continue
-			}
-
-			recoveryWindow = int32(lookAhead)
-			break
+		if seedEnc.NeedsPassphrase() {
+			aezeedPass, err = readPassword("This seed is encrypted " +
+				"with a passphrase please enter it now: ")
 		}
+
+		/// This should be automatic
+		// for {
+		// 	fmt.Println()
+		// 	fmt.Printf("Input an optional address look-ahead "+
+		// 		"used to scan for used keys (default %d): ",
+		// 		defaultRecoveryWindow)
+
+		// 	reader := bufio.NewReader(os.Stdin)
+		// 	answer, errr := reader.ReadString('\n')
+		// 	if errr != nil {
+		// 		return er.E(errr)
+		// 	}
+
+		// 	fmt.Println()
+
+		// 	answer = strings.TrimSpace(answer)
+
+		// 	if len(answer) == 0 {
+		// 		recoveryWindow = defaultRecoveryWindow
+		// 		break
+		// 	}
+
+		// 	lookAhead, err := strconv.Atoi(answer)
+		// 	if err != nil {
+		// 		fmt.Printf("Unable to parse recovery "+
+		// 			"window: %v\n", err)
+		// 		continue
+		// 	}
+
+		// 	recoveryWindow = int32(lookAhead)
+		// 	break
+		// }
 	} else {
 		// Otherwise, if the user doesn't have a mnemonic that they
 		// want to use, we'll generate a fresh one with the GenSeed
@@ -354,25 +353,18 @@ mnemonicCheck:
 
 	// Before we initialize the wallet, we'll display the cipher seed to
 	// the user so they can write it down.
-	mnemonicWords := cipherSeedMnemonic
 
-	fmt.Println("!!!YOU MUST WRITE DOWN THIS SEED TO BE ABLE TO " +
+	fmt.Println("!!!YOU MUST WRITE DOWN THIS SEED AND YOUR PASSWORD TO BE ABLE TO " +
 		"RESTORE THE WALLET!!!")
 	fmt.Println()
 
 	fmt.Println("---------------BEGIN LND CIPHER SEED---------------")
 
-	numCols := 4
-	colWords := monowidthColumns(mnemonicWords, numCols)
-	for i := 0; i < len(colWords); i += numCols {
-		fmt.Printf("%2d. %3s  %2d. %3s  %2d. %3s  %2d. %3s\n",
-			i+1, colWords[i], i+2, colWords[i+1], i+3,
-			colWords[i+2], i+4, colWords[i+3])
-	}
+	fmt.Printf("%v\n", strings.Join(cipherSeedMnemonic, " "))
 
 	fmt.Println("---------------END LND CIPHER SEED-----------------")
 
-	fmt.Println("\n!!!YOU MUST WRITE DOWN THIS SEED TO BE ABLE TO " +
+	fmt.Println("\n!!!YOU MUST WRITE DOWN THIS SEED AND YOUR PASSWORD TO BE ABLE TO " +
 		"RESTORE THE WALLET!!!")
 
 	// With either the user's prior cipher seed, or a newly generated one,
@@ -390,7 +382,7 @@ mnemonicCheck:
 		return er.E(errr)
 	}
 
-	fmt.Println("\nlnd successfully initialized!")
+	fmt.Println("\npld successfully initialized!")
 
 	if statelessInit {
 		return storeOrPrintAdminMac(ctx, response.AdminMacaroon)

@@ -7,7 +7,6 @@ package lnd
 import (
 	"context"
 	"crypto/tls"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -1302,19 +1301,8 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	// we'll create the wallet early to load the seed.
 	case initMsg := <-pwService.InitMsgs:
 		password := initMsg.Passphrase
-		cipherSeed := initMsg.WalletSeed
+		cipherSeed := initMsg.Seed
 		recoveryWindow := initMsg.RecoveryWindow
-
-		// Before we proceed, we'll check the internal version of the
-		// seed. If it's greater than the current key derivation
-		// version, then we'll return an error as we don't understand
-		// this.
-		if cipherSeed.InternalVersion != keychain.KeyDerivationVersion {
-			return nil, shutdown, er.Errorf("invalid internal "+
-				"seed version %v, current version is %v",
-				cipherSeed.InternalVersion,
-				keychain.KeyDerivationVersion)
-		}
 
 		netDir := btcwallet.NetworkDir(
 			chainConfig.ChainDir, cfg.ActiveNetParams.Params,
@@ -1324,11 +1312,8 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 			recoveryWindow,
 		)
 
-		// With the seed, we can now use the wallet loader to create
-		// the wallet, then pass it back to avoid unlocking it again.
-		birthday := cipherSeed.BirthdayTime()
 		newWallet, err := loader.CreateNewWallet(
-			password, password, []byte(hex.EncodeToString(cipherSeed.Entropy[:])), birthday, nil,
+			password, password, nil, time.Time{}, cipherSeed,
 		)
 		if err != nil {
 			// Don't leave the file open in case the new wallet
@@ -1348,7 +1333,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 
 		return &WalletUnlockParams{
 			Password:        password,
-			Birthday:        birthday,
+			Birthday:        cipherSeed.Birthday(),
 			RecoveryWindow:  recoveryWindow,
 			Wallet:          newWallet,
 			ChansToRestore:  initMsg.ChanBackups,
