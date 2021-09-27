@@ -1241,23 +1241,22 @@ var getInfoCommand = cli.Command{
 func getInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
+	inforeq := &lnrpc.GetInfoRequest{}
+	inforesp, infoerr := client.GetInfo(ctxb, inforeq)
+	metaclient, cleanUp := getMetaServiceClient(ctx)
 	defer cleanUp()
-
-	req := &lnrpc.GetInfoRequest{}
-	resp, err := client.GetInfo(ctxb, req)
-	if err != nil {
-		req := &lnrpc.GetInfo2Request{}
-		metaclient, cleanUp := getMetaServiceClient(ctx)
-		defer cleanUp()
-		resp, err := metaclient.GetInfo2(ctxb, req)
-		if err != nil {
-			return er.E(err)
-		} else {
-			printRespJSON(resp)
-		}
+	info2req := &lnrpc.GetInfo2Request{
+		InfoResponse: inforesp,
+	}
+	if infoerr != nil {
+		inforesp = nil
+	}
+	info2resp, info2err := metaclient.GetInfo2(ctxb, info2req, inforesp)
+	if info2err != nil {
+		return er.E(info2err)
 	}
 
-	printRespJSON(resp)
+	printRespJSON(info2resp)
 	return nil
 }
 

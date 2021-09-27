@@ -380,7 +380,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	if !cfg.NoSeedBackup {
 		params, shutdown, err := waitForWalletPassword(
 			cfg, cfg.RESTListeners, serverOpts, restDialOpts,
-			restProxyDest, restListen, walletUnlockerListeners,
+			restProxyDest, restListen, walletUnlockerListeners, neutrinoCS,
 		)
 		if err != nil {
 			err := er.Errorf("unable to set up wallet password "+
@@ -1180,7 +1180,7 @@ type WalletUnlockParams struct {
 func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	serverOpts []grpc.ServerOption, restDialOpts []grpc.DialOption,
 	restProxyDest string, restListen func(net.Addr) (net.Listener, er.R),
-	getListeners rpcListeners) (*WalletUnlockParams, func(), er.R) {
+	getListeners rpcListeners, neutrino *neutrino.ChainService) (*WalletUnlockParams, func(), er.R) {
 
 	chainConfig := cfg.Bitcoin
 	if cfg.registeredChains.PrimaryChain() == chainreg.LitecoinChain {
@@ -1207,7 +1207,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	lnrpc.RegisterWalletUnlockerServer(grpcServer, pwService)
 
 	// Set up meta Service
-	metaService := metaservice.NewMetaService(&neutrino.ChainService{})
+	metaService := metaservice.NewMetaService(neutrino)
 	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	var shutdownFuncs []func()
