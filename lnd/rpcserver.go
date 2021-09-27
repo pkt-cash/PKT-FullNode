@@ -55,6 +55,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chanfunding"
 	"github.com/pkt-cash/pktd/lnd/lnwire"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/lnd/metaservice"
 	"github.com/pkt-cash/pktd/lnd/monitoring"
 	"github.com/pkt-cash/pktd/lnd/peer"
 	"github.com/pkt-cash/pktd/lnd/peernotifier"
@@ -556,7 +557,7 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 	tower *watchtower.Standalone,
 	restListen func(net.Addr) (net.Listener, er.R),
 	getListeners rpcListeners,
-	chanPredicate *chanacceptor.ChainedAcceptor) (*rpcServer, er.R) {
+	chanPredicate *chanacceptor.ChainedAcceptor, metaService *metaservice.MetaService) (*rpcServer, er.R) {
 
 	// Set up router rpc backend.
 	channelGraph := s.localChanDB.ChannelGraph()
@@ -767,6 +768,8 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 		allPermissions:  permissions,
 	}
 	lnrpc.RegisterLightningServer(grpcServer, rootRPCServer)
+	//metaservice.RegisterRPCServer(rootRPCServer)
+	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	// Now the main RPC server has been registered, we'll iterate through
 	// all the sub-RPC servers and register them to ensure that requests

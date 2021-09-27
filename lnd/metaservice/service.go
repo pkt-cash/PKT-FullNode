@@ -2,10 +2,13 @@ package metaservice
 
 import (
 	"context"
+	"net"
+	"time"
 
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/neutrino"
+	"github.com/pkt-cash/pktd/neutrino/banman"
 )
 
 var (
@@ -38,6 +41,7 @@ const (
 
 type MetaService struct {
 	Neutrino *neutrino.ChainService
+	//rpcServer lnrpc.LightningServer
 }
 
 var _ lnrpc.MetaServiceServer = (*MetaService)(nil)
@@ -50,14 +54,20 @@ func NewMetaService(neutrino *neutrino.ChainService) *MetaService {
 	}
 }
 
+// func RegisterRPCServer(server lnrpc.LightningServer) *MetaService {
+// 	return &MetaService{
+// 		rpcServer: server,
+// 	}
+// }
+
 func (m *MetaService) GetInfo2(ctx context.Context,
-	in *lnrpc.GetInfo2Request, inforesp *lnrpc.GetInfoResponse) (*lnrpc.GetInfo2Responce, error) {
-	res, err := m.GetInfo20(ctx, in, inforesp)
+	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Responce, error) {
+	res, err := m.GetInfo20(ctx, in)
 	return res, er.Native(err)
 }
 
 func (m *MetaService) GetInfo20(ctx context.Context,
-	in *lnrpc.GetInfo2Request, inforesp *lnrpc.GetInfoResponse) (*lnrpc.GetInfo2Responce, er.R) {
+	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Responce, er.R) {
 
 	var ni lnrpc.NeutrinoInfo
 	neutrinoPeers := m.Neutrino.Peers()
@@ -79,7 +89,9 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 		peerDesc.Connected = neutrinoPeer.Connected()
 		peerDesc.Id = neutrinoPeer.ID()
 		peerDesc.Inbound = neutrinoPeer.Inbound()
-		peerDesc.LastAnnouncedBlock = neutrinoPeer.LastAnnouncedBlock().CloneBytes()
+		if neutrinoPeer.LastAnnouncedBlock() != nil {
+			peerDesc.LastAnnouncedBlock = neutrinoPeer.LastAnnouncedBlock().CloneBytes()
+		}
 		peerDesc.LastBlock = neutrinoPeer.LastBlock()
 		peerDesc.LastPingMicros = neutrinoPeer.LastPingMicros()
 		peerDesc.LastPingNonce = neutrinoPeer.LastPingNonce()
@@ -90,7 +102,15 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 		ni.Peers = append(ni.Peers, &peerDesc)
 	}
 
-	ni.Bans = nil
+	m.Neutrino.BanStore().ForEachBannedAddr(func(a *net.IPNet, r banman.Reason, t time.Time) er.R {
+		var ban lnrpc.NeutrinoBan
+		ban.Addr = a.String()
+		ban.Reason = r.String()
+		ban.EndTime = t.String()
+		ni.Bans = append(ni.Bans, &ban)
+		return nil
+	})
+
 	neutrionoQueries := m.Neutrino.GetActiveQueries()
 	for i := range neutrionoQueries {
 		var nq lnrpc.NeutrinoQuery
@@ -105,16 +125,16 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 		ni.Queries = append(ni.Queries, &nq)
 	}
 
-	ni.BlockHash = ""      //???
+	ni.BlockHash = ""
 	ni.Height = 0          //???
 	ni.BlockTimestamp = "" //???
 	ni.IsSyncing = false
 
 	var wallet lnrpc.WalletInfo
-	
+
 	return &lnrpc.GetInfo2Responce{
 		Neutrino:  &ni,
 		Wallet:    &wallet,
-		Lightning: inforesp,
+		Lightning: in.InfoResponse,
 	}, nil
 }

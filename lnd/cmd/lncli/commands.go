@@ -1251,7 +1251,7 @@ func getInfo(ctx *cli.Context) er.R {
 	if infoerr != nil {
 		inforesp = nil
 	}
-	info2resp, info2err := metaclient.GetInfo2(ctxb, info2req, inforesp)
+	info2resp, info2err := metaclient.GetInfo2(ctxb, info2req)
 	if info2err != nil {
 		return er.E(info2err)
 	}
