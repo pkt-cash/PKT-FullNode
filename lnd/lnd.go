@@ -396,6 +396,8 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		shutdownUnlocker = shutdown
 		privateWalletPw = walletInitParams.Password
 		publicWalletPw = walletInitParams.Password
+		//Pass wallet to metaservice for getinfo2
+		metaService.SetWallet(walletInitParams.Wallet)
 		defer func() {
 			if err := walletInitParams.UnloadWallet(); err != nil {
 				log.Errorf("Could not unload wallet: %v", err)

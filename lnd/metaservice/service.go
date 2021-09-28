@@ -5,10 +5,13 @@ import (
 	"net"
 	"time"
 
+	"github.com/pkt-cash/pktd/btcjson"
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/lnd/lnrpc"
 	"github.com/pkt-cash/pktd/neutrino"
 	"github.com/pkt-cash/pktd/neutrino/banman"
+	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
 var (
@@ -41,7 +44,7 @@ const (
 
 type MetaService struct {
 	Neutrino *neutrino.ChainService
-	//rpcServer lnrpc.LightningServer
+	Wallet   *wallet.Wallet
 }
 
 var _ lnrpc.MetaServiceServer = (*MetaService)(nil)
@@ -54,11 +57,9 @@ func NewMetaService(neutrino *neutrino.ChainService) *MetaService {
 	}
 }
 
-// func RegisterRPCServer(server lnrpc.LightningServer) *MetaService {
-// 	return &MetaService{
-// 		rpcServer: server,
-// 	}
-// }
+func (m *MetaService) SetWallet(wallet *wallet.Wallet) {
+	m.Wallet = wallet
+}
 
 func (m *MetaService) GetInfo2(ctx context.Context,
 	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Responce, error) {
@@ -125,16 +126,50 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 		ni.Queries = append(ni.Queries, &nq)
 	}
 
-	ni.BlockHash = ""
-	ni.Height = 0          //???
-	ni.BlockTimestamp = "" //???
-	ni.IsSyncing = false
+	bb, err := m.Neutrino.BestBlock()
+	if err != nil {
+		return nil, err
+	}
+	ni.BlockHash = bb.Hash.String()
+	ni.Height = bb.Height
+	ni.BlockTimestamp = bb.Timestamp.String()
+	ni.IsSyncing = !m.Neutrino.IsCurrent()
 
-	var wallet lnrpc.WalletInfo
+	mgrStamp := waddrmgr.BlockStamp{}
+	walletInfo := &lnrpc.WalletInfo{}
+
+	if m.Wallet != nil {
+		mgrStamp = m.Wallet.Manager.SyncedTo()
+		walletStats := &lnrpc.WalletStats{}
+		m.Wallet.ReadStats(func(ws *btcjson.WalletStats) {
+			walletStats.MaintenanceInProgress = ws.MaintenanceInProgress
+			walletStats.MaintenanceName = ws.MaintenanceName
+			walletStats.MaintenanceCycles = int32(ws.MaintenanceCycles)
+			walletStats.MaintenanceLastBlockVisited = int32(ws.MaintenanceLastBlockVisited)
+			walletStats.Syncing = ws.Syncing
+			if ws.SyncStarted != nil {
+				walletStats.SyncStarted = ws.SyncStarted.String()
+			}
+			walletStats.SyncRemainingSeconds = ws.SyncRemainingSeconds
+			walletStats.SyncCurrentBlock = ws.SyncCurrentBlock
+			walletStats.SyncFrom = ws.SyncFrom
+			walletStats.SyncTo = ws.SyncTo
+			walletStats.BirthdayBlock = ws.BirthdayBlock
+		})
+		walletInfo = &lnrpc.WalletInfo{
+			CurrentBlockHash:      mgrStamp.Hash.String(),
+			CurrentHeight:         mgrStamp.Height,
+			CurrentBlockTimestamp: mgrStamp.Timestamp.String(),
+			WalletVersion:         int32(waddrmgr.LatestMgrVersion),
+			WalletStats:           walletStats,
+		}
+	} else {
+		walletInfo = nil
+	}
 
 	return &lnrpc.GetInfo2Responce{
 		Neutrino:  &ni,
-		Wallet:    &wallet,
+		Wallet:    walletInfo,
 		Lightning: in.InfoResponse,
 	}, nil
 }
