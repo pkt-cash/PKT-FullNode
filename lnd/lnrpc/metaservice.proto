@@ -15,39 +15,6 @@ message GetInfo2Request {
     GetInfoResponse InfoResponse = 1;
 }
 
-message NeutrinoBan {
-    string addr = 1;
-    string reason = 2;
-    string end_time = 3;
-}
-
-message NeutrinoQuery {
-	string peer = 1;   
-	string command = 2;        
-	uint32 req_num = 3;  
-	uint32 create_time = 4;      
-	uint32 last_request_time = 5;  
-	uint32 last_response_time = 6;
-}
-
-message NeutrinoInfo {
-    repeated PeerDesc peers = 1;
-    repeated NeutrinoBan bans = 2;
-    repeated NeutrinoQuery queries = 3;
-    string block_hash = 4;
-    int32 height = 5;
-    string block_timestamp = 6;
-    bool is_syncing = 7;
-}
-
-message WalletInfo {
-    string current_block_hash = 1;
-    int32 current_height = 2;
-    string current_block_timestamp = 3;
-    int32 wallet_version = 4;
-    WalletStats wallet_stats = 5;
-}
-
 message GetInfo2Responce { 
     NeutrinoInfo neutrino = 1;
     WalletInfo wallet = 2;
