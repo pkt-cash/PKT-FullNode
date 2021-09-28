@@ -12,7 +12,6 @@ message Config {
     uint32 protocol_version = 8;
     bool disable_relay_tx = 9;
     int64 trickle_interval = 11;
-    bool allow_self_conns = 12;
 }
 
 message PeerDesc {

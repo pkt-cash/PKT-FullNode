@@ -11,7 +11,9 @@ service MetaService {
     rpc GetInfo2 (GetInfo2Request) returns (GetInfo2Responce);
 }
 
-message GetInfo2Request {}
+message GetInfo2Request {
+    GetInfoResponse InfoResponse = 1;
+}
 
 message NeutrinoBan {
     string addr = 1;
