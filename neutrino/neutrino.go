@@ -59,9 +59,9 @@ var (
 	RequiredServices = protocol.SFNodeNetwork | protocol.SFNodeWitness | protocol.SFNodeCF
 
 	// BanThreshold is the maximum ban score before a peer is banned.
-	BanThreshold = uint32(100)
+	BanThreshold     = uint32(100)
 	BanWarnThreshold = uint32(0)
-	
+
 	// BanDuration is the duration of a ban.
 	BanDuration = time.Hour * 24
 
@@ -929,8 +929,9 @@ func (s *ChainService) BestBlock() (*waddrmgr.BlockStamp, er.R) {
 	}
 
 	return &waddrmgr.BlockStamp{
-		Height: int32(bestHeight),
-		Hash:   bestHeader.BlockHash(),
+		Height:    int32(bestHeight),
+		Hash:      bestHeader.BlockHash(),
+		Timestamp: bestHeader.Timestamp,
 	}, nil
 }
 
@@ -972,7 +973,6 @@ func (s *ChainService) GetBlockHeight(hash *chainhash.Hash) (int32, er.R) {
 	return int32(height), nil
 }
 
-
 // addBanScore increases the persistent and decaying ban score fields by the
 // values passed as parameters. If the resulting score exceeds BanWarnThreshold,
 // (Default 0) a warning is logged including the reason provided. Further, if
@@ -1010,7 +1010,6 @@ func (sp *ServerPeer) addBanScore(persistent, transient uint32, reason string) {
 		}
 	}
 }
-
 
 // BanPeer bans a peer due to a specific reason for a duration of BanDuration.
 func (s *ChainService) BanPeer(addr string, reason banman.Reason) er.R {
