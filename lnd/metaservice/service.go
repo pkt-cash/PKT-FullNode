@@ -3,6 +3,7 @@ package metaservice
 import (
 	"context"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/pkt-cash/pktd/btcjson"
@@ -75,36 +76,44 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 	for i := range neutrinoPeers {
 		var peerDesc lnrpc.PeerDesc
 		neutrinoPeer := neutrinoPeers[i]
-		peerDesc.Addr = neutrinoPeer.Addr()
-		peerDesc.AdvertisedProtoVer = neutrinoPeer.Describe().AdvertisedProtoVer
+
 		peerDesc.BytesReceived = neutrinoPeer.BytesReceived()
 		peerDesc.BytesSent = neutrinoPeer.BytesSent()
-		desc := neutrinoPeer.Describe()
-		peerDesc.Cfg = &lnrpc.Config{}
-		peerDesc.Cfg.UserAgentName = desc.Cfg.UserAgentName
-		peerDesc.Cfg.UserAgentVersion = desc.Cfg.UserAgentVersion
-		peerDesc.Cfg.UserAgentComments = desc.Cfg.UserAgentComments
-		peerDesc.Cfg.DisableRelayTx = desc.Cfg.DisableRelayTx
-		peerDesc.Cfg.Services = desc.Cfg.Services.String()
-		peerDesc.Cfg.TrickleInterval = int64(desc.Cfg.TrickleInterval)
+		peerDesc.LastRecv = neutrinoPeer.LastRecv().String()
+		peerDesc.LastSend = neutrinoPeer.LastSend().String()
 		peerDesc.Connected = neutrinoPeer.Connected()
-		peerDesc.Id = neutrinoPeer.ID()
+		peerDesc.Addr = neutrinoPeer.Addr()
 		peerDesc.Inbound = neutrinoPeer.Inbound()
+		na := neutrinoPeer.NA()
+		if na != nil {
+			peerDesc.Na = na.IP.String() + ":" + strconv.Itoa(int(na.Port))
+		}
+		peerDesc.Id = neutrinoPeer.ID()
+		peerDesc.UserAgent = neutrinoPeer.UserAgent()
+		peerDesc.Services = neutrinoPeer.Services().String()
+		peerDesc.VersionKnown = neutrinoPeer.VersionKnown()
+		peerDesc.AdvertisedProtoVer = neutrinoPeer.Describe().AdvertisedProtoVer
+		peerDesc.ProtocolVersion = neutrinoPeer.ProtocolVersion()
+		peerDesc.SendHeadersPreferred = neutrinoPeer.Describe().SendHeadersPreferred
+		peerDesc.VerAckReceived = neutrinoPeer.VerAckReceived()
+		peerDesc.WitnessEnabled = neutrinoPeer.Describe().WitnessEnabled
+		peerDesc.WireEncoding = strconv.Itoa(int(neutrinoPeer.Describe().WireEncoding))
+		peerDesc.TimeOffset = neutrinoPeer.TimeOffset()
+		peerDesc.TimeConnected = neutrinoPeer.Describe().TimeConnected.String()
+		peerDesc.StartingHeight = neutrinoPeer.StartingHeight()
+		peerDesc.LastBlock = neutrinoPeer.LastBlock()
 		if neutrinoPeer.LastAnnouncedBlock() != nil {
 			peerDesc.LastAnnouncedBlock = neutrinoPeer.LastAnnouncedBlock().CloneBytes()
 		}
-		peerDesc.LastBlock = neutrinoPeer.LastBlock()
-		peerDesc.LastPingMicros = neutrinoPeer.LastPingMicros()
 		peerDesc.LastPingNonce = neutrinoPeer.LastPingNonce()
 		peerDesc.LastPingTime = neutrinoPeer.LastPingTime().String()
-		peerDesc.LastRecv = neutrinoPeer.LastRecv().String()
-		peerDesc.LastSend = neutrinoPeer.LastSend().String()
+		peerDesc.LastPingMicros = neutrinoPeer.LastPingMicros()
 
 		ni.Peers = append(ni.Peers, &peerDesc)
 	}
 
 	m.Neutrino.BanStore().ForEachBannedAddr(func(a *net.IPNet, r banman.Reason, t time.Time) er.R {
-		var ban lnrpc.NeutrinoBan
+		ban := lnrpc.NeutrinoBan{}
 		ban.Addr = a.String()
 		ban.Reason = r.String()
 		ban.EndTime = t.String()
@@ -114,14 +123,14 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 
 	neutrionoQueries := m.Neutrino.GetActiveQueries()
 	for i := range neutrionoQueries {
-		var nq lnrpc.NeutrinoQuery
+		nq := lnrpc.NeutrinoQuery{}
 		query := neutrionoQueries[i]
+		nq.Peer = query.Peer.String()
 		nq.Command = query.Command
+		nq.ReqNum = query.ReqNum
 		nq.CreateTime = query.CreateTime
 		nq.LastRequestTime = query.LastRequestTime
 		nq.LastResponseTime = query.LastResponseTime
-		nq.Peer = query.Peer.String()
-		nq.ReqNum = query.ReqNum
 
 		ni.Queries = append(ni.Queries, &nq)
 	}
