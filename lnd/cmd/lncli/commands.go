@@ -93,6 +93,7 @@ func actionDecorator(f func(*cli.Context) er.R) func(*cli.Context) er.R {
 			// running, but the RPC server is not active yet (only
 			// WalletUnlocker server active) and most likely this
 			// is because of an encrypted wallet.
+			// exclude getinfo in order to work even when wallet is locked
 			if ok && s.Code() == codes.Unimplemented && c.Command.Name != "getinfo" {
 				return er.Errorf("Wallet is encrypted. " +
 					"Please unlock using 'lncli unlock', " +
@@ -1241,15 +1242,17 @@ var getInfoCommand = cli.Command{
 func getInfo(ctx *cli.Context) er.R {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
+	defer cleanUp()
 	inforeq := &lnrpc.GetInfoRequest{}
 	inforesp, infoerr := client.GetInfo(ctxb, inforeq)
-	metaclient, cleanUp := getMetaServiceClient(ctx)
-	defer cleanUp()
-	info2req := &lnrpc.GetInfo2Request{
-		InfoResponse: inforesp,
-	}
 	if infoerr != nil {
 		inforesp = nil
+	}
+	// call getinfo2 from metaservice hat will return some info even when wallet is locked
+	metaclient, cleanUpMeta := getMetaServiceClient(ctx)
+	defer cleanUpMeta()
+	info2req := &lnrpc.GetInfo2Request{
+		InfoResponse: inforesp,
 	}
 	info2resp, info2err := metaclient.GetInfo2(ctxb, info2req)
 	if info2err != nil {

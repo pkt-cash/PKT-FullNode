@@ -52,7 +52,6 @@ var _ lnrpc.MetaServiceServer = (*MetaService)(nil)
 
 // New creates and returns a new MetaService
 func NewMetaService(neutrino *neutrino.ChainService) *MetaService {
-
 	return &MetaService{
 		Neutrino: neutrino,
 	}

@@ -373,7 +373,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		return getListeners()
 	}
 
-	// Set up meta Service
+	// Set up meta Service pass neutrino for getinfo
 	metaService := metaservice.NewMetaService(neutrinoCS)
 
 	// We wait until the user provides a password over RPC. In case lnd is
@@ -1210,6 +1210,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	// provided over RPC.
 	grpcServer := grpc.NewServer(serverOpts...)
 	lnrpc.RegisterWalletUnlockerServer(grpcServer, pwService)
+	// Set up metaservice allowing getinfo to work even when wallet is locked
 	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	var shutdownFuncs []func()

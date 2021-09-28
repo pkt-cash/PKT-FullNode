@@ -25,42 +25,6 @@
         }
       }
     },
-    "lnrpcConfig": {
-      "type": "object",
-      "properties": {
-        "user_agent_name": {
-          "type": "string"
-        },
-        "user_agent_version": {
-          "type": "string"
-        },
-        "user_agent_comments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "services": {
-          "type": "string"
-        },
-        "protocol_version": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "disable_relay_tx": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "trickle_interval": {
-          "type": "string",
-          "format": "int64"
-        },
-        "allow_self_conns": {
-          "type": "boolean",
-          "format": "boolean"
-        }
-      }
-    },
     "lnrpcFeature": {
       "type": "object",
       "properties": {
@@ -287,9 +251,6 @@
         },
         "addr": {
           "type": "string"
-        },
-        "cfg": {
-          "$ref": "#/definitions/lnrpcConfig"
         },
         "inbound": {
           "type": "boolean",
