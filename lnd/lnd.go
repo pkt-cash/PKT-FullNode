@@ -47,6 +47,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/btcwallet"
 	"github.com/pkt-cash/pktd/lnd/macaroons"
+	"github.com/pkt-cash/pktd/lnd/metaservice"
 	"github.com/pkt-cash/pktd/lnd/signal"
 	"github.com/pkt-cash/pktd/lnd/tor"
 	"github.com/pkt-cash/pktd/lnd/walletunlocker"
@@ -371,6 +372,9 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		return getListeners()
 	}
 
+	// Set up meta Service pass neutrino for getinfo
+	metaService := metaservice.NewMetaService(neutrinoCS)
+
 	// We wait until the user provides a password over RPC. In case lnd is
 	// started with the --noseedbackup flag, we use the default password
 	// for wallet encryption.
@@ -378,7 +382,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	if !cfg.NoSeedBackup {
 		params, shutdown, err := waitForWalletPassword(
 			cfg, cfg.RESTListeners, serverOpts, restDialOpts,
-			restProxyDest, restListen, walletUnlockerListeners,
+			restProxyDest, restListen, walletUnlockerListeners, metaService,
 		)
 		if err != nil {
 			err := er.Errorf("unable to set up wallet password "+
@@ -391,6 +395,8 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 		shutdownUnlocker = shutdown
 		privateWalletPw = walletInitParams.Password
 		publicWalletPw = walletInitParams.Password
+		//Pass wallet to metaservice for getinfo2
+		metaService.SetWallet(walletInitParams.Wallet)
 		defer func() {
 			if err := walletInitParams.UnloadWallet(); err != nil {
 				log.Errorf("Could not unload wallet: %v", err)
@@ -729,7 +735,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) er.R {
 	rpcServer, err := newRPCServer(
 		cfg, server, macaroonService, cfg.SubRPCServers, serverOpts,
 		restDialOpts, restProxyDest, atplManager, server.invoices,
-		tower, restListen, rpcListeners, chainedAcceptor,
+		tower, restListen, rpcListeners, chainedAcceptor, metaService,
 	)
 	if err != nil {
 		err := er.Errorf("unable to create RPC server: %v", err)
@@ -1178,7 +1184,7 @@ type WalletUnlockParams struct {
 func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	serverOpts []grpc.ServerOption, restDialOpts []grpc.DialOption,
 	restProxyDest string, restListen func(net.Addr) (net.Listener, er.R),
-	getListeners rpcListeners) (*WalletUnlockParams, func(), er.R) {
+	getListeners rpcListeners, metaService *metaservice.MetaService) (*WalletUnlockParams, func(), er.R) {
 
 	chainConfig := cfg.Bitcoin
 	if cfg.registeredChains.PrimaryChain() == chainreg.LitecoinChain {
@@ -1193,7 +1199,7 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	macaroonFiles := []string{
 		cfg.AdminMacPath, cfg.ReadMacPath, cfg.InvoiceMacPath,
 	}
-	fmt.Printf("\n\nchainConfig.ChainDir = %s\n\n", chainConfig.ChainDir)
+
 	pwService := walletunlocker.New(
 		chainConfig.ChainDir, cfg.ActiveNetParams.Params,
 		!cfg.SyncFreelist, macaroonFiles,
@@ -1203,6 +1209,8 @@ func waitForWalletPassword(cfg *Config, restEndpoints []net.Addr,
 	// provided over RPC.
 	grpcServer := grpc.NewServer(serverOpts...)
 	lnrpc.RegisterWalletUnlockerServer(grpcServer, pwService)
+	// Set up metaservice allowing getinfo to work even when wallet is locked
+	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	var shutdownFuncs []func()
 	shutdown := func() {

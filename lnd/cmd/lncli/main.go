@@ -58,6 +58,17 @@ func getWalletUnlockerClient(ctx *cli.Context) (lnrpc.WalletUnlockerClient, func
 	return lnrpc.NewWalletUnlockerClient(conn), cleanUp
 }
 
+func getMetaServiceClient(ctx *cli.Context) (lnrpc.MetaServiceClient, func()) {
+	conn := getClientConn(ctx, true)
+
+	cleanUp := func() {
+		conn.Close()
+	}
+
+	return lnrpc.NewMetaServiceClient(conn), cleanUp
+}
+
+
 func getClient(ctx *cli.Context) (lnrpc.LightningClient, func()) {
 	conn := getClientConn(ctx, false)
 
