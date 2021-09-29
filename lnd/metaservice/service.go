@@ -15,34 +15,6 @@ import (
 	"github.com/pkt-cash/pktd/pktwallet/wallet"
 )
 
-var (
-	// ErrUnlockTimeout signals that we did not get the expected unlock
-	// message before the timeout occurred.
-	ErrUnlockTimeout = er.GenericErrorType.CodeWithDetail("ErrUnlockTimeout",
-		"got no unlock message before timeout")
-)
-
-const (
-	// rpcAuthTimeoutSeconds is the number of seconds a connection to the
-	// RPC server is allowed to stay open without authenticating before it
-	// is closed.
-	rpcAuthTimeoutSeconds = 10
-
-	// gbtNonceRange is two 32-bit big-endian hexadecimal integers which
-	// represent the valid ranges of nonces returned by the getblocktemplate
-	// RPC.
-	gbtNonceRange = "00000000ffffffff"
-
-	// gbtRegenerateSeconds is the number of seconds that must pass before
-	// a new template is generated when the previous block hash has not
-	// changed and there have been changes to the available transactions
-	// in the memory pool.
-	gbtRegenerateSeconds = 60
-
-	// maxProtocolVersion is the max protocol version the server supports.
-	maxProtocolVersion = 70002
-)
-
 type MetaService struct {
 	Neutrino *neutrino.ChainService
 	Wallet   *wallet.Wallet
