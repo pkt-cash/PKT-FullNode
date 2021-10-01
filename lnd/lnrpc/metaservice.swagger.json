@@ -41,7 +41,7 @@
         }
       }
     },
-    "lnrpcGetInfo2Responce": {
+    "lnrpcGetInfo2Response": {
       "type": "object",
       "properties": {
         "neutrino": {
