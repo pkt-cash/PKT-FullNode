@@ -34,13 +34,13 @@ func (m *MetaService) SetWallet(wallet *wallet.Wallet) {
 }
 
 func (m *MetaService) GetInfo2(ctx context.Context,
-	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Responce, error) {
+	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Response, error) {
 	res, err := m.GetInfo20(ctx, in)
 	return res, er.Native(err)
 }
 
 func (m *MetaService) GetInfo20(ctx context.Context,
-	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Responce, er.R) {
+	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Response, er.R) {
 
 	var ni lnrpc.NeutrinoInfo
 	neutrinoPeers := m.Neutrino.Peers()
@@ -147,7 +147,7 @@ func (m *MetaService) GetInfo20(ctx context.Context,
 		walletInfo = nil
 	}
 
-	return &lnrpc.GetInfo2Responce{
+	return &lnrpc.GetInfo2Response{
 		Neutrino:  &ni,
 		Wallet:    walletInfo,
 		Lightning: in.InfoResponse,
