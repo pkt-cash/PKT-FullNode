@@ -102,7 +102,7 @@ type config struct {
 	RPCCert                *cfgutil.ExplicitString `long:"rpccert" description:"File containing the certificate file"`
 	RPCKey                 *cfgutil.ExplicitString `long:"rpckey" description:"File containing the certificate key"`
 	OneTimeTLSKey          bool                    `long:"onetimetlskey" description:"Generate a new TLS certpair at startup, but only write the certificate to disk"`
-	DisableServerTLS       bool                    `long:"noservertls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+	DisableServerTLS       bool                    `long:"noservertls" description:"Disable TLS for the RPC server"`
 	LegacyRPCListeners     []string                `long:"rpclisten" description:"Listen for legacy RPC connections on this interface/port (default port: 8332, testnet: 18332, simnet: 18554)"`
 	LegacyRPCMaxClients    int64                   `long:"rpcmaxclients" description:"Max number of legacy RPC clients for standard connections"`
 	LegacyRPCMaxWebsockets int64                   `long:"rpcmaxwebsockets" description:"Max number of legacy RPC websocket connections"`
@@ -241,10 +241,8 @@ func loadConfig() (*config, []string, er.R) {
 	}
 
 	// Show the version and exit if the version flag was specified.
-	funcName := "loadConfig"
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
-	usageMessage := fmt.Sprintf("Use %s -h to show usage", appName)
 	if preCfg.ShowVersion {
 		fmt.Println(appName, "version", version.Version())
 		os.Exit(0)
@@ -576,33 +574,6 @@ func loadConfig() (*config, []string, er.R) {
 					"used as a listener address for both "+
 					"RPC servers", addr)
 				fmt.Fprintln(os.Stderr, err)
-				return nil, nil, err
-			}
-		}
-	}
-
-	// Only allow server TLS to be disabled if the RPC server is bound to
-	// localhost addresses.
-	if cfg.DisableServerTLS {
-		allListeners := append(cfg.LegacyRPCListeners,
-			cfg.ExperimentalRPCListeners...)
-		for _, addr := range allListeners {
-			host, _, err := net.SplitHostPort(addr)
-			if err != nil {
-				str := "%s: RPC listen interface '%s' is " +
-					"invalid: %v"
-				err := er.Errorf(str, funcName, addr, err)
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
-			}
-			if _, ok := localhostListeners[host]; !ok {
-				str := "%s: the --noservertls option may not be used " +
-					"when binding RPC to non localhost " +
-					"addresses: %s"
-				err := er.Errorf(str, funcName, addr)
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, err
 			}
 		}
