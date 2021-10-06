@@ -2819,3 +2819,28 @@ func resync(ctx *cli.Context) er.R {
 	printRespJSON(resp)
 	return nil
 }
+
+var stopresyncCommand = cli.Command{
+	//TODO: add info
+	Name:        "stopresync",
+	Category:    "Wallet",
+	Usage:       "Stop a re-synchronization job before it's completion",
+	ArgsUsage:   "",
+	Description: `Stop a re-synchronization job before it's completion`,
+	Action:      actionDecorator(stopresync),
+}
+
+func stopresync(ctx *cli.Context) er.R {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	var req lnrpc.StopReSyncRequest
+
+	resp, err := client.StopReSync(ctxb, &req)
+	if err != nil {
+		return er.E(err)
+	}
+	printRespJSON(resp)
+	return nil
+}

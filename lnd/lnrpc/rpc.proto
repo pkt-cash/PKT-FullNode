@@ -522,6 +522,9 @@ service Lightning {
 
     /*Scan over the chain to find any transactions which may not have been recorded in the wallet's database*/
     rpc ReSync (ReSyncChainRequest) returns (ReSyncChainResponse);
+
+    /*Stop a re-synchronization job before it's completion*/
+    rpc StopReSync (StopReSyncRequest) returns (StopReSyncResponse);
 }
 
 message Utxo {
@@ -3774,4 +3777,10 @@ message ReSyncChainRequest {
 }
 
 message ReSyncChainResponse {
+}
+
+message StopReSyncRequest{}
+
+message StopReSyncResponse{
+    string value = 1;
 }
