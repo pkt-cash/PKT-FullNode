@@ -2757,7 +2757,6 @@ func restoreChanBackup(ctx *cli.Context) er.R {
 }
 
 var resyncCommand = cli.Command{
-	//TODO: add info
 	Name:        "resync",
 	Category:    "Wallet",
 	Usage:       "Scan over the chain to find any transactions which may not have been recorded in the wallet's database",
@@ -2821,7 +2820,6 @@ func resync(ctx *cli.Context) er.R {
 }
 
 var stopresyncCommand = cli.Command{
-	//TODO: add info
 	Name:        "stopresync",
 	Category:    "Wallet",
 	Usage:       "Stop a re-synchronization job before it's completion",
