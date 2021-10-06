@@ -371,6 +371,7 @@ func main() {
 		trackPaymentCommand,
 		versionCommand,
 		profileSubCommand,
+		resyncCommand,
 	}
 
 	// Add any extra commands determined by build flags.
