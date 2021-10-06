@@ -68,6 +68,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/zpay32"
 	"github.com/pkt-cash/pktd/pktconfig/version"
 	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -539,6 +540,8 @@ type rpcServer struct {
 	// allPermissions is a map of all registered gRPC URIs (including
 	// internal and external subservers) to the permissions they require.
 	allPermissions map[string][]bakery.Op
+
+	wallet *wallet.Wallet
 }
 
 // A compile time check to ensure that rpcServer fully implements the
@@ -747,6 +750,7 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 		serverOpts = append(serverOpts, chainedUnary, chainedStream)
 	}
 
+	wallet := metaService.GetWallet()
 	// Finally, with all the pre-set up complete,  we can create the main
 	// gRPC server, and register the main lnrpc server along side.
 	grpcServer := grpc.NewServer(serverOpts...)
@@ -766,9 +770,9 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 		macService:      macService,
 		selfNode:        selfNode.PubKeyBytes,
 		allPermissions:  permissions,
+		wallet:          wallet,
 	}
 	lnrpc.RegisterLightningServer(grpcServer, rootRPCServer)
-	//metaservice.RegisterRPCServer(rootRPCServer)
 	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
 
 	// Now the main RPC server has been registered, we'll iterate through
@@ -6860,4 +6864,22 @@ func (r *rpcServer) FundingStateStep0(ctx context.Context,
 	// TODO(roasbeef): return resulting state? also add a method to query
 	// current state?
 	return &lnrpc.FundingStateStepResp{}, nil
+}
+
+// Resync
+func (r *rpcServer) ReSync(ctx context.Context, req *lnrpc.ReSyncChainRequest) (*lnrpc.ReSyncChainResponse, error) {
+	fh := req.FromHeight
+	th := req.ToHeight
+	var a []string
+	if req.Addresses != nil {
+		a = req.Addresses
+	}
+
+	drop := req.DropDB
+	//Find how to access wallet.Wallet with in the RPCserver, check walletunlockparams it has a pointer to this wallet
+	err := r.wallet.ResyncChain(fh, th, a, drop)
+	if err != nil {
+		return nil, er.Native(err)
+	}
+	return &lnrpc.ReSyncChainResponse{}, nil
 }

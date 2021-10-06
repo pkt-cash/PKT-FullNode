@@ -519,6 +519,9 @@ service Lightning {
     */
     rpc ListPermissions (ListPermissionsRequest)
         returns (ListPermissionsResponse);
+
+    /*Scan over the chain to find any transactions which may not have been recorded in the wallet's database*/
+    rpc ReSync (ReSyncChainRequest) returns (ReSyncChainResponse);
 }
 
 message Utxo {
@@ -3761,4 +3764,14 @@ message MacaroonId {
 message Op {
     string entity = 1;
     repeated string actions = 2;
+}
+
+message ReSyncChainRequest {
+    int32 fromHeight = 1;
+    int32 toHeight = 2;
+    repeated string addresses = 3;
+    bool dropDB = 4;
+}
+
+message ReSyncChainResponse {
 }

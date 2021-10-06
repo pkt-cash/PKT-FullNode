@@ -33,6 +33,10 @@ func (m *MetaService) SetWallet(wallet *wallet.Wallet) {
 	m.Wallet = wallet
 }
 
+func (m *MetaService) GetWallet() *wallet.Wallet {
+	return m.Wallet
+}
+
 func (m *MetaService) GetInfo2(ctx context.Context,
 	in *lnrpc.GetInfo2Request) (*lnrpc.GetInfo2Response, error) {
 	res, err := m.GetInfo20(ctx, in)
