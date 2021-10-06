@@ -473,6 +473,10 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/ReSync": {{
+			Entity: "onchain",
+			Action: "write",
+		}},
 	}
 }
 
