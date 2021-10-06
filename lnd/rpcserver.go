@@ -754,7 +754,6 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 		serverOpts = append(serverOpts, chainedUnary, chainedStream)
 	}
 
-	wallet := metaService.GetWallet()
 	// Finally, with all the pre-set up complete,  we can create the main
 	// gRPC server, and register the main lnrpc server along side.
 	grpcServer := grpc.NewServer(serverOpts...)
@@ -774,7 +773,7 @@ func newRPCServer(cfg *Config, s *server, macService *macaroons.Service,
 		macService:      macService,
 		selfNode:        selfNode.PubKeyBytes,
 		allPermissions:  permissions,
-		wallet:          wallet,
+		wallet:          metaService.Wallet,
 	}
 	lnrpc.RegisterLightningServer(grpcServer, rootRPCServer)
 	lnrpc.RegisterMetaServiceServer(grpcServer, metaService)
@@ -6879,7 +6878,7 @@ func (r *rpcServer) ReSync(ctx context.Context, req *lnrpc.ReSyncChainRequest) (
 		a = req.Addresses
 	}
 
-	drop := req.DropDB
+	drop := req.DropDb
 	//Find how to access wallet.Wallet with in the RPCserver, check walletunlockparams it has a pointer to this wallet
 	err := r.wallet.ResyncChain(fh, th, a, drop)
 	if err != nil {

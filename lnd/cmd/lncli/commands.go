@@ -2808,7 +2808,7 @@ func resync(ctx *cli.Context) er.R {
 		FromHeight: fh,
 		ToHeight:   th,
 		Addresses:  a,
-		DropDB:     drop,
+		DropDb:     drop,
 	}
 
 	resp, err := client.ReSync(ctxb, req)

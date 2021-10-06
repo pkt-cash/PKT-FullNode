@@ -3767,10 +3767,10 @@ message Op {
 }
 
 message ReSyncChainRequest {
-    int32 fromHeight = 1;
-    int32 toHeight = 2;
+    int32 from_height = 1;
+    int32 to_height = 2;
     repeated string addresses = 3;
-    bool dropDB = 4;
+    bool drop_db = 4;
 }
 
 message ReSyncChainResponse {
