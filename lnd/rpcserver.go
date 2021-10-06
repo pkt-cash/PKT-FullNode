@@ -477,6 +477,10 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "onchain",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/StopReSync": {{
+			Entity: "onchain",
+			Action: "write",
+		}},
 	}
 }
 
@@ -6877,12 +6881,22 @@ func (r *rpcServer) ReSync(ctx context.Context, req *lnrpc.ReSyncChainRequest) (
 	if req.Addresses != nil {
 		a = req.Addresses
 	}
-
 	drop := req.DropDb
-	//Find how to access wallet.Wallet with in the RPCserver, check walletunlockparams it has a pointer to this wallet
 	err := r.wallet.ResyncChain(fh, th, a, drop)
 	if err != nil {
 		return nil, er.Native(err)
 	}
 	return &lnrpc.ReSyncChainResponse{}, nil
+}
+
+// StopResync
+func (r *rpcServer) StopReSync(ctx context.Context, req *lnrpc.StopReSyncRequest) (*lnrpc.StopReSyncResponse, error) {
+
+	msg, err := r.wallet.StopResync()
+	if err != nil {
+		return nil, er.Native(err)
+	}
+	return &lnrpc.StopReSyncResponse{
+		Value: msg,
+	}, nil
 }

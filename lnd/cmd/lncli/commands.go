@@ -2757,7 +2757,6 @@ func restoreChanBackup(ctx *cli.Context) er.R {
 }
 
 var resyncCommand = cli.Command{
-	//TODO: add info
 	Name:        "resync",
 	Category:    "Wallet",
 	Usage:       "Scan over the chain to find any transactions which may not have been recorded in the wallet's database",
@@ -2816,6 +2815,30 @@ func resync(ctx *cli.Context) er.R {
 		return er.E(err)
 	}
 
+	printRespJSON(resp)
+	return nil
+}
+
+var stopresyncCommand = cli.Command{
+	Name:        "stopresync",
+	Category:    "Wallet",
+	Usage:       "Stop a re-synchronization job before it's completion",
+	ArgsUsage:   "",
+	Description: `Stop a re-synchronization job before it's completion`,
+	Action:      actionDecorator(stopresync),
+}
+
+func stopresync(ctx *cli.Context) er.R {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	var req lnrpc.StopReSyncRequest
+
+	resp, err := client.StopReSync(ctxb, &req)
+	if err != nil {
+		return er.E(err)
+	}
 	printRespJSON(resp)
 	return nil
 }

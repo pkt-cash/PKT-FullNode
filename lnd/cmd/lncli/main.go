@@ -372,6 +372,7 @@ func main() {
 		versionCommand,
 		profileSubCommand,
 		resyncCommand,
+		stopresyncCommand,
 	}
 
 	// Add any extra commands determined by build flags.
