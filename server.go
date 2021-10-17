@@ -745,8 +745,10 @@ func (sp *serverPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 
 // OnGetCFilters is invoked when a peer receives a getcfilters bitcoin message.
 func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
-	// Ignore getcfilters requests if not in sync.
-	if !sp.server.syncManager.IsCurrent() {
+	// Ignore getcfilters requests if we don't have the necessary blocks yet
+	if _, err := sp.server.chain.BlockByHash(&msg.StopHash); err != nil {
+		log.Infof("Not serving filter %v to peer %v because we are not synced",
+			msg.FilterType, sp.String())
 		return
 	}
 
@@ -757,8 +759,8 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		break
 
 	default:
-		log.Debugf("Filter request for unknown filter: %v",
-			msg.FilterType)
+		log.Infof("Filter request for unknown filter: %v from %v",
+			msg.FilterType, sp.String())
 		return
 	}
 
@@ -766,7 +768,7 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
-		log.Debugf("Invalid getcfilters request: %v", err)
+		log.Infof("Invalid getcfilters request from [%v]: %v", sp.String(), err)
 		return
 	}
 
