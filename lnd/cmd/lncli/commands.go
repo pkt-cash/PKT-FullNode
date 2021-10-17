@@ -2755,3 +2755,90 @@ func restoreChanBackup(ctx *cli.Context) er.R {
 
 	return nil
 }
+
+var resyncCommand = cli.Command{
+	Name:        "resync",
+	Category:    "Wallet",
+	Usage:       "Scan over the chain to find any transactions which may not have been recorded in the wallet's database",
+	ArgsUsage:   "",
+	Description: `Scan over the chain to find any transactions which may not have been recorded in the wallet's database`,
+	Flags: []cli.Flag{
+		cli.Int64Flag{
+			Name:  "fromHeight",
+			Usage: "Start re-syncing to the chain from specified height, default or -1 will use the height of the chain when the wallet was created",
+		},
+		cli.Int64Flag{
+			Name:  "toHeight",
+			Usage: "Stop resyncing when this height is reached, default or -1 will use the tip of the chain",
+		},
+		cli.StringFlag{
+			Name:  "addresses",
+			Usage: "If specified, the wallet will ONLY scan the chain for these addresses, not others. If dropdb is specified then it will scan all addresses including these",
+		},
+		cli.BoolFlag{
+			Name:  "dropDB",
+			Usage: "Clean most of the data out of the wallet transaction store, this is not a real resync, it just drops the wallet and then lets it begin working again",
+		},
+	},
+	Action: actionDecorator(resync),
+}
+
+func resync(ctx *cli.Context) er.R {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+	fh := int32(-1)
+	if ctx.IsSet("fromHeight") {
+		fh = int32(ctx.Int64("fromHeight"))
+	}
+	th := int32(-1)
+	if ctx.IsSet("toHeight") {
+		th = int32(ctx.Int64("toHeight"))
+	}
+	var a []string
+	if ctx.IsSet("addresses") {
+		a = ctx.StringSlice("addresses")
+	}
+	drop := false
+	if ctx.IsSet("dropDB") {
+		drop = ctx.Bool("dropDB")
+	}
+	req := &lnrpc.ReSyncChainRequest{
+		FromHeight: fh,
+		ToHeight:   th,
+		Addresses:  a,
+		DropDb:     drop,
+	}
+
+	resp, err := client.ReSync(ctxb, req)
+	if err != nil {
+		return er.E(err)
+	}
+
+	printRespJSON(resp)
+	return nil
+}
+
+var stopresyncCommand = cli.Command{
+	Name:        "stopresync",
+	Category:    "Wallet",
+	Usage:       "Stop a re-synchronization job before it's completion",
+	ArgsUsage:   "",
+	Description: `Stop a re-synchronization job before it's completion`,
+	Action:      actionDecorator(stopresync),
+}
+
+func stopresync(ctx *cli.Context) er.R {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	var req lnrpc.StopReSyncRequest
+
+	resp, err := client.StopReSync(ctxb, &req)
+	if err != nil {
+		return er.E(err)
+	}
+	printRespJSON(resp)
+	return nil
+}
