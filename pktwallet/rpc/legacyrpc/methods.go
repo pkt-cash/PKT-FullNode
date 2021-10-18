@@ -1223,7 +1223,7 @@ func sendOutputs(
 		}
 		req.ChangeAddress = &addr
 	}
-	if fromAddressses != nil {
+	if fromAddressses != nil && len(*fromAddressses) > 0 {
 		addrs := make([]btcutil.Address, 0, len(*fromAddressses))
 		for _, addrStr := range *fromAddressses {
 			addr, err := btcutil.DecodeAddress(addrStr, w.ChainParams())
