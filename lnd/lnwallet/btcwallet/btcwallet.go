@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	base "github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
@@ -315,7 +316,7 @@ func (b *BtcWallet) SendOutputs(outputs []*wire.TxOut,
 		Outputs:     outputs,
 		Minconf:     minconf,
 		FeeSatPerKB: feeSatPerKB,
-		DryRun:      false,
+		SendMode:    base.SendModeBcasted,
 		Label:       label,
 
 		// TODO(cjd): Maybe change the defaults ?
@@ -337,14 +338,11 @@ func (b *BtcWallet) SendOutputs(outputs []*wire.TxOut,
 // returned. This method also takes the target fee expressed in sat/kw that
 // should be used when crafting the transaction.
 //
-// NOTE: The dryRun argument can be set true to create a tx that doesn't alter
-// the database. A tx created with this set to true SHOULD NOT be broadcasted.
-//
 // NOTE: This method requires the global coin selection lock to be held.
 //
 // This is a part of the WalletController interface.
 func (b *BtcWallet) CreateSimpleTx(outputs []*wire.TxOut,
-	feeRate chainfee.SatPerKWeight, dryRun bool) (*txauthor.AuthoredTx, er.R) {
+	feeRate chainfee.SatPerKWeight, sendMode wallet.SendMode) (*txauthor.AuthoredTx, er.R) {
 
 	// The fee rate is passed in using units of sat/kw, so we'll convert
 	// this to sat/KB as the CreateSimpleTx method requires this unit.
@@ -372,7 +370,7 @@ func (b *BtcWallet) CreateSimpleTx(outputs []*wire.TxOut,
 		Outputs:     outputs,
 		Minconf:     1,
 		FeeSatPerKB: feeSatPerKB,
-		DryRun:      dryRun,
+		SendMode:    sendMode,
 		Label:       "",
 
 		// TODO(cjd): Maybe change the defaults ?

@@ -112,7 +112,7 @@ func (w *Wallet) FundPsbt(packet *psbt.Packet, account uint32,
 			FeeSatPerKB: feeSatPerKB,
 			Minconf:     1,
 			Outputs:     packet.UnsignedTx.TxOut,
-			DryRun:      false,
+			SendMode:    SendModeBcasted,
 		})
 		if err != nil {
 			return 0, er.Errorf("error creating funding TX: %v",

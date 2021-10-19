@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/lnd/input"
 	"github.com/pkt-cash/pktd/lnd/lnwallet/chainfee"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/wire"
@@ -195,13 +196,9 @@ type WalletController interface {
 	// the target fee expressed in sat/kw that should be used when crafting
 	// the transaction.
 	//
-	// NOTE: The dryRun argument can be set true to create a tx that
-	// doesn't alter the database. A tx created with this set to true
-	// SHOULD NOT be broadcasted.
-	//
 	// NOTE: This method requires the global coin selection lock to be held.
 	CreateSimpleTx(outputs []*wire.TxOut, feeRate chainfee.SatPerKWeight,
-		dryRun bool) (*txauthor.AuthoredTx, er.R)
+		sendMode wallet.SendMode) (*txauthor.AuthoredTx, er.R)
 
 	// ListUnspentWitness returns all unspent outputs which are version 0
 	// witness programs. The 'minconfirms' and 'maxconfirms' parameters

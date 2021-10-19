@@ -231,7 +231,7 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	// scripts, and don't commit the database transaction. The DB will be
 	// rolled back when this method returns to ensure the dry run didn't
 	// alter the DB in any way.
-	if txr.DryRun {
+	if txr.SendMode == SendModeUnsigned {
 		return tx, nil
 	}
 
@@ -243,6 +243,10 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 	err = validateMsgTx1(tx.Tx)
 	if err != nil {
 		return nil, err
+	}
+
+	if txr.SendMode != SendModeBcasted {
+		return tx, nil
 	}
 
 	if err := dbtx.Commit(); err != nil {

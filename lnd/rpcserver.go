@@ -1154,9 +1154,9 @@ func (r *rpcServer) EstimateFee(ctx context.Context,
 	// We will ask the wallet to create a tx using this fee rate. We set
 	// dryRun=true to avoid inflating the change addresses in the db.
 	var tx *txauthor.AuthoredTx
-	wallet := r.server.cc.Wallet
-	err = wallet.WithCoinSelectLock(func() er.R {
-		tx, err = wallet.CreateSimpleTx(outputs, feePerKw, true)
+	walletx := r.server.cc.Wallet
+	err = walletx.WithCoinSelectLock(func() er.R {
+		tx, err = walletx.CreateSimpleTx(outputs, feePerKw, wallet.SendModeUnsigned)
 		return err
 	})
 	if err != nil {

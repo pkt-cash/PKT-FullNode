@@ -11,6 +11,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/util"
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/pktd/pktwallet/wallet"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wtxmgr"
 	"github.com/pkt-cash/pktd/wire"
@@ -87,7 +88,7 @@ func (w *WalletController) SendOutputs(outputs []*wire.TxOut,
 
 // CreateSimpleTx currently returns dummy values.
 func (w *WalletController) CreateSimpleTx(outputs []*wire.TxOut,
-	_ chainfee.SatPerKWeight, _ bool) (*txauthor.AuthoredTx, er.R) {
+	_ chainfee.SatPerKWeight, _ wallet.SendMode) (*txauthor.AuthoredTx, er.R) {
 
 	return nil, nil
 }

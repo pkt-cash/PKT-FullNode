@@ -1190,7 +1190,7 @@ func sendOutputs(
 	fromAddressses *[]string,
 	minconf int32,
 	feeSatPerKb btcutil.Amount,
-	dryRun bool,
+	sendMode wallet.SendMode,
 	changeAddress *string,
 	inputMinHeight int,
 	maxInputs int,
@@ -1198,7 +1198,7 @@ func sendOutputs(
 	req := wallet.CreateTxReq{
 		Minconf:        minconf,
 		FeeSatPerKB:    feeSatPerKb,
-		DryRun:         dryRun,
+		SendMode:       sendMode,
 		InputMinHeight: inputMinHeight,
 		MaxInputs:      maxInputs,
 		Label:          "",
@@ -1261,7 +1261,7 @@ func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
 		return "", err
 	}
 
-	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, false, nil, inputMinHeight, maxInputs)
+	tx, err := sendOutputs(w, amounts, vote, fromAddressses, minconf, feeSatPerKb, wallet.SendModeBcasted, nil, inputMinHeight, maxInputs)
 	if err != nil {
 		return "", err
 	}
@@ -1361,7 +1361,7 @@ func createTransaction(icmd interface{}, w *wallet.Wallet) (interface{}, er.R) {
 	}
 
 	tx, err := sendOutputs(w, amounts, vote, cmd.FromAddresses, minconf,
-		feeSatPerKb, true, cmd.ChangeAddress, inputMinHeight, maxInputs)
+		feeSatPerKb, wallet.SendModeSigned, cmd.ChangeAddress, inputMinHeight, maxInputs)
 	if err != nil {
 		return "", err
 	}

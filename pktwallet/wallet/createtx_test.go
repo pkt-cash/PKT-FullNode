@@ -139,7 +139,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 		Outputs:        txOuts,
 		Minconf:        1,
 		FeeSatPerKB:    1000,
-		DryRun:         true,
+		SendMode:       SendModeSigned,
 		ChangeAddress:  nil,
 		InputMinHeight: 0,
 	}
@@ -187,7 +187,7 @@ func TestTxToOutputsDryRun(t *testing.T) {
 
 	// Now we do a proper, non-dry run. This should add a change address
 	// to the database.
-	txr.DryRun = false
+	txr.SendMode = SendModeBcasted
 	tx, err := w.txToOutputs(txr)
 	if err != nil {
 		t.Fatalf("unable to author tx: %v", err)

@@ -619,12 +619,13 @@ func getBlockStamp(chainClient chain.Interface, height int32) (*waddrmgr.BlockSt
 }
 
 type (
+	SendMode    uint8
 	CreateTxReq struct {
 		InputAddresses  *[]btcutil.Address
 		Outputs         []*wire.TxOut
 		Minconf         int32
 		FeeSatPerKB     btcutil.Amount
-		DryRun          bool
+		SendMode        SendMode
 		ChangeAddress   *btcutil.Address
 		InputMinHeight  int
 		InputComparator utils.Comparator
@@ -639,6 +640,12 @@ type (
 		tx  *txauthor.AuthoredTx
 		err er.R
 	}
+)
+
+const (
+	SendModeUnsigned SendMode = 0
+	SendModeSigned   SendMode = 1
+	SendModeBcasted  SendMode = 2
 )
 
 // txCreator is responsible for the input selection and creation of
@@ -2217,7 +2224,7 @@ func (w *Wallet) SendOutputs(txr CreateTxReq) (*txauthor.AuthoredTx, er.R) {
 	if err != nil {
 		return nil, err
 	}
-	if txr.DryRun {
+	if txr.SendMode != SendModeBcasted {
 		return createdTx, nil
 	}
 
