@@ -18,6 +18,7 @@ import (
 	"github.com/pkt-cash/pktd/btcutil/er"
 	"github.com/pkt-cash/pktd/pktlog/log"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/enough"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txauthor"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/pktwallet/walletdb"
@@ -137,19 +138,9 @@ func (w *Wallet) txToOutputs(txr CreateTxReq) (tx *txauthor.AuthoredTx, err er.R
 		return nil, err
 	}
 
-	var sweepOutput *wire.TxOut
-	var needAmount btcutil.Amount
-	for _, out := range txr.Outputs {
-		needAmount += btcutil.Amount(out.Value)
-		if out.Value == 0 {
-			sweepOutput = out
-		}
-	}
-	if sweepOutput != nil {
-		needAmount = 0
-	}
+	isEnough := enough.MkIsEnough(txr.Outputs, txr.FeeSatPerKB)
 	eligibleOuts, err := w.findEligibleOutputs(
-		dbtx, needAmount, txr.InputAddresses, txr.Minconf, bs,
+		dbtx, isEnough, txr.InputAddresses, txr.Minconf, bs,
 		txr.InputMinHeight, txr.InputComparator, txr.MaxInputs)
 	if err != nil {
 		return nil, err
@@ -398,7 +389,7 @@ type eligibleOutputs struct {
 
 func (w *Wallet) findEligibleOutputs(
 	dbtx walletdb.ReadTx,
-	needAmount btcutil.Amount,
+	isEnough enough.IsEnough,
 	fromAddresses *[]btcutil.Address,
 	minconf int32,
 	bs *waddrmgr.BlockStamp,
@@ -498,16 +489,12 @@ func (w *Wallet) findEligibleOutputs(
 		}
 		ha.credits.Put(output, nil)
 		ha.amount += output.Amount
-		if needAmount == 0 {
-			// We're sweeping the wallet
-		} else if ha.amount < needAmount {
-			// We need more coins
-		} else {
+		if isEnough.WellIsIt(ha.credits.Size(), ha.isSegwit, ha.amount) {
 			worst := ha.credits.Right().Key.(*wtxmgr.Credit)
 			if worst == nil {
 				panic("findEligibleOutputs: worst == nil")
 			}
-			if ha.amount-worst.Amount >= needAmount {
+			if isEnough.WellIsIt(ha.credits.Size()-1, ha.isSegwit, ha.amount-worst.Amount) {
 				// Our amount is still fine even if we drop the worst credit
 				// so we'll drop it and continue traversing to find the best outputs
 				ha.credits.Remove(worst)
@@ -526,7 +513,7 @@ func (w *Wallet) findEligibleOutputs(
 
 		if !ha.overLimit(maxInputs) {
 			// We don't have too many inputs
-		} else if needAmount == 0 && inputComparator == nil {
+		} else if isEnough.IsSweeping() && inputComparator == nil {
 			// We're sweeping the wallet with no ordering specified
 			// This means we should just short-circuit with a winner
 			winner = ha
@@ -552,7 +539,7 @@ func (w *Wallet) findEligibleOutputs(
 		// we don't short circuit early so we might have a winner on our hands but not
 		// know it.
 		for _, ac := range haveAmounts {
-			if ac.amount >= needAmount {
+			if isEnough.WellIsIt(ac.credits.Size(), ac.isSegwit, ac.amount) {
 				winner = ac
 			}
 		}
@@ -603,10 +590,10 @@ func (w *Wallet) findEligibleOutputs(
 			out.unusedCount++
 			wasOver = true
 		}
-		if needAmount == 0 && !wasOver {
+		if isEnough.IsSweeping() && !wasOver {
 			// if we were never over the limit and we're sweeping multiple addresses,
 			// lets go around and get another address
-		} else if outAc.amount > needAmount {
+		} else if isEnough.WellIsIt(outAc.credits.Size(), outAc.isSegwit, outAc.amount) {
 			// We have enough money to make the tx
 			// We'll just iterate over the other entries to make unusedAmt and unusedCount correct
 			done = true

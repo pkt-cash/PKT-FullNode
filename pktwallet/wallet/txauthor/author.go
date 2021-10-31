@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkt-cash/pktd/btcutil"
 	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/pktd/pktwallet/wallet/enough"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/txrules"
 	"github.com/pkt-cash/pktd/txscript"
 	"github.com/pkt-cash/pktd/wire"
@@ -80,15 +81,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 	estimatedSize := txsizes.EstimateVirtualSize(0, 1, 0, outputs, true)
 	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
 
-	// If one of the outputs has a value of zero, this means we want to sweep everything
-	// except for fees to that output.
-	var sweepTo *wire.TxOut
-	for _, out := range outputs {
-		if out.Value == 0 {
-			sweepTo = out
-		}
-	}
-
+	sweepTo := enough.GetSweepOutput(outputs)
 	for {
 		synthTargetAmount := targetAmount + targetFee
 		if sweepTo != nil {
