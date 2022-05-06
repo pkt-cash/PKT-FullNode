@@ -63,6 +63,9 @@ type BlockFilterer struct {
 	// that contained matches from an address in either ExReverseFilter or
 	// InReverseFilter.
 	RelevantTxns []*wire.MsgTx
+
+	// If true, do not include coinbase transactions
+	IgnoreCoinbase bool
 }
 
 // NewBlockFilterer constructs the reverse indexes for the current set of
@@ -107,6 +110,7 @@ func NewBlockFilterer(params *chaincfg.Params,
 		FoundExternal:         foundExternal,
 		FoundInternal:         foundInternal,
 		FoundOutPoints:        foundOutPoints,
+		IgnoreCoinbase:        req.IgnoreCoinbase,
 	}
 }
 
@@ -117,7 +121,10 @@ func NewBlockFilterer(params *chaincfg.Params,
 // controlled by the wallet.
 func (bf *BlockFilterer) FilterBlock(block *wire.MsgBlock) bool {
 	var hasRelevantTxns bool
-	for _, tx := range block.Transactions {
+	for i, tx := range block.Transactions {
+		if bf.IgnoreCoinbase && i == 0 {
+			continue
+		}
 		if bf.FilterTx(tx) {
 			bf.RelevantTxns = append(bf.RelevantTxns, tx)
 			hasRelevantTxns = true

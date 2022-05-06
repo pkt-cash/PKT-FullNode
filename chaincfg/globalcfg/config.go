@@ -166,3 +166,5 @@ func AmountUnits() []CoinAmount {
 	checkRegistered()
 	return gConf.Amounts
 }
+
+var IgnoreMined bool

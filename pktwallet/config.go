@@ -67,6 +67,7 @@ type config struct {
 	LogDir        string                  `long:"logdir" description:"Directory to log output."`
 	StatsViz      string                  `long:"statsviz" description:"Enable StatsViz runtime visualization on given port -- NOTE port must be between 1024 and 65535"`
 	Profile       string                  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65535"`
+	IgnoreMined   bool                    `long:"ignoremined description:"Ignore payments from coinbases (newly mined coins)"`
 
 	// Wallet options
 	WalletPass string `long:"walletpass" default-mask:"-" description:"The public wallet password -- Only required if the wallet was created with one"`
@@ -367,6 +368,7 @@ func loadConfig() (*config, []string, er.R) {
 	activeNet.PowLimit = blockchain.CompactToBig(activeNet.PowLimitBits)
 
 	globalcfg.SelectConfig(activeNet.GlobalConf)
+	globalcfg.IgnoreMined = cfg.IgnoreMined
 
 	// Append the network type to the log directory so it is "namespaced"
 	// per network.

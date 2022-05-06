@@ -28,6 +28,7 @@ import (
 	"github.com/pkt-cash/pktd/chaincfg"
 	"github.com/pkt-cash/pktd/chaincfg/chainhash"
 	"github.com/pkt-cash/pktd/chaincfg/genesis"
+	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
 	"github.com/pkt-cash/pktd/pktwallet/chain"
 	"github.com/pkt-cash/pktd/pktwallet/waddrmgr"
 	"github.com/pkt-cash/pktd/pktwallet/wallet/seedwords"
@@ -2750,7 +2751,7 @@ func existsTxEntry(
 }
 
 func mkFilterReq(w *watcher.Watcher, header *wire.BlockHeader, height int32) *chain.FilterBlocksRequest {
-	filterReq := w.FilterReq(height)
+	filterReq := w.FilterReq(height, globalcfg.IgnoreMined)
 	filterReq.Blocks = []wtxmgr.BlockMeta{
 		{
 			Block: wtxmgr.Block{
@@ -3037,7 +3038,7 @@ func (w *Wallet) block(bm wtxmgr.Block) er.R {
 	}
 	if bm.Height == st.Height+1 && header.PrevBlock.IsEqual(&st.Hash) {
 		// Easy case, the new block is one more block than the one we have
-		filterReq := w.watch.FilterReq(bm.Height)
+		filterReq := w.watch.FilterReq(bm.Height, globalcfg.IgnoreMined)
 		filterReq.Blocks = []wtxmgr.BlockMeta{
 			{
 				Block: wtxmgr.Block{
