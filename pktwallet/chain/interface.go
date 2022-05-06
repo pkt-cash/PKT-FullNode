@@ -75,6 +75,7 @@ type (
 		InternalAddrs    map[waddrmgr.ScopedIndex]btcutil.Address
 		ImportedAddrs    []btcutil.Address
 		WatchedOutPoints map[wire.OutPoint]btcutil.Address
+		IgnoreCoinbase   bool
 	}
 
 	// FilterBlocksResponse reports the set of all internal and external
