@@ -125,15 +125,11 @@ func main() {
 	}
 
 	build("pktd", ".", &conf)
-	build("pktwallet", "./pktwallet", &conf)
 	build("pktctl", "./cmd/pktctl", &conf)
-	build("checksig", "./cmd/checksig", &conf)
-	build("pld", "./lnd/cmd/lnd", &conf)
-	build("pldctl", "./lnd/cmd/lncli", &conf)
 	if strings.Contains(strings.Join(os.Args, "|"), "--test") {
 		test()
 	} else {
 		fmt.Println("Pass the --test flag if you want to run the tests as well")
 	}
-	fmt.Println("Everything looks good, type `./bin/pktwallet --create` to make a wallet")
+	fmt.Println("Everything looks good, type `./bin/pktd` to launch the full node.")
 }
