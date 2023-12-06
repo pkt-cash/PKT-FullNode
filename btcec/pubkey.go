@@ -8,7 +8,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // These constants define the lengths of serialized public keys.

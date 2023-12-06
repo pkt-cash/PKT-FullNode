@@ -20,11 +20,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // LoadBlocks reads files containing bitcoin block data (gzipped but otherwise
@@ -84,7 +84,7 @@ func LoadBlocks(filename string) ([]*btcutil.Block, er.R) {
 }
 
 func GetBlock(name string, t *testing.T) *btcutil.Block {
-	runtime.GOMAXPROCS(runtime.NumCPU()*6)
+	runtime.GOMAXPROCS(runtime.NumCPU() * 6)
 
 	blocks, err := LoadBlocks(name)
 	if err != nil {

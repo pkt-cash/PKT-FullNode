@@ -10,11 +10,11 @@ package indexers
 import (
 	"encoding/binary"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/PKT-FullNode/blockchain"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/database"
 )
 
 var Err er.ErrorType = er.NewErrorType("indexers.Err")

@@ -3,7 +3,7 @@ package sphinx
 import (
 	"crypto/sha256"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 const (

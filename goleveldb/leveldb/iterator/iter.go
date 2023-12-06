@@ -11,7 +11,7 @@ package iterator
 import (
 	"errors"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/util"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/util"
 )
 
 var (

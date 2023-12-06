@@ -15,9 +15,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/btcutil/util"
-	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
 )
 
 // TestBIP0032Vectors tests the vectors provided by [BIP32] to ensure the
@@ -1069,7 +1069,7 @@ func TestMaximumDepth(t *testing.T) {
 	}
 }
 
-// TestLeadingZero ensures that deriving children from keys with a leading zero byte is 
+// TestLeadingZero ensures that deriving children from keys with a leading zero byte is
 // actually done according to the BIP-32 standard and that the legacy method generates
 // a backwards-compatible result.
 func TestLeadingZero(t *testing.T) {

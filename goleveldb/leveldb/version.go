@@ -12,9 +12,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/iterator"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/util"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/iterator"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/util"
 )
 
 type tSet struct {

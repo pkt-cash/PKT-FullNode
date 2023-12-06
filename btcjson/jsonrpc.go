@@ -5,11 +5,11 @@
 package btcjson
 
 import (
-	"github.com/json-iterator/go"
 	"fmt"
+	"github.com/json-iterator/go"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktconfig/version"
 )
 
 // RPCErrorCode represents an error code to be used as a part of an RPCError
@@ -59,10 +59,10 @@ func IsValidIDType(id interface{}) bool {
 // requests, however this struct it being exported in case the caller wants to
 // construct raw requests for some reason.
 type Request struct {
-	Jsonrpc string            `json:"jsonrpc"`
-	Method  string            `json:"method"`
+	Jsonrpc string                `json:"jsonrpc"`
+	Method  string                `json:"method"`
 	Params  []jsoniter.RawMessage `json:"params"`
-	ID      interface{}       `json:"id"`
+	ID      interface{}           `json:"id"`
 }
 
 // NewRequest returns a new JSON-RPC 1.0 request object given the provided id,
@@ -104,8 +104,8 @@ func NewRequest(id interface{}, method string, params []interface{}) (*Request, 
 // empty.
 type Response struct {
 	Result jsoniter.RawMessage `json:"result"`
-	Error  *RPCErr         `json:"error"`
-	ID     *interface{}    `json:"id"`
+	Error  *RPCErr             `json:"error"`
+	ID     *interface{}        `json:"id"`
 }
 
 func SerializeError(err er.R) *RPCErr {

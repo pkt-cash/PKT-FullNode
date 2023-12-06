@@ -9,7 +9,7 @@ import (
 	"github.com/json-iterator/go"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
 )
 
 // TestChainSvrWsResults ensures any results that have custom marshalling

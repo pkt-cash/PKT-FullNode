@@ -5,13 +5,13 @@
 package netsync
 
 import (
-	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/mempool"
-	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/mempool"
+	"github.com/pkt-cash/PKT-FullNode/peer"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // PeerNotifier exposes methods to notify peers of status changes to

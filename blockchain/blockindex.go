@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/globalcfg"
+	"github.com/pkt-cash/PKT-FullNode/database"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // blockStatus is a bit field representing the validation state of the block.

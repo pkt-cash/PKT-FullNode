@@ -9,13 +9,13 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript/opcode"
-	"github.com/pkt-cash/pktd/txscript/params"
-	"github.com/pkt-cash/pktd/txscript/parsescript"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/txscript/opcode"
+	"github.com/pkt-cash/PKT-FullNode/txscript/params"
+	"github.com/pkt-cash/PKT-FullNode/txscript/parsescript"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // isSmallInt returns whether or not the opcode is considered a small integer,

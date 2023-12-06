@@ -9,9 +9,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 )
 
 // MaxBlockHeaderPayload is the maximum number of bytes a block header can be.

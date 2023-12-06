@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // TestMruInventoryMap ensures the MruInventoryMap behaves as expected including

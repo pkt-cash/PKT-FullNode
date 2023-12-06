@@ -8,9 +8,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/pkt-cash/pktd/addrmgr"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr"
+	"github.com/pkt-cash/PKT-FullNode/wire"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // TestIPTypes ensures the various functions which determine the type of an IP

@@ -9,15 +9,15 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/gcs"
-	"github.com/pkt-cash/pktd/btcutil/gcs/builder"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/gcs"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/gcs/builder"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/txscript"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 var (

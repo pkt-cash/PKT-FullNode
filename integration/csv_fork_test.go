@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // This file is ignored during the regular tests due to the following build tag.
+//go:build rpctest
 // +build rpctest
 
 package integration
@@ -14,21 +15,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript/opcode"
-	"github.com/pkt-cash/pktd/txscript/params"
-	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
-	"github.com/pkt-cash/pktd/wire/constants"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/txscript/opcode"
+	"github.com/pkt-cash/PKT-FullNode/txscript/params"
+	"github.com/pkt-cash/PKT-FullNode/txscript/scriptbuilder"
+	"github.com/pkt-cash/PKT-FullNode/wire/constants"
 
-	"github.com/pkt-cash/pktd/blockchain"
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
-	"github.com/pkt-cash/pktd/integration/rpctest"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain"
+	"github.com/pkt-cash/PKT-FullNode/btcec"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/globalcfg"
+	"github.com/pkt-cash/PKT-FullNode/integration/rpctest"
+	"github.com/pkt-cash/PKT-FullNode/txscript"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 const (

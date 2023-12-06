@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 
-	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 )
 
 // shutdownRequestChannel is used to initiate shutdown from one of the

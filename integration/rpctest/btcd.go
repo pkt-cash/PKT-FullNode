@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 var (
@@ -50,7 +50,7 @@ func pktdExecutablePath() (string, er.R) {
 		outputPath += ".exe"
 	}
 	cmd := exec.Command(
-		"go", "build", "-o", outputPath, "github.com/pkt-cash/pktd",
+		"go", "build", "-o", outputPath, "github.com/pkt-cash/PKT-FullNode",
 	)
 	err = er.E(cmd.Run())
 	if err != nil {

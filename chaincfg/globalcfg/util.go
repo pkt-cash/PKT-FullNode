@@ -7,7 +7,7 @@ package globalcfg
 import (
 	"math"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // Copyright (c) 2013, 2014 The btcsuite developers

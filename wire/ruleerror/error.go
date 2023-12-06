@@ -1,8 +1,8 @@
 package ruleerror
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // Err identifies a rule violation.  It is used to indicate that

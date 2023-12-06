@@ -11,8 +11,8 @@ one entity can have the database open at a time (for most database backends),
 and that entity will be pktd.
 
 When a client wants programmatic access to the data provided by pktd, they'll
-likely want to use the [rpcclient](https://github.com/pkt-cash/pktd/tree/master/rpcclient)
-package which makes use of the [JSON-RPC API](https://github.com/pkt-cash/pktd/tree/master/docs/json_rpc_api.md).
+likely want to use the [rpcclient](https://github.com/pkt-cash/PKT-FullNode/tree/master/rpcclient)
+package which makes use of the [JSON-RPC API](https://github.com/pkt-cash/PKT-FullNode/tree/master/docs/json_rpc_api.md).
 
 However, this package could be extremely useful for any applications requiring
 Bitcoin block storage capabilities.

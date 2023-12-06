@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/peer"
-	"github.com/pkt-cash/pktd/wire"
-	"github.com/pkt-cash/pktd/wire/constants"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/peer"
+	"github.com/pkt-cash/PKT-FullNode/wire"
+	"github.com/pkt-cash/PKT-FullNode/wire/constants"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // conn mocks a network connection by implementing the net.Conn interface.  It
@@ -42,8 +42,8 @@ func (c conn) LocalAddr() net.Addr {
 
 // Remote returns the remote address for the connection.
 func (c conn) RemoteAddr() net.Addr {
-		return &addr {
-			c.rnet, c.raddr,
+	return &addr{
+		c.rnet, c.raddr,
 	}
 }
 

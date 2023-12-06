@@ -9,20 +9,20 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/randhash/util"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/announce"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block/proof"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/announce"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/block/proof"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/difficulty"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/cryptocycle"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 func isWorkOk(ccState *cryptocycle.State, cb *wire.PcCoinbaseCommit, target uint32, packetCryptVersion int) bool {

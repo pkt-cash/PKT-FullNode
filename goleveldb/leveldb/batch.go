@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/errors"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/memdb"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/storage"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/errors"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/memdb"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/storage"
 )
 
 // ErrBatchCorrupted records reason of batch corruption. This error will be

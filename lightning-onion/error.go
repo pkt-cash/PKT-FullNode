@@ -1,7 +1,7 @@
 package sphinx
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 var (

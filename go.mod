@@ -1,4 +1,4 @@
-module github.com/pkt-cash/pktd
+module github.com/pkt-cash/PKT-FullNode
 
 go 1.14
 

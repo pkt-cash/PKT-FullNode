@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/memdb"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/util"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/memdb"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/util"
 )
 
 func (db *DB) writeJournal(batches []*Batch, seq uint64, sync bool) error {

@@ -1,3 +1,4 @@
+//go:build goleveldbtests
 // +build goleveldbtests
 
 package leveldb
@@ -5,7 +6,7 @@ package leveldb
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/testutil"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/testutil"
 )
 
 func TestLevelDB(t *testing.T) {

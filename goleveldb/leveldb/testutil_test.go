@@ -1,3 +1,4 @@
+//go:build goleveldbtests
 // +build goleveldbtests
 
 // Copyright (c) 2014, Suryandaru Triandana <syndtr@gmail.com>
@@ -11,10 +12,10 @@ package leveldb
 import (
 	. "github.com/onsi/gomega"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/iterator"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/testutil"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/util"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/iterator"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/testutil"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/util"
 )
 
 type testingDB struct {

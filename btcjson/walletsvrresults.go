@@ -8,7 +8,7 @@ package btcjson
 import (
 	"time"
 
-	"github.com/pkt-cash/pktd/peer"
+	"github.com/pkt-cash/PKT-FullNode/peer"
 )
 
 // GetTransactionDetailsResult models the details data from the gettransaction command.

@@ -9,7 +9,7 @@ package leveldb
 import (
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/storage"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/storage"
 )
 
 // asyncWriter wraps storage.Writer. It uses a background goroutine to perform real write op.

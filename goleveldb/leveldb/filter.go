@@ -7,7 +7,7 @@
 package leveldb
 
 import (
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/filter"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/filter"
 )
 
 type iFilter struct {

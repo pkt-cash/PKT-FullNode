@@ -7,7 +7,7 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 )
 
 // TestThresholdStateStringer tests the stringized output for the

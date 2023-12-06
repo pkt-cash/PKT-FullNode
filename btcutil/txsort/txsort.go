@@ -11,8 +11,8 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // InPlaceSort modifies the passed transaction inputs and outputs to be sorted

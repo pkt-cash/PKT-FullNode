@@ -7,7 +7,7 @@ package protocol_test
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // TestServiceFlagStringer tests the stringized output for service flag types.

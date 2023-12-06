@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in

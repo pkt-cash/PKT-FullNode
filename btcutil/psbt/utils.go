@@ -10,10 +10,10 @@ import (
 	"io"
 	"sort"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/txscript/params"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/txscript"
+	"github.com/pkt-cash/PKT-FullNode/txscript/params"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // WriteTxWitness is a utility function due to non-exported witness

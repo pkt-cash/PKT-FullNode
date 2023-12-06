@@ -10,9 +10,9 @@ import (
 	"sort"
 	"sync/atomic"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/iterator"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/memdb"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/iterator"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/memdb"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
 )
 
 const (
@@ -48,7 +48,7 @@ func (s *session) flushMemdb(rec *sessionRecord, mdb *memdb.DB, maxLevel int) (i
 	// key-space is strictly incrementing it will not overlaps with
 	// higher level, thus maximum possible level is always picked, while
 	// overlapping deletion marker pushed into lower level.
-	// See: https://github.com/pkt-cash/pktd/goleveldb/issues/127.
+	// See: https://github.com/pkt-cash/PKT-FullNode/goleveldb/issues/127.
 	flushLevel := s.pickMemdbLevel(t.imin.ukey(), t.imax.ukey(), maxLevel)
 	rec.addTableFile(flushLevel, t)
 

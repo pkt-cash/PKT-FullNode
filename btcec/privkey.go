@@ -10,7 +10,7 @@ import (
 	"crypto/rand"
 	"math/big"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // PrivateKey wraps an ecdsa.PrivateKey as a convenience mainly for signing

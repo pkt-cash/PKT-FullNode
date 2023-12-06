@@ -14,7 +14,7 @@ import (
 	"hash"
 	"math/big"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // Errors returned by canonicalPadding.

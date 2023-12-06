@@ -14,10 +14,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	rpc "github.com/pkt-cash/pktd/rpcclient"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	rpc "github.com/pkt-cash/PKT-FullNode/rpcclient"
 )
 
 // nodeConfig contains all the args, and data required to launch a pktd process

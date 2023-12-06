@@ -3,7 +3,7 @@ package memdb
 import (
 	"testing"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/testutil"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/testutil"
 )
 
 func TestMemDB(t *testing.T) {

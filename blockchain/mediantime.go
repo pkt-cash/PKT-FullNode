@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 )
 
 const (

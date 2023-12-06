@@ -10,9 +10,9 @@ package opt
 import (
 	"math"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/cache"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/comparer"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/filter"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/cache"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/comparer"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/filter"
 )
 
 const (

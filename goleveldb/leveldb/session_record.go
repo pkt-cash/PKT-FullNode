@@ -12,8 +12,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/errors"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/storage"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/errors"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/storage"
 )
 
 type byteReader interface {

@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	. "github.com/pkt-cash/pktd/btcutil"
+	. "github.com/pkt-cash/PKT-FullNode/btcutil"
 )
 
 func TestAmountCreation(t *testing.T) {

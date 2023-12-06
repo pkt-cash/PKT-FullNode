@@ -9,10 +9,10 @@ import (
 	"math"
 	"sync"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/txscript"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // ln2Squared is simply the square of the natural log of 2.

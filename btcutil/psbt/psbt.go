@@ -13,8 +13,8 @@ import (
 
 	"io"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // psbtMagicLength is the length of the magic bytes used to signal the start of

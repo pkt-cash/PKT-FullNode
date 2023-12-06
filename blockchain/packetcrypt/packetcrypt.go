@@ -10,14 +10,14 @@ import (
 	"encoding/hex"
 	"io"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
 	"github.com/dchest/blake2b"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/announce"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/block"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/announce"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/block"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 	"golang.org/x/crypto/ed25519"
 )
 

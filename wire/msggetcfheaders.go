@@ -7,9 +7,9 @@ package wire
 import (
 	"io"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 )
 
 // MsgGetCFHeaders is a message similar to MsgGetHeaders, but for committed

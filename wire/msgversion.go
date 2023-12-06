@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a

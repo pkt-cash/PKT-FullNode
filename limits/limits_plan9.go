@@ -4,7 +4,7 @@
 
 package limits
 
-import "github.com/pkt-cash/pktd/btcutil/er"
+import "github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
 // SetLimits is a no-op on Plan 9 due to the lack of process accounting.
 func SetLimits() er.R {

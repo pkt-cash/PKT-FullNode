@@ -9,8 +9,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // TestFilterAddLatest tests the MsgFilterAdd API against the latest protocol

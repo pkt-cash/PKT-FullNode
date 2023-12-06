@@ -5,10 +5,10 @@
 package btcjson_test
 
 import (
-	"github.com/json-iterator/go"
 	"fmt"
+	"github.com/json-iterator/go"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
 )
 
 // This example demonstrates how to create and marshal a command into a JSON-RPC

@@ -8,7 +8,7 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // DeploymentError identifies an error that indicates a deployment ID was

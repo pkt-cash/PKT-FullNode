@@ -96,7 +96,7 @@ func buildStr() string {
 }
 
 func ldflags() string {
-	return "-X github.com/pkt-cash/pktd/pktconfig/version.appBuild=" + buildStr()
+	return "-X github.com/pkt-cash/PKT-FullNode/pktconfig/version.appBuild=" + buildStr()
 }
 
 func test() {

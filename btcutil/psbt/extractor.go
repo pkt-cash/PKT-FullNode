@@ -12,9 +12,9 @@ package psbt
 import (
 	"bytes"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/txscript/params"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/txscript/params"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // Extract takes a finalized psbt.Packet and outputs a finalized transaction

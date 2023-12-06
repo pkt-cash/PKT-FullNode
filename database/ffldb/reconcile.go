@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 
-	"github.com/pkt-cash/pktd/database"
+	"github.com/pkt-cash/PKT-FullNode/database"
 )
 
 // The serialized write cursor location format is:

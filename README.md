@@ -28,7 +28,7 @@ functionality - this was an intentional design decision.  You will not be
 able to make or receive payments with `pktd` directly.
 
 Example wallet functionality is provided in the included, separate,
-[pktwallet](https://github.com/pkt-cash/pktd/pktwallet) package.
+[pktwallet](https://github.com/pkt-cash/PKT-FullNode/pktwallet) package.
 
 ## Requirements
 
@@ -37,13 +37,13 @@ Example wallet functionality is provided in the included, separate,
 
 ## Issue Tracker
 
-* The GitHub [integrated GitHub issue tracker](https://github.com/pkt-cash/pktd/issues) is used for this project.  
+* The GitHub [integrated GitHub issue tracker](https://github.com/pkt-cash/PKT-FullNode/issues) is used for this project.  
 
 ## Building
 
 Using `git`, clone the project from the repository:
 
-`git clone https://github.com/pkt-cash/pktd`
+`git clone https://github.com/pkt-cash/PKT-FullNode`
 
 Use the `./do` shell script to build `pktd`, `pktwallet`, and `pktctl`.
 
@@ -63,7 +63,7 @@ for download [here](https://storage.googleapis.com/golang/getgo/installer_linux)
 
 ## Documentation
 
-The documentation for `pktd` is work-in-progress, and available in the [docs](https://github.com/pkt-cash/pktd/tree/master/docs) folder.
+The documentation for `pktd` is work-in-progress, and available in the [docs](https://github.com/pkt-cash/PKT-FullNode/tree/master/docs) folder.
 
 ## License
 

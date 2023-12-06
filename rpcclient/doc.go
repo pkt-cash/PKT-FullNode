@@ -9,7 +9,7 @@ Overview
 
 This client provides a robust and easy to use client for interfacing with a
 Bitcoin RPC server that uses a pktd/bitcoin core compatible Bitcoin JSON-RPC
-API.  This client has been tested with pktd (https://github.com/pkt-cash/pktd),
+API.  This client has been tested with pktd (https://github.com/pkt-cash/PKT-FullNode),
 pktwallet (https://github.com/pkt-cash/pktwallet), and
 bitcoin core (https://github.com/bitcoin).
 

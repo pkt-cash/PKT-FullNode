@@ -1,3 +1,4 @@
+//go:build goleveldbtests
 // +build goleveldbtests
 
 // Copyright (c) 2013, Suryandaru Triandana <syndtr@gmail.com>
@@ -16,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/filter"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/storage"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/filter"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/storage"
 )
 
 const ctValSize = 1000

@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // testNoncePrng provides a deterministic prng for the nonce in generated fake

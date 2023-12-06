@@ -10,13 +10,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog/log"
-	"github.com/pkt-cash/pktd/wire/ruleerror"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/wire/ruleerror"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/txscript"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/txscript"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // txValidateItem holds a transaction along with which input to validate.

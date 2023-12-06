@@ -8,16 +8,16 @@ package txscript
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/btcutil/util"
-	"github.com/pkt-cash/pktd/txscript/opcode"
-	"github.com/pkt-cash/pktd/txscript/parsescript"
-	"github.com/pkt-cash/pktd/txscript/scriptbuilder"
-	"github.com/pkt-cash/pktd/txscript/txscripterr"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util"
+	"github.com/pkt-cash/PKT-FullNode/txscript/opcode"
+	"github.com/pkt-cash/PKT-FullNode/txscript/parsescript"
+	"github.com/pkt-cash/PKT-FullNode/txscript/scriptbuilder"
+	"github.com/pkt-cash/PKT-FullNode/txscript/txscripterr"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 const (

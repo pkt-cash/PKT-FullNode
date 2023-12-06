@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcjson"
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // TestCmdMethod tests the CmdMethod function to ensure it retunrs the expected

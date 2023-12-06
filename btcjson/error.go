@@ -5,7 +5,7 @@
 package btcjson
 
 import (
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // ErrorCode identifies a kind of error.  These error codes are NOT used for

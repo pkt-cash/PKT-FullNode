@@ -1,3 +1,4 @@
+//go:build goleveldbtests
 // +build goleveldbtests
 
 // Copyright (c) 2014, Suryandaru Triandana <syndtr@gmail.com>
@@ -12,8 +13,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/opt"
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/testutil"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/opt"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/testutil"
 )
 
 var _ = testutil.Defer(func() {

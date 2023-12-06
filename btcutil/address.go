@@ -13,13 +13,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/btcutil/util"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/btcutil/base58"
-	"github.com/pkt-cash/pktd/btcutil/bech32"
-	"github.com/pkt-cash/pktd/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/btcec"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/base58"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/bech32"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
 )
 
 // UnsupportedWitnessVerError describes an error where a segwit address being

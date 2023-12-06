@@ -7,7 +7,7 @@ package base58
 import (
 	"crypto/sha256"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 var Err er.ErrorType = er.NewErrorType("base58.Err")

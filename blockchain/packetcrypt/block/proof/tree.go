@@ -11,10 +11,10 @@ import (
 	"math/bits"
 	"strings"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktlog/log"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
 )
 
 // How does it work:

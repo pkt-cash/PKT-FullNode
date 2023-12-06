@@ -1,3 +1,4 @@
+//go:build goleveldbtests
 // +build goleveldbtests
 
 // Copyright (c) 2012, Suryandaru Triandana <syndtr@gmail.com>
@@ -14,7 +15,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/pkt-cash/pktd/goleveldb/leveldb/testutil"
+	"github.com/pkt-cash/PKT-FullNode/goleveldb/leveldb/testutil"
 )
 
 func TestBatchHeader(t *testing.T) {

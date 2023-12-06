@@ -30,14 +30,14 @@ RUN=$SH
 
 imports() {
     $FIND ./ -name '*.go' | while read x; do
-        echo $SED -i -e \'s@"github.com/btcsuite/btcd@"github.com/pkt-cash/pktd@g\' $x;
+        echo $SED -i -e \'s@"github.com/btcsuite/btcd@"github.com/pkt-cash/PKT-FullNode@g\' $x;
         echo $SED -i -e \'s@"github.com/btcsuite/btcutil@"github.com/pkt-cash/btcutil@g\' $x;
         echo $SED -i -e \'s@"github.com/btcsuite/btcwallet@"github.com/pkt-cash/pktwallet@g\' $x;
     done | $RUN
 }
 rimports() {
     $FIND ./ -name '*.go' | while read x; do
-        echo $SED -i -e \'s@"github.com/pkt-cash/pktd@"github.com/btcsuite/btcd@g\' $x;
+        echo $SED -i -e \'s@"github.com/pkt-cash/PKT-FullNode@"github.com/btcsuite/btcd@g\' $x;
         echo $SED -i -e \'s@"github.com/pkt-cash/btcutil@"github.com/btcsuite/btcutil@g\' $x;
         echo $SED -i -e \'s@"github.com/pkt-cash/pktwallet@"github.com/btcsuite/btcwallet@g\' $x;
     done | $RUN

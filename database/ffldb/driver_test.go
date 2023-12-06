@@ -12,13 +12,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/btcutil/util"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/genesis"
-	"github.com/pkt-cash/pktd/database"
-	"github.com/pkt-cash/pktd/database/ffldb"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/genesis"
+	"github.com/pkt-cash/PKT-FullNode/database"
+	"github.com/pkt-cash/PKT-FullNode/database/ffldb"
 )
 
 // dbType is the database type name for this driver.
@@ -278,7 +278,7 @@ func TestInterface(t *testing.T) {
 	}
 
 	// Run all of the interface tests against the database.
-	runtime.GOMAXPROCS(runtime.NumCPU()*6)
+	runtime.GOMAXPROCS(runtime.NumCPU() * 6)
 
 	// Change the maximum file size to a small value to force multiple flat
 	// files with the test data set.

@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/PKT-FullNode/pktconfig/version"
 )
 
 // GenericErrorType is for packages with only one or two error codes
@@ -273,7 +273,7 @@ func (e err) Stack() []string {
 		// goroutine 1 [running]:
 		// runtime/debug.Stack(0x10df124, 0xc00007cf70, 0xc0000180c0)
 		//         /usr/local/go/src/runtime/debug/stack.go:24 +0x9d
-		// github.com/pkt-cash/pktd/btcutil/er.captureStack(...)
+		// github.com/pkt-cash/PKT-FullNode/btcutil/er.captureStack(...)
 		//         /Users/user/wrk/pkt-cash/pktd/btcutil/er/er.go:283
 		s = s[5:]
 		var stack []string

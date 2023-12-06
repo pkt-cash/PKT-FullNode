@@ -7,9 +7,9 @@ package difficulty
 import (
 	"math/big"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/randhash/util"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
 )
 
 func bn256() *big.Int {

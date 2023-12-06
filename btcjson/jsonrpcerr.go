@@ -4,7 +4,7 @@
 
 package btcjson
 
-import "github.com/pkt-cash/pktd/btcutil/er"
+import "github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
 // Err is an error type for the btcjson errors
 var Err er.ErrorType = er.NewErrorType("btcjson.Err")

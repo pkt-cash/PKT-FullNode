@@ -8,16 +8,16 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/difficulty"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/pcutil"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/interpret"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/randgen"
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/randhash/util"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/cryptocycle"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/difficulty"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/randhash/interpret"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/randhash/randgen"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/randhash/util"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 const announceMerkleDepth int = 13

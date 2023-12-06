@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/json-iterator/go"
 	"fmt"
+	"github.com/json-iterator/go"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/pktconfig/version"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according

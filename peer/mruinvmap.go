@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 )
 
 // mruInventoryMap provides a concurrency safe map that is limited to a maximum

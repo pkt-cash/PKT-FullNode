@@ -4,7 +4,7 @@ integration
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://Copyfree.org)
 
 This contains integration tests which make use of the
-[rpctest](https://github.com/pkt-cash/pktd/tree/master/integration/rpctest)
+[rpctest](https://github.com/pkt-cash/PKT-FullNode/tree/master/integration/rpctest)
 package to programmatically drive nodes via RPC.
 
 ## License

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 func init() {
@@ -685,4 +685,3 @@ func TestConnReqString(t *testing.T) {
 	cr2 := &ConnReq{}
 	_ = cr2.String()
 }
-

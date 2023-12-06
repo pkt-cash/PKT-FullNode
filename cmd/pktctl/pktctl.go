@@ -12,8 +12,8 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/pkt-cash/pktd/btcjson"
-	"github.com/pkt-cash/pktd/pktconfig/version"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/pktconfig/version"
 )
 
 const (

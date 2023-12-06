@@ -6,8 +6,8 @@
 package main
 
 import (
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/wire/protocol"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
 
 // activeNetParams is a pointer to the parameters specific to the

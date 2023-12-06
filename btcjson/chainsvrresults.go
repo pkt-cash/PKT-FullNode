@@ -8,7 +8,7 @@ package btcjson
 import (
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // GetBlockHeaderVerboseResult models the data from the getblockheader command when
@@ -236,9 +236,9 @@ type GetPeerInfoResult struct {
 }
 
 type GetNetworkInfoNetworks struct {
-	Name                      string `json:"name"`
-	Limited                   bool   `json:"limited"`
-	Reachable                 bool   `json:"reachable"`
+	Name      string `json:"name"`
+	Limited   bool   `json:"limited"`
+	Reachable bool   `json:"reachable"`
 }
 
 type GetNetworkInfoResult struct {

@@ -8,12 +8,12 @@ package btcjson_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/json-iterator/go"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 	"reflect"
 	"testing"
-	"github.com/json-iterator/go"
-	"github.com/pkt-cash/pktd/btcutil/er"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
 )
 
 // TestBtcdExtCmds tests all of the pktd extended commands marshal and unmarshal

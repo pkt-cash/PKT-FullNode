@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/btcutil/util"
-	"github.com/pkt-cash/pktd/chaincfg"
-	sphinx "github.com/pkt-cash/pktd/lightning-onion"
+	"github.com/pkt-cash/PKT-FullNode/btcec"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	sphinx "github.com/pkt-cash/PKT-FullNode/lightning-onion"
 )
 
 type OnionHopSpec struct {

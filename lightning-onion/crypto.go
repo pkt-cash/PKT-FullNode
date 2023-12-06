@@ -6,8 +6,8 @@ import (
 	"crypto/sha256"
 
 	"github.com/aead/chacha20"
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcec"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 const (

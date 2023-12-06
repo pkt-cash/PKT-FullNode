@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/base58"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/base58"
 )
 
 var (

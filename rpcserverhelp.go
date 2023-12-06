@@ -11,9 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/btcjson"
+	"github.com/pkt-cash/PKT-FullNode/btcjson"
 )
 
 // helpDescsEnUS defines the English descriptions used for the help strings.
@@ -161,9 +161,9 @@ var helpDescsEnUS = map[string]string{
 	"getnetworkinforesult-incrementalfee":     "Minimum fee increment for BIP 125 replacement",
 	"getnetworkinforesult-localaddresses":     "TODO Always empty for now",
 
-	"getnetworkinfonetworks-reachable":                   "If the network is externally reachable",
-	"getnetworkinfonetworks-limited":                     "True if this is the only allowed network",
-	"getnetworkinfonetworks-name":                        "IPv4 / IPv6",
+	"getnetworkinfonetworks-reachable": "If the network is externally reachable",
+	"getnetworkinfonetworks-limited":   "True if this is the only allowed network",
+	"getnetworkinfonetworks-name":      "IPv4 / IPv6",
 
 	// GenerateCmd help
 	"generate--synopsis": "Generates a set number of blocks (simnet or regtest only) and returns a JSON\n" +

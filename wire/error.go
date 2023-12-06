@@ -7,7 +7,7 @@ package wire
 import (
 	"fmt"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // MessageError describes an issue with a message.

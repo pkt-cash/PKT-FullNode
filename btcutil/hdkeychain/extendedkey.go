@@ -18,13 +18,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/pkt-cash/pktd/btcec"
-	"github.com/pkt-cash/pktd/btcutil"
-	"github.com/pkt-cash/pktd/btcutil/base58"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/chainhash"
+	"github.com/pkt-cash/PKT-FullNode/btcec"
+	"github.com/pkt-cash/PKT-FullNode/btcutil"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/base58"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 )
 
 const (
@@ -372,7 +372,7 @@ func (k *ExtendedKey) IsAffectedByIssue172() bool {
 // 1-of-256 hardened derivations will be wrong.  See note in the Derive method
 // and IsAffectedByIssue172.
 func (k *ExtendedKey) DeriveNonStandard(i uint32) (*ExtendedKey, er.R) {
-		// Prevent derivation of children beyond the max allowed depth.
+	// Prevent derivation of children beyond the max allowed depth.
 	if k.depth == maxUint8 {
 		return nil, ErrDeriveBeyondMaxDepth.Default()
 	}

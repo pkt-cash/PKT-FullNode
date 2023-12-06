@@ -10,15 +10,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
-	"github.com/pkt-cash/pktd/chaincfg"
-	"github.com/pkt-cash/pktd/chaincfg/globalcfg"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg"
+	"github.com/pkt-cash/PKT-FullNode/chaincfg/globalcfg"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt"
 
-	"github.com/pkt-cash/pktd/blockchain/packetcrypt/cryptocycle"
-	"github.com/pkt-cash/pktd/blockchain/testdata"
-	"github.com/pkt-cash/pktd/wire"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/cryptocycle"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/testdata"
+	"github.com/pkt-cash/PKT-FullNode/wire"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 

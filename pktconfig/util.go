@@ -14,7 +14,7 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 
-	"github.com/pkt-cash/pktd/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 )
 
 // CreateDefaultConfigFile copies the file sample-pktd.conf to the given destination path,
