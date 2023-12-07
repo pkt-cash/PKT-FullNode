@@ -87,6 +87,11 @@ const (
 	// SFNode2X is a flag used to indicate a peer is running the Segwit2X
 	// software.
 	SFNode2X
+
+	// SFTrusted is not a service flag, it is used internally for addresses
+	// whose source is a DNS seed or manual entry, to distinguish them from
+	// nodes whose source is another node.
+	SFTrusted = 1 << 63
 )
 
 // Map of service flags back to their constant names for pretty printing.

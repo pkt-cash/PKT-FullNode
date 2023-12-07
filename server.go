@@ -23,14 +23,17 @@ import (
 	"time"
 
 	"github.com/pkt-cash/PKT-FullNode/addrmgr"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/localaddrs"
 	"github.com/pkt-cash/PKT-FullNode/blockchain"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/indexers"
 	"github.com/pkt-cash/PKT-FullNode/btcutil"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/bloom"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
+	"github.com/pkt-cash/PKT-FullNode/btcutil/util/mailbox"
 	"github.com/pkt-cash/PKT-FullNode/chaincfg"
 	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 	"github.com/pkt-cash/PKT-FullNode/connmgr"
+	"github.com/pkt-cash/PKT-FullNode/connmgr/banmgr"
 	"github.com/pkt-cash/PKT-FullNode/database"
 	"github.com/pkt-cash/PKT-FullNode/mempool"
 	"github.com/pkt-cash/PKT-FullNode/mining"
@@ -201,6 +204,7 @@ type server struct {
 	db                   database.DB
 	timeSource           blockchain.MedianTimeSource
 	services             protocol.ServiceFlag
+	banMgr               banmgr.BanMgr
 
 	// The following fields are used for optional indexes.  They will be nil
 	// if the associated index is not enabled.  These fields are set during
@@ -247,7 +251,6 @@ type serverPeer struct {
 	filter         *bloom.Filter
 	addressesMtx   sync.RWMutex
 	knownAddresses map[string]struct{}
-	banScore       connmgr.DynamicBanScore
 	quit           chan struct{}
 	// The following chans are used to sync blockmanager and server.
 	txProcessed    chan struct{}
@@ -338,36 +341,9 @@ func (sp *serverPeer) pushAddrMsg(addresses []*wire.NetAddress) {
 // the score is above the ban threshold, the peer will be banned and
 // disconnected.
 func (sp *serverPeer) addBanScore(persistent, transient uint32, reason string) {
-	// No warning is logged and no score is calculated if banning is disabled.
-	if cfg.DisableBanning {
-		return
-	}
-	if sp.isWhitelisted {
-		log.Debugf("Misbehaving whitelisted peer %s: %s", sp, reason)
-		return
-	}
-
-	warnThreshold := cfg.BanThreshold >> 1
-	if transient == 0 && persistent == 0 {
-		// The score is not being increased, but a warning message is still
-		// logged if the score is above the warn threshold.
-		score := sp.banScore.Int()
-		if score > warnThreshold {
-			log.Warnf("Misbehaving peer %s: %s -- ban score is %d, "+
-				"it was not increased this time", sp, reason, score)
-		}
-		return
-	}
-	score := sp.banScore.Increase(persistent, transient)
-	if score > warnThreshold {
-		log.Warnf("Misbehaving peer %s: %s -- ban score increased to %d",
-			sp, reason, score)
-		if score > cfg.BanThreshold {
-			log.Warnf("Misbehaving peer %s -- banning and disconnecting",
-				sp)
-			sp.server.BanPeer(sp)
-			sp.Disconnect()
-		}
+	if sp.server.banMgr.AddBanScore(sp.Addr(), persistent, transient, reason) {
+		sp.server.BanPeer(sp)
+		sp.Disconnect()
 	}
 }
 
@@ -815,7 +791,7 @@ func (sp *serverPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 		break
 
 	default:
-		log.Debug("Filter request for unknown headers for "+
+		log.Debugf("Filter request for unknown headers for "+
 			"filter: %v", msg.FilterType)
 		return
 	}
@@ -932,7 +908,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 		break
 
 	default:
-		log.Debug("Filter request for unknown checkpoints for "+
+		log.Debugf("Filter request for unknown checkpoints for "+
 			"filter: %v", msg.FilterType)
 		return
 	}
@@ -1207,7 +1183,7 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	sp.sentAddrs = true
 
 	// Get the current known addresses from the address manager.
-	addrCache := sp.server.addrManager.AddressCache()
+	addrCache := sp.server.addrManager.AddressesToShare()
 
 	// Add the best addresses we have for peer discovery here - if
 	// we have a port of 0 then that means nothing good was found,
@@ -1589,6 +1565,9 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	}
 
 	// TODO: Check for max peers from a single IP.
+
+	// Rapid reconnect
+	sp.addBanScore(0, 10, "connect")
 
 	// Limit max number of total peers.
 	if state.Count() >= cfg.MaxPeers {
@@ -2112,9 +2091,12 @@ func (s *server) peerHandler() {
 				// Bitcoind uses a lookup of the dns seeder here. This
 				// is rather strange since the values looked up by the
 				// DNS seed lookups will vary quite a lot.
-				// to replicate this behavior we put all addresses as
-				// having come from the first one.
-				s.addrManager.AddAddresses(addrs, addrs[0])
+				// cjd Dec 6 2023: We're switching to a "magic" address
+				//                 which will allow us to differentiate
+				//                 more trusted addresses from addresses
+				//                 coming from random nodes.
+				src := wire.NetAddress{Services: protocol.SFTrusted}
+				s.addrManager.AddAddresses(addrs, &src)
 			})
 	}
 	go s.connManager.Start()
@@ -2540,6 +2522,13 @@ func setupRPCListeners() ([]net.Listener, er.R) {
 	return listeners, nil
 }
 
+func (s *server) peerCount() int {
+	replyChan := make(chan []*serverPeer)
+	s.query <- getPeersMsg{reply: replyChan}
+	serverPeers := <-replyChan
+	return len(serverPeers)
+}
+
 // newServer returns a new pktd server configured to listen on addr for the
 // bitcoin network type specified by chainParams.  Use start to begin accepting
 // connections from peers.
@@ -2577,6 +2566,12 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		log.Infof("User-agent whitelist %s", agentWhitelist)
 	}
 
+	bmConfig := banmgr.Config{
+		DisableBanning: cfg.DisableBanning,
+		IpWhiteList:    []string{},
+		BanThreashold:  cfg.BanThreshold,
+	}
+
 	s := server{
 		startupTime:          time.Now().Unix(),
 		chainParams:          chainParams,
@@ -2599,6 +2594,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		cfCheckptCaches:      make(map[wire.FilterType][]cfHeaderKV),
 		agentBlacklist:       agentBlacklist,
 		agentWhitelist:       agentWhitelist,
+		banMgr:               *banmgr.New(&bmConfig),
 	}
 
 	// Create the transaction and address indexes if needed.
@@ -2768,6 +2764,36 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		IsCurrent:              s.syncManager.IsCurrent,
 	})
 
+	targetOutbound := defaultTargetOutbound
+	if cfg.MaxPeers < targetOutbound {
+		targetOutbound = cfg.MaxPeers
+	}
+
+	localAddrs := localaddrs.New()
+	relaxedMode := mailbox.NewMailbox(false)
+	go func() {
+		for {
+			pc := s.peerCount()
+			hasSyncPeer := s.syncManager.SyncPeer() != nil
+			enoughPeers := pc > (targetOutbound - 2)
+			if relaxedMode.Load() {
+				if !hasSyncPeer {
+					log.Infof("Lost sync peer, switch to fast peer search")
+					relaxedMode.Store(false)
+				} else if !enoughPeers {
+					log.Infof("Only have [%d] peers, switch to fast peer search", pc)
+					relaxedMode.Store(false)
+				}
+			} else if hasSyncPeer && enoughPeers {
+				log.Infof("Found [%d] peers including sync peer, switching to relaxed peer search", pc)
+				relaxedMode.Store(true)
+			}
+
+			localAddrs.Referesh()
+			time.Sleep(time.Second * 30)
+		}
+	}()
+
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
 	// in connect-only mode since it is only intended to connect to
@@ -2778,9 +2804,16 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	if !cfg.SimNet && !cfg.RegressionTest && len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, er.R) {
 			for tries := 0; tries < 100; tries++ {
-				addr := s.addrManager.GetAddress()
+				addr := s.addrManager.GetAddress(relaxedMode.Load())
 				if addr == nil {
 					break
+				}
+
+				// If for some reason, we're not able to get our local addrs (OS permissions)
+				// we'll pretend everything is ok.
+				if !localAddrs.Reachable(addr.NetAddress()) && localAddrs.IsWorking() {
+					// Unreachable address
+					continue
 				}
 
 				// Address will not be invalid, local or unroutable
@@ -2819,10 +2852,6 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	}
 
 	// Create a connection manager.
-	targetOutbound := defaultTargetOutbound
-	if cfg.MaxPeers < targetOutbound {
-		targetOutbound = cfg.MaxPeers
-	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
 		OnAccept:       s.inboundPeerConnected,

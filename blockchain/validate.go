@@ -401,10 +401,6 @@ func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) (int32, er.R) {
 		return -1, err
 	}
 
-	if b.LatestCheckpoint().Height >= height {
-		return height, nil
-	}
-
 	if !globalcfg.IsPacketCryptAllowedVersion(pcp.Version, height) {
 		return height, ruleerror.ErrBadPow.New("Unallowed PacketCrypt proof version", nil)
 	}
@@ -412,8 +408,8 @@ func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) (int32, er.R) {
 	hashes := make([]*chainhash.Hash, len(pcp.Announcements))
 	for i := 0; i < len(pcp.Announcements); i++ {
 		ph := pcp.Announcements[i].GetParentBlockHeight()
-		if ph > 0x7fffffff {
-			return height, ruleerror.ErrBadPow.New("ann parent block height is negative", nil)
+		if ph > uint32(height) {
+			return height, ruleerror.ErrBadPow.New("ann parent block height exceeds block height", nil)
 		}
 		hash, err := b.BlockHashByHeightContextual(int32(ph), &block.MsgBlock().Header.PrevBlock)
 		if err != nil {

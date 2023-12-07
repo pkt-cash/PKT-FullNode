@@ -596,8 +596,9 @@ var PktMainNetParams = Params{
 	DefaultPort: "64764",
 	DNSSeeds: []DNSSeed{
 		{"seed.cjd.li", false},
-		{"seed.anode.co", false},
 		{"pktdseed.pkt.world", false},
+		{"seed.pkt.pink", false},
+		{"seed.pkt.ai", false},
 	},
 
 	// Chain parameters

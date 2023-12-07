@@ -39,7 +39,7 @@ const (
 	defaultDataDirname           = "data"
 	defaultLogLevel              = "info"
 	defaultLogDirname            = "logs"
-	defaultMaxPeers              = 125
+	defaultMaxPeers              = 2048
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 120
 	defaultConnectTimeout        = time.Second * 10

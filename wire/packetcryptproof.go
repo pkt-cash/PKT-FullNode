@@ -71,6 +71,10 @@ type PacketCryptProof struct {
 
 	// 0 means no version specified, 1 is the first version
 	Version int
+
+	/// The length of the encoded PcP, if the length is different from the SerializeSize
+	/// Then the PcP is considered "non-standard" and will be rejected.
+	serializeLength int
 }
 
 // SplitContentProof splits the content proof into the proofs for the
@@ -132,6 +136,20 @@ func (h *PacketCryptProof) Serialize(w io.Writer) er.R {
 	return writePacketCryptProof(w, 0, WitnessEncoding, h)
 }
 
+// IsStandard checks whether the encoded length of the PcP is the same
+// as the length that the PcP would be if it were encoded by this node.
+// Any duplicated or extranious entities in the TLV will make the length
+// different and will thus make the PcP non-standard.
+func (h *PacketCryptProof) IsStandard() bool {
+	if h.serializeLength == 0 {
+		// 0 length can only possibly happen if it has never been deserialized
+		// so that means we created it ourselves and when we serialize it, it
+		// will, by definition, be standard form.
+		return true
+	}
+	return h.serializeLength == h.SerializeSize()
+}
+
 // SerializeSize gets the size of the PacketCryptProof when serialized
 func (h *PacketCryptProof) SerializeSize() int {
 	out := 0
@@ -141,7 +159,6 @@ func (h *PacketCryptProof) SerializeSize() int {
 		out += VarIntSerializeSize(uint64(verLen))
 		out += verLen
 	}
-	out += 4 + PcAnnSerializeSize*4
 	{
 		pcplen := 1024*4 + 4 + len(h.AnnProof)
 		out += VarIntSerializeSize(pcpType)
@@ -175,6 +192,7 @@ func (h *PacketCryptProof) SerializeSize() int {
 
 func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *PacketCryptProof) er.R {
 	hasPcp := false
+	totalLen := 0
 	for {
 		t, err := ReadVarInt(r, 0)
 		if err != nil {
@@ -184,12 +202,14 @@ func readPacketCryptProof(r io.Reader, pver uint32, enc MessageEncoding, pcp *Pa
 		if err != nil {
 			return err
 		}
+		totalLen += VarIntSerializeSize(t) + VarIntSerializeSize(length) + int(length)
 		switch t {
 		case endType:
 			{
 				if !hasPcp {
 					return messageError("readPacketCryptProof", "Missing PacketCrypt proof")
 				}
+				pcp.serializeLength = totalLen
 				return nil
 			}
 		case pcpType:

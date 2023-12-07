@@ -263,7 +263,7 @@ func (e err) HasStack() bool {
 }
 
 var argumentsRegex = regexp.MustCompile(`\([0-9a-fx, \.]*\)$`)
-var prefixRegex = regexp.MustCompile(`^.*/pkt-cash/pktd/`)
+var prefixRegex = regexp.MustCompile(`^.*/pkt-cash/PKT-FullNode/`)
 var goFileRegex = regexp.MustCompile(`\.go:[0-9]+ `)
 
 func (e err) Stack() []string {
@@ -274,7 +274,7 @@ func (e err) Stack() []string {
 		// runtime/debug.Stack(0x10df124, 0xc00007cf70, 0xc0000180c0)
 		//         /usr/local/go/src/runtime/debug/stack.go:24 +0x9d
 		// github.com/pkt-cash/PKT-FullNode/btcutil/er.captureStack(...)
-		//         /Users/user/wrk/pkt-cash/pktd/btcutil/er/er.go:283
+		//         /Users/user/wrk/pkt-cash/PKT-FullNode/btcutil/er/er.go:283
 		s = s[5:]
 		var stack []string
 		fun := ""

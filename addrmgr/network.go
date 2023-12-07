@@ -42,6 +42,8 @@ var (
 	// cjdnsNet is half of rfc4193Net which is often routable for PKT nodes
 	cjdnsNet = ipNet("FC00::", 8, 128)
 
+	yggdrasilNet = ipNet("200::", 7, 128)
+
 	// rfc4380Net specifies the IPv6 teredo tunneling over UDP address block
 	// as defined by RFC4380 (2001::/32).
 	rfc4380Net = ipNet("2001::", 32, 128)
@@ -142,6 +144,10 @@ func IsRFC4193(na *wire.NetAddress) bool {
 
 func IsCjdns(na *wire.NetAddress) bool {
 	return cjdnsNet.Contains(na.IP)
+}
+
+func IsYggdrasil(na *wire.NetAddress) bool {
+	return yggdrasilNet.Contains(na.IP)
 }
 
 // IsRFC4380 returns whether or not the passed address is part of the IPv6

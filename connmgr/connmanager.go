@@ -351,8 +351,10 @@ out:
 				}
 
 				connReq.updateState(ConnFailing)
-				log.Tracef("Failed to connect to %v: %v",
-					connReq, msg.err)
+				if connReq.Addr != nil {
+					log.Infof("Failed to connect to %v: %v",
+						log.IpAddr(connReq.Addr.String()), msg.err.Message())
+				}
 				cm.handleFailedConn(connReq)
 			}
 

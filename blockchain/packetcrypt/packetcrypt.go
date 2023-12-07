@@ -78,6 +78,9 @@ func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annPar
 	if mb.Pcp == nil {
 		return false, er.New("missing packetcrypt proof")
 	}
+	if !mb.Pcp.IsStandard() {
+		return false, er.New("Block contains non-standard / mutated PacketCryptProof")
+	}
 
 	// Check ann sigs
 	for i, ann := range mb.Pcp.Announcements {

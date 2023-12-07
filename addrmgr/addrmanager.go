@@ -159,6 +159,8 @@ const (
 	// call to AddressCache()).
 	getAddrMax = 5000
 
+	getAddrMin = 20
+
 	// getAddrPercent is the percentage of total addresses known that we
 	// will share with a call to AddressCache.
 	getAddrPercent = 23
@@ -667,14 +669,39 @@ func (a *AddrManager) NeedMoreAddresses() bool {
 	return a.numAddresses() < needAddressThreshold
 }
 
+func (a *AddrManager) addressesThatOnceWorked() []*wire.NetAddress {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	count := 0
+	for _, v := range a.addrIndex {
+		if v.lastsuccess.After(time.Unix(0, 0)) {
+			count++
+		}
+	}
+	if count == 0 {
+		return nil
+	}
+	addrs := make([]*wire.NetAddress, 0, count)
+	for _, v := range a.addrIndex {
+		if v.lastsuccess.After(time.Unix(0, 0)) {
+			addrs = append(addrs, v.na)
+		}
+	}
+
+	return addrs
+}
+
 // AddressCache returns the current address cache.  It must be treated as
 // read-only (but since it is a copy now, this is not as dangerous).
-func (a *AddrManager) AddressCache() []*wire.NetAddress {
-	allAddr := a.getAddresses()
+func (a *AddrManager) AddressesToShare() []*wire.NetAddress {
+	allAddr := a.addressesThatOnceWorked()
 
 	numAddresses := len(allAddr) * getAddrPercent / 100
 	if numAddresses > getAddrMax {
 		numAddresses = getAddrMax
+	} else if numAddresses < getAddrMin {
+		numAddresses = len(allAddr)
 	}
 
 	// Fisher-Yates shuffle the array. We only need to do the first
@@ -758,11 +785,23 @@ func NetAddressKey(na *wire.NetAddress) string {
 	return net.JoinHostPort(ipString(na), port)
 }
 
+func isGoodAddress(a *KnownAddress, relaxedMode bool) bool {
+	if relaxedMode {
+		return true
+	} else if a.srcAddr.Services&protocol.SFTrusted == protocol.SFTrusted {
+		return true
+	} else if a.lastsuccess.After(time.Unix(0, 0)) {
+		return true
+	} else {
+		return false
+	}
+}
+
 // GetAddress returns a single address that should be routable.  It picks a
 // random one from the possible addresses with preference given to ones that
 // have not been used recently and should not pick 'close' addresses
 // consecutively.
-func (a *AddrManager) GetAddress() *KnownAddress {
+func (a *AddrManager) GetAddress(relaxedMode bool) *KnownAddress {
 	// Protect concurrent access.
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
@@ -776,20 +815,30 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 		// Tried entry.
 		large := 1 << 30
 		factor := 1.0
-		for {
-			// pick a random bucket.
-			bucket := a.rand.Intn(len(a.addrTried))
+		// pick a random bucket.
+		startBucket := a.rand.Intn(len(a.addrTried))
+		for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
+			bucket := bucketMod % len(a.addrTried)
 			if a.addrTried[bucket].Len() == 0 {
 				continue
 			}
 
 			// Pick a random entry in the list
 			e := a.addrTried[bucket].Front()
-			for i :=
-				a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0; i-- {
+			var ka *KnownAddress
+			for i := a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0 || ka == nil; i-- {
+				a := e.Value.(*KnownAddress)
+				if isGoodAddress(a, relaxedMode) {
+					ka = a
+				}
 				e = e.Next()
+				if e == nil {
+					break
+				}
 			}
-			ka := e.Value.(*KnownAddress)
+			if ka == nil {
+				continue
+			}
 			randval := a.rand.Intn(large)
 			if float64(randval) < (factor * ka.chance() * float64(large)) {
 				log.Tracef("Selected %v from tried bucket",
@@ -803,9 +852,10 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 		// XXX use a closure/function to avoid repeating this.
 		large := 1 << 30
 		factor := 1.0
-		for {
-			// Pick a random bucket.
-			bucket := a.rand.Intn(len(a.addrNew))
+		// Pick a random bucket.
+		startBucket := a.rand.Intn(len(a.addrNew))
+		for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
+			bucket := bucketMod % len(a.addrNew)
 			if len(a.addrNew[bucket]) == 0 {
 				continue
 			}
@@ -813,10 +863,16 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 			var ka *KnownAddress
 			nth := a.rand.Intn(len(a.addrNew[bucket]))
 			for _, value := range a.addrNew[bucket] {
-				if nth == 0 {
+				if isGoodAddress(value, relaxedMode) {
 					ka = value
 				}
+				if nth == 0 && ka != nil {
+					break
+				}
 				nth--
+			}
+			if ka == nil {
+				continue
 			}
 			randval := a.rand.Intn(large)
 			if float64(randval) < (factor * ka.chance() * float64(large)) {
@@ -827,6 +883,7 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 			factor *= 1.2
 		}
 	}
+	return nil
 }
 
 func (a *AddrManager) find(addr *wire.NetAddress) *KnownAddress {
@@ -1020,7 +1077,34 @@ func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPrior
 	return nil
 }
 
-// getReachabilityFrom returns the relative reachability of the provided local
+// cjd: This is a better reachability metric, getReachabilityFrom()
+// does some silly things like assume ip6 addresses are reachable from ip4.
+func Reachable(localAddr, remoteAddr *wire.NetAddress) bool {
+	// For our purposes, loopback addresses should be assumed unreachable
+	// we're PROBABLY not trying to connect to ourselves
+	if IsLocal(localAddr) || IsLocal(remoteAddr) {
+		return false
+	}
+
+	if IsIPv4(localAddr) != IsIPv4(remoteAddr) {
+		return false
+	}
+	if IsIPv4(remoteAddr) {
+		// We consider all NAT local IPv4 to be inaccessible
+		// because otherwise we risk trying to connect to 10.0.0.0/8
+		// addresses which were gossipped to us by far away nodes.
+		return IsRoutable(remoteAddr)
+	}
+	if IsCjdns(localAddr) != IsCjdns(remoteAddr) {
+		return false
+	}
+	if IsYggdrasil(localAddr) != IsYggdrasil(remoteAddr) {
+		return false
+	}
+	return IsRoutable(localAddr) && IsRoutable(remoteAddr)
+}
+
+// GetReachabilityFrom returns the relative reachability of the provided local
 // address to the provided remote address.
 func getReachabilityFrom(localAddr, remoteAddr *wire.NetAddress) int {
 	const (

@@ -1,69 +1,78 @@
-pktd
+PKT-FullNode
 ====
 
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://Copyfree.org)
 
-`pktd` is the primary full node *PKT Cash* implementation, written in Go.
+PKT-FullNode is the core blockchain engine which supports the PKT blockchain.
+It is based on the [pktd](https://github.com/pkt-cash/pktd) codebase which was
+a single repository combining blockchain engine, wallet, and lightning daemon.
 
-The PKT Cash project is currently under active development and considered 
-to be beta quality software.
+In order to allow the wallet and lightning code to evolve more quickly, the full
+node was branched off and lives here where it will evolve on it's own path.
 
-In particular, the development branch of `pktd` is highly experimental, 
-and should generally not be used in a production environment or on the
-PKT Cash mainnet.
+## Why should I run a FullNode?
 
-`pktd` is the primary mainnet node software for the PKT blockchain.
-It is known to correctly download, validate, and serve the chain,
-using rules for block acceptance based on Bitcoin Core, with the
-addition of PacketCrypt Proofs. 
+A FullNode is *not* needed to own PKT, mine PKT, or have a wallet. You only
+need this if you want to:
+1. Set up your own mining pool
+2. Run your own block explorer
+3. Run an ElectrumX instance
+4. Query your FullNode to learn things about the PKT blockchain
+5. Be a good community member and contribute resources
 
-It relays newly mined blocks, and individual transactions that have 
-not yet made it into a block, as well as maintaining a transaction pool.
-All individual transactions admitted to the pool follow rules defined by 
-the network operators, which include strict checks to filter transactions
-based on miner requirements ("standard" vs "non-standard" transactions).
+When you run a PKT-FullNode, you are making the PKT Network more decentralized and
+providing a service to wallets which need to talk to your node in order to know if
+they have been paid on the blockchain.
 
-Unlike other similar software, `pktd` does *NOT* directly include wallet
-functionality - this was an intentional design decision.  You will not be
-able to make or receive payments with `pktd` directly.
+## How should I run a FullNode?
 
-Example wallet functionality is provided in the included, separate,
-[pktwallet](https://github.com/pkt-cash/PKT-FullNode/pktwallet) package.
+FullNodes should be run on *servers*, they need not be housed in big datacenters
+but they should have a public IP address or ability to forward a port, and should
+be something which will be turned on most of the time.
 
-## Requirements
+As far as resources, a FullNode can run on anything as small as a Raspberry Pi,
+as long as it is attached to a large (500 GB) SSD and has at least 4GB of
+available memory.
 
-* Google [Go](http://golang.org) (Golang) version 1.14 or higher.
-* A somewhat recent release of Git.
+### Note about hard drives
+The PKT FullNode runs best on an SSD, it *can* run on a spinning disk, but the
+latency makes its database operate much more slowly.
 
-## Issue Tracker
+## How to install
 
-* The GitHub [integrated GitHub issue tracker](https://github.com/pkt-cash/PKT-FullNode/issues) is used for this project.  
+1. [Install golang](https://go.dev/doc/install) if you have not already.
+2. Clone this repository with git
+3. Type `./do`
+4. You should find `./bin/pktd` now exists
 
-## Building
+## How to run
 
-Using `git`, clone the project from the repository:
+Typically you can type `./bin/pktd` and your PKT-FullNode will begin syncing
+the PKT blockchain.
 
-`git clone https://github.com/pkt-cash/PKT-FullNode`
+## Now what?
 
-Use the `./do` shell script to build `pktd`, `pktwallet`, and `pktctl`.
+1. Make sure you have forwarded port 64764 from the public internet
+2. If your node is on a private IP address (e.g. 192.168.X.X) then you can
+tell pktd how it is reachable from the internet by using the flag
+`--externalip=133.33.33.7` (replacing 133.33.33.7 with whatever your public IP
+address is).
+3. Check if how close you are to being in sync `./bin/pktctl getinfo` and compare
+the "blocks" field with a block explorer like explorer.pkt.cash
+4. When you're synced, check on the nodes that are connecting to you with
+`./bin/pktctl getpeerinfo | jq -r '.[] | select(.inbound == true) | .addr + "    " + .subver '`
+make sure you install `jq` first. Note that nodes with `neutrino` in the name are
+wallets.
 
-NOTE: It is highly recommended to use only the toolchain Google distributes
-at the [official Go homepage](https://golang.org/dl). Go toolchains provided
-by Linux distributions often use different defaults or apply non-standard
-patches to the official sources, usually to meet distribution-specific
-requirements (for example, Red Hat backports, security fixes, and provides
-a different default linker configuration vs. the upstream Google Go package.)
+## Issues and support
+For help, check:
+* https://pkt.chat
+* [Discord](https://discord.gg/bjJutHm9CN) or
+* [Telegram](https://t.me/pkt_cash)
 
-Support can only be provided for binaries compiled from unmodified sources,
-using the official (upstream) Google Golang toolchain. We unfortunately are
-unable to test and support every distribution specific combination. 
+## More Info
 
-The official Google Golang installer for Linux is always available 
-for download [here](https://storage.googleapis.com/golang/getgo/installer_linux).
-
-## Documentation
-
-The documentation for `pktd` is work-in-progress, and available in the [docs](https://github.com/pkt-cash/PKT-FullNode/tree/master/docs) folder.
+Check https://docs.pkt.cash for more information.
 
 ## License
 

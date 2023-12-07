@@ -507,18 +507,13 @@ func (sm *SyncManager) shouldDCStalledSyncPeer() bool {
 // the current sync peer, attempts to select a new best peer to sync from.  It
 // is invoked from the syncHandler goroutine.
 func (sm *SyncManager) handleDonePeerMsg(peer *peerpkg.Peer) {
-	state, exists := sm.peerStates[peer]
-	if !exists {
-		log.Warnf("Received done peer message for unknown peer %s", peer)
-		return
+	// If this is false, then it's because we banned them
+	if state, exists := sm.peerStates[peer]; exists {
+		// Remove the peer from the list of candidate peers.
+		delete(sm.peerStates, peer)
+		log.Infof("Lost peer %s", peer)
+		sm.clearRequestedState(state)
 	}
-
-	// Remove the peer from the list of candidate peers.
-	delete(sm.peerStates, peer)
-
-	log.Infof("Lost peer %s", peer)
-
-	sm.clearRequestedState(state)
 
 	if peer == sm.syncPeer {
 		// Update the sync peer. The server has already disconnected the
@@ -1192,7 +1187,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// Also skip if it has already been requested, so
 				// we don't end up doing things multiple times.
 				if _, exists := sm.requestedTxns[iv.Hash]; exists {
-					log.Infof("Skipping already requested transaction from %s", peer)
+					log.Debugf("Skipping already requested transaction from %s", peer)
 					continue
 				}
 			}
@@ -1416,7 +1411,7 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		// Don't relay if we are not current. Other peers that are
 		// current should already know about it.
 		if !sm.current() {
-			log.Debugf("Block acceptance notification not relayed since we are not current.")
+			log.Tracef("Block acceptance notification not relayed since we are not current.")
 			return
 		}
 
