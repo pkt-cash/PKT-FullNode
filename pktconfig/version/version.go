@@ -31,7 +31,7 @@ func init() {
 	}
 	tag := "-custom"
 	// pktd-v1.1.0-beta-19-gfa3ba767
-	if _, err := fmt.Sscanf(appBuild, "pktd-v%d.%d.%d", &appMajor, &appMinor, &appPatch); err == nil {
+	if _, err := fmt.Sscanf(appBuild, "PKT-FullNode-v%d.%d.%d", &appMajor, &appMinor, &appPatch); err == nil {
 		tag = ""
 		custom = false
 		if x := regexp.MustCompile(`-[0-9]+-g[0-9a-f]{8}`).FindString(appBuild); len(x) > 0 {
