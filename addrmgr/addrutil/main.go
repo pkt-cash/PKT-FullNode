@@ -2,10 +2,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package addrmgr
+package addrutil
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/pkt-cash/PKT-FullNode/wire"
 )
@@ -264,4 +265,42 @@ func GroupKey(na *wire.NetAddress) string {
 	}
 
 	return na.IP.Mask(net.CIDRMask(bits, 128)).String()
+}
+
+func Reachable(localAddr, remoteAddr *wire.NetAddress) bool {
+	// For our purposes, loopback addresses should be assumed unreachable
+	// we're PROBABLY not trying to connect to ourselves
+	if IsLocal(localAddr) || IsLocal(remoteAddr) {
+		return false
+	}
+
+	if IsIPv4(localAddr) != IsIPv4(remoteAddr) {
+		return false
+	}
+	if IsIPv4(remoteAddr) {
+		// We consider all NAT local IPv4 to be inaccessible
+		// because otherwise we risk trying to connect to 10.0.0.0/8
+		// addresses which were gossipped to us by far away nodes.
+		return IsRoutable(remoteAddr)
+	}
+	if IsCjdns(localAddr) != IsCjdns(remoteAddr) {
+		return false
+	}
+	if IsYggdrasil(localAddr) != IsYggdrasil(remoteAddr) {
+		return false
+	}
+	return IsRoutable(localAddr) && IsRoutable(remoteAddr)
+}
+
+// ipString returns a string for the ip from the provided NetAddress.
+func ipString(na *wire.NetAddress) string {
+	return na.IP.String()
+}
+
+// NetAddressKey returns a string key in the form of ip:port for IPv4 addresses
+// or [ip]:port for IPv6 addresses.
+func NetAddressKey(na *wire.NetAddress) string {
+	port := strconv.FormatUint(uint64(na.Port), 10)
+
+	return net.JoinHostPort(ipString(na), port)
 }

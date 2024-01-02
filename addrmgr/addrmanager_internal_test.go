@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/addrutil"
 	"github.com/pkt-cash/PKT-FullNode/wire"
 	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
 )
@@ -80,7 +81,7 @@ func assertAddrs(t *testing.T, addrMgr *AddrManager,
 	}
 
 	for _, addr := range addrs {
-		addrStr := NetAddressKey(addr)
+		addrStr := addrutil.NetAddressKey(addr)
 		expectedAddr, ok := expectedAddrs[addrStr]
 		if !ok {
 			t.Fatalf("expected to find address %v", addrStr)
@@ -119,7 +120,7 @@ func TestAddrManagerSerialization(t *testing.T) {
 	expectedAddrs := make(map[string]*wire.NetAddress, numAddrs)
 	for i := 0; i < numAddrs; i++ {
 		addr := randAddr(t)
-		expectedAddrs[NetAddressKey(addr)] = addr
+		expectedAddrs[addrutil.NetAddressKey(addr)] = addr
 		addrMgr.AddAddress(addr, randAddr(t))
 	}
 
@@ -163,7 +164,7 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 	expectedAddrs := make(map[string]*wire.NetAddress, numAddrs)
 	for i := 0; i < numAddrs; i++ {
 		addr := randAddr(t)
-		expectedAddrs[NetAddressKey(addr)] = addr
+		expectedAddrs[addrutil.NetAddressKey(addr)] = addr
 		addrMgr.AddAddress(addr, randAddr(t))
 	}
 
@@ -189,7 +190,7 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 	}
 
 	for _, addr := range addrs {
-		addrStr := NetAddressKey(addr)
+		addrStr := addrutil.NetAddressKey(addr)
 		expectedAddr, ok := expectedAddrs[addrStr]
 		if !ok {
 			t.Fatalf("expected to find address %v", addrStr)

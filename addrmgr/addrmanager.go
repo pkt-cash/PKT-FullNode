@@ -21,6 +21,9 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/addrutil"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/externaladdrs"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/localaddrs"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 	"github.com/pkt-cash/PKT-FullNode/wire/protocol"
@@ -32,23 +35,23 @@ import (
 // AddrManager provides a concurrency safe address manager for caching potential
 // peers on the bitcoin network.
 type AddrManager struct {
-	mtx            sync.Mutex
-	peersFile      string
-	lookupFunc     func(string) ([]net.IP, er.R)
-	rand           *rand.Rand
-	key            [32]byte
-	addrIndex      map[string]*KnownAddress // address key to ka for all addrs.
-	addrNew        [newBucketCount]map[string]*KnownAddress
-	addrTried      [triedBucketCount]*list.List
-	started        int32
-	shutdown       int32
-	wg             sync.WaitGroup
-	quit           chan struct{}
-	nTried         int
-	nNew           int
-	lamtx          sync.Mutex
-	localAddresses map[string]*localAddress
-	version        int
+	mtx           sync.Mutex
+	peersFile     string
+	lookupFunc    func(string) ([]net.IP, er.R)
+	rand          *rand.Rand
+	key           [32]byte
+	addrIndex     map[string]*KnownAddress // address key to ka for all addrs.
+	addrNew       [newBucketCount]map[string]*KnownAddress
+	addrTried     [triedBucketCount]*list.List
+	started       int32
+	shutdown      int32
+	wg            sync.WaitGroup
+	quit          chan struct{}
+	nTried        int
+	nNew          int
+	version       int
+	localAddrs    localaddrs.LocalAddrs
+	LocalExternal externaladdrs.ExternalLocalAddrs
 }
 
 type serializedKnownAddress struct {
@@ -67,36 +70,9 @@ type serializedAddrManager struct {
 	Version      int
 	Key          [32]byte
 	Addresses    []*serializedKnownAddress
-	NewBuckets   [newBucketCount][]string // string is NetAddressKey
+	NewBuckets   [newBucketCount][]string // string is addrutil.NetAddressKey
 	TriedBuckets [triedBucketCount][]string
 }
-
-type localAddress struct {
-	na    *wire.NetAddress
-	score AddressPriority
-}
-
-// AddressPriority type is used to describe the hierarchy of local address
-// discovery methods.
-type AddressPriority int
-
-const (
-	// InterfacePrio signifies the address is on a local interface
-	InterfacePrio AddressPriority = iota
-
-	// BoundPrio signifies the address has been explicitly bounded to.
-	BoundPrio
-
-	// UpnpPrio signifies the address was obtained from UPnP.
-	UpnpPrio
-
-	// HTTPPrio signifies the address was obtained from an external HTTP service.
-	//lint:ignore U1001 removing this will cause ManualPrio to change number
-	HTTPPrio
-
-	// ManualPrio signifies the address was provided by --externalip.
-	ManualPrio
-)
 
 const (
 
@@ -174,11 +150,11 @@ const (
 func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	// Filter out non-routable addresses. Note that non-routable
 	// also includes invalid and local addresses.
-	if !IsRoutable(netAddr) {
+	if !addrutil.IsRoutable(netAddr) {
 		return
 	}
 
-	addr := NetAddressKey(netAddr)
+	addr := addrutil.NetAddressKey(netAddr)
 	ka := a.find(netAddr)
 	if ka != nil {
 		// TODO: only update addresses periodically.
@@ -273,7 +249,7 @@ func (a *AddrManager) expireNew(bucket int) {
 	}
 
 	if oldest != nil {
-		key := NetAddressKey(oldest.na)
+		key := addrutil.NetAddressKey(oldest.na)
 		log.Tracef("expiring oldest address %v", key)
 
 		delete(a.addrNew[bucket], key)
@@ -308,8 +284,8 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
-	data1 = append(data1, []byte(GroupKey(netAddr))...)
-	data1 = append(data1, []byte(GroupKey(srcAddr))...)
+	data1 = append(data1, []byte(addrutil.GroupKey(netAddr))...)
+	data1 = append(data1, []byte(addrutil.GroupKey(srcAddr))...)
 	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= newBucketsPerGroup
@@ -317,7 +293,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 	binary.LittleEndian.PutUint64(hashbuf[:], hash64)
 	data2 := []byte{}
 	data2 = append(data2, a.key[:]...)
-	data2 = append(data2, GroupKey(srcAddr)...)
+	data2 = append(data2, addrutil.GroupKey(srcAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
 	hash2 := chainhash.DoubleHashB(data2)
@@ -329,7 +305,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	// doublesha256(key + group + truncate_to_64bits(doublesha256(key)) % buckets_per_group) % num_buckets
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
-	data1 = append(data1, []byte(NetAddressKey(netAddr))...)
+	data1 = append(data1, []byte(addrutil.NetAddressKey(netAddr))...)
 	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= triedBucketsPerGroup
@@ -337,7 +313,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	binary.LittleEndian.PutUint64(hashbuf[:], hash64)
 	data2 := []byte{}
 	data2 = append(data2, a.key[:]...)
-	data2 = append(data2, GroupKey(netAddr)...)
+	data2 = append(data2, addrutil.GroupKey(netAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
 	hash2 := chainhash.DoubleHashB(data2)
@@ -382,7 +358,7 @@ func (a *AddrManager) savePeers() {
 		ska := new(serializedKnownAddress)
 		ska.Addr = k
 		ska.TimeStamp = v.na.Timestamp.Unix()
-		ska.Src = NetAddressKey(v.srcAddr)
+		ska.Src = addrutil.NetAddressKey(v.srcAddr)
 		ska.Attempts = v.attempts
 		ska.LastAttempt = v.lastattempt.Unix()
 		ska.LastSuccess = v.lastsuccess.Unix()
@@ -408,7 +384,7 @@ func (a *AddrManager) savePeers() {
 		j := 0
 		for e := a.addrTried[i].Front(); e != nil; e = e.Next() {
 			ka := e.Value.(*KnownAddress)
-			sam.TriedBuckets[i][j] = NetAddressKey(ka.na)
+			sam.TriedBuckets[i][j] = addrutil.NetAddressKey(ka.na)
 			j++
 		}
 	}
@@ -507,7 +483,7 @@ func (a *AddrManager) deserializePeers(filePath string) er.R {
 		ka.attempts = v.Attempts
 		ka.lastattempt = time.Unix(v.LastAttempt, 0)
 		ka.lastsuccess = time.Unix(v.LastSuccess, 0)
-		a.addrIndex[NetAddressKey(ka.na)] = ka
+		a.addrIndex[addrutil.NetAddressKey(ka.na)] = ka
 	}
 
 	for i := range sam.NewBuckets {
@@ -580,6 +556,13 @@ func (a *AddrManager) Start() {
 	}
 
 	log.Trace("Starting address manager")
+
+	go func() {
+		for {
+			a.localAddrs.Referesh()
+			time.Sleep(time.Second * 30)
+		}
+	}()
 
 	// Load peers we already know about from file.
 	a.loadPeers()
@@ -772,28 +755,129 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services protoc
 	return wire.NewNetAddressIPPort(ip, port, services), nil
 }
 
-// ipString returns a string for the ip from the provided NetAddress.
-func ipString(na *wire.NetAddress) string {
-	return na.IP.String()
-}
-
-// NetAddressKey returns a string key in the form of ip:port for IPv4 addresses
-// or [ip]:port for IPv6 addresses.
-func NetAddressKey(na *wire.NetAddress) string {
-	port := strconv.FormatUint(uint64(na.Port), 10)
-
-	return net.JoinHostPort(ipString(na), port)
-}
-
-func isGoodAddress(a *KnownAddress, relaxedMode bool) bool {
-	if relaxedMode {
-		return true
-	} else if a.srcAddr.Services&protocol.SFTrusted == protocol.SFTrusted {
-		return true
-	} else if a.lastsuccess.After(time.Unix(0, 0)) {
-		return true
+func (a *AddrManager) isGoodAddress(ka *KnownAddress, relaxedMode bool, isOk func(*KnownAddress) bool) bool {
+	// If for some reason, we're not able to get our local addrs (OS permissions)
+	// we'll pretend everything is ok.
+	if !a.localAddrs.Reachable(ka.NetAddress()) && a.localAddrs.IsWorking() {
+		// Unreachable address
+		return false
+	}
+	if ka.lastattempt.Add(time.Second * 60).After(time.Now()) {
+		// Never connect to something which has been connected in the past 60 seconds.
+		return false
+	} else if relaxedMode {
+	} else if ka.srcAddr.Services&protocol.SFTrusted == protocol.SFTrusted {
+	} else if ka.lastsuccess.After(time.Unix(0, 0)) {
 	} else {
 		return false
+	}
+	a.mtx.Unlock()
+	ok := isOk(ka)
+	a.mtx.Lock()
+	if !ok {
+		return false
+	} else if ka.lastattempt.Add(time.Second * 60).After(time.Now()) {
+		// Race condition because we had to unlock
+		return false
+	}
+	return true
+}
+
+func (a *AddrManager) getTriedAddress(relaxedMode bool, isOk func(*KnownAddress) bool) *KnownAddress {
+	// pick a random starting bucket.
+	startBucket := a.rand.Intn(len(a.addrTried))
+	for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
+		bucket := bucketMod % len(a.addrTried)
+		if a.addrTried[bucket].Len() == 0 {
+			continue
+		}
+		// Pick a random starting point within the bucket
+		startingPoint := a.rand.Int63n(int64(a.addrTried[bucket].Len()))
+
+		// Walk to that starting point
+		e := a.addrTried[bucket].Front()
+		for i := startingPoint; i > 0 && e != nil; i-- {
+			e = e.Next()
+		}
+
+		// Walk backward from the starting point looking for a usable address
+		for e != nil {
+			va := e.Value.(*KnownAddress)
+			if a.isGoodAddress(va, relaxedMode, isOk) {
+				return va
+			}
+			e = e.Next()
+		}
+
+		// Reset and walk from the front of the bucket toward the starting point
+		e = a.addrTried[bucket].Front()
+		for i := startingPoint; i > 0 && e != nil; i-- {
+			va := e.Value.(*KnownAddress)
+			if a.isGoodAddress(va, relaxedMode, isOk) {
+				return va
+			}
+			e = e.Next()
+		}
+	}
+	return nil
+}
+
+func (a *AddrManager) getUntriedAddress(relaxedMode bool, isOk func(*KnownAddress) bool) *KnownAddress {
+	// Pick a random starting bucket.
+	startBucket := a.rand.Intn(len(a.addrNew))
+	for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
+		bucket := bucketMod % len(a.addrNew)
+		if len(a.addrNew[bucket]) == 0 {
+			continue
+		}
+		// Then, a random starting point in it.
+		startingPoint := a.rand.Intn(len(a.addrNew[bucket]))
+
+		// Skip until starting point, take first valid address
+		i := -1
+		for _, value := range a.addrNew[bucket] {
+			i++
+			if i < startingPoint {
+				continue
+			}
+			if a.isGoodAddress(value, relaxedMode, isOk) {
+				return value
+			}
+		}
+
+		// Skip after starting point, take first valid address
+		i = -1
+		for _, value := range a.addrNew[bucket] {
+			i++
+			if i >= startingPoint {
+				break
+			}
+			if a.isGoodAddress(value, relaxedMode, isOk) {
+				return value
+			}
+		}
+	}
+	return nil
+}
+
+func (a *AddrManager) getAddress(relaxedMode bool, isOk func(*KnownAddress) bool) *KnownAddress {
+	if a.nTried > 0 && (a.nNew == 0 || a.rand.Intn(2) == 0) {
+		if addr := a.getTriedAddress(relaxedMode, isOk); addr != nil {
+			return addr
+		} else if addr := a.getUntriedAddress(relaxedMode, isOk); addr != nil {
+			return addr
+		}
+	} else {
+		if addr := a.getUntriedAddress(relaxedMode, isOk); addr != nil {
+			return addr
+		} else if addr := a.getTriedAddress(relaxedMode, isOk); addr != nil {
+			return addr
+		}
+	}
+	if !relaxedMode {
+		return a.getAddress(true, isOk)
+	} else {
+		return nil
 	}
 }
 
@@ -801,93 +885,29 @@ func isGoodAddress(a *KnownAddress, relaxedMode bool) bool {
 // random one from the possible addresses with preference given to ones that
 // have not been used recently and should not pick 'close' addresses
 // consecutively.
-func (a *AddrManager) GetAddress(relaxedMode bool) *KnownAddress {
+func (a *AddrManager) GetAddress(relaxedMode bool, isOk func(*KnownAddress) bool) *KnownAddress {
 	// Protect concurrent access.
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
 	if a.numAddresses() == 0 {
+		log.Infof("GetAddress() -> nil because no addresses at all")
 		return nil
 	}
-
-	// Use a 50% chance for choosing between tried and new table entries.
-	if a.nTried > 0 && (a.nNew == 0 || a.rand.Intn(2) == 0) {
-		// Tried entry.
-		large := 1 << 30
-		factor := 1.0
-		// pick a random bucket.
-		startBucket := a.rand.Intn(len(a.addrTried))
-		for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
-			bucket := bucketMod % len(a.addrTried)
-			if a.addrTried[bucket].Len() == 0 {
-				continue
-			}
-
-			// Pick a random entry in the list
-			e := a.addrTried[bucket].Front()
-			var ka *KnownAddress
-			for i := a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0 || ka == nil; i-- {
-				a := e.Value.(*KnownAddress)
-				if isGoodAddress(a, relaxedMode) {
-					ka = a
-				}
-				e = e.Next()
-				if e == nil {
-					break
-				}
-			}
-			if ka == nil {
-				continue
-			}
-			randval := a.rand.Intn(large)
-			if float64(randval) < (factor * ka.chance() * float64(large)) {
-				log.Tracef("Selected %v from tried bucket",
-					NetAddressKey(ka.na))
-				return ka
-			}
-			factor *= 1.2
-		}
+	addr := a.getAddress(relaxedMode, isOk)
+	if addr != nil {
+		// Because we have an isOk function, we can assume that if that function passes
+		// the address WILL be attempted.
+		addr.attempts++
+		addr.lastattempt = time.Now()
 	} else {
-		// new node.
-		// XXX use a closure/function to avoid repeating this.
-		large := 1 << 30
-		factor := 1.0
-		// Pick a random bucket.
-		startBucket := a.rand.Intn(len(a.addrNew))
-		for bucketMod := startBucket; bucketMod < startBucket*2; bucketMod++ {
-			bucket := bucketMod % len(a.addrNew)
-			if len(a.addrNew[bucket]) == 0 {
-				continue
-			}
-			// Then, a random entry in it.
-			var ka *KnownAddress
-			nth := a.rand.Intn(len(a.addrNew[bucket]))
-			for _, value := range a.addrNew[bucket] {
-				if isGoodAddress(value, relaxedMode) {
-					ka = value
-				}
-				if nth == 0 && ka != nil {
-					break
-				}
-				nth--
-			}
-			if ka == nil {
-				continue
-			}
-			randval := a.rand.Intn(large)
-			if float64(randval) < (factor * ka.chance() * float64(large)) {
-				log.Tracef("Selected %v from new bucket",
-					NetAddressKey(ka.na))
-				return ka
-			}
-			factor *= 1.2
-		}
+		log.Debugf("GetAddress() -> nil no qualifying addresses found")
 	}
-	return nil
+	return addr
 }
 
 func (a *AddrManager) find(addr *wire.NetAddress) *KnownAddress {
-	return a.addrIndex[NetAddressKey(addr)]
+	return a.addrIndex[addrutil.NetAddressKey(addr)]
 }
 
 // GetLastAttempt retrieves an address' last attempt time.
@@ -902,23 +922,6 @@ func (a *AddrManager) GetLastAttempt(addr *wire.NetAddress) time.Time {
 	}
 
 	return ka.LastAttempt()
-}
-
-// Attempt increases the given address' attempt counter and updates
-// the last attempt time.
-func (a *AddrManager) Attempt(addr *wire.NetAddress) {
-	a.mtx.Lock()
-	defer a.mtx.Unlock()
-
-	// find address.
-	// Surely address will be in tried by now?
-	ka := a.find(addr)
-	if ka == nil {
-		return
-	}
-	// set last tried time to now
-	ka.attempts++
-	ka.lastattempt = time.Now()
 }
 
 // Connected Marks the given address as currently connected and working at the
@@ -972,7 +975,7 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 
 	// remove from all new buckets.
 	// record one of the buckets in question and call it the `first'
-	addrKey := NetAddressKey(addr)
+	addrKey := addrutil.NetAddressKey(addr)
 	oldBucket := -1
 	for i := range a.addrNew {
 		// we check for existence so we can record the first one
@@ -1026,7 +1029,7 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 	// something back.
 	a.nNew++
 
-	rmkey := NetAddressKey(rmka.na)
+	rmkey := addrutil.NetAddressKey(rmka.na)
 	log.Tracef("Replacing %s with %s in tried", rmkey, addrKey)
 
 	// We made sure there is space here just above.
@@ -1052,174 +1055,16 @@ func (a *AddrManager) SetServices(addr *wire.NetAddress, services protocol.Servi
 	}
 }
 
-// AddLocalAddress adds na to the list of known local addresses to advertise
-// with the given priority.
-func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) er.R {
-	if !IsRoutable(na) {
-		return er.Errorf("address %s is not routable", na.IP)
-	}
-
-	a.lamtx.Lock()
-	defer a.lamtx.Unlock()
-
-	key := NetAddressKey(na)
-	la, ok := a.localAddresses[key]
-	if !ok || la.score < priority {
-		if ok {
-			la.score = priority + 1
-		} else {
-			a.localAddresses[key] = &localAddress{
-				na:    na,
-				score: priority,
-			}
-		}
-	}
-	return nil
-}
-
-// cjd: This is a better reachability metric, getReachabilityFrom()
-// does some silly things like assume ip6 addresses are reachable from ip4.
-func Reachable(localAddr, remoteAddr *wire.NetAddress) bool {
-	// For our purposes, loopback addresses should be assumed unreachable
-	// we're PROBABLY not trying to connect to ourselves
-	if IsLocal(localAddr) || IsLocal(remoteAddr) {
-		return false
-	}
-
-	if IsIPv4(localAddr) != IsIPv4(remoteAddr) {
-		return false
-	}
-	if IsIPv4(remoteAddr) {
-		// We consider all NAT local IPv4 to be inaccessible
-		// because otherwise we risk trying to connect to 10.0.0.0/8
-		// addresses which were gossipped to us by far away nodes.
-		return IsRoutable(remoteAddr)
-	}
-	if IsCjdns(localAddr) != IsCjdns(remoteAddr) {
-		return false
-	}
-	if IsYggdrasil(localAddr) != IsYggdrasil(remoteAddr) {
-		return false
-	}
-	return IsRoutable(localAddr) && IsRoutable(remoteAddr)
-}
-
-// GetReachabilityFrom returns the relative reachability of the provided local
-// address to the provided remote address.
-func getReachabilityFrom(localAddr, remoteAddr *wire.NetAddress) int {
-	const (
-		Unreachable = 0
-		Default     = iota
-		Teredo
-		Ipv6Weak
-		Ipv4
-		Ipv6Strong
-		Private
-	)
-
-	if !IsRoutable(remoteAddr) {
-		return Unreachable
-	}
-
-	if IsRFC4380(remoteAddr) {
-		if !IsRoutable(localAddr) {
-			return Default
-		}
-
-		if IsRFC4380(localAddr) {
-			return Teredo
-		}
-
-		if IsIPv4(localAddr) {
-			return Ipv4
-		}
-
-		return Ipv6Weak
-	}
-
-	if IsIPv4(remoteAddr) {
-		if IsRoutable(localAddr) && IsIPv4(localAddr) {
-			return Ipv4
-		}
-		return Unreachable
-	}
-
-	/* ipv6 */
-	var tunnelled bool
-	// Is our v6 is tunnelled?
-	if IsRFC3964(localAddr) || IsRFC6052(localAddr) || IsRFC6145(localAddr) {
-		tunnelled = true
-	}
-
-	if !IsRoutable(localAddr) {
-		return Default
-	}
-
-	if IsRFC4380(localAddr) {
-		return Teredo
-	}
-
-	if IsIPv4(localAddr) {
-		return Ipv4
-	}
-
-	if tunnelled {
-		// only prioritise ipv6 if we aren't tunnelling it.
-		return Ipv6Weak
-	}
-
-	return Ipv6Strong
-}
-
-// GetBestLocalAddress returns the most appropriate local address to use
-// for the given remote address.
-func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.NetAddress {
-	a.lamtx.Lock()
-	defer a.lamtx.Unlock()
-
-	bestreach := 0
-	var bestscore AddressPriority
-	var bestAddress *wire.NetAddress
-	for _, la := range a.localAddresses {
-		reach := getReachabilityFrom(la.na, remoteAddr)
-		if reach > bestreach ||
-			(reach == bestreach && la.score > bestscore) {
-			bestreach = reach
-			bestscore = la.score
-			bestAddress = la.na
-		}
-	}
-	if bestAddress != nil {
-		log.Debugf("Suggesting address %s:%d for %s:%d", bestAddress.IP,
-			bestAddress.Port, remoteAddr.IP, remoteAddr.Port)
-	} else {
-		log.Debugf("No worthy address for %s:%d", remoteAddr.IP,
-			remoteAddr.Port)
-
-		// Send something unroutable if nothing suitable.
-		var ip net.IP
-		if !IsIPv4(remoteAddr) {
-			ip = net.IPv6zero
-		} else {
-			ip = net.IPv4zero
-		}
-		services := protocol.SFNodeNetwork | protocol.SFNodeWitness | protocol.SFNodeBloom
-		bestAddress = wire.NewNetAddressIPPort(ip, 0, services)
-	}
-
-	return bestAddress
-}
-
 // New returns a new bitcoin address manager.
 // Use Start to begin processing asynchronous address updates.
 func New(dataDir string, lookupFunc func(string) ([]net.IP, er.R)) *AddrManager {
 	am := AddrManager{
-		peersFile:      filepath.Join(dataDir, "peers.json"),
-		lookupFunc:     lookupFunc,
-		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
-		quit:           make(chan struct{}),
-		localAddresses: make(map[string]*localAddress),
-		version:        serialisationVersion,
+		peersFile:  filepath.Join(dataDir, "peers.json"),
+		lookupFunc: lookupFunc,
+		rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
+		quit:       make(chan struct{}),
+		version:    serialisationVersion,
+		localAddrs: localaddrs.New(),
 	}
 	am.reset()
 	return &am
