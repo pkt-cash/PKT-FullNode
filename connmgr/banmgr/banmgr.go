@@ -59,16 +59,15 @@ func New(config *Config) *BanMgr {
 func (b *BanMgr) BanScore(ip string) uint32 {
 	addr := TrimAddress(ip)
 	b.m.Lock()
+	defer b.m.Unlock()
 	if banned, ok := b.banned[addr]; ok {
 		if time.Now().Before(banned.time) {
-			b.m.Unlock()
 			return 9999
 		}
 	}
 	if sus, ok := b.suspicious[addr]; ok {
 		return sus.dynamicBanScore.Int()
 	}
-	b.m.Unlock()
 	return 0
 }
 
