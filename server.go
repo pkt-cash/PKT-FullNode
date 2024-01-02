@@ -745,7 +745,7 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
-		log.Infof("Invalid getcfilters request from [%v]: %v", sp.String(), err)
+		log.Debugf("Invalid getcfilters request from [%v]: %v", sp.String(), err)
 		return
 	}
 
@@ -2628,7 +2628,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		indexes = append(indexes, s.addrIndex)
 	}
 	if !cfg.NoCFilters {
-		log.Info("Committed filter index is enabled")
+		log.Infof("Committed filter index is enabled")
 		s.cfIndex = indexers.NewCfIndex(db, chainParams)
 		indexes = append(indexes, s.cfIndex)
 	}

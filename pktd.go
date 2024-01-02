@@ -325,7 +325,7 @@ func loadBlockDB() (database.DB, er.R) {
 		}
 	}
 
-	log.Info("Block database loaded")
+	log.Infof("Block database loaded")
 	return db, nil
 }
 

@@ -431,7 +431,7 @@ func (sm *SyncManager) handleNewPeerMsg(peer *peerpkg.Peer) {
 		return
 	}
 
-	log.Infof("New valid peer %s (%s)", peer, peer.UserAgent())
+	log.Infof("New valid peer %s (%s) (%s)", log.IpAddr(peer.Addr()), peerDirection(peer), peer.UserAgent())
 
 	// Initialize the peer state
 	sm.syncPeerMutex.Lock()
@@ -502,6 +502,14 @@ func (sm *SyncManager) shouldDCStalledSyncPeer() bool {
 	return peerHeight > best.Height
 }
 
+func peerDirection(peer *peerpkg.Peer) string {
+	if peer.Inbound() {
+		return "inbound"
+	} else {
+		return "outbound"
+	}
+}
+
 // handleDonePeerMsg deals with peers that have signaled they are done.  It
 // removes the peer as a candidate for syncing and in the case where it was
 // the current sync peer, attempts to select a new best peer to sync from.  It
@@ -511,7 +519,7 @@ func (sm *SyncManager) handleDonePeerMsg(peer *peerpkg.Peer) {
 	if state, exists := sm.peerStates[peer]; exists {
 		// Remove the peer from the list of candidate peers.
 		delete(sm.peerStates, peer)
-		log.Infof("Lost peer %s", peer)
+		log.Infof("Lost peer %s (%s)", log.IpAddr(peer.Addr()), peerDirection(peer))
 		sm.clearRequestedState(state)
 	}
 
