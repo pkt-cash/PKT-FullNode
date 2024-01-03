@@ -207,7 +207,7 @@ func IsRFC6598(na *wire.NetAddress) bool {
 func IsValid(na *wire.NetAddress) bool {
 	// IsUnspecified returns if address is 0, so only all bits set, and
 	// RFC3849 need to be explicitly checked.
-	return na.IP != nil && !(na.IP.IsUnspecified() ||
+	return na != nil && na.IP != nil && !(na.IP.IsUnspecified() ||
 		na.IP.Equal(net.IPv4bcast))
 }
 
