@@ -61,15 +61,14 @@ func (a *ExternalLocalAddrs) Add(na *wire.NetAddress, priority AddressPriority) 
 	if a.localAddresses == nil {
 		a.localAddresses = make(map[string]*localAddress)
 	}
-	la, ok := a.localAddresses[key]
-	if !ok || la.score < priority {
-		if ok {
+	if la, ok := a.localAddresses[key]; ok {
+		if la.score < priority {
 			la.score = priority + 1
-		} else {
-			a.localAddresses[key] = &localAddress{
-				na:    na,
-				score: priority,
-			}
+		}
+	} else {
+		a.localAddresses[key] = &localAddress{
+			na:    na,
+			score: priority,
 		}
 	}
 	return nil
