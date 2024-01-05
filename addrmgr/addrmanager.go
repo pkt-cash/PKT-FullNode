@@ -898,6 +898,22 @@ func (a *AddrManager) GetAddress(relaxedMode bool, isOk func(*KnownAddress) bool
 	if addr != nil {
 		// Because we have an isOk function, we can assume that if that function passes
 		// the address WILL be attempted.
+		//
+		// But why do we increment it in GetAddress(), why not we have a separate Attempt()
+		// function? That's because right now, we're holding the lock. If we drop the lock then
+		// wait for our caller to call Attempt() then another thread can call us and we might
+		// very reasonably give them the same address - especially if we're starved for addresses.
+		//
+		// There's another little gotchya here, which is that we must unlock while calling isOk().
+		// This is because we expect no guarantees from isOk() that it won't try to take some
+		// other lock which could be held during a call to us. Furthermore, it is highly likely
+		// that it will call into the addrmanager and try to take the same lock, and Golang locks
+		// are not reentrent.
+		//
+		// Because we unlock while calling isOk(), we can have 2 calls to GetAddress() happen
+		// concurrently and one of them can complete while the other one is stuck waiting to relock
+		// after isOk() completes. For this reason we double-check the lastattempt time inside of
+		// isGoodAddress().
 		addr.attempts++
 		addr.lastattempt = time.Now()
 	} else {
