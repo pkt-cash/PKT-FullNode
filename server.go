@@ -23,7 +23,8 @@ import (
 	"time"
 
 	"github.com/pkt-cash/PKT-FullNode/addrmgr"
-	"github.com/pkt-cash/PKT-FullNode/addrmgr/localaddrs"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/addrutil"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/externaladdrs"
 	"github.com/pkt-cash/PKT-FullNode/blockchain"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/indexers"
 	"github.com/pkt-cash/PKT-FullNode/btcutil"
@@ -283,7 +284,7 @@ func (sp *serverPeer) newestBlock() (*chainhash.Hash, int32, er.R) {
 func (sp *serverPeer) addKnownAddresses(addresses []*wire.NetAddress) {
 	sp.addressesMtx.Lock()
 	for _, na := range addresses {
-		sp.knownAddresses[addrmgr.NetAddressKey(na)] = struct{}{}
+		sp.knownAddresses[addrutil.NetAddressKey(na)] = struct{}{}
 	}
 	sp.addressesMtx.Unlock()
 }
@@ -293,7 +294,7 @@ func (sp *serverPeer) addKnownAddresses(addresses []*wire.NetAddress) {
 func (sp *serverPeer) addressKnown(na *wire.NetAddress) bool {
 	sp.addressesMtx.Lock()
 	defer sp.addressesMtx.Unlock()
-	_, exists := sp.knownAddresses[addrmgr.NetAddressKey(na)]
+	_, exists := sp.knownAddresses[addrutil.NetAddressKey(na)]
 	return exists
 }
 
@@ -744,7 +745,7 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
-		log.Infof("Invalid getcfilters request from [%v]: %v", sp.String(), err)
+		log.Debugf("Invalid getcfilters request from [%v]: %v", sp.String(), err)
 		return
 	}
 
@@ -1190,7 +1191,7 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	// so don't rebroracast that. At this point, we trim the cache
 	// size by one entry if we add a record so we don't flood past
 	// the maximum allowed size and trigger bans.
-	bestAddress := sp.server.addrManager.GetBestLocalAddress(sp.NA())
+	bestAddress := sp.server.addrManager.LocalExternal.GetBest(sp.NA())
 	if bestAddress.Port != 0 {
 		if len(addrCache) > 0 {
 			addrCache = addrCache[1:]
@@ -1584,7 +1585,7 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	if sp.Inbound() {
 		state.inboundPeers[sp.ID()] = sp
 	} else {
-		state.outboundGroups[addrmgr.GroupKey(sp.NA())]++
+		state.outboundGroups[addrutil.GroupKey(sp.NA())]++
 		if sp.persistent {
 			state.persistentPeers[sp.ID()] = sp
 		} else {
@@ -1609,8 +1610,8 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 		// known tip.
 		if !cfg.DisableListen && s.syncManager.IsCurrent() {
 			// Get address that best matches.
-			lna := s.addrManager.GetBestLocalAddress(sp.NA())
-			if addrmgr.IsRoutable(lna) {
+			lna := s.addrManager.LocalExternal.GetBest(sp.NA())
+			if addrutil.IsRoutable(lna) {
 				// Filter addresses the peer already knows about.
 				addresses := []*wire.NetAddress{lna}
 				sp.pushAddrMsg(addresses)
@@ -1657,7 +1658,7 @@ func (s *server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	}
 	if _, ok := list[sp.ID()]; ok {
 		if !sp.Inbound() && sp.VersionKnown() {
-			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
+			state.outboundGroups[addrutil.GroupKey(sp.NA())]--
 		}
 		delete(list, sp.ID())
 		log.Debugf("Removed peer %s", sp)
@@ -1857,7 +1858,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		found := disconnectPeer(state.persistentPeers, msg.cmp, func(sp *serverPeer) {
 			// Keep group counts ok since we remove from
 			// the list now.
-			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
+			state.outboundGroups[addrutil.GroupKey(sp.NA())]--
 		})
 
 		if found {
@@ -1893,7 +1894,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		found = disconnectPeer(state.outboundPeers, msg.cmp, func(sp *serverPeer) {
 			// Keep group counts ok since we remove from
 			// the list now.
-			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
+			state.outboundGroups[addrutil.GroupKey(sp.NA())]--
 		})
 		if found {
 			// If there are multiple outbound connections to the same
@@ -1901,7 +1902,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 			// peers are found.
 			for found {
 				found = disconnectPeer(state.outboundPeers, msg.cmp, func(sp *serverPeer) {
-					state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
+					state.outboundGroups[addrutil.GroupKey(sp.NA())]--
 				})
 			}
 			msg.reply <- nil
@@ -2095,7 +2096,10 @@ func (s *server) peerHandler() {
 				//                 which will allow us to differentiate
 				//                 more trusted addresses from addresses
 				//                 coming from random nodes.
-				src := wire.NetAddress{Services: protocol.SFTrusted}
+				src := wire.NetAddress{
+					Services: protocol.SFTrusted,
+					IP:       net.IPv4(0, 0, 0, 0),
+				}
 				s.addrManager.AddAddresses(addrs, &src)
 			})
 	}
@@ -2444,7 +2448,7 @@ out:
 				}
 				na := wire.NewNetAddressIPPort(externalip, uint16(listenPort),
 					s.services)
-				err = s.addrManager.AddLocalAddress(na, addrmgr.UpnpPrio)
+				err = s.addrManager.LocalExternal.Add(na, externaladdrs.UpnpPrio)
 				if err != nil {
 					log.Warnf("UPnP AddLocalAddress() failed %v", err)
 					err = s.nat.DeletePortMapping("tcp", int(lport), int(lport))
@@ -2453,7 +2457,7 @@ out:
 					}
 					continue
 				}
-				log.Warnf("Successfully bound via UPnP to %s", addrmgr.NetAddressKey(na))
+				log.Warnf("Successfully bound via UPnP to %s", addrutil.NetAddressKey(na))
 				first = false
 			}
 			timer.Reset(time.Minute * 15)
@@ -2624,7 +2628,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		indexes = append(indexes, s.addrIndex)
 	}
 	if !cfg.NoCFilters {
-		log.Info("Committed filter index is enabled")
+		log.Infof("Committed filter index is enabled")
 		s.cfIndex = indexers.NewCfIndex(db, chainParams)
 		indexes = append(indexes, s.cfIndex)
 	}
@@ -2769,27 +2773,24 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		targetOutbound = cfg.MaxPeers
 	}
 
-	localAddrs := localaddrs.New()
 	relaxedMode := mailbox.NewMailbox(false)
 	go func() {
 		for {
 			pc := s.peerCount()
 			hasSyncPeer := s.syncManager.SyncPeer() != nil
-			enoughPeers := pc > (targetOutbound - 2)
+			enoughPeers := pc > (targetOutbound / 2)
 			if relaxedMode.Load() {
 				if !hasSyncPeer {
-					log.Infof("Lost sync peer, switch to fast peer search")
+					log.Warnf("Lost sync peer, switch to startup mode")
 					relaxedMode.Store(false)
 				} else if !enoughPeers {
-					log.Infof("Only have [%d] peers, switch to fast peer search", pc)
+					log.Warnf("Only have [%d] peers, switch to startup mode", pc)
 					relaxedMode.Store(false)
 				}
 			} else if hasSyncPeer && enoughPeers {
-				log.Infof("Found [%d] peers including sync peer, switching to relaxed peer search", pc)
+				log.Infof("Got [%d] peers, switch to relaxed mode 😎", pc)
 				relaxedMode.Store(true)
 			}
-
-			localAddrs.Referesh()
 			time.Sleep(time.Second * 30)
 		}
 	}()
@@ -2803,51 +2804,37 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	var newAddressFunc func() (net.Addr, er.R)
 	if !cfg.SimNet && !cfg.RegressionTest && len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, er.R) {
-			for tries := 0; tries < 100; tries++ {
-				addr := s.addrManager.GetAddress(relaxedMode.Load())
-				if addr == nil {
-					break
-				}
-
-				// If for some reason, we're not able to get our local addrs (OS permissions)
-				// we'll pretend everything is ok.
-				if !localAddrs.Reachable(addr.NetAddress()) && localAddrs.IsWorking() {
-					// Unreachable address
-					continue
-				}
-
+			tries := 0
+			addr := s.addrManager.GetAddress(relaxedMode.Load(), func(addr *addrmgr.KnownAddress) bool {
+				tries++
 				// Address will not be invalid, local or unroutable
 				// because addrmanager rejects those on addition.
 				// Just check that we don't already have an address
 				// in the same group so that we are not connecting
 				// to the same network segment at the expense of
 				// others.
-				key := addrmgr.GroupKey(addr.NetAddress())
+				key := addrutil.GroupKey(addr.NetAddress())
 				if s.OutboundGroupCount(key) != 0 {
-					continue
+					return false
 				}
-
 				// only allow recent nodes (10mins) after we failed 10
 				// times
 				lastTime := s.addrManager.GetLastAttempt(addr.NetAddress())
 				if tries < 10 && time.Since(lastTime) < 10*time.Minute {
-					continue
+					return false
 				}
-
 				// allow nondefault ports after 20 failed tries.
 				if tries < 20 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
 					activeNetParams.DefaultPort {
-					continue
+					return false
 				}
-
-				// Mark an attempt for the valid address.
-				s.addrManager.Attempt(addr.NetAddress())
-
-				addrString := addrmgr.NetAddressKey(addr.NetAddress())
-				return addrStringToNetAddr(addrString)
+				return true
+			})
+			if addr == nil {
+				return nil, er.New("no valid connect address")
 			}
-
-			return nil, er.New("no valid connect address")
+			addrString := addrutil.NetAddressKey(addr.NetAddress())
+			return addrStringToNetAddr(addrString)
 		}
 	}
 
@@ -2976,7 +2963,7 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services pro
 				continue
 			}
 
-			err = amgr.AddLocalAddress(na, addrmgr.ManualPrio)
+			err = amgr.LocalExternal.Add(na, externaladdrs.ManualPrio)
 			if err != nil {
 				log.Warnf("Skipping specified external IP: %v", err)
 			}
@@ -3073,7 +3060,7 @@ func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services protoco
 			}
 
 			netAddr := wire.NewNetAddressIPPort(ifaceIP, uint16(port), services)
-			addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio)
+			addrMgr.LocalExternal.Add(netAddr, externaladdrs.BoundPrio)
 		}
 	} else {
 		netAddr, err := addrMgr.HostToNetAddress(host, uint16(port), services)
@@ -3081,7 +3068,7 @@ func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services protoco
 			return err
 		}
 
-		addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio)
+		addrMgr.LocalExternal.Add(netAddr, externaladdrs.BoundPrio)
 	}
 
 	return nil

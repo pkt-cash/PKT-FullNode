@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkt-cash/PKT-FullNode/addrmgr"
+	"github.com/pkt-cash/PKT-FullNode/addrmgr/addrutil"
 	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 	"github.com/pkt-cash/PKT-FullNode/wire"
 )
@@ -59,7 +59,7 @@ func (la *LocalAddrs) Referesh() {
 				log.Warnf("LocalAddrs.Referesh(): unable to parse addr [%s]", s)
 			} else {
 				wip := wire.NewNetAddressIPPort(ip, 0, 0)
-				if (addrmgr.IsIPv4(wip) && !addrmgr.IsLocal(wip)) || addrmgr.IsRoutable(wip) {
+				if (addrutil.IsIPv4(wip) && !addrutil.IsLocal(wip)) || addrutil.IsRoutable(wip) {
 					log.Infof("Local address detected [%s]", log.IpAddr(s))
 					la.a[s] = wip
 				} else {
@@ -82,7 +82,7 @@ func (la *LocalAddrs) Reachable(na *wire.NetAddress) bool {
 	out := false
 	la.m.Lock()
 	for _, localNa := range la.a {
-		if localNa != nil && addrmgr.Reachable(localNa, na) {
+		if localNa != nil && addrutil.Reachable(localNa, na) {
 			log.Tracef("[%s] reachable via [%s]", na.IP.String(), localNa.IP.String())
 			out = true
 			break
