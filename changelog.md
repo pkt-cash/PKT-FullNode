@@ -1,3 +1,40 @@
+# PKT-FullNode v1.0.1
+
+Jan 9, 2024
+
+This is a minor update to the PKT-FullNode which addresses a number of bugs.
+
+1. More checkpoints
+  * Switch from a checkpoint every 2**13 to every 2**15 to reduce the number of checkpoints
+  * Checkpoint up to block 2260992 (December 2nd, 2023)
+2. Improvements in the peer selection logic - this effectively fixes a bug where a node can become
+starved for peers and end up with no connections at all, though there are many possible peers in the
+peers.json file. The improvements to fix this are detailed as follows:
+  * The previous version v1.0 started off only selecting peers which had been validated
+  (either had successfully connected before, or were received from the DNS seed).
+  * That version also retained an older logic which called GetAddress() in a loop until a suitable
+  address was returned. This version has rewritten GetAddress() to accept a filter function which
+  tells GetAddress whether the address is valid before that address is returned.
+  * In this version, GetAddress() cycles through ALL known addresses, beginning at a random point
+  in a random bucket, and iterating through that bucket until it has been exhausted, then proceeding
+  to a random point in the next bucket, and so on until all buckets have been exhausted.
+  * In this version, GetAddress() will first try addresses which are "trusted", i.e. have been
+  connected in the past, or have been received from a DNS seed, but before failing to return an
+  address, it will move on to "untrusted" addresses, i.e. addresses which have been received by gossip
+  from any node.
+  * In the new peering logic, there is a mode switch between "startup mode" and "relaxed mode". In
+  relaxed mode, GetAddress() does not prefer "trusted" addresses, it returns any address it knows
+  about. In the previous version, the criteria for switching to relaxed mode was that there is 2 less
+  than the target number of peers and a sync peer has been identified. In this version, we switch to
+  relaxed mode after we have 1/2 of the target number of peers.
+3. Bug fixes
+  * Improper use of locks in BanScore() makes "getpeerinfo" hang indefinitely
+  * Json-iterator cannot serialize a map, causing "getblockchaininfo" to crash
+  * "debuglevel" RPC was not implemented.
+4. Logging
+  * Minor logging improvements and decreasing of noisy logs
+
+
 # PKT-FullNode v1.0
 
 Dec 8, 2023
