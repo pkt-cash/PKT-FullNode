@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkt-cash/PKT-FullNode/blockchain/votecompute"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 	"github.com/pkt-cash/PKT-FullNode/wire/constants"
@@ -192,6 +193,9 @@ type BlockChain struct {
 	// certain blockchain events.
 	notificationsLock sync.RWMutex
 	notifications     []NotificationCallback
+
+	// The vote indexer is needed so that we know if we can advance the block height or not
+	votes *votecompute.VoteCompute
 }
 
 // HaveBlock returns whether or not the chain instance has the block represented
@@ -614,6 +618,11 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
 	blockWeight := uint64(GetBlockWeight(block))
 	state := newBestState(node, blockSize, blockWeight, numTxns,
 		curTotalTxns+numTxns, node.CalcPastMedianTime(), newEs)
+
+	// If the chain gets ahead of the vote computation, we need to stop insertion
+	// of new blocks. BUT we cannot do it inside of the Update() function because
+	// the vote computation needs to update the database and we'd end up with deadlock.
+	b.votes.WaitUntilCanUpdateHeight(node.height)
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) er.R {
@@ -1789,6 +1798,10 @@ type Config struct {
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
 	HashCache *txscript.HashCache
+
+	// Need the VoteCompute indexer in order to be able to stop block import
+	// if it gets ahead of vote computation.
+	Votes *votecompute.VoteCompute
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -1844,6 +1857,7 @@ func New(config *Config) (*BlockChain, er.R) {
 		prevOrphans:         make(map[chainhash.Hash][]*orphanBlock),
 		warningCaches:       newThresholdCaches(vbNumBits),
 		deploymentCaches:    newThresholdCaches(chaincfg.DefinedDeployments),
+		votes:               config.Votes,
 	}
 
 	// Initialize the chain state from the passed database.  When the db

@@ -540,3 +540,30 @@ type EstimateSmartFeeResult struct {
 	Errors  []string `json:"errors,omitempty"`
 	Blocks  int64    `json:"blocks"`
 }
+
+type AddressInfo struct {
+	Address     string  `json:"address"`
+	Balance     float64 `json:"balance"`
+	Sbalance    string  `json:"sbalance"`
+	IsCandidate bool    `json:"is_candidate"`
+	VoteFor     string  `json:"vote_for"`
+}
+
+type ListAddressesResult struct {
+	Addresses []AddressInfo `json:"addresses"`
+	AsOfBlock int32         `json:"as_of_block"`
+	HasMore   bool          `json:"has_more"`
+}
+
+type ElectionResult struct {
+	// The block height at which the winner becomes effective
+	EffectiveBlockHeight int32 `json:"effective_block_height"`
+	// The address of the winning node
+	Winner string `json:"winner"`
+	// The hash of the entire vote/balance table, for verifying same computation across nodes
+	VoteTableHash string `json:"vote_table_hash"`
+}
+
+type GetWinnersResult struct {
+	Results []ElectionResult
+}

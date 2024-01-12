@@ -33,6 +33,10 @@ import (
 	"github.com/pkt-cash/PKT-FullNode/blockchain/indexers"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/difficulty"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/votecompute"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/votecompute/db"
+	vote_db "github.com/pkt-cash/PKT-FullNode/blockchain/votecompute/db"
+	"github.com/pkt-cash/PKT-FullNode/blockchain/votecompute/votewinnerdb"
 	"github.com/pkt-cash/PKT-FullNode/btcec"
 	"github.com/pkt-cash/PKT-FullNode/btcjson"
 	"github.com/pkt-cash/PKT-FullNode/btcutil"
@@ -127,6 +131,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"estimatesmartfee":       handleEstimateSmartFee,
 	"generate":               handleGenerate,
 	"getaddednodeinfo":       handleGetAddedNodeInfo,
+	"getaddressinfo":         handleGetAddressInfo,
 	"getbestblock":           handleGetBestBlock,
 	"getbestblockhash":       handleGetBestBlockHash,
 	"getblock":               handleGetBlock,
@@ -154,6 +159,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getpeerinfo":            handleGetPeerInfo,
 	"getrawmempool":          handleGetRawMempool,
 	"getrawblocktemplate":    handleGetRawBlockTemplate,
+	"getwinners":             handleGetWinners,
 	"checkpcshare":           handleCheckPcShare,
 	"checkpcann":             handleCheckPcAnn,
 	"getrawtransaction":      handleGetRawTransaction,
@@ -162,6 +168,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"node":                   handleNode,
 	"ping":                   handlePing,
 	"echo":                   handleEcho,
+	"listaddresses":          handleListAddresses,
 	"searchrawtransactions":  handleSearchRawTransactions,
 	"sendrawtransaction":     handleSendRawTransaction,
 	"setgenerate":            handleSetGenerate,
@@ -1002,6 +1009,149 @@ func handleGetAddedNodeInfo(s *rpcServer, cmd interface{}, closeChan <-chan stru
 		results = append(results, &result)
 	}
 	return results, nil
+}
+
+func addrToPkScript(addr *string, params *chaincfg.Params) ([]byte, er.R) {
+	if addr == nil || *addr == "" {
+		return nil, nil
+	} else if a, err := btcutil.DecodeAddress(*addr, params); err != nil {
+		return nil, err
+	} else if pkScript, err := txscript.PayToAddrScript(a); err != nil {
+		return nil, err
+	} else {
+		return pkScript, nil
+	}
+}
+
+func handleGetAddressInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.GetAddressInfo)
+	code, err := addrToPkScript(&c.Address, s.cfg.ChainParams)
+	if err != nil {
+		return nil, err
+	}
+	snap := s.cfg.Chain.BestSnapshot()
+	effectiveBlock := snap.Height
+	if c.Current == nil || !*c.Current {
+		effectiveBlock = vote_db.LastEpochEnd(effectiveBlock)
+	}
+	var out *btcjson.AddressInfo
+	if err := s.cfg.DB.View(func(dbTx database.Tx) er.R {
+		return vote_db.ListAddressInfo(
+			dbTx,
+			code,
+			effectiveBlock,
+			func(ab *vote_db.AddressInfo) er.R {
+				if bytes.Equal(ab.AddressScript, code) {
+					addr := txscript.PkScriptToAddress(ab.AddressScript, s.cfg.ChainParams)
+					voteFor := txscript.PkScriptToAddress(ab.VoteFor, s.cfg.ChainParams)
+					out = &btcjson.AddressInfo{
+						Address:     addr.EncodeAddress(),
+						Balance:     ab.Balance.ToBTC(),
+						Sbalance:    strconv.FormatUint(uint64(ab.Balance), 10),
+						IsCandidate: ab.IsCandidate,
+						VoteFor:     voteFor.EncodeAddress(),
+					}
+				}
+				return er.LoopBreak
+			},
+		)
+	}); err != nil && !er.IsLoopBreak(err) {
+		return nil, err
+	} else {
+		return out, nil
+	}
+}
+
+const addressesPerBatch = 200
+
+func handleListAddresses(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.ListAddressesCmd)
+	startFrom, err := addrToPkScript(c.StartingAddress, s.cfg.ChainParams)
+	if err != nil {
+		return nil, err
+	}
+	snap := s.cfg.Chain.BestSnapshot()
+	votingOnly := c.VotingOnly != nil && *c.VotingOnly
+	effectiveBlock := snap.Height
+	if c.Current == nil || !*c.Current {
+		effectiveBlock = vote_db.LastEpochEnd(effectiveBlock)
+	}
+	out := make([]btcjson.AddressInfo, 0, addressesPerBatch)
+	if err := s.cfg.DB.View(func(dbTx database.Tx) er.R {
+		i := 0
+		return vote_db.ListAddressInfo(
+			dbTx,
+			startFrom,
+			effectiveBlock,
+			func(ab *vote_db.AddressInfo) er.R {
+				if votingOnly && len(ab.VoteFor) == 0 && !ab.IsCandidate {
+					return nil
+				}
+				if ab.Balance == 0 {
+					return nil
+				}
+				if i == 0 && bytes.Equal(ab.AddressScript, startFrom) {
+					// Skip the first address because it's the one we were passed.
+					i++
+					return nil
+				}
+				addr := txscript.PkScriptToAddress(ab.AddressScript, s.cfg.ChainParams)
+				voteFor := txscript.PkScriptToAddress(ab.VoteFor, s.cfg.ChainParams)
+				out = append(out, btcjson.AddressInfo{
+					Address:     addr.EncodeAddress(),
+					Balance:     ab.Balance.ToBTC(),
+					Sbalance:    strconv.FormatUint(uint64(ab.Balance), 10),
+					IsCandidate: ab.IsCandidate,
+					VoteFor:     voteFor.EncodeAddress(),
+				})
+				if i > addressesPerBatch {
+					return er.LoopBreak
+				}
+				i++
+				return nil
+			},
+		)
+	}); err != nil && !er.IsLoopBreak(err) {
+		return nil, err
+	} else {
+		return btcjson.ListAddressesResult{
+			Addresses: out,
+			AsOfBlock: effectiveBlock,
+			HasMore:   er.IsLoopBreak(err),
+		}, nil
+	}
+}
+
+func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
+	c := cmd.(*btcjson.GetWinnersCmd)
+	height := int32((1 << 31) - 1)
+	if c.Height != nil {
+		height = int32(*c.Height) + db.EpochBlocks + votecompute.InaugurationOffset
+	}
+	var out []btcjson.ElectionResult
+	i := 0
+	if err := s.cfg.DB.View(func(dbTx database.Tx) er.R {
+		return votewinnerdb.ListWinnersBefore(dbTx, height, func(height int32, hash, winner []byte) er.R {
+			winnerStr := ""
+			if len(winner) > 0 {
+				winnerStr = txscript.PkScriptToAddress(winner, s.cfg.ChainParams).EncodeAddress()
+			}
+			out = append(out, btcjson.ElectionResult{
+				EffectiveBlockHeight: height + db.EpochBlocks + votecompute.InaugurationOffset,
+				Winner:               winnerStr,
+				VoteTableHash:        hex.EncodeToString(hash),
+			})
+			i += 1
+			if i > addressesPerBatch {
+				return er.LoopBreak
+			}
+			return nil
+		})
+	}); err != nil && !er.IsLoopBreak(err) {
+		return nil, err
+	} else {
+		return btcjson.GetWinnersResult{Results: out}, nil
+	}
 }
 
 // handleGetBestBlock implements the getbestblock command.

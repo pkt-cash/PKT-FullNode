@@ -30,6 +30,20 @@ func (mb *Mailbox[T]) Store(t T) {
 	mb.m.Unlock()
 }
 
+func (mb *Mailbox[T]) AwaitTrue(f func(t T) bool) T {
+	for {
+		mb.m.Lock()
+		ch := mb.waitChan
+		if f(mb.val) {
+			t := mb.val
+			mb.m.Unlock()
+			return t
+		}
+		mb.m.Unlock()
+		<-ch
+	}
+}
+
 func (mb *Mailbox[T]) AwaitUpdate() T {
 	mb.m.Lock()
 	ch := mb.waitChan
