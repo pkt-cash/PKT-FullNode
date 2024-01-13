@@ -53,7 +53,7 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 		}
 		blockToProve >>= 1
 		blockSize <<= 1
-		//* NOTE * - assumed correct - currently no test (dchest to x migration)
+		//*NOTE* Rob - change assumed correct - currently no test (dchest to x migration)
 		x := blake2b.Sum256(buf[:])
 		copy(hash[:], x[:])
 	}
@@ -63,7 +63,7 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 	return nil
 }
 
-// has a test (dchest to x migration)
+// Rob - has accompanying test (dchest to x migration)
 func contentProofIdx2(mb *wire.MsgBlock) uint32 {
 	buff := new(bytes.Buffer)
 	mb.Header.Serialize(buff)
