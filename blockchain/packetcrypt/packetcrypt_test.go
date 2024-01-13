@@ -6,9 +6,13 @@ package packetcrypt_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"os"
 	"testing"
+
+	b2b_dchest "github.com/dchest/blake2b"
+	b2b_x "golang.org/x/crypto/blake2b"
 
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 	"github.com/pkt-cash/PKT-FullNode/chaincfg"
@@ -209,4 +213,42 @@ func TestInsertCoinbaseCommit(t *testing.T) {
 func TestMain(m *testing.M) {
 	globalcfg.SelectConfig(chaincfg.PktMainNetParams.GlobalConf)
 	os.Exit(m.Run())
+}
+
+// blake2b migration tests
+func TestBlake2b_ContentProof_1(t *testing.T) {
+	block := testdata.GetBlock("../testdata/277647.dat.bz2", t)
+	mb := block.MsgBlock()
+	mb.Pcp = &wire.PacketCryptProof{} //testdata & pcp - not working
+	mb.Pcp.Nonce = 12345
+	res_x := contentProofIdx2_Curr(mb)
+	res_dchest := contentProofIdx2_Old(mb, t)
+
+	if res_dchest != res_x {
+		t.Errorf("%s content proof result mismatch", t.Name())
+	}
+}
+
+func TestBlcake2b_ContentProof_2(t *testing.T) {
+	//test method packetcrypt::checkContentProof()
+	//can't get testdata to parse pcp properly, need it for announcements TODO
+	t.Errorf("%s - block parsing fails parsing pcp, needs looking at", t.Name())
+}
+
+// copied here as its private method in package
+func contentProofIdx2_Curr(mb *wire.MsgBlock) uint32 {
+	buff := new(bytes.Buffer)
+	mb.Header.Serialize(buff)
+	hash := b2b_x.Sum256(buff.Bytes())
+	return binary.LittleEndian.Uint32(hash[:]) ^ mb.Pcp.Nonce
+}
+
+func contentProofIdx2_Old(mb *wire.MsgBlock, t *testing.T) uint32 {
+	b2 := b2b_dchest.New256()
+	err := mb.Header.Serialize(b2)
+	if err != nil {
+		t.Errorf("header serialise - %s", err.String())
+	}
+	buf := b2.Sum(nil)
+	return binary.LittleEndian.Uint32(buf) ^ mb.Pcp.Nonce
 }
