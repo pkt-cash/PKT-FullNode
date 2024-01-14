@@ -12,12 +12,12 @@ import (
 
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
-	"github.com/dchest/blake2b"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/announce"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/block"
 	"github.com/pkt-cash/PKT-FullNode/blockchain/packetcrypt/pcutil"
 	"github.com/pkt-cash/PKT-FullNode/chaincfg/chainhash"
 	"github.com/pkt-cash/PKT-FullNode/wire"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -53,10 +53,9 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 		}
 		blockToProve >>= 1
 		blockSize <<= 1
-		b2 := blake2b.New256()
-		b2.Write(buf[:])
-		x := b2.Sum(nil)
-		copy(hash[:], x)
+		//*NOTE* Rob - change assumed correct - currently no test (dchest to x migration)
+		x := blake2b.Sum256(buf[:])
+		copy(hash[:], x[:])
 	}
 	if !bytes.Equal(hash[:], ann.GetContentHash()) {
 		return er.New("announcement content proof hash mismatch")
@@ -64,11 +63,12 @@ func checkContentProof(ann *wire.PacketCryptAnn, proofIdx uint32, cpb io.Reader)
 	return nil
 }
 
+// Rob - has accompanying test (dchest to x migration)
 func contentProofIdx2(mb *wire.MsgBlock) uint32 {
-	b2 := blake2b.New256()
-	mb.Header.Serialize(b2)
-	buf := b2.Sum(nil)
-	return binary.LittleEndian.Uint32(buf) ^ mb.Pcp.Nonce
+	buff := new(bytes.Buffer)
+	mb.Header.Serialize(buff)
+	hash := blake2b.Sum256(buff.Bytes())
+	return binary.LittleEndian.Uint32(hash[:]) ^ mb.Pcp.Nonce
 }
 
 func ValidatePcBlock(mb *wire.MsgBlock, height int32, shareTarget uint32, annParentHashes []*chainhash.Hash) (bool, er.R) {
