@@ -140,9 +140,9 @@ func TestBlake2b_256(t *testing.T) {
 func TestBlake2b_512(t *testing.T) {
 	sampleHash64 := [64]byte{}
 	hash_curr := make([]byte, 64)
-	HashCompress(hash_curr, sampleHash64[:]) //current implementation
+	HashCompress64(hash_curr, sampleHash64[:]) //current implementation
 	hash_old := make([]byte, 64)
-	HashCompress_Old(hash_old, sampleHash64[:]) //old (dchest) implementation
+	HashCompress64_Old(hash_old, sampleHash64[:]) //old (dchest) implementation
 	if !bytes.Equal(hash_curr, hash_old) {
 		t.Errorf("%s - mismatch %02X <-> %02X", t.Name(), hash_curr, hash_old)
 	}
