@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	Blake2bBenchmarkEnabled        = true //disable to remove noise from test
+	Blake2bBenchmarkEnabled        = false //disable to remove noise from test
 	Blake2bBenchmarkIterationCount = 10000000
 )
 
@@ -125,43 +125,53 @@ func TestBlake2bBenchmark_512(t *testing.T) {
 	}
 }
 
-// blake2b migration tests
+// blake2b (dchest to x) migration tests
 func TestBlake2b_256(t *testing.T) {
 	sampleHash32 := [32]byte{}
 	hash_curr := make([]byte, 32)
 	HashCompress(hash_curr, sampleHash32[:]) //current implementation
-	hash_new := make([]byte, 32)
-	HashCompress_New(hash_new, sampleHash32[:]) //new implementation
-	if !bytes.Equal(hash_curr, hash_new) {
-		t.Errorf("%s - mismatch %02X <-> %02X", t.Name(), hash_curr, hash_new)
+	hash_old := make([]byte, 32)
+	HashCompress_Old(hash_old, sampleHash32[:]) //new implementation
+
+	if !bytes.Equal(hash_curr, hash_old) {
+		t.Errorf("%s - mismatch %02X <-> %02X", t.Name(), hash_curr, hash_old)
 	}
 }
 
 func TestBlake2b_512(t *testing.T) {
 	sampleHash64 := [64]byte{}
 	hash_curr := make([]byte, 64)
-	HashCompress(hash_curr, sampleHash64[:]) //current implementation
+	HashCompress64(hash_curr, sampleHash64[:]) //current implementation
 	hash_new := make([]byte, 64)
-	HashCompress_New(hash_new, sampleHash64[:]) //new implementation
+	HashCompress64_Old(hash_new, sampleHash64[:]) //new implementation
 	if !bytes.Equal(hash_curr, hash_new) {
 		t.Errorf("%s - mismatch %02X <-> %02X", t.Name(), hash_curr, hash_new)
 	}
 }
 
-// proof prior to code changes
-// current implementation, changed from dchest to x
-func HashCompress_New(out, in []byte) {
+// these are the old dchest methods
+func HashCompress_Old(out, in []byte) {
 	if len(out) < 32 {
 		panic("need 32 byte output to place hash in")
 	}
-	hash := b2b_x.Sum256(in)
-	copy(out, hash[:])
+	b2 := b2b_dchest.New256()
+	_, err := b2.Write(in)
+	if err != nil {
+		panic("failed b2.Write()")
+	}
+	// blake2 wants to *append* the hash
+	b2.Sum(out[:0])
 }
 
-func HashCompress64_New(out, in []byte) {
+func HashCompress64_Old(out, in []byte) {
 	if len(out) < 64 {
 		panic("need 64 byte output to place hash in")
 	}
-	hash := b2b_x.Sum512(in)
-	copy(out, hash[:])
+	b2 := b2b_dchest.New512()
+	_, err := b2.Write(in)
+	if err != nil {
+		panic("failed b2.Write()")
+	}
+	// blake2 wants to *append* the hash
+	b2.Sum(out[:0])
 }

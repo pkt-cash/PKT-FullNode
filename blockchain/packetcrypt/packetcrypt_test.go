@@ -221,8 +221,8 @@ func TestBlake2b_ContentProof_1(t *testing.T) {
 	mb := block.MsgBlock()
 	mb.Pcp = &wire.PacketCryptProof{} //testdata & pcp - not working
 	mb.Pcp.Nonce = 12345
-	res_dchest := contentProofIdx2_Curr(t, mb)
-	res_x := contentProofIdx2_New(mb)
+	res_x := contentProofIdx2_Curr(mb)
+	res_dchest := contentProofIdx2_Old(mb, t)
 
 	if res_dchest != res_x {
 		t.Errorf("%s content proof result mismatch", t.Name())
@@ -236,7 +236,14 @@ func TestBlcake2b_ContentProof_2(t *testing.T) {
 }
 
 // copied here as its private method in package
-func contentProofIdx2_Curr(t *testing.T, mb *wire.MsgBlock) uint32 {
+func contentProofIdx2_Curr(mb *wire.MsgBlock) uint32 {
+	buff := new(bytes.Buffer)
+	mb.Header.Serialize(buff)
+	hash := b2b_x.Sum256(buff.Bytes())
+	return binary.LittleEndian.Uint32(hash[:]) ^ mb.Pcp.Nonce
+}
+
+func contentProofIdx2_Old(mb *wire.MsgBlock, t *testing.T) uint32 {
 	b2 := b2b_dchest.New256()
 	err := mb.Header.Serialize(b2)
 	if err != nil {
@@ -244,11 +251,4 @@ func contentProofIdx2_Curr(t *testing.T, mb *wire.MsgBlock) uint32 {
 	}
 	buf := b2.Sum(nil)
 	return binary.LittleEndian.Uint32(buf) ^ mb.Pcp.Nonce
-}
-
-func contentProofIdx2_New(mb *wire.MsgBlock) uint32 {
-	buff := new(bytes.Buffer)
-	mb.Header.Serialize(buff)
-	hash := b2b_x.Sum256(buff.Bytes())
-	return binary.LittleEndian.Uint32(hash[:]) ^ mb.Pcp.Nonce
 }
