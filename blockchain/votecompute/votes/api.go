@@ -38,7 +38,7 @@ func ConnectBlock(dbTx database.Tx, block *btcutil.Block, stxo []blockchain.Spen
 			int32(v.VoteCastInBlock),
 			v.VoterPkScript,
 			v.VoterIsWillingCandidate,
-			v.VoterPkScript,
+			v.VoteForPkScript,
 		); err != nil {
 			log.Errorf("Unable to store votes from block number [%d]: [%s]", block.Height(), err)
 			return err
