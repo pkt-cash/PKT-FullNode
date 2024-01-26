@@ -182,10 +182,15 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	}
 
 	blockHeader := &block.MsgBlock().Header
+	latestCheckpoint := b.LatestCheckpoint()
+	if latestCheckpoint == nil {
+		str := fmt.Sprintf("no checkpoints available for block check %v", blockHash)
+		return false, false, ruleerror.ErrBadCheckpoint.New(str, nil)
+	}
 
 	if globalcfg.GetProofOfWorkAlgorithm() != globalcfg.PowPacketCrypt {
 	} else if flags&BFNoPoWCheck == BFNoPoWCheck {
-	} else if h, err := b.pcCheckProofOfWork(block); err != nil {
+	} else if h, err := b.pcCheckProofOfWork(block, latestCheckpoint.Height); err != nil {
 		prevHashExists, _ := b.blockExists(&blockHeader.PrevBlock)
 		return false, !prevHashExists, err
 	} else {

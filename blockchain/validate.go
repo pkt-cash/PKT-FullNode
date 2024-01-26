@@ -345,8 +345,8 @@ func CheckTransactionSanity(tx *btcutil.Tx) er.R {
 // target difficulty as claimed.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFNoPoWCheck: The check to ensure the block hash is less than the target
-//    difficulty is not performed.
+//   - BFNoPoWCheck: The check to ensure the block hash is less than the target
+//     difficulty is not performed.
 func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags BehaviorFlags) er.R {
 	// The target difficulty must be larger than zero.
 	target := CompactToBig(header.Bits)
@@ -386,7 +386,7 @@ func ShaCheckProofOfWork(block *btcutil.Block, powLimit *big.Int) er.R {
 	return checkProofOfWork(&block.MsgBlock().Header, powLimit, BFNone)
 }
 
-func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) (int32, er.R) {
+func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block, latestCheckpointHeight int32) (int32, er.R) {
 	pcp := block.MsgBlock().Pcp
 	if pcp == nil {
 		return -1, ruleerror.ErrBadPow.New("pow missing", nil)
@@ -403,6 +403,11 @@ func (b *BlockChain) pcCheckProofOfWork(block *btcutil.Block) (int32, er.R) {
 
 	if !globalcfg.IsPacketCryptAllowedVersion(pcp.Version, height) {
 		return height, ruleerror.ErrBadPow.New("Unallowed PacketCrypt proof version", nil)
+	}
+
+	//rob -	if block is before latest checkpoint, we are syncing - bail before doing intensive pcp work
+	if block.Height() < latestCheckpointHeight {
+		return height, nil
 	}
 
 	hashes := make([]*chainhash.Hash, len(pcp.Announcements))
@@ -731,8 +736,8 @@ func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) er.R {
 // which depend on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: All checks except those involving comparing the header against
-//    the checkpoints are not performed.
+//   - BFFastAdd: All checks except those involving comparing the header against
+//     the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode *blockNode, flags BehaviorFlags) er.R {
@@ -810,8 +815,8 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 // on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: The transaction are not checked to see if they are finalized
-//    and the somewhat expensive BIP0034 validation is not performed.
+//   - BFFastAdd: The transaction are not checked to see if they are finalized
+//     and the somewhat expensive BIP0034 validation is not performed.
 //
 // The flags are also passed to checkBlockHeaderContext.  See its documentation
 // for how the flags modify its behavior.

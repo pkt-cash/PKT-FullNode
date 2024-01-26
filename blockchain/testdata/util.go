@@ -88,15 +88,15 @@ func GetBlock(name string, t *testing.T) *btcutil.Block {
 
 	blocks, err := LoadBlocks(name)
 	if err != nil {
-		t.Errorf("Error loading file: %v\n", err)
+		t.Errorf("%s - Error loading file: %v\n", t.Name(), err) //t.Name - grep friendly
 		return nil
 	}
 	if len(blocks) > 1 {
-		t.Errorf("The test block file must only have one block in it")
+		t.Errorf("%s - The test block file must only have one block in it", t.Name()) //t.Name - grep friendly
 		return nil
 	}
 	if len(blocks) == 0 {
-		t.Errorf("The test block file seems empty")
+		t.Errorf("%s - The test block file seems empty", t.Name()) //t.Name - grep friendly
 		return nil
 	}
 	return blocks[0]

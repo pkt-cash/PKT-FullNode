@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 
 	"github.com/aead/chacha20"
-	"github.com/dchest/blake2b"
+	"golang.org/x/crypto/blake2b"
 )
 
 func HashExpand(out, key []byte, counter uint32) {
@@ -28,24 +28,14 @@ func HashCompress(out, in []byte) {
 	if len(out) < 32 {
 		panic("need 32 byte output to place hash in")
 	}
-	b2 := blake2b.New256()
-	_, err := b2.Write(in)
-	if err != nil {
-		panic("failed b2.Write()")
-	}
-	// blake2 wants to *append* the hash
-	b2.Sum(out[:0])
+	hash := blake2b.Sum256(in)
+	copy(out, hash[:])
 }
 
 func HashCompress64(out, in []byte) {
 	if len(out) < 64 {
 		panic("need 64 byte output to place hash in")
 	}
-	b2 := blake2b.New512()
-	_, err := b2.Write(in)
-	if err != nil {
-		panic("failed b2.Write()")
-	}
-	// blake2 wants to *append* the hash
-	b2.Sum(out[:0])
+	hash := blake2b.Sum512(in)
+	copy(out, hash[:])
 }
