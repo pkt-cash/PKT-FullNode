@@ -556,8 +556,8 @@ type ListAddressesResult struct {
 }
 
 type ElectionResult struct {
-	// The block height at which the winner becomes effective
-	EffectiveBlockHeight int32 `json:"effective_block_height"`
+	// The block height at which the voting ends
+	VoteCloseHeight int32 `json:"vote_close_height"`
 	// The address of the winning node
 	Winner string `json:"winner"`
 	// The hash of the entire vote/balance table, for verifying same computation across nodes

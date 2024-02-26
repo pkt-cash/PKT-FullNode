@@ -1144,9 +1144,9 @@ func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 				winnerStr = txscript.PkScriptToAddress(winner, s.cfg.ChainParams).EncodeAddress()
 			}
 			out = append(out, btcjson.ElectionResult{
-				EffectiveBlockHeight: height + votecompute.InaugurationOffset,
-				Winner:               winnerStr,
-				VoteTableHash:        hex.EncodeToString(hash),
+				VoteCloseHeight: height,
+				Winner:          winnerStr,
+				VoteTableHash:   hex.EncodeToString(hash),
 			})
 			i += 1
 			if i > addressesPerBatch {
@@ -1157,7 +1157,7 @@ func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	}); err != nil && !er.IsLoopBreak(err) {
 		return nil, err
 	} else {
-		neb := db.LastEpochEnd(snap.Height) + db.EpochBlocks
+		neb := db.LastEpochEnd(snap.Height)
 		nib := neb + votecompute.InaugurationOffset
 		return btcjson.GetWinnersResult{
 			NextElectionBlock:            neb,
