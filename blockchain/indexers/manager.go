@@ -7,6 +7,7 @@ package indexers
 import (
 	"fmt"
 
+	"github.com/pkt-cash/PKT-FullNode/blockchain/votecompute"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 	"github.com/pkt-cash/PKT-FullNode/pktlog/log"
 
@@ -130,6 +131,7 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Bl
 type Manager struct {
 	db             database.DB
 	enabledIndexes []Indexer
+	votes          *votecompute.VoteCompute
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -431,6 +433,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				}
 			}
 
+			// If the chain gets ahead of the vote computation, we need to stop insertion
+			// of new blocks. BUT we cannot do it inside of the Update() function because
+			// the vote computation needs to update the database and we'd end up with deadlock.
+			m.votes.WaitUntilCanUpdateHeight(block.Height())
 			err := m.db.Update(func(dbTx database.Tx) er.R {
 				return dbIndexConnectBlock(
 					dbTx, indexer, block, spentTxos,
@@ -507,10 +513,11 @@ func (m *Manager) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
 //
 // The manager returned satisfies the blockchain.IndexManager interface and thus
 // cleanly plugs into the normal blockchain processing path.
-func NewManager(db database.DB, enabledIndexes []Indexer) *Manager {
+func NewManager(db database.DB, enabledIndexes []Indexer, votes *votecompute.VoteCompute) *Manager {
 	return &Manager{
 		db:             db,
 		enabledIndexes: enabledIndexes,
+		votes:          votes,
 	}
 }
 

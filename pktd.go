@@ -163,6 +163,14 @@ func pktdMain(serverChan chan<- *server) er.R {
 
 		return nil
 	}
+	if cfg.DropVotes {
+		if err := indexers.DropVotes(db, interrupt); err != nil {
+			log.Errorf("%v", err)
+			return err
+		}
+
+		return nil
+	}
 
 	// Create server and start it.
 	server, err := newServer(cfg.Listeners, cfg.AgentBlacklist,

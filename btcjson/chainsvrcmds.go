@@ -10,8 +10,8 @@ package btcjson
 
 import (
 	"fmt"
-	"github.com/json-iterator/go"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkt-cash/PKT-FullNode/btcutil/er"
 
 	"github.com/pkt-cash/PKT-FullNode/wire"
@@ -853,6 +853,27 @@ func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
 	}
 }
 
+type GetAddressInfo struct {
+	Address string
+	Current *bool
+}
+
+// ListAddressesCmd is the input to the "listaddresses" endpoint
+type ListAddressesCmd struct {
+	// If not "", then this is the first address that is visited
+	StartingAddress *string
+	// If true then return the address balances as of *right now*
+	// If false then return address balances as of last epoch change
+	Current *bool
+	// If true, we skip all addresses except those who are casting votes
+	VotingOnly *bool
+}
+
+type GetWinnersCmd struct {
+	// If specified, vote winners before this height will be shown
+	Height *int
+}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -865,6 +886,7 @@ func init() {
 	MustRegisterCmd("estimatefee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("estimatesmartfee", (*EstimateSmartFeeCmd)(nil), flags)
 	MustRegisterCmd("getaddednodeinfo", (*GetAddedNodeInfoCmd)(nil), flags)
+	MustRegisterCmd("getaddressinfo", (*GetAddressInfo)(nil), flags)
 	MustRegisterCmd("getbestblockhash", (*GetBestBlockHashCmd)(nil), flags)
 	MustRegisterCmd("getblock", (*GetBlockCmd)(nil), flags)
 	MustRegisterCmd("getblockchaininfo", (*GetBlockChainInfoCmd)(nil), flags)
@@ -890,6 +912,7 @@ func init() {
 	MustRegisterCmd("getnetworkhashps", (*GetNetworkHashPSCmd)(nil), flags)
 	MustRegisterCmd("getpeerinfo", (*GetPeerInfoCmd)(nil), flags)
 	MustRegisterCmd("getrawblocktemplate", (*GetRawBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("getwinners", (*GetWinnersCmd)(nil), flags)
 	MustRegisterCmd("checkpcshare", (*CheckPcShareCmd)(nil), flags)
 	MustRegisterCmd("checkpcann", (*CheckPcAnnCmd)(nil), flags)
 	MustRegisterCmd("getrawmempool", (*GetRawMempoolCmd)(nil), flags)
@@ -900,6 +923,7 @@ func init() {
 	MustRegisterCmd("getwork", (*GetWorkCmd)(nil), flags)
 	MustRegisterCmd("help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("invalidateblock", (*InvalidateBlockCmd)(nil), flags)
+	MustRegisterCmd("listaddresses", (*ListAddressesCmd)(nil), flags)
 	MustRegisterCmd("ping", (*PingCmd)(nil), flags)
 	MustRegisterCmd("echo", (*EchoCmd)(nil), flags)
 	MustRegisterCmd("preciousblock", (*PreciousBlockCmd)(nil), flags)

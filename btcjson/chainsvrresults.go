@@ -540,3 +540,39 @@ type EstimateSmartFeeResult struct {
 	Errors  []string `json:"errors,omitempty"`
 	Blocks  int64    `json:"blocks"`
 }
+
+type AddressInfo struct {
+	Address     string  `json:"address"`
+	Balance     float64 `json:"balance"`
+	Sbalance    string  `json:"sbalance"`
+	IsCandidate bool    `json:"is_candidate"`
+	VoteFor     string  `json:"vote_for"`
+}
+
+type ListAddressesResult struct {
+	Addresses []AddressInfo `json:"addresses"`
+	AsOfBlock int32         `json:"as_of_block"`
+	HasMore   bool          `json:"has_more"`
+}
+
+type ElectionResult struct {
+	// The block height at which the voting ends
+	VoteCloseHeight int32 `json:"vote_close_height"`
+	// The address of the winning node
+	Winner string `json:"winner"`
+	// The hash of the entire vote/balance table, for verifying same computation across nodes
+	VoteTableHash string `json:"vote_table_hash"`
+}
+
+type GetWinnersResult struct {
+	// The block at which the next vote will close
+	NextElectionBlock int32 `json:"next_election_block"`
+	// The block at which the next election will become effective
+	NextInagurationBlock int32 `json:"next_inaguration_block"`
+	// The estimated time when the next vote will close - seconds since the epoch
+	NextElectionEstimatedTime int64 `json:"next_election_estimated_time"`
+	// The estimated time when the next inaguration will occur - seconds since the epoch
+	NextInagurationEstimatedTime int64 `json:"next_inaguration_estimated_time"`
+	// The results of previous elections
+	Results []ElectionResult
+}

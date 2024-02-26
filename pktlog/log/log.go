@@ -526,20 +526,20 @@ func Criticalf(format string, args ...interface{}) {
 	doLog(LevelCritical, format, args...)
 }
 
-// logClosure is used to provide a closure over expensive logging operations so
+// LogClosure is used to provide a closure over expensive logging operations so
 // don't have to be performed when the logging level doesn't warrant it.
-type logClosure func() string
+type LogClosure func() string
 
 // String invokes the underlying function and returns the result.
-func (c logClosure) String() string {
+func (c LogClosure) String() string {
 	return c()
 }
 
 // log.C returns a new closure over a function that returns a string
 // which itself provides a Stringer interface so that it can be used with the
 // logging system.
-func C(c func() string) logClosure {
-	return logClosure(c)
+func C(c func() string) LogClosure {
+	return LogClosure(c)
 }
 
 func WarnIfPrerelease() {

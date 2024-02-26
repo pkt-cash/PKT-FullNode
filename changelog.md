@@ -1,3 +1,11 @@
+# PKT-FullNode v1.1.0
+
+NOT YET RELEASED
+
+This is a major update which introduces the Network Steward Election 2.0 system.
+This election system computes the balance and the votes of all addresses, a detailed
+description of each part of this new feature is found in `docs/network_steward_vote_2.md`.
+
 # PKT-FullNode v1.0.1
 
 Jan 9, 2024
