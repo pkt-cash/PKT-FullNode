@@ -1157,7 +1157,7 @@ func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	}); err != nil && !er.IsLoopBreak(err) {
 		return nil, err
 	} else {
-		neb := db.LastEpochEnd(snap.Height)
+		neb := db.LastEpochEnd(snap.Height) + db.EpochBlocks + 1
 		nib := neb + votecompute.InaugurationOffset
 		return btcjson.GetWinnersResult{
 			NextElectionBlock:            neb,
