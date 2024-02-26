@@ -565,5 +565,14 @@ type ElectionResult struct {
 }
 
 type GetWinnersResult struct {
+	// The block at which the next vote will close
+	NextElectionBlock int32 `json:"next_election_block"`
+	// The block at which the next election will become effective
+	NextInagurationBlock int32 `json:"next_inaguration_block"`
+	// The estimated time when the next vote will close - seconds since the epoch
+	NextElectionEstimatedTime int64 `json:"next_election_estimated_time"`
+	// The estimated time when the next inaguration will occur - seconds since the epoch
+	NextInagurationEstimatedTime int64 `json:"next_inaguration_estimated_time"`
+	// The results of previous elections
 	Results []ElectionResult
 }
