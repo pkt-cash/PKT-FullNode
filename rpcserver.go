@@ -1122,12 +1122,19 @@ func handleListAddresses(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 	}
 }
 
+func estimateBlockTime(cp *chaincfg.Params, currentHeight, futureHeight int32) int64 {
+	futureBlocks := futureHeight - currentHeight
+	estimatedDur := time.Duration(cp.TargetTimePerBlock.Nanoseconds() * int64(futureBlocks))
+	return time.Now().Add(estimatedDur).Unix()
+}
+
 func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, er.R) {
 	c := cmd.(*btcjson.GetWinnersCmd)
 	height := int32((1 << 31) - 1)
 	if c.Height != nil {
-		height = int32(*c.Height) + db.EpochBlocks + votecompute.InaugurationOffset
+		height = int32(*c.Height) + votecompute.InaugurationOffset
 	}
+	snap := s.cfg.Chain.BestSnapshot()
 	var out []btcjson.ElectionResult
 	i := 0
 	if err := s.cfg.DB.View(func(dbTx database.Tx) er.R {
@@ -1137,7 +1144,7 @@ func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 				winnerStr = txscript.PkScriptToAddress(winner, s.cfg.ChainParams).EncodeAddress()
 			}
 			out = append(out, btcjson.ElectionResult{
-				EffectiveBlockHeight: height + db.EpochBlocks + votecompute.InaugurationOffset,
+				EffectiveBlockHeight: height + votecompute.InaugurationOffset,
 				Winner:               winnerStr,
 				VoteTableHash:        hex.EncodeToString(hash),
 			})
@@ -1150,7 +1157,15 @@ func handleGetWinners(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	}); err != nil && !er.IsLoopBreak(err) {
 		return nil, err
 	} else {
-		return btcjson.GetWinnersResult{Results: out}, nil
+		neb := db.LastEpochEnd(snap.Height) + db.EpochBlocks
+		nib := neb + votecompute.InaugurationOffset
+		return btcjson.GetWinnersResult{
+			NextElectionBlock:            neb,
+			NextInagurationBlock:         nib,
+			NextElectionEstimatedTime:    estimateBlockTime(s.cfg.ChainParams, snap.Height, neb),
+			NextInagurationEstimatedTime: estimateBlockTime(s.cfg.ChainParams, snap.Height, nib),
+			Results:                      out,
+		}, nil
 	}
 }
 
